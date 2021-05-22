@@ -2,26 +2,27 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   
   <parent>
-    <groupId>com.paulissoft.tools</groupId>
-    <artifactId>db</artifactId>
+    <groupId>com.paulissoft.tools.db</groupId>
+    <artifactId>app</artifactId>
     <version>${revision}</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.paulissoft.tools</groupId>
-  <artifactId>EXT</artifactId>
+  <groupId>com.paulissoft.tools.db.app</groupId>
+  <artifactId>CFG</artifactId>
   <packaging>pom</packaging>
-  <description>Build EXT component</description>
+  <description>Build CFG component</description>
   
   <properties>
-    <flyway.table>schema_version_tools_ext</flyway.table>
+    <db.src.callbacks.scripts>${db.src.scripts}/callbacks</db.src.callbacks.scripts>
+    <flyway.table>schema_version_tools_cfg</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>EXT_LOAD_FILE_PKG
-,EXT_LOAD_FILE_COLUMN_V
-,EXT_LOAD_FILE_OBJECT_V
-    </db.object.names>
-    <db.test.phase>test</db.test.phase>
+    <db.object.names>CFG_INSTALL_PKG,CFG_PKG</db.object.names>
   </properties>
+
+  <build>
+    <resources />
+  </build>
 
 </project>
 

@@ -2,22 +2,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   
   <parent>
-    <groupId>com.paulissoft.tools</groupId>
-    <artifactId>db</artifactId>
+    <groupId>com.paulissoft.tools.db</groupId>
+    <artifactId>app</artifactId>
     <version>${revision}</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.paulissoft.tools</groupId>
-  <artifactId>CFG</artifactId>
+  <groupId>com.paulissoft.tools.db.app</groupId>
+  <artifactId>API</artifactId>
   <packaging>pom</packaging>
-  <description>Build CFG component</description>
+  <description>Build API component</description>
   
   <properties>
-    <db.src.callbacks.scripts>${db.src.scripts}/callbacks</db.src.callbacks.scripts>
-    <flyway.table>schema_version_tools_cfg</flyway.table>
+    <flyway.table>schema_version_tools_api</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>CFG_INSTALL_PKG,CFG_PKG</db.object.names>
+    <db.object.names>API_PKG</db.object.names>
+    <db.test.phase>test</db.test.phase>
   </properties>
 
   <build>

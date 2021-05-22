@@ -13,14 +13,15 @@
   <description>Core POM for Oracle Apex builds</description>
   
   <properties>
-    <oracle_tools.apex.dir>${maven.multiModuleProjectDirectory}/apex/target/dependency/apex-${oracle_tools.version}</oracle_tools.apex.dir>
+    <oracle_tools.apex.utils.version>${project.parent.version}</oracle_tools.apex.utils.version>
+    <oracle_tools.apex.utils.dir>${project.build.dir}/dependency/utils-${oracle_tools.apex.utils.version}</oracle_tools.apex.utils.dir>
     <apex.src.dir>${basedir}/src</apex.src.dir>
   </properties>
 
   <build>
     <resources>
       <resource>       
-        <directory>${basedir}/src/f${apex.application}</directory>
+        <directory>${apex.src.dir}/f${apex.application}</directory>
         <filtering>false</filtering>
       </resource>
     </resources>
@@ -95,12 +96,12 @@
                     <format property="apex.application.version"
                             pattern="yyyy-MM-dd hh:mm:ss"/>
                   </tstamp>
-                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.dir}">
+                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.utils.dir}">
                     <property name="application" value="${apex.application}" />
                     <property name="application.version" value="${apex.application.version}" />
                     <property name="userid" value="${db.userid}" />
                     <property name="workspace" value="${apex.workspace}" />
-                    <property name="output.dir" value="${basedir}/src" />
+                    <property name="output.dir" value="${apex.src.dir}" />
                     <property name="sql.home" value="${sql.home}" />
                     <property name="env.SQL_HOME" value="${env.SQL_HOME}" />
                     <property name="env.LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}"/>
@@ -193,17 +194,11 @@
         </plugins>
       </build>
     </profile>
-
-    <!-- Are we in the oracle_tools/apex directory? If so, override oracle_tools.apex.dir -->
-    <profile>
-      <id>oracle-tools-apex</id>
-      <properties>
-        <oracle_tools.apex.dir>${maven.multiModuleProjectDirectory}/apex</oracle_tools.apex.dir>
-        <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
-        <db.schema>${db.oracle_tools_schema}</db.schema>
-      </properties>
-    </profile>
-
   </profiles>
+
+  <modules>
+    <module>app</module>
+    <module>utils</module>
+  </modules>
   
 </project>

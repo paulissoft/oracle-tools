@@ -2,27 +2,26 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   
   <parent>
-    <groupId>com.paulissoft.tools</groupId>
-    <artifactId>db</artifactId>
+    <groupId>com.paulissoft.tools.db</groupId>
+    <artifactId>app</artifactId>
     <version>${revision}</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.paulissoft.tools</groupId>
-  <artifactId>API</artifactId>
+  <groupId>com.paulissoft.tools.db.app</groupId>
+  <artifactId>EXT</artifactId>
   <packaging>pom</packaging>
-  <description>Build API component</description>
+  <description>Build EXT component</description>
   
   <properties>
-    <flyway.table>schema_version_tools_api</flyway.table>
+    <flyway.table>schema_version_tools_ext</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>API_PKG</db.object.names>
+    <db.object.names>EXT_LOAD_FILE_PKG
+,EXT_LOAD_FILE_COLUMN_V
+,EXT_LOAD_FILE_OBJECT_V
+    </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
-
-  <build>
-    <resources />
-  </build>
 
 </project>
 

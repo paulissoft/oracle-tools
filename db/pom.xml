@@ -14,8 +14,12 @@
   <description>Core POM for Database builds</description>
 
   <properties>
-    <!-- The way to determine the oracle_tools.db.dir for child projects is to use dependencies. -->
-    <oracle_tools.db.dir>${maven.multiModuleProjectDirectory}/db/target/dependency/db-${oracle_tools.version}</oracle_tools.db.dir>
+    <!-- The way to determine the oracle_tools.db.utils.dir for child projects:
+         1) have as parent POM this POM
+         2) use a dependency to the utils child of this project
+    -->
+    <oracle_tools.db.utils.version>${project.parent.version}</oracle_tools.db.utils.version>
+    <oracle_tools.db.utils.dir>${project.build.dir}/dependency/utils-${oracle_tools.db.utils.version}</oracle_tools.db.utils.dir>
     
     <!-- database properties -->
     <db.src.scripts>src</db.src.scripts>
@@ -24,7 +28,7 @@
     <db.src.incr.scripts>${db.src.scripts}/incr</db.src.incr.scripts>
     <!-- callbacks are added to the artifact for deployment later on without
          CD sources -->
-    <db.src.callbacks.scripts>${oracle_tools.db.dir}/src/callbacks</db.src.callbacks.scripts>
+    <db.src.callbacks.scripts>${oracle_tools.db.utils.dir}/src/callbacks</db.src.callbacks.scripts>
 
     <!-- compile all and reuse settings for afterMigrate.sql -->
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
@@ -464,7 +468,7 @@
         <!-- do not use parent configuration -->
         <configuration combine.self="override">                                     
           <descriptorRefs>
-            <descriptorRef>project</descriptorRef>
+            <descriptorRef>src</descriptorRef>
           </descriptorRefs>
         </configuration>
       </plugin>
@@ -544,7 +548,7 @@
                   <target unless="${db.generate.ddl.full.skip}">
                     <fail message="Property db.userid must be set" unless="db.userid" />
                     <fail message="Property db.password must be set" unless="db.password" />
-                    <ant antfile="${oracle_tools.db.dir}/src/main/resources/generate_ddl.xml"
+                    <ant antfile="${oracle_tools.db.utils.dir}/src/main/resources/generate_ddl.xml"
                          target="generate-ddl-full"
                          inheritAll="false"
                          dir=".">
@@ -601,7 +605,7 @@
                   <target unless="${db.generate.ddl.incr.skip}">
                     <fail message="Property db.prev.database.link must be set" unless="db.prev.database.link" />
                     <fail message="Property db.password must be set" unless="db.password" />
-                    <ant antfile="${oracle_tools.db.dir}/src/main/resources/generate_ddl.xml"
+                    <ant antfile="${oracle_tools.db.utils.dir}/src/main/resources/generate_ddl.xml"
                          target="generate-ddl-incr"
                          inheritAll="false"
                          dir=".">
@@ -635,27 +639,11 @@
         </plugins>
       </build>
     </profile>
-    
-    <!-- Are we in the oracle_tools/db directory? If so, override oracle_tools.db.dir -->
-    <profile>
-      <id>oracle-tools-db</id>
-      <properties>
-        <oracle_tools.db.dir>${maven.multiModuleProjectDirectory}/db</oracle_tools.db.dir>
-        <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
-        <db.schema>${db.oracle_tools_schema}</db.schema>
-        <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>
-      </properties>
-    </profile>
   </profiles>
 
-  <!-- The only non generic thing -->
   <modules>
-    <module>cfg</module>
-    <module>data</module>
-    <module>api</module>
-    <module>ddl</module>
-    <module>ext</module>
-    <module>ui</module>
+    <module>app</module>
+    <module>utils</module>
   </modules>
-
+  
 </project>

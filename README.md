@@ -96,8 +96,8 @@ Add this to the Database POM:
 	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
   <dependencies>
     <dependency>
-      <groupId>com.paulissoft.build</groupId>
-      <artifactId>db</artifactId>
+      <groupId>com.paulissoft.tools.db</groupId>
+      <artifactId>utils</artifactId>
       <version>${project.parent.version}</version>
       <classifier>project</classifier>
       <type>zip</type>
@@ -136,8 +136,8 @@ Add this to the Apex POM:
 	<!-- Needed for Apex Export/Import scripts -->
   <dependencies>
     <dependency>
-      <groupId>com.paulissoft.build</groupId>
-      <artifactId>apex</artifactId>
+      <groupId>com.paulissoft.tools.apex</groupId>
+      <artifactId>utils</artifactId>
       <version>${project.parent.version}</version>
       <classifier>project</classifier>
       <type>zip</type>

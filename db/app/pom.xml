@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.paulissoft.tools</groupId>
+    <artifactId>db</artifactId>
+    <version>${revision}</version>
+  </parent>
+  <groupId>com.paulissoft.tools.db</groupId>
+  <artifactId>app</artifactId>
+  <packaging>pom</packaging>
+  <description>Oracle Tools database application POM</description>
+
+  <properties>
+    <oracle_tools.db.utils.dir>${maven.multiModuleProjectDirectory}/db/utils</oracle_tools.db.utils.dir>
+    <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
+    <db.schema>${db.oracle_tools_schema}</db.schema>
+    <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>
+  </properties>
+
+  <modules>
+    <module>cfg</module>
+    <module>data</module>
+    <module>api</module>
+    <module>ddl</module>
+    <module>ext</module>
+    <module>ui</module>
+  </modules>
+
+</project>
