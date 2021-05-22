@@ -1,0 +1,416 @@
+<project name="synchronize" default="help" basedir="." xmlns:ac="antlib:net.sf.antcontrib">
+
+  <description>
+Generate Apex scripts (export) or import them.
+
+The following properties must be set before:
+- application: an Apex application id
+- userid: an Oracle userid to connect to the database
+- workspace: Apex workspace name
+- output.dir: directory to save/retrieve f${application}/install.sql
+- sql.home: the home directory of the SqlCli client (often the SQL Developer home)
+- runtime.classpath: the runtime classpath
+
+The following properties are only important during export:
+- application.version: an Apex application version
+  </description>
+
+  <target name="help">
+    <echo message="(synchronize.xml.help) Please run ${ant.file} with -projecthelp" />
+  </target>
+
+  <!--taskdef resource="net/sf/antcontrib/antlib.xml"/-->
+  
+  <target name="init">
+    <echo message="(synchronize.xml.init) basedir: ${basedir}" />
+    <fail message="Property output.dir (${output.dir}) should be set and point to a directory">
+      <condition>
+        <not>
+          <and>
+            <isset property="output.dir" />
+            <available file="${output.dir}" type="dir" />
+          </and>
+        </not>
+      </condition>
+    </fail>
+    <echo message="(synchronize.xml.init) output.dir: ${output.dir}" />
+    <fail message="Property application should be set and not empty">
+      <condition>
+        <or>
+          <not>
+            <isset property="application" />
+          </not>
+          <equals arg1="${application}" arg2=""/>
+        </or>
+      </condition>
+    </fail>
+    <echo message="(synchronize.xml.init) application: ${application}" />
+    <fail message="Property userid should be set and not empty">
+      <condition>
+        <or>
+          <not>
+            <isset property="userid" />
+          </not>
+          <equals arg1="${userid}" arg2=""/>
+        </or>
+      </condition>
+    </fail>
+    <fail message="Property workspace should be set and not empty">
+      <condition>
+        <or>
+          <not>
+            <isset property="workspace" />
+          </not>
+          <equals arg1="${workspace}" arg2=""/>
+        </or>
+      </condition>
+    </fail>
+    <echo message="(synchronize.xml.init) workspace: ${workspace}" />
+
+    <!-- GPA 2017-04-05 We must quote arguments with spaces on Windows. -->
+    <condition property="quote" value="&quot;" else="">
+      <os family="windows" />
+    </condition>
+    <property name="lib.dir" location="${basedir}/lib" />
+
+    <!-- sql.home is already set -->
+    <condition property="my.sql.home" value="${sql.home}">
+      <available file="${sql.home}/bin/sql" type="file" />
+    </condition>
+    <condition property="my.sql.home" value="${env.SQL_HOME}">
+      <available file="${env.SQL_HOME}/bin/sql" type="file" />
+    </condition>
+    <echo message="(synchronize.xml.init) $${sql.home}: ${sql.home}" />
+    <echo message="(synchronize.xml.init) $${env.SQL_HOME}: ${env.SQL_HOME}" />
+    <echo message="(synchronize.xml.init) $${my.sql.home}: ${my.sql.home}" />
+
+    <property name="runtime.classpath" refid="runtime.classpath" />
+
+    <echo message="(synchronize.xml.init) $${runtime.classpath}: ${runtime.classpath}" />
+  </target>
+
+  <target name="init-split-userid">
+    <echo message="(synchronize.xml.init-split-userid)" />
+    <property name="userid.pattern" value="([^/]+)/([^@]+)@(.+)"/>
+    <!--
+      <script language="javascript">
+        arr = project.getProperty('userid').split('[/@]');
+        project.setProperty('my.user', arr[0]);
+        project.setProperty('my.password', arr[1]);
+        project.setProperty('my.db', arr[2]);
+      </script>
+    -->
+    <loadresource property="my.user">
+      <string value="${userid}"/>
+      <filterchain>
+        <tokenfilter>
+          <replaceregex pattern="${userid.pattern}" replace="\1"/>
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+    <loadresource property="my.password">
+      <string value="${userid}"/>
+      <filterchain>
+        <tokenfilter>
+          <replaceregex pattern="${userid.pattern}" replace="\2"/>
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+    <loadresource property="my.db">
+      <string value="${userid}"/>
+      <filterchain>
+        <tokenfilter>
+          <replaceregex pattern="${userid.pattern}" replace="\3"/>
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+    <echo message="(synchronize.xml.init-split-userid) $${my.user}     => ${my.user}"/>
+    <echo message="(synchronize.xml.init-split-userid) $${my.db}       => ${my.db}"/>
+  </target>
+
+  <!-- IMPORT -->
+  
+  <!-- prefer non flat structure -->
+  <target name="init-import">
+    <echo message="(synchronize.xml.init-import)" />
+    <condition property="input.file"
+               value="install.sql"
+               else="f${application}.sql">
+      <available file="${output.dir}/f${application}/install.sql" type="file" />
+    </condition>    
+    <condition property="input.file.dir"
+               value="${output.dir}/f${application}"
+               else="${output.dir}">
+      <available file="${output.dir}/f${application}/install.sql" type="file" />
+    </condition>    
+    <echo message="(synchronize.xml.init-import) Importing from ${input.file.dir}/${input.file}" />
+  </target>
+
+  <macrodef name="sqlplus" description="Run SQL*Plus">
+    <attribute name="name"/> <!-- unique name -->
+    <attribute name="dir"/>
+    <attribute name="inputstring"/>
+    <sequential>
+      <tempfile property="@{name}.file" deleteonexit="true" />
+      <ac:trycatch property="@{name}.error">
+        <try>
+          <!-- record the output so we can check for ORA-01017 -->
+          <record name="${@{name}.file}" action="start"/>
+          <exec executable="sqlplus"
+                failonerror="true"
+                spawn="false"
+                dir="@{dir}"
+                inputstring="@{inputstring}">
+            <arg value="-S" /> <!-- silent -->
+            <arg value="${quote}${userid}${quote}" />
+          </exec>
+          <record name="${@{name}.file}" action="stop"/>
+          <fail>
+            <condition>
+              <!-- This does not raise an error in SQL*Plus: we just do it ourselves -->
+              <!-- ORA-01017: invalid username/password; logon denied -->
+              <resourcecontains resource="${@{name}.file}" substring="ORA-01017:" />
+            </condition>
+          </fail>
+        </try>
+        <catch>
+          <!-- Show version -->
+          <exec executable="sqlplus"
+                failonerror="false"
+                spawn="false">
+            <arg value="-V" /> <!-- show version -->
+          </exec>
+          <!-- Fail anyhow -->
+          <fail message="${@{name}.error}"/>
+        </catch>
+      </ac:trycatch>
+    </sequential>
+  </macrodef>
+  
+  <target name="import-sqlplus"
+          depends="init-import"
+          unless="my.sql.home">
+    <echo message="(synchronize.xml.import-sqlplus) Import is using SQL*Plus"
+          />
+    <sqlplus name="import"
+             dir="${input.file.dir}"
+             inputstring='@${basedir}/import.sql "${workspace}" "${application}" "${input.file}"'/>
+  </target>
+
+  <macrodef name="sqlcl" description="Run Java Sql Client">
+    <attribute name="name"/> <!-- unique name -->
+    <attribute name="dir"/>
+    <attribute name="inputstring"/>
+    <sequential>
+      <echo message="(synchronize.xml.sqlcl) dir: @{dir}"/>
+      <echo message="(synchronize.xml.sqlcl) inputstring: @{inputstring}"/>
+      <ac:trycatch property="@{name}.error">
+        <try>
+          <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
+                fork="true"
+                spawn="false"
+                dir="@{dir}"
+                inputstring="@{inputstring}"
+                failonerror="false">
+            <sysproperty key="java.awt.headless" value="true"/>
+            <sysproperty key="apple.awt.UIElement" value="true"/>
+            <jvmarg value="-Xss10M"/>
+            <classpath id="sqlcl.classpath">
+              <!-- from file ${my.sql.home}/bin/sql -->
+
+              <pathelement location="${my.sql.home}/lib/dbtools-sqlcl.jar"/>
+              
+              <!-- please note that in the script they are built up in a reversed -->
+              
+              <fileset dir="${my.sql.home}/lib">
+                <include name="jansi.jar"/>
+                <include name="drivers/*"/>
+                <include name="ext/*"/>
+                <include name="javax.json.jar"/>
+                <include name="javax.json-api.jar"/>
+                <include name="xmlparserv2.jar"/>
+                <include name="commons-logging.jar"/>
+                <include name="orai18n.jar"/>
+                <include name="xmlparserv2-sans-jaxp-services.jar"/>
+                <include name="orai18n-collation.jar"/>
+                <include name="jackson-databind.jar"/>
+                <include name="xdb6.jar"/>
+                <include name="jackson-core.jar"/>
+                <include name="stringtemplate.jar"/>
+                <include name="oraclepki.jar"/>
+                <include name="jackson-annotations.jar"/>
+                <include name="osdt_core.jar"/>
+                <include name="httpmime.jar"/>
+                <include name="osdt_cert.jar"/>
+                <include name="httpcore.jar"/>
+                <include name="orajsoda.jar"/>
+                <include name="httpclient.jar"/>
+                <include name="orai18n-utility.jar"/>
+                <include name="ojdbc8.jar"/>
+                <include name="dbtools-net.jar"/>
+                <include name="dbtools-http.jar"/>
+                <include name="dbtools-common.jar"/>
+                <include name="orai18n-servlet.jar"/>
+                <include name="jsch.jar"/>
+                <include name="commons-codec.jar"/>
+                <include name="jdbcrest.jar"/>
+                <include name="orai18n-mapping.jar"/>
+                <include name="jline.jar"/>
+                <include name="antlr-runtime.jar"/>
+                <!--include name="jansi.jar"/-->
+                <!-- version 20on Mac OS X -->
+                <include name="dbtools-data.jar"/>
+                <include name="guava.jar"/>
+              </fileset>
+              
+              <!-- Start of #Sql file locations (when embedded) -->
+              <fileset dir="${my.sql.home}/..">
+                <include name="rdbms/jlib/xdb6.jar"/>
+                <include name="jdbc/lib/ojdbc8.jar"/>
+                <include name="jlib/orai18n-utility.jar"/>
+                <include name="jlib/orai18n-mapping.jar"/>
+                <include name="jlib/orai18n.jar"/>
+                <include name="modules/oracle.xdk/xmlparserv2.jar"/>
+              </fileset>
+
+              <!-- For Dataxion -->
+              <fileset dir="${my.sql.home}">
+                <include name="rdbms/jlib/xdb6.jar"/>
+                <include name="jdbc/lib/ojdbc8.jar"/>
+                <include name="jlib/orai18n-utility.jar"/>
+                <include name="jlib/orai18n-mapping.jar"/>
+                <include name="jlib/orai18n.jar"/>
+                <include name="modules/oracle.xdk/xmlparserv2.jar"/>
+              </fileset>
+              <!-- End of #Sql file locations (when embedded) -->          
+            </classpath>
+            <!-- for Unix -->
+            <env key="LD_LIBRARY_PATH"
+                 value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
+            <!-- finally the arguments for the class -->
+            <arg value="-S" /> <!-- silent -->
+            <arg value="${quote}${userid}${quote}" />
+          </java>
+        </try>
+        <catch>
+          <!-- show classpath -->
+          <pathconvert property="sqlcl.classpath.property"
+                       refid="sqlcl.classpath"/>
+          <ac:var name="index" value="1"/>
+          <ac:for list="${sqlcl.classpath.property}"
+               delimiter="${path.separator}"
+               param="file">
+            <sequential>
+              <echo message="(synchronize.xml.sqlcl) classpath #${index}: @{file}"/>
+              <ac:math result="index"
+                       operand1="${index}"
+                       operation="+"
+                       operand2="1"
+                       datatype="int"/>
+            </sequential>
+          </ac:for>
+          <!-- show version of sqlcl -->
+          <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
+                fork="true"
+                spawn="false"
+                failonerror="false">
+            <sysproperty key="java.awt.headless" value="true"/>
+            <sysproperty key="apple.awt.UIElement" value="true"/>
+            <jvmarg value="-Xss10M"/>
+            <classpath refid="sqlcl.classpath" />
+            <!-- for Unix -->
+            <env key="LD_LIBRARY_PATH"
+                 value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
+            <!-- finally the arguments for the class -->
+            <arg value="-V" /> <!-- show version -->
+          </java>
+          <!-- fail anyhow -->
+          <fail message="${@{name}.error}"/>
+        </catch>
+      </ac:trycatch>
+    </sequential>
+  </macrodef>
+
+  <target name="import-sqlcl"
+          depends="init-import"
+          if="my.sql.home">
+    <echo message="(synchronize.xml.import-sqlcl) Import is using Java SqlCli" />
+    <sqlcl name="import"
+           dir="${input.file.dir}"
+           inputstring='@${basedir}/import.sql "${workspace}" "${application}" "${input.file}"'>
+    </sqlcl>
+  </target>
+
+  <target name="import"
+          depends="init,import-sqlplus,import-sqlcl"
+          description="import">
+    <echo message="(synchronize.xml.import)" />
+  </target>
+
+  <!-- EXPORT -->
+  
+  <target name="init-export" depends="init">
+    <property name="output.file" value="f${application}.sql" />
+    <basename property="output.file.base" file="${output.file}" suffix=".sql" />
+    <delete file="${output.dir}/${output.file}" quiet="true" />
+    <delete dir="${output.dir}/${output.file.base}" quiet="true"/>
+  </target>
+  
+  <!-- export solution with Java SqlCli class -->
+  <target name="export-sqlcl"
+          depends="init-export"
+          if="my.sql.home">
+    <echo message="(synchronize.xml.export-sqlcl) Writing Apex export of application ${application}" />
+    <!-- Following command may create ${output.file} or not depending on SQL version -->
+    <sqlcl name="export"
+           dir="${output.dir}"
+           inputstring='@${basedir}/export.sql "${workspace}" "${application}"'>
+    </sqlcl>
+  </target>
+
+  <!-- export solution with oracle.apex.APEXExport class -->
+  <target name="export-java"
+          depends="init-export,init-split-userid"
+          unless="my.sql.home">
+    <echo message="(synchronize.xml.export-java)" />
+
+    <!-- first run pre_export.sql to apply seed translations and publish the
+         application -->
+    <sqlplus name="pre_import"
+             dir=""
+             inputstring='@${basedir}/pre_export.sql "${workspace}" "${application}"' />
+
+    <echo message="(synchronize.xml.export-java) Writing Apex export of application ${application}" />
+    <java classname="oracle.apex.APEXExport" fork="true" dir="${output.dir}">
+      <arg value="-db"/>
+      <arg value="${my.db}"/>
+      <arg value="-user"/>
+      <arg value="${my.user}"/>
+      <arg value="-password"/>
+      <arg value="${my.password}"/>
+      <arg value="-applicationid"/>
+      <arg value="${application}"/>
+      <arg value="-expPubReports"/>
+      <arg value="-expSavedReports"/>
+      <arg value="-expTranslations"/>
+      <arg value="-expOriginalIds"/>
+      <arg value="-split"/>
+      <classpath>
+        <pathelement refid="runtime.classpath"/>
+        <pathelement path="${lib.dir}"/>
+      </classpath>
+    </java>
+  </target>
+
+  <target name="export"
+          depends="init,export-java,export-sqlcl"
+          description="export">
+    <echo message="(synchronize.xml.export)" />
+    <replaceregexp file="${output.dir}/${output.file.base}/application/create_application.sql"
+                   match=",p_flow_version=>'.*'"
+                   replace=",p_flow_version=>'Version ${application.version}'"
+                   byline="true"/>
+    <delete file="${output.dir}/${output.file}" quiet="true" />
+  </target>
+
+</project>

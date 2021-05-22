@@ -1,0 +1,33 @@
+prompt --application/shared_components/navigation/breadcrumbs/breadcrumb
+begin
+wwv_flow_api.create_menu(
+ p_id=>wwv_flow_api.id(50984017497475157)
+,p_name=>'Breadcrumb'
+);
+wwv_flow_api.create_menu_option(
+ p_id=>wwv_flow_api.id(50984287532475157)
+,p_short_name=>'Home'
+,p_link=>'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.'
+,p_page_id=>1
+);
+wwv_flow_api.create_menu_option(
+ p_id=>wwv_flow_api.id(51129258133475383)
+,p_short_name=>'Administration'
+,p_link=>'f?p=&APP_ID.:10000:&SESSION.'
+,p_page_id=>10000
+);
+wwv_flow_api.create_menu_option(
+ p_id=>wwv_flow_api.id(53002301655395355)
+,p_short_name=>'Components'
+,p_link=>'f?p=&APP_ID.:3000:&SESSION.'
+,p_page_id=>3000
+);
+wwv_flow_api.create_menu_option(
+ p_id=>wwv_flow_api.id(53031687768404441)
+,p_parent_id=>wwv_flow_api.id(53002301655395355)
+,p_short_name=>'Wizards'
+,p_link=>'f?p=&APP_ID.:1208:&SESSION.'
+,p_page_id=>1208
+);
+end;
+/

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="windows-1252" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  
+  <parent>
+    <groupId>com.paulissoft.tools</groupId>
+    <artifactId>db</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.paulissoft.tools</groupId>
+  <artifactId>EXT</artifactId>
+  <packaging>pom</packaging>
+  <description>Build EXT component</description>
+  
+  <properties>
+    <flyway.table>schema_version_tools_ext</flyway.table>
+    <db.object.names.include>1</db.object.names.include>
+    <db.object.names>EXT_LOAD_FILE_PKG
+,EXT_LOAD_FILE_COLUMN_V
+,EXT_LOAD_FILE_OBJECT_V
+    </db.object.names>
+    <db.test.phase>test</db.test.phase>
+  </properties>
+
+</project>
+

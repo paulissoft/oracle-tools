@@ -1,0 +1,153 @@
+CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_ATTRIBUTE_DDL" AS
+
+constructor function t_type_attribute_ddl
+( self in out nocopy t_type_attribute_ddl
+, p_obj in t_schema_object
+)
+return self as result
+is
+  l_type_attribute_object t_type_attribute_object := treat(p_obj as t_type_attribute_object);
+  l_buffer varchar2(32767 char) := null;
+  l_clob clob := null;
+  " ADD " constant varchar2(5) := ' ADD ';
+  l_data_default t_text_tab;
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_TYPE_ATTRIBUTE_DDL.T_TYPE_ATTRIBUTE_DDL');
+$end
+
+  self.obj := p_obj;
+  self.ddl_tab := t_ddl_tab();
+
+  /* construct the ALTER TYPE ADD ATTRIBUTE here */ 
+
+  pkg_str_util.append_text
+  ( pi_text => 'ALTER TYPE "' || l_type_attribute_object.base_object_schema() || '"."' || l_type_attribute_object.base_object_name() || '"' ||
+               " ADD " || 'ATTRIBUTE "' || l_type_attribute_object.member_name() || '" ' || l_type_attribute_object.data_type()
+  , pio_buffer => l_buffer
+  , pio_clob => l_clob
+  );
+
+  -- append the buffer to l_clob (if that has not already been done)
+  pkg_str_util.append_text
+  ( pi_buffer => l_buffer
+  , pio_clob => l_clob
+  );
+
+  self.add_ddl
+  ( p_verb => 'ALTER'
+  , p_text => l_clob
+  );
+
+  dbms_lob.freetemporary(l_clob);
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+
+  return;
+end;
+
+overriding member procedure migrate
+( self in out nocopy t_type_attribute_ddl
+, p_source in t_schema_ddl
+, p_target in t_schema_ddl
+)
+is
+  l_buffer varchar2(32767 char) := null;
+  l_clob clob := null;
+  l_source_type_attribute_object t_type_attribute_object := treat(p_source.obj as t_type_attribute_object);
+  l_target_type_attribute_object t_type_attribute_object := treat(p_target.obj as t_type_attribute_object);
+  l_changed boolean;
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_TYPE_ATTRIBUTE_DDL.MIGRATE');
+  dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
+$end
+
+  -- first the standard things
+  t_schema_ddl.migrate
+  ( p_source => p_source
+  , p_target => p_target
+  , p_schema_ddl => self
+  );
+  
+  l_changed := false;
+
+  pkg_str_util.append_text
+  ( pi_text => 'ALTER TYPE "' || l_source_type_attribute_object.base_object_schema() || '"."' || l_source_type_attribute_object.base_object_name() || '"' ||
+               ' MODIFY "' || l_source_type_attribute_object.member_name() || '" '
+  , pio_buffer => l_buffer
+  , pio_clob => l_clob
+  );
+
+  -- datatype changed?
+  if l_source_type_attribute_object.data_type() != l_target_type_attribute_object.data_type()
+  then
+    pkg_str_util.append_text
+    ( pi_text => l_source_type_attribute_object.data_type()
+    , pio_buffer => l_buffer
+    , pio_clob => l_clob
+    );
+    l_changed := true;
+  end if;
+
+  if l_changed
+  then
+    -- append the buffer to l_clob (if that has not already been done)
+    pkg_str_util.append_text
+    ( pi_buffer => l_buffer
+    , pio_clob => l_clob
+    );
+
+    self.add_ddl
+    ( p_verb => 'ALTER'
+    , p_text => l_clob
+    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    );
+  end if;
+
+  if l_clob is not null
+  then
+    dbms_lob.freetemporary(l_clob);
+  end if;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+end migrate;
+
+overriding member procedure uninstall
+( self in out nocopy t_type_attribute_ddl
+, p_target in t_schema_ddl
+)
+is
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_TYPE_ATTRIBUTE_DDL.UNINSTALL');
+$end
+
+  -- ALTER type "owner"."type" DROP ATTRIBUTE "column"
+  self.add_ddl
+  ( p_verb => 'ALTER'
+  , p_text => 'ALTER ' ||
+              p_target.obj.base_object_type() ||
+              ' "' ||
+              p_target.obj.base_object_schema() ||
+              '"."' ||
+              p_target.obj.base_object_name() ||
+              '"' ||
+              ' DROP ATTRIBUTE "' ||
+              treat(p_target.obj as t_type_attribute_object).member_name() ||
+              '"'
+  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
+  );
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+end uninstall;
+
+end;
+/
+

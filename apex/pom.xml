@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="windows-1252" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.paulissoft.tools</groupId>
+    <artifactId>db</artifactId>
+    <version>${revision}</version>
+    <relativePath>../db/pom.xml</relativePath>
+  </parent>
+  <groupId>com.paulissoft.tools</groupId>
+  <artifactId>apex</artifactId>
+  <packaging>pom</packaging>
+  <description>Core POM for Oracle Apex builds</description>
+  
+  <properties>
+    <oracle_tools.apex.dir>${maven.multiModuleProjectDirectory}/apex/target/dependency/apex-${oracle_tools.version}</oracle_tools.apex.dir>
+    <apex.src.dir>${basedir}/src</apex.src.dir>
+  </properties>
+
+  <build>
+    <resources>
+      <resource>       
+        <directory>${basedir}/src/f${apex.application}</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>${maven-antrun-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>apex-debug-before</id>
+              <phase>validate</phase>
+              <configuration>
+                <target if="maven.apex.debug">
+                  <echoproperties prefix="apex." />
+                  <echoproperties prefix="sql." />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>apex-init</id>
+              <phase>validate</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target>
+                  <condition property="apex.skip" value="true" else="false">
+                    <not>
+                      <available file="${apex.src.dir}" type="dir" />
+                    </not>
+                  </condition>
+                  <property name="db.connect.skip" value="${apex.skip}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>apex-operation</id>
+              <phase>compile</phase>
+              <configuration>
+                <target unless="${apex.skip}">
+                  <!-- derive apex.config.dir from db.properties (apex.properties must be in the same directory) -->
+                  <dirname property="apex.config.dir" file="${db.properties}" />
+
+                  <!-- Read the apex properties file into apex namespace.
+                       The following property should be set:
+                       - application
+                  -->
+                  <echo message="Reading apex properties from file ${apex.config.dir}/apex.properties" />
+                  <property file="${apex.config.dir}/apex.properties" prefix="apex" />
+                  
+                  <fail message="Property apex.operation must be export or import">
+                    <condition>
+                      <not>
+                        <or>
+                          <equals arg1="${apex.operation}" arg2="export" />
+                          <equals arg1="${apex.operation}" arg2="import" />
+                        </or>
+                      </not>
+                    </condition>
+                  </fail>
+                  <fail message="Property db.userid must be set" unless="db.userid" />
+                  <fail message="Property apex.application must be set" unless="apex.application" />
+                  <fail message="Property apex.workspace must be set"
+                        unless="apex.workspace" />
+                  <!-- a default apex.application.version as a timestamp -->
+                  <tstamp>
+                    <format property="apex.application.version"
+                            pattern="yyyy-MM-dd hh:mm:ss"/>
+                  </tstamp>
+                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.dir}">
+                    <property name="application" value="${apex.application}" />
+                    <property name="application.version" value="${apex.application.version}" />
+                    <property name="userid" value="${db.userid}" />
+                    <property name="workspace" value="${apex.workspace}" />
+                    <property name="output.dir" value="${basedir}/src" />
+                    <property name="sql.home" value="${sql.home}" />
+                    <property name="env.SQL_HOME" value="${env.SQL_HOME}" />
+                    <property name="env.LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}"/>
+                    <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
+                  </ant>
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>apex-debug-after</id>
+              <phase>compile</phase>
+              <configuration>
+                <target if="maven.apex.debug">
+                  <echoproperties prefix="apex." />
+                  <echoproperties prefix="sql." />
+                  <echoproperties prefix="env." />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>      
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven-assembly-plugin.version}</version>
+        <!-- Configuration won't be propagated to children -->
+        <inherited>false</inherited>
+        <!-- do not use parent configuration -->
+        <configuration combine.self="override">                                     
+          <descriptorRefs>
+            <descriptorRef>project</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>apex-export</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <apex.operation>export</apex.operation>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <!-- This matches and thus overrides execution defined above -->
+                <id>db-install-init</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>apex-import</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <apex.operation>import</apex.operation>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <!-- This matches and thus overrides execution defined above -->
+                <id>db-install-init</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- Are we in the oracle_tools/apex directory? If so, override oracle_tools.apex.dir -->
+    <profile>
+      <id>oracle-tools</id>
+      <activation>
+        <file>
+          <exists>${maven.multiModuleProjectDirectory}/db/src/main/java/GenerateDDL.java</exists>
+        </file>
+      </activation>
+      <properties>
+        <oracle_tools.apex.dir>${maven.multiModuleProjectDirectory}/apex</oracle_tools.apex.dir>
+        <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
+        <db.schema>${db.oracle_tools_schema}</db.schema>
+      </properties>
+    </profile>
+
+  </profiles>
+  
+</project>

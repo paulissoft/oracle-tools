@@ -1,0 +1,22 @@
+prompt --application/shared_components/user_interface/lovs/lov_boolean
+begin
+wwv_flow_api.create_list_of_values(
+ p_id=>wwv_flow_api.id(57038586386489135)
+,p_lov_name=>'LOV_BOOLEAN'
+,p_lov_query=>'.'||wwv_flow_api.id(57038586386489135)||'.'
+,p_location=>'STATIC'
+);
+wwv_flow_api.create_static_lov_data(
+ p_id=>wwv_flow_api.id(57038819730489155)
+,p_lov_disp_sequence=>1
+,p_lov_disp_value=>'No'
+,p_lov_return_value=>'0'
+);
+wwv_flow_api.create_static_lov_data(
+ p_id=>wwv_flow_api.id(57039234506489156)
+,p_lov_disp_sequence=>2
+,p_lov_disp_value=>'Yes'
+,p_lov_return_value=>'1'
+);
+end;
+/

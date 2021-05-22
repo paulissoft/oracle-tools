@@ -1,0 +1,177 @@
+CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_GRANT_OBJECT" AS
+
+constructor function t_object_grant_object
+( self in out nocopy t_object_grant_object
+, p_base_object in t_named_object
+, p_object_schema in varchar2
+, p_grantee in varchar2
+, p_privilege in varchar2
+, p_grantable in varchar2
+)
+return self as result
+is
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_OBJECT_GRANT_OBJECT.T_OBJECT_GRANT_OBJECT');
+  p_base_object.print();
+  dbug.print
+  ( dbug."input"
+  , 'p_object_schema: %s; p_grantee: %s; p_privilege: %s; p_grantable: %s'
+  , p_object_schema
+  , p_grantee
+  , p_privilege
+  , p_grantable
+  );
+$end
+
+  self.base_object$ := p_base_object;
+  self.network_link$ := null;
+  self.object_schema$ := p_object_schema;
+  self.grantee$ := p_grantee;
+  self.privilege$ := p_privilege;
+  self.grantable$ := p_grantable;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+
+  return;
+end;
+
+-- begin of getter(s)
+
+overriding member function object_type
+return varchar2
+deterministic
+is
+begin
+  return 'OBJECT_GRANT';
+end object_type;  
+
+overriding member function grantee
+return varchar2
+deterministic
+is
+begin
+  return self.grantee$;
+end grantee;
+
+overriding member function privilege
+return varchar2
+deterministic
+is
+begin
+  return self.privilege$;
+end privilege;
+
+overriding member function grantable
+return varchar2
+deterministic
+is
+begin
+  return self.grantable$;
+end grantable;
+
+-- end of getter(s)
+
+overriding member procedure chk
+( self in t_object_grant_object
+, p_schema in varchar2
+)
+is
+$if pkg_ddl_util.c_#140920801 $then
+  pragma autonomous_transaction;
+  
+  -- Capture invalid objects before releasing to next enviroment.
+  l_statement varchar2(4000 char) := null;
+$end  
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter('T_OBJECT_GRANT_OBJECT.CHK');
+$end
+
+  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+
+  if self.object_schema() is not null
+  then
+    raise_application_error(-20000, 'Object schema should be empty.');
+  end if;
+  if self.object_name() is not null
+  then
+    raise_application_error(-20000, 'Object name should be empty.');
+  end if;
+
+  if self.column_name() is not null
+  then
+    raise_application_error(-20000, 'Column name should be null.');
+  end if;
+  if self.grantee() is null
+  then
+    raise_application_error(-20000, 'Grantee should not be null.');
+  end if;
+  if self.privilege() is null
+  then
+    raise_application_error(-20000, 'Privilege should not be null.');
+  end if;
+  if self.grantable() is null
+  then
+    raise_application_error(-20000, 'Grantable should not be null.');
+  end if;
+
+$if pkg_ddl_util.c_#140920801 $then
+
+  -- Capture invalid objects before releasing to next enviroment.
+  -- This is implemented by re-granting the grant statement when the grantor is equal to the logged in user.
+  
+  if pkg_ddl_util.do_chk(self.object_type()) and self.network_link() is null
+  then
+    begin
+      select  'GRANT ' ||
+              grt.privilege ||
+              ' ON "' ||
+              grt.table_schema ||
+              '"."' ||
+              grt.table_name ||
+              '" TO "' ||
+              grt.grantee ||
+              '"' ||
+              case when grt.grantable = 'YES' then ' WITH GRANT OPTION' end as stmt
+      into    l_statement
+      from    all_tab_privs grt
+$if dbms_db_version.version < 12 $then
+              inner join all_objects obj
+              on obj.owner = grt.table_schema and obj.object_name = grt.table_name
+$end              
+      where   grt.table_schema = self.base_object_schema()
+$if dbms_db_version.version < 12 $then
+      and     obj.object_type = self.base_dict_object_type()
+      and     obj.object_type not in ('MATERIALIZED VIEW', 'TYPE BODY', 'PACKAGE BODY')
+$else
+      and     grt.type = self.base_dict_object_type()
+      and     grt.type not in ('MATERIALIZED VIEW', 'TYPE BODY', 'PACKAGE BODY')
+$end
+      and     grt.table_name = self.base_object_name()
+      and     grt.grantee = self.grantee()
+      and     grt.privilege = self.privilege()
+      and     grt.grantable = self.grantable()
+      and     grt.grantor = user /* we can always grant our own objects */
+      ;
+  
+      execute immediate l_statement;
+    exception
+      when no_data_found
+      then
+        null;
+    end;  
+  end if;
+  
+$end
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+end chk;
+
+end;
+/
+

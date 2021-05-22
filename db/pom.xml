@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.paulissoft</groupId>
+    <artifactId>tools</artifactId>
+    <version>${revision}</version>
+  </parent>
+  <groupId>com.paulissoft.tools</groupId>
+  <artifactId>db</artifactId>
+  <packaging>pom</packaging>
+  <description>Core POM for Database builds</description>
+
+  <properties>
+    <!-- The way to determine the oracle_tools.db.dir for child projects is to use dependencies. -->
+    <oracle_tools.db.dir>${maven.multiModuleProjectDirectory}/db/target/dependency/db-${oracle_tools.version}</oracle_tools.db.dir>
+    
+    <!-- database properties -->
+    <db.src.scripts>src</db.src.scripts>
+    <db.src.dml.scripts>${db.src.scripts}/dml</db.src.dml.scripts>
+    <db.src.full.scripts>${db.src.scripts}/full</db.src.full.scripts>
+    <db.src.incr.scripts>${db.src.scripts}/incr</db.src.incr.scripts>
+    <!-- callbacks are added to the artifact for deployment later on without
+         CD sources -->
+    <db.src.callbacks.scripts>${oracle_tools.db.dir}/src/callbacks</db.src.callbacks.scripts>
+
+    <!-- compile all and reuse settings for afterMigrate.sql -->
+    <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
+    <flyway.placeholders.reuse_settings>false</flyway.placeholders.reuse_settings>
+
+    <!-- 2020-05-12 GJP Add a db.schema.prefix to handle generic projects -->
+    <!-- do not define db.schema.prefix so the logon error is more descriptive -->
+    <!-- db.schema.prefix /--> 
+    <db.schema>${project.artifactId}</db.schema>
+    <!-- object type as defined in documentation of Oracle package DBMS_METADATA -->
+    <db.object.type />
+    <!-- A list of object names to include or exclude (or empty to include all) -->
+    <db.object.names />
+    <!-- db.object.names.include specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include) -->
+    <db.object.names.include />
+    <!--
+        Normally these are the possible stages in a project:
+        1) development
+        2) integration
+        3) test
+        4) acceptance
+        5) production
+        
+        Not all stages are necessary for a project: the project decides.
+        
+        The development stage has no previous database, i.e. it is not
+        necessary to compare the current (development) database with a
+        previous database to generate incremental DDL scripts (create/alter
+        table/sequence ..., etcetera).  The subsequent stages do have a
+        previous database: for production this is acceptance, for acceptance
+        this is test, etcetera.
+
+        The information about the current (and previous) database is stored in
+        a file named env.properties which must be in a configuration folder
+        (taking the pom.xml directory as reference) like (the first wins):
+        a) conf
+        b) ../conf
+        c) ../../conf
+        d) ../../../conf
+        e) ${db.config.dir}
+        
+        The file env.properties must have a line like:
+        db=<database directory name>
+        
+        The file env.properties may have a line like:
+        db.prev=<database directory name>
+
+        The database directory name is a directory below a configuration
+        folder with a file named db.properties, just like env.properties
+
+        The following properties are set in db.properties:
+        - username
+        - userid
+        - database.link
+        
+        These are prefixed with db (or db.prev) using the criteria above.
+        
+        Please note that it is also possible to define properties via the
+        command line.
+    -->
+    <!-- utplsql properties -->
+    <db.utplsql.path>${db.schema}</db.utplsql.path>
+    <db.test.phase>none</db.test.phase>
+    <!-- must set it here so profile oracle-tools can override it when
+         db-generate-ddl-full is also active -->
+    <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
+    <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
+    <db.generate.ddl.incr.skip>true</db.generate.ddl.incr.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.oracle.ojdbc</groupId>
+      <artifactId>ojdbc8</artifactId>
+      <version>${ojdbc8.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources />
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>${maven-antrun-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>db-debug-before</id>
+              <!-- use initialize here so the Apex pom can use validate -->
+              <phase>initialize</phase>
+              <configuration>
+                <target if="maven.db.debug">
+                  <!-- also dbUrl, dbUser, dbPass -->
+                  <echoproperties prefix="java." />
+                  <echoproperties prefix="maven." />
+                  <echoproperties prefix="db" />
+                  <echoproperties prefix="flyway." />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>db-init</id>
+              <!-- use initialize here so the Apex pom can use validate -->
+              <phase>initialize</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target>
+                  <condition property="db.connect.skip" value="true" else="false">
+                    <not>
+                      <available file="${db.src.full.scripts}" type="dir" />
+                    </not>
+                  </condition>
+                  <property name="db.install.skip" value="${db.connect.skip}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <!-- This must be named -->
+              <id>db-connect-init</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
+              <phase>process-resources</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target unless="${db.connect.skip}">
+                  <!-- GPA 2017-03-09 #141396395
+                       As a CD developer I want to maintain the connection
+                       data in just one configuration folder.
+
+                       Use (in that order)
+                       - conf
+                       - ../conf
+                       - ../../conf
+                       - ../../../conf
+                       - ${db.config.dir}
+                       to look for DB related properties files.
+                       
+                       This reduces the need for duplicates folders/files.
+                  -->
+                  
+                  <!-- READ THE env.properties FILE. -->
+                  
+                  
+                  <!-- First find the env.properties file -->
+                  <condition property="env.properties" value="conf${file.separator}env.properties">
+                    <available file="conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="..${file.separator}conf${file.separator}env.properties">
+                    <available file="..${file.separator}conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="..${file.separator}..${file.separator}conf${file.separator}env.properties">
+                    <available file="..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties">
+                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="${db.config.dir}${file.separator}env.properties">
+                    <available file="${db.config.dir}${file.separator}env.properties" type="file" />
+                  </condition>
+
+                  <property name="env.properties.abs" location="${env.properties}" />
+
+                  <!--
+                      1) read the file env.properties (file may not exist)
+                      2) the file should set db and maybe db.prev (for backwards compability we also check db.source and db.target)
+                  -->
+                  <echo message="Reading environment properties from file ${env.properties.abs}" />
+                  <property file="${env.properties.abs}" />
+                  
+                  <!-- READ THE flyway-app.conf FILE. -->
+                  
+                  <!-- If the file is not there: no problem according to the Ant documentation. -->
+                  <dirname file="${env.properties.abs}"
+                           property="env.properties.dir" />
+                  <echo>Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
+                  <!-- no prefix needed -->
+                  <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
+
+                  <!-- backwards compability -->
+                  <!-- db.target first because that is the installation database -->
+                  <condition property="db" value="${db.target}">
+                    <isset property="db.target" />
+                  </condition>
+                  <condition property="db.password" value="${db.target.password}">
+                    <isset property="db.target.password" />
+                  </condition>
+                  
+                  <!-- db.source next -->
+                  <condition property="db" value="${db.source}">
+                    <isset property="db.source" />
+                  </condition>
+                  <condition property="db" value="${db.source.password}">
+                    <isset property="db.source.password" />
+                  </condition>
+
+                  <!-- READ THE db.properties FILE. -->
+                  
+                  <!-- DB -->
+                  <!-- First find the properties file -->
+                  <condition property="db.properties" value="conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="${db.config.dir}${file.separator}${db}${file.separator}db.properties">
+                    <available file="${db.config.dir}${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <property name="db.properties.abs" location="${db.properties}" />
+                  <echo message="Reading db properties from file ${db.properties.abs}" />
+                  <!-- prefixValues="true" is needed for correctly expanding
+                       username=prxy[${schema}] -->
+                  <property file="${db.properties.abs}" prefix="db"
+                            prefixValues="true" />
+                  
+                  <!-- READ THE flyway-db.conf FILE. -->
+                  
+                  <!-- If the file is not there: no problem according to the Ant documentation. -->
+                  <dirname file="${db.properties.abs}"
+                           property="db.properties.dir" />
+                  <echo>Reading flyway properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
+                  <!-- no prefix needed -->
+                  <property file="${db.properties.dir}${file.separator}flyway-db.conf" />                    
+                  <!-- new eazy connect syntax -->
+                  <!-- db info -->
+                  <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />
+                  <property name="db.url" value="jdbc:oracle:thin:@${db.connect.identifier}" />
+                  <!-- use proxy users if property db.proxy.username exists -->
+                  <condition property="db.username"
+                             value="${db.proxy.username}[${db.schema}]"
+                             else="${db.schema}">
+                    <isset property="db.proxy.username"/>
+                  </condition>
+                  <!--property name="db.password" value="${db.proxy.password}"/-->
+                  <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
+
+                  <!-- set utplsql properties -->
+                  <property name="dbUrl" value="${db.url}" />
+                  <property name="dbUser" value="${db.username}" />
+                  <property name="dbPass" value="${db.password}" />
+
+                  <!-- READ THE db.prev.properties FILE. -->
+                  
+                  <!-- DB.PREV -->
+                  <!-- First find the properties file -->
+                  <condition property="db.prev.properties" value="conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <property name="db.prev.properties.abs" location="${db.prev.properties}" />
+                  <!-- target info -->
+                  <echo message="Reading db.prev properties from file ${db.prev.properties.abs}" />
+                  <property file="${db.prev.properties.abs}" prefix="db.prev" />
+                  <!-- db.prev.database.link is empty meaning the previous database schema is used -->
+                  <property name="db.prev.database.link"
+                            value="${db.schema}@${db.prev.service}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+
+            <execution>
+              <!-- This must be named -->
+              <id>db-install-init</id>
+              <phase>process-resources</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target unless="${db.install.skip}">
+                  <property name="db.src.dml.scripts.abs" location="${db.src.dml.scripts}" />
+                  <fail message="Directory ${db.src.dml.scripts.abs} does not exist">
+                    <condition>
+                      <not>
+                        <available file="${db.src.dml.scripts.abs}" type="dir"/>
+                      </not>
+                    </condition>
+                  </fail>
+                  
+                  <property name="db.src.full.scripts.abs" location="${db.src.full.scripts}" />
+                  <fail message="Directory ${db.src.full.scripts.abs} does not exist">
+                    <condition>
+                      <not>
+                        <available file="${db.src.full.scripts.abs}" type="dir"/>
+                      </not>
+                    </condition>
+                  </fail>
+                  
+                  <property name="db.src.incr.scripts.abs" location="${db.src.incr.scripts}" />
+                  <fail message="Directory ${db.src.incr.scripts.abs} does not exist">
+                    <condition>
+                      <not>
+                        <available file="${db.src.incr.scripts.abs}" type="dir"/>
+                      </not>
+                    </condition>
+                  </fail>
+                  
+                  <property name="db.src.callbacks.scripts.abs" location="${db.src.callbacks.scripts}" />
+                  <fail message="Directory ${db.src.callbacks.scripts.abs} does not exist">
+                    <condition>
+                      <not>
+                        <available file="${db.src.callbacks.scripts.abs}" type="dir"/>
+                      </not>
+                    </condition>
+                  </fail>
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+
+            <execution>
+              <id>db-debug-after</id>
+              <phase>process-resources</phase>
+              <configuration>
+                <target if="maven.db.debug">
+                  <!-- env. and db. set by db-init, db-connect-init or
+                       db-install-init -->
+                  <!-- flyway. set by reading property files -->
+                  <echoproperties prefix="env" />
+                  <echoproperties prefix="db" />
+                  <echoproperties prefix="flyway." />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- Flyway -->
+        <plugin>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-maven-plugin</artifactId>
+          <version>${flyway.version}</version>
+          <configuration>
+            <skip>${db.install.skip}</skip>
+            <locations>                
+              <location>filesystem:${db.src.full.scripts.abs}</location>
+              <location>filesystem:${db.src.incr.scripts.abs}</location>
+              <location>filesystem:${db.src.dml.scripts.abs}</location>
+              <location>filesystem:${db.src.callbacks.scripts.abs}</location>
+            </locations>
+            <baselineVersion>0</baselineVersion>
+            <baselineOnMigrate>true</baselineOnMigrate>
+            <cleanDisabled>true</cleanDisabled>
+            <user>${db.username}</user>
+            <password>${db.password}</password>
+            <!-- The password may be set on the command line -->
+            <url>${db.url}</url>
+          </configuration>
+          <executions>
+            <execution>
+              <!-- This must be named -->
+              <id>db-install</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
+              <phase>process-resources</phase>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- utplsql v3 -->
+        <plugin>
+          <groupId>org.utplsql</groupId>
+          <artifactId>utplsql-maven-plugin</artifactId>
+          <version>${utplsql-maven-plugin.version}</version>
+          <configuration>
+            <!-- this plugin has no skip tag -->
+            <paths>
+              <path>${db.utplsql.path}</path>
+            </paths>
+          </configuration>
+          <executions>
+            <execution>
+              <!-- This must be named -->
+              <id>db-test</id>
+              <phase>${db.test.phase}</phase>
+              <goals>
+                <goal>test</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>properties-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>set-system-properties</goal>
+            </goals>
+            <configuration>
+              <properties>
+                <property>
+                  <!-- SEVERE: attempt to configure ONS in FanManager failed with oracle.ons.NoServersAvailable: Subscription time out -->
+                  <name>oracle.jdbc.fanEnabled</name>
+                  <value>false</value>
+                </property>
+              </properties>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven-assembly-plugin.version}</version>
+        <!-- Configuration won't be propagated to children -->
+        <inherited>false</inherited>
+        <!-- do not use parent configuration -->
+        <configuration combine.self="override">                                     
+          <descriptorRefs>
+            <descriptorRef>project</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-install</id>
+      <properties>
+        <default.goal>compile flyway:repair flyway:migrate</default.goal>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-test</id>
+      <properties>
+        <default.goal>test</default.goal>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-install-init</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.utplsql</groupId>
+            <artifactId>utplsql-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-generate-ddl-full</id>
+      <properties>
+        <default.goal>compile</default.goal>       
+        <!-- Must we remove the output directory tree before creating full scripts? -->
+        <db.full.remove.output.directory>yes</db.full.remove.output.directory>
+        <!-- Pivotal #132752233 GPA 2016-10-19
+             Is the FORCE keyword in scripts (CREATE OR REPLACE FORCE VIEW)
+             generated by profile generate-ddl-full allowed? -->
+        <db.full.force.view>no</db.full.force.view>
+        <!-- skip install.sql / uninstall.sql scripts during a full generation? -->
+        <db.full.skip.install.sql>yes</db.full.skip.install.sql>
+        <db.full.interface>pkg_ddl_util v4</db.full.interface> <!-- pkg_datapump_util -->
+        <db.generate.ddl.full.skip>${db.install.skip}</db.generate.ddl.full.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${maven-antrun-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>db-generate-ddl-full</id>
+                <phase>process-resources</phase>
+                <configuration>
+                  <target unless="${db.generate.ddl.full.skip}">
+                    <fail message="Property db.userid must be set" unless="db.userid" />
+                    <fail message="Property db.password must be set" unless="db.password" />
+                    <ant antfile="${oracle_tools.db.dir}/src/main/resources/generate_ddl.xml"
+                         target="generate-ddl-full"
+                         inheritAll="false"
+                         dir=".">
+                      <property name="source.db.name" value="" />
+                      <property name="schema" value="${db.schema}" />
+                      <property name="userid" value="${db.userid}" />
+                      <property name="object.type" value="${db.object.type}" />
+                      <property name="object.names" value="${db.object.names}" />
+                      <property name="object.names.include" value="${db.object.names.include}" />
+                      <property name="full.remove.output.directory" value="${db.full.remove.output.directory}" />
+                      <property name="full.force.view" value="${db.full.force.view}" />
+                      <property name="full.output.directory" value="${db.src.full.scripts}" />
+                      <property name="full.skip.install.sql" value="${db.full.skip.install.sql}" />
+                      <property name="full.interface" value="${db.full.interface}" />
+                      <property name="full.strip.source.schema" value="${db.generate.full.strip.source.schema}" />
+                      <property name="owner" value="${db.oracle_tools_schema}" />
+                      <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
+                      <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
+                      <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
+                    </ant>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-generate-ddl-incr</id>
+      <properties>
+        <default.goal>compile</default.goal>       
+        <!-- Use dynamic SQL for the incremental migration scripts? -->
+        <db.incr.dynamic.sql>no</db.incr.dynamic.sql>
+        <!-- skip repeatable/replaceable objects in incremental migration scripts? -->
+        <db.incr.skip.repeatables>yes</db.incr.skip.repeatables>
+        <db.incr.interface>pkg_ddl_util v4</db.incr.interface> <!-- pkg_datapump_util -->
+        <db.generate.ddl.incr.skip>${db.install.skip}</db.generate.ddl.incr.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${maven-antrun-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>db-generate-ddl-incr</id>
+                <phase>process-resources</phase>
+                <configuration>
+                  <target unless="${db.generate.ddl.incr.skip}">
+                    <fail message="Property db.prev.database.link must be set" unless="db.prev.database.link" />
+                    <fail message="Property db.password must be set" unless="db.password" />
+                    <ant antfile="${oracle_tools.db.dir}/src/main/resources/generate_ddl.xml"
+                         target="generate-ddl-incr"
+                         inheritAll="false"
+                         dir=".">
+                      <!-- GPA 2017-02-07 #137711209 We connect to the target
+                           and use database links on the target connection to
+                           the source. -->
+                      <property name="userid" value="${db.userid}" />
+                      <property name="source.db.name" value="${db.prev.database.link}" />
+                      <property name="target.db.name" value="" />
+                      <property name="schema" value="${db.schema}" />
+                      <property name="object.type" value="${db.object.type}" />
+                      <property name="object.names" value="${db.object.names}" />
+                      <property name="object.names.include" value="${db.object.names.include}" />
+                      <property name="incr.dynamic.sql" value="${db.incr.dynamic.sql}" />
+                      <property name="incr.output.directory" value="${db.src.incr.scripts}" />
+                      <property name="incr.skip.repeatables" value="${db.incr.skip.repeatables}" />
+                      <property name="incr.interface" value="${db.incr.interface}" />
+                      <property name="owner" value="${db.oracle_tools_schema}" />
+                      <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
+                      <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
+                      <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
+                    </ant>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
+    <!-- Are we in the oracle_tools/db directory? If so, override oracle_tools.db.dir -->
+    <profile>
+      <id>oracle-tools-db</id>
+      <activation>
+        <file>
+          <exists>${maven.multiModuleProjectDirectory}/db/src/main/java/GenerateDDL.java</exists>
+        </file>
+      </activation>
+      <properties>
+        <oracle_tools.db.dir>${maven.multiModuleProjectDirectory}/db</oracle_tools.db.dir>
+        <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
+        <db.schema>${db.oracle_tools_schema}</db.schema>
+        <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>
+      </properties>
+    </profile>
+  </profiles>
+
+  <!-- The only non generic thing -->
+  <modules>
+    <module>cfg</module>
+    <module>data</module>
+    <module>api</module>
+    <module>ddl</module>
+    <module>ext</module>
+    <module>ui</module>
+  </modules>
+
+</project>

@@ -1,0 +1,1027 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.0">
+  <trans-unit>
+    <source>Global Page - Desktop</source>
+    <target>Page globale - Bureau</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Home</source>
+    <target>Accueil</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Upload File</source>
+    <target>Télécharger des fichiers</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Preview File</source>
+    <target>Aperçu du fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load</source>
+    <target>Chargement</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load Summary</source>
+    <target>Résumé de la chargement</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Wizards</source>
+    <target>Assistants</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Components</source>
+    <target>Composants</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Login Page</source>
+    <target>Page de connexion</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Administration</source>
+    <target>Administration</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Application Appearance</source>
+    <target>Apparence de l'application</target>
+  </trans-unit>
+  <trans-unit>
+    <source>About</source>
+    <target>À propos</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Oracle Tools</source>
+    <target>Outils Oracle</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Oracle Tools - Sign In</source>
+    <target>Outils Oracle - Connexion</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>
+    This is the first step of the wizard to upload a spreadsheet file into the database.    
+&lt;/p>
+&lt;p>
+    If the defaults suit you, you may press the Finish button to immediately load the file and go to the last step.
+&lt;/p>
+&lt;p>
+The defaults are:
+&lt;ul>
+    &lt;li>only the first sheet will be loaded (only relevant for a non-CSV file)&lt;/li>
+    &lt;li>the first sheet name (or file name for a CSV) is used to create a table with the same name (if it does not already exist). Thus file 'Example.xlsx' with first sheet 'Sheet 1' will load into a table named "Sheet 1". For a CSV file 'Example 1.csv' it will be "Example 1.csv".&lt;/li>
+    &lt;li>the owner of the table is the application owner - ORACLE_TOOLS - by default&lt;/li>
+    &lt;li>the last sheet column that may be loaded is ZZ&lt;/li>
+    &lt;li>the first row is the header row and these header column names are used to create the table (if necessary)&lt;/li>
+    &lt;li>the datatype of each column is determined by inspecting the data&lt;/li>
+    &lt;li>for a CSV file the character set is Windows CP1252&lt;/li>
+&lt;/ul>       
+&lt;/p></source>
+    <target>&lt;p>
+    Il s'agit de la première étape de l'assistant pour télécharger un fichier de feuille de calcul dans la base de données.
+&lt;/p>
+&lt;p>
+    Si les valeurs par défaut vous conviennent, vous pouvez appuyer sur le bouton Terminer pour charger immédiatement le fichier et passer à la dernière étape.
+&lt;/p>
+&lt;p>
+Les valeurs par défaut sont:
+&lt;ul>
+    &lt;li>seule la première feuille sera chargée (uniquement pertinent pour un fichier non CSV)&lt;/li>
+    &lt;li>le premier nom de feuille (ou nom de fichier pour un CSV) est utilisé pour créer une table avec le même nom (s'il n'existe pas déjà). Ainsi, le fichier 'Example.xlsx' avec la première feuille 'Sheet 1' se chargera dans une table nommée "Sheet 1". Pour un fichier CSV 'Exemple 1.csv', ce sera "Exemple 1.csv".&lt;/li>
+    &lt;li>le propriétaire de la table est le propriétaire de l'application - ORACLE_TOOLS - par défaut&lt;/li>
+    &lt;li>la dernière colonne de feuille qui peut être chargée est ZZ&lt;/li>
+    &lt;li>la première ligne est la ligne d'en-tête et ces noms de colonne d'en-tête sont utilisés pour créer le tableau (si nécessaire)&lt;/li>
+    &lt;li>le type de données de chaque colonne est déterminé en inspectant les données&lt;/li>
+    &lt;li>pour un fichier CSV, le jeu de caractères est Windows CP1252&lt;/li>
+&lt;/ul>       
+&lt;/p></target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>
+This is the second step of the wizard to upload a spreadsheet file into the database.    
+&lt;/p>
+
+&lt;p>
+A Download/View button is provided so you can determine the sheet(s) and/or last column to load into the database.  
+&lt;/p>
+
+&lt;p>
+Furthermore a load file info history report is shown with information stored when you actually load a file in the next step of the wizard. You can remove history from this grid if needed by selecting line(s), choosing Delete Row(s) from the Row/Selection Action menu next to the selectors and then press the Save button.
+&lt;/p>
+
+&lt;p>
+The load file info history allows you to (de)select a line in order to (un)set information like object name, sheet name, last excel column, first header row, last header row, first data row or determine data type yes/no. This report is sorted by similarity between file names (best matches first) and within that by descending date.
+&lt;/p>
+
+&lt;p>
+For every load file info there is also a detail report showing the columns with properties like file column, table column, data type, part of the key and format mask for date/timestamp fields. Selecting a load file info line also selects those columns with their properties to be used in the next wizard step.    
+&lt;/p>
+</source>
+    <target>&lt;p>
+Il s'agit de la deuxième étape de l'assistant pour télécharger un fichier de feuille de calcul dans la base de données.
+&lt;/p>
+
+&lt;p>
+Un bouton Télécharger / Afficher est fourni afin que vous puissiez déterminer la (les) feuille (s) et / ou la dernière colonne à charger dans la base de données.
+&lt;/p>
+
+&lt;p>
+En outre, un rapport d'historique d'informations sur le fichier de chargement est affiché avec des informations stockées lorsque vous chargez réellement un fichier à l'étape suivante de l'assistant. Vous pouvez supprimer l'historique de cette grille si nécessaire en sélectionnant des lignes, en choisissant Supprimer les lignes dans le menu Ligne / Action de sélection en regard des sélecteurs, puis en appuyant sur le bouton Enregistrer.
+&lt;/p>
+
+&lt;p>
+L'historique des informations du fichier de chargement vous permet de (dé) sélectionner une ligne afin de (dé) définir des informations telles que le nom de l'objet, le nom de la feuille, la dernière colonne Excel, la première ligne d'en-tête, la dernière ligne d'en-tête, la première ligne de données ou de déterminer le type de données oui / non. Ce rapport est trié par similitude entre les noms de fichiers (les meilleures correspondances en premier) et par date décroissante.
+&lt;/p>
+
+&lt;p>
+Pour chaque information de fichier de chargement, il existe également un rapport détaillé montrant les colonnes avec des propriétés telles que la colonne de fichier, la colonne de table, le type de données, une partie de la clé et le masque de format pour les champs de date / horodatage. La sélection d'une ligne d'informations sur le fichier de chargement sélectionne également ces colonnes avec leurs propriétés à utiliser à l'étape suivante de l'assistant.
+&lt;/p>
+</target>
+  </trans-unit>
+  <trans-unit>
+    <source>This is the third step of the wizard to upload a spreadsheet file into the database.
+
+Here you can define properties for the source (file) and the target (database).
+
+The target may be an existing table/view (in one of the allowed database schemas) or a new table (in the application owner schema).
+
+When a new table is created, the following information in the source region is used to create it:
+&lt;ul>
+    &lt;li>Table Column (header)&lt;/li>
+    &lt;li>Data Type&lt;/li>
+    &lt;li>Key?&lt;/li>
+&lt;/ul>
+
+When you press the Load button, this will be verified:
+&lt;ol>
+    &lt;li>No duplicates for source "Table Column (header)".&lt;/li>
+    &lt;li>Every source "Table Column (header)" must exactly match one target Table/View column.&lt;/li>
+    &lt;li>For an update, merge or delete there must be a key.&lt;/li>
+&lt;/ol></source>
+    <target>Il s'agit de la troisième étape de l'assistant pour télécharger un fichier de feuille de calcul dans la base de données.
+
+Ici, vous pouvez définir les propriétés de la source (fichier) et de la cible (base de données).
+
+La cible peut être une table / vue existante (dans l'un des schémas de base de données autorisés) ou une nouvelle table (dans le schéma du propriétaire de l'application).
+
+Lorsqu'une nouvelle table est créée, les informations suivantes de la région source sont utilisées pour la créer:
+&lt;ul>
+    &lt;li>Colonne de table (en-tête)&lt;/li>
+    &lt;li>Type de données&lt;/li>
+    &lt;li>Clé?&lt;/li>
+&lt;/ul>
+
+Lorsque vous appuyez sur le bouton Charger, cela sera vérifié:
+&lt;ol>
+    &lt;li>Pas de doublons pour la source "Colonne de table (en-tête)".&lt;/li>
+    &lt;li>Chaque «colonne de table (en-tête)» source doit correspondre exactement à une colonne de table / vue cible.&lt;/li>
+    &lt;li>Pour une mise à jour, une fusion ou une suppression, il doit y avoir une clé.&lt;/li>
+&lt;/ol></target>
+  </trans-unit>
+  <trans-unit>
+    <source>This is the fourth and final step of the wizard to upload a spreadsheet file into the database.
+
+Here a summary is shown.</source>
+    <target>Il s'agit de la quatrième et dernière étape de l'assistant pour télécharger un fichier de feuille de calcul dans la base de données.
+
+Ici, un résumé est affiché.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>No help is available for this page.</source>
+    <target>Aucune aide n'est disponible pour cette page.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>The administration page allows application owners (Administrators) to configure the application and maintain common data used across the application.
+By selecting one of the available settings, administrators can potentially change how the application is displayed and/or features available to the end users.&lt;/p>
+&lt;p>Access to this page should be limited to Administrators only.&lt;/p></source>
+    <target>&lt;p>La page d'administration permet aux propriétaires d'applications (administrateurs) de configurer l'application et de gérer les données communes utilisées dans l'application.
+En sélectionnant l'un des paramètres disponibles, les administrateurs peuvent potentiellement modifier la façon dont l'application est affichée et / ou les fonctionnalités disponibles pour les utilisateurs finaux.&lt;/p>
+&lt;p>L'accès à cette page doit être limité aux administrateurs uniquement.&lt;/p></target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>Select the default color scheme used to display the application.&lt;/p>
+&lt;p>If &lt;strong>Allow End Users to choose Theme Style&lt;/strong> is checked, then each end user can select from the available theme styles by clicking the &lt;em>Customize&lt;/em> link in the bottom left corner of the Home page.&lt;/p></source>
+    <target>&lt;p> Sélectionnez le jeu de couleurs par défaut utilisé pour afficher l'application. &lt;/p>
+&lt;p> Si l'option &lt;strong> Autoriser les utilisateurs finaux à choisir le style du thème &lt;/strong> est cochée, chaque utilisateur final peut choisir parmi les styles de thème disponibles en cliquant sur le lien &lt;em> Personnaliser &lt;/em> dans le coin inférieur gauche de la page d'accueil. &lt;/p></target>
+  </trans-unit>
+  <trans-unit>
+    <source>All application help text can be accessed from this page. The links in the "Documentation" region give a much more in-depth explanation of the application's features and functionality.</source>
+    <target>Tous les textes d'aide de l'application sont accessibles à partir de cette page. Les liens dans la région "Documentation" donnent une explication beaucoup plus approfondie des caractéristiques et fonctionnalités de l'application.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Download/View</source>
+    <target>Télécharger / Voir</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Sign In</source>
+    <target>Se connecter</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Cancel</source>
+    <target>Annuler</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Apply Changes</source>
+    <target>Appliquer les modifications</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Next</source>
+    <target>Suivant</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Previous</source>
+    <target>Précédent</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Close</source>
+    <target>Fermer</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load File</source>
+    <target>Charger un fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Refresh Column Info</source>
+    <target>Actualiser les informations des colonnes</target>
+  </trans-unit>
+  <trans-unit>
+    <source>(Un)select All Sheets</source>
+    <target>(Dés) sélectionner toutes les feuilles</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Finish</source>
+    <target>Terminer</target>
+  </trans-unit>
+  <trans-unit>
+    <source>#LABEL# must have some value.</source>
+    <target>#LABEL# doit avoir une valeur.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>First and last header rows must be both 0 (meaning no header) or the last header row must be at least the first header row.</source>
+    <target>La première et la dernière ligne d'en-tête doivent être à la fois 0 (ce qui signifie pas d'en-tête) ou la dernière ligne d'en-tête doit être au moins la première ligne d'en-tête.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The first data row must be greater than the last header row.</source>
+    <target>La première ligne de données doit être supérieure à la dernière ligne d'en-tête.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>First header row must be 0 (meaning no header) or at least 1.</source>
+    <target>La première ligne d'en-tête doit être 0 (ce qui signifie pas d'en-tête) ou au moins 1.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Application Appearance Settings Saved.</source>
+    <target>Paramètres d'apparence de l'application enregistrés.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Number of rows processed: &amp;P4_NR_ROWS.</source>
+    <target>Nombre de lignes traitées: &amp;P4_NR_ROWS.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Number of rows processed: &amp;P2_NR_ROWS.</source>
+    <target>Nombre de lignes traitées: &amp;P2_NR_ROWS.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Column Info</source>
+    <target>Informations sur les colonnes</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Language Selector</source>
+    <target>Sélecteur de langue</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Buttons</source>
+    <target>Boutons</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Configure Appearance</source>
+    <target>Configurer l'apparence</target>
+  </trans-unit>
+  <trans-unit>
+    <source>About Page</source>
+    <target>À propos de la page</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Breadcrumb</source>
+    <target>Miette de pain</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Column 1</source>
+    <target>Colonne 1</target>
+  </trans-unit>
+  <trans-unit>
+    <source>User Interface</source>
+    <target>Interface utilisateur</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Wizard Progress</source>
+    <target>Progression de l'assistant</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Target</source>
+    <target>Cible</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Target (New Table)</source>
+    <target>Cible (Nouvelle Table)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Target (Existing Table/View)</source>
+    <target>Cible (Table/Vue Existante)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Source</source>
+    <target>Source</target>
+  </trans-unit>
+  <trans-unit>
+    <source>New Table</source>
+    <target>Nouvelle Table</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Existing Table/View</source>
+    <target>Table/View Existante</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Navigation</source>
+    <target>Navigation</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Help</source>
+    <target>Aide</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load file details</source>
+    <target>Détails du chargement du fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load file info history</source>
+    <target>L'historique des chargements du fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load file info</source>
+    <target>Informations de téléchargement de fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load File Wizard</source>
+    <target>Assistant de chargement de fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Region Display Selector</source>
+    <target>Sélecteur d'affichage de la région</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Component Types</source>
+    <target>Types de composants</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Load File Wizard Progress Bar</source>
+    <target>Barre de progression de l'assistant de chargement de fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Example 1</source>
+    <target>Exemple 1</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Show Help</source>
+    <target>Montrer l'aide</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&amp;APP_USER.</source>
+  </trans-unit>
+  <trans-unit>
+    <source>---</source>
+  </trans-unit>
+  <trans-unit>
+    <source>Sign Out</source>
+    <target>Déconnexion</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Theme Style Selection</source>
+    <target>Sélection du style de thème</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Value Attribute Pairs Report</source>
+    <target>Rapport sur les paires d'attributs de valeur</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Activity Timeline</source>
+    <target>Chronologie de l'activité</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Alert</source>
+    <target>Alerte</target>
+  </trans-unit>
+  <trans-unit>
+    <source>File</source>
+    <target>Fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>File Column</source>
+    <target>Colonne du fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Table Column (header)</source>
+    <target>Colonne de la table (d'en-tête)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Data Type</source>
+    <target>Type de données</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Format mask</source>
+    <target>Masque de format</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Key?</source>
+    <target>Clé?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Default Value</source>
+    <target>Valeur par défaut</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Time Created</source>
+    <target>Temps créé</target>
+  </trans-unit>
+  <trans-unit>
+    <source>File + Sheet&lt;br/>Score (%)</source>
+    <target>Fichier + Feuille&lt;br/>Score (%)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Header Rows</source>
+    <target>Lignes d'en-tête</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Data Rows</source>
+    <target>Lignes de données</target>
+  </trans-unit>
+  <trans-unit>
+    <source>File Name</source>
+    <target>Nom de fichier</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Mime Type</source>
+    <target>Type MIME</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Object Name</source>
+    <target>Nom d'Object</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Sheet(s)</source>
+    <target>Feuille(s)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Last Column (A,B,...)</source>
+    <target>Dèrniere colonne (A,B,...)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Determine&lt;br/>Data Type?</source>
+    <target>Déterminer&lt;br/>le type de données?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>If you define an existing table/view, you must use the column names of the existing table/view as file table column (autocompletion available).</source>
+    <target>Si vous définissez une table / vue existante, vous devez utiliser les noms de colonne de la table / vue existante comme colonne de table de fichier (saisie semi-automatique disponible).</target>
+  </trans-unit>
+  <trans-unit>
+    <source>When the target is an existing table/view, the data type of that column is shown otherwise it is determined from the file contents.</source>
+    <target>Lorsque la cible est une table / vue existante, le type de données de cette colonne est affiché sinon il est déterminé à partir du contenu du fichier.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The creation date of the view containing the file load info.</source>
+    <target>La date de création de la vue contenant les informations de chargement du fichier.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The name of the file uploaded.</source>
+    <target>Le nom du fichier téléchargé.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The media type identifier for file formats and format contents.</source>
+    <target>Identificateur de type de média pour les formats de fichier et le contenu du format.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The object loaded into.</source>
+    <target>L'objet cible.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The sheet to upload from the spreadsheet file.</source>
+    <target>La feuille à télécharger à partir du fichier de feuille de calcul.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The last column you want to load into the database.</source>
+    <target>La dernière colonne que vous souhaitez charger dans la base de données.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>If true, try to determine the datatype by inspecting the file contents. If false, use VARCHAR2(4000). Used when creating a table.</source>
+    <target>Si vrai, essayez de déterminer le type de données en inspectant le contenu du fichier. Si faux, utilisez VARCHAR2 (4000). Utilisé lors de la création d'une table.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>View Name</source>
+    <target>Nom de vue</target>
+  </trans-unit>
+  <trans-unit>
+    <source>First Header Row</source>
+    <target>Première ligne d'en-tête</target>
+  </trans-unit>
+  <trans-unit>
+    <source>First Data Row</source>
+    <target>Première ligne de données</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Determine Data Type?</source>
+    <target>Déterminer le type de données?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Last Header Row</source>
+    <target>Dernière ligne d'en-tête</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Last Data Row</source>
+    <target>Dernière ligne de données</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Yes</source>
+    <target>Oui</target>
+  </trans-unit>
+  <trans-unit>
+    <source>No</source>
+    <target>Non</target>
+  </trans-unit>
+  <trans-unit>
+    <source>If you define an existing table/view, you must use the column names of the existing table/view as file table column (autocompletion available).
+
+</source>
+    <target>Si vous définissez une table / vue existante, vous devez utiliser les noms de colonne de la table / vue existante comme colonne de table de fichier (saisie semi-automatique disponible).
+
+</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Table/View to load into</source>
+    <target>Nom de la cible (table/vue)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Table/View schema to load into</source>
+    <target>Schema de la cible (table/vue)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Action</source>
+    <target>Action</target>
+  </trans-unit>
+  <trans-unit>
+    <source>New table?</source>
+    <target>Nouvelle table?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>New table to load into</source>
+    <target>Nouvelle table de chargement</target>
+  </trans-unit>
+  <trans-unit>
+    <source>New table schema to load into</source>
+    <target>Nouvelle schema de chargement</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Table Columns Must Match?</source>
+    <target>Les colonnes doivent correspondre?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>In Key</source>
+    <target>En clé</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Header Row From</source>
+    <target>Ligne d'en-tête de</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Data Row From</source>
+    <target>Ligne de données de</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Number of rows processed</source>
+    <target>Nombre de lignes traitées</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Header Row Till</source>
+    <target>Ligne d'en-tête jusqu'à</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Format Mask</source>
+    <target>Masque de format</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Data Row</source>
+    <target>Ligne de données</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Language</source>
+    <target>Language</target>
+  </trans-unit>
+  <trans-unit>
+    <source>English</source>
+    <target>English</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Français</source>
+    <target>Français</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Badges List</source>
+    <target>Badges List</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Button Group</source>
+    <target>Button Group</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Button Container Region</source>
+    <target>Button Container Region</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Calendars</source>
+    <target>Calendars</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Cards</source>
+    <target>Cards</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Carousel</source>
+    <target>Carousel</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Charts</source>
+    <target>Charts</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Collapsible</source>
+    <target>Collapsible</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Comments</source>
+    <target>Comments</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Data Tables and Reports</source>
+    <target>Data Tables and Reports</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Forms</source>
+    <target>Forms</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Help Text</source>
+    <target>Help Text</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Hero</source>
+    <target>Hero</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Lists</source>
+    <target>Lists</target>
+  </trans-unit>
+  <trans-unit>
+    <source>List View</source>
+    <target>List View</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Map Chart</source>
+    <target>Map Chart</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Menu Bar</source>
+    <target>Menu Bar</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Menu Popup</source>
+    <target>Menu Popup</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Modal Dialogs</source>
+    <target>Modal Dialogs</target>
+  </trans-unit>
+  <trans-unit>
+    <source>PL/SQL Dynamic Content</source>
+    <target>PL/SQL Dynamic Content</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Responsive Tables</source>
+    <target>Responsive Tables</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Standard Region</source>
+    <target>Standard Region</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Static Content</source>
+    <target>Static Content</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Tabs</source>
+    <target>Tabs</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Title Bar Region</source>
+    <target>Title Bar Region</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Tree</source>
+    <target>Tree</target>
+  </trans-unit>
+  <trans-unit>
+    <source>URL</source>
+    <target>URL</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Step 1</source>
+    <target>Step 1</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Step 2</source>
+    <target>Step 2</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Step 3</source>
+    <target>Step 3</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Step 4</source>
+    <target>Step 4</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Hide Help</source>
+    <target>Hide Help</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Search Dialog</source>
+    <target>Search Dialog</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;div class="t-PopupLOV-actions t-Form--large"></source>
+    <target>&lt;div class="t-PopupLOV-actions t-Form--large"></target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;/div></source>
+    <target>&lt;/div></target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;div class="t-PopupLOV-links"></source>
+    <target>&lt;div class="t-PopupLOV-links"></target>
+  </trans-unit>
+  <trans-unit>
+    <source>Search</source>
+    <target>Search</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Next &amp;gt;</source>
+    <target>Next &amp;gt;</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&amp;lt; Previous</source>
+    <target>&amp;lt; Previous</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Would you like to perform this delete action?</source>
+    <target>Would you like to perform this delete action?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Remember username</source>
+    <target>Remember username</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Allow End Users to choose Theme Style</source>
+    <target>Allow End Users to choose Theme Style</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Insert</source>
+    <target>Insert</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Replace (empty first and insert next)</source>
+    <target>Replace (empty first and insert next)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Update</source>
+    <target>Update</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Merge (update or insert)</source>
+    <target>Merge (update or insert)</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Delete</source>
+    <target>Delete</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>
+If you select this checkbox, the application will save your username in a persistent browser cookie named "LOGIN_USERNAME_COOKIE".
+When you go to the login page the next time,
+the username field will be automatically populated with this value.
+&lt;/p>
+&lt;p>
+If you deselect this checkbox and your username is already saved in the cookie,
+the application will overwrite it with an empty value.
+You can also use your browser's developer tools to completely remove the cookie.
+&lt;/p></source>
+    <target>&lt;p>
+If you select this checkbox, the application will save your username in a persistent browser cookie named "LOGIN_USERNAME_COOKIE".
+When you go to the login page the next time,
+the username field will be automatically populated with this value.
+&lt;/p>
+&lt;p>
+If you deselect this checkbox and your username is already saved in the cookie,
+the application will overwrite it with an empty value.
+You can also use your browser's developer tools to completely remove the cookie.
+&lt;/p></target>
+  </trans-unit>
+  <trans-unit>
+    <source>Choose the spreadsheet file to upload with possible file types:
+&lt;ul>    
+    &lt;li>CSV files&lt;/li>
+    &lt;li>Microsoft XLS, XLSX, XLSM or XLSB files&lt;/li>
+    &lt;li>Open Office ODS files&lt;/li>
+&lt;/ul>
+</source>
+    <target>Choose the spreadsheet file to upload with possible file types:
+&lt;ul>    
+    &lt;li>CSV files&lt;/li>
+    &lt;li>Microsoft XLS, XLSX, XLSM or XLSB files&lt;/li>
+    &lt;li>Open Office ODS files&lt;/li>
+&lt;/ul>
+</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The sheet(s) to upload from the spreadsheet file.</source>
+    <target>The sheet(s) to upload from the spreadsheet file.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>If the file contains a header this is the first row of the header. A value of 0 indicates no header. If there is a header the table field "Table Column (header)" will contain that information, otherwise the table field will be the same as the "File Column".</source>
+    <target>If the file contains a header this is the first row of the header. A value of 0 indicates no header. If there is a header the table field "Table Column (header)" will contain that information, otherwise the table field will be the same as the "File Column".</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The first data row to process.</source>
+    <target>The first data row to process.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>An existing table or view.</source>
+    <target>An existing table or view.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The allowed schemas (the Oracle Apex parsing schemas of the workspace).</source>
+    <target>The allowed schemas (the Oracle Apex parsing schemas of the workspace).</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The database manipulation action:
+&lt;ul>
+    &lt;li>Insert&lt;/li>
+    &lt;li>Replace which means emptying the table first and then insert&lt;/li>
+    &lt;li>Update which requires a key (at least one "Key?" true)&lt;/li>
+    &lt;li>Merge which means update if the record exists and otherwise an insert&lt;/li>
+    &lt;li>Delete which requires a key&lt;/li>
+&lt;/ul></source>
+    <target>The database manipulation action:
+&lt;ul>
+    &lt;li>Insert&lt;/li>
+    &lt;li>Replace which means emptying the table first and then insert&lt;/li>
+    &lt;li>Update which requires a key (at least one "Key?" true)&lt;/li>
+    &lt;li>Merge which means update if the record exists and otherwise an insert&lt;/li>
+    &lt;li>Delete which requires a key&lt;/li>
+&lt;/ul></target>
+  </trans-unit>
+  <trans-unit>
+    <source>Are we going to load into a new table or use an existing table/view?</source>
+    <target>Are we going to load into a new table or use an existing table/view?</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The new table name (case sensitive).</source>
+    <target>The new table name (case sensitive).</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The number of rows processed which means for each action:
+&lt;ul>
+    &lt;li>Insert - the number of rows inserted&lt;/li>
+    &lt;li>Replace - the number of rows inserted (the number of rows deleted first is not shown)&lt;/li>
+    &lt;li>Update - the number of rows updated&lt;/li>
+    &lt;li>Merge - the number of rows updated or inserted&lt;/li>
+    &lt;li>Delete - the number of rows deleted&lt;/li>
+&lt;/ul></source>
+    <target>The number of rows processed which means for each action:
+&lt;ul>
+    &lt;li>Insert - the number of rows inserted&lt;/li>
+    &lt;li>Replace - the number of rows inserted (the number of rows deleted first is not shown)&lt;/li>
+    &lt;li>Update - the number of rows updated&lt;/li>
+    &lt;li>Merge - the number of rows updated or inserted&lt;/li>
+    &lt;li>Delete - the number of rows deleted&lt;/li>
+&lt;/ul></target>
+  </trans-unit>
+  <trans-unit>
+    <source>If true, the source columns ("Table Column (header)") must all be in the column names of the target table/view.
+If false, no such verification is made yet but only when loading. This is useful for choosing the "Table Column (header)" from an auto completion list.</source>
+    <target>If true, the source columns ("Table Column (header)") must all be in the column names of the target table/view.
+If false, no such verification is made yet but only when loading. This is useful for choosing the "Table Column (header)" from an auto completion list.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The name of the view containing the load file info.</source>
+    <target>The name of the view containing the load file info.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>If the file contains a header this is the last row of the header. A value of 0 indicates no header. </source>
+    <target>If the file contains a header this is the last row of the header. A value of 0 indicates no header. </target>
+  </trans-unit>
+  <trans-unit>
+    <source>The last data row to process where empty means all starting from the first data row.</source>
+    <target>The last data row to process where empty means all starting from the first data row.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;div class="t-PopupLOV-pagination">Row(s) #FIRST_ROW# - #LAST_ROW#&lt;/div></source>
+    <target>&lt;div class="t-PopupLOV-pagination">Row(s) #FIRST_ROW# - #LAST_ROW#&lt;/div></target>
+  </trans-unit>
+  <trans-unit>
+    <source>Display Template Options</source>
+    <target>Display Template Options</target>
+  </trans-unit>
+  <trans-unit>
+    <source>How To Instructions</source>
+    <target>How To Instructions</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Select2</source>
+    <target>Select2</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;div>
+	The Select2 plugin is a jQuery based replacement for select lists in Oracle Application Express. It supports searching, multiselection, tagging, lazy loading and infinite scrolling of results.&lt;/div>
+</source>
+    <target>&lt;div>
+	The Select2 plugin is a jQuery based replacement for select lists in Oracle Application Express. It supports searching, multiselection, tagging, lazy loading and infinite scrolling of results.&lt;/div>
+</target>
+  </trans-unit>
+  <trans-unit>
+    <source>You do not have access to this data</source>
+    <target>You do not have access to this data</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Desktop</source>
+    <target>Desktop</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Text about this application can be placed here.</source>
+    <target>Text about this application can be placed here.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>The &lt;strong>Load File Wizard&lt;/strong> is a modal dialog progress list used to upload a file and save it into a table (or view).&lt;/p>
+&lt;p class="dm-Hero-steps">Use page &lt;strong>2&lt;/strong> as the page to redirect to.&lt;/p>
+&lt;p>You can use it from another application (in the same workspace) in which case you should set Session Sharing Type to Workspace Sharing (Shared Components -> Authentication Schemes -> Application Express Authentication) to prevent a new login when redirecting, see also &lt;a href="http://www.grassroots-oracle.com/2019/01/oracle-apex-application-session-sharing.html" target="_blank">Session Sharing&lt;/a>.&lt;/p>
+</source>
+    <target>&lt;p>The &lt;strong>Load File Wizard&lt;/strong> is a modal dialog progress list used to upload a file and save it into a table (or view).&lt;/p>
+&lt;p class="dm-Hero-steps">Use page &lt;strong>2&lt;/strong> as the page to redirect to.&lt;/p>
+&lt;p>You can use it from another application (in the same workspace) in which case you should set Session Sharing Type to Workspace Sharing (Shared Components -> Authentication Schemes -> Application Express Authentication) to prevent a new login when redirecting, see also &lt;a href="http://www.grassroots-oracle.com/2019/01/oracle-apex-application-session-sharing.html" target="_blank">Session Sharing&lt;/a>.&lt;/p>
+</target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;p>Wizards can be very useful in simplifying complex flows into smaller, more manageable steps.  This page describes the Load File Wizard.&lt;/p></source>
+    <target>&lt;p>Wizards can be very useful in simplifying complex flows into smaller, more manageable steps.  This page describes the Load File Wizard.&lt;/p></target>
+  </trans-unit>
+  <trans-unit>
+    <source>&lt;span class="dm-Logo app-sample-universal-theme">&lt;/span>
+&lt;h1>&lt;span>Oracle Application Express &lt;/span>Oracle Tools&lt;/h1>
+&lt;p class="margin-top-lg">This is a set of Oracle Tools including:
+&lt;ul>
+&lt;li>the Load File Wizard&lt;/li>
+&lt;/ul>&lt;/p></source>
+    <target>&lt;span class="dm-Logo app-sample-universal-theme">&lt;/span>
+&lt;h1>&lt;span>Oracle Application Express &lt;/span>Oracle Tools&lt;/h1>
+&lt;p class="margin-top-lg">This is a set of Oracle Tools including:
+&lt;ul>
+&lt;li>the Load File Wizard&lt;/li>
+&lt;/ul>&lt;/p></target>
+  </trans-unit>
+  <trans-unit>
+    <source>username</source>
+    <target>username</target>
+  </trans-unit>
+  <trans-unit>
+    <source>password</source>
+    <target>password</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Desktop Theme Style</source>
+    <target>Desktop Theme Style</target>
+  </trans-unit>
+  <trans-unit>
+    <source>End User Theme Preference</source>
+    <target>End User Theme Preference</target>
+  </trans-unit>
+  <trans-unit>
+    <source>The default Theme Style applies to all users.</source>
+    <target>The default Theme Style applies to all users.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>If checked, end users may choose their own Theme Style using the Customize link.</source>
+    <target>If checked, end users may choose their own Theme Style using the Customize link.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>Are you sure you want to load this file without previous settings from region "Load file info history"? The first line has the best match.</source>
+    <target>Voulez-vous vraiment charger ce fichier sans les paramètres précédents de la région "Charger l'historique des informations sur le fichier"? La première ligne a le meilleur match.</target>
+  </trans-unit>
+  <trans-unit>
+    <source>This will load just one sheet (the first) from the spreadsheet file. The first row of that sheet must be the only header row. Do you want to continue?</source>
+    <target>Cela ne chargera qu'une seule feuille (la première) à partir du fichier de feuille de calcul et la première ligne de cette feuille doit être la seule ligne d'en-tête. Voulez-vous continuer?</target>
+  </trans-unit>
+</xliff>

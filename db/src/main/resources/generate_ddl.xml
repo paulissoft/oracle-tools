@@ -1,0 +1,484 @@
+<project name="generate_ddl" default="generate-ddl-full-help" basedir=".">
+
+  <description>
+    Generate database scripts for a fresh (full) and incremental installation.
+
+    This buildfile is used to run the following utilities from:
+    - generate_ddl.pl
+
+    The following public targets are defined:
+    - clean
+    - generate-ddl-full-help
+    - generate-ddl-full
+    - generate-ddl-incr-help
+    - generate-ddl-incr
+
+    The following properties may be used and must be set before:
+    - source.db.name
+    The source database.
+    - schema
+    The schema to compare.
+    - userid
+    The connect string to the compare database which may be different.
+    - object.type
+    The schema object type (default empty).
+    - object.names
+    A comma separated list of object names (default empty).
+    - object.names.include
+    Must we include (1), exclude (0) or ignore object.names (empty) (default empty).
+    - compile.classpath
+    The compile classpath.
+    - runtime.classpath
+    The runtime classpath.
+    - owner
+    The owner of the pkg_ddl_util package.
+    - build.dir
+    The build directory.
+
+    The following properties are used for generate-ddl-full:
+    - full.remove.output.directory
+    Must we remove the output directory tree before?
+    - full.force.view
+    Do we remove the FORCE keyword from CREATE OR REPLACE FORCE VIEW?
+    - full.output.directory
+    The directory to put the scripts in.
+    - full.skip.install.sql
+    Skip generating (un)install.sql script during a full generation?
+    - full.interface
+    The full interface (pkg_ddl_util v4/pkg_datapump_util).
+    - full.strip.source.schema
+    Must we strip the object schema from the file name and DDL statement if it is equal to the source schema?
+
+    The following properties are used for generate-ddl-incr:
+    - target.db.name
+    The target database.
+    - incr.dynamic.sql
+    Must we use dynamic SQL around SQL statements?
+    - incr.output.directory
+    The directory to put the script(s) in.
+    - incr.skip.repeatables
+    Skip repeatable/replaceable objects in incremental migration scripts?
+    - incr.interface
+    The incremental interface (pkg_ddl_util v4).
+
+  </description>
+
+  <macrodef name="define-perl-property" description="Define perl property">
+    <attribute name="property"/>
+    <attribute name="default"/>
+    <sequential>
+      <fail message="Property perl.@{property} should NOT be set">
+        <condition>
+          <isset property="perl.@{property}"/>
+        </condition>
+      </fail>
+      
+      <property name="@{property}" value="@{default}"/>
+      <!-- Perl boolean options have a prefix of 'no' when the option is false. -->
+      <condition property="perl.@{property}" value="no" else="">
+        <or>
+          <equals arg1="${@{property}}" arg2="no" casesensitive="false" trim="true"/>
+          <equals arg1="${@{property}}" arg2="n" casesensitive="false" trim="true"/>
+          <equals arg1="${@{property}}" arg2="false" casesensitive="false" trim="true"/>
+          <equals arg1="${@{property}}" arg2="f" casesensitive="false" trim="true"/>
+          <equals arg1="${@{property}}" arg2="0" casesensitive="false" trim="true"/>
+        </or>
+      </condition>
+    </sequential>
+  </macrodef>
+
+  <target name="init" depends="init-common,init-full,init-incr" />
+
+  <target name="init-common">
+    <!-- replace ${ant.file} (../generate_ddl.xml) by ../generate_ddl.pl -->
+    <loadresource property="generate_ddl.pl">
+      <propertyresource name="ant.file"/>
+      <filterchain>
+        <tokenfilter>
+          <replacestring from=".xml" to=".pl"/>
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <available property="generate_ddl.pl.exists" file="${generate_ddl.pl}"/>
+
+    <!-- remove whitespace in ${object.names} -->
+    <loadresource property="object.names.trimmed">
+      <propertyresource name="object.names"/>
+      <filterchain>
+        <tokenfilter>
+          <deletecharacters chars=" \t\r\n" />
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <!-- when property object.names does not contain whitespace
+         object.names.trimmed is not set above -->
+    <property name="object.names.trimmed" value=""/>
+
+    <!-- for GenerateDDL.java -->
+    <dirname property="ant.file.dir" file="${ant.file}"/>
+    <property name="src.dir" location="${ant.file.dir}/../java"/>
+    <echo message="src.dir: ${src.dir}"/>
+    <property name="build.dir" location="${basedir}"/>
+    <echo message="build.dir: ${build.dir}"/>
+    <property name="classes.dir" location="${build.dir}/classes"/>
+    <property name="jar.dir" location="${build.dir}/jar"/>
+    <property name="main-class" value="GenerateDDL"/>
+    <property name="log.dir" location="target"/> <!-- Use maven target directory -->
+    <mkdir dir="${log.dir}"/>
+    <tempfile property="temp.file" destDir="${log.dir}" suffix=".sql" prefix="temp"/>
+    
+    <property environment="env"/>
+    <!-- trick to set env.USER on Windows. On Unix it is already set (because
+         environment variable USER is known on Unix and USERNAME is known on
+         Windows -->
+    <property name="env.USER" value="${env.USERNAME}"/>
+
+    <!-- GPA 2016-12-09
+         The Windows shell is invoked if fork is used so we must quote empty
+         arguments on Windows.
+    -->
+    <condition property="quote" value="&quot;" else="'">
+      <os family="windows"/>
+    </condition>
+
+    <property name="compile.classpath" refid="compile.classpath" />
+    <property name="runtime.classpath" refid="runtime.classpath" />
+
+    <echo message="compile.classpath: ${compile.classpath}" />
+    <echo message="runtime.classpath: ${runtime.classpath}" />
+  </target>
+
+  <target name="init-full" unless="target.db.name">
+    <fail message="Properties src.scripts and full.output.directory undefined">
+      <condition>
+        <and>
+          <not>
+            <isset property="src.scripts"/>
+          </not>
+          <not>
+            <isset property="full.output.directory"/>
+          </not>
+        </and>
+      </condition>
+    </fail>
+    
+    <condition property="full.output.directory"
+               value="${src.scripts}/full/sql"
+               else="${src.scripts}/full">
+      <available file="${src.scripts}/full/sql" type="dir"/>
+    </condition>
+
+    <mkdir dir="${full.output.directory}"/>
+    
+    <delete dir="${full.output.directory}/../export"/>
+
+    <!-- Boolean properties, see also ../../pom.xml -->
+    <define-perl-property property="full.remove.output.directory" default="yes"/>
+    <!-- Pivotal #132752233 -->
+    <define-perl-property property="full.force.view" default="no"/>
+    <define-perl-property property="full.skip.install.sql" default="yes"/>
+    <define-perl-property property="full.strip.source.schema" default="no"/>
+
+    <property name="full.interface" value="pkg_ddl_util v4"/>
+
+    <condition property="skip.uninstall.sql">
+      <not>
+        <equals arg1="${perl.full.skip.install.sql}" arg2="no"/>
+      </not>
+    </condition>
+    <echoproperties prefix="perl." />
+    <echoproperties prefix="full." />
+  </target>
+  
+  <target name="init-incr" if="target.db.name">
+    <!--
+
+Java SimpleDateFormat Pattern
+
+Letter  Date or Time Component  Presentation        Examples
+======  ======================  ============        ========
+G       Era designator          Text                AD
+y       Year                    Year                1996; 96
+M       Month in year           Month               July; Jul; 07
+w       Week in year            Number              27
+W       Week in month           Number              2
+D       Day in year             Number              189
+d       Day in month            Number              10
+F       Day of week in month    Number              2
+E       Day in week             Text                Tuesday; Tue
+a       Am/pm marker            Text                PM
+H       Hour in day (0-23)      Number              0
+k       Hour in day (1-24)      Number              24
+K       Hour in am/pm (0-11)    Number              0
+h       Hour in am/pm (1-12)    Number              12
+m       Minute in hour          Number              30
+s       Second in minute        Number              55
+S       Millisecond             Number              978
+z       Time zone               General time zone   Pacific Standard Time; PST; GMT-08:00
+Z       Time zone               RFC 822 time zone   -0800
+
+    -->
+    <tstamp>
+      <!-- GPA 2015-11-17 Bestanden om 14 uur gemaakt kregen als uuraanduiding 2 door de hhmmss pattern -->
+      <format property="TSTAMP" pattern="HHmmss" unit="second"/>
+    </tstamp>
+
+    <fail message="Properties src.scripts and incr.output.directory undefined">
+      <condition>
+        <and>
+          <not>
+            <isset property="src.scripts"/>
+          </not>
+          <not>
+            <isset property="incr.output.directory"/>
+          </not>
+        </and>
+      </condition>
+    </fail>
+
+    <define-perl-property property="incr.dynamic.sql" default="no"/>
+    <define-perl-property property="incr.skip.repeatables" default="yes"/>
+    
+    <property name="incr.output.directory" location="${src.scripts}/incr"/>
+
+    <mkdir dir="${incr.output.directory}"/>
+
+    <property name="incr.interface" value="pkg_ddl_util v4"/>
+
+    <echoproperties prefix="perl." />
+    <echoproperties prefix="incr." />
+  </target>
+
+  <target name="init-schema" depends="init">
+    <!-- set source.db properties -->
+    <fail message="Property source.db.name should be set">
+      <condition>
+        <not>
+          <isset property="source.db.name"/>
+        </not>
+      </condition>
+    </fail>
+  </target>
+
+  <target name="init-userid" depends="init">
+    <fail message="Property userid should be set">
+      <condition>
+        <not>
+          <isset property="userid"/>
+        </not>
+      </condition>
+    </fail>
+    <fail message="Property userid (${userid}) contains a variable">
+      <condition>
+        <contains string="${userid}" substring="${"/>
+      </condition>
+    </fail>
+  </target>
+
+  <target name="clean" depends="init" description="Clean up">
+    <delete dir="${log.dir}"/>
+    <delete dir="${build.dir}"/>
+  </target>
+  
+  <target name="compile">
+    <echo message="Compiling Java sources from ${src.dir} to ${classes.dir}" />
+    <mkdir dir="${classes.dir}"/>
+    <!-- #137252739 The JAVA_HOME is set incorrectly during the Maven build. -->
+    <property name="build.compiler" value="extJavac"/>
+    <javac srcdir="${src.dir}" 
+           destdir="${classes.dir}"
+           classpathref="compile.classpath"
+           debug="true"
+           includeantruntime="false"/>
+  </target>
+
+  <target name="jar" depends="compile">
+    <echo message="Creating Java jar ${jar.dir}/${ant.project.name}.jar" />
+    <mkdir dir="${jar.dir}"/>
+    <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+      <manifest>
+        <attribute name="Main-Class" value="${main-class}"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <macrodef name="generate-ddl" description="Generate schema ddl">
+    <!-- Java (and maybe Perl) -->
+    <attribute name="source.schema" default=""/>
+    <attribute name="source.db.name" default=""/>
+    <attribute name="target.schema" default=""/>
+    <attribute name="target.db.name" default=""/>
+    <attribute name="skip.repeatables" default="0"/>
+    <attribute name="interface"/>
+    <attribute name="owner"/>
+    <attribute name="id"/> <!-- unique id -->
+    <!-- Perl -->
+    <element name="perl-arguments"/>
+    <sequential>
+      <echo message="Invoke generate schema (@{id})" />
+      <!-- generate the input for the Perl script -->
+      <java fork="true" 
+            classname="${main-class}" 
+            failonerror="true"
+            logError="true">
+        <redirector output="${temp.file}"/>
+        <classpath>
+          <path refid="runtime.classpath"/>
+          <path location="${jar.dir}/${ant.project.name}.jar"/>
+        </classpath>
+        <env key="NLS_LANG" value="_.UTF8"/>
+        <arg value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
+        <arg value="${quote}@{source.schema}${quote}"/> <!-- source schema -->
+        <arg value="${quote}@{source.db.name}${quote}"/> <!-- source database link -->
+        <arg value="${quote}@{target.schema}${quote}"/> <!-- target schema -->
+        <arg value="${quote}@{target.db.name}${quote}"/> <!-- target database link -->
+        <arg value="${quote}${object.type}${quote}"/> <!-- object type -->
+        <arg value="${quote}${object.names.include}${quote}"/> <!-- object names include -->
+        <arg value="${quote}${object.names.trimmed}${quote}"/> <!-- object names -->
+        <arg value="${quote}@{skip.repeatables}${quote}"/> <!-- skip repeatables -->
+        <arg value="${quote}@{interface}${quote}"/>
+        <arg value="${quote}@{owner}${quote}"/>
+      </java>
+
+      <!-- Create scripts -->
+      <exec executable="perl" failonerror="false" resultproperty="result.@{id}">
+        <redirector input="${temp.file}"/>
+        <arg value="${generate_ddl.pl}"/>
+        <perl-arguments/>
+        <arg value="--verbose"/>
+      </exec>
+      <!-- Keep the temporary file in case of errors -->
+      <fail message="Error while parsing file ${temp.file}">
+        <condition>
+          <not>
+            <equals arg1="${result.@{id}}" arg2="0"/>
+          </not>
+        </condition>
+      </fail>
+      <delete file="${temp.file}"/>
+    </sequential>
+  </macrodef>
+  
+  <target name="generate-ddl-full-help" depends="generate-ddl-incr-help"/>
+
+  <target name="generate-ddl-full"
+          depends="generate-ddl-full-scripts,generate-ddl-full-uninstall"
+          if="generate_ddl.pl.exists"/>
+
+  <target name="generate-ddl-full-scripts"
+          depends="init-schema,init-userid,jar"
+          description="Run: perl ${generate_ddl.pl}">
+    <fail message='Schema "${schema}" is not set'>
+      <condition>
+        <not>
+          <isset property="schema"/>
+        </not>
+      </condition>
+    </fail>
+    <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
+    <!-- generate the input for the Perl script -->
+    <generate-ddl source.schema="${schema}"
+                     source.db.name="${source.db.name}"
+                     interface="${full.interface}"
+                     owner="${owner}"
+                     id="generate-ddl-full-scripts">
+      <perl-arguments>
+        <arg value="--${perl.full.force.view}force-view"/>
+        <arg value="--output-directory=${full.output.directory}"/>
+        <arg value="--${perl.full.skip.install.sql}skip-install-sql"/>
+        <arg value="--${perl.full.remove.output.directory}remove-output-directory"/>
+        <arg value="--source-schema=${schema}"/>
+        <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
+      </perl-arguments>
+    </generate-ddl>
+  </target>
+
+  <!-- Create uninstall.sql script by migrating an empty schema to the target -->
+  <target name="generate-ddl-full-uninstall"
+          depends="init-schema,init-userid,jar"
+          description="Run: perl ${generate_ddl.pl}"
+          unless="skip.uninstall.sql">
+    <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
+    <generate-ddl target.schema="${schema}"
+                     target.db.name="${source.db.name}"
+                     interface="${full.interface}"
+                     owner="${owner}"
+                     id="generate-ddl-full-uninstall">
+      <perl-arguments>
+        <arg value="--output-directory=${full.output.directory}"/>
+        <arg value="--single-output-file=uninstall.sql"/>
+      </perl-arguments>
+    </generate-ddl>
+  </target>
+  
+  <target name="generate-ddl-incr-help"
+          depends="init-schema"
+          description="Show help for: perl ${generate_ddl.pl}"
+          if="generate_ddl.pl.exists">
+    <exec executable="perl" failonerror="true">
+      <arg value="${generate_ddl.pl}"/>
+      <arg value="--help"/>
+    </exec>
+  </target>
+
+  <target name="generate-ddl-incr"
+          depends="init-schema,init-userid,jar"
+          description="Run: perl ${generate_ddl.pl}"
+          if="generate_ddl.pl.exists">
+    <fail message='Schema "${schema}" is not set'>
+      <condition>
+        <not>
+          <isset property="schema"/>
+        </not>
+      </condition>
+    </fail>
+    <!-- set target.db properties -->
+    <fail message="Property target.db.name should be set">
+      <condition>
+        <not>
+          <isset property="target.db.name"/>
+        </not>
+      </condition>
+    </fail>
+    <!-- GPA 2017-02-07
+         Add .1 to the timestamp so we can split the generated scripts more
+         easily. -->
+    <!-- GPA 2017-05-10 #145216383
+         Change .1 into .@nr@
+    -->
+    <property name="sync.basename" value="${DSTAMP}${TSTAMP}.@nr@__DDL_${schema}"/>
+    <condition property="skip.repeatables" value="1" else="0">
+      <not>
+        <equals arg1="${perl.incr.skip.repeatables}" arg2="no"/>
+      </not>
+    </condition>
+    <generate-ddl source.schema="${schema}"
+                     source.db.name="${source.db.name}"
+                     target.schema="${schema}"
+                     target.db.name="${target.db.name}"
+                     skip.repeatables="${skip.repeatables}"
+                     interface="${incr.interface}"
+                     owner="${owner}"
+                     id="generate-ddl-incr">
+      <perl-arguments>   
+        <arg value="--${perl.incr.dynamic.sql}dynamic-sql"/>
+        <arg value="--output-directory=${incr.output.directory}"/>
+        <arg value="--single-output-file=V${sync.basename}.sql"/>
+      </perl-arguments>
+    </generate-ddl>
+    <property name="generated.schema.incr.file"
+              location="${incr.output.directory}/V${sync.basename}.sql"/>
+    <loadresource property="generated.schema.incr.files">
+      <propertyresource name="generated.schema.incr.file"/>
+      <filterchain>
+        <tokenfilter>
+          <replacestring from="@nr@" to="*"/>
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+    <echo message="File(s) created: ${generated.schema.incr.files}" />
+  </target>
+  
+</project>

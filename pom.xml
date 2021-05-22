@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.paulissoft</groupId>
+  <artifactId>tools</artifactId>
+  <version>${revision}</version>
+  <packaging>pom</packaging>
+  <description>Core POM for Database builds</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    
+    <!-- plugins from super pom without version -->
+    <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
+    <maven-deploy-plugin.version>3.0.0-M1</maven-deploy-plugin.version>
+    <maven-install-plugin.version>3.0.0-M1</maven-install-plugin.version>
+    <maven-site-plugin.version>3.9.1</maven-site-plugin.version>
+
+    <maven-dependency-plugin.version>3.1.2</maven-dependency-plugin.version>
+    <maven-antrun-plugin.version>3.0.0</maven-antrun-plugin.version>
+    <!--maven-antrun-plugin.version>1.8</maven-antrun-plugin.version-->
+    <!-- note: 20020829 is not newer -->
+    <maven-ant-contrib-plugin.version>1.0b3</maven-ant-contrib-plugin.version>
+    <maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
+    <maven.minimum.version>3.6.1</maven.minimum.version>
+    <flatten-maven-plugin.version>1.2.5</flatten-maven-plugin.version>
+    <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
+    <properties-maven-plugin>1.0.0</properties-maven-plugin>
+    <!-- Begin of SCM section -->
+    <!-- DO NOT UPDATE the SCM plugin: last version that is compatible with maven-scm-provider-svnjava and svnkit -->
+    <maven-scm-plugin.version>1.9.5</maven-scm-plugin.version>
+    <maven-scm-provider-svnjava.version>2.1.2</maven-scm-provider-svnjava.version>
+    <!--maven-scm-provider-svnjava.version>2.0.6</maven-scm-provider-svnjava.version-->
+    <svnkit.version>1.10.3</svnkit.version>
+    <!--svnkit.version>1.7.11</svnkit.version-->
+    <!-- End of SCM section -->
+    <!--flyway.version>4.2.0</flyway.version-->
+    <!--flyway.version>5.0.0</flyway.version-->
+    <!-- flyway.version>5.1.4</flyway.version--> <!-- last one to support Oracle 12.1 -->
+    <flyway.version>7.4.0</flyway.version> <!-- latest and greatest at 2021-01-08 -->
+    <ojdbc8.version>19.3.0.0</ojdbc8.version>
+    <utplsql-maven-plugin.version>3.1.4</utplsql-maven-plugin.version>
+    <revision>${project.version}</revision>
+  </properties>
+
+  <scm>
+    <developerConnection>scm:svn:https://github.com/paulissoft/oracle_tools.git/trunk</developerConnection>
+  </scm>
+
+  <distributionManagement>
+    <repository>
+      <id>internal.repo</id>
+      <name>Internal releases</name>
+      <url>file:///C:/usr/local/maven-repository/releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>internal.repo</id>
+      <name>Internal snapshots</name>
+      <url>file:///C:/usr/local/maven-repository/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+  
+  <build>
+    <defaultGoal>${default.goal}</defaultGoal>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>${maven-clean-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${maven-deploy-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>${maven-install-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>${maven-site-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>${maven-antrun-plugin.version}</version>          
+          <dependencies>
+            <dependency>
+              <groupId>ant-contrib</groupId>
+              <artifactId>ant-contrib</artifactId>
+              <version>${maven-ant-contrib-plugin.version}</version>
+              <exclusions>
+                <exclusion>
+                  <groupId>ant</groupId>
+                  <artifactId>ant</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+          </dependencies>              
+        </plugin>
+        <plugin>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-maven-plugin</artifactId>
+          <version>${flyway.version}</version>
+        </plugin>
+
+        <!-- The assembly and dependency plugin are used to copy the apex,
+             conf and db modules to the target/dependency directory of every
+             project using their parent POMs.
+
+             ORACLE_TOOLS
+             ============
+             The idea is to invoke the assembly plugin in the two subdirectories,
+             thus creating two Zip archives (amongst others).
+
+             OTHER PROJECTS
+             ==============
+             Next each project that inherits from apex or db defines
+             dependencies to the Zip files and invokes the dependency plugin
+             using the unpack-dependencies goal during generate-resources.
+        -->
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven-assembly-plugin.version}</version>
+          <!-- no configuration on purpose: must be set by project using it -->
+          <executions>
+            <execution>
+              <id>create-archive</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+            </execution>
+          </executions>          
+        </plugin>
+        <plugin>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>${maven-dependency-plugin.version}</version>
+          <configuration>
+            <!-- configure the plugin here -->
+            <includeGroupIds>com.paulissoft.tools</includeGroupIds>
+            <excludeTransitive>true</excludeTransitive>
+            <!--use as much as needed to be specific...also scope,type,classifier etc-->
+          </configuration>
+          <executions>
+            <execution>
+              <id>unpack-dependencies</id>
+              <phase>generate-resources</phase>
+              <goals>
+                <goal>unpack-dependencies</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- begin of root only plugins used by this and other projects  -->
+        <plugin>
+          <artifactId>maven-scm-plugin</artifactId>
+          <version>${maven-scm-plugin.version}</version>
+          <configuration>
+            <tag>${project.artifactId}-${project.version}</tag>
+            <providerImplementations>
+              <svn>javasvn</svn>
+            </providerImplementations>
+            <connectionType>developerConnection</connectionType>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.google.code.maven-scm-provider-svnjava</groupId>
+              <artifactId>maven-scm-provider-svnjava</artifactId>
+              <version>${maven-scm-provider-svnjava.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.tmatesoft.svnkit</groupId>
+              <artifactId>svnkit</artifactId>
+              <version>${svnkit.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <!-- end of root only plugins used by this and other projects  -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>${flatten-maven-plugin.version}</version>
+          <configuration>
+            <updatePomFile>true</updatePomFile>
+            <flattenMode>resolveCiFriendliesOnly</flattenMode>
+          </configuration>
+          <executions>
+            <execution>
+              <id>flatten</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>flatten</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>flatten.clean</id>
+              <phase>clean</phase>
+              <goals>
+                <goal>clean</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>properties-maven-plugin</artifactId>
+          <version>${properties-maven-plugin}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- begin of root only plugins used by this and other projects  -->
+      <plugin>
+        <artifactId>maven-scm-plugin</artifactId>
+        <inherited>false</inherited>
+      </plugin>
+      <!-- end of root only plugins used by this and other projects -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <!-- enforce the Maven version always -->
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>${maven.minimum.version}</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>versions-check</id>
+      <properties>
+        <default.goal>versions:display-dependency-updates versions:display-parent-updates versions:display-plugin-updates versions:display-property-updates</default.goal>
+      </properties>
+    </profile>
+  </profiles>
+  
+  <modules>
+    <module>apex</module>
+    <module>db</module>
+  </modules>
+
+</project>

@@ -1,14 +1,14 @@
-# Oracle build tools
+# Oracle tools
 
 This project contains:
-- build software for deploying Oracle software (database and Apex).
+- Maven build software for deploying Oracle software (database and Apex).
 - Apex and database tools installed by the build software.
 
-## build
+## Maven build
 
-An Oracle build environment for Oracle projects.
+See the various POM files.
 
-## tools
+## Tools
 
 A set of Oracle tools for Oracle projects.
 
@@ -58,19 +58,94 @@ SQL> grant execute on ExcelTable to <Oracle tools schema>;
 First clone the project:
 
 ```
-$ git clone https://github.com/paulissoft/oracle_build_tools.git
+$ git clone https://github.com/paulissoft/oracle_tools.git
 ```
 
 #### Installing the database software
 
 ```
-$ cd oracle_build_tools/tools/db
-$ mvn -Ddb=<db from oracle_build_tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Ddb.operation=install validate flyway:migrate
+$ cd oracle_tools/tools/db
+$ mvn -Ddb=<db from oracle_tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Ddb.operation=install validate flyway:migrate
 ```
 
 #### Installing the APEX application
 
 ```
-$ cd oracle_build_tools/tools/apex
-$ mvn -Ddb=<db from oracle_build_tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Dapex.operation=import compile
+$ cd oracle_tools/tools/apex
+$ mvn -Ddb=<db from oracle_tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Dapex.operation=import compile
+```
+
+## Using Oracle Tools in other Maven projects
+
+### Database POM
+
+Add this to the Database POM:
+
+```
+  <parent>
+    <groupId>com.paulissoft.tools</groupId>
+    <artifactId>db</artifactId>
+    <version>YOUR VERSION</version>
+    <relativePath></relativePath>
+  </parent>
+
+	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
+  <dependencies>
+    <dependency>
+      <groupId>com.paulissoft.build</groupId>
+      <artifactId>db</artifactId>
+      <version>${project.parent.version}</version>
+      <classifier>project</classifier>
+      <type>zip</type>
+      <!-- Make sure this isn't included on any classpath-->
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources/>
+    <plugins>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <!-- Configuration won't be propagated to children -->
+        <inherited>false</inherited>
+      </plugin>
+    </plugins>
+  </build>
+```
+### Apex POM
+
+Add this to the Apex POM:
+
+```
+  <parent>
+    <groupId>com.paulissoft.tools</groupId>
+    <artifactId>apex</artifactId>
+    <version>YOUR VERSION</version>
+    <relativePath></relativePath>
+  </parent>
+
+	<!-- Needed for Apex Export/Import scripts -->
+  <dependencies>
+    <dependency>
+      <groupId>com.paulissoft.build</groupId>
+      <artifactId>apex</artifactId>
+      <version>${project.parent.version}</version>
+      <classifier>project</classifier>
+      <type>zip</type>
+      <!-- Make sure this isn't included on any classpath-->
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources/>
+    <plugins>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <!-- Configuration won't be propagated to children -->
+        <inherited>false</inherited>
+      </plugin>
+    </plugins>
+  </build>
 ```
