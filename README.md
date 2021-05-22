@@ -89,6 +89,10 @@ Add this to the Database POM:
     <relativePath></relativePath>
   </parent>
 
+  <properties>
+    <oracle_tools.version>${project.parent.version}</oracle_tools.version>
+  </properties>
+
 	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
   <dependencies>
     <dependency>
@@ -124,6 +128,10 @@ Add this to the Apex POM:
     <version>YOUR VERSION</version>
     <relativePath></relativePath>
   </parent>
+
+  <properties>
+    <oracle_tools.version>${project.parent.version}</oracle_tools.version>
+  </properties>
 
 	<!-- Needed for Apex Export/Import scripts -->
   <dependencies>

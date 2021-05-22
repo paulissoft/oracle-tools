@@ -639,11 +639,6 @@
     <!-- Are we in the oracle_tools/db directory? If so, override oracle_tools.db.dir -->
     <profile>
       <id>oracle-tools-db</id>
-      <activation>
-        <file>
-          <exists>${maven.multiModuleProjectDirectory}/db/src/main/java/GenerateDDL.java</exists>
-        </file>
-      </activation>
       <properties>
         <oracle_tools.db.dir>${maven.multiModuleProjectDirectory}/db</oracle_tools.db.dir>
         <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>

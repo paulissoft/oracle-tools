@@ -106,8 +106,8 @@
           <version>${flyway.version}</version>
         </plugin>
 
-        <!-- The assembly and dependency plugin are used to copy the apex,
-             conf and db modules to the target/dependency directory of every
+        <!-- The assembly and dependency plugin are used to copy the apex
+             and/or db modules to the target/dependency directory of every
              project using their parent POMs.
 
              ORACLE_TOOLS
@@ -132,6 +132,16 @@
               <goals>
                 <goal>single</goal>
               </goals>
+              <configuration>
+                <formats>
+                  <format>zip</format>
+                </formats>
+                <!-- so the archive does not prefix the files with ${artifactId}-${revision}/ -->
+                <includeBaseDirectory>false</includeBaseDirectory>
+                <descriptorRefs>
+                  <descriptorRef>project</descriptorRef>
+                </descriptorRefs>
+              </configuration>
             </execution>
           </executions>          
         </plugin>
