@@ -1,0 +1,5 @@
+*~
+target
+*.bak
+*.log
+.flattened-pom.xml
