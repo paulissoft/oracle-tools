@@ -15,6 +15,7 @@
   <properties>
     <oracle_tools.apex.utils.version>${project.parent.version}</oracle_tools.apex.utils.version>
     <oracle_tools.apex.utils.dir>${project.build.dir}/dependency/utils-${oracle_tools.apex.utils.version}</oracle_tools.apex.utils.dir>
+    <oracle_tools.apex.utils.resources.dir>${oracle_tools.apex.utils.dir}/src/main/resources</oracle_tools.apex.utils.resources.dir>
     <apex.src.dir>${basedir}/src</apex.src.dir>
   </properties>
 
@@ -96,7 +97,7 @@
                     <format property="apex.application.version"
                             pattern="yyyy-MM-dd hh:mm:ss"/>
                   </tstamp>
-                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.utils.dir}">
+                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.utils.resources.dir}">
                     <property name="application" value="${apex.application}" />
                     <property name="application.version" value="${apex.application.version}" />
                     <property name="userid" value="${db.userid}" />
