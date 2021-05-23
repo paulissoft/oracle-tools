@@ -14,9 +14,8 @@
   <description>Core POM for Database builds</description>
 
   <properties>
-    <!-- The way to determine the oracle_tools.db.src.dir for child projects:
-         1) have as parent POM this POM
-         2) use a dependency to the utils child of this project
+    <!-- When child projects have this POM as parent and this project as
+         dependency, this is the way to set oracle_tools.db.src.dir.
     -->
     <oracle_tools.db.version>${project.parent.version}</oracle_tools.db.version>
     <oracle_tools.db.src.dir>${project.build.directory}/dependency/db-${oracle_tools.db.version}/src</oracle_tools.db.src.dir>

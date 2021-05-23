@@ -12,9 +12,8 @@
   <description>Oracle Tools Apex application POM</description>
   
   <properties>
-    <oracle_tools.apex.utils.dir>${maven.multiModuleProjectDirectory}/apex/utils</oracle_tools.apex.utils.dir>
-    <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
-    <db.schema>${db.oracle_tools_schema}</db.schema>
+    <oracle_tools.apex.src.dir>${maven.multiModuleProjectDirectory}/apex/src</oracle_tools.apex.src.dir>
+    <db.schema>${oracle_tools.db.schema}</db.schema>
   </properties>
   
 </project>

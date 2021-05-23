@@ -13,12 +13,31 @@
   <description>Core POM for Oracle Apex builds</description>
   
   <properties>
-    <oracle_tools.apex.utils.version>${project.parent.version}</oracle_tools.apex.utils.version>
-    <oracle_tools.apex.utils.dir>${project.build.dir}/dependency/utils-${oracle_tools.apex.utils.version}</oracle_tools.apex.utils.dir>
-    <oracle_tools.apex.utils.resources.dir>${oracle_tools.apex.utils.dir}/src/main/resources</oracle_tools.apex.utils.resources.dir>
+    <!-- When child projects have this POM as parent and this project as
+         dependency, this is the way to set oracle_tools.apex.src.dir.
+    -->
+    <oracle_tools.apex.version>${project.parent.version}</oracle_tools.apex.version>
+    <oracle_tools.apex.src.dir>${project.build.dir}/dependency/apex-${oracle_tools.apex.utils.version}/src</oracle_tools.apex.src.dir>
+    <oracle_tools.apex.scripts.dir>${oracle_tools.apex.utils.dir}/src/main/resources</oracle_tools.apex.scripts.dir>
+    <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
   </properties>
 
+  <!-- Needed for Apex Export/Import scripts -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.paulissoft.tools.apex</groupId>
+        <artifactId>utils</artifactId>
+        <version>${oracle_tools.apex.version}</version>
+        <classifier>src</classifier>
+        <type>zip</type>
+        <!-- Make sure this isn't included on any classpath-->
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  
   <build>
     <resources>
       <resource>       
@@ -97,7 +116,7 @@
                     <format property="apex.application.version"
                             pattern="yyyy-MM-dd hh:mm:ss"/>
                   </tstamp>
-                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.utils.resources.dir}">
+                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.scripts.dir}">
                     <property name="application" value="${apex.application}" />
                     <property name="application.version" value="${apex.application.version}" />
                     <property name="userid" value="${db.userid}" />
@@ -199,7 +218,6 @@
 
   <modules>
     <module>app</module>
-    <module>utils</module>
   </modules>
   
 </project>
