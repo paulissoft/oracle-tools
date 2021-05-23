@@ -14,7 +14,7 @@
   <description>Oracle Tools database application POM</description>
 
   <properties>
-    <oracle_tools.db.utils.dir>${maven.multiModuleProjectDirectory}/db/utils</oracle_tools.db.utils.dir>
+    <oracle_tools.db.src.dir>${maven.multiModuleProjectDirectory}/db/src</oracle_tools.db.src.dir>
     <db.oracle_tools_schema>${flyway.placeholders.oracle_tools_schema}</db.oracle_tools_schema>
     <db.schema>${db.oracle_tools_schema}</db.schema>
     <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>

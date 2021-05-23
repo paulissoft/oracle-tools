@@ -90,7 +90,7 @@ Add this to the Database POM:
   </parent>
 
   <properties>
-    <oracle_tools.version>${project.parent.version}</oracle_tools.version>
+    <oracle_tools.db.version>${project.parent.version}</oracle_tools.db.version>
   </properties>
 
 	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
@@ -98,11 +98,6 @@ Add this to the Database POM:
     <dependency>
       <groupId>com.paulissoft.tools</groupId>
       <artifactId>db</artifactId>
-      <version>${oracle_tools.version}</version>
-      <classifier>project</classifier>
-      <type>zip</type>
-      <!-- Make sure this isn't included on any classpath-->
-      <scope>provided</scope>
     </dependency>
   </dependencies>
 

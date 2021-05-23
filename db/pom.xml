@@ -18,8 +18,8 @@
          1) have as parent POM this POM
          2) use a dependency to the utils child of this project
     -->
-    <oracle_tools.db.src.version>${project.parent.version}</oracle_tools.db.src.version>
-    <oracle_tools.db.src.dir>${project.build.dir}/dependency/db-${oracle_tools.db.src.version}/src</oracle_tools.db.src.dir>
+    <oracle_tools.db.version>${project.parent.version}</oracle_tools.db.version>
+    <oracle_tools.db.src.dir>${project.build.dir}/dependency/db-${oracle_tools.db.version}/src</oracle_tools.db.src.dir>
     
     <!-- database properties -->
     <db.src.scripts>src</db.src.scripts>
@@ -113,7 +113,7 @@
       <dependency>
         <groupId>com.paulissoft.tools</groupId>
         <artifactId>db</artifactId>
-        <version>${version}</version>
+        <version>${project.version}</version>
         <classifier>project</classifier>
         <type>zip</type>
         <!-- Make sure this isn't included on any classpath-->
