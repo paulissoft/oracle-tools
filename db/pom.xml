@@ -19,7 +19,8 @@
          2) use a dependency to the utils child of this project
     -->
     <oracle_tools.db.version>${project.parent.version}</oracle_tools.db.version>
-    <oracle_tools.db.src.dir>${project.build.dir}/dependency/db-${oracle_tools.db.version}/src</oracle_tools.db.src.dir>
+    <oracle_tools.db.src.dir>${project.build.directory}/dependency/db-${oracle_tools.db.version}/src</oracle_tools.db.src.dir>
+    <oracle_tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle_tools.db.schema>
     
     <!-- database properties -->
     <db.src.scripts>src</db.src.scripts>
@@ -106,21 +107,6 @@
       <version>${ojdbc8.version}</version>
     </dependency>
   </dependencies>
-
-  <!-- so this can be included more easily -->
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.paulissoft.tools</groupId>
-        <artifactId>db</artifactId>
-        <version>${project.version}</version>
-        <classifier>project</classifier>
-        <type>zip</type>
-        <!-- Make sure this isn't included on any classpath-->
-        <scope>provided</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <build>
     <resources />
@@ -579,7 +565,8 @@
                       <property name="full.skip.install.sql" value="${db.full.skip.install.sql}" />
                       <property name="full.interface" value="${db.full.interface}" />
                       <property name="full.strip.source.schema" value="${db.generate.full.strip.source.schema}" />
-                      <property name="owner" value="${db.oracle_tools_schema}" />
+                      <property name="owner" value="${oracle_tools.db.schema}" />
+                      <property name="src.dir" value="${oracle_tools.db.src.dir}/scripts" />
                       <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
                       <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
                       <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
@@ -638,7 +625,8 @@
                       <property name="incr.output.directory" value="${db.src.incr.scripts}" />
                       <property name="incr.skip.repeatables" value="${db.incr.skip.repeatables}" />
                       <property name="incr.interface" value="${db.incr.interface}" />
-                      <property name="owner" value="${db.oracle_tools_schema}" />
+                      <property name="owner" value="${oracle_tools.db.schema}" />
+                      <property name="src.dir" value="${oracle_tools.db.src.dir}/scripts" />
                       <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
                       <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
                       <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>

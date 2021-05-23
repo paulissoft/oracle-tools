@@ -98,6 +98,11 @@ Add this to the Database POM:
     <dependency>
       <groupId>com.paulissoft.tools</groupId>
       <artifactId>db</artifactId>
+      <version>${project.parent.version}</version>
+      <classifier>src</classifier>
+      <type>zip</type>
+      <!-- Make sure this isn't included on any classpath-->
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 
@@ -134,7 +139,7 @@ Add this to the Apex POM:
       <groupId>com.paulissoft.tools.apex</groupId>
       <artifactId>utils</artifactId>
       <version>${project.parent.version}</version>
-      <classifier>project</classifier>
+      <classifier>src</classifier>
       <type>zip</type>
       <!-- Make sure this isn't included on any classpath-->
       <scope>provided</scope>
