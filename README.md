@@ -83,7 +83,7 @@ Add this to the Database POM:
 
 ```
   <parent>
-    <groupId>com.paulissoft.tools</groupId>
+    <groupId>com.paulissoft.oracle-tools</groupId>
     <artifactId>db</artifactId>
     <version>YOUR VERSION</version>
     <relativePath></relativePath>
@@ -96,7 +96,7 @@ Add this to the Database POM:
 	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
   <dependencies>
     <dependency>
-      <groupId>com.paulissoft.tools</groupId>
+      <groupId>com.paulissoft.oracle-tools</groupId>
       <artifactId>db</artifactId>
       <version>${project.parent.version}</version>
       <classifier>src</classifier>
@@ -123,7 +123,7 @@ Add this to the Apex POM:
 
 ```
   <parent>
-    <groupId>com.paulissoft.tools</groupId>
+    <groupId>com.paulissoft.oracle-tools</groupId>
     <artifactId>apex</artifactId>
     <version>YOUR VERSION</version>
     <relativePath></relativePath>
@@ -136,8 +136,8 @@ Add this to the Apex POM:
 	<!-- Needed for Apex Export/Import scripts -->
   <dependencies>
     <dependency>
-      <groupId>com.paulissoft.tools.apex</groupId>
-      <artifactId>utils</artifactId>
+      <groupId>com.paulissoft.oracle-tools</groupId>
+      <artifactId>apex</artifactId>
       <version>${project.parent.version}</version>
       <classifier>src</classifier>
       <type>zip</type>

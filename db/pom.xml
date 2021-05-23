@@ -5,10 +5,10 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.paulissoft</groupId>
-    <artifactId>tools</artifactId>
+    <artifactId>oracle-tools</artifactId>
     <version>${revision}</version>
   </parent>
-  <groupId>com.paulissoft.tools</groupId>
+  <groupId>com.paulissoft.oracle-tools</groupId>
   <artifactId>db</artifactId>
   <packaging>pom</packaging>
   <description>Core POM for Database builds</description>
@@ -98,6 +98,21 @@
     <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
     <db.generate.ddl.incr.skip>true</db.generate.ddl.incr.skip>
   </properties>
+
+  <!-- Needed for Db Generate DDL scripts in child projects -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.paulissoft.oracle-tools</groupId>
+        <artifactId>db</artifactId>
+        <version>${oracle_tools.db.version}</version>
+        <classifier>src</classifier>
+        <type>zip</type>
+        <!-- Make sure this isn't included on any classpath-->
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>

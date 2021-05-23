@@ -2,12 +2,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.paulissoft.tools</groupId>
+    <groupId>com.paulissoft.oracle-tools</groupId>
     <artifactId>db</artifactId>
     <version>${revision}</version>
     <relativePath>../db/pom.xml</relativePath>
   </parent>
-  <groupId>com.paulissoft.tools</groupId>
+  <groupId>com.paulissoft.oracle-tools</groupId>
   <artifactId>apex</artifactId>
   <packaging>pom</packaging>
   <description>Core POM for Oracle Apex builds</description>
@@ -17,18 +17,18 @@
          dependency, this is the way to set oracle_tools.apex.src.dir.
     -->
     <oracle_tools.apex.version>${project.parent.version}</oracle_tools.apex.version>
-    <oracle_tools.apex.src.dir>${project.build.dir}/dependency/apex-${oracle_tools.apex.utils.version}/src</oracle_tools.apex.src.dir>
-    <oracle_tools.apex.scripts.dir>${oracle_tools.apex.utils.dir}/src/main/resources</oracle_tools.apex.scripts.dir>
+    <oracle_tools.apex.src.dir>${project.build.dir}/dependency/apex-${oracle_tools.apex.version}/src</oracle_tools.apex.src.dir>
+    <oracle_tools.apex.scripts.dir>${oracle_tools.apex.src.dir}/scripts</oracle_tools.apex.scripts.dir>
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
   </properties>
 
-  <!-- Needed for Apex Export/Import scripts -->
+  <!-- Needed for Apex Export/Import scripts in child projects -->
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>com.paulissoft.tools.apex</groupId>
-        <artifactId>utils</artifactId>
+        <groupId>com.paulissoft.oracle-tools</groupId>
+        <artifactId>apex</artifactId>
         <version>${oracle_tools.apex.version}</version>
         <classifier>src</classifier>
         <type>zip</type>

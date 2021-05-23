@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.paulissoft</groupId>
-  <artifactId>tools</artifactId>
+  <artifactId>oracle-tools</artifactId>
   <version>${revision}</version>
   <packaging>pom</packaging>
   <description>Core POM for Database builds</description>
@@ -47,7 +47,7 @@
   </properties>
 
   <scm>
-    <developerConnection>scm:svn:https://github.com/paulissoft/oracle_tools.git/trunk</developerConnection>
+    <developerConnection>scm:svn:https://github.com/paulissoft/oracle-tools.git/trunk</developerConnection>
   </scm>
 
   <distributionManagement>
@@ -150,7 +150,7 @@
           <version>${maven-dependency-plugin.version}</version>
           <configuration>
             <!-- configure the plugin here -->
-            <includeGroupIds>com.paulissoft.tools</includeGroupIds>
+            <includeGroupIds>com.paulissoft.oracle-tools</includeGroupIds>
             <excludeTransitive>true</excludeTransitive>
             <!--use as much as needed to be specific...also scope,type,classifier etc-->
           </configuration>
