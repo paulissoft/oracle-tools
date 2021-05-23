@@ -96,9 +96,9 @@ Add this to the Database POM:
 	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
   <dependencies>
     <dependency>
-      <groupId>com.paulissoft.tools.db</groupId>
-      <artifactId>utils</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>com.paulissoft.tools</groupId>
+      <artifactId>db</artifactId>
+      <version>${oracle_tools.version}</version>
       <classifier>project</classifier>
       <type>zip</type>
       <!-- Make sure this isn't included on any classpath-->

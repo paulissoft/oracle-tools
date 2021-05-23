@@ -139,7 +139,7 @@
                 <!-- so the archive does not prefix the files with ${artifactId}-${revision}/ -->
                 <includeBaseDirectory>false</includeBaseDirectory>
                 <descriptorRefs>
-                  <descriptorRef>project</descriptorRef>
+                  <descriptorRef>src</descriptorRef>
                 </descriptorRefs>
               </configuration>
             </execution>

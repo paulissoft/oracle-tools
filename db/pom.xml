@@ -14,12 +14,12 @@
   <description>Core POM for Database builds</description>
 
   <properties>
-    <!-- The way to determine the oracle_tools.db.utils.dir for child projects:
+    <!-- The way to determine the oracle_tools.db.src.dir for child projects:
          1) have as parent POM this POM
          2) use a dependency to the utils child of this project
     -->
-    <oracle_tools.db.utils.version>${project.parent.version}</oracle_tools.db.utils.version>
-    <oracle_tools.db.utils.dir>${project.build.dir}/dependency/utils-${oracle_tools.db.utils.version}</oracle_tools.db.utils.dir>
+    <oracle_tools.db.src.version>${project.parent.version}</oracle_tools.db.src.version>
+    <oracle_tools.db.src.dir>${project.build.dir}/dependency/db-${oracle_tools.db.src.version}/src</oracle_tools.db.src.dir>
     
     <!-- database properties -->
     <db.src.scripts>src</db.src.scripts>
@@ -28,7 +28,7 @@
     <db.src.incr.scripts>${db.src.scripts}/incr</db.src.incr.scripts>
     <!-- callbacks are added to the artifact for deployment later on without
          CD sources -->
-    <db.src.callbacks.scripts>${oracle_tools.db.utils.dir}/src/callbacks</db.src.callbacks.scripts>
+    <db.src.callbacks.scripts>${oracle_tools.db.src.dir}/callbacks</db.src.callbacks.scripts>
 
     <!-- compile all and reuse settings for afterMigrate.sql -->
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
@@ -106,6 +106,21 @@
       <version>${ojdbc8.version}</version>
     </dependency>
   </dependencies>
+
+  <!-- so this can be included more easily -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.paulissoft.tools</groupId>
+        <artifactId>db</artifactId>
+        <version>${version}</version>
+        <classifier>project</classifier>
+        <type>zip</type>
+        <!-- Make sure this isn't included on any classpath-->
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <resources />
@@ -548,7 +563,7 @@
                   <target unless="${db.generate.ddl.full.skip}">
                     <fail message="Property db.userid must be set" unless="db.userid" />
                     <fail message="Property db.password must be set" unless="db.password" />
-                    <ant antfile="${oracle_tools.db.utils.dir}/src/main/resources/generate_ddl.xml"
+                    <ant antfile="${oracle_tools.db.src.dir}/scripts/generate_ddl.xml"
                          target="generate-ddl-full"
                          inheritAll="false"
                          dir=".">
@@ -605,7 +620,7 @@
                   <target unless="${db.generate.ddl.incr.skip}">
                     <fail message="Property db.prev.database.link must be set" unless="db.prev.database.link" />
                     <fail message="Property db.password must be set" unless="db.password" />
-                    <ant antfile="${oracle_tools.db.utils.dir}/src/main/resources/generate_ddl.xml"
+                    <ant antfile="${oracle_tools.db.src.dir}/scripts/generate_ddl.xml"
                          target="generate-ddl-incr"
                          inheritAll="false"
                          dir=".">
@@ -643,7 +658,6 @@
 
   <modules>
     <module>app</module>
-    <module>utils</module>
   </modules>
   
 </project>
