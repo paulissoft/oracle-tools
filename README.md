@@ -58,21 +58,21 @@ SQL> grant execute on ExcelTable to <Oracle tools schema>;
 First clone the project:
 
 ```
-$ git clone https://github.com/paulissoft/oracle_tools.git
+$ git clone https://github.com/paulissoft/oracle-tools.git
 ```
 
 #### Installing the database software
 
 ```
-$ cd oracle_tools/tools/db
-$ mvn -Ddb=<db from oracle_tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Ddb.operation=install validate flyway:migrate
+$ cd oracle-tools/tools/db
+$ mvn -Ddb=<db from oracle-tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Ddb.operation=install validate flyway:migrate
 ```
 
 #### Installing the APEX application
 
 ```
-$ cd oracle_tools/tools/apex
-$ mvn -Ddb=<db from oracle_tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Dapex.operation=import compile
+$ cd oracle-tools/tools/apex
+$ mvn -Ddb=<db from oracle-tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Dapex.operation=import compile
 ```
 
 ## Using Oracle Tools in other Maven projects
@@ -90,7 +90,7 @@ Add this to the Database POM:
   </parent>
 
   <properties>
-    <oracle_tools.db.version>${project.parent.version}</oracle_tools.db.version>
+    <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
   </properties>
 
 	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
@@ -130,7 +130,7 @@ Add this to the Apex POM:
   </parent>
 
   <properties>
-    <oracle_tools.version>${project.parent.version}</oracle_tools.version>
+    <oracle-tools.version>${project.parent.version}</oracle-tools.version>
   </properties>
 
 	<!-- Needed for Apex Export/Import scripts -->

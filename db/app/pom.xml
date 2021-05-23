@@ -14,8 +14,8 @@
   <description>Oracle Tools database application POM</description>
 
   <properties>
-    <oracle_tools.db.src.dir>${maven.multiModuleProjectDirectory}/db/src</oracle_tools.db.src.dir>
-    <db.schema>${oracle_tools.db.schema}</db.schema>
+    <oracle-tools.db.src.dir>${maven.multiModuleProjectDirectory}/db/src</oracle-tools.db.src.dir>
+    <db.schema>${oracle-tools.db.schema}</db.schema>
     <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>
   </properties>
 

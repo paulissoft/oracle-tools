@@ -14,11 +14,11 @@
   
   <properties>
     <!-- When child projects have this POM as parent and this project as
-         dependency, this is the way to set oracle_tools.apex.src.dir.
+         dependency, this is the way to set oracle-tools.apex.src.dir.
     -->
-    <oracle_tools.apex.version>${project.parent.version}</oracle_tools.apex.version>
-    <oracle_tools.apex.src.dir>${project.build.dir}/dependency/apex-${oracle_tools.apex.version}/src</oracle_tools.apex.src.dir>
-    <oracle_tools.apex.scripts.dir>${oracle_tools.apex.src.dir}/scripts</oracle_tools.apex.scripts.dir>
+    <oracle-tools.apex.version>${project.parent.version}</oracle-tools.apex.version>
+    <oracle-tools.apex.src.dir>${project.build.dir}/dependency/apex-${oracle-tools.apex.version}/src</oracle-tools.apex.src.dir>
+    <oracle-tools.apex.scripts.dir>${oracle-tools.apex.src.dir}/scripts</oracle-tools.apex.scripts.dir>
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
   </properties>
@@ -29,7 +29,7 @@
       <dependency>
         <groupId>com.paulissoft.oracle-tools</groupId>
         <artifactId>apex</artifactId>
-        <version>${oracle_tools.apex.version}</version>
+        <version>${oracle-tools.apex.version}</version>
         <classifier>src</classifier>
         <type>zip</type>
         <!-- Make sure this isn't included on any classpath-->
@@ -116,7 +116,7 @@
                     <format property="apex.application.version"
                             pattern="yyyy-MM-dd hh:mm:ss"/>
                   </tstamp>
-                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle_tools.apex.scripts.dir}">
+                  <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle-tools.apex.scripts.dir}">
                     <property name="application" value="${apex.application}" />
                     <property name="application.version" value="${apex.application.version}" />
                     <property name="userid" value="${db.userid}" />

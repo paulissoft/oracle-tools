@@ -15,11 +15,11 @@
 
   <properties>
     <!-- When child projects have this POM as parent and this project as
-         dependency, this is the way to set oracle_tools.db.src.dir.
+         dependency, this is the way to set oracle-tools.db.src.dir.
     -->
-    <oracle_tools.db.version>${project.parent.version}</oracle_tools.db.version>
-    <oracle_tools.db.src.dir>${project.build.directory}/dependency/db-${oracle_tools.db.version}/src</oracle_tools.db.src.dir>
-    <oracle_tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle_tools.db.schema>
+    <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
+    <oracle-tools.db.src.dir>${project.build.directory}/dependency/db-${oracle-tools.db.version}/src</oracle-tools.db.src.dir>
+    <oracle-tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle-tools.db.schema>
     
     <!-- database properties -->
     <db.src.scripts>src</db.src.scripts>
@@ -28,7 +28,7 @@
     <db.src.incr.scripts>${db.src.scripts}/incr</db.src.incr.scripts>
     <!-- callbacks are added to the artifact for deployment later on without
          CD sources -->
-    <db.src.callbacks.scripts>${oracle_tools.db.src.dir}/callbacks</db.src.callbacks.scripts>
+    <db.src.callbacks.scripts>${oracle-tools.db.src.dir}/callbacks</db.src.callbacks.scripts>
 
     <!-- compile all and reuse settings for afterMigrate.sql -->
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
@@ -105,7 +105,7 @@
       <dependency>
         <groupId>com.paulissoft.oracle-tools</groupId>
         <artifactId>db</artifactId>
-        <version>${oracle_tools.db.version}</version>
+        <version>${oracle-tools.db.version}</version>
         <classifier>src</classifier>
         <type>zip</type>
         <!-- Make sure this isn't included on any classpath-->
@@ -563,7 +563,7 @@
                   <target unless="${db.generate.ddl.full.skip}">
                     <fail message="Property db.userid must be set" unless="db.userid" />
                     <fail message="Property db.password must be set" unless="db.password" />
-                    <ant antfile="${oracle_tools.db.src.dir}/scripts/generate_ddl.xml"
+                    <ant antfile="${oracle-tools.db.src.dir}/scripts/generate_ddl.xml"
                          target="generate-ddl-full"
                          inheritAll="false"
                          dir=".">
@@ -579,8 +579,8 @@
                       <property name="full.skip.install.sql" value="${db.full.skip.install.sql}" />
                       <property name="full.interface" value="${db.full.interface}" />
                       <property name="full.strip.source.schema" value="${db.generate.full.strip.source.schema}" />
-                      <property name="owner" value="${oracle_tools.db.schema}" />
-                      <property name="src.dir" value="${oracle_tools.db.src.dir}/scripts" />
+                      <property name="owner" value="${oracle-tools.db.schema}" />
+                      <property name="src.dir" value="${oracle-tools.db.src.dir}/scripts" />
                       <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
                       <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
                       <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
@@ -621,7 +621,7 @@
                   <target unless="${db.generate.ddl.incr.skip}">
                     <fail message="Property db.prev.database.link must be set" unless="db.prev.database.link" />
                     <fail message="Property db.password must be set" unless="db.password" />
-                    <ant antfile="${oracle_tools.db.src.dir}/scripts/generate_ddl.xml"
+                    <ant antfile="${oracle-tools.db.src.dir}/scripts/generate_ddl.xml"
                          target="generate-ddl-incr"
                          inheritAll="false"
                          dir=".">
@@ -639,8 +639,8 @@
                       <property name="incr.output.directory" value="${db.src.incr.scripts}" />
                       <property name="incr.skip.repeatables" value="${db.incr.skip.repeatables}" />
                       <property name="incr.interface" value="${db.incr.interface}" />
-                      <property name="owner" value="${oracle_tools.db.schema}" />
-                      <property name="src.dir" value="${oracle_tools.db.src.dir}/scripts" />
+                      <property name="owner" value="${oracle-tools.db.schema}" />
+                      <property name="src.dir" value="${oracle-tools.db.src.dir}/scripts" />
                       <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
                       <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
                       <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
