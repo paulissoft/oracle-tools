@@ -455,7 +455,7 @@ $end
       raise_application_error
       ( c_schema_does_not_exist
       , p_description || '"' || p_schema || '"' || ' does not exist.'
-      ); -- hier komt ie niet omdat dbms_assert.schema_name() al een exceptie genereer
+      ); -- hier komt ie niet omdat dbms_assert.schema_name() al een exceptie genereert
     end if;
   end check_schema;
 
@@ -5392,7 +5392,6 @@ $end
   return t_schema_ddl_tab
   pipelined
   is
-    -- At Frankenbach:
     -- ORA-31642: the following SQL statement fails:
     -- BEGIN "SYS"."DBMS_SCHED_EXPORT_CALLOUTS".SCHEMA_CALLOUT(:1,1,1,'11.02.00.00.00'); END;
     -- ORA-06512: at "SYS.DBMS_SYS_ERROR", line 86
@@ -5492,6 +5491,7 @@ $end
                             where   l.object_type || 'X' = t.object_type || 'X' -- null == null
                             and     l.object_schema || 'X' = t.object_schema || 'X'
                             and     l.base_object_schema || 'X' = t.base_object_schema || 'X'
+                            and     l.base_object_name is not null
                           ) as oracle_tools.t_text_tab
                         ) as base_object_name_tab
                 ,       count(*) as nr_objects

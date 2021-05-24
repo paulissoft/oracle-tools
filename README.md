@@ -89,20 +89,14 @@ Add this to the Database POM:
     <relativePath></relativePath>
   </parent>
 
-  <properties>
-    <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
-  </properties>
-
-	<!-- Needed for Flyway callbacks and Generate DDL scripts -->
+  <!-- Needed for Flyway callbacks and Generate DDL scripts -->
   <dependencies>
     <dependency>
       <groupId>com.paulissoft.oracle-tools</groupId>
       <artifactId>db</artifactId>
-      <version>${project.parent.version}</version>
-      <classifier>src</classifier>
+      <!-- type and classifier are needed when they are not the default -->
       <type>zip</type>
-      <!-- Make sure this isn't included on any classpath-->
-      <scope>provided</scope>
+      <classifier>src</classifier>
     </dependency>
   </dependencies>
 
@@ -129,20 +123,14 @@ Add this to the Apex POM:
     <relativePath></relativePath>
   </parent>
 
-  <properties>
-    <oracle-tools.version>${project.parent.version}</oracle-tools.version>
-  </properties>
-
-	<!-- Needed for Apex Export/Import scripts -->
+  <!-- Needed for Apex Export/Import scripts -->
   <dependencies>
     <dependency>
       <groupId>com.paulissoft.oracle-tools</groupId>
       <artifactId>apex</artifactId>
-      <version>${project.parent.version}</version>
-      <classifier>src</classifier>
+      <!-- type and classifier are needed when they are not the default -->
       <type>zip</type>
-      <!-- Make sure this isn't included on any classpath-->
-      <scope>provided</scope>
+      <classifier>src</classifier>
     </dependency>
   </dependencies>
 
