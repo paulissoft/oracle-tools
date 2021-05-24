@@ -165,8 +165,6 @@ $Header$
 
 =item 2017-05-10
 
-Pivotal #145216383
-
 As a developer I want to be able to have versioned migration scripts with just
 one statement so I can easy recover from a failed versioned migration.
 
@@ -188,7 +186,7 @@ solution is to use one dummy object so the order of DDL statements is preserved.
 
 =item 2016-10-19
 
-The option force-view is added. Pivotal issue #132752233.
+The option force-view is added.
 
 =item 2016-10-18
 
@@ -246,7 +244,7 @@ my $encoding = ''; # was :crlf:encoding(UTF-8)
     
 # command line options
 my $dynamic_sql = 0;
-my $force_view = 1; # Pivotal #132752233
+my $force_view = 1;
 my $input_file = undef;
 my $output_directory = '.';
 my $remove_output_directory = 0;
@@ -351,7 +349,7 @@ sub print_run_info ($$);
 sub remove_cr_lf ($);
 sub remove_leading_empty_lines ($);
 sub remove_trailing_empty_lines ($);
-sub beautify_line ($$$$$);
+sub beautify_line ($$$$$$);
 sub split_single_output_file($);
 sub warning (@);
 sub info (@);
@@ -382,7 +380,7 @@ sub process_command_line ()
 
     #
     GetOptions('dynamic-sql!' => \$dynamic_sql,
-               'force-view!' => \$force_view, # Pivotal #132752233
+               'force-view!' => \$force_view,
                'help' => sub { pod2usage(-verbose => 2) },
                'input-file=s' => \$input_file,
                'output-directory=s' => \$output_directory,
@@ -559,9 +557,7 @@ sub process () {
                 } else {
                     debug(sprintf("text%d", (($. - 1) % $nr_lines_per_record)));
 
-                    if ($line_no == 1) {
-                        beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, \$sql_line);
-                    }
+                    beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no, \$sql_line);
 
                     # take into account optional whitespace at the end
                     sql_statement_add(\$sql_line, \%sql_statements, $object, $ddl_no);
@@ -589,8 +585,8 @@ sub process () {
                     if ($line_no == 1) {
                         croak "\$object_name undefined"
                             unless (defined($object_name));
-                        beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, \$line);
                     }
+                    beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no, \$line);
 
                     sql_statement_add(\$line, \%sql_statements, $object, $ddl_no, $ddl_info);
                 }
@@ -671,7 +667,7 @@ sub process_object_type ($$$$)
 
                 $ddl_no = $r_ddl_no->{$object}++;
                         
-                beautify_line($matched_object, $object_schema, $object_name, $object_type, \$line);
+                beautify_line($matched_object, $object_schema, $object_name, $object_type, 1, \$line);
                 
                 $last_line = $line;
                 $line =~ s/^\s+//; # strip leading space
@@ -1291,35 +1287,41 @@ sub remove_trailing_empty_lines ($)
     }
 }
 
-sub beautify_line ($$$$$) {
-    my ($matched_object, $object_schema, $object_name, $object_type, $r_line) = @_;
+sub beautify_line ($$$$$$) {
+    my ($matched_object, $object_schema, $object_name, $object_type, $line_no, $r_line) = @_;
 
+    return
+        unless defined($$r_line) && $$r_line ne '';
+        
     debug("\$\$r_line before: $$r_line");
 
-    if ($object_type_info{$object_type}->{'repeatable'}) {
-        # create => create or replace
-        $$r_line =~ s/^\s*CREATE\s+/CREATE OR REPLACE /i
-            unless $$r_line =~ m/^\s*CREATE\s+OR\s+REPLACE\b/i;
+    if ($line_no == 1) {
+        if ($object_type_info{$object_type}->{'repeatable'}) {
+            # create => create or replace
+            $$r_line =~ s/^\s*CREATE\s+/CREATE OR REPLACE /i
+                unless $$r_line =~ m/^\s*CREATE\s+OR\s+REPLACE\b/i;
+            
+            $$r_line =~ s/\s+FORCE\s+/ /i
+                if (!$force_view); 
+        } elsif ($object_type eq 'TYPE_SPEC') {
+            # create or replace => create (TYPE)
+            $$r_line =~ s/^\s*CREATE\s+OR\s+REPLACE\s+/CREATE /i;
+        }
 
-        # Pivotal #132752233
-        $$r_line =~ s/\s+FORCE\s+/ /i
-            if (!$force_view); 
-    } elsif ($object_type eq 'TYPE_SPEC') {
-        # create or replace => create (TYPE)
-        $$r_line =~ s/^\s*CREATE\s+OR\s+REPLACE\s+/CREATE /i;
+        # Do not change NONEDITIONABLE since some views may need it (APEX views for instance)
+        $$r_line =~ s/\bEDITIONABLE\s+//i; # Flyway does not like CREATE OR REPLACE EDITIONABLE PACKAGE 
+
+        my $object_fq_name = ($strip_source_schema && $object_schema eq $source_schema ? '' : "\"$object_schema\".");
+
+        $object_fq_name .= "\"$object_name\"";
+
+        # beautify the name
+        $$r_line =~ s/(.*\S)\s+$matched_object(\s+(?:AS|IS)\b)?(\s+OBJECT\b)?/uc($1).' '.$object_fq_name.(defined($2)?uc($2):'').(defined($3)?uc($3):'')/ie;
     }
 
-    # Do not change NONEDITIONABLE since some views may need it (APEX views for instance)
-    $$r_line =~ s/\bEDITIONABLE\s+//i; # Flyway does not like CREATE OR REPLACE EDITIONABLE PACKAGE 
-
-    # Pivotal #132752233
-
-    my $object_fq_name = ($strip_source_schema && $object_schema eq $source_schema ? '' : "\"$object_schema\".");
-
-    $object_fq_name .= "\"$object_name\"";
-
-    # beautify the name
-    $$r_line =~ s/(.*\S)\s+$matched_object(\s+(?:AS|IS)\b)?(\s+OBJECT\b)?/uc($1).' '.$object_fq_name.(defined($2)?uc($2):'').(defined($3)?uc($3):'')/ie;
+    if ($strip_source_schema && defined($source_schema)) {
+        $$r_line =~ s/"$source_schema"\.//g;
+    }
 
     debug("\$\$r_line after : $$r_line");
 }

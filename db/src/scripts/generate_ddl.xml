@@ -183,7 +183,7 @@
 
     <property name="full.interface" value="pkg_ddl_util v4"/>
 
-    <condition property="skip.uninstall.sql">
+    <condition property="full.skip.uninstall.sql" value="true" else="false">
       <not>
         <equals arg1="${perl.full.skip.install.sql}" arg2="no"/>
       </not>
@@ -399,7 +399,7 @@ Z       Time zone               RFC 822 time zone   -0800
   <target name="generate-ddl-full-uninstall"
           depends="init-schema,init-userid,jar"
           description="Run: perl ${generate_ddl.pl}"
-          unless="skip.uninstall.sql">
+          unless="${full.skip.uninstall.sql}">
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <generate-ddl target.schema="${schema}"
                      target.db.name="${source.db.name}"
