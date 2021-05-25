@@ -89,6 +89,10 @@ Add this to the Database POM:
     <relativePath></relativePath>
   </parent>
 
+  <properties>
+    <oracle-tools.db.version>YOUR VERSION</oracle-tools.db.version>
+  </properties>
+  
   <!-- Needed for Flyway callbacks and Generate DDL scripts -->
   <dependencies>
     <dependency>
@@ -105,8 +109,6 @@ Add this to the Database POM:
     <plugins>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
-        <!-- Configuration won't be propagated to children -->
-        <inherited>false</inherited>
       </plugin>
     </plugins>
   </build>
@@ -123,6 +125,10 @@ Add this to the Apex POM:
     <relativePath></relativePath>
   </parent>
 
+  <properties>
+    <oracle-tools.apex.version>YOUR VERSION</oracle-tools.apex.version>
+  </properties>
+  
   <!-- Needed for Apex Export/Import scripts -->
   <dependencies>
     <dependency>
@@ -139,8 +145,6 @@ Add this to the Apex POM:
     <plugins>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
-        <!-- Configuration won't be propagated to children -->
-        <inherited>false</inherited>
       </plugin>
     </plugins>
   </build>

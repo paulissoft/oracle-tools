@@ -131,23 +131,6 @@
           <version>${maven-antrun-plugin.version}</version>
           <executions>
             <execution>
-              <id>db-debug-before</id>
-              <!-- use initialize here so the Apex pom can use validate -->
-              <phase>initialize</phase>
-              <configuration>
-                <target if="maven.db.debug">
-                  <!-- also dbUrl, dbUser, dbPass -->
-                  <echoproperties prefix="java." />
-                  <echoproperties prefix="maven." />
-                  <echoproperties prefix="db" />
-                  <echoproperties prefix="flyway." />
-                </target>
-              </configuration>
-              <goals>
-                <goal>run</goal>
-              </goals>
-            </execution>
-            <execution>
               <id>db-init</id>
               <!-- use initialize here so the Apex pom can use validate -->
               <phase>initialize</phase>
@@ -160,6 +143,24 @@
                     </not>
                   </condition>
                   <property name="db.install.skip" value="${db.connect.skip}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>db-debug-before</id>
+              <!-- use initialize here so the Apex pom can use validate -->
+              <phase>initialize</phase>
+              <configuration>
+                <target if="maven.db.debug">
+                  <!-- also dbUrl, dbUser, dbPass -->
+                  <echoproperties prefix="java." />
+                  <echoproperties prefix="maven." />
+                  <echoproperties prefix="db" />
+                  <echoproperties prefix="flyway." />
+                  <echoproperties prefix="oracle-tools." />
                 </target>
               </configuration>
               <goals>
@@ -332,6 +333,7 @@
             <execution>
               <!-- This must be named -->
               <id>db-install-init</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
               <phase>process-resources</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
@@ -380,6 +382,7 @@
 
             <execution>
               <id>db-debug-after</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
               <phase>process-resources</phase>
               <configuration>
                 <target if="maven.db.debug">
@@ -558,6 +561,7 @@
             <executions>
               <execution>
                 <id>db-generate-ddl-full</id>
+                <!-- give the generate-resources phase a chance to extract resources -->
                 <phase>process-resources</phase>
                 <configuration>
                   <target unless="${db.generate.ddl.full.skip}">
@@ -581,7 +585,7 @@
                       <property name="full.strip.source.schema" value="${db.generate.full.strip.source.schema}" />
                       <property name="owner" value="${oracle-tools.db.schema}" />
                       <property name="src.dir" value="${oracle-tools.db.src.dir}/scripts" />
-                      <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
+                      <property name="build.dir" value="${project.build.directory}" />
                       <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
                       <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
                     </ant>
@@ -616,6 +620,7 @@
             <executions>
               <execution>
                 <id>db-generate-ddl-incr</id>
+                <!-- give the generate-resources phase a chance to extract resources -->
                 <phase>process-resources</phase>
                 <configuration>
                   <target unless="${db.generate.ddl.incr.skip}">
@@ -641,7 +646,7 @@
                       <property name="incr.interface" value="${db.incr.interface}" />
                       <property name="owner" value="${oracle-tools.db.schema}" />
                       <property name="src.dir" value="${oracle-tools.db.src.dir}/scripts" />
-                      <property name="build.dir" value="${maven.multiModuleProjectDirectory}/db/target" />
+                      <property name="build.dir" value="${project.build.directory}" />
                       <reference torefid="compile.classpath" refid="maven.compile.classpath"/>
                       <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>
                     </ant>

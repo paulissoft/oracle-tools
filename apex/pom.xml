@@ -21,6 +21,7 @@
     <oracle-tools.apex.scripts.dir>${oracle-tools.apex.src.dir}/scripts</oracle-tools.apex.scripts.dir>
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
+    <apex.application.dir>${apex.src.dir}/f${apex.application}</apex.application.dir>
   </properties>
 
   <!-- Needed for Apex Export/Import scripts in child projects -->
@@ -41,7 +42,7 @@
   <build>
     <resources>
       <resource>       
-        <directory>${apex.src.dir}/f${apex.application}</directory>
+        <directory>${apex.application.dir}</directory>
         <filtering>false</filtering>
       </resource>
     </resources>
@@ -52,19 +53,6 @@
           <version>${maven-antrun-plugin.version}</version>
           <executions>
             <execution>
-              <id>apex-debug-before</id>
-              <phase>validate</phase>
-              <configuration>
-                <target if="maven.apex.debug">
-                  <echoproperties prefix="apex." />
-                  <echoproperties prefix="sql." />
-                </target>
-              </configuration>
-              <goals>
-                <goal>run</goal>
-              </goals>
-            </execution>
-            <execution>
               <id>apex-init</id>
               <phase>validate</phase>
               <configuration>
@@ -72,10 +60,23 @@
                 <target>
                   <condition property="apex.skip" value="true" else="false">
                     <not>
-                      <available file="${apex.src.dir}" type="dir" />
+                      <available file="${apex.application.dir}" type="dir" />
                     </not>
                   </condition>
                   <property name="db.connect.skip" value="${apex.skip}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>apex-debug-before</id>
+              <phase>validate</phase>
+              <configuration>
+                <target if="maven.apex.debug">
+                  <echoproperties prefix="apex." />
+                  <echoproperties prefix="sql." />
                 </target>
               </configuration>
               <goals>
