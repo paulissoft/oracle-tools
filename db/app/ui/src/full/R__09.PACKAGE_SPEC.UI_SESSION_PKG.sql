@@ -183,7 +183,7 @@ procedure create_apex_session
  * 
  * The page item names should be prefixed as usual:
  *
- *   'P_' || p_app_page_id_from || '_'
+ *   'P' || p_app_page_id_from || '_'
  *
  * @param p_app_page_id_from  The application page id to copy from
  * @param p_app_page_id_to    The application page id to copy to

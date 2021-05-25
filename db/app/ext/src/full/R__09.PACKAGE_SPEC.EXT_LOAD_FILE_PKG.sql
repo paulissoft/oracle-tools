@@ -54,6 +54,23 @@ type t_column_info_rec is record
 
 type t_column_info_tab is table of t_column_info_rec;
 
+type t_object_columns_tab is table of all_tab_columns.column_name%type;
+
+/**
+ * Return the columns of a table/view (or synonym pointing to a table/view).
+ *
+ * @param p_object_name  The object name (may be fully qualified if p_owner is empty)
+ * @param p_owner        The owner (may be empty)
+ *
+ * @return The schema owner of that package
+ */
+function get_object_columns
+( p_object_name in varchar2
+, p_owner in varchar2 default null
+)
+return t_object_columns_tab
+pipelined;
+
 /**
  * Return the owner of the load data package.
  *

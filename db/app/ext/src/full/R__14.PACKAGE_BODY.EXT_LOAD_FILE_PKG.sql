@@ -271,10 +271,8 @@ $end
   from    ( select  t.header_row as table_column
             from    table(l_column_info_tab) t
             minus
-            select  c.column_name
-            from    all_tab_columns c
-            where   c.owner = l_owner
-            and     c.table_name = l_object_name
+            select  c.column_value as column_name
+            from    table(ext_load_file_pkg.get_object_columns(p_object_info_rec.object_name)) c
           );
 
   if l_error_msg is not null
@@ -445,10 +443,8 @@ begin
     begin
       select  1
       into    l_found
-      from    all_tab_columns c
-      where   c.owner = l_owner
-      and     c.table_name = l_object_name
-      and     c.column_name = "ROW##NUMBER";
+      from    table(ext_load_file_pkg.get_object_columns(p_object_name)) c
+      where   c.column_value = "ROW##NUMBER";
 
       ExcelTable.mapColumn
       ( p_ctx => p_ctx
@@ -467,10 +463,8 @@ begin
       begin
         select  1
         into    l_found
-        from    all_tab_columns c
-        where   c.owner = l_owner
-        and     c.table_name = l_object_name
-        and     c.column_name = "SHEET##NAME";
+        from    table(ext_load_file_pkg.get_object_columns(p_object_name)) c
+        where   c.column_value = "SHEET##NAME";
 
         ExcelTable.mapColumn
         ( p_ctx => p_ctx
@@ -529,9 +523,7 @@ is
   l_key_columns varchar2(32767 char) := null;
   
   l_column_name varchar2(4000 char) := null;
-  l_owner all_objects.owner%type;
-  l_object_name all_objects.object_name%type;
-  l_found pls_integer;
+  l_found pls_integer := 0;
 
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'CREATE_TABLE_STATEMENT';
 begin
@@ -546,18 +538,16 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
-  parse_object_name
-  ( p_fq_object_name => p_table_name
-  , p_owner => l_owner
-  , p_object_name => l_object_name
-  );
-  
-  select  count(*)
-  into    l_found
-  from    all_objects obj
-  where   obj.owner = l_owner
-  and     obj.object_name = l_object_name
-  and     obj.object_type in ('TABLE', 'VIEW');
+  begin
+    if dbms_assert.sql_object_name(p_table_name) is not null -- raises an exception if not an existing sql object
+    then
+      l_found := 1;
+    end if;
+  exception
+    when others
+    then
+      null; -- l_found already 0
+  end;
 
 $if cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'l_found: %s', l_found);
@@ -635,8 +625,92 @@ begin
          );
 end get_sheet_name_list;
 
+function get_fq_object_name
+( p_owner in varchar2
+, p_object_name in varchar2
+)
+return varchar2
+is
+begin
+  return
+    dbms_assert.enquote_name(p_owner, false) ||
+    '.' ||
+    dbms_assert.enquote_name(p_object_name, false);
+end get_fq_object_name;
+
 -- GLOBAL
 
+function get_object_columns
+( p_object_name in varchar2 -- may be fully qualified or not
+, p_owner in varchar2
+)
+return t_object_columns_tab
+pipelined  
+is
+  l_cnt number := 0;
+  l_table_description dbms_sql.desc_tab;
+  l_cursor integer := dbms_sql.open_cursor;
+  
+  l_module_name constant varchar2(61 char) := g_package_name || '.' || 'GET_OBJECT_COLUMNS';
+
+  procedure cleanup
+  is
+  begin
+    dbms_sql.close_cursor(l_cursor);
+  end cleanup;
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter(l_module_name);
+  dbug.print(dbug."input", 'p_owner: "%s"; p_object_name: "%s"', p_owner, p_object_name);
+$end
+
+  dbms_sql.parse
+  ( l_cursor
+  , 'select * from ' ||
+    case
+      when p_owner is null
+      then p_object_name
+      else get_fq_object_name(p_owner => p_owner, p_object_name => p_object_name)
+    end ||
+    ' where 1 = 2'
+  , dbms_sql.native
+  );
+  dbms_sql.describe_columns
+  ( c => l_cursor
+  , col_cnt => l_cnt
+  , desc_t => l_table_description
+  );
+
+  for i_idx in 1 .. l_cnt
+  loop
+$if cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'column(%s): "%s"', i_idx, l_table_description(i_idx).col_name);
+$end
+    pipe row (l_table_description(i_idx).col_name);
+  end loop;
+
+  cleanup;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+exception
+  when no_data_needed
+  then
+    cleanup;
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+    return;
+  when others
+  then
+    cleanup;
+$if cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    raise;
+end get_object_columns;
+   
 function get_load_data_owner
 return all_users.username%type
 is
@@ -2783,23 +2857,22 @@ $end
       else p_object_info_rec.sheet_names
     end;
 
-  begin
-    select  0
-    into    p_new_table
-    from    all_objects obj
-    where   obj.object_type in ('TABLE', 'VIEW')
-    and     obj.owner = p_owner
-    and     obj.object_name = p_object_info_rec.object_name;
-  exception
-    when no_data_found
-    then
-      p_new_table := 1;
-  end;
-
   p_object_info_rec.object_name :=
     dbms_assert.enquote_name(p_owner, false) ||
     '.' ||
     dbms_assert.enquote_name(p_object_info_rec.object_name, false);
+
+  p_new_table := 0;
+  begin
+    if dbms_assert.sql_object_name(p_object_info_rec.object_name) is not null -- raises an exception if not an existing sql object
+    then
+      null;
+    end if;
+  exception
+    when others
+    then
+      p_new_table := 1;
+  end;
 
   if p_new_table != 0
   then
