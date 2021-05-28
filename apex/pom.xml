@@ -17,7 +17,7 @@
          dependency, this is the way to set oracle-tools.apex.src.dir.
     -->
     <oracle-tools.apex.version>${project.parent.version}</oracle-tools.apex.version>
-    <oracle-tools.apex.src.dir>${project.build.dir}/dependency/apex-${oracle-tools.apex.version}/src</oracle-tools.apex.src.dir>
+    <oracle-tools.apex.src.dir>${project.build.directory}/dependency/apex-${oracle-tools.apex.version}/src</oracle-tools.apex.src.dir>
     <oracle-tools.apex.scripts.dir>${oracle-tools.apex.src.dir}/scripts</oracle-tools.apex.scripts.dir>
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
