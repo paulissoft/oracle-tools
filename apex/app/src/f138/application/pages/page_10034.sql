@@ -343,6 +343,7 @@ wwv_flow_api.create_page_process(
 '    apex_collection.DELETE_COLLECTION(''ACL_BULK_USER_VALID'');',
 '    :P10033_PRELIM_USERS := null;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_when_button_id=>wwv_flow_api.id(310019751784582)
 ,p_process_success_message=>'User(s) added.'

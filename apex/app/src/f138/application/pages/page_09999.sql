@@ -130,6 +130,7 @@ wwv_flow_api.create_page_process(
 'apex_authentication.send_login_username_cookie (',
 '    p_username => lower(:P9999_USERNAME),',
 '    p_consent  => :P9999_REMEMBER = ''Y'' );'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 wwv_flow_api.create_page_process(
@@ -142,6 +143,7 @@ wwv_flow_api.create_page_process(
 'apex_authentication.login(',
 '    p_username => :P9999_USERNAME,',
 '    p_password => :P9999_PASSWORD );'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 wwv_flow_api.create_page_process(
@@ -162,6 +164,7 @@ wwv_flow_api.create_page_process(
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 ':P9999_USERNAME := apex_authentication.get_login_username_cookie;',
 ':P9999_REMEMBER := case when :P9999_USERNAME is not null then ''Y'' end;'))
+,p_process_clob_language=>'PLSQL'
 );
 end;
 /

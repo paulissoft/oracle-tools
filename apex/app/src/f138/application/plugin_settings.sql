@@ -1,6 +1,13 @@
 prompt --application/plugin_settings
 begin
 wwv_flow_api.create_plugin_setting(
+ p_id=>wwv_flow_api.id(33128656754851360)
+,p_plugin_type=>'ITEM TYPE'
+,p_plugin=>'NATIVE_SINGLE_CHECKBOX'
+,p_attribute_01=>'Y'
+,p_attribute_02=>'N'
+);
+wwv_flow_api.create_plugin_setting(
  p_id=>wwv_flow_api.id(549582000213)
 ,p_plugin_type=>'ITEM TYPE'
 ,p_plugin=>'NATIVE_STAR_RATING'

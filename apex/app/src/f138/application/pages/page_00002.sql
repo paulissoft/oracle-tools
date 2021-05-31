@@ -34,7 +34,7 @@ wwv_flow_api.create_page(
 '</ul>       ',
 '</p>'))
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20210511123314'
+,p_last_upd_yyyymmddhh24miss=>'20210525094026'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(51141452707494381)
@@ -116,13 +116,13 @@ wwv_flow_api.create_page_branch(
 ,p_branch_sequence=>20
 );
 wwv_flow_api.create_page_branch(
- p_id=>wwv_flow_api.id(61103912196126825)
+ p_id=>wwv_flow_api.id(2199821366094625)
 ,p_branch_name=>'Finish'
 ,p_branch_action=>'f?p=&APP_ID.:5:&SESSION.::&DEBUG.:5:P5_ACTION,P5_CSV_FILE,P5_DATA_ROW_FROM,P5_DATA_ROW_TILL,P5_DETERMINE_DATATYPE,P5_FILE_ID,P5_FILE_NAME,P5_HEADER_ROW_FROM,P5_HEADER_ROW_TILL,P5_LAST_EXCEL_COLUMN_NAME,P5_NEW_TABLE,P5_NR_ROWS,P5_OWNER,P5_SCHEMA,P5_SHEET_NAMES,P5_TABLE,P5_TABLE_VIEW,P5_VIEW_NAME:&P2_ACTION.,&P2_CSV_FILE.,&P2_DATA_ROW_FROM.,&P2_DATA_ROW_TILL.,&P2_DETERMINE_DATATYPE.,&P2_FILE_ID.,&P2_FILE_NAME.,&P2_HEADER_ROW_FROM.,&P2_HEADER_ROW_TILL.,&P2_LAST_EXCEL_COLUMN_NAME.,&P2_NEW_TABLE.,&P2_NR_ROWS.,&P2_OWNER.,&P2_SCHEMA.,&P2_SHEET_NAMES.,&P2_TABLE.,&P2_TABLE_VIEW.,&P2_VIEW_NAME.&success_msg=#SUCCESS_MSG#'
 ,p_branch_point=>'AFTER_PROCESSING'
 ,p_branch_type=>'REDIRECT_URL'
 ,p_branch_when_button_id=>wwv_flow_api.id(61104054015126826)
-,p_branch_sequence=>30
+,p_branch_sequence=>40
 );
 wwv_flow_api.create_page_item(
  p_id=>wwv_flow_api.id(51143267248494390)
@@ -148,6 +148,7 @@ wwv_flow_api.create_page_item(
 ,p_attribute_01=>'APEX_APPLICATION_TEMP_FILES'
 ,p_attribute_09=>'SESSION'
 ,p_attribute_10=>'N'
+,p_attribute_12=>'NATIVE'
 ,p_item_comment=>'text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.ms-excel.sheet.binary.macroEnabled.12,application/vnd.oasis.opendocument.spreadsheet'
 );
 wwv_flow_api.create_page_item(
@@ -404,6 +405,7 @@ wwv_flow_api.create_page_process(
 '  end if;',
 '  :P2_NR_ROWS := l_nr_rows;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_when_button_id=>wwv_flow_api.id(61104054015126826)
 ,p_process_success_message=>'Number of rows processed: &P2_NR_ROWS.'

@@ -101,6 +101,7 @@ wwv_flow_api.create_page_item(
 '    return ''Y'';',
 'end if;'))
 ,p_source_type=>'FUNCTION_BODY'
+,p_source_language=>'PLSQL'
 ,p_display_as=>'NATIVE_YES_NO'
 ,p_cSize=>64
 ,p_cMaxlength=>4000
@@ -147,6 +148,7 @@ wwv_flow_api.create_page_process(
 '            p_value => ''ACL_ONLY'');',
 '    end if;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_success_message=>'Access Control settings saved.'
 );

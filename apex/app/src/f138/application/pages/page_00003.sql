@@ -431,6 +431,7 @@ wwv_flow_api.create_interactive_grid(
 ,p_enable_flashback=>true
 ,p_define_chart_view=>true
 ,p_enable_download=>true
+,p_download_formats=>'CSV:HTML'
 ,p_enable_mail_download=>true
 ,p_fixed_header=>'PAGE'
 ,p_show_icon_view=>false
@@ -999,6 +1000,7 @@ wwv_flow_api.create_interactive_grid(
 ,p_enable_flashback=>true
 ,p_define_chart_view=>true
 ,p_enable_download=>true
+,p_download_formats=>'CSV:HTML'
 ,p_enable_mail_download=>true
 ,p_fixed_header=>'REGION'
 ,p_fixed_header_max_height=>300
@@ -1010,6 +1012,9 @@ wwv_flow_api.create_interactive_grid(
 '    return config',
 '} '))
 );
+end;
+/
+begin
 wwv_flow_api.create_ig_report(
  p_id=>wwv_flow_api.id(113782232758010868)
 ,p_interactive_grid_id=>wwv_flow_api.id(113781800853010865)
@@ -1019,9 +1024,6 @@ wwv_flow_api.create_ig_report(
 ,p_show_row_number=>false
 ,p_settings_area_expanded=>true
 );
-end;
-/
-begin
 wwv_flow_api.create_ig_report_view(
  p_id=>wwv_flow_api.id(113782331534010869)
 ,p_report_id=>wwv_flow_api.id(113782232758010868)
@@ -1693,6 +1695,7 @@ wwv_flow_api.create_page_process(
 '              end',
 ', p_view_name => :VIEW_NAME',
 ');'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 end;

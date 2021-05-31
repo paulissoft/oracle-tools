@@ -5,15 +5,15 @@ whenever sqlerror exit sql.sqlcode rollback
 -- ORACLE Application Express (APEX) export file
 --
 -- You should run the script connected to SQL*Plus as the Oracle user
--- APEX_190200 or as the owner (parsing schema) of the application.
+-- APEX_200200 or as the owner (parsing schema) of the application.
 --
 -- NOTE: Calls to apex_application_install override the defaults below.
 --
 --------------------------------------------------------------------------------
 begin
 wwv_flow_api.import_begin (
- p_version_yyyy_mm_dd=>'2019.10.04'
-,p_release=>'19.2.0.00.18'
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
 ,p_default_id_offset=>34400451291151777
@@ -27,7 +27,7 @@ prompt APPLICATION 138 - Oracle Tools
 -- Application Export:
 --   Application:     138
 --   Name:            Oracle Tools
---   Date and Time:   05:06 Saturday May 22, 2021
+--   Date and Time:   05:36 Monday May 31, 2021
 --   Exported By:     ORACLE_TOOLS
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -73,7 +73,7 @@ prompt APPLICATION 138 - Oracle Tools
 --       Reports:
 --       E-Mail:
 --     Supporting Objects:  Included
---   Version:         19.2.0.00.18
+--   Version:         20.2.0.00.20
 --   Instance ID:     250161874321153
 --
 

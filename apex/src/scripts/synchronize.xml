@@ -354,6 +354,8 @@ The following properties are only important during export:
     <basename property="output.file.base" file="${output.file}" suffix=".sql" />
     <delete file="${output.dir}/${output.file}" quiet="true" />
     <delete dir="${output.dir}/${output.file.base}" quiet="true"/>
+    <!-- GJP 2021/05/31 Create the directory so errors can be detected earlier on -->
+    <mkdir dir="${output.dir}/${output.file.base}" />
   </target>
   
   <!-- export solution with Java SqlCli class -->

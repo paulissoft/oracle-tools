@@ -29,6 +29,7 @@ wwv_flow_api.create_flow_process(
 '  then',
 '    raise_application_error(-20000, ''file id: "'' || :file_id || ''"'', true);',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_security_scheme=>'MUST_NOT_BE_PUBLIC_USER'
 );
 end;

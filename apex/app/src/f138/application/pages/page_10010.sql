@@ -190,6 +190,7 @@ wwv_flow_api.create_page_process(
 '            );',
 '    end loop;',
 'end if;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_success_message=>'Application Appearance Settings Saved.'
 );
@@ -223,6 +224,7 @@ wwv_flow_api.create_page_process(
 '        end if;',
 '  end loop;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_success_message=>'Application Appearance Settings Saved.'
 );

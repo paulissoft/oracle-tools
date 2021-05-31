@@ -204,6 +204,7 @@ wwv_flow_api.create_interactive_grid(
 ,p_enable_flashback=>true
 ,p_define_chart_view=>true
 ,p_enable_download=>true
+,p_download_formats=>'CSV:HTML'
 ,p_enable_mail_download=>true
 ,p_fixed_header=>'REGION'
 ,p_fixed_header_max_height=>300
@@ -307,6 +308,7 @@ wwv_flow_api.create_page_process(
 '  );',
 '  :ID := l_id;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 end;

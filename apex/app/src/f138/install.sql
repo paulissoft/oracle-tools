@@ -23,8 +23,14 @@
 @application/shared_components/security/app_access_control/reader.sql
 @application/shared_components/navigation/navigation_bar.sql
 @application/shared_components/logic/application_processes/display_file.sql
-@application/shared_components/logic/application_items.sql
-@application/shared_components/logic/application_computations.sql
+@application/shared_components/logic/application_items/application_owner.sql
+@application/shared_components/logic/application_items/file_id.sql
+@application/shared_components/logic/application_items/fsp_language_preference.sql
+@application/shared_components/logic/application_items/show_help.sql
+@application/shared_components/logic/application_computations/application_owner.sql
+@application/shared_components/logic/application_computations/fsp_language_preference.sql
+@application/shared_components/logic/application_computations/fsp_language_preference_002.sql
+@application/shared_components/logic/application_computations/show_help.sql
 @application/shared_components/logic/application_settings.sql
 @application/shared_components/navigation/tabs/standard.sql
 @application/shared_components/navigation/tabs/parent.sql
@@ -42,6 +48,7 @@
 @application/shared_components/user_interface/lovs/user_theme_preference.sql
 @application/pages/page_groups.sql
 @application/shared_components/navigation/breadcrumbs/breadcrumb.sql
+@application/shared_components/navigation/breadcrumbentry.sql
 @application/shared_components/user_interface/templates/page/master_detail.sql
 @application/shared_components/user_interface/templates/page/modal_dialog.sql
 @application/shared_components/user_interface/templates/page/login.sql

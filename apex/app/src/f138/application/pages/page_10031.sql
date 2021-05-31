@@ -47,7 +47,7 @@ wwv_flow_api.create_worksheet(
 ,p_pagination_display_pos=>'BOTTOM_RIGHT'
 ,p_report_list_mode=>'TABS'
 ,p_show_detail_link=>'C'
-,p_download_formats=>'CSV:HTML:EMAIL:XLS:PDF:RTF'
+,p_download_formats=>'CSV:HTML:EMAIL:XLSX:PDF:RTF'
 ,p_detail_link=>'f?p=&APP_ID.:10032:&APP_SESSION.::::P10032_ID:#ID#'
 ,p_detail_link_text=>'<img src="#IMAGE_PREFIX#app_ui/img/icons/apex-edit-pencil.png" class="apex-edit-pencil" alt="">'
 ,p_owner=>'ADMIN'

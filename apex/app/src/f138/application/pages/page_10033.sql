@@ -308,6 +308,7 @@ wwv_flow_api.create_page_process(
 '        l_username := null;',
 '    end loop;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_when_button_id=>wwv_flow_api.id(308953415784582)
 );

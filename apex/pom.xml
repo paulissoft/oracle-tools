@@ -60,7 +60,10 @@
                 <target>
                   <condition property="conf.connect.skip" value="true" else="false">
                     <not>
-                      <available file="${apex.application.dir}" type="dir" />
+                      <or>
+                        <available file="${apex.application.dir}" type="dir" />
+                        <isset property="apex.application" />
+                      </or>
                     </not>
                   </condition>
                   <property name="apex.skip" value="${conf.connect.skip}" />
@@ -90,6 +93,17 @@
               <phase>compile</phase>
               <configuration>
                 <target unless="${apex.skip}">
+                  <fail message="The Apex source directory (${apex.application.dir}) does not exist">
+                    <condition>
+                      <and>
+                        <isset property="apex.application" />
+                        <not>
+                          <available file="${apex.application.dir}" type="dir" />
+                        </not>
+                      </and>
+                    </condition>
+                  </fail>
+                  
                   <!-- derive apex.config.dir from db.properties (apex.properties must be in the same directory) -->
                   <dirname property="apex.config.dir" file="${db.properties}" />
 

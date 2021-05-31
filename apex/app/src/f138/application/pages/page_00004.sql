@@ -870,7 +870,8 @@ wwv_flow_api.create_page_item(
 ,p_item_plug_id=>wwv_flow_api.id(51263418012910712)
 ,p_use_cache_before_default=>'NO'
 ,p_item_default=>'nvl(case when instr(:P4_SHEET_NAMES, '':'') = 0 then :P4_SHEET_NAMES end, :P4_FILE_NAME)'
-,p_item_default_type=>'PLSQL_EXPRESSION'
+,p_item_default_type=>'EXPRESSION'
+,p_item_default_language=>'PLSQL'
 ,p_prompt=>'New table to load into'
 ,p_display_as=>'NATIVE_TEXT_FIELD'
 ,p_cSize=>30
@@ -1078,6 +1079,7 @@ wwv_flow_api.create_page_validation(
 '  then',
 '    return sqlerrm;',
 'end;'))
+,p_validation2=>'PLSQL'
 ,p_validation_type=>'FUNC_BODY_RETURNING_ERR_TEXT'
 ,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
 );
@@ -1088,7 +1090,8 @@ wwv_flow_api.create_page_validation(
 ,p_validation=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '(:P4_HEADER_ROW_FROM = 0 AND :P4_HEADER_ROW_TILL = 0) OR',
 '(:P4_HEADER_ROW_FROM > 0 AND :P4_HEADER_ROW_FROM <= :P4_HEADER_ROW_TILL)'))
-,p_validation_type=>'PLSQL_EXPRESSION'
+,p_validation2=>'PLSQL'
+,p_validation_type=>'EXPRESSION'
 ,p_error_message=>'First and last header rows must be both 0 (meaning no header) or the last header row must be at least the first header row.'
 ,p_associated_item=>wwv_flow_api.id(57131288524458203)
 ,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
@@ -1098,7 +1101,8 @@ wwv_flow_api.create_page_validation(
 ,p_validation_name=>'CheckHeaderRowFrom'
 ,p_validation_sequence=>60
 ,p_validation=>':P4_HEADER_ROW_FROM >= 0'
-,p_validation_type=>'PLSQL_EXPRESSION'
+,p_validation2=>'PLSQL'
+,p_validation_type=>'EXPRESSION'
 ,p_error_message=>'First header row must be 0 (meaning no header) or at least 1.'
 ,p_associated_item=>wwv_flow_api.id(51154714699494401)
 ,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
@@ -1108,7 +1112,8 @@ wwv_flow_api.create_page_validation(
 ,p_validation_name=>'CheckDataRowFrom'
 ,p_validation_sequence=>70
 ,p_validation=>':P4_DATA_ROW_FROM >= 1 AND :P4_DATA_ROW_FROM > :P4_HEADER_ROW_TILL'
-,p_validation_type=>'PLSQL_EXPRESSION'
+,p_validation2=>'PLSQL'
+,p_validation_type=>'EXPRESSION'
 ,p_error_message=>'The first data row must be greater than the last header row.'
 ,p_associated_item=>wwv_flow_api.id(51155155240494401)
 ,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
@@ -1247,6 +1252,7 @@ wwv_flow_api.create_page_process(
 ', p_in_key => case :IN_KEY when ''N'' then 0 else 1 end',
 ', p_default_value => :DEFAULT_VALUE',
 ');'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 wwv_flow_api.create_page_process(
@@ -1353,6 +1359,7 @@ wwv_flow_api.create_page_process(
 '    cleanup;',
 '    raise;',
 'end;'))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_when_button_id=>wwv_flow_api.id(52614280119825711)
 ,p_process_success_message=>'Number of rows processed: &P4_NR_ROWS.'
@@ -1385,6 +1392,7 @@ wwv_flow_api.create_page_process(
 '  :P4_TABLE_VIEW := ''"'' || :P4_TABLE_VIEW || ''"'';',
 'end if;  ',
 ''))
+,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 end;

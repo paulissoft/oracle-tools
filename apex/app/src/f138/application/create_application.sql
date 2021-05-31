@@ -9,6 +9,7 @@ wwv_flow_api.create_flow(
 ,p_page_protection_enabled_y_n=>'Y'
 ,p_checksum_salt=>'7EE936B805AE6E8ABA68DCBB55F1F6F7C203C3A351414150F02DB460CE4768F8'
 ,p_bookmark_checksum_function=>'SH512'
+,p_accept_old_checksums=>false
 ,p_compatibility_mode=>'5.1'
 ,p_flow_language=>'en'
 ,p_flow_language_derived_from=>'ITEM_PREFERENCE'
@@ -25,7 +26,7 @@ wwv_flow_api.create_flow(
 ,p_public_user=>'APEX_PUBLIC_USER'
 ,p_proxy_server=>nvl(wwv_flow_application_install.get_proxy,'')
 ,p_no_proxy_domains=>nvl(wwv_flow_application_install.get_no_proxy_domains,'')
-,p_flow_version=>'Version 2021-05-22 11:06:46'
+,p_flow_version=>'Version 2021-05-31 11:36:51'
 ,p_flow_status=>'AVAILABLE_W_EDIT_LINK'
 ,p_flow_unavailable_text=>'This application is currently unavailable at this time.'
 ,p_exact_substitutions_only=>'Y'
@@ -37,13 +38,15 @@ wwv_flow_api.create_flow(
 ,p_csv_encoding=>'Y'
 ,p_auto_time_zone=>'N'
 ,p_default_error_display_loc=>'INLINE_IN_NOTIFICATION'
+,p_friendly_url=>'N'
 ,p_substitution_string_01=>'APP_NAME'
 ,p_substitution_value_01=>'Oracle Tools'
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20210521112333'
+,p_last_upd_yyyymmddhh24miss=>'20210525094026'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
 ,p_files_version=>9
 ,p_ui_type_name => null
+,p_print_server_type=>'INSTANCE'
 );
 end;
 /
