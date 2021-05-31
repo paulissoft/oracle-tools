@@ -22,6 +22,14 @@
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
     <apex.application.dir>${apex.src.dir}/f${apex.application}</apex.application.dir>
+
+    <!-- ======================== -->
+    <!-- Maven lifecycle phases   -->
+    <!--                          -->
+    <!-- See also ../conf/pom.xml -->
+    <!-- ======================== -->    
+    <apex.phase.init>validate</apex.phase.init>
+    <apex.phase.process>compile</apex.phase.process>
   </properties>
 
   <!-- Needed for Apex Export/Import scripts in child projects -->
@@ -54,7 +62,7 @@
           <executions>
             <execution>
               <id>apex-init</id>
-              <phase>validate</phase>
+              <phase>${apex.phase.init}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target>
@@ -76,7 +84,7 @@
             
             <execution>
               <id>apex-debug-before</id>
-              <phase>validate</phase>
+              <phase>${apex.phase.init}</phase>
               <configuration>
                 <target if="maven.debug">
                   <echoproperties prefix="apex." />
@@ -90,7 +98,7 @@
 
             <execution>
               <id>apex-operation</id>
-              <phase>compile</phase>
+              <phase>${apex.phase.process}</phase>
               <configuration>
                 <target unless="${apex.skip}">
                   <fail message="The Apex source directory (${apex.application.dir}) does not exist">
@@ -153,7 +161,7 @@
 
             <execution>
               <id>apex-debug-after</id>
-              <phase>compile</phase>
+              <phase>${apex.phase.process}</phase>
               <configuration>
                 <target if="maven.debug">
                   <echoproperties prefix="apex." />

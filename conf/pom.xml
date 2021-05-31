@@ -67,6 +67,11 @@
     <oracle-tools.conf.src.dir>${project.build.directory}/dependency/conf-${oracle-tools.conf.version}/src</oracle-tools.conf.src.dir>
     <db.config.dir>${oracle-tools.conf.src.dir}</db.config.dir>
     <conf.connect>true</conf.connect> <!-- profile activation -->
+    
+    <!-- use initialize here so the Db/Apex pom can use validate -->
+    <conf.phase.init>initialize</conf.phase.init>
+    <!-- give the generate-resources phase a chance to extract resources -->
+    <conf.phase.process>process-resources</conf.phase.process>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -102,8 +107,7 @@
           <executions>
             <execution>
               <id>conf-init</id>
-              <!-- use initialize here so the Db/Apex pom can use validate -->
-              <phase>initialize</phase>
+              <phase>${conf.phase.init}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target>
@@ -121,8 +125,7 @@
 
             <execution>
               <id>conf-debug-before</id>
-              <!-- use initialize here so the Db/Apex pom can use validate -->
-              <phase>initialize</phase>
+              <phase>${conf.phase.init}</phase>
               <configuration>
                 <target if="maven.debug">
                   <!-- also dbUrl, dbUser, dbPass -->
@@ -141,7 +144,7 @@
               <!-- This must be named -->
               <id>conf-connect</id>
               <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>process-resources</phase>
+              <phase>${conf.phase.process}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target unless="${conf.connect.skip}">
@@ -285,8 +288,7 @@
 
             <execution>
               <id>conf-debug-after</id>
-              <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>process-resources</phase>
+              <phase>${conf.phase.process}</phase>
               <configuration>
                 <target if="maven.debug">
                   <echoproperties prefix="env." />

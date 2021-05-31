@@ -65,6 +65,14 @@
     <!-- ============================ -->
     <db.utplsql.path>${db.schema}</db.utplsql.path>
     <db.test.phase>none</db.test.phase>
+
+    <!-- ======================== -->
+    <!-- Maven lifecycle phases   -->
+    <!--                          -->
+    <!-- See also ../conf/pom.xml -->
+    <!-- ======================== -->    
+    <db.phase.init>validate</db.phase.init>
+    <db.phase.process>compile</db.phase.process>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -92,7 +100,7 @@
           <executions>
             <execution>
               <id>db-init</id>
-              <phase>validate</phase>
+              <phase>${db.phase.init}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target>
@@ -111,7 +119,7 @@
 
             <execution>
               <id>db-debug-before</id>
-              <phase>validate</phase>
+              <phase>${db.phase.init}</phase>
               <configuration>
                 <target if="maven.debug">
                   <echoproperties prefix="flyway." />
@@ -126,7 +134,7 @@
               <!-- This must be named -->
               <id>db-install-init</id>
               <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>process-resources</phase>
+              <phase>${db.phase.process}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target unless="${db.install.skip}">
@@ -192,7 +200,7 @@
 
             <execution>
               <id>db-debug-after</id>
-              <phase>compile</phase>
+              <phase>${db.phase.process}</phase>
               <configuration>
                 <target if="maven.debug">
                   <echoproperties prefix="flyway." />
@@ -231,7 +239,7 @@
               <!-- This must be named -->
               <id>db-install</id>
               <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>process-resources</phase>
+              <phase>${db.phase.process}</phase>
             </execution>
           </executions>
         </plugin>
@@ -302,7 +310,7 @@
     <profile>
       <id>db-install</id>
       <properties>
-        <default.goal>compile flyway:repair flyway:migrate</default.goal>
+        <default.goal>${db.phase.process} flyway:repair flyway:migrate</default.goal>
       </properties>
       <build>
         <plugins>
@@ -345,7 +353,7 @@
     <profile>
       <id>db-generate-ddl-full</id>
       <properties>
-        <default.goal>compile</default.goal>       
+        <default.goal>${db.phase.process}</default.goal>       
         <!-- Must we remove the output directory tree before creating full scripts? -->
         <db.full.remove.output.directory>yes</db.full.remove.output.directory>
         <!-- Pivotal #132752233 GPA 2016-10-19
@@ -366,7 +374,7 @@
               <execution>
                 <id>db-generate-ddl-full</id>
                 <!-- give the generate-resources phase a chance to extract resources -->
-                <phase>process-resources</phase>
+                <phase>${db.phase.process}</phase>
                 <configuration>
                   <target unless="${db.generate.ddl.full.skip}">
                     <fail message="Property db.userid must be set" unless="db.userid" />
@@ -408,7 +416,7 @@
     <profile>
       <id>db-generate-ddl-incr</id>
       <properties>
-        <default.goal>compile</default.goal>       
+        <default.goal>${db.phase.process}</default.goal>       
         <!-- Use dynamic SQL for the incremental migration scripts? -->
         <db.incr.dynamic.sql>no</db.incr.dynamic.sql>
         <!-- skip repeatable/replaceable objects in incremental migration scripts? -->
@@ -425,7 +433,7 @@
               <execution>
                 <id>db-generate-ddl-incr</id>
                 <!-- give the generate-resources phase a chance to extract resources -->
-                <phase>process-resources</phase>
+                <phase>${db.phase.process}</phase>
                 <configuration>
                   <target unless="${db.generate.ddl.incr.skip}">
                     <fail message="Property db.prev.database.link must be set" unless="db.prev.database.link" />
