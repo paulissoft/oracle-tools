@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.paulissoft</groupId>
+    <artifactId>oracle-tools</artifactId>
+    <version>${revision}</version>
+  </parent>
+  <groupId>com.paulissoft.oracle-tools</groupId>
+  <artifactId>conf</artifactId>
+  <packaging>pom</packaging>
+  <description>Core POM for Database configuration</description>
+  
+  <!--
+      Normally these are the possible stages in a project:
+      1) development
+      2) integration
+      3) test
+      4) acceptance
+      5) production
+      
+      Not all stages are necessary for a project: the project decides.
+      
+      The development stage has no previous database, i.e. it is not
+      necessary to compare the current (development) database with a
+      previous database to generate incremental DDL scripts (create/alter
+      table/sequence ..., etcetera).  The subsequent stages do have a
+      previous database: for production this is acceptance, for acceptance
+      this is test, etcetera.
+
+      The information about the current (and previous) database is stored in
+      a file named env.properties which must be in a configuration folder
+      (taking the pom.xml directory as reference) like (the first wins):
+      a) ${db.config.dir}
+      b) conf
+      c) ../conf
+      d) ../../conf
+      e) ../../../conf
+      
+      The file env.properties must have a line like:
+      db=<database directory name>
+      
+      The file env.properties may have a line like:
+      db.prev=<database directory name>
+
+      The database directory name is a directory below a configuration
+      folder with a file named db.properties, just like env.properties
+
+      The following properties are set in db.properties:
+      - username
+      - userid
+      - database.link
+      
+      These are prefixed with db (or db.prev) using the criteria above.
+      
+      Please note that it is also possible to define properties via the
+      command line.
+  -->
+
+  <properties>
+    <!-- When child projects have this POM as parent and this project as
+         dependency, this is the way to set oracle-tools.db.src.dir.
+    -->
+    <oracle-tools.conf.version>${project.parent.version}</oracle-tools.conf.version>
+    <oracle-tools.conf.src.dir>${project.build.directory}/dependency/conf-${oracle-tools.conf.version}/src</oracle-tools.conf.src.dir>
+    <db.config.dir>${oracle-tools.conf.src.dir}</db.config.dir>
+    <conf.connect>true</conf.connect> <!-- profile activation -->
+  </properties>
+
+  <!-- Needed for Db Generate DDL scripts in child projects -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.paulissoft.oracle-tools</groupId>
+        <artifactId>conf</artifactId>
+        <version>${oracle-tools.db.version}</version>
+        <classifier>src</classifier>
+        <type>zip</type>
+        <!-- Make sure this isn't included on any classpath-->
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.oracle.ojdbc</groupId>
+      <artifactId>ojdbc8</artifactId>
+      <version>${ojdbc8.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources />
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>${maven-antrun-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>conf-init</id>
+              <!-- use initialize here so the Db/Apex pom can use validate -->
+              <phase>initialize</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target>
+                  <condition property="conf.connect.skip" value="true" else="false">
+                    <not>
+                      <available file="src" type="dir" />
+                    </not>
+                  </condition>
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+
+            <execution>
+              <id>conf-debug-before</id>
+              <!-- use initialize here so the Db/Apex pom can use validate -->
+              <phase>initialize</phase>
+              <configuration>
+                <target if="maven.debug">
+                  <!-- also dbUrl, dbUser, dbPass -->
+                  <echoproperties prefix="java." />
+                  <echoproperties prefix="maven." />
+                  <echoproperties prefix="db." />
+                  <echoproperties prefix="oracle-tools." />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+
+            <execution>
+              <!-- This must be named -->
+              <id>conf-connect</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
+              <phase>process-resources</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target unless="${conf.connect.skip}">
+                  <!-- GPA 2017-03-09 #141396395
+                       As a CD developer I want to maintain the connection
+                       data in just one configuration folder.
+
+                       Use (in that order)
+                       - ${db.config.dir}
+                       - conf
+                       - ../conf
+                       - ../../conf
+                       - ../../../conf
+                       to look for DB related properties files.
+                       
+                       This reduces the need for duplicate folders/files.
+                  -->
+                  
+                  <!-- READ THE env.properties FILE. -->
+                  
+                  
+                  <!-- First find the env.properties file -->
+                  <condition property="env.properties" value="${db.config.dir}${file.separator}env.properties">
+                    <available file="${db.config.dir}${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="conf${file.separator}env.properties">
+                    <available file="conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="..${file.separator}conf${file.separator}env.properties">
+                    <available file="..${file.separator}conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="..${file.separator}..${file.separator}conf${file.separator}env.properties">
+                    <available file="..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
+                  </condition>
+                  <condition property="env.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties">
+                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
+                  </condition>
+
+                  <property name="env.properties.abs" location="${env.properties}" />
+
+                  <!--
+                      1) read the file env.properties (file may not exist)
+                      2) the file should set db and maybe db.prev (for backwards compability we also check db.source and db.target)
+                  -->
+                  <echo message="Reading environment properties from file ${env.properties.abs}" />
+                  <property file="${env.properties.abs}" />
+                  
+                  <!-- backwards compability -->
+                  <!-- db.target first because that is the installation database -->
+                  <condition property="db" value="${db.target}">
+                    <isset property="db.target" />
+                  </condition>
+                  <condition property="db.password" value="${db.target.password}">
+                    <isset property="db.target.password" />
+                  </condition>
+                  
+                  <!-- db.source next -->
+                  <condition property="db" value="${db.source}">
+                    <isset property="db.source" />
+                  </condition>
+                  <condition property="db" value="${db.source.password}">
+                    <isset property="db.source.password" />
+                  </condition>
+
+                  <!-- READ THE db.properties FILE. -->
+                  
+                  <!-- DB -->
+                  <!-- First find the properties file -->
+                  <condition property="db.properties" value="${db.config.dir}${file.separator}${db}${file.separator}db.properties">
+                    <available file="${db.config.dir}${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <property name="db.properties.abs" location="${db.properties}" />
+                  <echo message="Reading db properties from file ${db.properties.abs}" />
+                  <!-- prefixValues="true" is needed for correctly expanding
+                       username=prxy[${schema}] -->
+                  <property file="${db.properties.abs}" prefix="db"
+                            prefixValues="true" />
+                  
+                  <!-- new eazy connect syntax -->
+                  <!-- db info -->
+                  <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />
+                  <property name="db.url" value="jdbc:oracle:thin:@${db.connect.identifier}" />
+                  <!-- use proxy users if property db.proxy.username exists -->
+                  <condition property="db.username"
+                             value="${db.proxy.username}[${db.schema}]"
+                             else="${db.schema}">
+                    <isset property="db.proxy.username"/>
+                  </condition>
+                  <!--property name="db.password" value="${db.proxy.password}"/-->
+                  <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
+
+                  <!-- set utplsql properties -->
+                  <property name="dbUrl" value="${db.url}" />
+                  <property name="dbUser" value="${db.username}" />
+                  <property name="dbPass" value="${db.password}" />
+
+                  <!-- READ THE db.prev.properties FILE. -->
+                  
+                  <!-- DB.PREV -->
+                  <!-- First find the properties file -->
+                  <condition property="db.prev.properties" value="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
+                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
+                  </condition>
+                  <property name="db.prev.properties.abs" location="${db.prev.properties}" />
+                  <!-- target info -->
+                  <echo message="Reading db.prev properties from file ${db.prev.properties.abs}" />
+                  <property file="${db.prev.properties.abs}" prefix="db.prev" />
+                  <!-- db.prev.database.link is empty meaning the previous database schema is used -->
+                  <property name="db.prev.database.link"
+                            value="${db.schema}@${db.prev.service}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+
+            <execution>
+              <id>conf-debug-after</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
+              <phase>process-resources</phase>
+              <configuration>
+                <target if="maven.debug">
+                  <echoproperties prefix="env." />
+                  <echoproperties prefix="db." />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven-assembly-plugin.version}</version>
+        <!-- Configuration won't be propagated to children -->
+        <inherited>false</inherited>
+        <!-- do not use parent configuration -->
+        <configuration combine.self="override">                                     
+          <descriptorRefs>
+            <descriptorRef>src</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  
+  <profiles>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>conf-connect</id>
+      <activation>
+        <property>
+          <name>conf.connect</name>
+          <value>true</value>
+        </property>
+      </activation>
+    </profile>
+  </profiles>
+  
+</project>

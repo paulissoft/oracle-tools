@@ -4,9 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.paulissoft</groupId>
-    <artifactId>oracle-tools</artifactId>
+    <groupId>com.paulissoft.oracle-tools</groupId>
+    <artifactId>conf</artifactId>
     <version>${revision}</version>
+    <relativePath>../conf/pom.xml</relativePath>
   </parent>
   <groupId>com.paulissoft.oracle-tools</groupId>
   <artifactId>db</artifactId>
@@ -20,8 +21,10 @@
     <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
     <oracle-tools.db.src.dir>${project.build.directory}/dependency/db-${oracle-tools.db.version}/src</oracle-tools.db.src.dir>
     <oracle-tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle-tools.db.schema>
-    
-    <!-- database properties -->
+
+    <!-- =========================================== -->
+    <!-- Database properties for Flyway (db-install) -->
+    <!-- =========================================== -->
     <db.src.scripts>src</db.src.scripts>
     <db.src.dml.scripts>${db.src.scripts}/dml</db.src.dml.scripts>
     <db.src.full.scripts>${db.src.scripts}/full</db.src.full.scripts>
@@ -38,65 +41,30 @@
     <!-- do not define db.schema.prefix so the logon error is more descriptive -->
     <!-- db.schema.prefix /--> 
     <db.schema>${project.artifactId}</db.schema>
+
+    <!-- ======================================================================= -->
+    <!-- Properties for generate DDL (db-generate-ddl-full/db-generate-ddl-incr) -->
+    <!-- ======================================================================= -->
     <!-- object type as defined in documentation of Oracle package DBMS_METADATA -->
     <db.object.type />
     <!-- A list of object names to include or exclude (or empty to include all) -->
     <db.object.names />
     <!-- db.object.names.include specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include) -->
     <db.object.names.include />
-    <!--
-        Normally these are the possible stages in a project:
-        1) development
-        2) integration
-        3) test
-        4) acceptance
-        5) production
-        
-        Not all stages are necessary for a project: the project decides.
-        
-        The development stage has no previous database, i.e. it is not
-        necessary to compare the current (development) database with a
-        previous database to generate incremental DDL scripts (create/alter
-        table/sequence ..., etcetera).  The subsequent stages do have a
-        previous database: for production this is acceptance, for acceptance
-        this is test, etcetera.
-
-        The information about the current (and previous) database is stored in
-        a file named env.properties which must be in a configuration folder
-        (taking the pom.xml directory as reference) like (the first wins):
-        a) conf
-        b) ../conf
-        c) ../../conf
-        d) ../../../conf
-        e) ${db.config.dir}
-        
-        The file env.properties must have a line like:
-        db=<database directory name>
-        
-        The file env.properties may have a line like:
-        db.prev=<database directory name>
-
-        The database directory name is a directory below a configuration
-        folder with a file named db.properties, just like env.properties
-
-        The following properties are set in db.properties:
-        - username
-        - userid
-        - database.link
-        
-        These are prefixed with db (or db.prev) using the criteria above.
-        
-        Please note that it is also possible to define properties via the
-        command line.
-    -->
-    <!-- utplsql properties -->
-    <db.utplsql.path>${db.schema}</db.utplsql.path>
-    <db.test.phase>none</db.test.phase>
     <!-- must set it here so profile oracle-tools can override it when
          db-generate-ddl-full is also active -->
-    <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
     <db.generate.ddl.incr.skip>true</db.generate.ddl.incr.skip>
+    <!-- create or replace "source schema"."source name" 
+         =>
+         create or replace "source name" ? -->
+    <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
+    
+    <!-- ============================ -->
+    <!-- UTPLSQL properties (db-test) -->
+    <!-- ============================ -->
+    <db.utplsql.path>${db.schema}</db.utplsql.path>
+    <db.test.phase>none</db.test.phase>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -114,14 +82,6 @@
     </dependencies>
   </dependencyManagement>
 
-  <dependencies>
-    <dependency>
-      <groupId>com.oracle.ojdbc</groupId>
-      <artifactId>ojdbc8</artifactId>
-      <version>${ojdbc8.version}</version>
-    </dependency>
-  </dependencies>
-
   <build>
     <resources />
     <pluginManagement>
@@ -132,197 +92,29 @@
           <executions>
             <execution>
               <id>db-init</id>
-              <!-- use initialize here so the Apex pom can use validate -->
-              <phase>initialize</phase>
+              <phase>validate</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target>
-                  <condition property="db.connect.skip" value="true" else="false">
+                  <condition property="conf.connect.skip" value="true" else="false">
                     <not>
                       <available file="${db.src.full.scripts}" type="dir" />
                     </not>
                   </condition>
-                  <property name="db.install.skip" value="${db.connect.skip}" />
+                  <property name="db.install.skip" value="${conf.connect.skip}" />
                 </target>
               </configuration>
               <goals>
                 <goal>run</goal>
               </goals>
             </execution>
+
             <execution>
               <id>db-debug-before</id>
-              <!-- use initialize here so the Apex pom can use validate -->
-              <phase>initialize</phase>
+              <phase>validate</phase>
               <configuration>
-                <target if="maven.db.debug">
-                  <!-- also dbUrl, dbUser, dbPass -->
-                  <echoproperties prefix="java." />
-                  <echoproperties prefix="maven." />
-                  <echoproperties prefix="db" />
+                <target if="maven.debug">
                   <echoproperties prefix="flyway." />
-                  <echoproperties prefix="oracle-tools." />
-                </target>
-              </configuration>
-              <goals>
-                <goal>run</goal>
-              </goals>
-            </execution>
-            <execution>
-              <!-- This must be named -->
-              <id>db-connect-init</id>
-              <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>process-resources</phase>
-              <configuration>
-                <exportAntProperties>true</exportAntProperties>
-                <target unless="${db.connect.skip}">
-                  <!-- GPA 2017-03-09 #141396395
-                       As a CD developer I want to maintain the connection
-                       data in just one configuration folder.
-
-                       Use (in that order)
-                       - conf
-                       - ../conf
-                       - ../../conf
-                       - ../../../conf
-                       - ${db.config.dir}
-                       to look for DB related properties files.
-                       
-                       This reduces the need for duplicates folders/files.
-                  -->
-                  
-                  <!-- READ THE env.properties FILE. -->
-                  
-                  
-                  <!-- First find the env.properties file -->
-                  <condition property="env.properties" value="conf${file.separator}env.properties">
-                    <available file="conf${file.separator}env.properties" type="file" />
-                  </condition>
-                  <condition property="env.properties" value="..${file.separator}conf${file.separator}env.properties">
-                    <available file="..${file.separator}conf${file.separator}env.properties" type="file" />
-                  </condition>
-                  <condition property="env.properties" value="..${file.separator}..${file.separator}conf${file.separator}env.properties">
-                    <available file="..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
-                  </condition>
-                  <condition property="env.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties">
-                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
-                  </condition>
-                  <condition property="env.properties" value="${db.config.dir}${file.separator}env.properties">
-                    <available file="${db.config.dir}${file.separator}env.properties" type="file" />
-                  </condition>
-
-                  <property name="env.properties.abs" location="${env.properties}" />
-
-                  <!--
-                      1) read the file env.properties (file may not exist)
-                      2) the file should set db and maybe db.prev (for backwards compability we also check db.source and db.target)
-                  -->
-                  <echo message="Reading environment properties from file ${env.properties.abs}" />
-                  <property file="${env.properties.abs}" />
-                  
-                  <!-- READ THE flyway-app.conf FILE. -->
-                  
-                  <!-- If the file is not there: no problem according to the Ant documentation. -->
-                  <dirname file="${env.properties.abs}"
-                           property="env.properties.dir" />
-                  <echo>Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
-                  <!-- no prefix needed -->
-                  <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
-
-                  <!-- backwards compability -->
-                  <!-- db.target first because that is the installation database -->
-                  <condition property="db" value="${db.target}">
-                    <isset property="db.target" />
-                  </condition>
-                  <condition property="db.password" value="${db.target.password}">
-                    <isset property="db.target.password" />
-                  </condition>
-                  
-                  <!-- db.source next -->
-                  <condition property="db" value="${db.source}">
-                    <isset property="db.source" />
-                  </condition>
-                  <condition property="db" value="${db.source.password}">
-                    <isset property="db.source.password" />
-                  </condition>
-
-                  <!-- READ THE db.properties FILE. -->
-                  
-                  <!-- DB -->
-                  <!-- First find the properties file -->
-                  <condition property="db.properties" value="conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="${db.config.dir}${file.separator}${db}${file.separator}db.properties">
-                    <available file="${db.config.dir}${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <property name="db.properties.abs" location="${db.properties}" />
-                  <echo message="Reading db properties from file ${db.properties.abs}" />
-                  <!-- prefixValues="true" is needed for correctly expanding
-                       username=prxy[${schema}] -->
-                  <property file="${db.properties.abs}" prefix="db"
-                            prefixValues="true" />
-                  
-                  <!-- READ THE flyway-db.conf FILE. -->
-                  
-                  <!-- If the file is not there: no problem according to the Ant documentation. -->
-                  <dirname file="${db.properties.abs}"
-                           property="db.properties.dir" />
-                  <echo>Reading flyway properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
-                  <!-- no prefix needed -->
-                  <property file="${db.properties.dir}${file.separator}flyway-db.conf" />                    
-                  <!-- new eazy connect syntax -->
-                  <!-- db info -->
-                  <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />
-                  <property name="db.url" value="jdbc:oracle:thin:@${db.connect.identifier}" />
-                  <!-- use proxy users if property db.proxy.username exists -->
-                  <condition property="db.username"
-                             value="${db.proxy.username}[${db.schema}]"
-                             else="${db.schema}">
-                    <isset property="db.proxy.username"/>
-                  </condition>
-                  <!--property name="db.password" value="${db.proxy.password}"/-->
-                  <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
-
-                  <!-- set utplsql properties -->
-                  <property name="dbUrl" value="${db.url}" />
-                  <property name="dbUser" value="${db.username}" />
-                  <property name="dbPass" value="${db.password}" />
-
-                  <!-- READ THE db.prev.properties FILE. -->
-                  
-                  <!-- DB.PREV -->
-                  <!-- First find the properties file -->
-                  <condition property="db.prev.properties" value="conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <property name="db.prev.properties.abs" location="${db.prev.properties}" />
-                  <!-- target info -->
-                  <echo message="Reading db.prev properties from file ${db.prev.properties.abs}" />
-                  <property file="${db.prev.properties.abs}" prefix="db.prev" />
-                  <!-- db.prev.database.link is empty meaning the previous database schema is used -->
-                  <property name="db.prev.database.link"
-                            value="${db.schema}@${db.prev.service}" />
                 </target>
               </configuration>
               <goals>
@@ -338,6 +130,24 @@
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target unless="${db.install.skip}">
+                  <!-- READ THE flyway-app.conf FILE. -->
+                  
+                  <!-- If the file is not there: no problem according to the Ant documentation. -->
+                  <dirname file="${env.properties.abs}"
+                           property="env.properties.dir" />
+                  <echo>Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
+                  <!-- no prefix needed -->
+                  <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
+
+                  <!-- READ THE flyway-db.conf FILE. -->
+                  
+                  <!-- If the file is not there: no problem according to the Ant documentation. -->
+                  <dirname file="${db.properties.abs}"
+                           property="db.properties.dir" />
+                  <echo>Reading flyway-db properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
+                  <!-- no prefix needed -->
+                  <property file="${db.properties.dir}${file.separator}flyway-db.conf" />                    
+
                   <property name="db.src.dml.scripts.abs" location="${db.src.dml.scripts}" />
                   <fail message="Directory ${db.src.dml.scripts.abs} does not exist">
                     <condition>
@@ -382,15 +192,9 @@
 
             <execution>
               <id>db-debug-after</id>
-              <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>process-resources</phase>
+              <phase>compile</phase>
               <configuration>
-                <target if="maven.db.debug">
-                  <!-- env. and db. set by db-init, db-connect-init or
-                       db-install-init -->
-                  <!-- flyway. set by reading property files -->
-                  <echoproperties prefix="env" />
-                  <echoproperties prefix="db" />
+                <target if="maven.debug">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>

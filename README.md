@@ -113,6 +113,30 @@ Add this to the Database POM:
     </plugins>
   </build>
 ```
+
+If you want to use the ORCL database from the Oracle Tools conf/src directory
+you have to add this dependency as well:
+
+```
+    <dependency>
+      <groupId>com.paulissoft.oracle-tools</groupId>
+      <artifactId>conf</artifactId>
+      <!-- type and classifier are needed when they are not the default -->
+      <type>zip</type>
+      <classifier>src</classifier>
+    </dependency>
+```
+
+Then you can run for instance:
+
+```
+$ mvn -Pdb-install -Ddb=orcl -Ddb.password=...
+```
+
+to get a connection to the local database with service name ORCL on port 1521,
+the Oracle default.
+
+
 ### Apex POM
 
 Add this to the Apex POM:

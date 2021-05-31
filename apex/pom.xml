@@ -3,9 +3,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.paulissoft.oracle-tools</groupId>
-    <artifactId>db</artifactId>
+    <artifactId>conf</artifactId>
     <version>${revision}</version>
-    <relativePath>../db/pom.xml</relativePath>
+    <relativePath>../conf/pom.xml</relativePath>
   </parent>
   <groupId>com.paulissoft.oracle-tools</groupId>
   <artifactId>apex</artifactId>
@@ -58,23 +58,24 @@
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target>
-                  <condition property="apex.skip" value="true" else="false">
+                  <condition property="conf.connect.skip" value="true" else="false">
                     <not>
                       <available file="${apex.application.dir}" type="dir" />
                     </not>
                   </condition>
-                  <property name="db.connect.skip" value="${apex.skip}" />
+                  <property name="apex.skip" value="${conf.connect.skip}" />
                 </target>
               </configuration>
               <goals>
                 <goal>run</goal>
               </goals>
             </execution>
+            
             <execution>
               <id>apex-debug-before</id>
               <phase>validate</phase>
               <configuration>
-                <target if="maven.apex.debug">
+                <target if="maven.debug">
                   <echoproperties prefix="apex." />
                   <echoproperties prefix="sql." />
                 </target>
@@ -83,6 +84,7 @@
                 <goal>run</goal>
               </goals>
             </execution>
+
             <execution>
               <id>apex-operation</id>
               <phase>compile</phase>
@@ -134,11 +136,12 @@
                 <goal>run</goal>
               </goals>
             </execution>
+
             <execution>
               <id>apex-debug-after</id>
               <phase>compile</phase>
               <configuration>
-                <target if="maven.apex.debug">
+                <target if="maven.debug">
                   <echoproperties prefix="apex." />
                   <echoproperties prefix="sql." />
                   <echoproperties prefix="env." />

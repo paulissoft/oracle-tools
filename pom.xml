@@ -266,6 +266,7 @@
   </profiles>
   
   <modules>
+    <module>conf</module>
     <module>apex</module>
     <module>db</module>
   </modules>
