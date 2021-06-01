@@ -1,12 +1,12 @@
 prompt --application/shared_components/navigation/lists/ut_wizard_progress
 begin
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(53031854233404442)
+ p_id=>wwv_flow_api.id(45470934172692464)
 ,p_name=>'UT - Wizard Progress'
 ,p_list_status=>'PUBLIC'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(53032197864404442)
+ p_id=>wwv_flow_api.id(45470590541692464)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Step 1'
 ,p_list_item_link_target=>'#'
@@ -14,7 +14,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(53032572365404442)
+ p_id=>wwv_flow_api.id(45470216040692464)
 ,p_list_item_display_sequence=>15
 ,p_list_item_link_text=>'Step 2'
 ,p_list_item_link_target=>'#'
@@ -22,7 +22,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(53032958579404442)
+ p_id=>wwv_flow_api.id(45469829826692464)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Step 3'
 ,p_list_item_link_target=>'#'
@@ -31,7 +31,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_for_pages=>'1112'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(53033307722404442)
+ p_id=>wwv_flow_api.id(45469480683692464)
 ,p_list_item_display_sequence=>25
 ,p_list_item_link_text=>'Step 4'
 ,p_list_item_link_target=>'#'

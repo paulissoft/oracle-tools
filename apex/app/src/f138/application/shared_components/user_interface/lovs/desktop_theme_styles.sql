@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/lovs/desktop_theme_styles
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(51119615093475369)
+ p_id=>wwv_flow_api.id(47383173312621537)
 ,p_lov_name=>'DESKTOP THEME STYLES'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select s.name d,',

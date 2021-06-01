@@ -1,7 +1,7 @@
 prompt --application/shared_components/logic/application_computations/show_help
 begin
 wwv_flow_api.create_flow_computation(
- p_id=>wwv_flow_api.id(53204375573328365)
+ p_id=>wwv_flow_api.id(45298412832768541)
 ,p_computation_sequence=>10
 ,p_computation_item=>'SHOW_HELP'
 ,p_computation_point=>'ON_NEW_INSTANCE'

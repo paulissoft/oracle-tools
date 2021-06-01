@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/page/login
 begin
 wwv_flow_api.create_template(
- p_id=>wwv_flow_api.id(50989450750475180)
+ p_id=>wwv_flow_api.id(47513337655621726)
 ,p_theme_id=>42
 ,p_name=>'Login'
 ,p_internal_name=>'LOGIN'
@@ -136,8 +136,8 @@ wwv_flow_api.create_template(
 ,p_reference_id=>2099711150063350616
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(50989715929475180)
-,p_page_template_id=>wwv_flow_api.id(50989450750475180)
+ p_id=>wwv_flow_api.id(47513072476621726)
+,p_page_template_id=>wwv_flow_api.id(47513337655621726)
 ,p_name=>'Content Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
@@ -145,8 +145,8 @@ wwv_flow_api.create_page_tmpl_display_point(
 ,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(50990017129475180)
-,p_page_template_id=>wwv_flow_api.id(50989450750475180)
+ p_id=>wwv_flow_api.id(47512771276621726)
+,p_page_template_id=>wwv_flow_api.id(47513337655621726)
 ,p_name=>'Body Header'
 ,p_placeholder=>'REGION_POSITION_01'
 ,p_has_grid_support=>false

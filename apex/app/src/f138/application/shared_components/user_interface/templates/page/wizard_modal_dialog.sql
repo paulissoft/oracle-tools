@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/page/wizard_modal_dialog
 begin
 wwv_flow_api.create_template(
- p_id=>wwv_flow_api.id(50990263774475180)
+ p_id=>wwv_flow_api.id(47512524631621726)
 ,p_theme_id=>42
 ,p_name=>'Wizard Modal Dialog'
 ,p_internal_name=>'WIZARD_MODAL_DIALOG'
@@ -137,8 +137,8 @@ wwv_flow_api.create_template(
 ,p_reference_id=>2120348229686426515
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(50990562312475180)
-,p_page_template_id=>wwv_flow_api.id(50990263774475180)
+ p_id=>wwv_flow_api.id(47512226093621726)
+,p_page_template_id=>wwv_flow_api.id(47512524631621726)
 ,p_name=>'Wizard Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
@@ -146,16 +146,16 @@ wwv_flow_api.create_page_tmpl_display_point(
 ,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(50990857379475181)
-,p_page_template_id=>wwv_flow_api.id(50990263774475180)
+ p_id=>wwv_flow_api.id(47511931026621725)
+,p_page_template_id=>wwv_flow_api.id(47512524631621726)
 ,p_name=>'Wizard Progress Bar'
 ,p_placeholder=>'REGION_POSITION_01'
 ,p_has_grid_support=>false
 ,p_glv_new_row=>true
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(50991192760475181)
-,p_page_template_id=>wwv_flow_api.id(50990263774475180)
+ p_id=>wwv_flow_api.id(47511595645621725)
+,p_page_template_id=>wwv_flow_api.id(47512524631621726)
 ,p_name=>'Wizard Buttons'
 ,p_placeholder=>'REGION_POSITION_03'
 ,p_has_grid_support=>false

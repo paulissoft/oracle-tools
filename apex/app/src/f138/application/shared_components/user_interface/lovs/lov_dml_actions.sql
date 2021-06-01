@@ -1,37 +1,37 @@
 prompt --application/shared_components/user_interface/lovs/lov_dml_actions
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(53152190782839823)
+ p_id=>wwv_flow_api.id(45350597623257083)
 ,p_lov_name=>'LOV_DML_ACTIONS'
-,p_lov_query=>'.'||wwv_flow_api.id(53152190782839823)||'.'
+,p_lov_query=>'.'||wwv_flow_api.id(45350597623257083)||'.'
 ,p_location=>'STATIC'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(53152433017839831)
+ p_id=>wwv_flow_api.id(45350355388257075)
 ,p_lov_disp_sequence=>1
 ,p_lov_disp_value=>'Insert'
 ,p_lov_return_value=>'I'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(53152890830839832)
+ p_id=>wwv_flow_api.id(45349897575257074)
 ,p_lov_disp_sequence=>2
 ,p_lov_disp_value=>'Replace (empty first and insert next)'
 ,p_lov_return_value=>'R'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(53153290967839832)
+ p_id=>wwv_flow_api.id(45349497438257074)
 ,p_lov_disp_sequence=>3
 ,p_lov_disp_value=>'Update'
 ,p_lov_return_value=>'U'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(53153615057839832)
+ p_id=>wwv_flow_api.id(45349173348257074)
 ,p_lov_disp_sequence=>4
 ,p_lov_disp_value=>'Merge (update or insert)'
 ,p_lov_return_value=>'M'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(53154016001839832)
+ p_id=>wwv_flow_api.id(45348772404257074)
 ,p_lov_disp_sequence=>5
 ,p_lov_disp_value=>'Delete'
 ,p_lov_return_value=>'D'

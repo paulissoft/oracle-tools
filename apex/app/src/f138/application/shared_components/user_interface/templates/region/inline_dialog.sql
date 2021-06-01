@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/region/inline_dialog
 begin
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(51019059478475195)
+ p_id=>wwv_flow_api.id(47483728927621711)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div id="#REGION_STATIC_ID#_parent">',
@@ -31,8 +31,8 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(51019308779475195)
-,p_plug_template_id=>wwv_flow_api.id(51019059478475195)
+ p_id=>wwv_flow_api.id(47483479626621711)
+,p_plug_template_id=>wwv_flow_api.id(47483728927621711)
 ,p_name=>'Region Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>true

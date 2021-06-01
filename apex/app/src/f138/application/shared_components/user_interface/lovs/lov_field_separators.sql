@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/lovs/lov_field_separators
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(56996589294278002)
+ p_id=>wwv_flow_api.id(41506199111818904)
 ,p_lov_name=>'LOV_FIELD_SEPARATORS'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select '', (comma)'' as d,',

@@ -1,7 +1,7 @@
 prompt --application/shared_components/security/authorizations/administration_rights
 begin
 wwv_flow_api.create_security_scheme(
- p_id=>wwv_flow_api.id(51107961647475310)
+ p_id=>wwv_flow_api.id(47394826758621596)
 ,p_name=>'Administration Rights'
 ,p_scheme_type=>'NATIVE_FUNCTION_BODY'
 ,p_attribute_01=>'return oracle_tools.ui_user_management_pkg.has_role(sys.odcivarchar2list(''OT Administrators'')) != 0;'

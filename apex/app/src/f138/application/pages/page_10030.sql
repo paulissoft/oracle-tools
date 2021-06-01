@@ -2,14 +2,14 @@ prompt --application/pages/page_10030
 begin
 wwv_flow_api.create_page(
  p_id=>10030
-,p_user_interface_id=>wwv_flow_api.id(51104881185475271)
+,p_user_interface_id=>wwv_flow_api.id(47397907220621635)
 ,p_name=>'Configure Access Control'
 ,p_page_mode=>'MODAL'
 ,p_step_title=>'Configure Access Control'
 ,p_autocomplete_on_off=>'OFF'
-,p_group_id=>wwv_flow_api.id(51108512056475312)
-,p_required_role=>wwv_flow_api.id(51107961647475310)
-,p_required_patch=>wwv_flow_api.id(289934192784440)
+,p_group_id=>wwv_flow_api.id(47394276349621594)
+,p_required_role=>wwv_flow_api.id(47394826758621596)
+,p_required_patch=>wwv_flow_api.id(29991820016577792)
 ,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<p>Select the appropriate choice for any authenticated users.<br> ',
 'Selecting <strong>No</strong> makes the application more secure as only specified users can access the application. ',
@@ -28,25 +28,11 @@ wwv_flow_api.create_page(
 ,p_last_upd_yyyymmddhh24miss=>'20210512054602'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(291556638784509)
-,p_plug_name=>'Access Control Configuration'
-,p_region_template_options=>'#DEFAULT#'
-,p_escape_on_http_output=>'Y'
-,p_plug_template=>wwv_flow_api.id(51009147593475192)
-,p_plug_display_sequence=>10
-,p_plug_display_point=>'BODY'
-,p_query_type=>'SQL'
-,p_plug_query_num_rows=>15
-,p_attribute_01=>'N'
-,p_attribute_02=>'HTML'
-,p_attribute_03=>'Y'
-);
-wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(291658161784509)
+ p_id=>wwv_flow_api.id(29993543985577861)
 ,p_plug_name=>'Dialog Buttons'
 ,p_region_template_options=>'#DEFAULT#'
 ,p_escape_on_http_output=>'Y'
-,p_plug_template=>wwv_flow_api.id(51021125669475196)
+,p_plug_template=>wwv_flow_api.id(47481662736621710)
 ,p_plug_display_sequence=>10
 ,p_plug_display_point=>'REGION_POSITION_03'
 ,p_query_type=>'SQL'
@@ -55,32 +41,46 @@ wwv_flow_api.create_page_plug(
 ,p_attribute_02=>'HTML'
 ,p_attribute_03=>'Y'
 );
+wwv_flow_api.create_page_plug(
+ p_id=>wwv_flow_api.id(29993442462577861)
+,p_plug_name=>'Access Control Configuration'
+,p_region_template_options=>'#DEFAULT#'
+,p_escape_on_http_output=>'Y'
+,p_plug_template=>wwv_flow_api.id(47493640812621714)
+,p_plug_display_sequence=>10
+,p_plug_display_point=>'BODY'
+,p_query_type=>'SQL'
+,p_plug_query_num_rows=>15
+,p_attribute_01=>'N'
+,p_attribute_02=>'HTML'
+,p_attribute_03=>'Y'
+);
 wwv_flow_api.create_page_button(
- p_id=>wwv_flow_api.id(293064119784523)
+ p_id=>wwv_flow_api.id(29994949943577875)
 ,p_button_sequence=>20
-,p_button_plug_id=>wwv_flow_api.id(291658161784509)
+,p_button_plug_id=>wwv_flow_api.id(29993543985577861)
 ,p_button_name=>'APPLY_CHANGES'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
-,p_button_template_id=>wwv_flow_api.id(51082992460475237)
+,p_button_template_id=>wwv_flow_api.id(47419795945621669)
 ,p_button_is_hot=>'Y'
 ,p_button_image_alt=>'Apply Changes'
 ,p_button_position=>'REGION_TEMPLATE_CREATE'
 );
 wwv_flow_api.create_page_button(
- p_id=>wwv_flow_api.id(291781988784509)
+ p_id=>wwv_flow_api.id(29993667812577861)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_api.id(291658161784509)
+,p_button_plug_id=>wwv_flow_api.id(29993543985577861)
 ,p_button_name=>'CANCEL'
 ,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
-,p_button_template_id=>wwv_flow_api.id(51082992460475237)
+,p_button_template_id=>wwv_flow_api.id(47419795945621669)
 ,p_button_image_alt=>'Cancel'
 ,p_button_position=>'REGION_TEMPLATE_PREVIOUS'
 ,p_button_execute_validations=>'N'
 );
 wwv_flow_api.create_page_branch(
- p_id=>wwv_flow_api.id(293763656784525)
+ p_id=>wwv_flow_api.id(29995649480577877)
 ,p_branch_name=>'Go To Admin Page'
 ,p_branch_action=>'f?p=&APP_ID.:10000:&SESSION.::&DEBUG.:::&success_msg=#SUCCESS_MSG#'
 ,p_branch_point=>'AFTER_PROCESSING'
@@ -88,11 +88,11 @@ wwv_flow_api.create_page_branch(
 ,p_branch_sequence=>10
 );
 wwv_flow_api.create_page_item(
- p_id=>wwv_flow_api.id(294044011784526)
+ p_id=>wwv_flow_api.id(29995929835577878)
 ,p_name=>'P10030_ALLOW_OTHER_USERS'
 ,p_is_required=>true
 ,p_item_sequence=>30
-,p_item_plug_id=>wwv_flow_api.id(291556638784509)
+,p_item_plug_id=>wwv_flow_api.id(29993442462577861)
 ,p_prompt=>'Any authenticated user may access this application'
 ,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if apex_app_setting.get_value( p_name => ''ACCESS_CONTROL_SCOPE'' ) = ''ACL_ONLY'' then',
@@ -107,31 +107,31 @@ wwv_flow_api.create_page_item(
 ,p_cMaxlength=>4000
 ,p_cHeight=>4
 ,p_grid_label_column_span=>3
-,p_field_template=>wwv_flow_api.id(51082438739475235)
+,p_field_template=>wwv_flow_api.id(47420349666621671)
 ,p_item_template_options=>'#DEFAULT#'
 ,p_lov_display_extra=>'NO'
 ,p_inline_help_text=>'Choose <strong>No</strong> if all users are defined in the access control list. Choose <strong>Yes</strong> if authenticated users not in the access control list may also use this application.'
 ,p_attribute_01=>'APPLICATION'
 );
 wwv_flow_api.create_page_da_event(
- p_id=>wwv_flow_api.id(291838779784509)
+ p_id=>wwv_flow_api.id(29993724603577861)
 ,p_name=>'Cancel Modal'
 ,p_event_sequence=>50
 ,p_triggering_element_type=>'BUTTON'
-,p_triggering_button_id=>wwv_flow_api.id(291781988784509)
+,p_triggering_button_id=>wwv_flow_api.id(29993667812577861)
 ,p_bind_type=>'bind'
 ,p_bind_event_type=>'click'
 );
 wwv_flow_api.create_page_da_action(
- p_id=>wwv_flow_api.id(294786194784531)
-,p_event_id=>wwv_flow_api.id(291838779784509)
+ p_id=>wwv_flow_api.id(29996672018577883)
+,p_event_id=>wwv_flow_api.id(29993724603577861)
 ,p_event_result=>'TRUE'
 ,p_action_sequence=>10
 ,p_execute_on_page_init=>'N'
 ,p_action=>'NATIVE_DIALOG_CANCEL'
 );
 wwv_flow_api.create_page_process(
- p_id=>wwv_flow_api.id(295303860784534)
+ p_id=>wwv_flow_api.id(29997189684577886)
 ,p_process_sequence=>10
 ,p_process_point=>'AFTER_SUBMIT'
 ,p_process_type=>'NATIVE_PLSQL'

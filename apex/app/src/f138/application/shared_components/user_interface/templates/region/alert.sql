@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/region/alert
 begin
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(51005461720475186)
+ p_id=>wwv_flow_api.id(47497326685621720)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-Alert #REGION_CSS_CLASSES#" id="#REGION_STATIC_ID#" #REGION_ATTRIBUTES#>',
@@ -33,8 +33,8 @@ wwv_flow_api.create_plug_template(
 ,p_template_comment=>'Red Theme'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(51005780758475189)
-,p_plug_template_id=>wwv_flow_api.id(51005461720475186)
+ p_id=>wwv_flow_api.id(47497007647621717)
+,p_plug_template_id=>wwv_flow_api.id(47497326685621720)
 ,p_name=>'Region Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>true

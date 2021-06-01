@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/lovs/lov_eol
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(56913689961043379)
+ p_id=>wwv_flow_api.id(41589098445053527)
 ,p_lov_name=>'LOV_EOL'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select ''CRLF (Windows)'' as d,',

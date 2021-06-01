@@ -2,24 +2,24 @@ prompt --application/pages/page_10020
 begin
 wwv_flow_api.create_page(
  p_id=>10020
-,p_user_interface_id=>wwv_flow_api.id(51104881185475271)
+,p_user_interface_id=>wwv_flow_api.id(47397907220621635)
 ,p_name=>'About'
 ,p_alias=>'HELP'
 ,p_step_title=>'About'
 ,p_first_item=>'AUTO_FIRST_ITEM'
 ,p_autocomplete_on_off=>'OFF'
-,p_group_id=>wwv_flow_api.id(51108512056475312)
-,p_required_patch=>wwv_flow_api.id(51107165979475307)
+,p_group_id=>wwv_flow_api.id(47394276349621594)
+,p_required_patch=>wwv_flow_api.id(47395622426621599)
 ,p_help_text=>'All application help text can be accessed from this page. The links in the "Documentation" region give a much more in-depth explanation of the application''s features and functionality.'
 ,p_last_updated_by=>'ADMIN'
 ,p_last_upd_yyyymmddhh24miss=>'20200416080203'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(51123559782475376)
+ p_id=>wwv_flow_api.id(47379228623621530)
 ,p_plug_name=>'About Page'
 ,p_region_template_options=>'#DEFAULT#:t-ContentBlock--padded:t-ContentBlock--h1:t-ContentBlock--lightBG'
 ,p_escape_on_http_output=>'Y'
-,p_plug_template=>wwv_flow_api.id(51027785376475200)
+,p_plug_template=>wwv_flow_api.id(47475003029621706)
 ,p_plug_display_sequence=>20
 ,p_plug_display_point=>'BODY'
 ,p_query_type=>'SQL'
