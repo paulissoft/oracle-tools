@@ -353,9 +353,9 @@ The following properties are only important during export:
   <target name="init-export" depends="init">
     <property name="output.file" value="f${application}.sql" />
     <basename property="output.file.base" file="${output.file}" suffix=".sql" />
+    <!-- delete temporary files / directories -->
     <delete file="${output.dir}/${output.file}" quiet="true" />
     <delete dir="${output.dir}/${output.file.base}" quiet="true" />
-    <delete dir="${export.dir}" quiet="true"/>
   </target>
   
   <!-- export solution with Java SqlCli class -->
@@ -415,13 +415,13 @@ The following properties are only important during export:
         </not>
       </condition>
     </fail>
+    <delete dir="${export.dir}" quiet="true"/>
     <move file="${output.dir}/${output.file.base}" tofile="${export.dir}" />
     <delete file="${output.dir}/${output.file}" quiet="true" />
     <replaceregexp file="${export.dir}/application/create_application.sql"
                    match=",p_flow_version=>'.*'"
                    replace=",p_flow_version=>'Version ${application.version}'"
                    byline="true"/>
-    <delete file="${output.dir}/${output.file}" quiet="true" />
   </target>
 
 </project>
