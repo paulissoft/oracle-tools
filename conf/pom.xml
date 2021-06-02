@@ -346,16 +346,14 @@
         <oracle-tools.conf.version>${project.parent.version}</oracle-tools.conf.version>
         <oracle-tools.conf.src.dir>${project.build.directory}/dependency/conf-${oracle-tools.conf.version}/src</oracle-tools.conf.src.dir>
       </properties>
-      <build>
-        <dependencies>
-          <dependency>
-            <groupId>com.paulissoft.oracle-tools</groupId>
-            <artifactId>conf</artifactId>
-            <classifier>src</classifier>
-            <type>zip</type>
-          </dependency>
-        </dependencies>
-      </build>
+      <dependencies>
+        <dependency>
+          <groupId>com.paulissoft.oracle-tools</groupId>
+          <artifactId>conf</artifactId>
+          <classifier>src</classifier>
+          <type>zip</type>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
   

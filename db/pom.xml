@@ -502,16 +502,14 @@
         <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
         <oracle-tools.db.src.dir>${project.build.directory}/dependency/db-${oracle-tools.db.version}/src</oracle-tools.db.src.dir>
       </properties>
-      <build>
-        <dependencies>
-          <dependency>
-            <groupId>com.paulissoft.oracle-tools</groupId>
-            <artifactId>db</artifactId>
-            <classifier>src</classifier>
-            <type>zip</type>
-          </dependency>
-        </dependencies>
-      </build>
+      <dependencies>
+        <dependency>
+          <groupId>com.paulissoft.oracle-tools</groupId>
+          <artifactId>db</artifactId>
+          <classifier>src</classifier>
+          <type>zip</type>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 

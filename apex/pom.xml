@@ -279,16 +279,14 @@
         <oracle-tools.apex.version>${project.parent.version}</oracle-tools.apex.version>
         <oracle-tools.apex.src.dir>${project.build.directory}/dependency/apex-${oracle-tools.apex.version}/src</oracle-tools.apex.src.dir>
       </properties>
-      <build>
-        <dependencies>
-          <dependency>
-            <groupId>com.paulissoft.oracle-tools</groupId>
-            <artifactId>apex</artifactId>
-            <classifier>src</classifier>
-            <type>zip</type>
-          </dependency>
-        </dependencies>
-      </build>
+      <dependencies>
+        <dependency>
+          <groupId>com.paulissoft.oracle-tools</groupId>
+          <artifactId>apex</artifactId>
+          <classifier>src</classifier>
+          <type>zip</type>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 
