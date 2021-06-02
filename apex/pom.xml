@@ -13,15 +13,11 @@
   <description>Core POM for Oracle Apex builds</description>
   
   <properties>
-    <!-- When child projects have this POM as parent and this project as
-         dependency, this is the way to set oracle-tools.apex.src.dir.
-    -->
-    <oracle-tools.apex.version>${project.parent.version}</oracle-tools.apex.version>
-    <oracle-tools.apex.src.dir>${project.build.directory}/dependency/apex-${oracle-tools.apex.version}/src</oracle-tools.apex.src.dir>
+    <oracle-tools.apex.src.dir>${maven.multiModuleProjectDirectory}/apex/src</oracle-tools.apex.src.dir>
     <oracle-tools.apex.scripts.dir>${oracle-tools.apex.src.dir}/scripts</oracle-tools.apex.scripts.dir>
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
-    <apex.application.dir>${apex.src.dir}/f${apex.application}</apex.application.dir>
+    <apex.application.dir>${apex.src.dir}/export</apex.application.dir>
 
     <!-- ======================== -->
     <!-- Maven lifecycle phases   -->
@@ -97,6 +93,28 @@
             </execution>
 
             <execution>
+              <id>apex-operation-init</id>
+              <phase>${apex.phase.process}</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target>
+                  <!-- derive apex.config.dir from db.properties (apex.properties must be in the same directory) -->
+                  <dirname property="apex.config.dir" file="${db.properties}" />
+
+                  <!-- Read the apex properties file into apex namespace.
+                       The following property should be set:
+                       - application
+                  -->
+                  <echo message="Reading apex properties from file ${apex.config.dir}/apex.properties" />
+                  <property file="${apex.config.dir}/apex.properties" prefix="apex" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+
+            <execution>
               <id>apex-operation</id>
               <phase>${apex.phase.process}</phase>
               <configuration>
@@ -111,17 +129,6 @@
                       </and>
                     </condition>
                   </fail>
-                  
-                  <!-- derive apex.config.dir from db.properties (apex.properties must be in the same directory) -->
-                  <dirname property="apex.config.dir" file="${db.properties}" />
-
-                  <!-- Read the apex properties file into apex namespace.
-                       The following property should be set:
-                       - application
-                  -->
-                  <echo message="Reading apex properties from file ${apex.config.dir}/apex.properties" />
-                  <property file="${apex.config.dir}/apex.properties" prefix="apex" />
-                  
                   <fail message="Property apex.operation must be export or import">
                     <condition>
                       <not>
@@ -146,7 +153,7 @@
                     <property name="application.version" value="${apex.application.version}" />
                     <property name="userid" value="${db.userid}" />
                     <property name="workspace" value="${apex.workspace}" />
-                    <property name="output.dir" value="${apex.src.dir}" />
+                    <property name="export.dir" value="${apex.application.dir}" />
                     <property name="sql.home" value="${sql.home}" />
                     <property name="env.SQL_HOME" value="${env.SQL_HOME}" />
                     <property name="env.LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}"/>
@@ -158,7 +165,7 @@
                 <goal>run</goal>
               </goals>
             </execution>
-
+            
             <execution>
               <id>apex-debug-after</id>
               <phase>${apex.phase.process}</phase>
@@ -238,6 +245,49 @@
             </executions>
           </plugin>
         </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>apex-inquiry</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <conf.connect.skip>false</conf.connect.skip>
+        <apex.skip>true</apex.skip>
+        <maven.debug>true</maven.debug>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile activated when oracle-tools/apex is not where it should be -->
+    <profile>
+      <id>apex-dependency</id>
+      <activation>
+        <file>
+          <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/apex/pom.xml</missing>
+        </file>
+      </activation>
+      <properties>
+        <!-- When child projects have this POM as parent and this project as
+             dependency, this is the way to set oracle-tools.apex.src.dir.
+        -->
+        <oracle-tools.apex.version>${project.parent.version}</oracle-tools.apex.version>
+        <oracle-tools.apex.src.dir>${project.build.directory}/dependency/apex-${oracle-tools.apex.version}/src</oracle-tools.apex.src.dir>
+      </properties>
+      <build>
+        <dependencies>
+          <dependency>
+            <groupId>com.paulissoft.oracle-tools</groupId>
+            <artifactId>apex</artifactId>
+            <classifier>src</classifier>
+            <type>zip</type>
+          </dependency>
+        </dependencies>
       </build>
     </profile>
   </profiles>

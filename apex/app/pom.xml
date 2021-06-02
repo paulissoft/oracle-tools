@@ -13,8 +13,6 @@
   
   <properties>
     <apex.application>138</apex.application>
-    <oracle-tools.apex.src.dir>${maven.multiModuleProjectDirectory}/apex/src</oracle-tools.apex.src.dir>
-    <oracle-tools.conf.src.dir>${maven.multiModuleProjectDirectory}/conf/src</oracle-tools.conf.src.dir>
     <db.schema>${oracle_tools_schema}</db.schema>
   </properties>
   

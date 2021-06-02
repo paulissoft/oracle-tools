@@ -15,11 +15,7 @@
   <description>Core POM for Database builds</description>
 
   <properties>
-    <!-- When child projects have this POM as parent and this project as
-         dependency, this is the way to set oracle-tools.db.src.dir.
-    -->
-    <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
-    <oracle-tools.db.src.dir>${project.build.directory}/dependency/db-${oracle-tools.db.version}/src</oracle-tools.db.src.dir>
+    <oracle-tools.db.src.dir>${maven.multiModuleProjectDirectory}/db/src</oracle-tools.db.src.dir>
     <oracle-tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle-tools.db.schema>
 
     <!-- =========================================== -->
@@ -471,6 +467,50 @@
             </executions>
           </plugin>
         </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-inquiry</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <conf.connect.skip>false</conf.connect.skip>
+        <!-- do not read flyway properties -->
+        <db.install.skip>true</db.install.skip>
+        <maven.debug>true</maven.debug>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile activated when oracle-tools is not where it should be -->
+    <profile>
+      <id>db-dependency</id>
+      <activation>
+        <file>
+          <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/db/pom.xml</missing>
+        </file>
+      </activation>
+      <properties>
+        <!-- When child projects have this POM as parent and this project as
+             dependency, this is the way to set oracle-tools.db.src.dir.
+        -->
+        <oracle-tools.db.version>${project.parent.version}</oracle-tools.db.version>
+        <oracle-tools.db.src.dir>${project.build.directory}/dependency/db-${oracle-tools.db.version}/src</oracle-tools.db.src.dir>
+      </properties>
+      <build>
+        <dependencies>
+          <dependency>
+            <groupId>com.paulissoft.oracle-tools</groupId>
+            <artifactId>db</artifactId>
+            <classifier>src</classifier>
+            <type>zip</type>
+          </dependency>
+        </dependencies>
       </build>
     </profile>
   </profiles>

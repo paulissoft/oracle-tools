@@ -60,13 +60,8 @@
   -->
 
   <properties>
-    <!-- When child projects have this POM as parent and this project as
-         dependency, this is the way to set oracle-tools.db.src.dir.
-    -->
-    <oracle-tools.conf.version>${project.parent.version}</oracle-tools.conf.version>
-    <oracle-tools.conf.src.dir>${project.build.directory}/dependency/conf-${oracle-tools.conf.version}/src</oracle-tools.conf.src.dir>
+    <oracle-tools.conf.src.dir>${maven.multiModuleProjectDirectory}/conf/src</oracle-tools.conf.src.dir>
     <db.config.dir>${oracle-tools.conf.src.dir}</db.config.dir>
-    <conf.connect>true</conf.connect> <!-- profile activation -->
     
     <!-- use initialize here so the Db/Apex pom can use validate -->
     <conf.phase.init>initialize</conf.phase.init>
@@ -322,13 +317,45 @@
   <profiles>
     <!-- profile to be called by the user -->
     <profile>
-      <id>conf-connect</id>
+      <id>conf-inquiry</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <conf.connect.skip>false</conf.connect.skip>
+        <maven.debug>true</maven.debug>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile activated when oracle-tools is not where it should be -->
+    <profile>
+      <id>conf-dependency</id>
       <activation>
-        <property>
-          <name>conf.connect</name>
-          <value>true</value>
-        </property>
+        <file>
+          <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/conf/pom.xml</missing>
+        </file>
       </activation>
+      <properties>
+        <!-- When child projects have this POM as parent and this project as
+             dependency, this is the way to set oracle-tools.conf.src.dir.
+        -->
+        <oracle-tools.conf.version>${project.parent.version}</oracle-tools.conf.version>
+        <oracle-tools.conf.src.dir>${project.build.directory}/dependency/conf-${oracle-tools.conf.version}/src</oracle-tools.conf.src.dir>
+      </properties>
+      <build>
+        <dependencies>
+          <dependency>
+            <groupId>com.paulissoft.oracle-tools</groupId>
+            <artifactId>conf</artifactId>
+            <classifier>src</classifier>
+            <type>zip</type>
+          </dependency>
+        </dependencies>
+      </build>
     </profile>
   </profiles>
   

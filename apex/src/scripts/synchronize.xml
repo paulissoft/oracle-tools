@@ -7,7 +7,7 @@ The following properties must be set before:
 - application: an Apex application id
 - userid: an Oracle userid to connect to the database
 - workspace: Apex workspace name
-- output.dir: directory to save/retrieve f${application}/install.sql
+- export.dir: directory to save/retrieve install.sql
 - sql.home: the home directory of the SqlCli client (often the SQL Developer home)
 - runtime.classpath: the runtime classpath
 
@@ -23,17 +23,18 @@ The following properties are only important during export:
   
   <target name="init">
     <echo message="(synchronize.xml.init) basedir: ${basedir}" />
-    <fail message="Property output.dir (${output.dir}) should be set and point to a directory">
+    <fail message="Property export.dir (${export.dir}) should be set and point to a directory">
       <condition>
         <not>
           <and>
-            <isset property="output.dir" />
-            <available file="${output.dir}" type="dir" />
+            <isset property="export.dir" />
+            <available file="${export.dir}" type="dir" />
           </and>
         </not>
       </condition>
     </fail>
-    <echo message="(synchronize.xml.init) output.dir: ${output.dir}" />
+    <echo message="(synchronize.xml.init) export.dir: ${export.dir}" />
+    <dirname property="output.dir" file="${export.dir}" />
     <fail message="Property application should be set and not empty">
       <condition>
         <or>
@@ -136,12 +137,12 @@ The following properties are only important during export:
     <condition property="input.file"
                value="install.sql"
                else="f${application}.sql">
-      <available file="${output.dir}/f${application}/install.sql" type="file" />
+      <available file="${export.dir}/install.sql" type="file" />
     </condition>    
     <condition property="input.file.dir"
-               value="${output.dir}/f${application}"
+               value="${export.dir}"
                else="${output.dir}">
-      <available file="${output.dir}/f${application}/install.sql" type="file" />
+      <available file="${export.dir}/install.sql" type="file" />
     </condition>    
     <echo message="(synchronize.xml.init-import) Importing from ${input.file.dir}/${input.file}" />
   </target>
@@ -353,9 +354,9 @@ The following properties are only important during export:
     <property name="output.file" value="f${application}.sql" />
     <basename property="output.file.base" file="${output.file}" suffix=".sql" />
     <delete file="${output.dir}/${output.file}" quiet="true" />
-    <delete dir="${output.dir}/${output.file.base}" quiet="true"/>
+    <delete dir="${export.dir}" quiet="true"/>
     <!-- GJP 2021/05/31 Create the directory so errors can be detected earlier on -->
-    <mkdir dir="${output.dir}/${output.file.base}" />
+    <mkdir dir="${export.dir}" />
   </target>
   
   <!-- export solution with Java SqlCli class -->
@@ -368,6 +369,7 @@ The following properties are only important during export:
            dir="${output.dir}"
            inputstring='@${basedir}/export.sql "${workspace}" "${application}"'>
     </sqlcl>
+    <move file="${output.dir}/${output.file.base}" todir="${export.dir}" overwrite="true" />
   </target>
 
   <!-- export solution with oracle.apex.APEXExport class -->
@@ -408,7 +410,7 @@ The following properties are only important during export:
           depends="init,export-java,export-sqlcl"
           description="export">
     <echo message="(synchronize.xml.export)" />
-    <replaceregexp file="${output.dir}/${output.file.base}/application/create_application.sql"
+    <replaceregexp file="${export.dir}/application/create_application.sql"
                    match=",p_flow_version=>'.*'"
                    replace=",p_flow_version=>'Version ${application.version}'"
                    byline="true"/>
