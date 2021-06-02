@@ -44,6 +44,7 @@
     <ojdbc8.version>19.3.0.0</ojdbc8.version>
     <utplsql-maven-plugin.version>3.1.4</utplsql-maven-plugin.version>
     <revision>${project.version}</revision>
+    <oracle-tools.dir>${maven.multiModuleProjectDirectory}/../oracle-tools</oracle-tools.dir>
   </properties>
 
   <scm>

@@ -60,7 +60,7 @@
   -->
 
   <properties>
-    <oracle-tools.conf.src.dir>${maven.multiModuleProjectDirectory}/conf/src</oracle-tools.conf.src.dir>
+    <oracle-tools.conf.src.dir>${oracle-tools.dir}/conf/src</oracle-tools.conf.src.dir>
     <db.config.dir>${oracle-tools.conf.src.dir}</db.config.dir>
     
     <!-- use initialize here so the Db/Apex pom can use validate -->
@@ -336,6 +336,7 @@
       <id>conf-dependency</id>
       <activation>
         <file>
+          <!-- can not use ${oracle-tools.dir} here -->
           <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/conf/pom.xml</missing>
         </file>
       </activation>

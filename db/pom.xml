@@ -15,7 +15,7 @@
   <description>Core POM for Database builds</description>
 
   <properties>
-    <oracle-tools.db.src.dir>${maven.multiModuleProjectDirectory}/db/src</oracle-tools.db.src.dir>
+    <oracle-tools.db.src.dir>${oracle-tools.dir}/db/src</oracle-tools.db.src.dir>
     <oracle-tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle-tools.db.schema>
 
     <!-- =========================================== -->
@@ -492,6 +492,7 @@
       <id>db-dependency</id>
       <activation>
         <file>
+          <!-- can not use ${oracle-tools.dir} here -->
           <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/db/pom.xml</missing>
         </file>
       </activation>

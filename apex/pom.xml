@@ -13,7 +13,7 @@
   <description>Core POM for Oracle Apex builds</description>
   
   <properties>
-    <oracle-tools.apex.src.dir>${maven.multiModuleProjectDirectory}/apex/src</oracle-tools.apex.src.dir>
+    <oracle-tools.apex.src.dir>${oracle-tools.dir}/apex/src</oracle-tools.apex.src.dir>
     <oracle-tools.apex.scripts.dir>${oracle-tools.apex.src.dir}/scripts</oracle-tools.apex.scripts.dir>
     <!-- generic apex src dir -->
     <apex.src.dir>${basedir}/src</apex.src.dir>
@@ -269,6 +269,7 @@
       <id>apex-dependency</id>
       <activation>
         <file>
+          <!-- can not use ${oracle-tools.dir} here -->
           <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/apex/pom.xml</missing>
         </file>
       </activation>
