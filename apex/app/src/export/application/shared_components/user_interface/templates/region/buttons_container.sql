@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/region/buttons_container
 begin
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(47481662736621710)
+ p_id=>wwv_flow_api.id(18336791840600134)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-ButtonRegion t-Form--floatLeft #REGION_CSS_CLASSES#" id="#REGION_STATIC_ID#" #REGION_ATTRIBUTES#>',
@@ -29,19 +29,19 @@ wwv_flow_api.create_plug_template(
 ,p_template_comment=>'Red Theme'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(47481350795621710)
-,p_plug_template_id=>wwv_flow_api.id(47481662736621710)
-,p_name=>'Region Body'
-,p_placeholder=>'BODY'
+ p_id=>wwv_flow_api.id(18337427152600134)
+,p_plug_template_id=>wwv_flow_api.id(18336791840600134)
+,p_name=>'Sub Regions'
+,p_placeholder=>'SUB_REGIONS'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(47481027424621710)
-,p_plug_template_id=>wwv_flow_api.id(47481662736621710)
-,p_name=>'Sub Regions'
-,p_placeholder=>'SUB_REGIONS'
+ p_id=>wwv_flow_api.id(18337103781600134)
+,p_plug_template_id=>wwv_flow_api.id(18336791840600134)
+,p_name=>'Region Body'
+,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12

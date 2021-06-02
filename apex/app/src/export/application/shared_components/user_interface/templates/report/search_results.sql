@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/report/search_results
 begin
 wwv_flow_api.create_row_template(
- p_id=>wwv_flow_api.id(47441243783621685)
+ p_id=>wwv_flow_api.id(18377210793600159)
 ,p_row_template_name=>'Search Results'
 ,p_internal_name=>'SEARCH_RESULTS'
 ,p_row_template1=>wwv_flow_string.join(wwv_flow_t_varchar2(

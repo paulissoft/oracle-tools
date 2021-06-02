@@ -1,19 +1,19 @@
 prompt --application/shared_components/user_interface/lovs/lov_boolean
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(41464202019607771)
+ p_id=>wwv_flow_api.id(24354252557614073)
 ,p_lov_name=>'LOV_BOOLEAN'
-,p_lov_query=>'.'||wwv_flow_api.id(41464202019607771)||'.'
+,p_lov_query=>'.'||wwv_flow_api.id(24354252557614073)||'.'
 ,p_location=>'STATIC'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(41463968675607751)
+ p_id=>wwv_flow_api.id(24354485901614093)
 ,p_lov_disp_sequence=>1
 ,p_lov_disp_value=>'No'
 ,p_lov_return_value=>'0'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(41463553899607750)
+ p_id=>wwv_flow_api.id(24354900677614094)
 ,p_lov_disp_sequence=>2
 ,p_lov_disp_value=>'Yes'
 ,p_lov_return_value=>'1'

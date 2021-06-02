@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/button/icon
 begin
 wwv_flow_api.create_button_templates(
- p_id=>wwv_flow_api.id(47419891371621670)
+ p_id=>wwv_flow_api.id(18398563205600174)
 ,p_template_name=>'Icon'
 ,p_internal_name=>'ICON'
 ,p_template=>'<button class="t-Button t-Button--noLabel t-Button--icon #BUTTON_CSS_CLASSES#" #BUTTON_ATTRIBUTES# onclick="#JAVASCRIPT#" type="button" id="#BUTTON_ID#" title="#LABEL#" aria-label="#LABEL#"><span class="t-Icon #ICON_CSS_CLASSES#" aria-hidden="true"><'

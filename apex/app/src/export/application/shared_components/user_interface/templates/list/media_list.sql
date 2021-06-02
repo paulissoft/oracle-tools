@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/list/media_list
 begin
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(47433283101621679)
+ p_id=>wwv_flow_api.id(18385171475600165)
 ,p_list_template_current=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<li class="t-MediaList-item is-active #A04#">',
 '    <a href="#LINK#" class="t-MediaList-itemWrap #A05#" #A03#>',

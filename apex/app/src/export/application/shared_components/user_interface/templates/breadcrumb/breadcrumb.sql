@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/breadcrumb/breadcrumb
 begin
 wwv_flow_api.create_menu_template(
- p_id=>wwv_flow_api.id(47418993926621668)
+ p_id=>wwv_flow_api.id(18399460650600176)
 ,p_name=>'Breadcrumb'
 ,p_internal_name=>'BREADCRUMB'
 ,p_before_first=>'<ul class="t-Breadcrumb #COMPONENT_CSS_CLASSES#">'

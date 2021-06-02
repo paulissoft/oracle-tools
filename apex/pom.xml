@@ -119,16 +119,8 @@
               <phase>${apex.phase.process}</phase>
               <configuration>
                 <target unless="${apex.skip}">
-                  <fail message="The Apex source directory (${apex.application.dir}) does not exist">
-                    <condition>
-                      <and>
-                        <isset property="apex.application" />
-                        <not>
-                          <available file="${apex.application.dir}" type="dir" />
-                        </not>
-                      </and>
-                    </condition>
-                  </fail>
+                  <property name="apex.application.dir.abs"
+                            location="${apex.application.dir}" />
                   <fail message="Property apex.operation must be export or import">
                     <condition>
                       <not>

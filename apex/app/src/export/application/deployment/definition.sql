@@ -1,7 +1,7 @@
 prompt --application/deployment/definition
 begin
 wwv_flow_api.create_install(
- p_id=>wwv_flow_api.id(45401386999346162)
+ p_id=>wwv_flow_api.id(20417067577875682)
 ,p_welcome_message=>'This application installer will guide you through the process of creating your database objects and seed data.'
 ,p_configuration_message=>'You can configure the following attributes of your application.'
 ,p_build_options_message=>'You can choose to include the following build options.'

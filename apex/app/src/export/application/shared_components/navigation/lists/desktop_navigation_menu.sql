@@ -1,12 +1,12 @@
 prompt --application/shared_components/navigation/lists/desktop_navigation_menu
 begin
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(47518274176621747)
+ p_id=>wwv_flow_api.id(18300180400600097)
 ,p_name=>'Desktop Navigation Menu'
 ,p_list_status=>'PUBLIC'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(47387390749621553)
+ p_id=>wwv_flow_api.id(18431063827600291)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Home'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.:'
@@ -14,7 +14,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(45503505266751371)
+ p_id=>wwv_flow_api.id(20314949310470473)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Components'
 ,p_list_item_link_target=>'f?p=&APP_ID.:3000:&SESSION.::&DEBUG.::::'
@@ -22,32 +22,32 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(45484772888692477)
+ p_id=>wwv_flow_api.id(20333681688529367)
 ,p_list_item_display_sequence=>40
 ,p_list_item_link_text=>'Wizards'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1208:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-wizard'
-,p_parent_list_item_id=>wwv_flow_api.id(45503505266751371)
+,p_parent_list_item_id=>wwv_flow_api.id(20314949310470473)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'1208'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(31466194560469945)
+ p_id=>wwv_flow_api.id(34352260016751899)
 ,p_list_item_display_sequence=>50
 ,p_list_item_link_text=>'Text Messages (IG)'
 ,p_list_item_link_target=>'f?p=&APP_ID.:6:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-globe'
-,p_parent_list_item_id=>wwv_flow_api.id(45503505266751371)
+,p_parent_list_item_id=>wwv_flow_api.id(20314949310470473)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'6'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(47374464750621527)
+ p_id=>wwv_flow_api.id(18443989826600317)
 ,p_list_item_display_sequence=>30
 ,p_list_item_link_text=>'Administration'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10000:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-user-wrench'
-,p_security_scheme=>wwv_flow_api.id(47394826758621596)
+,p_security_scheme=>wwv_flow_api.id(18423627818600248)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 end;

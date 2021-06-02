@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/list/navigation_bar
 begin
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(47429403299621677)
+ p_id=>wwv_flow_api.id(18389051277600167)
 ,p_list_template_current=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<li class="t-NavigationBar-item is-active #A02#">',
 '  <a class="t-Button t-Button--icon t-Button--header t-Button--navBar" href="#LINK#">',

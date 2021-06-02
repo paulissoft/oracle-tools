@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/region/blank_with_attributes_no_grid
 begin
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(47493450819621714)
+ p_id=>wwv_flow_api.id(18325003757600130)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div id="#REGION_STATIC_ID#" #REGION_ATTRIBUTES# class="#REGION_CSS_CLASSES#"> ',
@@ -17,18 +17,18 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(47493170628621714)
-,p_plug_template_id=>wwv_flow_api.id(47493450819621714)
-,p_name=>'Body'
-,p_placeholder=>'BODY'
+ p_id=>wwv_flow_api.id(18325637552600130)
+,p_plug_template_id=>wwv_flow_api.id(18325003757600130)
+,p_name=>'Sub Regions'
+,p_placeholder=>'SUB_REGIONS'
 ,p_has_grid_support=>false
 ,p_glv_new_row=>true
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(47492817024621714)
-,p_plug_template_id=>wwv_flow_api.id(47493450819621714)
-,p_name=>'Sub Regions'
-,p_placeholder=>'SUB_REGIONS'
+ p_id=>wwv_flow_api.id(18325283948600130)
+,p_plug_template_id=>wwv_flow_api.id(18325003757600130)
+,p_name=>'Body'
+,p_placeholder=>'BODY'
 ,p_has_grid_support=>false
 ,p_glv_new_row=>true
 );

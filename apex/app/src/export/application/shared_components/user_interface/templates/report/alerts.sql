@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/report/alerts
 begin
 wwv_flow_api.create_row_template(
- p_id=>wwv_flow_api.id(47446204472621687)
+ p_id=>wwv_flow_api.id(18372250104600157)
 ,p_row_template_name=>'Alerts'
 ,p_internal_name=>'ALERTS'
 ,p_row_template1=>wwv_flow_string.join(wwv_flow_t_varchar2(

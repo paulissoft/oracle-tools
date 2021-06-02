@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/list/links_list
 begin
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(47422255484621674)
+ p_id=>wwv_flow_api.id(18396199092600170)
 ,p_list_template_current=>'<li class="t-LinksList-item is-current #A03#"><a href="#LINK#" class="t-LinksList-link" #A02#><span class="t-LinksList-icon"><span class="t-Icon #ICON_CSS_CLASSES#"></span></span><span class="t-LinksList-label">#TEXT#</span><span class="t-LinksList-b'
 ||'adge">#A01#</span></a></li>'
 ,p_list_template_noncurrent=>'<li class="t-LinksList-item #A03#"><a href="#LINK#" class="t-LinksList-link" #A02#><span class="t-LinksList-icon"><span class="t-Icon #ICON_CSS_CLASSES#"></span></span><span class="t-LinksList-label">#TEXT#</span><span class="t-LinksList-badge">#A01#'

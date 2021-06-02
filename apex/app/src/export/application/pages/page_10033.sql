@@ -2,46 +2,31 @@ prompt --application/pages/page_10033
 begin
 wwv_flow_api.create_page(
  p_id=>10033
-,p_user_interface_id=>wwv_flow_api.id(47397907220621635)
+,p_user_interface_id=>wwv_flow_api.id(18420547356600209)
 ,p_name=>'Add Multiple Users - Step 1'
 ,p_page_mode=>'MODAL'
 ,p_step_title=>'Add Multiple Users'
 ,p_first_item=>'AUTO_FIRST_ITEM'
 ,p_autocomplete_on_off=>'OFF'
-,p_group_id=>wwv_flow_api.id(47394276349621594)
+,p_group_id=>wwv_flow_api.id(18424178227600250)
 ,p_inline_css=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '.helpText {',
 'padding: 8px;',
 'color: #707070;',
 '}'))
-,p_required_role=>wwv_flow_api.id(47394826758621596)
-,p_required_patch=>wwv_flow_api.id(29991820016577792)
+,p_required_role=>wwv_flow_api.id(18423627818600248)
+,p_required_patch=>wwv_flow_api.id(35826634560644052)
 ,p_dialog_chained=>'N'
 ,p_deep_linking=>'N'
 ,p_last_updated_by=>'ADMIN'
 ,p_last_upd_yyyymmddhh24miss=>'20210512054603'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(30010700952577934)
-,p_plug_name=>'Wizard Container'
-,p_region_template_options=>'#DEFAULT#:t-Form--stretchInputs'
-,p_component_template_options=>'#DEFAULT#:t-WizardSteps--displayCurrentLabelOnly'
-,p_escape_on_http_output=>'Y'
-,p_plug_template=>wwv_flow_api.id(47493640812621714)
-,p_plug_display_sequence=>10
-,p_plug_display_point=>'BODY'
-,p_query_type=>'SQL'
-,p_plug_query_num_rows=>15
-,p_attribute_01=>'N'
-,p_attribute_02=>'HTML'
-,p_attribute_03=>'Y'
-);
-wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(30010594711577934)
+ p_id=>wwv_flow_api.id(35807859865643910)
 ,p_plug_name=>'Button Bar'
 ,p_region_template_options=>'#DEFAULT#'
 ,p_escape_on_http_output=>'Y'
-,p_plug_template=>wwv_flow_api.id(47481662736621710)
+,p_plug_template=>wwv_flow_api.id(18336791840600134)
 ,p_plug_display_sequence=>10
 ,p_plug_display_point=>'REGION_POSITION_03'
 ,p_query_type=>'SQL'
@@ -50,68 +35,88 @@ wwv_flow_api.create_page_plug(
 ,p_attribute_02=>'HTML'
 ,p_attribute_03=>'Y'
 );
+wwv_flow_api.create_page_plug(
+ p_id=>wwv_flow_api.id(35807753624643910)
+,p_plug_name=>'Wizard Container'
+,p_region_template_options=>'#DEFAULT#:t-Form--stretchInputs'
+,p_component_template_options=>'#DEFAULT#:t-WizardSteps--displayCurrentLabelOnly'
+,p_escape_on_http_output=>'Y'
+,p_plug_template=>wwv_flow_api.id(18324813764600130)
+,p_plug_display_sequence=>10
+,p_plug_display_point=>'BODY'
+,p_query_type=>'SQL'
+,p_plug_query_num_rows=>15
+,p_attribute_01=>'N'
+,p_attribute_02=>'HTML'
+,p_attribute_03=>'Y'
+);
 wwv_flow_api.create_page_button(
- p_id=>wwv_flow_api.id(30010839239577934)
+ p_id=>wwv_flow_api.id(35807615337643910)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_api.id(30010594711577934)
+,p_button_plug_id=>wwv_flow_api.id(35807859865643910)
 ,p_button_name=>'NEXT'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#:t-Button--iconRight'
-,p_button_template_id=>wwv_flow_api.id(47419701971621669)
+,p_button_template_id=>wwv_flow_api.id(18398752605600175)
 ,p_button_is_hot=>'Y'
 ,p_button_image_alt=>'Next'
 ,p_button_position=>'REGION_TEMPLATE_NEXT'
 ,p_icon_css_classes=>'fa-chevron-right'
 );
 wwv_flow_api.create_page_button(
- p_id=>wwv_flow_api.id(30010987549577934)
+ p_id=>wwv_flow_api.id(35807467027643910)
 ,p_button_sequence=>20
-,p_button_plug_id=>wwv_flow_api.id(30010594711577934)
+,p_button_plug_id=>wwv_flow_api.id(35807859865643910)
 ,p_button_name=>'CANCEL'
 ,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
-,p_button_template_id=>wwv_flow_api.id(47419795945621669)
+,p_button_template_id=>wwv_flow_api.id(18398658631600175)
 ,p_button_image_alt=>'Cancel'
 ,p_button_position=>'REGION_TEMPLATE_PREVIOUS'
 ,p_button_execute_validations=>'N'
 );
 wwv_flow_api.create_page_branch(
- p_id=>wwv_flow_api.id(30013583903577935)
+ p_id=>wwv_flow_api.id(35804870673643909)
 ,p_branch_name=>'Go To Next Step'
 ,p_branch_action=>'f?p=&APP_ID.:10034:&SESSION.::&DEBUG.:RP,10034::&success_msg=#SUCCESS_MSG#'
 ,p_branch_point=>'AFTER_PROCESSING'
 ,p_branch_type=>'REDIRECT_URL'
-,p_branch_when_button_id=>wwv_flow_api.id(30010839239577934)
+,p_branch_when_button_id=>wwv_flow_api.id(35807615337643910)
 ,p_branch_sequence=>10
 );
 wwv_flow_api.create_page_item(
- p_id=>wwv_flow_api.id(30014723908577936)
-,p_name=>'P10033_USERNAME_FORMAT'
-,p_item_sequence=>40
-,p_item_plug_id=>wwv_flow_api.id(30010700952577934)
-,p_prompt=>'Username Format'
+ p_id=>wwv_flow_api.id(35804492694643909)
+,p_name=>'P10033_ROLE'
+,p_is_required=>true
+,p_item_sequence=>20
+,p_item_plug_id=>wwv_flow_api.id(35807753624643910)
+,p_item_default=>'2'
+,p_prompt=>'Role'
 ,p_display_as=>'NATIVE_CHECKBOX'
-,p_named_lov=>'EMAIL_USERNAME_FORMAT'
-,p_lov=>'.'||wwv_flow_api.id(30014826667577936)||'.'
-,p_field_template=>wwv_flow_api.id(47420565762621671)
+,p_named_lov=>'ACCESS_ROLES'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select role_name d, role_id r',
+'from APEX_APPL_ACL_ROLES where application_id = :APP_ID ',
+'order by 1'))
+,p_field_template=>wwv_flow_api.id(18397888814600173)
 ,p_item_template_options=>'#DEFAULT#'
 ,p_lov_display_extra=>'NO'
-,p_attribute_01=>'1'
+,p_attribute_01=>'3'
 ,p_attribute_02=>'VERTICAL'
 );
 wwv_flow_api.create_page_item(
- p_id=>wwv_flow_api.id(30014375085577936)
+ p_id=>wwv_flow_api.id(35804079491643908)
 ,p_name=>'P10033_PRELIM_USERS'
 ,p_is_required=>true
 ,p_item_sequence=>30
-,p_item_plug_id=>wwv_flow_api.id(30010700952577934)
+,p_item_plug_id=>wwv_flow_api.id(35807753624643910)
 ,p_prompt=>'Usernames'
 ,p_placeholder=>'Enter usernames here'
 ,p_display_as=>'NATIVE_TEXTAREA'
 ,p_cSize=>80
 ,p_cMaxlength=>4000
 ,p_cHeight=>5
-,p_field_template=>wwv_flow_api.id(47420565762621671)
+,p_field_template=>wwv_flow_api.id(18397888814600173)
 ,p_item_template_options=>'#DEFAULT#'
 ,p_lov_display_extra=>'NO'
 ,p_inline_help_text=>'Enter usernames separated by commas, semicolons, or whitespace. Existing or duplicate usernames will automatically be ignored.'
@@ -121,44 +126,39 @@ wwv_flow_api.create_page_item(
 ,p_attribute_04=>'BOTH'
 );
 wwv_flow_api.create_page_item(
- p_id=>wwv_flow_api.id(30013961882577935)
-,p_name=>'P10033_ROLE'
-,p_is_required=>true
-,p_item_sequence=>20
-,p_item_plug_id=>wwv_flow_api.id(30010700952577934)
-,p_item_default=>'2'
-,p_prompt=>'Role'
+ p_id=>wwv_flow_api.id(35803730668643908)
+,p_name=>'P10033_USERNAME_FORMAT'
+,p_item_sequence=>40
+,p_item_plug_id=>wwv_flow_api.id(35807753624643910)
+,p_prompt=>'Username Format'
 ,p_display_as=>'NATIVE_CHECKBOX'
-,p_named_lov=>'ACCESS_ROLES'
-,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'select role_name d, role_id r',
-'from APEX_APPL_ACL_ROLES where application_id = :APP_ID ',
-'order by 1'))
-,p_field_template=>wwv_flow_api.id(47420565762621671)
+,p_named_lov=>'EMAIL_USERNAME_FORMAT'
+,p_lov=>'.'||wwv_flow_api.id(35803627909643908)||'.'
+,p_field_template=>wwv_flow_api.id(18397888814600173)
 ,p_item_template_options=>'#DEFAULT#'
 ,p_lov_display_extra=>'NO'
-,p_attribute_01=>'3'
+,p_attribute_01=>'1'
 ,p_attribute_02=>'VERTICAL'
 );
 wwv_flow_api.create_page_da_event(
- p_id=>wwv_flow_api.id(30011063763577934)
+ p_id=>wwv_flow_api.id(35807390813643910)
 ,p_name=>'Cancel Modal'
 ,p_event_sequence=>10
 ,p_triggering_element_type=>'BUTTON'
-,p_triggering_button_id=>wwv_flow_api.id(30010987549577934)
+,p_triggering_button_id=>wwv_flow_api.id(35807467027643910)
 ,p_bind_type=>'bind'
 ,p_bind_event_type=>'click'
 );
 wwv_flow_api.create_page_da_action(
- p_id=>wwv_flow_api.id(30015996141577939)
-,p_event_id=>wwv_flow_api.id(30011063763577934)
+ p_id=>wwv_flow_api.id(35802458435643905)
+,p_event_id=>wwv_flow_api.id(35807390813643910)
 ,p_event_result=>'TRUE'
 ,p_action_sequence=>10
 ,p_execute_on_page_init=>'N'
 ,p_action=>'NATIVE_DIALOG_CANCEL'
 );
 wwv_flow_api.create_page_process(
- p_id=>wwv_flow_api.id(30016565469577939)
+ p_id=>wwv_flow_api.id(35801889107643905)
 ,p_process_sequence=>10
 ,p_process_point=>'AFTER_SUBMIT'
 ,p_process_type=>'NATIVE_PLSQL'
@@ -310,7 +310,7 @@ wwv_flow_api.create_page_process(
 'end;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
-,p_process_when_button_id=>wwv_flow_api.id(30010839239577934)
+,p_process_when_button_id=>wwv_flow_api.id(35807615337643910)
 );
 end;
 /

@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/lovs/access_roles
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(30007176318577920)
+ p_id=>wwv_flow_api.id(35811278258643924)
 ,p_lov_name=>'ACCESS_ROLES'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select role_name d, role_id r',

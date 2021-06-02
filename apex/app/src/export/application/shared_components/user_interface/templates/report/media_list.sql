@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/report/media_list
 begin
 wwv_flow_api.create_row_template(
- p_id=>wwv_flow_api.id(47459877846621692)
+ p_id=>wwv_flow_api.id(18358576730600152)
 ,p_row_template_name=>'Media List'
 ,p_internal_name=>'MEDIA_LIST'
 ,p_row_template1=>wwv_flow_string.join(wwv_flow_t_varchar2(

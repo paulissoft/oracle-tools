@@ -1,33 +1,33 @@
 prompt --application/shared_components/navigation/breadcrumbs/breadcrumb
 begin
 wwv_flow_api.create_menu(
- p_id=>wwv_flow_api.id(47518770908621749)
+ p_id=>wwv_flow_api.id(18299683668600095)
 ,p_name=>'Breadcrumb'
 );
 wwv_flow_api.create_menu_option(
- p_id=>wwv_flow_api.id(47518500873621749)
-,p_short_name=>'Home'
-,p_link=>'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.'
-,p_page_id=>1
+ p_id=>wwv_flow_api.id(20347353939529379)
+,p_parent_id=>wwv_flow_api.id(20317967826520293)
+,p_short_name=>'Wizards'
+,p_link=>'f?p=&APP_ID.:1208:&SESSION.'
+,p_page_id=>1208
 );
 wwv_flow_api.create_menu_option(
- p_id=>wwv_flow_api.id(47373530272621523)
-,p_short_name=>'Administration'
-,p_link=>'f?p=&APP_ID.:10000:&SESSION.'
-,p_page_id=>10000
-);
-wwv_flow_api.create_menu_option(
- p_id=>wwv_flow_api.id(45500486750701551)
+ p_id=>wwv_flow_api.id(20317967826520293)
 ,p_short_name=>'Components'
 ,p_link=>'f?p=&APP_ID.:3000:&SESSION.'
 ,p_page_id=>3000
 );
 wwv_flow_api.create_menu_option(
- p_id=>wwv_flow_api.id(45471100637692465)
-,p_parent_id=>wwv_flow_api.id(45500486750701551)
-,p_short_name=>'Wizards'
-,p_link=>'f?p=&APP_ID.:1208:&SESSION.'
-,p_page_id=>1208
+ p_id=>wwv_flow_api.id(18444924304600321)
+,p_short_name=>'Administration'
+,p_link=>'f?p=&APP_ID.:10000:&SESSION.'
+,p_page_id=>10000
+);
+wwv_flow_api.create_menu_option(
+ p_id=>wwv_flow_api.id(18299953703600095)
+,p_short_name=>'Home'
+,p_link=>'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.'
+,p_page_id=>1
 );
 end;
 /

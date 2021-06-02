@@ -1,7 +1,7 @@
 prompt --application/shared_components/security/authentications/application_express_authentication
 begin
 wwv_flow_api.create_authentication(
- p_id=>wwv_flow_api.id(47518991858621751)
+ p_id=>wwv_flow_api.id(18299462718600093)
 ,p_name=>'Application Express Authentication'
 ,p_scheme_type=>'NATIVE_APEX_ACCOUNTS'
 ,p_invalid_session_type=>'LOGIN'

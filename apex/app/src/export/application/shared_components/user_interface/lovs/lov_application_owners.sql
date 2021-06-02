@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/lovs/lov_application_owners
 begin
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(41711721853622768)
+ p_id=>wwv_flow_api.id(24106732723599076)
 ,p_lov_name=>'LOV_APPLICATION_OWNERS'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select  distinct',

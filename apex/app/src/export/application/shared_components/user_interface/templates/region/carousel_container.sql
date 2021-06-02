@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/region/carousel_container
 begin
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(47492644625621714)
+ p_id=>wwv_flow_api.id(18325809951600130)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-Region t-Region--carousel #REGION_CSS_CLASSES#" id="#REGION_STATIC_ID#" #REGION_ATTRIBUTES#>',
@@ -51,19 +51,19 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(47492295156621713)
-,p_plug_template_id=>wwv_flow_api.id(47492644625621714)
-,p_name=>'Region Body'
-,p_placeholder=>'BODY'
+ p_id=>wwv_flow_api.id(18326451584600131)
+,p_plug_template_id=>wwv_flow_api.id(18325809951600130)
+,p_name=>'Slides'
+,p_placeholder=>'SUB_REGIONS'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(47492002992621713)
-,p_plug_template_id=>wwv_flow_api.id(47492644625621714)
-,p_name=>'Slides'
-,p_placeholder=>'SUB_REGIONS'
+ p_id=>wwv_flow_api.id(18326159420600131)
+,p_plug_template_id=>wwv_flow_api.id(18325809951600130)
+,p_name=>'Region Body'
+,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12

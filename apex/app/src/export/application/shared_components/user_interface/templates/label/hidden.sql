@@ -1,7 +1,7 @@
 prompt --application/shared_components/user_interface/templates/label/hidden
 begin
 wwv_flow_api.create_field_template(
- p_id=>wwv_flow_api.id(47420415074621671)
+ p_id=>wwv_flow_api.id(18398039502600173)
 ,p_template_name=>'Hidden'
 ,p_internal_name=>'HIDDEN'
 ,p_template_body1=>wwv_flow_string.join(wwv_flow_t_varchar2(
