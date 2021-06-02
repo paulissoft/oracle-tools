@@ -150,8 +150,22 @@
                            property="db.properties.dir" />
                   <echo>Reading flyway-db properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
                   <!-- no prefix needed -->
-                  <property file="${db.properties.dir}${file.separator}flyway-db.conf" />                    
+                  <property file="${db.properties.dir}${file.separator}flyway-db.conf" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
 
+            <execution>
+              <!-- This must be named -->
+              <id>db-install-verify</id>
+              <!-- give the generate-resources phase a chance to extract resources -->
+              <phase>${db.phase.process}</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target unless="${db.install.skip}">
                   <property name="db.src.dml.scripts.abs" location="${db.src.dml.scripts}" />
                   <fail message="Directory ${db.src.dml.scripts.abs} does not exist">
                     <condition>
@@ -336,6 +350,11 @@
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
+              <execution>
+                <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
             </executions>
           </plugin>
           <plugin>
@@ -476,13 +495,20 @@
         <default.goal>compile</default.goal>
         <conf.connect.skip>false</conf.connect.skip>
         <!-- do not read flyway properties -->
-        <db.install.skip>true</db.install.skip>
+        <db.install.skip>false</db.install.skip>
         <maven.debug>true</maven.debug>
       </properties>
       <build>
         <plugins>
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
@@ -491,10 +517,10 @@
     <profile>
       <id>db-dependency</id>
       <activation>
-        <file>
-          <!-- can not use ${oracle-tools.dir} here -->
-          <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/db/pom.xml</missing>
-        </file>
+        <property>
+          <name>db.dependency</name>
+          <value>true</value>
+        </property>
       </activation>
       <properties>
         <!-- When child projects have this POM as parent and this project as
@@ -511,6 +537,14 @@
           <type>zip</type>
         </dependency>
       </dependencies>
+      <build>
+        <resources/>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

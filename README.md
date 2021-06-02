@@ -30,7 +30,7 @@ The following MIME spreadsheet types (with extension between parentheses) are su
 This project depends on the ExcelTable GitHub project:
 https://github.com/mbleron/ExcelTable.git.
 
-### various PL/SQL utilities
+### Various PL/SQL utilities
 
 Utilities to enable/disable constraints, manage Apex messages and so on.
 
@@ -65,20 +65,59 @@ $ git clone https://github.com/paulissoft/oracle-tools.git
 
 ```
 $ cd oracle-tools/tools/db
-$ mvn -Ddb=<db from oracle-tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Ddb.operation=install validate flyway:migrate
+$ mvn -Pdb-install -Ddb=<db from oracle-tools/conf/src> -Ddb.schema=<username> -Ddb.password=<password>
 ```
 
 #### Installing the APEX application
 
 ```
 $ cd oracle-tools/tools/apex
-$ mvn -Ddb=<db from oracle-tools/build/conf> -Ddb.schema=<username> -Ddb.password=<password> -Dapex.operation=import compile
+$ mvn -Papex-import -Ddb=<db from oracle-tools/conf/src> -Ddb.schema=<username> -Ddb.password=<password>
 ```
 
 ## Using Oracle Tools in other Maven projects
 
-### Database POM
+### Using Oracle Tools on the file system on the same level as your project
 
+This is an example file layout:
+
+
+```
+.../projects/oracle-tools
+.../projects/your-project
+```
+
+#### Database POM
+
+The .../projects/your-project/db/pom.xml may have as parent:
+
+```
+  <parent>
+    <groupId>com.paulissoft.oracle-tools</groupId>
+    <artifactId>db</artifactId>
+    <version>${revision}</version>
+    <relativePath>${maven.multiModuleProjectDirectory}/../oracle-tools/db</relativePath>
+  </parent>
+```
+
+#### Apex POM
+
+The .../projects/your-project/apex/pom.xml may have as parent:
+
+```
+  <parent>
+    <groupId>com.paulissoft.oracle-tools</groupId>
+    <artifactId>apex</artifactId>
+    <version>${revision}</version>
+    <relativePath>${maven.multiModuleProjectDirectory}/../oracle-tools/apex</relativePath>
+  </parent>
+```
+
+### Using Maven dependencies
+
+#### Database POM
+
+The .../projects/your-project/db/pom.xml may have as parent:
 Add this to the Database POM:
 
 ```
@@ -91,40 +130,15 @@ Add this to the Database POM:
 
   <properties>
     <oracle-tools.db.version>YOUR VERSION</oracle-tools.db.version>
+    <db.dependency>true</db.dependency>
   </properties>
-  
-  <!-- Needed for Flyway callbacks and Generate DDL scripts -->
-  <dependencies>
-    <dependency>
-      <groupId>com.paulissoft.oracle-tools</groupId>
-      <artifactId>db</artifactId>
-      <!-- type and classifier are needed when they are not the default -->
-      <type>zip</type>
-      <classifier>src</classifier>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <resources/>
-    <plugins>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 ```
 
 If you want to use the ORCL database from the Oracle Tools conf/src directory
 you have to add this dependency as well:
 
 ```
-    <dependency>
-      <groupId>com.paulissoft.oracle-tools</groupId>
-      <artifactId>conf</artifactId>
-      <!-- type and classifier are needed when they are not the default -->
-      <type>zip</type>
-      <classifier>src</classifier>
-    </dependency>
+    <conf.dependency>true</conf.dependency>
 ```
 
 Then you can run for instance:
@@ -137,7 +151,7 @@ to get a connection to the local database with service name ORCL on port 1521,
 the Oracle default.
 
 
-### Apex POM
+#### Apex POM
 
 Add this to the Apex POM:
 
@@ -151,25 +165,14 @@ Add this to the Apex POM:
 
   <properties>
     <oracle-tools.apex.version>YOUR VERSION</oracle-tools.apex.version>
+    <apex.dependency>true</apex.dependency>
   </properties>
-  
-  <!-- Needed for Apex Export/Import scripts -->
-  <dependencies>
-    <dependency>
-      <groupId>com.paulissoft.oracle-tools</groupId>
-      <artifactId>apex</artifactId>
-      <!-- type and classifier are needed when they are not the default -->
-      <type>zip</type>
-      <classifier>src</classifier>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <resources/>
-    <plugins>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 ```
+
+If you want to use the ORCL database from the Oracle Tools conf/src directory
+you have to add this dependency as well:
+
+```
+    <conf.dependency>true</conf.dependency>
+```
+

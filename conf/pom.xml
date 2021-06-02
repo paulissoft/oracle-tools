@@ -33,11 +33,11 @@
       The information about the current (and previous) database is stored in
       a file named env.properties which must be in a configuration folder
       (taking the pom.xml directory as reference) like (the first wins):
-      a) ${db.config.dir}
-      b) conf
-      c) ../conf
-      d) ../../conf
-      e) ../../../conf
+      a) conf
+      b) ../conf
+      c) ../../conf
+      d) ../../../conf
+      e) ${oracle-tools.conf.src.dir}
       
       The file env.properties must have a line like:
       db=<database directory name>
@@ -61,7 +61,6 @@
 
   <properties>
     <oracle-tools.conf.src.dir>${oracle-tools.dir}/conf/src</oracle-tools.conf.src.dir>
-    <db.config.dir>${oracle-tools.conf.src.dir}</db.config.dir>
     
     <!-- use initialize here so the Db/Apex pom can use validate -->
     <conf.phase.init>initialize</conf.phase.init>
@@ -128,6 +127,7 @@
                   <echoproperties prefix="maven." />
                   <echoproperties prefix="db." />
                   <echoproperties prefix="oracle-tools." />
+                  <echoproperties prefix="conf." />
                 </target>
               </configuration>
               <goals>
@@ -139,7 +139,7 @@
               <!-- This must be named -->
               <id>conf-connect</id>
               <!-- give the generate-resources phase a chance to extract resources -->
-              <phase>${conf.phase.process}</phase>
+              <phase>${conf.phase.init}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target unless="${conf.connect.skip}">
@@ -147,37 +147,50 @@
                        As a CD developer I want to maintain the connection
                        data in just one configuration folder.
 
-                       Use (in that order)
-                       - ${db.config.dir}
+                       This configuration folder will be db.config.dir which
+                       will be (in that order):
+
                        - conf
                        - ../conf
                        - ../../conf
                        - ../../../conf
+                       - ${oracle-tools.conf.src.dir}
                        to look for DB related properties files.
                        
                        This reduces the need for duplicate folders/files.
                   -->
-                  
-                  <!-- READ THE env.properties FILE. -->
-                  
-                  
-                  <!-- First find the env.properties file -->
-                  <condition property="env.properties" value="${db.config.dir}${file.separator}env.properties">
-                    <available file="${db.config.dir}${file.separator}env.properties" type="file" />
+
+                  <!-- SET db.config.dir -->
+                  <property name="tmp.env.properties1"
+                            value="conf${file.separator}env.properties" />
+                  <property name="tmp.env.properties2"
+                            value="..${file.separator}${tmp.env.properties1}" />
+                  <property name="tmp.env.properties3"
+                            value="..${file.separator}${tmp.env.properties2}" />
+                  <property name="tmp.env.properties4"
+                            value="..${file.separator}${tmp.env.properties3}" />
+                  <property name="tmp.env.properties5"
+                            value="${oracle-tools.conf.src.dir}${file.separator}env.properties" />
+
+                  <condition property="env.properties" value="${tmp.env.properties1}">
+                    <available file="${tmp.env.properties1}" type="file" />
                   </condition>
-                  <condition property="env.properties" value="conf${file.separator}env.properties">
-                    <available file="conf${file.separator}env.properties" type="file" />
+                  <condition property="env.properties" value="${tmp.env.properties2}">
+                    <available file="${tmp.env.properties2}" type="file" />
                   </condition>
-                  <condition property="env.properties" value="..${file.separator}conf${file.separator}env.properties">
-                    <available file="..${file.separator}conf${file.separator}env.properties" type="file" />
+                  <condition property="env.properties" value="${tmp.env.properties3}">
+                    <available file="${tmp.env.properties3}" type="file" />
                   </condition>
-                  <condition property="env.properties" value="..${file.separator}..${file.separator}conf${file.separator}env.properties">
-                    <available file="..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
+                  <condition property="env.properties" value="${tmp.env.properties4}">
+                    <available file="${tmp.env.properties4}" type="file" />
                   </condition>
-                  <condition property="env.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties">
-                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}env.properties" type="file" />
+                  <condition property="env.properties" value="${tmp.env.properties5}">
+                    <available file="${tmp.env.properties5}" type="file" />
                   </condition>
 
+                  <dirname file="${env.properties}" property="db.config.dir" />
+                  
+                  <!-- READ THE env.properties FILE. -->
                   <property name="env.properties.abs" location="${env.properties}" />
 
                   <!--
@@ -211,18 +224,6 @@
                   <condition property="db.properties" value="${db.config.dir}${file.separator}${db}${file.separator}db.properties">
                     <available file="${db.config.dir}${file.separator}${db}${file.separator}db.properties" type="file" />
                   </condition>
-                  <condition property="db.properties" value="conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db}${file.separator}db.properties" type="file" />
-                  </condition>
                   <property name="db.properties.abs" location="${db.properties}" />
                   <echo message="Reading db properties from file ${db.properties.abs}" />
                   <!-- prefixValues="true" is needed for correctly expanding
@@ -240,7 +241,9 @@
                              else="${db.schema}">
                     <isset property="db.proxy.username"/>
                   </condition>
-                  <!--property name="db.password" value="${db.proxy.password}"/-->
+                  <condition property="db.password" value="${db.proxy.password}">
+                    <isset property="db.proxy.password"/>
+                  </condition>
                   <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
 
                   <!-- set utplsql properties -->
@@ -254,18 +257,6 @@
                   <!-- First find the properties file -->
                   <condition property="db.prev.properties" value="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties">
                     <available file="${db.config.dir}${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
-                  </condition>
-                  <condition property="db.prev.properties" value="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties">
-                    <available file="..${file.separator}..${file.separator}..${file.separator}conf${file.separator}${db.prev}${file.separator}db.properties" type="file" />
                   </condition>
                   <property name="db.prev.properties.abs" location="${db.prev.properties}" />
                   <!-- target info -->
@@ -321,6 +312,8 @@
       <properties>
         <default.goal>compile</default.goal>
         <conf.connect.skip>false</conf.connect.skip>
+        <db.install.skip>true</db.install.skip>
+        <apex.skip>true</apex.skip>
         <maven.debug>true</maven.debug>
       </properties>
       <build>
@@ -335,10 +328,10 @@
     <profile>
       <id>conf-dependency</id>
       <activation>
-        <file>
-          <!-- can not use ${oracle-tools.dir} here -->
-          <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/conf/pom.xml</missing>
-        </file>
+        <property>
+          <name>conf.dependency</name>
+          <value>true</value>
+        </property>
       </activation>
       <properties>
         <!-- When child projects have this POM as parent and this project as
@@ -355,6 +348,14 @@
           <type>zip</type>
         </dependency>
       </dependencies>
+      <build>
+        <resources/>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
   

@@ -204,14 +204,6 @@
         <plugins>
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <!-- This matches and thus overrides execution defined above -->
-                <id>db-install-init</id>
-                <!-- Unbind from lifecycle for this POM -->
-                <phase>none</phase>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>
@@ -227,14 +219,6 @@
         <plugins>
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <!-- This matches and thus overrides execution defined above -->
-                <id>db-install-init</id>
-                <!-- Unbind from lifecycle for this POM -->
-                <phase>none</phase>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>
@@ -245,13 +229,21 @@
       <properties>
         <default.goal>compile</default.goal>
         <conf.connect.skip>false</conf.connect.skip>
-        <apex.skip>true</apex.skip>
+        <apex.skip>false</apex.skip>
         <maven.debug>true</maven.debug>
       </properties>
       <build>
         <plugins>
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <!-- This matches and thus overrides execution defined above -->
+                <id>apex-operation</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
@@ -260,10 +252,10 @@
     <profile>
       <id>apex-dependency</id>
       <activation>
-        <file>
-          <!-- can not use ${oracle-tools.dir} here -->
-          <missing>${maven.multiModuleProjectDirectory}/../oracle-tools/apex/pom.xml</missing>
-        </file>
+        <property>
+          <name>apex.dependency</name>
+          <value>true</value>
+        </property>
       </activation>
       <properties>
         <!-- When child projects have this POM as parent and this project as
@@ -280,6 +272,14 @@
           <type>zip</type>
         </dependency>
       </dependencies>
+      <build>
+        <resources/>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
