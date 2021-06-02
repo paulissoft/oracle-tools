@@ -355,8 +355,6 @@ The following properties are only important during export:
     <basename property="output.file.base" file="${output.file}" suffix=".sql" />
     <delete file="${output.dir}/${output.file}" quiet="true" />
     <delete dir="${export.dir}" quiet="true"/>
-    <!-- GJP 2021/05/31 Create the directory so errors can be detected earlier on -->
-    <mkdir dir="${export.dir}" />
   </target>
   
   <!-- export solution with Java SqlCli class -->
@@ -369,7 +367,7 @@ The following properties are only important during export:
            dir="${output.dir}"
            inputstring='@${basedir}/export.sql "${workspace}" "${application}"'>
     </sqlcl>
-    <move file="${output.dir}/${output.file.base}" todir="${export.dir}" overwrite="true" />
+    <move file="${output.dir}/${output.file.base}" tofile="${export.dir}" />
   </target>
 
   <!-- export solution with oracle.apex.APEXExport class -->
