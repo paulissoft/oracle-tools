@@ -32,7 +32,7 @@ type t_object_info_rec is record
 , data_row_from integer default 2
 , data_row_till integer default null -- all
   -- do we need to determine the datatype?
-, determine_datatype t_boolean default 1
+, determine_datatype t_boolean default 0 -- use varchar2(4000) by default
 , nls_charset_name t_nls_charset_name default csv_nls_charset_name
 );
 
