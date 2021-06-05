@@ -41,6 +41,7 @@
 @application/shared_components/user_interface/lovs/login_remember_username.sql
 @application/shared_components/user_interface/lovs/lov_application_owners.sql
 @application/shared_components/user_interface/lovs/lov_boolean.sql
+@application/shared_components/user_interface/lovs/lov_determine_datatype.sql
 @application/shared_components/user_interface/lovs/lov_dml_actions.sql
 @application/shared_components/user_interface/lovs/lov_eol.sql
 @application/shared_components/user_interface/lovs/lov_excel_sheets.sql

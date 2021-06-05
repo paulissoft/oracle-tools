@@ -1095,7 +1095,7 @@ $end
 
   if p_object_info_rec.determine_datatype is null
   then
-    p_object_info_rec.determine_datatype := 1;
+    p_object_info_rec.determine_datatype := "DATATYPE STRING LENGTH MAX";
   end if;
 
   if p_object_info_rec.nls_charset_name is null
@@ -1270,7 +1270,7 @@ function display
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_format_mask in varchar2
 , p_view_name in varchar2
 , p_nls_charset_name in t_nls_charset_name
@@ -1607,7 +1607,7 @@ procedure get_column_info_tab
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_format_mask in varchar2
 , p_view_name in varchar2
   -- CSV parameters
@@ -1967,9 +1967,14 @@ $end
       -- no metadata
       if not(l_md_column_info_by_name_tab.exists(r.excel_column_name))
       then
-        if p_determine_datatype != 0
+        if p_determine_datatype in ("DATATYPE EXACT LENGTH MIN", "DATATYPE EXACT LENGTH MAX")
         then
-          l_max_length := greatest(l_max_length, nvl(length(r.data_value), 0));
+          if p_determine_datatype = "DATATYPE EXACT LENGTH MIN"
+          then
+            l_max_length := greatest(l_max_length, nvl(length(r.data_value), 0));
+          else
+            l_max_length := 4000;
+          end if;
 
           if l_column_info_by_name_tab(r.excel_column_name).data_type is null
           then
@@ -2049,9 +2054,9 @@ $end
 
     for i_idx in p_column_info_tab.first .. p_column_info_tab.last
     loop
-      -- p_determine_datatype = 0 or maybe there was no data row
+      -- p_determine_datatype = "DATATYPE STRING LENGTH MAX" or maybe there was no data row
       if p_column_info_tab(i_idx).data_type is null or
-         p_column_info_tab(i_idx).data_type = 'VARCHAR2'
+         p_column_info_tab(i_idx).data_type = 'VARCHAR2' -- must specify length
       then
         p_column_info_tab(i_idx).data_type := 'VARCHAR2(4000 CHAR)';
       end if;
@@ -2111,7 +2116,7 @@ procedure init
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_format_mask in varchar2
 , p_view_name in varchar2
 , p_nls_charset_name in t_nls_charset_name
@@ -2438,7 +2443,7 @@ procedure validate
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_object_name in varchar2
 , p_action in varchar2
 , p_nls_charset_name in t_nls_charset_name
@@ -2615,7 +2620,7 @@ function load
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_object_name in varchar2
 , p_action in varchar2
 , p_nls_charset_name in t_nls_charset_name
@@ -2978,7 +2983,7 @@ procedure dml
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 )
 is
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'DML';
@@ -3179,7 +3184,7 @@ $end
   g_object_info_rec.header_row_till := 0;
   g_object_info_rec.data_row_from := 2;
   g_object_info_rec.data_row_till := null;
-  g_object_info_rec.determine_datatype := 0;
+  g_object_info_rec.determine_datatype := "DATATYPE STRING LENGTH MAX";
 
   g_column_info_tab.extend(1);
 
@@ -3480,7 +3485,7 @@ $end
         l_object_info_rec.header_row_till := 2;
         l_object_info_rec.data_row_from := 3;
         l_object_info_rec.data_row_till := null;
-        l_object_info_rec.determine_datatype := 1;
+        l_object_info_rec.determine_datatype := "DATATYPE EXACT LENGTH MIN";
 
         l_column_info_tab(l_column_info_tab.first).in_key := 1;
 
@@ -3522,7 +3527,7 @@ $end
     , p_header_row_till => 2
     , p_data_row_from => 3
     , p_data_row_till => null
-    , p_determine_datatype => 1
+    , p_determine_datatype => "DATATYPE EXACT LENGTH MIN"
     , p_format_mask => null
     , p_view_name => l_view_name
       -- CSV parameters

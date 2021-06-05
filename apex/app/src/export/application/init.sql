@@ -27,18 +27,18 @@ prompt APPLICATION 138 - Oracle Tools
 -- Application Export:
 --   Application:     138
 --   Name:            Oracle Tools
---   Date and Time:   06:14 Wednesday June 2, 2021
+--   Date and Time:   10:08 Saturday June 5, 2021
 --   Exported By:     ORACLE_TOOLS
 --   Flashback:       0
 --   Export Type:     Application Export
 --     Pages:                     18
---       Items:                   89
+--       Items:                   90
 --       Computations:             1
 --       Validations:              7
 --       Processes:               21
 --       Regions:                 62
 --       Buttons:                 32
---       Dynamic Actions:         22
+--       Dynamic Actions:         23
 --     Shared Components:
 --       Logic:
 --         Items:                  5
@@ -66,7 +66,7 @@ prompt APPLICATION 138 - Oracle Tools
 --           Breadcrumb:           1
 --           Button:               3
 --           Report:              10
---         LOVs:                  12
+--         LOVs:                  13
 --         Shortcuts:              1
 --         Plug-ins:               3
 --       Globalization:

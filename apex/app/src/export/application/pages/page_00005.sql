@@ -39,7 +39,7 @@ wwv_flow_api.create_page(
 '',
 'Here a summary is shown.'))
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20200810103853'
+,p_last_upd_yyyymmddhh24miss=>'20210605100253'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(60522762099184120)
@@ -557,17 +557,18 @@ wwv_flow_api.create_page_item(
 ,p_is_required=>true
 ,p_item_sequence=>160
 ,p_item_plug_id=>wwv_flow_api.id(60522599133184120)
-,p_item_default=>'1'
-,p_prompt=>'Determine Data Type?'
-,p_display_as=>'NATIVE_YES_NO'
+,p_item_default=>'2'
+,p_prompt=>'Determine Data Type'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_named_lov=>'LOV_DETERMINE_DATATYPE'
+,p_lov=>'.'||wwv_flow_api.id(65177840871101570)||'.'
+,p_cHeight=>1
 ,p_begin_on_new_line=>'N'
 ,p_field_template=>wwv_flow_api.id(18397825820600171)
 ,p_item_template_options=>'#DEFAULT#'
-,p_attribute_01=>'CUSTOM'
-,p_attribute_02=>'1'
-,p_attribute_03=>'Yes'
-,p_attribute_04=>'0'
-,p_attribute_05=>'No'
+,p_lov_display_extra=>'NO'
+,p_attribute_01=>'NONE'
+,p_attribute_02=>'N'
 );
 wwv_flow_api.create_page_item(
  p_id=>wwv_flow_api.id(20049199778503240)

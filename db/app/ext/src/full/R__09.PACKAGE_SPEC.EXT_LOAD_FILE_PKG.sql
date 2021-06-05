@@ -3,7 +3,7 @@ create or replace package ext_load_file_pkg as
 -- to speed it up
 create_collection_from_query constant boolean := false;
 
-subtype t_boolean is integer;
+subtype t_boolean is integer; -- must be a SQL type, not a PL/SQL type
 subtype t_excel_column_name is varchar2(3 char);
 subtype t_mime_type is varchar2(255 char);
 subtype t_nls_charset_name is varchar2(100);
@@ -15,6 +15,22 @@ max_excel_column_name constant t_excel_column_name := 'XFD'; -- in Excel 2019
 max_excel_column_number constant positiven := 16384; -- 24 (X) * 26 * 26 + 6 (F) * 26 + 4 (D)
 
 csv_nls_charset_name constant t_nls_charset_name := 'WE8MSWIN1252';
+
+subtype t_determine_datatype is integer; -- must be a SQL type, not a PL/SQL type
+
+-- All strings of maximum length hence VARCHAR2(4000 CHAR)
+"DATATYPE STRING LENGTH MAX" constant t_determine_datatype := 0;
+-- Use the document information to determine the exact datatype and for a string the minimum length to store all data.
+-- Possible datatypes:
+-- 1) NUMBER
+-- 2) DATE
+-- 3) TIMESTAMP
+-- 4) VARCHAR2(n CHAR) where n is the maximum length in the data document hence the minimum to store all document data
+"DATATYPE EXACT LENGTH MIN" constant t_determine_datatype  := 1;
+-- Use the document information to determine the exact datatype and for a string the maximum length (hence VARCHAR2(4000 CHAR))
+"DATATYPE EXACT LENGTH MAX" constant t_determine_datatype  := 2;
+
+
 
 /* An structure that describes how to load DML */
 type t_object_info_rec is record
@@ -32,7 +48,7 @@ type t_object_info_rec is record
 , data_row_from integer default 2
 , data_row_till integer default null -- all
   -- do we need to determine the datatype?
-, determine_datatype t_boolean default 0 -- use varchar2(4000) by default
+, determine_datatype t_determine_datatype default "DATATYPE EXACT LENGTH MAX" -- use varchar2(4000 char) for strings
 , nls_charset_name t_nls_charset_name default csv_nls_charset_name
 );
 
@@ -200,7 +216,7 @@ return clob;
  * @param p_header_row_till         The header ends at this row (0: no header)
  * @param p_data_row_from           The first data row starts at this row
  * @param p_data_row_till           The last data row ends at this row (null means all)
- * @param p_determine_datatype      Determine the datatype: NUMBER, DATE, TIMESTAMP or VARCHAR2(max data length)
+ * @param p_determine_datatype      Determine the datatype
  * @param p_format_mask             The format mask for a DATE or TIMESTAMP
  * @param p_view_name               The object info for the DML
  * @param p_nls_charset_name        The NLS character set used to convert the flat file BLOB into a CLOB.
@@ -215,7 +231,7 @@ function display
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_format_mask in varchar2
 , p_view_name in varchar2
 , p_nls_charset_name in t_nls_charset_name default csv_nls_charset_name
@@ -275,7 +291,7 @@ procedure get_column_info_tab
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_format_mask in varchar2
 , p_view_name in varchar2
   -- CSV parameters
@@ -301,7 +317,7 @@ procedure get_column_info_tab
  * @param p_header_row_till         The header ends at this row (0: no header)
  * @param p_data_row_from           The first data row starts at this row
  * @param p_data_row_till           The first data row ends at this row (null means all)
- * @param p_determine_datatype      Determine the datatype: NUMBER, DATE, TIMESTAMP or VARCHAR2(max data length)
+ * @param p_determine_datatype      Determine the datatype
  * @param p_format_mask             The format mask for a DATE or TIMESTAMP
  * @param p_view_name               The object info for the DML
  * @param p_nls_charset_name        The NLS character set used to convert the flat file BLOB into a CLOB.
@@ -314,7 +330,7 @@ procedure init
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_format_mask in varchar2 default v('APP_NLS_TIMESTAMP_FORMAT')
 , p_view_name in varchar2 default null
 , p_nls_charset_name in t_nls_charset_name default csv_nls_charset_name
@@ -403,7 +419,7 @@ procedure validate
  * @param p_header_row_till         The header ends at this row (0: no header)
  * @param p_data_row_from           The first data row starts at this row
  * @param p_data_row_till           The last data row ends at this row (null means all)
- * @param p_determine_datatype      Determine the datatype: NUMBER, DATE, TIMESTAMP or VARCHAR2(max data length)
+ * @param p_determine_datatype      Determine the datatype
  * @param p_object_name             The object name for the DML
  * @param p_action                  (I)nsert
  *                                  (R)eplace for truncate + insert
@@ -420,7 +436,7 @@ procedure validate
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_object_name in varchar2
 , p_action in varchar2
 , p_nls_charset_name in t_nls_charset_name default csv_nls_charset_name
@@ -510,7 +526,7 @@ return integer;
  * @param p_header_row_till         The header ends at this row (0: no header)
  * @param p_data_row_from           The first data row starts at this row
  * @param p_data_row_till           The last data row ends at this row (null means all)
- * @param p_determine_datatype      Determine the datatype: NUMBER, DATE, TIMESTAMP or VARCHAR2(max data length)
+ * @param p_determine_datatype      Determine the datatype
  * @param p_object_name             The object name for the DML
  * @param p_action                  (I)nsert
  *                                  (R)eplace for truncate + insert
@@ -529,7 +545,7 @@ function load
 , p_header_row_till in natural
 , p_data_row_from in natural
 , p_data_row_till in natural
-, p_determine_datatype in t_boolean
+, p_determine_datatype in t_determine_datatype
 , p_object_name in varchar2
 , p_action in varchar2
 , p_nls_charset_name in t_nls_charset_name default csv_nls_charset_name
@@ -587,7 +603,7 @@ procedure done
  * @param p_header_row_till         The header ends at this row (0: no header)
  * @param p_data_row_from           The first data row starts at this row
  * @param p_data_row_till           The last data row ends at this row (null means all)
- * @param p_determine_datatype      Determine the datatype: NUMBER, DATE, TIMESTAMP or VARCHAR2(max data length)
+ * @param p_determine_datatype      Determine the datatype
  */
 procedure dml
 ( p_action in varchar2
@@ -601,7 +617,7 @@ procedure dml
 , p_header_row_till in natural default null
 , p_data_row_from in natural default null
 , p_data_row_till in natural default null
-, p_determine_datatype in t_boolean default null
+, p_determine_datatype in t_determine_datatype default null
 );
 
 /**

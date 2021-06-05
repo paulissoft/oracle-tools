@@ -10,7 +10,7 @@ wwv_flow_api.create_page(
 ,p_javascript_code=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'var logger = oracleTools.initLogger()',
 'var field_names =    ["VIEW_NAME", "OBJECT_NAME", "SHEET_NAMES", "LAST_EXCEL_COLUMN_NAME", "HEADER_ROW_FROM", "HEADER_ROW_TILL", "DATA_ROW_FROM", "DATA_ROW_TILL", "DETERMINE_DATATYPE"];',
-'var default_values = [""         , ""           , ""           , "ZZ"                    , "1"              , "1"              , "2"            , ""             , "1"                 ];',
+'var default_values = [""         , ""           , ""           , "ZZ"                    , "1"              , "1"              , "2"            , ""             , "2"                 ];',
 '    ',
 'function SelectLoadFileInfo (data) {',
 '  let selectedRecord = null',
@@ -152,8 +152,8 @@ wwv_flow_api.create_page(
 '</p>',
 '',
 '<p>',
-'The load file info history allows you to (de)select a line in order to (un)set information like object name, sheet name, last excel column, first header row, last header row, first data row or determine data type yes/no. This report is sorted by simi'
-||'larity between file names (best matches first) and within that by descending date.',
+'The load file info history allows you to (de)select a line in order to (un)set information like object name, sheet name, last excel column, first header row, last header row, first data row or determine data type. This report is sorted by similarity '
+||'between file names (best matches first) and within that by descending date.',
 '</p>',
 '',
 '<p>',
@@ -162,7 +162,7 @@ wwv_flow_api.create_page(
 '</p>',
 ''))
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20210511123842'
+,p_last_upd_yyyymmddhh24miss=>'20210605100420'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(50539956092307893)
@@ -397,13 +397,13 @@ wwv_flow_api.create_region_column(
 ,p_data_type=>'NUMBER'
 ,p_is_query_only=>false
 ,p_item_type=>'NATIVE_SELECT_LIST'
-,p_heading=>'Determine<br/>Data Type?'
+,p_heading=>'Determine<br/>Data Type'
 ,p_heading_alignment=>'CENTER'
 ,p_display_sequence=>140
 ,p_value_alignment=>'CENTER'
-,p_is_required=>false
+,p_is_required=>true
 ,p_lov_type=>'SHARED'
-,p_lov_id=>wwv_flow_api.id(24354252557614073)
+,p_lov_id=>wwv_flow_api.id(65177840871101570)
 ,p_lov_display_extra=>false
 ,p_lov_display_null=>false
 ,p_enable_filter=>true
@@ -414,13 +414,12 @@ wwv_flow_api.create_region_column(
 ,p_filter_lov_type=>'LOV'
 ,p_use_as_row_header=>false
 ,p_enable_sort_group=>false
-,p_enable_control_break=>false
 ,p_enable_hide=>true
 ,p_enable_pivot=>false
 ,p_is_primary_key=>false
 ,p_duplicate_value=>true
 ,p_include_in_export=>true
-,p_help_text=>'If true, try to determine the datatype by inspecting the file contents. If false, use VARCHAR2(4000). Used when creating a table.'
+,p_help_text=>'Used when creating a table.'
 );
 wwv_flow_api.create_region_column(
  p_id=>wwv_flow_api.id(25121604301718953)
@@ -1023,9 +1022,6 @@ wwv_flow_api.create_region_column(
 ,p_include_in_export=>false
 ,p_escape_on_http_output=>true
 );
-end;
-/
-begin
 wwv_flow_api.create_region_column(
  p_id=>wwv_flow_api.id(24229613050176841)
 ,p_name=>'VIEW_NAME'
@@ -1044,6 +1040,9 @@ wwv_flow_api.create_region_column(
 ,p_parent_column_id=>wwv_flow_api.id(50537663534307871)
 ,p_include_in_export=>false
 );
+end;
+/
+begin
 wwv_flow_api.create_interactive_grid(
  p_id=>wwv_flow_api.id(24229533381176840)
 ,p_internal_uid=>56913867210051902
@@ -1343,18 +1342,20 @@ wwv_flow_api.create_page_item(
 ,p_is_required=>true
 ,p_item_sequence=>100
 ,p_item_plug_id=>wwv_flow_api.id(547315001934663)
-,p_item_default=>'1'
-,p_prompt=>'Determine Data Type?'
-,p_display_as=>'NATIVE_YES_NO'
+,p_item_default=>'2'
+,p_prompt=>'Determine Data Type'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_named_lov=>'LOV_DETERMINE_DATATYPE'
+,p_lov=>'.'||wwv_flow_api.id(65177840871101570)||'.'
+,p_lov_display_null=>'YES'
+,p_cHeight=>1
 ,p_begin_on_new_line=>'N'
 ,p_field_template=>wwv_flow_api.id(18397825820600171)
 ,p_item_template_options=>'#DEFAULT#'
-,p_help_text=>'If true, try to determine the datatype by inspecting the file contents. If false, use VARCHAR2(4000). Used when creating a table.'
-,p_attribute_01=>'CUSTOM'
-,p_attribute_02=>'1'
-,p_attribute_03=>'Yes'
-,p_attribute_04=>'0'
-,p_attribute_05=>'No'
+,p_lov_display_extra=>'NO'
+,p_help_text=>'Used when creating a table.'
+,p_attribute_01=>'NONE'
+,p_attribute_02=>'N'
 );
 wwv_flow_api.create_page_item(
  p_id=>wwv_flow_api.id(24284742226677378)
