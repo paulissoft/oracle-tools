@@ -13,7 +13,7 @@ wwv_flow_api.create_page(
 ,p_page_is_public_y_n=>'Y'
 ,p_help_text=>'No help is available for this page.'
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20210605095055'
+,p_last_upd_yyyymmddhh24miss=>'20210607030029'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(308066291748132266)
@@ -113,7 +113,7 @@ wwv_flow_api.create_page_button(
 ,p_button_position=>'BELOW_BOX'
 ,p_button_redirect_url=>'f?p=&APP_ID.:2:&SESSION.::&DEBUG.:RP,::'
 ,p_icon_css_classes=>'fa-upload'
-,p_security_scheme=>wwv_flow_api.id(35825717060644018)
+,p_security_scheme=>'MUST_NOT_BE_PUBLIC_USER'
 );
 end;
 /

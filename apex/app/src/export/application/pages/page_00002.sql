@@ -13,7 +13,7 @@ wwv_flow_api.create_page(
 'button.hide(); //hide the button'))
 ,p_step_template=>wwv_flow_api.id(18305929945600118)
 ,p_page_template_options=>'#DEFAULT#'
-,p_required_role=>wwv_flow_api.id(18423627818600248)
+,p_required_role=>'MUST_NOT_BE_PUBLIC_USER'
 ,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<p>',
 '    This is the first step of the wizard to upload a spreadsheet file into the database.    ',
@@ -35,7 +35,7 @@ wwv_flow_api.create_page(
 '</ul>       ',
 '</p>'))
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20210605095348'
+,p_last_upd_yyyymmddhh24miss=>'20210607030013'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(18457322735619319)
@@ -132,7 +132,7 @@ wwv_flow_api.create_page_item(
 ,p_item_sequence=>30
 ,p_item_plug_id=>wwv_flow_api.id(18457175682619319)
 ,p_item_default=>'0'
-,p_prompt=>'Expert Mode'
+,p_prompt=>'Expert Mode?'
 ,p_display_as=>'NATIVE_YES_NO'
 ,p_field_template=>wwv_flow_api.id(18397825820600171)
 ,p_item_template_options=>'#DEFAULT#'

@@ -31,7 +31,7 @@ wwv_flow_api.create_page(
 'button.hide(); //hide the button'))
 ,p_step_template=>wwv_flow_api.id(18305929945600118)
 ,p_page_template_options=>'#DEFAULT#:ui-dialog--stretch'
-,p_required_role=>wwv_flow_api.id(18423627818600248)
+,p_required_role=>'MUST_NOT_BE_PUBLIC_USER'
 ,p_dialog_height=>'800'
 ,p_dialog_width=>'1000'
 ,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
@@ -39,7 +39,7 @@ wwv_flow_api.create_page(
 '',
 'Here a summary is shown.'))
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20210605100253'
+,p_last_upd_yyyymmddhh24miss=>'20210607030430'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(60522762099184120)
@@ -58,6 +58,7 @@ wwv_flow_api.create_page_plug(
 ,p_region_template_options=>'#DEFAULT#:t-Region--scrollBody'
 ,p_plug_template=>wwv_flow_api.id(18346340098600141)
 ,p_plug_display_sequence=>10
+,p_plug_grid_column_span=>7
 ,p_plug_display_point=>'BODY'
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
 ,p_attribute_01=>'N'
@@ -446,6 +447,7 @@ wwv_flow_api.create_page_plug(
 ,p_plug_display_sequence=>20
 ,p_include_in_reg_disp_sel_yn=>'Y'
 ,p_plug_new_grid_row=>false
+,p_plug_grid_column_span=>5
 ,p_plug_display_point=>'BODY'
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
 ,p_attribute_01=>'N'

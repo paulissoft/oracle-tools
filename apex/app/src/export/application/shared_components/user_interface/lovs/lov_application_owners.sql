@@ -10,7 +10,8 @@ wwv_flow_api.create_list_of_values(
 'from    apex_applications a',
 'where   a.workspace_id = to_number(SYS_CONTEXT(''APEX$SESSION'',''WORKSPACE_ID''))',
 'order by',
-'        d'))
+'        case when a.owner = ''&APPLICATION_OWNER.'' then 0 else 1 end',
+',       d'))
 ,p_source_type=>'LEGACY_SQL'
 ,p_location=>'LOCAL'
 );
