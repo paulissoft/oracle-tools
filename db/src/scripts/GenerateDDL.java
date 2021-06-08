@@ -117,6 +117,7 @@ public class GenerateDDL
             out.println("*/");
   
             //Load and register Oracle driver
+            System.setProperty("oracle.jdbc.fanEnabled", "false");
             DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
             //Establish a connection
 

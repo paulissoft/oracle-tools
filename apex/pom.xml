@@ -177,18 +177,20 @@
       </plugins>
     </pluginManagement>
     <plugins>      
+      <!-- Configuration won't be propagated to children -->
+      <!-- do not use parent configuration -->
+      <!--
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>${maven-assembly-plugin.version}</version>
-        <!-- Configuration won't be propagated to children -->
         <inherited>false</inherited>
-        <!-- do not use parent configuration -->
         <configuration combine.self="override">                                     
           <descriptorRefs>
             <descriptorRef>project</descriptorRef>
           </descriptorRefs>
         </configuration>
       </plugin>
+      -->
     </plugins>
   </build>
 
