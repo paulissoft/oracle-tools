@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="windows-1252" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.paulissoft.oracle-tools</groupId>
+    <artifactId>conf</artifactId>
+    <version>${revision}</version>
+  </parent>
+  <groupId>com.paulissoft.oracle-tools.conf</groupId>
+  <artifactId>app</artifactId>
+  <packaging>jar</packaging>
+  <description>Test JDBC connection</description>
+
+  <profiles>
+    <profile>
+      <id>test-connection</id>
+      <properties>
+        <default.goal>test</default.goal>
+        <conf.connect.skip>false</conf.connect.skip>
+        <db.schema>${oracle_tools_schema}</db.schema>
+        <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>test</phase>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+                <configuration>
+                  <mainClass>TestConnection</mainClass>
+                  <arguments>
+                    <argument>${db.url}</argument>
+                    <argument>${db.username}</argument>
+                    <argument>${db.password}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

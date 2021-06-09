@@ -12,6 +12,9 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     
     <!-- plugins from super pom without version -->
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
@@ -28,7 +31,8 @@
     <maven.minimum.version>3.6.1</maven.minimum.version>
     <flatten-maven-plugin.version>1.2.5</flatten-maven-plugin.version>
     <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
-    <properties-maven-plugin>1.0.0</properties-maven-plugin>
+    <properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
+    <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
     <!-- Begin of SCM section -->
     <!-- DO NOT UPDATE the SCM plugin: last version that is compatible with maven-scm-provider-svnjava and svnkit -->
     <maven-scm-plugin.version>1.9.5</maven-scm-plugin.version>
@@ -219,7 +223,12 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>properties-maven-plugin</artifactId>
-          <version>${properties-maven-plugin}</version>
+          <version>${properties-maven-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>${exec-maven-plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
