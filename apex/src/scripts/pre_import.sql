@@ -14,15 +14,34 @@ REMARK set by import.sql
 
 declare
   l_app_id apex_applications.application_id%type := to_number('&&1');
+  l_username constant varchar2(30) := 'ADMIN';
+  
   -- ORA-20987: APEX - ERR-1014 Application not found. - Contact your application
   e_apex_error exception;
   pragma exception_init(e_apex_error, -20987);
 begin
+  begin
+    /* apex_session.create_session does not exist on Apex 5.1 */
+    execute immediate q'[
+begin
   apex_session.create_session
-  ( p_app_id => l_app_id
+  ( p_app_id => :app_id
   , p_page_id => 1
-  , p_username => 'ADMIN'
+  , p_username => :username
   );
+end;]' using l_app_id, l_username;
+  exception
+    when others
+    then
+      execute immediate q'[
+begin
+  ui_session_pkg.create_apex_session
+  ( p_app_id => :app_id
+  , p_app_user => :username
+  , p_app_page_id => 1
+  );
+end;]' using l_app_id, l_username;
+  end;
 
   apex_util.set_application_status
   ( p_application_id => l_app_id
