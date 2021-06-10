@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_INFO" ("OBJECT_SCHEMA", "OBJECT_TYPE", "OBJECT_NAME", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "BASE_OBJECT_NAME", "COLUMN_NAME", "GRANTEE", "PRIVILEGE", "GRANTABLE") DEFAULT COLLATION "USING_NLS_COMP"  AS 
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_INFO" ("OBJECT_SCHEMA", "OBJECT_TYPE", "OBJECT_NAME", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "BASE_OBJECT_NAME", "COLUMN_NAME", "GRANTEE", "PRIVILEGE", "GRANTABLE") AS 
   select  t.object_schema() as object_schema
 ,       t.object_type() as object_type
 ,       t.object_name() as object_name
@@ -9,7 +9,7 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_INFO" ("OBJECT_SCHEMA"
 ,       t.grantee() as grantee
 ,       t.privilege() as privilege
 ,       t.grantable() as grantable
-from	table
+from  table
         ( oracle_tools.pkg_ddl_util.get_schema_object
           ( user -- p_schema
           , null -- p_object_type
