@@ -20,28 +20,25 @@ declare
   e_apex_error exception;
   pragma exception_init(e_apex_error, -20987);
 begin
-  begin
-    /* apex_session.create_session does not exist on Apex 5.1 */
-    execute immediate q'[
-begin
-  apex_session.create_session
-  ( p_app_id => :app_id
-  , p_page_id => 1
-  , p_username => :username
-  );
-end;]' using l_app_id, l_username;
-  exception
-    when others
-    then
-      execute immediate q'[
-begin
+$if dbms_db_version.ver_le_12 $then
+
+  /* apex_session.create_session does not exist on Apex 5.1 */
+
   ui_session_pkg.create_apex_session
-  ( p_app_id => :app_id
-  , p_app_user => :username
+  ( p_app_id => l_app_id
+  , p_app_user => l_username
   , p_app_page_id => 1
   );
-end;]' using l_app_id, l_username;
-  end;
+
+$else
+
+  apex_session.create_session
+  ( p_app_id => l_app_id
+  , p_page_id => 1
+  , p_username => l_username
+  );
+
+$end
 
   apex_util.set_application_status
   ( p_application_id => l_app_id
