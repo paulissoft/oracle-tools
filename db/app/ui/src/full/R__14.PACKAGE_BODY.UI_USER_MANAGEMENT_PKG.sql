@@ -129,6 +129,12 @@ exception
 $end
 end has_role;
 
+$if dbms_db_version.ver_le_12 $then
+
+/* ACL does not exist on Apex 5.1 */
+
+$else
+
 function has_acl_role
 ( p_role_tab in sys.odcivarchar2list
 , p_app_user in varchar2 default apex_application.g_user
@@ -181,6 +187,8 @@ exception
     raise;
 $end
 end has_acl_role;
+
+$end
 
 function get_role
 ( p_app_user in varchar2

@@ -47,6 +47,12 @@ function has_role
 )
 return integer;
 
+$if dbms_db_version.ver_le_12 $then
+
+/* ACL does not exist on Apex 5.1 */
+
+$else
+
 /*
  * Has the user an ACL role?
  * 
@@ -64,6 +70,8 @@ function has_acl_role
 , p_app_id in number default apex_application.g_flow_id
 )
 return integer;
+
+$end
 
 /*
  * Get the user role?

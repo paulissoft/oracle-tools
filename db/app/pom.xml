@@ -16,6 +16,8 @@
   <properties>
     <db.schema>${oracle-tools.db.schema}</db.schema>
     <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>
+    <!-- see also apex/app/pom.xml: for UI messages -->
+    <apex.application>138</apex.application>
   </properties>
 
   <modules>
