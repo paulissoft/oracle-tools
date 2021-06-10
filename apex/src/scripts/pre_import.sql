@@ -48,10 +48,14 @@ $end
   
   commit;
 exception
-  when e_apex_error
+  when e_apex_error or no_data_found
   then
-    null;
+    null;   
 end;
+.
+
+list
+
 /
 
 undefine 1 application_status
