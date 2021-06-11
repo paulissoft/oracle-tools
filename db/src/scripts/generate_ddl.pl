@@ -1309,7 +1309,7 @@ sub beautify_line ($$$$$$) {
             # create or replace => create (TYPE)
             $$r_line =~ s/^\s*CREATE\s+OR\s+REPLACE\s+/CREATE /i;
         }
-
+            
         # Do not change NONEDITIONABLE since some views may need it (APEX views for instance)
         $$r_line =~ s/\bEDITIONABLE\s+//i; # Flyway does not like CREATE OR REPLACE EDITIONABLE PACKAGE 
 
@@ -1320,6 +1320,14 @@ sub beautify_line ($$$$$$) {
         # beautify the name
         $$r_line =~ s/(.*\S)\s+$matched_object(\s+(?:AS|IS)\b)?(\s+OBJECT\b)?/uc($1).' '.$object_fq_name.(defined($2)?uc($2):'').(defined($3)?uc($3):'')/ie;
     }
+
+    if ($object_type eq 'TABLE') {
+        # "ADDRESS_TYPE" VARCHAR2(30) COLLATE "USING_NLS_COMP",
+        # =>
+        # "ADDRESS_TYPE" VARCHAR2(30),
+        
+        $$r_line =~ s/\s+COLLATE "USING_NLS_COMP"//g;
+    }        
 
     if ($strip_source_schema && defined($source_schema)) {
         $$r_line =~ s/"$source_schema"\.//g;
