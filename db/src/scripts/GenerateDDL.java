@@ -154,7 +154,7 @@ public class GenerateDDL
             final long len = clob.length();
 
             if (len < Integer.MIN_VALUE || len > Integer.MAX_VALUE) {
-                throw new Exception("CLOB length " + new Long(len) + " is not between " + Integer.MIN_VALUE + " and " + Integer.MAX_VALUE);
+                throw new Exception(String.format("CLOB length %d is not between %d and %d", len, Integer.MIN_VALUE, Integer.MAX_VALUE));
             } else {
                 out.print(clob.getSubString(1, (int) len));
             }

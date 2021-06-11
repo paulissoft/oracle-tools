@@ -16,7 +16,7 @@
 
   <properties>
     <oracle-tools.db.src.dir>${oracle-tools.dir}/db/src</oracle-tools.db.src.dir>
-    <oracle-tools.db.schema>${flyway.placeholders.oracle_tools_schema}</oracle-tools.db.schema>
+    <oracle-tools.db.schema>${oracle_tools_schema}</oracle-tools.db.schema>
 
     <!-- =========================================== -->
     <!-- Database properties for Flyway (db-install) -->
@@ -32,11 +32,6 @@
     <!-- compile all and reuse settings for afterMigrate.sql -->
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
     <flyway.placeholders.reuse_settings>false</flyway.placeholders.reuse_settings>
-
-    <!-- 2020-05-12 GJP Add a db.schema.prefix to handle generic projects -->
-    <!-- do not define db.schema.prefix so the logon error is more descriptive -->
-    <!-- db.schema.prefix /--> 
-    <db.schema>${project.artifactId}</db.schema>
 
     <!-- ======================================================================= -->
     <!-- Properties for generate DDL (db-generate-ddl-full/db-generate-ddl-incr) -->

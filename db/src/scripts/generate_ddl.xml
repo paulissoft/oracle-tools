@@ -291,7 +291,9 @@ Z       Time zone               RFC 822 time zone   -0800
            destdir="${classes.dir}"
            classpathref="compile.classpath"
            debug="true"
-           includeantruntime="false"/>
+           includeantruntime="false">
+      <compilerarg value="-Xlint:deprecation"/>
+    </javac>
   </target>
 
   <target name="jar" depends="compile">

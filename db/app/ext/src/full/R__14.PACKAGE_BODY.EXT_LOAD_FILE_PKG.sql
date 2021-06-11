@@ -1,4 +1,4 @@
-create or replace package body ext_load_file_pkg as
+CREATE OR REPLACE PACKAGE BODY "EXT_LOAD_FILE_PKG" AS
 
 -- LOCAL
 
@@ -3625,3 +3625,4 @@ $end -- $if cfg_pkg.c_testing $then
 
 end ext_load_file_pkg;
 /
+

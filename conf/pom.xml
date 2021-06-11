@@ -66,6 +66,24 @@
     <conf.phase.init>initialize</conf.phase.init>
     <!-- give the generate-resources phase a chance to extract resources -->
     <conf.phase.process>process-resources</conf.phase.process>
+
+    <!-- 
+         This property is used to construct the db.username property below in
+         the conf-connect antrun execution.
+         If a db.proxy.username is set, db.username will become
+         ${db.proxy.username}[${db.schema}]. 
+         If db.proxy.username is not set, db.username will be ${db.schema}.
+    -->
+    <db.schema>${project.artifactId}</db.schema>
+    <!-- 
+         Define db.password here as the environment variable DB_PASSWORD.
+         So it can not be overridden in one of the property files since it
+         already set. 
+         Please note that the environment variable DB_PASSWORD is used in the
+         Oracle Tools GUI so passwords need not be transferred on the command
+         line, i.e. more security.
+    -->
+    <db.password>${env.DB_PASSWORD}</db.password>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -171,6 +189,19 @@
                        This reduces the need for duplicate folders/files.
                   -->
 
+                  <property name="db.config.dir.env.properties" value="${db.config.dir}${file.separator}env.properties" />
+                  
+                  <fail message="The database conf directory '${db.config.dir}' does not contain a file 'env.properties'">
+                    <condition>
+                      <and>
+                        <isset property="db.config.dir"/>
+                        <not>
+                          <available file="${db.config.dir.env.properties}" type="file"/>
+                        </not>
+                      </and>
+                    </condition>
+                  </fail>
+
                   <!-- SET db.config.dir -->
                   <property name="tmp.env.properties1"
                             value="conf${file.separator}env.properties" />
@@ -183,6 +214,9 @@
                   <property name="tmp.env.properties5"
                             value="${oracle-tools.conf.src.dir}${file.separator}env.properties" />
 
+                  <condition property="env.properties" value="${db.config.dir.env.properties}">
+                    <available file="${db.config.dir.env.properties}" type="file" />
+                  </condition>
                   <condition property="env.properties" value="${tmp.env.properties1}">
                     <available file="${tmp.env.properties1}" type="file" />
                   </condition>
@@ -216,16 +250,10 @@
                   <condition property="db" value="${db.target}">
                     <isset property="db.target" />
                   </condition>
-                  <condition property="db.password" value="${db.target.password}">
-                    <isset property="db.target.password" />
-                  </condition>
                   
                   <!-- db.source next -->
                   <condition property="db" value="${db.source}">
                     <isset property="db.source" />
-                  </condition>
-                  <condition property="db" value="${db.source.password}">
-                    <isset property="db.source.password" />
                   </condition>
 
                   <!-- READ THE db.properties FILE. -->
@@ -251,9 +279,6 @@
                              value="${db.proxy.username}[${db.schema}]"
                              else="${db.schema}">
                     <isset property="db.proxy.username"/>
-                  </condition>
-                  <condition property="db.password" value="${db.proxy.password}">
-                    <isset property="db.proxy.password"/>
                   </condition>
                   <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
 

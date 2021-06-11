@@ -1296,7 +1296,9 @@ sub beautify_line ($$$$$$) {
     debug("\$\$r_line before: $$r_line");
 
     if ($line_no == 1) {
-        if ($object_type_info{$object_type}->{'repeatable'}) {
+        if ($object_type eq 'VIEW') {
+            $$r_line =~ s/\s+DEFAULT COLLATION "USING_NLS_COMP"//g;
+        } elsif ($object_type_info{$object_type}->{'repeatable'}) {
             # create => create or replace
             $$r_line =~ s/^\s*CREATE\s+/CREATE OR REPLACE /i
                 unless $$r_line =~ m/^\s*CREATE\s+OR\s+REPLACE\b/i;
