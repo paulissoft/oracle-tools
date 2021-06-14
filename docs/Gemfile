@@ -20,11 +20,6 @@ source "https://rubygems.org"
 gem "github-pages", "~> 215", group: :jekyll_plugins
 # If you have any plugins, put them here!
 group :jekyll_plugins do
-  gem "jekyll-feed"
-  gem "jekyll-gist"
-  gem "jekyll-sitemap"
-  gem "jekyll-paginate"
-  gem "jekyll-include-cache"
   gem "jekyll-remote-theme"
   gem "webrick"
 end
@@ -43,7 +38,7 @@ jekyll_env = ENV['JEKYLL_ENV'] || 'development'
 
 if jekyll_env == 'development'
 then
-  gem "minimal-mistakes-jekyll"
+  gem "just-the-docs"
   gem 'html-proofer'
   gem 'rake'
 end

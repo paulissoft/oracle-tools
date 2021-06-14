@@ -13,6 +13,15 @@
 # https://learnxinyminutes.com/docs/yaml/
 #
 # Site settings
+#
+#   ASCII-Font: http://patorjk.com/software/taag/#p=display&f=Slant&t=Phlow
+#      _____ _ __          _____      __  __  _
+#     / ___/(_) /____     / ___/___  / /_/ /_(_)___  ____ ______
+#     \__ \/ / __/ _ \    \__ \/ _ \/ __/ __/ / __ \/ __ `/ ___/
+#    ___/ / / /_/  __/   ___/ /  __/ /_/ /_/ / / / / /_/ (__  )
+#   /____/_/\__/\___/   /____/\___/\__/\__/_/_/ /_/\__, /____/
+#                                                 /____/
+#
 # These are used to personalize your new site. If you look in the HTML files,
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
@@ -32,22 +41,34 @@ encoding: utf-8
 destination: _site
 lang: 'en'             # The language setting is used in /includes/header.html for html-settings
 locale: 'en'
-minimal_mistakes_skin: "aqua" # "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+logo: "https://github.com/gpaulissen/paulissoft/raw/main/Paulissoft.png"
 
 # Build settings
 # theme: minima
+remote_theme: "pmarsceill/just-the-docs"
 
 # Build settings
 markdown             : kramdown
 # Outputting
-permalink            : /:categories/:title/
-paginate             : 5 # amount of posts to show
-paginate_path        : /page:num/
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 timezone             : CET
 
-include:
-  - _pages
+
+# 
+#      ____.               __      __  .__             ________                        
+#     |    |__ __  _______/  |_  _/  |_|  |__   ____   \______ \   ____   ____   ______
+#     |    |  |  \/  ___/\   __\ \   __\  |  \_/ __ \   |    |  \ /  _ \_/ ___\ /  ___/
+# /\__|    |  |  /\___ \  |  |    |  | |   Y  \  ___/   |    `   (  <_> )  \___ \___ \ 
+# \________|____//____  > |__|    |__| |___|  /\___  > /_______  /\____/ \___  >____  >
+#                     \/                    \/     \/          \/            \/     \/ 
+
+# Aux links for the upper right navigation
+aux_links:
+  "Just the Docs on GitHub":
+    - "//github.com/pmarsceill/just-the-docs"
+
+# Makes Aux links open in a new tab. Default is false
+aux_links_new_tab: false
 
 # Exclude from processing.
 # The following items will not be processed, by default.
@@ -69,88 +90,6 @@ include:
 #   - vendor/gems/
 #   - vendor/ruby/
 
-#      ______                           ______          __          __
-#     / ____/__  ____ ___       __     / ____/  _______/ /_  ______/ /__  _____
-#    / / __/ _ \/ __ `__ \   __/ /_   / __/ | |/_/ ___/ / / / / __  / _ \/ ___/
-#   / /_/ /  __/ / / / / /  /_  __/  / /____>  </ /__/ / /_/ / /_/ /  __(__  )
-#   \____/\___/_/ /_/ /_/    /_/    /_____/_/|_|\___/_/\__,_/\__,_/\___/____/
-#
-# Plugins (previously gems:)
-plugins:
-  - jekyll-feed
-  - webrick
-  - jekyll-paginate
-  - jekyll-sitemap
-  - jekyll-gist
-  - jekyll-feed
-  - jemoji
-  - jekyll-include-cache
-  - jekyll-remote-theme
-
-
-#       ____       ____            ____
-#      / __ \___  / __/___ ___  __/ / /_
-#     / / / / _ \/ /_/ __ `/ / / / / __/
-#    / /_/ /  __/ __/ /_/ / /_/ / / /_
-#   /_____/\___/_/  \__,_/\__,_/_/\__/
-#
-# Default Settings
-
-defaults:
-  # _posts
-  - scope:
-      path: ""
-      type: posts
-    values:
-      layout: single
-      author_profile: true
-      read_time: true
-      show_date: true
-      comments: false
-      share: true
-      related: true
-      sitemap: true
-  # _pages
-  - scope:
-      path: "_pages"
-      type: pages
-    values:
-      layout: single
-      author_profile: true
-      comments: false
-      sitemap: true
-
-comments:
-  provider: "custom"
-  
-category_archive:
-  type: liquid
-  path: /categories/
-tag_archive:
-  type: liquid
-  path: /tags/
-
-# Frontpage-Layout-Settings
-excerpt_separator: <!--more-->   # Use <!--more--> in your posts to generate an excerpt and a teaser
-
-#
-# Minimal mistakes settings
-#
-# 
-#     __  ____       _                 __   __  ____      __        __                _____      __  __  _                 
-#    /  |/  (_)___  (_)___ ___  ____ _/ /  /  |/  (_)____/ /_____ _/ /_____  _____   / ___/___  / /_/ /_(_)___  ____ ______
-#   / /|_/ / / __ \/ / __ `__ \/ __ `/ /  / /|_/ / / ___/ __/ __ `/ //_/ _ \/ ___/   \__ \/ _ \/ __/ __/ / __ \/ __ `/ ___/
-#  / /  / / / / / / / / / / / / /_/ / /  / /  / / (__  ) /_/ /_/ / ,< /  __(__  )   ___/ /  __/ /_/ /_/ / / / / /_/ (__  ) 
-# /_/  /_/_/_/ /_/_/_/ /_/ /_/\__,_/_/  /_/  /_/_/____/\__/\__,_/_/|_|\___/____/   /____/\___/\__/\__/_/_/ /_/\__, /____/  
-#                                                                                                            /____/        
-#
-# These are used to personalize your new site. If you look in the HTML files,
-# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
-# You can create any custom variable you would like, and they will be accessible
-# in the templates via {{ site.myvariable }}.
-
-remote_theme         : "mmistakes/minimal-mistakes@4.22.0"
-search               : true
 
 # GJP 2021-02-09 To prevent this warning:
 #
