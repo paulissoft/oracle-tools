@@ -8,7 +8,7 @@ nav_order: 2
 {: .no_toc }
 
 Here we will install the necessary programs and start a connection to a
-(local) Oracle database. For the remainder of the documentation I will presule
+(local) Oracle database. For the remainder of the documentation I will presume
 that the reader is familiar with (and will use) the command line.
 
 ## Table of contents
@@ -62,12 +62,14 @@ pom.xml, that uses a profile named test-connection to test the connection.
 
 ### Making a connection using TNS
 
+Using the famous user SCOTT with password TIGER on the (local) database ORCL like this:
+
 ```
 $ mvn -f oracle-tools/conf/app -P test-connection --quiet -Ddb.connect.identifier=ORCL -Ddb.username=SCOTT -Ddb.password=TIGER
 
 ```
 
-This will give the following output on my computer:
+will give output similar to this:
 
 ```
 Db Url: jdbc:oracle:thin:@ORCL
@@ -86,7 +88,7 @@ Please note that the connect identifier ORCL is an entry in tnsnames.ora. That
 file is usually located in a directory pointed to by the environment variable
 TNS_ADMIN.
 
-### Making a connection using EazyConnect
+### Making a connection using Easy Connect
 
 This will work too, now without TNS:
 

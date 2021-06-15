@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Configuration
-nav_order: 3
+nav_order: 4
 ---
 
 # Configuration
@@ -18,8 +18,6 @@ This chapter describes the configuration you can define for Oracle Tools.
 {:toc}
 
 ---
-
-
 
 ## Database configuration directory
 
@@ -88,18 +86,18 @@ flyway.placeholders.oracle_wallet_path=
 
 This allows you to have a different Oracle Tools schema or Oracle wallet on every database.
 
-### Oracle Connections
+## Oracle Connections
 
-#### Easy Connect
+### Easy Connect
 
 See [How to connect to Oracle Autonomous Cloud
 Databases](https://blogs.oracle.com/opal/how-connect-to-oracle-autonomous-cloud-databases)
 for a nice introduction on how to connect to the Oracle Autonomous Cloud Database.
 
-#### Good old TNS
+### Good old TNS
 
-The best way to handle connections using TNS is:
-1. to define an environment variable TNS_ADMIN pointing to the directory where
+The best way to handle connections using TNS is to:
+1. define an environment variable TNS_ADMIN pointing to the directory where
 tnsnames.ora and sqlnet.ora are located;
 2. define the connections in tnsnames.ora.
 
@@ -111,15 +109,15 @@ my_wallet_directory like this:
 ```
 db_tst =
   (description= (retry_count=20)(retry_delay=3)
-	  (address=(protocol=tcps)(port=1522)(host=ABCDEF.oraclecloud.com))
-		(connect_data=
-		  (service_name=dbABCDEF_high.adwc.oraclecloud.com)
-		)
-		(security=
-		  (my_wallet_directory=c:\dev\wallet\TST)
-		  (ssl_server_cert_dn="CN=ABCDEF.oraclecloud.com,OU=Oracle somewhere,O=Oracle Corporation,L=Redwood City,ST=California,C=US")
-		)
-	)
+    (address=(protocol=tcps)(port=1522)(host=ABCDEF.oraclecloud.com))
+    (connect_data=
+      (service_name=dbABCDEF_high.adwc.oraclecloud.com)
+    )
+    (security=
+      (my_wallet_directory=c:\dev\wallet\TST)
+      (ssl_server_cert_dn="CN=ABCDEF.oraclecloud.com,OU=Oracle somewhere,O=Oracle Corporation,L=Redwood City,ST=California,C=US")
+    )
+  )
 ```
 
 The original entry was dbABCDEF_high but I just renamed it into something more
@@ -133,7 +131,7 @@ connect.identifier=db_tst
 ```
 
 So no more hassles with host, port and service name. But everywhere the Oracle
-Tool is used, these TNS entries have to be in the tnsnames.ora.
+Tool is used, this TNS entry has to be in the tnsnames.ora.
 
 ## Properties used
 
@@ -141,6 +139,8 @@ This is a list of the Maven properties used by Oracle Tools along with their
 defaults:
 
 ### oracle-tools/conf/pom.xml
+
+This is the POM that can be uased as parent for projects that need a database connection.
 
 |Property             |Default                                               |Description                                                              |
 |--------             |-------                                               |-----------                                                              |
@@ -152,4 +152,73 @@ defaults:
 |db.url               |jdbc:oracle:thin:@${db.connect.identifier}            |JDBC database URL                                                        |
 |db.userid            |${db.username}/${db.password}@${db.connect.identifier}|SQLcl connect string                                                     |
 
+### oracle-tools/db/pom.xml
 
+This is the POM that can be used as parent for projects that issue database
+actions. It has oracle-tools/conf/pom.xml as its parent POM.
+
+#### Flyway related properties
+
+For profile (action) db-install:
+
+|Property                |Default                             |Description                                                              |
+|--------                |-------                             |-----------                                                              |
+|db.src.scripts          |src                                 |The root directory for Flyway migration scripts                          |
+|db.src.dml.scripts      |${db.src.scripts}/dml               |The directory containing DML scripts                                     |
+|db.src.full.scripts     |${db.src.scripts}/full              |The directory containing DDL scripts that can be run over and over again |
+|db.src.incr.scripts     |${db.src.scripts}/incr              |The directory containing DDL scripts that can be run only once           |
+|db.src.callbacks.scripts|${oracle-tools.db.src.dir}/callbacks|The directory that contains scripts run before or after Flyway           |
+
+#### Properties for generating DDL
+
+For profiles (actions) db-generate-ddl-full and db-generate-ddl-incr:
+
+|Property                            |Default|Description                                                                                  |
+|--------                            |-------|-----------                                                                                  |
+|db.object.type                      |       |Only generate for this object type (Oracle package DBMS_METADATA)                            |
+|db.object.names                     |       |A list of object names to include or exclude (or empty to include all)                       |
+|db.object.names.include             |       |Specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include)     |
+
+##### Profile db-generate-ddl-full
+
+|Property                            |Default|Description                                                                                  |
+|--------                            |-------|-----------                                                                                  |
+|db.full.remove.output.directory     |yes    |Remove the output directory (${db.src.full.scripts}) before generating DDL scripts?                                                                                            |
+|db.full.force.view                  |no     |CREATE OR REPLACE **FORCE** VIEW or not?                                                     |
+|db.full.skip.install.sql            |yes    |skip creating install.sql/uninstall.sql scripts?                                             |
+|db.generate.ddl.full.skip           |       |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists. |
+|db.generate.full.strip.source.schema|0      |Strip source schema from 'create or replace "source schema"."source name"': yes (1) or no (0)|
+
+##### Profile db-generate-ddl-incr
+
+|Property                            |Default|Description                                                                                 |
+|--------                            |-------|-----------                                                                                 |
+|db.incr.dynamic.sql                 |no     |Use dynamic SQL for the incremental migration scripts?                                      |
+|db.incr.skip.repeatables            |yes    |Skip repeatable/replaceable objects in incremental migration scripts?                       |
+|db.generate.ddl.incr.skip           |       |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists.|
+
+#### Properties for running utPLSQL
+
+The profile is db-test:
+
+|Property       |Default     |Description                                                 |
+|--------       |-------     |-----------                                                 |
+|db.utplsql.path|${db.schema}|Run utPLSQL for the packages                                |
+|db.test.phase  |none        |Set this to test in your project POM in order to activate it|
+
+### oracle-tools/apex/pom.xml
+
+This is the POM that can be used as parent for projects that issue Apex 
+actions. It has oracle-tools/conf/pom.xml as its parent POM.
+
+For profiles (actions) apex-export and apex-import:
+
+|Property                |Default               |Description                                      				                 |
+|--------            		 |-------               |-----------                                			       	                 |
+|apex.src.dir        		 |${basedir}/src        |The project source directory               				                       |
+|apex.application.dir		 |${apex.src.dir}/export|The Apex export directory with splitted SQL scripts                       |
+|apex.workspace      		 |                      |The Apex workspace                                                        |
+|apex.application        |                      |The Apex application id                                                   |
+|apex.application.version|current date/time 		|In Java yyyy-MM-dd hh:mm:ss format, used in Apex appplication version info|
+|sql.home								 |                      |The home directory of SQLcl (${sql.home}/bin/sql exists?)                 |
+|env.SQL_HOME            |                      |idem but now the environment variable SQL_HOME                            |

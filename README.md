@@ -92,12 +92,12 @@ This is an example file layout:
 The .../projects/your-project/db/pom.xml may have as parent:
 
 ```
-  <parent>
-    <groupId>com.paulissoft.oracle-tools</groupId>
-    <artifactId>db</artifactId>
-    <version>${revision}</version>
-    <relativePath>${maven.multiModuleProjectDirectory}/../oracle-tools/db</relativePath>
-  </parent>
+<parent>
+  <groupId>com.paulissoft.oracle-tools</groupId>
+  <artifactId>db</artifactId>
+  <version>${revision}</version>
+  <relativePath>../../oracle-tools/db</relativePath>
+</parent>
 ```
 
 #### Apex POM
@@ -105,12 +105,12 @@ The .../projects/your-project/db/pom.xml may have as parent:
 The .../projects/your-project/apex/pom.xml may have as parent:
 
 ```
-  <parent>
-    <groupId>com.paulissoft.oracle-tools</groupId>
-    <artifactId>apex</artifactId>
-    <version>${revision}</version>
-    <relativePath>${maven.multiModuleProjectDirectory}/../oracle-tools/apex</relativePath>
-  </parent>
+<parent>
+  <groupId>com.paulissoft.oracle-tools</groupId>
+  <artifactId>apex</artifactId>
+  <version>${revision}</version>
+  <relativePath>../../oracle-tools/apex</relativePath>
+</parent>
 ```
 
 ### Using Maven dependencies
