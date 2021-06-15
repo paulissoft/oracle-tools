@@ -8,7 +8,7 @@ nav_order: 3
 {: .no_toc }
 
 
-Just the Docs has some specific configuration parameters that can be defined in your Jekyll site's _config.yml file.
+This chapter describes the configuration you can define for Oracle Tools.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -20,179 +20,136 @@ Just the Docs has some specific configuration parameters that can be defined in 
 ---
 
 
-View this site's [_config.yml](https://github.com/pmarsceill/just-the-docs/tree/master/_config.yml) file as an example.
 
+## Database configuration directory
 
-## Site logo
+In oracle-tools there is a directory conf/src that contains the database configuration:
 
-```yaml
-# Set a path/url to a logo that will be displayed instead of the title
-logo: "/assets/images/just-the-docs.png"
+```
+|   env.properties
+|   flyway-app.conf
+|
+\---orcl
+        apex.properties
+        db.properties
+        flyway-db.conf
 ```
 
-## Search
+The property db.config.dir in Oracle Tools points to this directory.
 
-```yaml
-# Enable or disable the site search
-# Supports true (default) or false
-search_enabled: true
+### env.properties
 
-search:
-  # Split pages into sections that can be searched individually
-  # Supports 1 - 6, default: 2
-  heading_level: 2
-  # Maximum amount of previews per search result
-  # Default: 3
-  previews: 3
-  # Maximum amount of words to display before a matched word in the preview
-  # Default: 5
-  preview_words_before: 5
-  # Maximum amount of words to display after a matched word in the preview
-  # Default: 10
-  preview_words_after: 10
-  # Set the search token separator
-  # Default: /[\s\-/]+/
-  # Example: enable support for hyphenated search words
-  tokenizer_separator: /[\s/]+/
-  # Display the relative url in search results
-  # Supports true (default) or false
-  rel_url: true
-  # Enable or disable the search button that appears in the bottom right corner of every page
-  # Supports true or false (default)
-  button: false
+It currently just contains the name of the the Oracle Tools schema:
+
+```
+oracle_tools_schema=ORACLE_TOOLS
 ```
 
-## Aux links
+### flyway-app.conf
 
-```yaml
-# Aux links for the upper right navigation
-aux_links:
-  "Just the Docs on GitHub":
-    - "//github.com/pmarsceill/just-the-docs"
+Properties defined here are global (i.e. for every database). It now contains:
 
-# Makes Aux links open in a new tab. Default is false
-aux_links_new_tab: false
+```
+flyway.placeholders.apex.application=${apex.application}
 ```
 
-## Heading anchor links
+This means that you can use ${apex.application} in a migration script that
+may be run by Flyway, see [Placeholders](https://flywaydb.org/documentation/configuration/placeholder).
 
-```yaml
-# Heading anchor links appear on hover over h1-h6 tags in page content
-# allowing users to deep link to a particular heading on a page.
-#
-# Supports true (default) or false
-heading_anchors: true
+### orcl
+
+The directory for the local database ORCL.
+
+#### orcl/apex.properties
+
+```
+workspace=DEV_WKS
 ```
 
-## Footer content
+#### orcl/db.properties
 
-```yaml
-# Footer content
-# appears at the bottom of every page's main content
-# Note: The footer_content option is deprecated and will be removed in a future major release. Please use `_includes/footer_custom.html` for more robust
-markup / liquid-based content.
-footer_content: "Copyright &copy; 2017-2020 Patrick Marsceill. Distributed by an <a href=\"https://github.com/pmarsceill/just-the-docs/tree/master/LICENSE.txt\">MIT license.</a>"
+The standard properties for a locally installed database:
 
-# Footer last edited timestamp
-last_edit_timestamp: true # show or hide edit time - page must have `last_modified_date` defined in the frontmatter
-last_edit_time_format: "%b %e %Y at %I:%M %p" # uses ruby's time format: https://ruby-doc.org/stdlib-2.7.0/libdoc/time/rdoc/Time.html
-
-# Footer "Edit this page on GitHub" link text
-gh_edit_link: true # show or hide edit this page link
-gh_edit_link_text: "Edit this page on GitHub."
-gh_edit_repository: "https://github.com/pmarsceill/just-the-docs" # the github URL for your repo
-gh_edit_branch: "master" # the branch that your docs is served from
-# gh_edit_source: docs # the source that your files originate from
-gh_edit_view_mode: "tree" # "tree" or "edit" if you want the user to jump into the editor immediately
+```
+host=localhost
+port=1521
+service=orcl
 ```
 
-_note: `footer_content` is deprecated, but still supported. For a better experience we have moved this into an include called `_includes/footer_custom.html` which will allow for robust markup / liquid-based content._
+#### orcl/flyway-db.conf
 
-- the "page last modified" data will only display if a page has a key called `last_modified_date`, formatted in some readable date format
-- `last_edit_time_format` uses Ruby's DateTime formatter; see examples and more information [at this link.](https://apidock.com/ruby/DateTime/strftime)
-- `gh_edit_repository` is the URL of the project's GitHub repository
-- `gh_edit_branch` is the branch that the docs site is served from; defaults to `master`
-- `gh_edit_source` is the source directory that your project files are stored in (should be the same as [site.source](https://jekyllrb.com/docs/configuration/options/))
-- `gh_edit_view_mode` is `"tree"` by default, which brings the user to the github page; switch to `"edit"` to bring the user directly into editing mode
 
-## Color scheme
+This now contains:
 
-```yaml
-# Color scheme supports "light" (default) and "dark"
-color_scheme: dark
 ```
-<button class="btn js-toggle-dark-mode">Preview dark color scheme</button>
-
-<script>
-const toggleDarkMode = document.querySelector('.js-toggle-dark-mode');
-
-jtd.addEvent(toggleDarkMode, 'click', function(){
-  if (jtd.getTheme() === 'dark') {
-    jtd.setTheme('light');
-    toggleDarkMode.textContent = 'Preview dark color scheme';
-  } else {
-    jtd.setTheme('dark');
-    toggleDarkMode.textContent = 'Return to the light side';
-  }
-});
-</script>
-
-See [Customization]({{ site.baseurl }}{% link docs/customization.md %}) for more information.
-
-## Google Analytics
-
-```yaml
-# Google Analytics Tracking (optional)
-# e.g, UA-1234567-89
-ga_tracking: UA-5555555-55
-ga_tracking_anonymize_ip: true # Use GDPR compliant Google Analytics settings (true by default)
+flyway.placeholders.oracle_tools_schema=${oracle_tools_schema}
+flyway.placeholders.oracle_wallet_path=
 ```
 
-## Document collections
+This allows you to have a different Oracle Tools schema or Oracle wallet on every database.
 
-By default, the navigation and search include normal [pages](https://jekyllrb.com/docs/pages/).
-Instead, you can also use [Jekyll collections](https://jekyllrb.com/docs/collections/) which group documents semantically together.
+### Oracle Connections
 
-For example, put all your documentation files in the `_docs` folder and create the `docs` collection:
-```yaml
-# Define Jekyll collections
-collections:
-  # Define a collection named "docs", its documents reside in the "_docs" directory
-  docs:
-    permalink: "/:collection/:path/"
-    output: true
+#### Easy Connect
 
-just_the_docs:
-  # Define which collections are used in just-the-docs
-  collections:
-    # Reference the "docs" collection
-    docs:
-      # Give the collection a name
-      name: Documentation
-      # Exclude the collection from the navigation
-      # Supports true or false (default)
-      nav_exclude: false
-      # Exclude the collection from the search
-      # Supports true or false (default)
-      search_exclude: false
+See [How to connect to Oracle Autonomous Cloud
+Databases](https://blogs.oracle.com/opal/how-connect-to-oracle-autonomous-cloud-databases)
+for a nice introduction on how to connect to the Oracle Autonomous Cloud Database.
+
+#### Good old TNS
+
+The best way to handle connections using TNS is:
+1. to define an environment variable TNS_ADMIN pointing to the directory where
+tnsnames.ora and sqlnet.ora are located;
+2. define the connections in tnsnames.ora.
+
+In the latter case: if there is a (Cloud) wallet involved, unzip it in a
+dedicated directory and copy the relevant entries from that tnsnames.ora to
+your $TNS_ADMIN/tnsnames.ora. But you must not forget to add
+my_wallet_directory like this:
+
+```
+db_tst =
+  (description= (retry_count=20)(retry_delay=3)
+	  (address=(protocol=tcps)(port=1522)(host=ABCDEF.oraclecloud.com))
+		(connect_data=
+		  (service_name=dbABCDEF_high.adwc.oraclecloud.com)
+		)
+		(security=
+		  (my_wallet_directory=c:\dev\wallet\TST)
+		  (ssl_server_cert_dn="CN=ABCDEF.oraclecloud.com,OU=Oracle somewhere,O=Oracle Corporation,L=Redwood City,ST=California,C=US")
+		)
+	)
 ```
 
-You can reference multiple collections.
-This creates categories in the navigation with the configured names.
-```yaml
-collections:
-  docs:
-    permalink: "/:collection/:path/"
-    output: true
-  tutorials:
-    permalink: "/:collection/:path/"
-    output: true
+The original entry was dbABCDEF_high but I just renamed it into something more
+convenient.
 
-just_the_docs:
-  collections:
-    docs:
-      name: Documentation
-    tutorials:
-      name: Tutorials
+Now the database configuration directory could contain a subdirectory named
+`db_tst` with these db.properties:
+
 ```
+connect.identifier=db_tst
+```
+
+So no more hassles with host, port and service name. But everywhere the Oracle
+Tool is used, these TNS entries have to be in the tnsnames.ora.
+
+## Properties used
+
+This is a list of the Maven properties used by Oracle Tools along with their
+defaults:
+
+### oracle-tools/conf/pom.xml
+
+|Property             |Default                                               |Description                                                              |
+|--------             |-------                                               |-----------                                                              |
+|db.schema            |${project.artifactId}                                 |Defaults to POM artifactId assuming it is named after the database schema|
+|db.password          |${env.DB_PASSWORD}                                    |Defaults to environment variable DB_PASSWORD                             |
+|db.config.dir        |directory of **/conf/env.properties                   |Database configuration directory                                         |
+|db                   |                                                      |One of the subdirectories of ${db.config.dir}                            |
+|db.connect.identifier|//${db.host}:${db.port}/${db.service}                 |Part of the database URL                                                 |
+|db.url               |jdbc:oracle:thin:@${db.connect.identifier}            |JDBC database URL                                                        |
+|db.userid            |${db.username}/${db.password}@${db.connect.identifier}|SQLcl connect string                                                     |
+
 

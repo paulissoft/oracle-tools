@@ -95,7 +95,8 @@ So my approach is to:
 - checkout Oracle Tools (to directory dev for instance)
 - checkout any project that uses Oracle Tools on the same level (also to dev)
 
-Now another project POM can have as parent one of the Oracle Tools POMs by just:
+Now another project POM in <project>/db, can have as parent one of the Oracle
+Tools POMs like this:
 
 ```
 <parent>
@@ -113,18 +114,20 @@ Another problem for Maven is that the properties are determined by (in order):
 2. a user settings file ($HOME/.m2/settings.xml by default)
 3. a POM (child POMs having more priority)
 
-And what I need is that some properties must be read from property files
-just like Ant does.
+But this is quite static. What I would like is that some properties can be
+read from property files just like Ant does.
 
-So my solution is to read those property files using the Antrun plugin and
+So my solution is to read those property files using the [Maven AntRun Plugin](https://maven.apache.org/plugins/maven-antrun-plugin/) and
 export them into the Maven namespace.
 
-This allows me to define a configuration directory containing property files and
-within that configuration directory you may have subdirectories each
-representing a database with properties you would like to store for that
-database environment (not passwords of course). And that can be APEX
-properties as well (APEX is part of a database).
+This allows me to define a configuration directory containing property files
+and within that directory you may have subdirectories each representing a
+database with its properties you would like to store (not passwords of
+course). And that can be APEX properties as well like workspace or application
+id. Please note that APEX is part of a database so it is the obvious place to
+store the configuration there.
 
 The database password is by the default the value of the environment variable
-DB_ENVIRONMENT, a best practice since it allows you to **not** set it on the
+DB_ENVIRONMENT, a best practice described in [The Twelve-Factor
+App](https://12factor.net/) since it allows you to **not** set it on the
 command line.
