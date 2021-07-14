@@ -1,5 +1,7 @@
 set define on verify off
 
+whenever sqlerror exit failure
+
 define oracle_tools_username = ORACLE_TOOLS
 
 accept oracle_tools_username prompt "Oracle tools username [&&oracle_tools_username] ? " default "&&oracle_tools_username"
@@ -12,8 +14,11 @@ define tablespace_users = users
 
 accept tablespace_users prompt "Default tablespace [&&tablespace_users] ? " default "&&tablespace_users"
 
-create user &&oracle_tools_username identified by "&&oracle_tools_password" default tablespace &&tablespace_users temporary tablespace temp;
+define tablespace_temp = temp
 
-create role oracle_tools_rd;
+accept tablespace_temp prompt "Temporary tablespace [&&tablespace_temp] ? " default "&&tablespace_temp"
 
-grant oracle_tools_rd to public;
+create user &&oracle_tools_username -
+identified by "&&oracle_tools_password" -
+default tablespace &&tablespace_users -
+temporary tablespace &&tablespace_users;
