@@ -6867,7 +6867,7 @@ $end
     select  t.table_owner
     into    g_owner_utplsql
     from    all_synonyms t
-    where   t.table_name = 'UTASSERT';
+    where   t.table_name = 'UT';
 
     /*
        For ut_synchronize user EMPTY must have
@@ -7069,11 +7069,7 @@ $end
 $if cfg_pkg.c_debugging $then
         dbug.leave;
 $end        
-        utassert.eq(msg_in => l_program || '#' || p_description
-                   ,check_this_in => sqlcode
-                   ,against_this_in => p_sqlcode_expected
-                   ,null_ok_in => false
-                   ,raise_exc_in => g_raise_exc);
+        ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
     end chk;
 
     procedure replace_sequence_start_with(p_line_tab in out nocopy dbms_sql.varchar2a)
@@ -7282,11 +7278,7 @@ $end
           begin
             l_line1_tab(i_line_idx) := modify_ddl_text(p_ddl_text => l_line1_tab(i_line_idx), p_schema => g_owner, p_new_schema => g_empty);
 
-            utassert.eq(msg_in => l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx
-                       ,check_this_in => l_line1_tab(i_line_idx)
-                       ,against_this_in => l_line2_tab(i_line_idx)
-                       ,null_ok_in => true
-                       ,raise_exc_in => g_raise_exc);
+            ut.expect(l_line1_tab(i_line_idx), l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx).to_equal(l_line2_tab(i_line_idx));
 $if cfg_pkg.c_debugging $then
           exception
             when others
@@ -7298,18 +7290,10 @@ $end
           end;
         elsif l_line1_tab.exists(i_line_idx)
         then
-          utassert.eq(msg_in => l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx
-                     ,check_this_in => l_line1_tab(i_line_idx)
-                     ,against_this_in => null
-                     ,null_ok_in => true
-                     ,raise_exc_in => g_raise_exc);
+          ut.expect(l_line1_tab(i_line_idx), l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx).to_be_null();
         elsif l_line2_tab.exists(i_line_idx)
         then
-          utassert.eq(msg_in => l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx
-                     ,check_this_in => null
-                     ,against_this_in => l_line2_tab(i_line_idx)
-                     ,null_ok_in => true
-                     ,raise_exc_in => g_raise_exc);
+          ut.expect(l_line2_tab(i_line_idx), l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx).to_be_null();
         end if;
       end loop;
     end;
@@ -7464,11 +7448,7 @@ $end
           skip_ws_lines_around(l_line2_tab, l_first2, l_last2);
         end if;
 
-        utassert.eq(msg_in => l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq'
-                   ,check_this_in => eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
-                   ,against_this_in => true
-                   ,null_ok_in => true
-                   ,raise_exc_in => g_raise_exc);
+        ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq').to_be_true();
       end loop try_loop;
 
       longops_show(l_longops_rec);
@@ -7590,12 +7570,7 @@ $end
 $if cfg_pkg.c_debugging $then
         dbug.leave;
 $end        
-        utassert.eq(msg_in => l_program || '#' || p_description
-                   ,check_this_in => sqlcode
-                   ,against_this_in => p_sqlcode_expected
-                   ,null_ok_in => false
-                   ,raise_exc_in => g_raise_exc);
-                   
+        ut.expect(sqlcode, l_program || '#' || p_description).to_be_equal(p_sqlcode_expected);
     end chk;
 
     procedure cleanup
