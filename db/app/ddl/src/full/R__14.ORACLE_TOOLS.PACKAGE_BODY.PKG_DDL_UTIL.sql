@@ -188,7 +188,7 @@ $end -- $if cfg_pkg.c_testing $then
   e_not_a_directed_acyclic_graph exception;
   pragma exception_init(e_not_a_directed_acyclic_graph, -20001);
 
-  -- ORA-31603: object "MV_AUTHORISATION" of type MATERIALIZED_VIEW not found in schema "<owner>"
+  -- ORA-31603: object ... of type MATERIALIZED_VIEW not found in schema ...
   e_object_not_found exception;
   pragma exception_init(e_object_not_found, -31603);
 
@@ -791,22 +791,21 @@ $end
   end get_host;
 
   procedure parse_ddl
-  (
-    p_ddl in sys.ku$_ddl
-   ,p_schema in varchar2 -- necessary when there is a remap going on
-   ,p_object_lookup_tab in t_object_lookup_tab
-   ,p_constraint_lookup_tab in t_constraint_lookup_tab
-   ,p_verb out nocopy varchar2
-   ,p_object_name out nocopy varchar2
-   ,p_object_type out nocopy varchar2
-   ,p_object_schema out nocopy varchar2
-   ,p_base_object_name out nocopy varchar2
-   ,p_base_object_type out nocopy varchar2
-   ,p_base_object_schema out nocopy varchar2
-   ,p_column_name out nocopy varchar2
-   ,p_grantee out nocopy varchar2
-   ,p_privilege out nocopy varchar2
-   ,p_grantable out nocopy varchar2
+  ( p_ddl in sys.ku$_ddl
+  , p_schema in varchar2 -- necessary when there is a remap going on
+  , p_object_lookup_tab in t_object_lookup_tab
+  , p_constraint_lookup_tab in t_constraint_lookup_tab
+  , p_verb out nocopy varchar2
+  , p_object_name out nocopy varchar2
+  , p_object_type out nocopy varchar2
+  , p_object_schema out nocopy varchar2
+  , p_base_object_name out nocopy varchar2
+  , p_base_object_type out nocopy varchar2
+  , p_base_object_schema out nocopy varchar2
+  , p_column_name out nocopy varchar2
+  , p_grantee out nocopy varchar2
+  , p_privilege out nocopy varchar2
+  , p_grantable out nocopy varchar2
   )
   is
     procedure parse_alter
@@ -814,17 +813,17 @@ $end
       l_constraint varchar2(32767 char) := dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 32767);
       l_constraint_expr_tab constant t_text_tab :=
         t_text_tab
-        ( -- 1) ALTER TABLE "<owner>"."CPUPDSUBSCRIPTION" ADD CONSTRAINT "CPUPDSUBSCRIPTION_PK" PRIMARY KEY (...)
-          --    ALTER TABLE "<owner>"."CPUPDCOSTREV" ADD CONSTRAINT "CPUPDCOSTREV_FK1" FOREIGN KEY (...)
-          --    ALTER TABLE "<owner>"."SUBSCRIPTION" ADD CONSTRAINT "SUBSCRIPTION_CK2" CHECK (...)
+        ( -- 1) ALTER TABLE "<owner>"."<table>" ADD CONSTRAINT "<pk>" PRIMARY KEY (...)
+          --    ALTER TABLE "<owner>"."<table>" ADD CONSTRAINT "<fk>" FOREIGN KEY (...)
+          --    ALTER TABLE "<owner>"."<table>" ADD CONSTRAINT "<ck>" CHECK (...)
           'ALTER % "%"."%" ADD CONSTRAINT "%" %' -- named constraint
-        , -- 2) ALTER TABLE "<owner>"."SHIPMENTSTATUSFLOW" ADD PRIMARY KEY ("SEQ")
+        , -- 2) ALTER TABLE "<owner>"."<table>" ADD PRIMARY KEY ("SEQ")
           'ALTER % "%"."%" ADD PRIMARY KEY %' -- system generated constraint
-        , -- 3) ALTER TABLE "<owner>"."DIR_LIST" ADD UNIQUE ("SYS_NC_OID$") ENABLE;
+        , -- 3) ALTER TABLE "<owner>"."<table>" ADD UNIQUE ("SYS_NC_OID$") ENABLE;
           'ALTER % "%"."%" ADD UNIQUE %' -- system generated unique constraint
-        , -- 4) ALTER TABLE "<owner>"."CMMVERSION" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."COMPONENT_MAINTENANCE_MANUAL" ("SEQ")
+        , -- 4) ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("SEQ")
           'ALTER % "%"."%" ADD FOREIGN KEY %' -- system generated constraint
-        , -- 5) ALTER TABLE "<owner>"."CLEANINGCLASS" ADD CHECK ( cleaning_method in ('STANDARD','SANITIZED','HALAL'))
+        , -- 5) ALTER TABLE "<owner>"."<table>" ADD CHECK ( ... )
           'ALTER % "%"."%" ADD CHECK (%)%' -- system generated constraint
         , -- 6) ALTER TABLE "<owner>"."APEX$_ACL" MODIFY ("CREATED_BY" NOT NULL ENABLE);
           'ALTER % "%"."%" MODIFY ("%" NOT NULL ENABLE)%' -- system generated not null constraint
@@ -986,7 +985,7 @@ $end
                                           );
               when l_constraint like l_constraint_expr_tab(4) -- foreign key
               then
-                -- ALTER TABLE "<owner>"."CMMVERSION" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."COMPONENT_MAINTENANCE_MANUAL" ("SEQ")
+                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("SEQ")
                 
                 -- get the reference object schema, since l_pos2 is the position of the first ')'
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
@@ -1164,7 +1163,7 @@ $end
     is
     -- COMMENT ON TABLE "schema"."object" IS
     -- COMMENT ON VIEW "schema"."object" IS
-    -- COMMENT ON MATERIALIZED VIEW "<owner>"."MV_TTSUBSCRIPTION"
+    -- COMMENT ON MATERIALIZED VIEW "<owner>"."<mview>"
     -- COMMENT ON COLUMN "schema"."object"."column" IS
       l_pos1 pls_integer := dbms_lob.instr(lob_loc => p_ddl.ddlText, pattern => ' IS ');
       l_pos2 pls_integer;
@@ -1274,9 +1273,9 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-      -- GRANT SELECT ON "<owner>"."MANUALADDRESS_SEQ" TO "<owner>";
+      -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>";
       -- or
-      -- GRANT SELECT ON "<owner>"."MANUALADDRESS_SEQ" TO "<owner>" WITH GRANT OPTION;
+      -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>" WITH GRANT OPTION;
       p_grantable := case when l_object_grant like '% WITH GRANT OPTION%' then 'YES' else 'NO' end;
       l_pos1 := instr(l_object_grant, 'GRANT ') + length('GRANT ');
       l_pos2 := instr(l_object_grant, ' ON "');
@@ -1702,7 +1701,7 @@ $end
                   --
                   -- Skip DDL like this:
                   --
-                  -- ALTER PACKAGE "<owner>"."PKG_APEXDATA"
+                  -- ALTER PACKAGE "<owner>"."<package>"
                   --  COMPILE SPECIFICATION
                   --    PLSQL_OPTIMIZE_LEVEL=  2
                   --    PLSQL_CODE_TYPE=  INTERPRETED
@@ -4667,20 +4666,17 @@ $end
 
               -- This is an example of table DDL:
               --
-              --CREATE TABLE "<owner>"."BIKELOCK" 
+              --CREATE TABLE "<owner>"."<table>" 
               --   (  "SEQ" NUMBER GENERATED BY DEFAULT AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 NOCACHE  ORDER  NOCYCLE  NOT NULL ENABLE, 
-              --  "LOCKID" VARCHAR2(25) CONSTRAINT "LOCK_LOCKID_NN" NOT NULL ENABLE, 
               --  "CREATEDATETIME" DATE, 
               --  "CREATEUSER" VARCHAR2(100 CHAR), 
               --  "UPDATEDATETIME" DATE, 
-              --  "UPDATEUSER" VARCHAR2(100 CHAR), 
-              --  "DELETEDYN" VARCHAR2(1 CHAR) DEFAULT 'N' CONSTRAINT "BIKELOCK_DELETEDYN_NN" NOT NULL ENABLE, 
-              --  "LOCKTYPE" VARCHAR2(25 CHAR) DEFAULT 'LINKAV1' CONSTRAINT "LOCK_LOCKTYPE_NN" NOT NULL ENABLE
+              --  "UPDATEUSER" VARCHAR2(100 CHAR)
               --   ) ...
               --
               -- Observations:
               -- a) declaration is ("<column>" ... )<end> where end is ',' || <whitespace> || "<next column>" if there is a next column
-              -- b) declaration is ("<column>" ... )<end> where end is chr(10) || '   )' if there is a next column
+              -- b) declaration is ("<column>" ... )<end> where end is chr(10) || '   )' if there is NO next column
 
               -- find start of column declaration ("<column>")
               l_pattern := '"' || l_member_tab(i_idx).member_name || '"';
@@ -6556,10 +6552,10 @@ $end
     l_ddl_text := p_ddl_text;
 
     /*
-       ON "<owner>"."PRODUCTS" must be replaced by ON "EMPTY"."PRODUCTS"
+       ON "<owner>"."<table>" must be replaced by ON "EMPTY"."<table>"
 
-       CREATE OR REPLACE EDITIONABLE TRIGGER "EMPTY"."TR_PRODUCTS"
-       BEFORE INSERT OR DELETE OR UPDATE ON "<owner>"."PRODUCTS"
+       CREATE OR REPLACE EDITIONABLE TRIGGER "EMPTY"."<trigger>"
+       BEFORE INSERT OR DELETE OR UPDATE ON "<owner>"."<table>"
        REFERENCING FOR EACH ROW
     */
     if p_schema <> p_new_schema
@@ -6869,38 +6865,6 @@ $end
     from    all_synonyms t
     where   t.table_name = 'UT';
 
-    /*
-       For ut_synchronize user EMPTY must have
-       1) quota on USERS, YSSDATA and YSSINDEX
-       2) roles WR_ORACLE_TOOLS, CONNECT and RESOURCE
-       3) privilege CREATE VIEW
-
-       And the following references privileges:
-
-       select  distinct 
-               owner
-       ,       r_owner
-       ,       r_constraint_name
-       from    dba_constraints
-       where   owner in ('<owner>', '<owner>', '<owner>') 
-       and     constraint_type = 'R'
-       and     r_owner <> owner
-       /
-
-       "OWNER"                  "R_OWNER"               "R_CONSTRAINT_NAME"  "TABLE"
-       -------                  ---------               -------------------  -------
-       "<owner>" "<owner>"         "PROJECTITEM"        "PROJECTITEM"        
-       "<owner>" "<owner>"          "ADDRESS_PK"         "ADDRESS"
-       "<owner>" "<owner>"         "COMPANY_PK"         "PARTY"
-       "<owner>" "<owner>" "SERVICEGROUP_PK"    "SERVICEGROUP"
-       "<owner>" "<owner>" "SERVICE_PK"         "SERVICE"
-       "<owner>" "<owner>"          "STATUS_PK"          "STATUS"
-       "<owner>" "<owner>"          "DOCUMENTTYPE_PK"    "DOCUMENTTYPE"
-
-       
-
-    */
-
     begin
       select  1
       into    l_found
@@ -6939,23 +6903,6 @@ $end
       then
         raise_application_error(-20000, 'Private database link LOOPBACK should point to this schema and database.', true);
     end;
-
-    for i_try in 1..4
-    loop
-      begin
-        dbms_session.close_database_link
-        ( case i_try
-            when 1 then "<owner>"
-            when 2 then "<owner>"
-            when 3 then "<owner>"
-            when 4 then "<owner>"
-          end
-        );
-      exception
-        when others
-        then null;
-      end;
-    end loop;    
   end ut_setup;
 
   procedure ut_teardown
@@ -7080,7 +7027,7 @@ $end
       loop
         if substr(p_line_tab(i_idx), 1, length("CREATE SEQUENCE ")) = "CREATE SEQUENCE "
         then
-          -- CREATE SEQUENCE  "<owner>"."SQ_STG"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 13849101
+          -- CREATE SEQUENCE  "<owner>"."<sequence>"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 13849101
           p_line_tab(i_idx) := regexp_replace(p_line_tab(i_idx), '( START WITH )(\d+)', '\1 1');
         end if;
       end loop;
@@ -7570,7 +7517,7 @@ $end
 $if cfg_pkg.c_debugging $then
         dbug.leave;
 $end        
-        ut.expect(sqlcode, l_program || '#' || p_description).to_be_equal(p_sqlcode_expected);
+        ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
     end chk;
 
     procedure cleanup
@@ -7864,11 +7811,7 @@ $end
         end if;
 
         begin
-          utassert.eq(msg_in => l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#eq'
-                     ,check_this_in => eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
-                     ,against_this_in => true
-                     ,null_ok_in => false
-                     ,raise_exc_in => g_raise_exc);
+          ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#eq').to_be_true();
 $if cfg_pkg.c_debugging $then
         exception
           when others
@@ -7912,18 +7855,10 @@ $if cfg_pkg.c_debugging $then
 $end
 
     -- null as parameter
-    utassert.eq(msg_in => l_program || '#null'
-               ,check_this_in => t_schema_object.dict2metadata_object_type(to_char(null))
-               ,against_this_in => null
-               ,null_ok_in => true
-               ,raise_exc_in => g_raise_exc);
+    ut.expect(t_schema_object.dict2metadata_object_type(to_char(null)), l_program || '#null').to_be_null();
 
     -- ABC XYZ as parameter
-    utassert.eq(msg_in => l_program || '#ABC XYZ'
-               ,check_this_in => t_schema_object.dict2metadata_object_type('ABC XYZ')
-               ,against_this_in => 'ABC_XYZ'
-               ,null_ok_in => true
-               ,raise_exc_in => g_raise_exc);
+    ut.expect(t_schema_object.dict2metadata_object_type('ABC XYZ'), l_program || '#ABC XYZ').to_equal('ABC_XYZ');
 
     for r in (select distinct t.object_type from all_objects t where t.generated = 'N' /* GPA 2016-12-19 #136334705 */ order by t.object_type)
     loop
@@ -7938,11 +7873,7 @@ $end
                                    replace(r.object_type, ' ', '_')
                                 end;
 
-      utassert.eq(msg_in => l_program || '#' || r.object_type
-                 ,check_this_in => t_schema_object.dict2metadata_object_type(r.object_type)
-                 ,against_this_in => l_metadata_object_type
-                 ,null_ok_in => false
-                 ,raise_exc_in => g_raise_exc);
+      ut.expect(t_schema_object.dict2metadata_object_type(r.object_type), l_program || '#' || r.object_type).to_equal(l_metadata_object_type);
     end loop;
 
 $if cfg_pkg.c_debugging $then
@@ -7960,18 +7891,10 @@ $if cfg_pkg.c_debugging $then
 $end
 
     -- null as parameter
-    utassert.eq(msg_in => l_program || '#null'
-               ,check_this_in => t_schema_object.is_a_repeatable(to_char(null))
-               ,against_this_in => null
-               ,null_ok_in => true
-               ,raise_exc_in => g_raise_exc);
+    ut.expect(t_schema_object.is_a_repeatable(to_char(null)), l_program || '#null').to_be_null();
 
     -- ABC XYZ as parameter
-    utassert.eq(msg_in => l_program || '#ABC XYZ'
-               ,check_this_in => t_schema_object.is_a_repeatable('ABC XYZ')
-               ,against_this_in => null
-               ,null_ok_in => true
-               ,raise_exc_in => g_raise_exc);
+    ut.expect(t_schema_object.is_a_repeatable('ABC XYZ'), l_program || '#ABC XYZ').to_be_null();
 
     for i_try in 1 .. 3
     loop
@@ -7986,34 +7909,33 @@ $end
 
       for i_idx in l_object_type_tab.first .. l_object_type_tab.last
       loop
-        utassert.eq(msg_in => l_program || '#' || i_try || '#' || l_object_type_tab(i_idx)
-                   ,check_this_in => t_schema_object.is_a_repeatable(l_object_type_tab(i_idx))
-                   ,against_this_in => case
-                                         when l_object_type_tab(i_idx) in ('CLUSTER'
-                                                                          ,'DB_LINK'
-                                                                          ,'DIMENSION'
-                                                                          ,'INDEXTYPE'
-                                                                          ,'LIBRARY'
-                                                                          ,'OPERATOR'
-                                                                          ,'INDEX'
-                                                                          ,'MATERIALIZED_VIEW'
-                                                                          ,'MATERIALIZED_VIEW_LOG'
-                                                                          ,'QUEUE'
-                                                                          ,'QUEUE_TABLE'
-                                                                          ,'SEQUENCE'
-                                                                          ,'TABLE'
-                                                                          ,'TYPE_SPEC'
-                                                                          ,'REFRESH_GROUP'
-                                                                          ,'XMLSCHEMA'
-                                                                          ,'PROCOBJ'
-                                                                          ) then
-                                          0
+        ut.expect( t_schema_object.is_a_repeatable(l_object_type_tab(i_idx))
+                 , l_program || '#' || i_try || '#' || l_object_type_tab(i_idx)
+                 ).to_equal( case
+                               when l_object_type_tab(i_idx) in ('CLUSTER'
+                                                                ,'DB_LINK'
+                                                                ,'DIMENSION'
+                                                                ,'INDEXTYPE'
+                                                                ,'LIBRARY'
+                                                                ,'OPERATOR'
+                                                                ,'INDEX'
+                                                                ,'MATERIALIZED_VIEW'
+                                                                ,'MATERIALIZED_VIEW_LOG'
+                                                                ,'QUEUE'
+                                                                ,'QUEUE_TABLE'
+                                                                ,'SEQUENCE'
+                                                                ,'TABLE'
+                                                                ,'TYPE_SPEC'
+                                                                ,'REFRESH_GROUP'
+                                                                ,'XMLSCHEMA'
+                                                                ,'PROCOBJ'
+                                                                ) then
+                                0
 
-                                         else
-                                          1
-                                       end
-                   ,null_ok_in => true
-                   ,raise_exc_in => g_raise_exc);
+                               else
+                                1
+                             end
+                           );
       end loop;
     end loop;
 
@@ -8038,6 +7960,8 @@ $end
     l_object_names_include t_numeric_boolean;
     l_object_names t_object_names;
 
+    l_count pls_integer;
+
     l_program constant varchar2(61 char) := 'UT_GET_SCHEMA_OBJECT';
   begin
 $if cfg_pkg.c_debugging $then
@@ -8056,22 +7980,19 @@ $if pkg_ddl_util.c_get_queue_ddl $then
     loop
       for i_test in 1..2
       loop
-        utassert.eqqueryvalue
-        ( msg_in => l_program || '#queue table count#' || r.owner || '.' || r.queue_table || '#' || i_test
-        , check_query_in =>
-            q'[select count(*)
-from    table
-        ( oracle_tools.pkg_ddl_util.get_schema_object
-          ( ']' || r.owner || q'['
-          , ']' || case i_test when 1 then null else 'AQ_QUEUE_TABLE' end || q'['
-          , ']' || r.queue_table || q'['
-          , 1
-          )
-        ) t
-where   t.object_type() in ('TABLE', 'AQ_QUEUE_TABLE')]'
-        , against_value_in => 1
-        , raise_exc_in => g_raise_exc
-        );
+        select  count(*)
+        into    l_count
+        from    table
+                ( oracle_tools.pkg_ddl_util.get_schema_object
+                  ( r.owner
+                  , case i_test when 1 then null else 'AQ_QUEUE_TABLE' end
+                  , r.queue_table
+                  , 1
+                  )
+                ) t
+        where   t.object_type() in ('TABLE', 'AQ_QUEUE_TABLE');
+
+        ut.expect(l_count, l_program || '#queue table count#' || r.owner || '.' || r.queue_table || '#' || i_test).to_equal(1);
       end loop;
     end loop;
 
@@ -8092,35 +8013,37 @@ $end
     loop
       for i_test in 1..3
       loop
-        utassert.eqqueryvalue
-        ( msg_in => l_program || '#mview count#' || r.mview_name || '#' || r.build_mode || '#' || i_test
-        , check_query_in => q'[select count(*)
-from    table
-        ( oracle_tools.pkg_ddl_util.get_schema_object
-          ( ']' || substr(r.mview_name, 1, instr(r.mview_name, '.')-1) || q'['
-          , ']' || case i_test when 1 then null when 2 then 'MATERIALIZED_VIEW' when 3 then 'TABLE' end || q'['
-          , ']' || substr(r.mview_name, instr(r.mview_name, '.')+1) || q'['
-          , 1
-          )
-        ) t
-where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW')]'
-        , against_value_in => case
-                                when r.build_mode = 'PREBUILT'
-                                then
-                                  case i_test
-                                    when 1
-                                    then 2 -- table and mv returned
-                                    else 1 -- else table or mv
-                                  end
-                                else
-                                  case i_test
-                                    when 3
-                                    then 0 -- nothing returned
-                                    else 1 -- mv returned
-                                  end
-                              end
-        , raise_exc_in => g_raise_exc
-        );
+        select  count(*)
+        into    l_count
+        from    table
+                ( oracle_tools.pkg_ddl_util.get_schema_object
+                  ( substr(r.mview_name, 1, instr(r.mview_name, '.')-1)
+                  , case i_test when 1 then null when 2 then 'MATERIALIZED_VIEW' when 3 then 'TABLE' end
+                  , substr(r.mview_name, instr(r.mview_name, '.')+1)
+                  , 1
+                  )
+                ) t
+        where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW');
+        
+        ut.expect
+        ( l_count
+        , l_program || '#mview count#' || r.mview_name || '#' || r.build_mode || '#' || i_test
+        ).to_equal( case
+                      when r.build_mode = 'PREBUILT'
+                      then
+                        case i_test
+                          when 1
+                          then 2 -- table and mv returned
+                          else 1 -- else table or mv
+                        end
+                      else
+                        case i_test
+                          when 3
+                          then 0 -- nothing returned
+                          else 1 -- mv returned
+                        end
+                    end
+                  );
       end loop;
     end loop;
 
@@ -8147,20 +8070,21 @@ where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW')]'
     loop
       if r.fq_object_name is not null
       then
-        utassert.eqqueryvalue
-        ( msg_in => l_program || '#object based on another schema count#' || r.fq_object_name
-        , check_query_in => q'[select count(*)
-from    table
-        ( oracle_tools.pkg_ddl_util.get_schema_object
-          ( ']' || substr(r.fq_object_name, 1, instr(r.fq_object_name, '.')-1) || q'['
-          , ']' || r.object_type || q'['
-          , ']' || substr(r.fq_object_name, instr(r.fq_object_name, '.')+1) || q'['
-          , 1
-          )
-        ) t]'
-        , against_value_in => 1
-        , raise_exc_in => g_raise_exc
-        );
+        select  count(*)
+        into    l_count
+        from    table
+                ( oracle_tools.pkg_ddl_util.get_schema_object
+                  ( substr(r.fq_object_name, 1, instr(r.fq_object_name, '.')-1)
+                  , r.object_type
+                  , substr(r.fq_object_name, instr(r.fq_object_name, '.')+1)
+                  , 1
+                  )
+                ) t;
+                
+        ut.expect
+        ( l_count
+        , l_program || '#object based on another schema count#' || r.fq_object_name
+        ).to_equal(1);
       end if;
     end loop;
 
@@ -8210,7 +8134,9 @@ $end
       ,      table(t.ddl_tab) u
       where  u.verb() != '--' -- no comments
       ;
-      
+
+    l_count pls_integer;
+
     l_program constant varchar2(61) := g_package || '.UT_SYNCHRONIZE';
 
     procedure cleanup is
@@ -8282,29 +8208,10 @@ $end
     -- Now there must be no differences
     */
 
-    for i_try in 1..4
+    for i_try in 1..1
     loop
       case i_try
-        when 2
-        then
-          -- GPA 2017-02-01 #138707789 The diff DDL utility generates wrong DDL for <owner>.
-          -- GPA 2017-02-01 #138550763 For schema <owner> the collection T_SEQ_TABLE will always be recreated.
-          l_schema := "<owner>";
-          l_network_link_source := l_schema; -- must connect as the same user otherwise the all tables do not show the information correctly
-
-        when 3
-        then
-          -- GPA 2017-02-01 #138550749 As a developer I want to migrate function based indexes correctly.
-          l_schema := "<owner>";
-          l_network_link_source := l_schema; -- must connect as the same user otherwise the all tables do not show the information correctly
-          
         when 1
-        then
-          -- GPA 2017-02-01 #138707615 The diff DDL for XBIKE contained errors. 
-          l_schema := "<owner>";
-          l_network_link_source := l_schema; -- must connect as the same user otherwise the all tables do not show the information correctly
-        
-        when 4
         then
           l_schema := g_owner;
           l_network_link_source := g_loopback; -- this is l_schema
@@ -8314,12 +8221,14 @@ $end
       /* step 1 */
       begin
         cleanup; -- empty EMPTY
-        utassert.eqqueryvalue(msg_in => l_program || '#cleanup' || '#' || i_try
-                             ,check_query_in => 'select count(*) from all_objects t where t.owner = ''' ||
-                                                g_empty ||
-                                                ''' and pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) = 0'
-                             ,against_value_in => 0
-                             ,raise_exc_in => g_raise_exc);
+        
+        select  count(*)
+        into    l_count
+        from    all_objects t
+        where   t.owner = g_empty
+        and     pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) = 0;
+        
+        ut.expect(l_count, l_program || '#cleanup' || '#' || i_try).to_equal(0);
 $if cfg_pkg.c_debugging $then        
       exception
         when others
@@ -8340,11 +8249,14 @@ $if cfg_pkg.c_debugging $then
 $end          
       end;
 
-      /* step 2 */                     
-      utassert.eqqueryvalue(msg_in => l_program || '#no public synonyms' || '#' || i_try
-                           ,check_query_in => 'select count(*) from all_synonyms t where t.owner = ''PUBLIC'' and t.table_owner = ''' || l_schema || ''''
-                           ,against_value_in => 0
-                           ,raise_exc_in => g_raise_exc);
+      /* step 2 */
+      select  count(*)
+      into    l_count
+      from    all_synonyms t
+      where   t.owner = 'PUBLIC'
+      and     t.table_owner = l_schema;
+      
+      ut.expect(l_count, l_program || '#no public synonyms' || '#' || i_try).to_equal(0);
 
       /* step 3 */
       synchronize
@@ -8380,11 +8292,7 @@ $end
       remove_object_grants(l_diff_schema_ddl_tab);
       
       begin
-        utassert.eq(msg_in => l_program || '#verschillen' || '#' || i_try
-                   ,check_this_in => l_diff_schema_ddl_tab.count
-                   ,against_this_in => 0
-                   ,null_ok_in => true
-                   ,raise_exc_in => g_raise_exc);
+        ut.expect(l_diff_schema_ddl_tab.count, l_program || '#differences' || '#' || i_try).to_equal(0);
 $if cfg_pkg.c_debugging $then        
       exception
         when others
@@ -8439,69 +8347,6 @@ $if cfg_pkg.c_debugging $then
       raise;
 $end
   end ut_sort_objects_by_deps;
-
-  procedure ut_140681641
-  is
-    l_seq pls_integer := 0;
-    
-    l_program constant varchar2(61) := g_package_prefix || 'UT_140681641';
-  begin
-$if cfg_pkg.c_debugging $then
-    dbug.enter(l_program);
-$end
-
-    for r in
-    ( select  t.obj.id() as id
-      ,       t.obj.signature() as signature
-      from    table
-              ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
-                ( p_object_type => null
-                , p_object_names => null
-                , p_object_names_include => null
-                , p_schema_source => "<owner>"
-                , p_schema_target => "EMPTY"
-                , p_network_link_source => "<owner>"
-                , p_network_link_target => "EMPTY"
-                , p_skip_repeatables => 1
-                )
-              ) t
-      where   t.obj.object_type() in ('TABLE', 'CONSTRAINT', 'REF_CONSTRAINT', 'INDEX')
-      and     ( t.obj.object_name() in ('WORKORDER_TYPEPRICEAGREEMENTS', 'CUSTOMERPRICEAGREEMENTS') or
-                t.obj.base_object_name() in ('WORKORDER_TYPEPRICEAGREEMENTS', 'CUSTOMERPRICEAGREEMENTS') )
-      and     ( t.obj.object_type() <> 'REF_CONSTRAINT' or t.obj.signature() like '%:CUSTOMERPRICEAGREEMENTS' )
-    )
-    loop
-      l_seq := l_seq + 1;
-      
-$if cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'id: %s; seq: %s; signature: %s', r.id, l_seq, r.signature);
-$end
-      utassert.eq(msg_in => l_program || '#' || l_seq
-                 ,check_this_in => r.id
-                 ,against_this_in => case l_seq
-                                       when 1 then 'EMPTY:TABLE:WORKORDER_TYPEPRICEAGREEMENTS:::::::'
-                                       when 2 then 'EMPTY:TABLE:CUSTOMERPRICEAGREEMENTS:::::::'
-                                       when 3 then 'EMPTY:INDEX:WORKORDER_TYPEPRICEAGR_PK:EMPTY::WORKORDER_TYPEPRICEAGREEMENTS::::'
-                                       when 4 then 'EMPTY:INDEX:WORKORDER_TYPEPRICEAGR_IDX1:EMPTY::WORKORDER_TYPEPRICEAGREEMENTS::::'
-                                       when 5 then 'EMPTY:INDEX:CUSTOMERPRICEAGRM_PK:EMPTY::CUSTOMERPRICEAGREEMENTS::::'
-                                       when 6 then 'EMPTY:INDEX:CUSTOMERPRICEAGREEMENTS_IDX1:EMPTY::CUSTOMERPRICEAGREEMENTS::::'
-                                       when 7 then 'EMPTY:CONSTRAINT:WORKORDER_TYPEPRICEAGR_PK:EMPTY:TABLE:WORKORDER_TYPEPRICEAGREEMENTS::::'
-                                       when 8 then 'EMPTY:CONSTRAINT:CUSTOMERPRICEAGRM_PK:EMPTY:TABLE:CUSTOMERPRICEAGREEMENTS::::'
-                                       when 9 then 'EMPTY:REF_CONSTRAINT:WORKORDER_TYPEPRICEAGR_FK1:EMPTY:TABLE:WORKORDER_TYPEPRICEAGREEMENTS::::'
-                                     end
-                 ,null_ok_in => false
-                 ,raise_exc_in => g_raise_exc);
-    end loop;
-
-$if cfg_pkg.c_debugging $then
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end ut_140681641;
   
 $else -- $if cfg_pkg.c_testing $then
 
@@ -8566,12 +8411,6 @@ $else -- $if cfg_pkg.c_testing $then
     raise program_error;
   end ut_sort_objects_by_deps;
   
-  procedure ut_140681641
-  is
-  begin
-    raise program_error;  
-  end ut_140681641;
-
 $end -- $if cfg_pkg.c_testing $then
 
 begin

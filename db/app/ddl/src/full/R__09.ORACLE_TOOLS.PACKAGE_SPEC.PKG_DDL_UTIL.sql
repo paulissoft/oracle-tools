@@ -499,9 +499,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   procedure ut_sort_objects_by_deps;
 
-  -- Pivotal #140681641
-  procedure ut_140681641;
-
 end pkg_ddl_util;
 /
 
