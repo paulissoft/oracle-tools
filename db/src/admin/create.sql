@@ -10,15 +10,18 @@ define oracle_tools_password = &&oracle_tools_username
 
 accept oracle_tools_password prompt "Oracle tools password [&&oracle_tools_password] ? " default "&&oracle_tools_password" hide
 
-define tablespace_users = users
+define tablespace_users = USERS
 
 accept tablespace_users prompt "Default tablespace [&&tablespace_users] ? " default "&&tablespace_users"
 
-define tablespace_temp = temp
+define tablespace_temp = TEMP
 
 accept tablespace_temp prompt "Temporary tablespace [&&tablespace_temp] ? " default "&&tablespace_temp"
 
 create user &&oracle_tools_username -
 identified by "&&oracle_tools_password" -
 default tablespace &&tablespace_users -
-temporary tablespace &&tablespace_users;
+temporary tablespace &&tablespace_temp;
+
+alter user &&oracle_tools_username -
+quota unlimited on &&tablespace_users;
