@@ -1,7 +1,18 @@
 prompt --application/shared_components/user_interface/templates/region/tabs_container
 begin
+--   Manifest
+--     REGION TEMPLATE: TABS_CONTAINER
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(18353099091600147)
+ p_id=>wwv_flow_api.id(49625371253366412)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-TabsRegion #REGION_CSS_CLASSES# apex-tabs-region" #REGION_ATTRIBUTES# id="#REGION_STATIC_ID#">',
@@ -26,20 +37,21 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(18353731463600148)
-,p_plug_template_id=>wwv_flow_api.id(18353099091600147)
-,p_name=>'Tabs'
-,p_placeholder=>'SUB_REGIONS'
-,p_has_grid_support=>false
-,p_glv_new_row=>true
-);
-wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(18353455728600147)
-,p_plug_template_id=>wwv_flow_api.id(18353099091600147)
+ p_id=>wwv_flow_api.id(49625014616366412)
+,p_plug_template_id=>wwv_flow_api.id(49625371253366412)
 ,p_name=>'Region Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 );
+wwv_flow_api.create_plug_tmpl_display_point(
+ p_id=>wwv_flow_api.id(49624738881366411)
+,p_plug_template_id=>wwv_flow_api.id(49625371253366412)
+,p_name=>'Tabs'
+,p_placeholder=>'SUB_REGIONS'
+,p_has_grid_support=>false
+,p_glv_new_row=>true
+);
+wwv_flow_api.component_end;
 end;
 /

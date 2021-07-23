@@ -1,7 +1,18 @@
 prompt --application/shared_components/user_interface/templates/list/media_list
 begin
+--   Manifest
+--     REGION TEMPLATE: MEDIA_LIST
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(18385171475600165)
+ p_id=>wwv_flow_api.id(49593298869366394)
 ,p_list_template_current=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<li class="t-MediaList-item is-active #A04#">',
 '    <a href="#LINK#" class="t-MediaList-itemWrap #A05#" #A03#>',
@@ -47,5 +58,6 @@ wwv_flow_api.create_list_template(
 ,p_a06_label=>'Icon Color Class'
 ,p_reference_id=>2066548068783481421
 );
+wwv_flow_api.component_end;
 end;
 /

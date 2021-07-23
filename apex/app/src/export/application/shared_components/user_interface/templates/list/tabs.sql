@@ -1,7 +1,18 @@
 prompt --application/shared_components/user_interface/templates/list/tabs
 begin
+--   Manifest
+--     REGION TEMPLATE: TABS
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(18394257522600169)
+ p_id=>wwv_flow_api.id(49584212822366390)
 ,p_list_template_current=>'<li class="t-Tabs-item is-active"><a href="#LINK#" class="t-Tabs-link"><span class="t-Icon #ICON_CSS_CLASSES#"></span><span class="t-Tabs-label">#TEXT#</span></a></li>'
 ,p_list_template_noncurrent=>'<li class="t-Tabs-item"><a href="#LINK#" class="t-Tabs-link"><span class="t-Icon #ICON_CSS_CLASSES#"></span><span class="t-Tabs-label">#TEXT#</span></a></li>'
 ,p_list_template_name=>'Tabs'
@@ -14,5 +25,6 @@ wwv_flow_api.create_list_template(
 ,p_list_template_after_rows=>'</ul>'
 ,p_reference_id=>3288206686691809997
 );
+wwv_flow_api.component_end;
 end;
 /

@@ -1,7 +1,18 @@
 prompt --application/shared_components/user_interface/templates/list/navigation_bar
 begin
+--   Manifest
+--     REGION TEMPLATE: NAVIGATION_BAR
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(18389051277600167)
+ p_id=>wwv_flow_api.id(49589419067366392)
 ,p_list_template_current=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<li class="t-NavigationBar-item is-active #A02#">',
 '  <a class="t-Button t-Button--icon t-Button--header t-Button--navBar" href="#LINK#">',
@@ -40,5 +51,6 @@ wwv_flow_api.create_list_template(
 ,p_a02_label=>'List  Item CSS Classes'
 ,p_reference_id=>2846096252961119197
 );
+wwv_flow_api.component_end;
 end;
 /

@@ -1,5 +1,16 @@
 prompt --application/shared_components/files/loglevel_plugin_prefix_min_js
 begin
+--   Manifest
+--     APP STATIC FILES: 138
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.g_varchar2_table := wwv_flow_api.empty_varchar2_table;
 wwv_flow_api.g_varchar2_table(1) := '2166756E6374696F6E28652C74297B2266756E6374696F6E223D3D747970656F6620646566696E652626646566696E652E616D643F646566696E652874293A226F626A656374223D3D747970656F66206D6F64756C6526266D6F64756C652E6578706F72';
 wwv_flow_api.g_varchar2_table(2) := '74733F6D6F64756C652E6578706F7274733D7428293A652E7072656669783D742865297D28746869732C66756E6374696F6E2865297B2275736520737472696374223B766172206E2C742C613D7B74656D706C6174653A225B25745D20256C3A222C6C65';
@@ -20,11 +31,12 @@ wwv_flow_api.g_varchar2_table(16) := '6576656C2D706C7567696E2D707265666978206265
 wwv_flow_api.g_varchar2_table(17) := '7470733A2F2F6769746875622E636F6D2F6B7574756C756B2F6C6F676C6576656C2D706C7567696E2D7072656669782F626C6F622F6D61737465722F524541444D452E6D6422292C657D7D3B72657475726E2065262628743D652E7072656669782C722E';
 wwv_flow_api.g_varchar2_table(18) := '6E6F436F6E666C6963743D66756E6374696F6E28297B72657475726E20652E7072656669783D3D3D72262628652E7072656669783D74292C727D292C727D293B';
 wwv_flow_api.create_app_static_file(
- p_id=>wwv_flow_api.id(29808157112813383)
+ p_id=>wwv_flow_api.id(38170313232153176)
 ,p_file_name=>'loglevel-plugin-prefix.min.js'
 ,p_mime_type=>'application/javascript'
 ,p_file_charset=>'utf-8'
 ,p_file_content => wwv_flow_api.varchar2_to_blob(wwv_flow_api.g_varchar2_table)
 );
+wwv_flow_api.component_end;
 end;
 /

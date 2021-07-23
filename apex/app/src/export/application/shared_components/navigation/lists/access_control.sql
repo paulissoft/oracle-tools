@@ -1,13 +1,24 @@
 prompt --application/shared_components/navigation/lists/access_control
 begin
+--   Manifest
+--     LIST: Access Control
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(35790045557643886)
+ p_id=>wwv_flow_api.id(32188424787322673)
 ,p_name=>'Access Control'
 ,p_list_status=>'PUBLIC'
-,p_required_patch=>wwv_flow_api.id(35826634560644052)
+,p_required_patch=>wwv_flow_api.id(32151835784322507)
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(35789573954643885)
+ p_id=>wwv_flow_api.id(32188896390322674)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Users'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10031:&SESSION.::&DEBUG.:RP:::'
@@ -16,7 +27,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(35789200325643883)
+ p_id=>wwv_flow_api.id(32189270019322676)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Access Control'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10030:&SESSION.::&DEBUG.::::'
@@ -24,5 +35,6 @@ wwv_flow_api.create_list_item(
 ,p_list_text_01=>'Set level of access for authenticated users of this application'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
+wwv_flow_api.component_end;
 end;
 /

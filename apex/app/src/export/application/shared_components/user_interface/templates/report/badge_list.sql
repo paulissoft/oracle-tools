@@ -1,7 +1,18 @@
 prompt --application/shared_components/user_interface/templates/report/badge_list
 begin
+--   Manifest
+--     ROW TEMPLATE: BADGE_LIST
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_row_template(
- p_id=>wwv_flow_api.id(18365223381600155)
+ p_id=>wwv_flow_api.id(49613246963366404)
 ,p_row_template_name=>'Badge List'
 ,p_internal_name=>'BADGE_LIST'
 ,p_row_template1=>wwv_flow_string.join(wwv_flow_t_varchar2(
@@ -43,5 +54,6 @@ wwv_flow_api.create_row_template(
 ,p_reference_id=>2103197159775914759
 ,p_translate_this_template=>'N'
 );
+wwv_flow_api.component_end;
 end;
 /

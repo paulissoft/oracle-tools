@@ -84,12 +84,12 @@ This is an example file layout:
 
 ```
 .../projects/oracle-tools
-.../projects/your-project
+.../projects/YOUR-PROJECT
 ```
 
 #### Database POM
 
-The .../projects/your-project/db/pom.xml may have as parent:
+The .../projects/YOUR-PROJECT/db/pom.xml may have as parent:
 
 ```
 <parent>
@@ -102,7 +102,7 @@ The .../projects/your-project/db/pom.xml may have as parent:
 
 #### Apex POM
 
-The .../projects/your-project/apex/pom.xml may have as parent:
+The .../projects/YOUR-PROJECT/apex/pom.xml may have as parent:
 
 ```
 <parent>
@@ -117,7 +117,7 @@ The .../projects/your-project/apex/pom.xml may have as parent:
 
 #### Database POM
 
-The .../projects/your-project/db/pom.xml may have as parent:
+The .../projects/YOUR-PROJECT/db/pom.xml may have as parent:
 Add this to the Database POM:
 
 ```

@@ -1,7 +1,18 @@
 prompt --application/shared_components/user_interface/templates/list/menu_popup
 begin
+--   Manifest
+--     REGION TEMPLATE: MENU_POPUP
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_list_template(
- p_id=>wwv_flow_api.id(18395813860600169)
+ p_id=>wwv_flow_api.id(49582656484366390)
 ,p_list_template_current=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<li data-id="#A01#" data-disabled="#A02#" data-hide="#A03#" data-shortcut="#A05#" data-icon="#ICON_CSS_CLASSES#"><a href="#LINK#" title="#A04#">#TEXT_ESC_SC#</a></li>',
 ''))
@@ -35,5 +46,6 @@ wwv_flow_api.create_list_template(
 ,p_a05_label=>'Shortcut'
 ,p_reference_id=>3492264004432431646
 );
+wwv_flow_api.component_end;
 end;
 /

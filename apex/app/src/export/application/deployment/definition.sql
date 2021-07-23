@@ -1,7 +1,18 @@
 prompt --application/deployment/definition
 begin
+--   Manifest
+--     INSTALL: 138
+--   Manifest End
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>71778820537478575
+,p_default_owner=>'ORACLE_TOOLS'
+);
 wwv_flow_api.create_install(
- p_id=>wwv_flow_api.id(20417067577875682)
+ p_id=>wwv_flow_api.id(47561402767090877)
 ,p_welcome_message=>'This application installer will guide you through the process of creating your database objects and seed data.'
 ,p_configuration_message=>'You can configure the following attributes of your application.'
 ,p_build_options_message=>'You can choose to include the following build options.'
@@ -17,5 +28,6 @@ wwv_flow_api.create_install(
 ,p_required_sys_privs=>'CREATE PROCEDURE'
 ,p_required_names_available=>'EXT_LOAD_FILE_PKG'
 );
+wwv_flow_api.component_end;
 end;
 /
