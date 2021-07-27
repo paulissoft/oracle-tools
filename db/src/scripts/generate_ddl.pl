@@ -410,7 +410,6 @@ sub process_command_line ()
 
 sub process () {
     my $install_sql = ($skip_install_sql ? undef : "$output_directory/install.sql");
-        
     my $in;
 
     if (defined($input_file)) {
@@ -444,12 +443,14 @@ sub process () {
         open($fh, ">$encoding", $file) 
             or croak "ERROR: Can not write to '$file': $!";
     } else {
-        if ($remove_output_directory && defined($install_sql)) {
+        # GJP 2021-07-27  $remove_output_directory should not be a condition so put defined() around it
+        if (defined($remove_output_directory) && defined($install_sql)) {
             open($fh_install_sql, ">$encoding", $install_sql) 
                 or croak "ERROR: Can not write to '$install_sql': $!";
         }
     }
 
+    info("Skip install.sql: $skip_install_sql; install.sql: ", (defined $fh_install_sql ? $install_sql : ''));
 
     print_run_info($fh, 0)
         if (defined($fh));
