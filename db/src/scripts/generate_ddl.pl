@@ -806,7 +806,7 @@ sub open_file ($$$$)
 {
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists) = @_;
 
-    print $fh_install_sql "prompt \@$file\n\@$file\n"
+    print $fh_install_sql "prompt \@\@$file\n\@\@$file\n"
         if (defined $fh_install_sql);
 
     $file = File::Spec->catfile($output_directory, $file);
