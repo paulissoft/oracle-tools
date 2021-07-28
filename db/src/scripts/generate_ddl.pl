@@ -153,7 +153,7 @@ Show the version.
 
 =head1 AUTHOR
 
-Gert-Jan Paulissen, E<lt>g.paulissen@yellowstar.comE<gt>.
+Gert-Jan Paulissen, E<lt>gert.jan.paulissen@gmail.comE<gt>.
 
 =head1 VERSION
 
@@ -162,6 +162,11 @@ $Header$
 =head1 HISTORY
 
 =over 4
+
+=item 2021-07-28
+
+Version is now shown as the change date. All relevant command line options are
+printed to standard error on start up.
 
 =item 2017-05-10
 
@@ -241,17 +246,18 @@ use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
+my $install_sql_preamble_printed = 0;
     
 # command line options
-my $dynamic_sql = 0;
-my $force_view = 1;
+my $dynamic_sql = 0; # displayed in print_run_info()
+my $force_view = 1; # displayed in print_run_info()
 my $input_file = undef;
 my $output_directory = '.';
-my $remove_output_directory = 0;
+my $remove_output_directory = 0; # displayed in print_run_info()
 my $single_output_file = undef;
-my $skip_install_sql = 1;
-my $source_schema = '';
-my $strip_source_schema = 0;
+my $skip_install_sql = 1; # displayed in print_run_info()
+my $source_schema = ''; # displayed in print_run_info()
+my $strip_source_schema = 0; # displayed in print_run_info()
 my $verbose = ( exists($ENV{VERBOSE}) && $ENV{VERBOSE} =~ m/^\d+$/o ? $ENV{VERBOSE} : 0 );
 
 my $interface = undef;
@@ -325,7 +331,7 @@ my %object_type_info = (
     'PROCOBJ' => { expr => \@procobj_expr, seq => 30, repeatable => 0, plsql => 1 },
     );
 
-my $VERSION = sprintf "%d", q$Revision: 1099 $ =~ /(\d+)/g;
+my $VERSION = "2021-07-28";
 
     
 # PROTOTYPES
@@ -362,7 +368,9 @@ main();
 # SUBROUTINES
 
 sub main () {
+    info("\@ARGV: @ARGV");
     process_command_line();
+    print_run_info(\*STDERR, 0);
 
     process();
 }
@@ -449,8 +457,6 @@ sub process () {
                 or croak "ERROR: Can not write to '$install_sql': $!";
         }
     }
-
-    info("Skip install.sql: $skip_install_sql; install.sql: ", (defined $fh_install_sql ? $install_sql : ''));
 
     print_run_info($fh, 0)
         if (defined($fh));
@@ -806,6 +812,11 @@ sub open_file ($$$$)
 {
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists) = @_;
 
+    if (defined $fh_install_sql && !$install_sql_preamble_printed) {
+        print $fh_install_sql "whenever oserror exit failure\n";
+        $install_sql_preamble_printed = 1;
+    }
+    
     print $fh_install_sql "prompt \@\@$file\n\@\@$file\n"
         if (defined $fh_install_sql);
 
@@ -1243,6 +1254,7 @@ sub print_run_info ($$)
     print $fh sprintf(" --%s%s", ($remove_output_directory ? '' : 'no'), 'remove-output-directory');
     print $fh sprintf(" --%s%s", ($skip_install_sql ? '' : 'no'), 'skip-install-sql');
     print $fh " --source-schema=$source_schema" if (length($source_schema) > 0);
+    print $fh sprintf(" --%s%s", ($strip_source_schema ? '' : 'no'), 'strip-source-schema');
     print $fh ' */', "\n\n";
     print $fh "whenever sqlerror exit failure\nwhenever oserror exit failure\n\nset define off\n\n"
         if ($install);
