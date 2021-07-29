@@ -1220,7 +1220,10 @@ sub sql_statement_flush ($$$$$$)
             
     if ($terminator eq ';/') {
         # For type specifications
-        $sql_statement .= ";\n/";
+        # GJP 2021-07-29 No ;;\n/
+        my $last_ch = substr($sql_statement, length($sql_statement)-1);
+        
+        $sql_statement .= ($last_ch eq ';' ? "\n/" : ";\n/");
     } elsif ($terminator eq '/') {
         # close PL/SQL block
         $sql_statement .= "\n/";
