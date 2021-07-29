@@ -106,6 +106,7 @@
     <loadresource property="object.names.trimmed">
       <propertyresource name="object.names"/>
       <filterchain>
+        <striplinebreaks/>
         <tokenfilter>
           <deletecharacters chars=" \t\r\n" />
         </tokenfilter>
