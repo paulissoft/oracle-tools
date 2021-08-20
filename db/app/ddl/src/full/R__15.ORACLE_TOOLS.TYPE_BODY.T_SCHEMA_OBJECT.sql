@@ -793,6 +793,13 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 end chk;
 
+member function get_creation_date
+return date
+is
+begin
+  return null;
+end get_creation_date;
+
 end;
 /
 

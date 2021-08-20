@@ -181,6 +181,20 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 end chk;
 
+overriding member function get_creation_date
+return date
+is
+  l_creation_date date := null;  
+begin
+  select  c.last_change
+  into    l_creation_date
+  from    all_constraints c
+  where   c.owner = self.object_schema()
+  and     c.constraint_name = self.object_name();
+  
+  return l_creation_date;
+end get_creation_date;
+
 end;
 /
 

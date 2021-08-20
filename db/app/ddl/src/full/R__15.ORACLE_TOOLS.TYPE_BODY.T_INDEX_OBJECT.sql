@@ -130,10 +130,10 @@ begin
 
   -- select * from all_ind_columns where index_name IN ('MAINTENANCE_PK','ORDER_PK');
   --
-  -- INDEX_OWNER	INDEX_NAME	TABLE_OWNER	TABLE_NAME	COLUMN_NAME	COLUMN_POSITION
+  -- INDEX_OWNER  INDEX_NAME  TABLE_OWNER TABLE_NAME  COLUMN_NAME COLUMN_POSITION
   -- -----------        ----------      -----------     ----------      -----------     ---------------
-  -- <owner>	MAINTENANCE_PK	<owner>	MAINTENANCE	SEQ	        1
-  -- <owner>	ORDER_PK	<owner>	ORDERHEADER	SEQ	        1
+  -- <owner>  MAINTENANCE_PK  <owner> MAINTENANCE SEQ         1
+  -- <owner>  ORDER_PK  <owner> ORDERHEADER SEQ         1
 
   -- GPA 20170126
   -- The problem was that t_schema_object.id ignored base info for an INDEX
@@ -230,6 +230,21 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end chk;
+
+overriding member function get_creation_date
+return date
+is
+  l_creation_date date := null;
+begin
+  select  o.created
+  into    l_creation_date
+  from    all_objects o
+  where   o.owner = self.object_schema()
+  and     o.object_name = self.object_name()
+  and     o.object_type = self.dict_object_type();
+  
+  return l_creation_date;
+end get_creation_date;
 
 end;
 /

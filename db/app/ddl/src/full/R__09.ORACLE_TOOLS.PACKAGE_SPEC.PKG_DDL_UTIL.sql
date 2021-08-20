@@ -187,6 +187,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_object_names_include  Wat er moet gebeuren met de lijst van namen: include de lijst (1), exclude de lijst (0) of niet gebruiken en dus geen beperking opleggen (null)
   * @param p_network_link          De netwerk link
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+  * @param p_sort_objects_by_date  Sort objects in creation date order (unless p_sort_objects_by_deps equals true).
   *
   * @return Een lijst van DDL text plus informatie over object.
   */
@@ -199,6 +200,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
+  , p_sort_objects_by_date in t_numeric_boolean_nn default 0 -- >= 0, not null
   )
   return t_schema_ddl_tab
   pipelined;
@@ -440,6 +442,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_sort_objects_by_date in t_numeric_boolean_nn
   );
 
   /*
