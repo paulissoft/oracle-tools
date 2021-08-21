@@ -353,7 +353,7 @@
         <db.full.force.view>no</db.full.force.view>
         <!-- skip install.sql / uninstall.sql scripts during a full generation? -->
         <db.full.skip.install.sql>yes</db.full.skip.install.sql>
-        <db.full.interface>pkg_ddl_util v4</db.full.interface> <!-- pkg_datapump_util -->
+        <db.full.interface>pkg_ddl_util v5</db.full.interface> <!-- pkg_datapump_util -->
         <db.generate.ddl.full.skip>${db.install.skip}</db.generate.ddl.full.skip>
       </properties>
       <build>
@@ -412,7 +412,7 @@
         <db.incr.dynamic.sql>no</db.incr.dynamic.sql>
         <!-- skip repeatable/replaceable objects in incremental migration scripts? -->
         <db.incr.skip.repeatables>yes</db.incr.skip.repeatables>
-        <db.incr.interface>pkg_ddl_util v4</db.incr.interface> <!-- pkg_datapump_util -->
+        <db.incr.interface>pkg_ddl_util v5</db.incr.interface> <!-- pkg_datapump_util -->
         <db.generate.ddl.incr.skip>${db.install.skip}</db.generate.ddl.incr.skip>
       </properties>
       <build>

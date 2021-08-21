@@ -18,6 +18,7 @@ as
 
   -- to reduce typos we use constant identifiers
   "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4'; -- pkg_ddl_util
+  "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5'; -- pkg_ddl_util
   "pkg_datapump_util" constant varchar2(30 char) := 'pkg_datapump_util';
 
   -- try the interfaces in this order
@@ -28,8 +29,8 @@ as
       then
         case
           when pi_target_schema is not null -- for comparison the new interface should be used
-          then sys.odcivarchar2list("pkg_ddl_util v4")
-          else sys.odcivarchar2list("pkg_ddl_util v4"/*, "pkg_datapump_util"*/)
+          then sys.odcivarchar2list("pkg_ddl_util v4", "pkg_ddl_util v5")
+          else sys.odcivarchar2list("pkg_ddl_util v4", "pkg_ddl_util v5"/*, "pkg_datapump_util"*/)
         end
       else sys.odcivarchar2list(pi_interface)
     end;
@@ -81,9 +82,9 @@ $end
   for i_interface_idx in l_interface_tab.first .. l_interface_tab.last
   loop
     begin
-      if l_interface_tab(i_interface_idx) in ("pkg_ddl_util v4")
+      if l_interface_tab(i_interface_idx) in ("pkg_ddl_util v4", "pkg_ddl_util v5")
       then
-        if l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" and pi_target_schema is null
+        if pi_target_schema is null
         then
           -- enable object valid checks
           oracle_tools.pkg_ddl_util.execute_ddl
@@ -118,6 +119,7 @@ $if dbms_db_version.version > 10 $then
                       , p_object_names_include => pi_object_names_include
                       , p_network_link => pi_source_database_link
                       , p_grantor_is_schema => 0
+                      , p_sort_objects_by_date => case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
                       )
 $else
                       ( pi_source_schema
@@ -128,13 +130,13 @@ $else
                       , pi_object_names_include
                       , pi_source_database_link
                       , 0
+                      , case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
                       )
 $end
                     ) t
           ,         table(t.ddl_tab) u
           ;
-        elsif l_interface_tab(i_interface_idx) = "pkg_ddl_util v4"
-        then
+        else
           -- incremental DDL because target schema is not empty
           open l_cursor for
             select  '-- ddl info: ' ||

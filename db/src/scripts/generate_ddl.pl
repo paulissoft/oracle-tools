@@ -236,11 +236,8 @@ use utf8;
 use warnings;
 
 # CONSTANTS
-use constant PKG_DATAPUMP_UTIL => 'pkg_datapump_util';
-use constant PKG_DDL_UTIL_V1 => 'pkg_ddl_util v1';
-use constant PKG_DDL_UTIL_V2 => 'pkg_ddl_util v2';
-use constant PKG_DDL_UTIL_V3 => 'pkg_ddl_util v3';
 use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
+use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 
 # VARIABLES
 
@@ -330,6 +327,8 @@ my %object_type_info = (
     # 'XMLSCHEMA' => { seq => 29, repeatable => 0 },
     'PROCOBJ' => { expr => \@procobj_expr, seq => 30, repeatable => 0, plsql => 1 },
     );
+
+my %object_files_names = ();
 
 my $VERSION = "2021-07-28";
 
@@ -431,7 +430,13 @@ sub process () {
         # Only when a complete new tree is created, the install.sql and install.txt scripts are reliable.
         # Because when the tree is not removed, the user may just create a single script and not the whole tree.
         remove_tree($output_directory, { verbose => 0 });
+    } else {
+        # GJP 2021-08-21
+        my @flyway_files = grep { -e $_ && m/ˆ(R__)?(\d{2}|\d{4})\./ } glob(File::Spec->catfile($output_directory, '*.sql'));
+        
+        unlink(@flyway_files);
     }
+    
     # always make the output directory
     make_path($output_directory, { verbose => 0 });
 
@@ -466,26 +471,19 @@ sub process () {
     my %sql_statements = (); # for each object (or file) it contains the DDL statements (an array) where a statement is also an array
     my %ddl_no;
 
-    # interface pkg_ddl_util v1
-    my $nr_lines_per_record = 11;
-    my $sql_line = '';
-    
-    # interface pkg_ddl_util v1 till v4
+    # interface pkg_ddl_util v4 till v5
     my $object = undef;
     my ($object_schema, $object_type, $object_name, $ddl_no, $line_no);
 
-    # interface pkg_ddl_util v2 till v4
+    # interface pkg_ddl_util v4 till v5
     my ($base_object_schema, $base_object_type, $base_object_name, $ddl_info);
-
-    # interface pkg_datapump_util
-    my @object_type_lines;
 
     eval {
         # GPA 2016-11-17 There may be some debugging output before the interface line, so be aware
         #
         # read interface (first line with '-- ')
         #
-        my $interface_expr = '^-- (' . PKG_DATAPUMP_UTIL . '|' . PKG_DDL_UTIL_V1 . '|' . PKG_DDL_UTIL_V2 . '|' . PKG_DDL_UTIL_V3 . '|' . PKG_DDL_UTIL_V4 . ')$';
+        my $interface_expr = '^-- (' . PKG_DDL_UTIL_V4 . '|' . PKG_DDL_UTIL_V5 . ')$';
         
       INTERFACE:
         while (defined(my $line = <$in>)) {
@@ -505,11 +503,8 @@ sub process () {
         $interface = '' unless defined($interface);
         
         croak "Unknown interface: $interface"
-            unless ( $interface eq PKG_DATAPUMP_UTIL ||
-                     $interface eq PKG_DDL_UTIL_V1 ||
-                     $interface eq PKG_DDL_UTIL_V2 ||
-                     $interface eq PKG_DDL_UTIL_V3 ||
-                     $interface eq PKG_DDL_UTIL_V4 );
+            unless ( $interface eq PKG_DDL_UTIL_V4 ||
+                     $interface eq PKG_DDL_UTIL_V5 );
 
         # reset the line number back to 0 since the interface line may not be the first
         $. = 0; # $. = $. - 1;
@@ -524,52 +519,7 @@ sub process () {
 
             # $. starts from 1
 
-            if ($interface eq PKG_DATAPUMP_UTIL) {
-                if ($line =~ m/^-- new object type path( is)?: (?<object_type_path>\S+)$/o) {
-                    # process previous block (if any)
-                    process_object_type($object_type, \@object_type_lines, \%ddl_no, \%sql_statements);
-
-                    my $object_type_path = $+{object_type_path};
-                    
-                    $object_type = basename($object_type_path);
-                } elsif (!($line =~ qr/^\s*--\s*CONNECT\s+$id_expr/)) {
-                    push(@object_type_lines, $line)
-                        if defined($object_type);
-                }
-            } elsif ($interface eq PKG_DDL_UTIL_V1) {
-                if (($. - 1) % $nr_lines_per_record == 0) {
-                    debug("new object line");
-
-                    die "EOF" unless length($line) > 0;
-                    
-                    croak "ERROR: object line $.:\n$line\n"
-                        unless ($line =~ m/($id_expr)\s*;($id_expr)\s*;($id_expr)\s*;($id_expr)?\s*;\s*(\d+)\s*;\s*(\d+)\s*$/o);
-
-                    ($object_schema, $object_type, $object_name, my $grantee, undef, $line_no) = ($1, $2, $3, $4, $5, $6, $7);
-
-                    $object = get_object($object_schema, $object_type, $object_name);
-
-                    $ddl_no = $ddl_no{$object}++
-                        if ($line_no == 1);
-                } elsif (($. - 1) % $nr_lines_per_record <= $nr_lines_per_record - 2) {
-                    debug(sprintf("text%d", (($. - 1) % $nr_lines_per_record)));
-
-                    # In order to recreate lines with whitespace at the end, we need to know the exact length of each text column.
-                    croak "ERROR: text line $.:\n$line\n"
-                        unless ($line =~ m/^\s*(\d+)\s*;(.*)$/o);
-
-                    my ($text_length, $text) = ($1, $2);
-                    # text1, text2 till text9 must be appended to form one text
-                    $sql_line .= substr($text . (' ' x 4000), 0, $text_length);
-                } else {
-                    debug(sprintf("text%d", (($. - 1) % $nr_lines_per_record)));
-
-                    beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no, \$sql_line);
-
-                    # take into account optional whitespace at the end
-                    sql_statement_add(\$sql_line, \%sql_statements, $object, $ddl_no);
-                }
-            } elsif ($interface eq PKG_DDL_UTIL_V2 || $interface eq PKG_DDL_UTIL_V3 || $interface eq PKG_DDL_UTIL_V4) {
+            if ($interface eq PKG_DDL_UTIL_V4 || $interface eq PKG_DDL_UTIL_V5) {
                 if ($line =~ m/^-- ddl info:\s*(?<ddl_info>\S.+)$/o) {
                     # Since all the grantees for one object will be saved in one file, we must determine the ddl# ourselves.
                     $ddl_info = $+{ddl_info};
@@ -605,11 +555,6 @@ sub process () {
             warn $@;
             croak "ERROR: Could not generate DDL\n";
         }
-    }
-
-    if ($interface eq PKG_DATAPUMP_UTIL) {
-        # process last block (if any)
-        process_object_type($object_type, \@object_type_lines, \%ddl_no, \%sql_statements);
     }
 
     debug(Data::Dumper->Dump([%sql_statements], [qw(sql_statements)]));
@@ -799,13 +744,25 @@ sub object_file_name ($$$)
     croak "\$object_type_info{$object_type}->{'seq'} does not exist" unless exists($object_type_info{$object_type}->{'seq'});
     croak "\$object_schema undefined" unless defined($object_schema);
     croak "\$object_name undefined" unless defined($object_name);
+
+    my $object_file_name_key = join('.', $object_schema, $object_type, $object_name);
+    my $object_file_name;
+    my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
+
+    if (!exists($object_file_names{$object_file_name_key})) {
+        $object_file_name = 
+            uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
+                       ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
+                       ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : keys %object_file_names + 1),
+                       (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
+                       $object_type,
+                       $object_name)) . '.sql';
+        $object_file_names{$object_file_name_key} = $object_file_name;
+    } else {
+        $object_file_name = $object_file_names{$object_file_name_key};
+    }   
     
-    return uc(sprintf("%s%02d.%s%s.%s", 
-                      ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                      $object_type_info{$object_type}->{'seq'},
-                      (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
-                      $object_type,
-                      $object_name)) . '.sql';
+    return $object_file_name;
 }
 
 sub open_file ($$$$)
@@ -867,23 +824,9 @@ sub sort_sql_statements ($$$) {
     my ($r_sql_statements, $a, $b) = @_;
     my $result;
 
-    if ($interface eq PKG_DATAPUMP_UTIL) {
-        my ($object_schema_a, $object_type_a, $object_name_a) = split(/:/, $a);
-        my ($object_schema_b, $object_type_b, $object_name_b) = split(/:/, $b);
+    # just sort by sequence
+    $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
 
-        $result = ($object_schema_a cmp $object_schema_b);
-
-        return $result unless $result == 0;
-
-        $result = ($object_type_info{$object_type_a}->{'seq'} <=> $object_type_info{$object_type_b}->{'seq'});
-
-        return $result unless $result == 0;
-
-        $result = ($object_name_a cmp $object_name_b);
-    } else {
-        # just sort by sequence
-        $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
-    }
     return $result;
 }
 
@@ -1048,7 +991,7 @@ sub sql_statement_flush ($$$$$$)
 
     # If the sql terminator must not be added, i.e. it is already there 
     # we must strip it first because Flyway may expect a different one.
-    for my $try ( ($interface eq PKG_DDL_UTIL_V1 or $interface eq PKG_DDL_UTIL_V4 ? 1 : 0) .. 1 ) {
+    for my $try ( ($interface eq PKG_DDL_UTIL_V4 or $interface eq PKG_DDL_UTIL_V5 ? 1 : 0) .. 1 ) {
         remove_trailing_empty_lines($r_sql_statement);
 
         if ($try == 0) {

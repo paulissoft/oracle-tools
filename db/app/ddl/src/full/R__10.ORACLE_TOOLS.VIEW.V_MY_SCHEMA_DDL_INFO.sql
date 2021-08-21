@@ -22,6 +22,7 @@ from    table
           , null -- p_object_names_include
           , null -- p_network_link
           , 0    -- p_grantor_is_schema
+          , 0    -- p_sort_objects_by_date
           )
         ) t
 ,       table(t.ddl_tab) u;

@@ -45,7 +45,7 @@
     - full.skip.install.sql
     Skip generating (un)install.sql script during a full generation?
     - full.interface
-    The full interface (pkg_ddl_util v4/pkg_datapump_util).
+    The full interface (pkg_ddl_util v4/pkg_ddl_util v5).
     - full.strip.source.schema
     Must we strip the object schema from the file name and DDL statement if it is equal to the source schema?
 
@@ -59,7 +59,7 @@
     - incr.skip.repeatables
     Skip repeatable/replaceable objects in incremental migration scripts?
     - incr.interface
-    The incremental interface (pkg_ddl_util v4).
+    The incremental interface (pkg_ddl_util v4/pkg_ddl_util v5).
 
   </description>
 
@@ -183,7 +183,7 @@
     <define-perl-property property="full.skip.install.sql" default="yes"/>
     <define-perl-property property="full.strip.source.schema" default="no"/>
 
-    <property name="full.interface" value="pkg_ddl_util v4"/>
+    <property name="full.interface" value="pkg_ddl_util v5"/>
 
     <condition property="full.skip.uninstall.sql" value="true" else="false">
       <not>
@@ -247,7 +247,7 @@ Z       Time zone               RFC 822 time zone   -0800
 
     <mkdir dir="${incr.output.directory}"/>
 
-    <property name="incr.interface" value="pkg_ddl_util v4"/>
+    <property name="incr.interface" value="pkg_ddl_util v5"/>
 
     <echoproperties prefix="perl." />
     <echoproperties prefix="incr." />
