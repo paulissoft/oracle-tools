@@ -1152,12 +1152,15 @@ sub sql_statement_flush ($$$$$$)
         } else {
             # Only the first statement is relevant. Statement 2 and further are never create or replace statements
 
+            debug("\$ddl_no:", $ddl_no, "; \$object_type:", $object_type);
+            debug("object type terminator:", (exists($object_type_info{$object_type}->{'terminator'}) ? $object_type_info{$object_type}->{'terminator'} : 'UNKNOWN'));
+            debug("object type plsql:", (exists($object_type_info{$object_type}->{'plsql'}) ? $object_type_info{$object_type}->{'plsql'} : 'UNKNOWN'));
+
             # GPA 2016-11-14 #133852433 Object grants should be ignored when they return an error during an installation.
             if ( $ddl_no == 0 && exists($object_type_info{$object_type}->{'terminator'}) ) {
                 $terminator = $object_type_info{$object_type}->{'terminator'};
-            } elsif ( $ddl_no == 0 && exists($object_type_info{$object_type}->{'plsql'}) ) {
-                $terminator = '/'
-                    if ( $object_type_info{$object_type}->{'plsql'} );
+            } elsif ( $ddl_no == 0 && exists($object_type_info{$object_type}->{'plsql'}) && $object_type_info{$object_type}->{'plsql'} ) {
+                $terminator = '/';
             } elsif ( $r_sql_statement->[scalar(@$r_sql_statement)-1] =~ m/;\s*$/i ) {
                 # Is it a PL/SQL statement, i.e. last line ends with a semi-colon (and maybe some whitespace)
                 $terminator = '/';
