@@ -106,8 +106,7 @@
     <loadresource property="object.names.trimmed">
       <propertyresource name="object.names"/>
       <filterchain>
-        <!-- tokenfilter with chars=" \t\r\n" does not seem to replace \r nor \n so use striplinebreaks -->
-        <striplinebreaks/>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
         <tokenfilter>
           <deletecharacters chars=" \t" />
         </tokenfilter>

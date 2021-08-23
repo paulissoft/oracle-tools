@@ -16,6 +16,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_TRIGGER_OBJECT" authid current_user under t_depend
   , p_schema in varchar2
   )
 )
-final;
+final
+ alter type "ORACLE_TOOLS"."T_TRIGGER_OBJECT" 
+add overriding member function get_creation_date return date cascade;
 /
 

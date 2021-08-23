@@ -38,6 +38,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_INDEX_OBJECT" authid current_user under t_dependen
   , p_schema in varchar2
   )
 )
-final;
+final
+ alter type "ORACLE_TOOLS"."T_INDEX_OBJECT" 
+add overriding member function get_creation_date return date cascade;
 /
 

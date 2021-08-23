@@ -19,6 +19,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_NAMED_OBJECT" authid current_user under t_schema_o
   )
 )
 not instantiable
-not final;
+not final
+ alter type "ORACLE_TOOLS"."T_NAMED_OBJECT" 
+add overriding member function get_creation_date return date cascade;
 /
 

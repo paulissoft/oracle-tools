@@ -96,6 +96,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
 , member function base_dict_object_type return varchar2 deterministic
 )
 not instantiable
-not final;
+not final
+ alter type "ORACLE_TOOLS"."T_SCHEMA_OBJECT" 
+add member function get_creation_date return date cascade;
 /
 

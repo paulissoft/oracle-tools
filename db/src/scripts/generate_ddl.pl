@@ -234,7 +234,8 @@ use Pod::Usage;
 use strict;
 use utf8;
 use warnings;
-
+use Storable qw(nstore retrieve);
+ 
 # CONSTANTS
 use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
@@ -328,7 +329,7 @@ my %object_type_info = (
     'PROCOBJ' => { expr => \@procobj_expr, seq => 30, repeatable => 0, plsql => 1 },
     );
 
-my %object_files_names = ();
+my $object_seq = undef;
 
 my $VERSION = "2021-07-28";
 
@@ -416,7 +417,8 @@ sub process_command_line ()
 }
 
 sub process () {
-    my $install_sql = ($skip_install_sql ? undef : "$output_directory/install.sql");
+    my $install_sql = ($skip_install_sql ? undef : File::Spec->catfile($output_directory, 'install.sql'));
+    my $install_txt = File::Spec->catfile($output_directory, 'install.txt');
     my $in;
 
     if (defined($input_file)) {
@@ -427,7 +429,7 @@ sub process () {
     }
 
     if ($remove_output_directory) {
-        # Only when a complete new tree is created, the install.sql and install.txt scripts are reliable.
+        # Only when a complete new tree is created, the install.sql script is reliable.
         # Because when the tree is not removed, the user may just create a single script and not the whole tree.
         remove_tree($output_directory, { verbose => 0 });
     } else {
@@ -436,7 +438,14 @@ sub process () {
         
         unlink(@flyway_files);
     }
-    
+
+    # read previous object sequence numbers
+    $object_seq = ( -e $install_txt ? retrieve($install_txt) : undef );   # There is NO nretrieve()
+
+    if (!defined($object_seq)) {
+        $object_seq = {};
+    }
+
     # always make the output directory
     make_path($output_directory, { verbose => 0 });
 
@@ -571,6 +580,9 @@ sub process () {
     if (defined($single_output_file) && $single_output_file =~ m/\@nr\@/) {
         split_single_output_file($file);
     }
+
+    # save the install database in network order (portabl amongst any O/S)
+    nstore($object_seq, $install_txt);
 }
 
 sub process_object_type ($$$$)
@@ -745,22 +757,20 @@ sub object_file_name ($$$)
     croak "\$object_schema undefined" unless defined($object_schema);
     croak "\$object_name undefined" unless defined($object_name);
 
-    my $object_file_name_key = join('.', $object_schema, $object_type, $object_name);
+    my $object_seq_key = join('.', $object_schema, $object_type, $object_name);
     my $object_file_name;
     my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
-    if (!exists($object_file_names{$object_file_name_key})) {
-        $object_file_name = 
-            uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
-                       ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                       ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : keys %object_file_names + 1),
-                       (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
-                       $object_type,
-                       $object_name)) . '.sql';
-        $object_file_names{$object_file_name_key} = $object_file_name;
-    } else {
-        $object_file_name = $object_file_names{$object_file_name_key};
-    }   
+    if (!exists($object_seq->{$object_seq_key})) {
+        $object_seq->{$object_seq_key} = keys(%$object_seq) + 1;
+    }
+    $object_file_name = 
+        uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
+                   ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
+                   ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : $object_seq->{$object_seq_key}),
+                   (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
+                   $object_type,
+                   $object_name)) . '.sql';
     
     return $object_file_name;
 }
@@ -1257,13 +1267,13 @@ sub beautify_line ($$$$$$) {
     if ($line_no == 1) {
         if ($object_type eq 'VIEW') {
             $$r_line =~ s/\s+DEFAULT COLLATION "USING_NLS_COMP"//g;
+            $$r_line =~ s/\s+FORCE\s+/ /i
+                if (!$force_view); 
+            $$r_line =~ s/\s+(as\s*)$/' ' . $1/ie;
         } elsif ($object_type_info{$object_type}->{'repeatable'}) {
             # create => create or replace
             $$r_line =~ s/^\s*CREATE\s+/CREATE OR REPLACE /i
                 unless $$r_line =~ m/^\s*CREATE\s+OR\s+REPLACE\b/i;
-            
-            $$r_line =~ s/\s+FORCE\s+/ /i
-                if (!$force_view); 
         } elsif ($object_type eq 'TYPE_SPEC') {
             # create or replace => create (TYPE)
             $$r_line =~ s/^\s*CREATE\s+OR\s+REPLACE\s+/CREATE /i;
