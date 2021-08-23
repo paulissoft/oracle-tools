@@ -810,7 +810,7 @@ sub open_file ($$$$)
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists) = @_;
 
     if (defined $fh_install_sql && !$install_sql_preamble_printed) {
-        print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\n\n";
+        print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
         $install_sql_preamble_printed = 1;
     }
     
