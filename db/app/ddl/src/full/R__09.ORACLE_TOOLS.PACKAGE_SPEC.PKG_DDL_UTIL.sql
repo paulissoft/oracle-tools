@@ -27,7 +27,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_testing constant boolean := true; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
   -- pivotal issues
-  
+
   -- GPA 2017-02-01 #138707615 named not null constraints are recreated
   c_#138707615_1 constant boolean := true;
 
@@ -92,7 +92,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   /* TYPES */
   subtype t_dict_object_type is all_objects.object_type%type; 
   subtype t_dict_object_type_nn is t_dict_object_type not null;
-  
+
   subtype t_metadata_object_type is varchar2(30 char); -- langer dan all_objects.object_type%type
   subtype t_metadata_object_type_nn is t_metadata_object_type not null;
 
@@ -111,10 +111,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   subtype t_object_names is varchar2(4000 char);
   subtype t_object_names_nn is t_object_names not null;
-  
+
   subtype t_network_link is all_db_links.db_link%type;
   subtype t_network_link_nn is t_network_link not null;
-  
+
   /**
   *
   * Get a sorted dependency list sorted by the least number of dependencies first.
@@ -211,7 +211,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_skip_repeatables in t_numeric_boolean
   , p_schema_ddl out nocopy t_schema_ddl
   );
-  
+
   /**
   * Deze functie toont DDL om van een source schema naar target schema te migreren.
   *
@@ -484,7 +484,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_type in t_metadata_object_type default null
   )
   return clob;
-  
+
   -- test functions
   procedure ut_setup;
   procedure ut_teardown;

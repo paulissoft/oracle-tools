@@ -48,7 +48,7 @@ $end
                 '"'
     , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
-    
+
     -- the table indexes will become unusable after the move tablespace so rebuild them (dynamically)
     self.add_ddl
     ( p_verb => 'ALTER'
@@ -174,7 +174,7 @@ $end
   , p_text => 'DROP ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name() || ' PURGE'
   , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end

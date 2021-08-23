@@ -102,7 +102,7 @@ $end
     , p_verb => p_verb
     , p_text => p_text
     );
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
@@ -152,13 +152,13 @@ $end
   case
     when p_schema_ddl is null
     then l_result := null;
-    
+
     -- use the map function for the object
     when self.obj < p_schema_ddl.obj
     then l_result := -1;
     when self.obj > p_schema_ddl.obj
     then l_result := +1;
-    
+
     -- objects the same
     else
       l_count1 := self.ddl_tab.count;
@@ -272,7 +272,7 @@ $end
   , p_text => 'DROP ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name()
   , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end

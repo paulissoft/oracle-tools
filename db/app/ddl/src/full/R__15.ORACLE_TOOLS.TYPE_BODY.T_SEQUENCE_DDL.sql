@@ -18,7 +18,7 @@ $end
     , /*p_verb => */p_verb
     , /*p_text => */p_text
     );
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end

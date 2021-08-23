@@ -43,8 +43,6 @@ as
 
   c_fetch_limit constant pls_integer := 100;
 
-  c_sort_objects_by_deps constant integer := case when pi_target_schema is not null then 1 else 0 end;
-
   l_buffer varchar2(32767 char) := null;
 
   -- dbms_application_info stuff
@@ -113,7 +111,7 @@ $end
 $if dbms_db_version.version > 10 $then
                       ( p_schema => pi_source_schema
                       , p_new_schema => null
-                      , p_sort_objects_by_deps => c_sort_objects_by_deps
+                      , p_sort_objects_by_deps => case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
                       , p_object_type => pi_object_type
                       , p_object_names => pi_object_names
                       , p_object_names_include => pi_object_names_include
@@ -124,7 +122,7 @@ $if dbms_db_version.version > 10 $then
 $else
                       ( pi_source_schema
                       , null
-                      , 1
+                      , case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
                       , pi_object_type
                       , pi_object_names
                       , pi_object_names_include

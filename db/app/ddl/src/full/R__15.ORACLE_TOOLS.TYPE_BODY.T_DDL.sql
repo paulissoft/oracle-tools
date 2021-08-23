@@ -23,7 +23,7 @@ $end
 
   return;
 end;  
-  
+
 member function verb
 return varchar2
 deterministic
@@ -136,9 +136,9 @@ $end
     then
       self.text_to_compare(l_text1_tab);
       p_ddl.text_to_compare(l_text2_tab);
-      
+
       l_idx := l_text1_tab.first;
-      
+
       loop
         exit when l_idx is null or l_result != 0;
 

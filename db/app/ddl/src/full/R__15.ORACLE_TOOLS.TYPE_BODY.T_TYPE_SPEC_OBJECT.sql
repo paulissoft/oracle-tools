@@ -28,7 +28,7 @@ $end
 
   return;
 end;
-  
+
 overriding member function object_type
 return varchar2
 deterministic

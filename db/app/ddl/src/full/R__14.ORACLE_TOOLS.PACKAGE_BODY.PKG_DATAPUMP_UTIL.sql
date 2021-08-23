@@ -627,7 +627,7 @@ $end
     for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
     loop
       l_value := q'[NOT LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']';
-      
+
 $if cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'l_value: %s', l_value);
 $end

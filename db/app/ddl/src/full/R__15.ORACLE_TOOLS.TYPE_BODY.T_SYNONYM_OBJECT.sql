@@ -97,7 +97,7 @@ $end
     else
       raise_application_error(-20000, 'Object schema must be ' || p_schema || ' for a private synonym');
     end if;
-    
+
     pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
   end if;
 
@@ -117,7 +117,7 @@ begin
   where   o.owner = self.object_schema()
   and     o.object_name = self.object_name()
   and     o.object_type = self.dict_object_type();
-  
+
   return l_creation_date;
 end get_creation_date;
 

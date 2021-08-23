@@ -67,7 +67,7 @@ $if pkg_ddl_util.c_#138707615_2 $then
               --
               -- Simple solution: KEEP the INDEX
               --
-              
+
               case l_constraint_object.constraint_type()
                 when 'P' -- primary key
                 then ' DROP PRIMARY KEY KEEP INDEX'
@@ -101,7 +101,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
 $if pkg_ddl_util.c_#138707615_2 $then
-                        
+
   -- Primary/unique constraints with USING INDEX syntax may fail.
   --
   -- a) This may fail when the index is already there:

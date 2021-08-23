@@ -44,7 +44,7 @@ $end
     then
       self.column_names$ := nvl(p_column_names, t_constraint_object.get_column_names(p_object_schema, p_object_name, p_base_object.object_name));
       self.search_condition$ := null;
-      
+
     when self.constraint_type$ in ('C')
     then
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -55,7 +55,7 @@ $end
       self.column_names$ := null;
       self.search_condition$ := dbms_utility.get_hash_value(l_search_condition, 37, 1073741824);
   end case;
-  
+
   return;
 end;
 
@@ -191,7 +191,7 @@ begin
   from    all_constraints c
   where   c.owner = self.object_schema()
   and     c.constraint_name = self.object_name();
-  
+
   return l_creation_date;
 end get_creation_date;
 

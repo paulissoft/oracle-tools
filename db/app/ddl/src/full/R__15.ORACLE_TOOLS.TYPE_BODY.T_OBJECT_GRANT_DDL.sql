@@ -128,7 +128,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
     null;
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   when others
   then

@@ -234,7 +234,6 @@ use Pod::Usage;
 use strict;
 use utf8;
 use warnings;
-use Storable qw(nstore retrieve);
  
 # CONSTANTS
 use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
@@ -329,7 +328,7 @@ my %object_type_info = (
     'PROCOBJ' => { expr => \@procobj_expr, seq => 30, repeatable => 0, plsql => 1 },
     );
 
-my $object_seq = undef;
+my %object_seq = ();
 
 my $VERSION = "2021-07-28";
 
@@ -418,7 +417,7 @@ sub process_command_line ()
 
 sub process () {
     my $install_sql = ($skip_install_sql ? undef : File::Spec->catfile($output_directory, 'install.sql'));
-    my $install_txt = File::Spec->catfile($output_directory, 'install.txt');
+    my $install_sequence_txt = File::Spec->catfile($output_directory, 'install_sequence.txt');
     my $in;
 
     if (defined($input_file)) {
@@ -439,11 +438,25 @@ sub process () {
         unlink(@flyway_files);
     }
 
+    my $fh_seq = undef;
+    
     # read previous object sequence numbers
-    $object_seq = ( -e $install_txt ? retrieve($install_txt) : undef );   # There is NO nretrieve()
+    if ( -e $install_sequence_txt ) {
+        open($fh_seq, '<', $install_sequence_txt)
+            or croak "ERROR: Can not open '$install_sequence_txt': $!";
 
-    if (!defined($object_seq)) {
-        $object_seq = {};
+        my $line_nr = 0;
+        
+        while (<$fh_seq>) {
+            if (m/^(.*)\.(.*)\.(.*)$/) {
+                chomp;
+                croak "ERROR: Object must be unique: $_"
+                    if exists($object_seq{$_});
+                $object_seq{$_} = ++$line_nr;
+            }
+        }
+        close $fh_seq;
+        $fh_seq = undef;
     }
 
     # always make the output directory
@@ -581,8 +594,15 @@ sub process () {
         split_single_output_file($file);
     }
 
-    # save the install database in network order (portabl amongst any O/S)
-    nstore($object_seq, $install_txt);
+    open($fh_seq, '>', $install_sequence_txt)
+        or croak "ERROR: Can not write '$install_sequence_txt': $!";
+
+    print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
+    print $fh_seq "-- DO NEVER REMOVE LINES BELOW BUT YOU MAY CHANGE THE ORDER OR ADD LINES (AT THE END)\n";
+    foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
+        print $fh_seq "$object\n";
+    }
+    close $fh_seq;
 }
 
 sub process_object_type ($$$$)
@@ -761,13 +781,13 @@ sub object_file_name ($$$)
     my $object_file_name;
     my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
-    if (!exists($object_seq->{$object_seq_key})) {
-        $object_seq->{$object_seq_key} = keys(%$object_seq) + 1;
+    if (!exists($object_seq{$object_seq_key})) {
+        $object_seq{$object_seq_key} = keys(%object_seq) + 1;
     }
     $object_file_name = 
         uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
                    ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                   ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : $object_seq->{$object_seq_key}),
+                   ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : $object_seq{$object_seq_key}),
                    (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
                    $object_type,
                    $object_name)) . '.sql';

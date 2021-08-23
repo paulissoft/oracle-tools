@@ -63,13 +63,13 @@ $end
   else
     begin
       self.constraint_type$ := null; -- to begin with
-      
+
       open c_con(p_object_schema, p_object_name, p_base_object.object_name());
       fetch c_con into r_con;
       if c_con%found
       then
         close c_con; -- closed cursor indicates success
-        
+
         self.constraint_type$ := r_con.constraint_type;
 
         -- get the referenced table/view
@@ -114,7 +114,7 @@ $end
         close c_con;
         raise no_data_found;
       end if;
-      
+
     exception
       when others
       then
@@ -122,7 +122,7 @@ $end
         -- chk() will signal this later on
     end;
   end if;
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
@@ -214,7 +214,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
-  
+
   if self.ref_object$ is null
   then
     raise_application_error(-20000, 'Reference object should not be empty.');

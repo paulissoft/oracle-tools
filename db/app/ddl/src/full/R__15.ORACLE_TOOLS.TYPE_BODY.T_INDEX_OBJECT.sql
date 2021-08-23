@@ -242,7 +242,7 @@ begin
   where   o.owner = self.object_schema()
   and     o.object_name = self.object_name()
   and     o.object_type = self.dict_object_type();
-  
+
   return l_creation_date;
 end get_creation_date;
 

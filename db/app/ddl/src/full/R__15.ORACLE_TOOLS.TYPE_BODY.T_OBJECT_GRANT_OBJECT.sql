@@ -81,7 +81,7 @@ overriding member procedure chk
 is
 $if pkg_ddl_util.c_#140920801 $then
   pragma autonomous_transaction;
-  
+
   -- Capture invalid objects before releasing to next enviroment.
   l_statement varchar2(4000 char) := null;
 $end  
@@ -122,7 +122,7 @@ $if pkg_ddl_util.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
   -- This is implemented by re-granting the grant statement when the grantor is equal to the logged in user.
-  
+
   if pkg_ddl_util.do_chk(self.object_type()) and self.network_link() is null
   then
     begin
@@ -156,7 +156,7 @@ $end
       and     grt.grantable = self.grantable()
       and     grt.grantor = user /* we can always grant our own objects */
       ;
-  
+
       execute immediate l_statement;
     exception
       when no_data_found
@@ -164,7 +164,7 @@ $end
         null;
     end;  
   end if;
-  
+
 $end
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
