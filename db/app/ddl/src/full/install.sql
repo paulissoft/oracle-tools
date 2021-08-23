@@ -1,6 +1,7 @@
 whenever oserror exit failure
 whenever sqlerror exit failure
 set define off sqlblanklines on
+ALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';
 
 prompt @@02.ORACLE_TOOLS.TYPE_SPEC.T_ARGUMENT_OBJECT.sql
 @@02.ORACLE_TOOLS.TYPE_SPEC.T_ARGUMENT_OBJECT.sql
