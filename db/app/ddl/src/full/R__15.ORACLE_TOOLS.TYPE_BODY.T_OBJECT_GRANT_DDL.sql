@@ -74,7 +74,15 @@ $end
   , p_text => case
                 when substr(p_text, 1, 2) = '--' /* do not execute comments */
                 then substr(p_text, 1, l_pos1)
-                else 'call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ''' || self.obj.id() || ''', p_text => ''' || substr(p_text, 1, l_pos1) || ''')'
+                else q'[
+begin
+  execute immediate ']' || 
+                     substr(p_text, 1, l_pos1) || 
+                     q'['; 
+exception
+  when others
+  then null;
+end;]'
               end
   , p_add_sqlterminator => p_add_sqlterminator
   );

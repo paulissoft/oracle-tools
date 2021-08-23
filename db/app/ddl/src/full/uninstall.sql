@@ -87,27 +87,63 @@ DROP FUNCTION ORACLE_TOOLS.F_GENERATE_DDL;
 
 /* SQL statement 2 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;PKG_DDL_UTIL;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 2');
-call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ':OBJECT_GRANT::ORACLE_TOOLS::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO', p_text => 'REVOKE EXECUTE ON "ORACLE_TOOLS"."PKG_DDL_UTIL" FROM "PUBLIC"');
+begin
+  execute immediate 'REVOKE EXECUTE ON "ORACLE_TOOLS"."PKG_DDL_UTIL" FROM "PUBLIC"'; 
+exception
+  when others
+  then null;
+end;
+/
 
 /* SQL statement 3 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;PKG_STR_UTIL;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 3');
-call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ':OBJECT_GRANT::ORACLE_TOOLS::PKG_STR_UTIL::PUBLIC:EXECUTE:NO', p_text => 'REVOKE EXECUTE ON "ORACLE_TOOLS"."PKG_STR_UTIL" FROM "PUBLIC"');
+begin
+  execute immediate 'REVOKE EXECUTE ON "ORACLE_TOOLS"."PKG_STR_UTIL" FROM "PUBLIC"'; 
+exception
+  when others
+  then null;
+end;
+/
 
 /* SQL statement 4 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PROCEDURE;P_GENERATE_DDL;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 4');
-call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ':OBJECT_GRANT::ORACLE_TOOLS::P_GENERATE_DDL::PUBLIC:EXECUTE:NO', p_text => 'REVOKE EXECUTE ON "ORACLE_TOOLS"."P_GENERATE_DDL" FROM "PUBLIC"');
+begin
+  execute immediate 'REVOKE EXECUTE ON "ORACLE_TOOLS"."P_GENERATE_DDL" FROM "PUBLIC"'; 
+exception
+  when others
+  then null;
+end;
+/
 
 /* SQL statement 5 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;TYPE_SPEC;T_DDL;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 5');
-call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ':OBJECT_GRANT::ORACLE_TOOLS::T_DDL::PUBLIC:EXECUTE:NO', p_text => 'REVOKE EXECUTE ON "ORACLE_TOOLS"."T_DDL" FROM "PUBLIC"');
+begin
+  execute immediate 'REVOKE EXECUTE ON "ORACLE_TOOLS"."T_DDL" FROM "PUBLIC"'; 
+exception
+  when others
+  then null;
+end;
+/
 
 /* SQL statement 6 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 6');
-call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ':OBJECT_GRANT::ORACLE_TOOLS::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO', p_text => 'REVOKE EXECUTE ON "ORACLE_TOOLS"."T_SCHEMA_OBJECT" FROM "PUBLIC"');
+begin
+  execute immediate 'REVOKE EXECUTE ON "ORACLE_TOOLS"."T_SCHEMA_OBJECT" FROM "PUBLIC"'; 
+exception
+  when others
+  then null;
+end;
+/
 
 /* SQL statement 7 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;TYPE_SPEC;T_TEXT_TAB;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 7');
-call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ':OBJECT_GRANT::ORACLE_TOOLS::T_TEXT_TAB::PUBLIC:EXECUTE:NO', p_text => 'REVOKE EXECUTE ON "ORACLE_TOOLS"."T_TEXT_TAB" FROM "PUBLIC"');
+begin
+  execute immediate 'REVOKE EXECUTE ON "ORACLE_TOOLS"."T_TEXT_TAB" FROM "PUBLIC"'; 
+exception
+  when others
+  then null;
+end;
+/
 
 /* SQL statement 8 (DROP;ORACLE_TOOLS;PACKAGE_BODY;PKG_DATAPUMP_UTIL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 8');

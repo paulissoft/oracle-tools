@@ -965,7 +965,7 @@ sub object_sql_statements_flush ($$$$$)
         }
     }
 
-    # GPA 2017-03-14 Number the number of SQL statements per file, so we can invoker dbms_application_info.set_action()
+    # GPA 2017-03-14 Number the number of SQL statements per file, so we can invoke dbms_application_info.set_action()
     my $nr_sql_statements = 0;
     
     for my $ddl_no (0 .. scalar(@$r_sql_statements)-1) {

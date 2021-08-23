@@ -21,7 +21,9 @@ begin
     ( p_verb => 'ALTER'
       -- the schema is
     , p_text => -- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
-                'call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ''' || p_target.obj.id() /* target exists, source maybe not */ || ''', p_text => ''' ||
+                q'[
+begin
+  execute immediate ']' || 
                 'ALTER TABLE "' ||
                 self.obj.base_object_schema() ||
                 '"."' ||
@@ -30,8 +32,11 @@ begin
                 p_target.obj.object_name() ||
                 '" TO "' ||
                 self.obj.object_name() ||
-                '"' ||
-                ''')'
+                '"' || q'[';
+exception
+  when others
+  then null;
+end;]'
     , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
