@@ -431,11 +431,15 @@ sub process () {
         # Only when a complete new tree is created, the install.sql script is reliable.
         # Because when the tree is not removed, the user may just create a single script and not the whole tree.
         remove_tree($output_directory, { verbose => 0 });
-    } else {
+    } elsif (!defined($single_output_file)) {
         # GJP 2021-08-21
-        my @flyway_files = grep { -e $_ && m/ˆ(R__)?(\d{2}|\d{4})\./ } glob(File::Spec->catfile($output_directory, '*.sql'));
+        my @flyway_files = glob(File::Spec->catfile($output_directory, '*.sql'));
+
+        @flyway_files = grep { -f $_ && m/\b(R__)?(\d{2}|\d{4})\./ } @flyway_files;
+
+        debug('files to delete:', @flyway_files);
         
-        unlink(@flyway_files);
+        unlink(@flyway_files) == scalar(@flyway_files) or croak "ERROR: Can not remove all Flyway files";;
     }
 
     my $fh_seq = undef;
@@ -448,11 +452,12 @@ sub process () {
         my $line_nr = 0;
         
         while (<$fh_seq>) {
-            if (m/^(.*)\.(.*)\.(.*)$/) {
-                chomp;
+            if (m/^(.*)[:.](.*)[:.](.*)$/) {
+                $_ = join(':', $1, $2, $3);
                 croak "ERROR: Object must be unique: $_"
                     if exists($object_seq{$_});
                 $object_seq{$_} = ++$line_nr;
+                debug("\$object_seq{$_}:", $object_seq{$_});
             }
         }
         close $fh_seq;
@@ -587,7 +592,9 @@ sub process () {
     close($fh_install_sql)
         if defined($fh_install_sql);
 
-    close($in);
+    if (defined($input_file)) { # Suppress 'Filehandle STDIN reopened as $fh_seq only for output'
+        close($in);
+    }
 
     # do never remove the input file
     if (defined($single_output_file) && $single_output_file =~ m/\@nr\@/) {
@@ -730,17 +737,19 @@ sub parse_object($)
 sub get_object ($$$;$$$) {
     my ($object_schema, $object_type, $object_name, $base_object_schema, $base_object_type, $base_object_name) = @_;
 
+    my $sep = ':';
+
     # GPA 2017-02-28 #140681641 Unique constraints must be created before a referencing key is created.
     # All DDL stored must be saved for one and only one object name, otherwise the order of DDL statements determined by the database may change.
     if (defined($single_output_file)) {
-        return sprintf("%s::", $source_schema);
+        return sprintf("%s$sep$sep", $source_schema);
     } 
     # All comments, indexes and constraints in one file named after the base object
     elsif ( defined($base_object_schema) &&
             $object_schema eq $base_object_schema &&
             exists($object_type_info{$object_type}->{use_base_object_name}) &&
             $object_type_info{$object_type}->{use_base_object_name} ) {
-        return sprintf("%s:%s:%s", 
+        return sprintf("%s$sep%s$sep%s", 
                        $object_schema,
                        $object_type,
                        $base_object_name);
@@ -751,7 +760,7 @@ sub get_object ($$$;$$$) {
             unless (defined($object_type) or defined($base_object_type));
         croak "Both \$object_name and \$base_object_name undefined"
             unless (defined($object_name) or defined($base_object_name));
-        return sprintf("%s:%s:%s", 
+        return sprintf("%s$sep%s$sep%s", 
                        ( defined($object_schema) && length($object_schema) > 0 ? $object_schema : $base_object_schema ),
                        ( defined($object_type) && length($object_type) > 0 ? $object_type : $base_object_type ),
                        ( defined($object_name) && length($object_name) > 0 ? $object_name : $base_object_name ));
@@ -777,12 +786,13 @@ sub object_file_name ($$$)
     croak "\$object_schema undefined" unless defined($object_schema);
     croak "\$object_name undefined" unless defined($object_name);
 
-    my $object_seq_key = join('.', $object_schema, $object_type, $object_name);
+    my $object_seq_key = join(':', $object_schema, $object_type, $object_name);
     my $object_file_name;
     my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
     if (!exists($object_seq{$object_seq_key})) {
         $object_seq{$object_seq_key} = keys(%object_seq) + 1;
+        debug("\$object_seq{$object_seq_key}:", $object_seq{$object_seq_key});
     }
     $object_file_name = 
         uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
@@ -854,8 +864,17 @@ sub sort_sql_statements ($$$) {
     my ($r_sql_statements, $a, $b) = @_;
     my $result;
 
-    # just sort by sequence
-    $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
+    if ($interface eq PKG_DDL_UTIL_V4) {
+        # just sort by sequence
+        $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
+    } else {
+        croak "ERROR: $a undefined"
+            unless exists($object_seq{$a});
+        croak "ERROR: $b undefined"
+            unless exists($object_seq{$b});
+        
+        $result = ($object_seq{$a} <=> $object_seq{$b});
+    }
 
     return $result;
 }

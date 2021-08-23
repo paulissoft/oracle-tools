@@ -405,10 +405,10 @@ Z       Time zone               RFC 822 time zone   -0800
           unless="${full.skip.uninstall.sql}">
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <generate-ddl target.schema="${schema}"
-                     target.db.name="${source.db.name}"
-                     interface="${full.interface}"
-                     owner="${owner}"
-                     id="generate-ddl-full-uninstall">
+                  target.db.name="${source.db.name}"
+                  interface="${full.interface}"
+                  owner="${owner}"
+                  id="generate-ddl-full-uninstall">
       <perl-arguments>
         <arg value="--output-directory=${full.output.directory}"/>
         <arg value="--single-output-file=uninstall.sql"/>
