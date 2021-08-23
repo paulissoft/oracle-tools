@@ -2732,7 +2732,6 @@ $end
   , p_object_names_include in t_numeric_boolean
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
-  , p_sort_objects_by_date in t_numeric_boolean_nn
   )
   return t_schema_ddl_tab
   pipelined
@@ -2757,11 +2756,10 @@ $if cfg_pkg.c_debugging $then
                ,p_object_type
                ,p_object_names);
     dbug.print(dbug."input"
-               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_sort_objects_by_date: %s'
+               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s'
                ,p_object_names_include
                ,p_network_link
                ,p_grantor_is_schema
-               ,p_sort_objects_by_date
                );
 $end
 
@@ -2774,7 +2772,6 @@ $end
     check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
     check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
     check_network_link(p_network_link => p_network_link);
-    check_numeric_boolean(p_numeric_boolean => p_sort_objects_by_date, p_description => 'Sort objects by date');
 
     if p_network_link is not null
     then
@@ -2796,7 +2793,6 @@ $end
       , p_object_names_include => p_object_names_include
       , p_network_link => p_network_link
       , p_grantor_is_schema => p_grantor_is_schema
-      , p_sort_objects_by_date => p_sort_objects_by_date
       );
 
       open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema' || l_network_link || ' t';
@@ -2910,8 +2906,7 @@ $end
                     )
                   ) s
           order by
-                  case when nvl(p_sort_objects_by_date, 0) != 0 then s.obj.get_creation_date() else null end nulls last
-          ,       s.obj.object_type_order() nulls last
+                  s.obj.object_type_order() nulls last
           ,       s.obj.object_schema()
           ,       s.obj.object_type()
           ,       s.obj.object_name()
@@ -5873,7 +5868,6 @@ $end
   , p_object_names_include in t_numeric_boolean
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
-  , p_sort_objects_by_date in t_numeric_boolean_nn
   )
   is
 $if not(dbms_db_version.ver_le_10) $then
@@ -5891,11 +5885,10 @@ $if cfg_pkg.c_debugging $then
                ,p_object_type
                ,p_object_names);
     dbug.print(dbug."input"
-               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_sort_objects_by_date: %s'
+               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s'
                ,p_object_names_include
                ,p_network_link
-               ,p_grantor_is_schema
-               ,p_sort_objects_by_deps);
+               ,p_grantor_is_schema);
 $end
 
     if p_network_link is null
@@ -5914,7 +5907,6 @@ $if dbms_db_version.ver_le_10 $then
                 , p_object_names_include
                 , null -- p_network_link
                 , p_grantor_is_schema
-                , p_sort_objects_by_date
                 )
               ) t;
 $else  
@@ -5930,7 +5922,6 @@ $else
                   , p_object_names_include
                   , null -- p_network_link
                   , p_grantor_is_schema
-                  , p_sort_objects_by_date
                   )
                 ) t;
       -- PLS-00994: Cursor Variables cannot be declared as part of a package
@@ -5964,12 +5955,11 @@ begin
   , p_object_names_include => :b6
   , p_network_link => null
   , p_grantor_is_schema => :b7
-  , p_sort_objects_by_date => :b8
   );
 end;]';
       begin
         execute immediate l_statement
-          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_sort_objects_by_date;
+          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema;
       exception
         when others
         then raise_application_error(-20000, l_statement, true);

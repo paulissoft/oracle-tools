@@ -117,7 +117,6 @@ $if dbms_db_version.version > 10 $then
                       , p_object_names_include => pi_object_names_include
                       , p_network_link => pi_source_database_link
                       , p_grantor_is_schema => 0
-                      , p_sort_objects_by_date => case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
                       )
 $else
                       ( pi_source_schema
@@ -128,7 +127,6 @@ $else
                       , pi_object_names_include
                       , pi_source_database_link
                       , 0
-                      , case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
                       )
 $end
                     ) t

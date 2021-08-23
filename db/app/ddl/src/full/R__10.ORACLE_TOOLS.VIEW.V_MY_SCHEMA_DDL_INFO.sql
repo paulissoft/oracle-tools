@@ -16,13 +16,12 @@ from    table
         ( oracle_tools.pkg_ddl_util.display_ddl_schema
           ( user -- p_schema
           , null -- p_new_schema
-          , 0    -- p_sort_objects_by_deps
+          , 1    -- p_sort_objects_by_deps
           , null -- p_object_type
           , null -- p_object_names
           , null -- p_object_names_include
           , null -- p_network_link
           , 0    -- p_grantor_is_schema
-          , 0    -- p_sort_objects_by_date
           )
         ) t
 ,       table(t.ddl_tab) u;

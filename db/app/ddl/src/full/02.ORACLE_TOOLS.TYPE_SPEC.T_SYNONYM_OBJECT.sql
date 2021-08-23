@@ -16,8 +16,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_SYNONYM_OBJECT" authid current_user under t_depend
   , p_schema in varchar2
   )
 )
-final
- alter type "ORACLE_TOOLS"."T_SYNONYM_OBJECT" 
-add overriding member function get_creation_date return date cascade;
+final;
 /
 
