@@ -15,7 +15,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_ARGUMENT_OBJECT" authid current_user is object
                                          -- ARGUMENT_NAME can refer to any of the following:
                                          -- a) Return type, if ARGUMENT_NAME is null
                                          -- b) The argument that appears in the argument list if ARGUMENT_NAME is not null
-
+                                          
 , data_type_name$     varchar2(30 char)  -- Datatype of the argument
 , in_out$             varchar2(9 char)   -- Direction of the argument: IN, OUT or IN/OUT
 , type_owner$         varchar2(30 char)  -- Owner of the type of the argument
