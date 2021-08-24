@@ -1422,7 +1422,7 @@ $end
     -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
     add(t_text_tab('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT'), 'SYSTP%');
 
-    -- no datapump tables, see pkg_datapump_util
+    -- no datapump tables
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_SQL\_FILE\_SCHEMA%');
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DDL');
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DML');
@@ -3440,7 +3440,6 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."input", 'p_id: %s; p_text: %s', p_id, p_text);
 $end
 
-    -- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
     t_schema_ddl.execute_ddl(p_id => p_id, p_text => p_text);
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then

@@ -74,15 +74,15 @@ $end
   , p_text => case
                 when substr(p_text, 1, 2) = '--' /* do not execute comments */
                 then substr(p_text, 1, l_pos1)
-                else q'[
+                else /*q'[
 begin
   execute immediate ']' || 
-                     substr(p_text, 1, l_pos1) || 
+                     */ substr(p_text, 1, l_pos1) /*|| 
                      q'['; 
 exception
   when others
   then null;
-end;]'
+end;]'*/
               end
   , p_add_sqlterminator => p_add_sqlterminator
   );
@@ -92,7 +92,6 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 end add_ddl;
 
--- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
 overriding member procedure execute_ddl
 ( self in t_object_grant_ddl
 )

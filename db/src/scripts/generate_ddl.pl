@@ -24,6 +24,18 @@ unspecified (or empty).
 
 In this situation you should set the output directory.
 
+The following files will be created:
+- <seq>.[<owner>.]<type>.<name> (incremental scripts)
+- R__<seq>.[<owner>.]<type>.<name> (repeatable scripts)
+
+The owner will not be part of the file name if the strip source schema command line option is true.
+
+If the pkg_ddl_util interface version is 4 the sequence number is dependent on the type.
+
+If the pkg_ddl_util interface version is 5 the sequence number depends on the
+installation sequence order as specified in file install_sequence.txt which is
+initially created in object dependency order.
+
 =item GENERATE DDL SCRIPTS FOR AN INCREMENTAL INSTALLATION
 
 The SOURCE and TARGET schema (including database links) are used to generate
@@ -116,7 +128,6 @@ Normally output files will be created for each object in the output
 output file <output directory>/SCHEMA/TABLE/NAME.sql.  When this option is
 set, the (single) output file will be <output directory>/<single output file>.
 
-
 =item B<--skip-install-sql>
 
 Skip creating the install.sql file while generation scripts. Default true (skip).
@@ -162,6 +173,11 @@ $Header$
 =head1 HISTORY
 
 =over 4
+
+=item 2021-08-24
+
+Version 5 of the pkg_ddl_util interface has been added. 
+Only supports version 4 and 5 of that interface now.
 
 =item 2021-07-28
 
@@ -330,7 +346,10 @@ my %object_type_info = (
 
 my %object_seq = ();
 
-my $VERSION = "2021-07-28";
+# A list of modified files so we can remove non-modified files in non single output mode.
+my %file_modified = ();
+
+my $VERSION = "2021-08-24";
 
     
 # PROTOTYPES
@@ -356,6 +375,7 @@ sub remove_leading_empty_lines ($);
 sub remove_trailing_empty_lines ($);
 sub beautify_line ($$$$$$);
 sub split_single_output_file($);
+sub error (@);
 sub warning (@);
 sub info (@);
 sub debug (@);
@@ -422,7 +442,7 @@ sub process () {
 
     if (defined($input_file)) {
         open $in, "< $input_file"
-            or croak "ERROR: Can not open '$input_file': $!";
+            or error("Can not open '$input_file': $!");
     } else {
         $in = \*STDIN;
     }
@@ -431,15 +451,6 @@ sub process () {
         # Only when a complete new tree is created, the install.sql script is reliable.
         # Because when the tree is not removed, the user may just create a single script and not the whole tree.
         remove_tree($output_directory, { verbose => 0 });
-    } elsif (!defined($single_output_file)) {
-        # GJP 2021-08-21
-        my @flyway_files = glob(File::Spec->catfile($output_directory, '*.sql'));
-
-        @flyway_files = grep { -f $_ && m/\b(R__)?(\d{2}|\d{4})\./ } @flyway_files;
-
-        debug('files to delete:', @flyway_files);
-        
-        unlink(@flyway_files) == scalar(@flyway_files) or croak "ERROR: Can not remove all Flyway files";;
     }
 
     my $fh_seq = undef;
@@ -447,14 +458,14 @@ sub process () {
     # read previous object sequence numbers
     if ( -e $install_sequence_txt ) {
         open($fh_seq, '<', $install_sequence_txt)
-            or croak "ERROR: Can not open '$install_sequence_txt': $!";
+            or error("Can not open '$install_sequence_txt': $!");
 
         my $line_nr = 0;
         
         while (<$fh_seq>) {
             if (m/^(.*)[:.](.*)[:.](.*)$/) {
                 $_ = join(':', $1, $2, $3);
-                croak "ERROR: Object must be unique: $_"
+                error("Object must be unique: $_")
                     if exists($object_seq{$_});
                 $object_seq{$_} = ++$line_nr;
                 debug("\$object_seq{$_}:", $object_seq{$_});
@@ -481,12 +492,12 @@ sub process () {
     if (defined($single_output_file)) {
         $file = File::Spec->catfile($output_directory, $single_output_file);
         open($fh, ">$encoding", $file) 
-            or croak "ERROR: Can not write to '$file': $!";
+            or error("Can not write to '$file': $!");
     } else {
         # GJP 2021-07-27  $remove_output_directory should not be a condition so put defined() around it
         if (defined($remove_output_directory) && defined($install_sql)) {
             open($fh_install_sql, ">$encoding", $install_sql) 
-                or croak "ERROR: Can not write to '$install_sql': $!";
+                or error("Can not write to '$install_sql': $!");
         }
     }
 
@@ -529,7 +540,7 @@ sub process () {
 
         $interface = '' unless defined($interface);
         
-        croak "Unknown interface: $interface"
+        error("Unknown interface: $interface")
             unless ( $interface eq PKG_DDL_UTIL_V4 ||
                      $interface eq PKG_DDL_UTIL_V5 );
 
@@ -567,7 +578,7 @@ sub process () {
                 } else {
                     $line_no++;
                     if ($line_no == 1) {
-                        croak "\$object_name undefined"
+                        error("\$object_name undefined")
                             unless (defined($object_name));
                     }
                     beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no, \$line);
@@ -580,7 +591,7 @@ sub process () {
     if ($@) {
         if ($@ !~ m/^EOF\b/) {
             warn $@;
-            croak "ERROR: Could not generate DDL\n";
+            error("Could not generate DDL");
         }
     }
 
@@ -601,15 +612,30 @@ sub process () {
         split_single_output_file($file);
     }
 
-    open($fh_seq, '>', $install_sequence_txt)
-        or croak "ERROR: Can not write '$install_sequence_txt': $!";
+    # Only write $install_sequence_txt for version 5
+    if ($interface eq PKG_DDL_UTIL_V5) {
+        open($fh_seq, '>', $install_sequence_txt)
+            or error("Can not write '$install_sequence_txt': $!");
 
-    print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
-    print $fh_seq "-- DO NEVER REMOVE LINES BELOW BUT YOU MAY CHANGE THE ORDER OR ADD LINES (AT THE END)\n";
-    foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
-        print $fh_seq "$object\n";
+        print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
+        print $fh_seq "-- DO NEVER REMOVE LINES BELOW BUT YOU MAY CHANGE THE ORDER OR ADD LINES (AT THE END)\n";
+        foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
+            print $fh_seq "$object\n";
+        }
+        close $fh_seq;
     }
-    close $fh_seq;
+
+    # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
+    if (!$remove_output_directory && !defined($single_output_file)) {
+        # GJP 2021-08-21
+        my @obsolete_files = glob(File::Spec->catfile($output_directory, '*.sql'));
+
+        @obsolete_files = grep { -f $_ && m/\b(R__)?(\d{2}|\d{4})\./ && !exists($file_modified{$_}) } @obsolete_files;
+
+        info('obsolete files to delete:', @obsolete_files);
+        
+        unlink(@obsolete_files) == scalar(@obsolete_files) or error("Can not remove obsolete files");
+    }
 }
 
 sub process_object_type ($$$$)
@@ -673,7 +699,7 @@ sub process_object_type ($$$$)
                 # END;
                 # /
 
-                croak "WARNING: line did not match for $object_type: $line\n" 
+                error("line did not match for $object_type: $line") 
                     unless defined($last_line);
                 #
                 $last_line = $line;
@@ -725,7 +751,7 @@ sub parse_object($)
     } elsif ($name =~ qr/(?<name>$id_expr)/) {
         ($name) = ($+{name});
     } else {
-        croak "ERROR: name '$name' can not be parsed";
+        error("name '$name' can not be parsed");
     }
 
     $owner = ($owner =~ m/^"([^"]+)"$/ ? $1 : uc($owner));
@@ -754,11 +780,11 @@ sub get_object ($$$;$$$) {
                        $object_type,
                        $base_object_name);
     } else {
-        croak "Both \$object_schema and \$base_object_schema undefined"
+        error("Both \$object_schema and \$base_object_schema undefined")
             unless (defined($object_schema) or defined($base_object_schema));
-        croak "Both \$object_type and \$base_object_type undefined"
+        error("Both \$object_type and \$base_object_type undefined")
             unless (defined($object_type) or defined($base_object_type));
-        croak "Both \$object_name and \$base_object_name undefined"
+        error("Both \$object_name and \$base_object_name undefined")
             unless (defined($object_name) or defined($base_object_name));
         return sprintf("%s$sep%s$sep%s", 
                        ( defined($object_schema) && length($object_schema) > 0 ? $object_schema : $base_object_schema ),
@@ -779,12 +805,12 @@ sub object_file_name ($$$)
     # We must forbid objects like TRIGGER bi_CLEVE and BI_CLEVE to coexist together.
     # A solution to check this is to create the file in uppercase.
     # Now when the file already exists, we should raise an exception.
-    croak "\$object_type undefined" unless defined($object_type);
-    croak "\$object_type_info{$object_type} does not exist" unless exists($object_type_info{$object_type});
-    croak "\$object_type_info{$object_type}->{'repeatable'} does not exist" unless exists($object_type_info{$object_type}->{'repeatable'});
-    croak "\$object_type_info{$object_type}->{'seq'} does not exist" unless exists($object_type_info{$object_type}->{'seq'});
-    croak "\$object_schema undefined" unless defined($object_schema);
-    croak "\$object_name undefined" unless defined($object_name);
+    error("\$object_type undefined") unless defined($object_type);
+    error("\$object_type_info{$object_type} does not exist") unless exists($object_type_info{$object_type});
+    error("\$object_type_info{$object_type}->{'repeatable'} does not exist") unless exists($object_type_info{$object_type}->{'repeatable'});
+    error("\$object_type_info{$object_type}->{'seq'} does not exist") unless exists($object_type_info{$object_type}->{'seq'});
+    error("\$object_schema undefined") unless defined($object_schema);
+    error("\$object_name undefined") unless defined($object_name);
 
     my $object_seq_key = join(':', $object_schema, $object_type, $object_name);
     my $object_file_name;
@@ -825,15 +851,17 @@ sub open_file ($$$$)
             unless ($ignore_warning_when_file_exists);
         
         open($$r_fh, ">>$encoding", $file)
-            or croak "ERROR: Can not append to '$file': $!";
+            or error("Can not append to '$file': $!");
 
         info("Appending to $file");
     } else {
         open($$r_fh, ">$encoding", $file)
-            or croak "ERROR: Can not write to '$file': $!";
+            or error("Can not write to '$file': $!");
 
         info("Writing to $file");
     }
+
+    $file_modified{$file} = 1;
 }
                                     
 sub sql_statement_add ($$$$;$)
@@ -852,9 +880,9 @@ sub sql_statement_add ($$$$;$)
 
     push(@$r_sql_statement, $$r_sql_line);
 
-    croak sprintf("The number of statements for object '$object' is %d which is not the current ddl no (%d)", 
+    error(sprintf("The number of statements for object '$object' is %d which is not the current ddl no (%d)", 
                   scalar(@{$r_sql_statements->{$object}->{ddls}}), 
-                  $ddl_no + 1)
+                  $ddl_no + 1))
         unless $ddl_no + 1 == scalar(@{$r_sql_statements->{$object}->{ddls}});
     
     $$r_sql_line = '';
@@ -868,9 +896,9 @@ sub sort_sql_statements ($$$) {
         # just sort by sequence
         $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
     } else {
-        croak "ERROR: $a undefined"
+        error("\$object_seq{$a} does not exist")
             unless exists($object_seq{$a});
-        croak "ERROR: $b undefined"
+        error("\$object_seq{$b} does not exist")
             unless exists($object_seq{$b});
         
         $result = ($object_seq{$a} <=> $object_seq{$b});
@@ -925,7 +953,7 @@ sub object_sql_statements_flush ($$$$$)
     # GPA 2017-02-28 #140681641 Unique constraints must be created before a referencing key is created.
     # All DDL stored must be saved for one and only one object name, otherwise the order of DDL statements determined by the database may change.
     if ( defined($single_output_file) ) {
-        die "File handle must be defined" unless defined($$r_fh);
+        error("File handle must be defined") unless defined($$r_fh);
 
         print $$r_fh sprintf("call dbms_application_info.set_module('%s', null);\n", basename($single_output_file));
     } else {
@@ -998,7 +1026,7 @@ sub object_sql_statements_flush ($$$$$)
         }
         open_file($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists);
         if ($object_type eq 'OBJECT_GRANT') {
-            die "File handle must be defined" unless defined($$r_fh);
+            error("File handle must be defined") unless defined($$r_fh);
             
             print $$r_fh sprintf("call dbms_application_info.set_module('%s', null);\n", basename($file));
         }
@@ -1023,7 +1051,7 @@ sub sql_statement_flush ($$$$$$)
 
     debug("Flushing statement for $object with ", scalar(@$r_sql_statement), " line(s)");
 
-    die "File handle must be defined" unless defined($fh);
+    error("File handle must be defined") unless defined($fh);
     
     return if ( scalar(@$r_sql_statement) == 0 );
 
@@ -1050,7 +1078,7 @@ sub sql_statement_flush ($$$$$$)
             if (defined($statement) && $statement !~ m/^\s*--/o) {
                 my $terminator = substr($statement, length($statement)-1);
 
-                croak sprintf("Wrong SQL or PL/SQL terminator '%s' (%d)\n", $terminator, ord($terminator))
+                error(sprintf("Wrong SQL or PL/SQL terminator '%s' (%d)\n", $terminator, ord($terminator)))
                     unless ($terminator eq ';' or $terminator eq '/');
                 
                 debug(sprintf("Removing the SQL or PL/SQL terminator '%s' (%d)\n", $terminator, ord($terminator)));
@@ -1209,7 +1237,7 @@ sub sql_statement_flush ($$$$$$)
 
     debug("\$terminator: $terminator");
 
-    croak sprintf("Wrong SQL or PL/SQL terminator '%s' (%d)\n", $terminator, ord($terminator))
+    error(sprintf("Wrong SQL or PL/SQL terminator '%s' (%d)\n", $terminator, ord($terminator)))
         unless (($is_sql_statement == 1 and ($terminator eq ';' or $terminator eq '/' or $terminator eq ';/')) or 
                 ($is_sql_statement == 0 and $terminator eq ''));
             
@@ -1244,7 +1272,7 @@ sub print_run_info ($$)
 {
     my ($fh, $install) = @_;
 
-    die "File handle must be defined" unless defined($fh);
+    error("File handle must be defined") unless defined($fh);
     
     print $fh '/* ', "perl generate_ddl.pl (version $VERSION)";
     print $fh sprintf(" --%s%s", ($dynamic_sql ? '' : 'no'), 'dynamic-sql');
@@ -1353,7 +1381,7 @@ sub split_single_output_file ($) {
     # only one SQL statement allowed
     my ($output_file, $output_fh, $line, $nr);
         
-    open(my $input_fh, $input_file) || die "Can not open $input_file: $!";
+    open(my $input_fh, $input_file) || error("Can not open $input_file: $!");
             
     while (defined($line = <$input_fh>)) {
         # new sql statement greater than 1 or first line?
@@ -1366,10 +1394,10 @@ sub split_single_output_file ($) {
             close($output_fh) if (defined($output_fh));
                 
             open($output_fh, ">$encoding", $output_file) 
-                or croak "ERROR: Can not write to '$output_file': $!";
+                or error("Can not write to '$output_file': $!");
         }
 
-        die "File handle must be defined" unless defined($$output_fh);
+        error("File handle must be defined") unless defined($$output_fh);
 
         print $output_fh $line
             unless $line =~ m/^call\s+dbms_application_info\.(set_module|set_action)\b/;
@@ -1379,6 +1407,10 @@ sub split_single_output_file ($) {
     close($input_fh);
 
     unlink($input_file);
+}
+
+sub error (@) {
+    croak "ERROR: @_";
 }
 
 sub warning (@) {

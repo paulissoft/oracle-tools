@@ -46,8 +46,12 @@ begin
     self.add_ddl
     ( p_verb => 'ALTER'
       -- the schema is
-    , p_text => -- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
+    , p_text => -- GPA 2017-06-27 #147914109 - As a release operator I do not want that index/constraint rename actions fail when the target already exists.
                 q'[
+declare
+  -- ORA-00955: name is already used by an existing object
+  e_name_already_used exception;
+  pragma exception_init(e_name_already_used, -955);
 begin
   execute immediate ']' || 
                 'ALTER INDEX "' ||
@@ -58,7 +62,7 @@ begin
                 l_source_index_object.object_name() ||
                 '"' || q'[';
 exception
-  when others
+  when e_name_already_used
   then null;
 end;]'
     , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
@@ -66,7 +70,6 @@ end;]'
   end if;
 end migrate;
 
--- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
 overriding member procedure execute_ddl
 ( self in t_index_ddl
 )

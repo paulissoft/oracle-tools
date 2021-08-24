@@ -8,6 +8,7 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 , pi_object_names in varchar2 default null
 , pi_skip_repeatables in naturaln default 1
 , pi_interface in varchar2 default null
+, pi_transform_param_list in varchar2 default pkg_ddl_util.c_transform_param_list
 , po_clob out nocopy clob
 )
 authid current_user
@@ -19,19 +20,13 @@ as
   -- to reduce typos we use constant identifiers
   "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4'; -- pkg_ddl_util
   "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5'; -- pkg_ddl_util
-  "pkg_datapump_util" constant varchar2(30 char) := 'pkg_datapump_util';
 
   -- try the interfaces in this order
   -- the first one which matches pi_interface and which does not return an error, wins
   l_interface_tab constant sys.odcivarchar2list :=
     case
       when pi_interface is null
-      then
-        case
-          when pi_target_schema is not null -- for comparison the new interface should be used
-          then sys.odcivarchar2list("pkg_ddl_util v4", "pkg_ddl_util v5")
-          else sys.odcivarchar2list("pkg_ddl_util v4", "pkg_ddl_util v5"/*, "pkg_datapump_util"*/)
-        end
+      then sys.odcivarchar2list("pkg_ddl_util v4", "pkg_ddl_util v5")
       else sys.odcivarchar2list(pi_interface)
     end;
 
@@ -108,7 +103,6 @@ $end
             ,       u.text
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema
-$if dbms_db_version.version > 10 $then
                       ( p_schema => pi_source_schema
                       , p_new_schema => null
                       , p_sort_objects_by_deps => case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
@@ -117,18 +111,8 @@ $if dbms_db_version.version > 10 $then
                       , p_object_names_include => pi_object_names_include
                       , p_network_link => pi_source_database_link
                       , p_grantor_is_schema => 0
+                      , p_transform_param_list => pi_transform_param_list
                       )
-$else
-                      ( pi_source_schema
-                      , null
-                      , case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
-                      , pi_object_type
-                      , pi_object_names
-                      , pi_object_names_include
-                      , pi_source_database_link
-                      , 0
-                      )
-$end
                     ) t
           ,         table(t.ddl_tab) u
           ;
@@ -151,7 +135,6 @@ $end
             ,       u.text
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
-$if dbms_db_version.version > 10 $then
                       ( p_object_type => pi_object_type
                       , p_object_names => pi_object_names
                       , p_object_names_include => pi_object_names_include
@@ -160,18 +143,8 @@ $if dbms_db_version.version > 10 $then
                       , p_network_link_source => pi_source_database_link
                       , p_network_link_target => pi_target_database_link
                       , p_skip_repeatables => pi_skip_repeatables
+                      , p_transform_param_list => pi_transform_param_list
                       )
-$else
-                      ( pi_object_type
-                      , pi_object_names
-                      , pi_object_names_include
-                      , pi_source_schema
-                      , pi_target_schema
-                      , pi_source_database_link
-                      , pi_target_database_link
-                      , pi_skip_repeatables
-                      )
-$end
                     ) t
           ,         table(t.ddl_tab) u
           ;
@@ -213,36 +186,6 @@ $end
                                                  ,totalwork => l_sofar
                                                  ,target_desc => l_program
                                                  ,units => l_units);
-
-      elsif l_interface_tab(i_interface_idx) = "pkg_datapump_util" and
-            pi_source_database_link is null and
-            pi_target_schema is null and
-            pi_target_database_link is null
-      then
-        -- datapump is much faster than pkg_ddl_util v1
-        oracle_tools.pkg_datapump_util.create_schema_export_file
-        ( p_schema => pi_source_schema
-        , p_content => 'METADATA_ONLY'
-        );
-        oracle_tools.pkg_datapump_util.create_schema_sql_file
-        ( p_schema => pi_source_schema
-        , p_content => 'METADATA_ONLY'
-        , p_new_schema => null
-        , p_object_type => pi_object_type
-        , p_object_name_expr => case pi_object_names_include
-                                  when 0 then 'NOT IN ('''
-                                  when 1 then 'IN ('''
-                                end ||
-                                replace(replace(replace(replace(replace(pi_object_names, chr(9)), chr(10)), chr(13)), chr(32)), ',', ''',''') ||
-                                case pi_object_names_include
-                                  when 0 then ''')'
-                                  when 1 then ''')'
-                                end
-        , p_sql_file => l_bfile
-        );
-        dbms_lob.trim(po_clob, 0);
-        oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx)||chr(10), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
-        dbms_lob.append(dest_lob => po_clob, src_lob => oracle_tools.pkg_datapump_util.bfile2clob(p_bfile => l_bfile));
 
       else
         raise_application_error(c_could_not_process, 'Could not process interface ' || l_interface_tab(i_interface_idx));

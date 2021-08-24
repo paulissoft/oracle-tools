@@ -355,8 +355,10 @@
         <db.full.skip.install.sql>yes</db.full.skip.install.sql>
         <!-- This property determines script creation ((R__)?<seq>.<schema>.<object_type>.<object_name>.sql) -->
         <!-- pkg_ddl_util v4: sequence number depends on object type -->
-        <!-- pkg_ddl_util v5: sequence number depends on object creation date -->
+        <!-- pkg_ddl_util v5: sequence number depends on install_sequence.txt (initially created ordered on object dependencies) -->
         <db.full.interface>pkg_ddl_util v5</db.full.interface>
+        <!-- a comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links) -->
+        <db.full.transform.params>SEGMENT_ATTRIBUTES,TABLESPACE</db.full.transform.params>
         <db.generate.ddl.full.skip>${db.install.skip}</db.generate.ddl.full.skip>
       </properties>
       <build>
@@ -389,6 +391,7 @@
                       <property name="full.skip.install.sql" value="${db.full.skip.install.sql}" />
                       <property name="full.interface" value="${db.full.interface}" />
                       <property name="full.strip.source.schema" value="${db.generate.full.strip.source.schema}" />
+                      <property name="full.transform.params" value="${db.full.transform.params}" />
                       <property name="owner" value="${oracle-tools.db.schema}" />
                       <property name="src.dir" value="${oracle-tools.db.src.dir}/scripts" />
                       <property name="build.dir" value="${project.build.directory}" />
@@ -417,6 +420,8 @@
         <db.incr.skip.repeatables>yes</db.incr.skip.repeatables>
         <!-- see above (db-generate-ddl-full) -->
         <db.incr.interface>pkg_ddl_util v5</db.incr.interface>
+        <!-- a comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links) -->
+        <db.incr.transform.params>SEGMENT_ATTRIBUTES,TABLESPACE</db.incr.transform.params>
         <db.generate.ddl.incr.skip>${db.install.skip}</db.generate.ddl.incr.skip>
       </properties>
       <build>
@@ -451,6 +456,7 @@
                       <property name="incr.output.directory" value="${db.src.incr.scripts}" />
                       <property name="incr.skip.repeatables" value="${db.incr.skip.repeatables}" />
                       <property name="incr.interface" value="${db.incr.interface}" />
+                      <property name="incr.transform.params" value="${db.incr.transform.params}" />
                       <property name="owner" value="${oracle-tools.db.schema}" />
                       <property name="src.dir" value="${oracle-tools.db.src.dir}/scripts" />
                       <property name="build.dir" value="${project.build.directory}" />

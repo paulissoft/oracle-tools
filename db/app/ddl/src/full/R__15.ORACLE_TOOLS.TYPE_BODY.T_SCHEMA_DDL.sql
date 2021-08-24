@@ -313,7 +313,6 @@ exception
 $end
 end chk;
 
--- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
 static procedure execute_ddl(p_id in varchar2, p_text in varchar2)
 is
   l_part_tab dbms_sql.varchar2a;
@@ -372,7 +371,6 @@ $end
     );
 end execute_ddl;
 
--- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
 member procedure execute_ddl
 ( self in t_schema_ddl
 )
@@ -394,7 +392,6 @@ exception
 $end
 end execute_ddl;
 
--- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
 static procedure execute_ddl(p_schema_ddl in t_schema_ddl)
 is
 begin
