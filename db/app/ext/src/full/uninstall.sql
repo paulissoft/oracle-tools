@@ -18,19 +18,23 @@
 */
 -- pkg_ddl_util v4
 call dbms_application_info.set_module('uninstall.sql', null);
-/* SQL statement 1 (DROP;ORACLE_TOOLS;PACKAGE_BODY;EXT_LOAD_FILE_PKG;;;;;;;;2) */
+/* SQL statement 1 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;EXT_LOAD_FILE_PKG;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 1');
+REVOKE EXECUTE ON "ORACLE_TOOLS"."EXT_LOAD_FILE_PKG" FROM "PUBLIC";
+
+/* SQL statement 2 (DROP;ORACLE_TOOLS;PACKAGE_BODY;EXT_LOAD_FILE_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 2');
 DROP PACKAGE BODY ORACLE_TOOLS.EXT_LOAD_FILE_PKG;
 
-/* SQL statement 2 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_COLUMN_V;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 2');
+/* SQL statement 3 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_COLUMN_V;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 3');
 DROP VIEW ORACLE_TOOLS.EXT_LOAD_FILE_COLUMN_V;
 
-/* SQL statement 3 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_OBJECT_V;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 3');
+/* SQL statement 4 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_OBJECT_V;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 4');
 DROP VIEW ORACLE_TOOLS.EXT_LOAD_FILE_OBJECT_V;
 
-/* SQL statement 4 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;EXT_LOAD_FILE_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 4');
+/* SQL statement 5 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;EXT_LOAD_FILE_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 5');
 DROP PACKAGE ORACLE_TOOLS.EXT_LOAD_FILE_PKG;
 
