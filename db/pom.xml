@@ -46,10 +46,6 @@
          db-generate-ddl-full is also active -->
     <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
     <db.generate.ddl.incr.skip>true</db.generate.ddl.incr.skip>
-    <!-- create or replace "source schema"."source name" 
-         =>
-         create or replace "source name" ? -->
-    <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     
     <!-- ============================ -->
     <!-- UTPLSQL properties (db-test) -->
@@ -360,6 +356,10 @@
         <!-- a comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links) -->
         <db.full.transform.params>SEGMENT_ATTRIBUTES,TABLESPACE</db.full.transform.params>
         <db.generate.ddl.full.skip>${db.install.skip}</db.generate.ddl.full.skip>
+        <!-- create or replace "source schema"."source name" 
+             =>
+             create or replace "source name" ? -->
+        <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
       </properties>
       <build>
         <plugins>
