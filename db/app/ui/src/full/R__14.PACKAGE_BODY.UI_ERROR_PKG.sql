@@ -1,4 +1,4 @@
-create or replace package body ui_error_pkg
+CREATE OR REPLACE PACKAGE BODY "UI_ERROR_PKG" 
 as
   --
   -- Function: apex_error_handling
@@ -313,3 +313,4 @@ $end
 
 end ui_error_pkg;
 /
+

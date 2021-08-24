@@ -1,4 +1,4 @@
-create or replace package ui_error_pkg
+CREATE OR REPLACE PACKAGE "UI_ERROR_PKG" 
 as
   -- See https://gist.github.com/dgielis/050d3f2169a44afc39514171f6b6095a
   
@@ -21,3 +21,4 @@ as
   
 end ui_error_pkg;
 /
+
