@@ -155,10 +155,10 @@ public class GenerateDDL
             pstmt.setInt(8, Integer.parseInt(args[++nr])); // never null
             pstmt.setString(9, args[++nr]);
             pstmt.setString(10, args[++nr]);
-            pstmt.registerOutParameter(10, Types.CLOB);
+            pstmt.registerOutParameter(args_size - 1, Types.CLOB);
             pstmt.executeUpdate();
 
-            final Clob clob = pstmt.getClob(10);
+            final Clob clob = pstmt.getClob(args_size - 1);
 
             // Print all at once
             final long len = clob.length();

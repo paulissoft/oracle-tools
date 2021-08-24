@@ -447,15 +447,9 @@ sub process () {
         $in = \*STDIN;
     }
 
-    if ($remove_output_directory) {
-        # Only when a complete new tree is created, the install.sql script is reliable.
-        # Because when the tree is not removed, the user may just create a single script and not the whole tree.
-        remove_tree($output_directory, { verbose => 0 });
-    }
-
     my $fh_seq = undef;
     
-    # read previous object sequence numbers
+    # read previous object sequence numbers first so we can recreate them even if the directory is removed after
     if ( -e $install_sequence_txt ) {
         open($fh_seq, '<', $install_sequence_txt)
             or error("Can not open '$install_sequence_txt': $!");
@@ -473,6 +467,12 @@ sub process () {
         }
         close $fh_seq;
         $fh_seq = undef;
+    }
+
+    if ($remove_output_directory) {
+        # Only when a complete new tree is created, the install.sql script is reliable.
+        # Because when the tree is not removed, the user may just create a single script and not the whole tree.
+        remove_tree($output_directory, { verbose => 0 });
     }
 
     # always make the output directory
