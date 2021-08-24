@@ -632,9 +632,11 @@ sub process () {
 
         @obsolete_files = grep { -f $_ && m/\b(R__)?(\d{2}|\d{4})\./ && !exists($file_modified{$_}) } @obsolete_files;
 
-        info('obsolete files to delete:', @obsolete_files);
+        if (scalar(@obsolete_files) > 0) {
+            info('Obsolete files to delete:', @obsolete_files);
         
-        unlink(@obsolete_files) == scalar(@obsolete_files) or error("Can not remove obsolete files");
+            unlink(@obsolete_files) == scalar(@obsolete_files) or error("Can not remove obsolete files");
+        }
     }
 }
 
