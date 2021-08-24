@@ -1,4 +1,4 @@
-create or replace package data_br_pkg authid current_user is
+CREATE OR REPLACE PACKAGE "DATA_BR_PKG" authid current_user is
 
 type t_valid_count_rec is record
 ( owner all_tables.owner%type
@@ -229,3 +229,4 @@ return integer;
 
 end data_br_pkg;
 /
+
