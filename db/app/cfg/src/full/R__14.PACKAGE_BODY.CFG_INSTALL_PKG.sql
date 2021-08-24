@@ -1,4 +1,4 @@
-create or replace package body cfg_install_pkg
+CREATE OR REPLACE PACKAGE BODY "CFG_INSTALL_PKG" 
 is
 
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -119,3 +119,4 @@ end compile_objects;
 
 end cfg_install_pkg;
 /
+
