@@ -21,13 +21,13 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   /* CONSTANTS */
   -- see 11g / 12c licensing
-  c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4
+  c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
   c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
   c_testing constant boolean := true; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
   -- pivotal issues
-  
+
   -- GPA 2017-02-01 #138707615 named not null constraints are recreated
   c_#138707615_1 constant boolean := true;
 
@@ -59,6 +59,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_get_library_ddl constant boolean := false;
   c_get_operator_ddl constant boolean := false;
   c_get_xmlschema_ddl constant boolean := false;
+  
+  c_transform_param_list constant varchar2(4000 char) := 'SEGMENT_ATTRIBUTES,TABLESPACE';
 
   /* EXCEPTIONS */
   c_schema_does_not_exist        constant integer := -20100;
@@ -92,7 +94,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   /* TYPES */
   subtype t_dict_object_type is all_objects.object_type%type; 
   subtype t_dict_object_type_nn is t_dict_object_type not null;
-  
+
   subtype t_metadata_object_type is varchar2(30 char); -- langer dan all_objects.object_type%type
   subtype t_metadata_object_type_nn is t_metadata_object_type not null;
 
@@ -111,10 +113,12 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   subtype t_object_names is varchar2(4000 char);
   subtype t_object_names_nn is t_object_names not null;
-  
+
   subtype t_network_link is all_db_links.db_link%type;
   subtype t_network_link_nn is t_network_link not null;
-  
+
+  type t_transform_param_tab is table of boolean index by varchar2(4000 char);
+
   /**
   *
   * Get a sorted dependency list sorted by the least number of dependencies first.
@@ -187,6 +191,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_object_names_include  Wat er moet gebeuren met de lijst van namen: include de lijst (1), exclude de lijst (0) of niet gebruiken en dus geen beperking opleggen (null)
   * @param p_network_link          De netwerk link
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+  * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
   *
   * @return Een lijst van DDL text plus informatie over object.
   */
@@ -199,6 +204,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
+  , p_transform_param_list in varchar2 default c_transform_param_list 
   )
   return t_schema_ddl_tab
   pipelined;
@@ -209,7 +215,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_skip_repeatables in t_numeric_boolean
   , p_schema_ddl out nocopy t_schema_ddl
   );
-  
+
   /**
   * Deze functie toont DDL om van een source schema naar target schema te migreren.
   *
@@ -225,6 +231,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_network_link_source     De netwerk link van het bronschema
   * @param p_network_link_target     De netwerk link van het doelschema
   * @param pi_skip_repeatables       Skip repeatables objects (1) or check all objects (0)
+  * @param p_transform_param_list    A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
   *
   * @return Een lijst van DDL text plus informatie over object.
   */
@@ -237,6 +244,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link_source in t_network_link default null
   , p_network_link_target in t_network_link default null
   , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Default for Flyway with repeatable migrations
+  , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return t_schema_ddl_tab
   pipelined;
@@ -424,6 +432,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_new_schema in t_schema
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in t_schema_object_tab
+  , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return t_schema_ddl_tab
   pipelined;
@@ -440,6 +449,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
   );
 
   /*
@@ -481,7 +491,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_type in t_metadata_object_type default null
   )
   return clob;
-  
+
   -- test functions
   procedure ut_setup;
   procedure ut_teardown;

@@ -32,7 +32,7 @@ $end
   ( p_target
   , l_target_member_ddl_tab
   );
-  
+
   for r in
   ( select  value(s) as source_schema_ddl
     ,       value(t) as target_schema_ddl

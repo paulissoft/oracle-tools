@@ -1,4 +1,4 @@
-create or replace package ui_session_pkg
+CREATE OR REPLACE PACKAGE "UI_SESSION_PKG" 
 as
 -- See https://jeffkemponoracle.com/tag/best-practice/
 
@@ -214,3 +214,4 @@ deterministic;
 
 end ui_session_pkg;
 /
+

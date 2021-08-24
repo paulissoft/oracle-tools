@@ -45,9 +45,11 @@
     - full.skip.install.sql
     Skip generating (un)install.sql script during a full generation?
     - full.interface
-    The full interface (pkg_ddl_util v4/pkg_datapump_util).
+    The full interface (pkg_ddl_util v4/pkg_ddl_util v5).
     - full.strip.source.schema
     Must we strip the object schema from the file name and DDL statement if it is equal to the source schema?
+    - full.transform.params
+    A list of DBMS_METADATA transformation parameters.
 
     The following properties are used for generate-ddl-incr:
     - target.db.name
@@ -59,7 +61,9 @@
     - incr.skip.repeatables
     Skip repeatable/replaceable objects in incremental migration scripts?
     - incr.interface
-    The incremental interface (pkg_ddl_util v4).
+    The incremental interface (pkg_ddl_util v4/pkg_ddl_util v5).
+    - incr.transform.params
+    A list of DBMS_METADATA transformation parameters.
 
   </description>
 
@@ -106,8 +110,7 @@
     <loadresource property="object.names.trimmed">
       <propertyresource name="object.names"/>
       <filterchain>
-        <!-- tokenfilter with chars=" \t\r\n" does not seem to replace \r nor \n so use striplinebreaks -->
-        <striplinebreaks/>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
         <tokenfilter>
           <deletecharacters chars=" \t" />
         </tokenfilter>
@@ -183,7 +186,8 @@
     <define-perl-property property="full.skip.install.sql" default="yes"/>
     <define-perl-property property="full.strip.source.schema" default="no"/>
 
-    <property name="full.interface" value="pkg_ddl_util v4"/>
+    <property name="full.interface" value="pkg_ddl_util v5"/>
+    <property name="full.transform.params" value="SEGMENT_ATTRIBUTES,TABLESPACE"/>
 
     <condition property="full.skip.uninstall.sql" value="true" else="false">
       <not>
@@ -247,7 +251,8 @@ Z       Time zone               RFC 822 time zone   -0800
 
     <mkdir dir="${incr.output.directory}"/>
 
-    <property name="incr.interface" value="pkg_ddl_util v4"/>
+    <property name="incr.interface" value="pkg_ddl_util v5"/>
+    <property name="incr.transform.params" value="SEGMENT_ATTRIBUTES,TABLESPACE"/>
 
     <echoproperties prefix="perl." />
     <echoproperties prefix="incr." />
@@ -316,7 +321,8 @@ Z       Time zone               RFC 822 time zone   -0800
     <attribute name="target.db.name" default=""/>
     <attribute name="skip.repeatables" default="0"/>
     <attribute name="interface"/>
-    <attribute name="owner"/>
+    <attribute name="transform.params"/>
+    <attribute name="owner"/>   
     <attribute name="id"/> <!-- unique id -->
     <!-- Perl -->
     <element name="perl-arguments"/>
@@ -343,6 +349,8 @@ Z       Time zone               RFC 822 time zone   -0800
         <arg value="${quote}${object.names.trimmed}${quote}"/> <!-- object names -->
         <arg value="${quote}@{skip.repeatables}${quote}"/> <!-- skip repeatables -->
         <arg value="${quote}@{interface}${quote}"/>
+        <arg value="${quote}@{transform.params}${quote}"/>
+        <!-- owner must be the last -->
         <arg value="${quote}@{owner}${quote}"/>
       </java>
 
@@ -384,10 +392,11 @@ Z       Time zone               RFC 822 time zone   -0800
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <!-- generate the input for the Perl script -->
     <generate-ddl source.schema="${schema}"
-                     source.db.name="${source.db.name}"
-                     interface="${full.interface}"
-                     owner="${owner}"
-                     id="generate-ddl-full-scripts">
+                  source.db.name="${source.db.name}"
+                  interface="${full.interface}"
+                  transform.params="${full.transform.params}"
+                  owner="${owner}"
+                  id="generate-ddl-full-scripts">
       <perl-arguments>
         <arg value="--${perl.full.force.view}force-view"/>
         <arg value="--output-directory=${full.output.directory}"/>
@@ -406,10 +415,11 @@ Z       Time zone               RFC 822 time zone   -0800
           unless="${full.skip.uninstall.sql}">
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <generate-ddl target.schema="${schema}"
-                     target.db.name="${source.db.name}"
-                     interface="${full.interface}"
-                     owner="${owner}"
-                     id="generate-ddl-full-uninstall">
+                  target.db.name="${source.db.name}"
+                  interface="${full.interface}"
+                  transform.params="${full.transform.params}"
+                  owner="${owner}"
+                  id="generate-ddl-full-uninstall">
       <perl-arguments>
         <arg value="--output-directory=${full.output.directory}"/>
         <arg value="--single-output-file=uninstall.sql"/>
@@ -464,6 +474,7 @@ Z       Time zone               RFC 822 time zone   -0800
                      target.db.name="${target.db.name}"
                      skip.repeatables="${skip.repeatables}"
                      interface="${incr.interface}"
+                     transform.params="${incr.transform.params}"
                      owner="${owner}"
                      id="generate-ddl-incr">
       <perl-arguments>   

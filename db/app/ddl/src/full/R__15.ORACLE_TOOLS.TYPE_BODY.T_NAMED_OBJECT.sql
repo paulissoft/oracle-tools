@@ -38,7 +38,7 @@ $end
     and     o.object_name = p_object_name
     and     o.object_type not in ('INDEX', 'TRIGGER', 'PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW') -- only primary objects
     ;
-    
+
     l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
   end if;
 
@@ -90,7 +90,7 @@ $end
   , p_object_name => p_object_name
   , p_named_object => l_named_object
   );
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
@@ -117,7 +117,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   pkg_ddl_util.chk_schema_object(p_named_object => self, p_schema => p_schema);
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end

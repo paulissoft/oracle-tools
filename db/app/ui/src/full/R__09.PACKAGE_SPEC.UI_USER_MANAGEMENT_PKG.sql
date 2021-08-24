@@ -1,4 +1,4 @@
-create or replace package ui_user_management_pkg
+CREATE OR REPLACE PACKAGE "UI_USER_MANAGEMENT_PKG" 
 is
 
 "USE_APEX_GROUPS" constant varchar2(100) := 'USE_APEX_GROUPS'; -- an Apex BUILD OPTION
@@ -151,3 +151,4 @@ procedure dml_apex_user
 
 end ui_user_management_pkg;
 /
+

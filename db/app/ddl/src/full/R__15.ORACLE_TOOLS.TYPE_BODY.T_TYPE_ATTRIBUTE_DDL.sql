@@ -71,7 +71,7 @@ $end
   , p_target => p_target
   , p_schema_ddl => self
   );
-  
+
   l_changed := false;
 
   pkg_str_util.append_text

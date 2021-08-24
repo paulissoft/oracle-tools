@@ -35,7 +35,7 @@ $end
 
   return;
 end;
-  
+
 overriding member function dict_object_type 
 return varchar2
 deterministic
@@ -68,7 +68,7 @@ $end
   then
     raise_application_error(-20000, 'Dictionary object type should not be null.');
   end if;
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end

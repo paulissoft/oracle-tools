@@ -1,4 +1,4 @@
-create or replace package body ui_session_pkg
+CREATE OR REPLACE PACKAGE BODY "UI_SESSION_PKG" 
 as
 
 function get_date_format
@@ -357,3 +357,4 @@ end prepare_dialog_url;
 
 end ui_session_pkg;
 /
+

@@ -1,4 +1,4 @@
-create or replace function data_session_username
+CREATE OR REPLACE FUNCTION "DATA_SESSION_USERNAME" 
 return varchar2 as
 begin
   return coalesce
@@ -8,3 +8,4 @@ begin
          );
 end;
 /
+

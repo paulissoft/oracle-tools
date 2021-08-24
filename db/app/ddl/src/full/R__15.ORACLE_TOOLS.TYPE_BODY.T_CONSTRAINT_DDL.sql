@@ -20,8 +20,14 @@ begin
     self.add_ddl
     ( p_verb => 'ALTER'
       -- the schema is
-    , p_text => -- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
-                'call oracle_tools.pkg_ddl_util.execute_ddl(p_id => ''' || p_target.obj.id() /* target exists, source maybe not */ || ''', p_text => ''' ||
+    , p_text => -- GPA 2017-06-27 #147914109 - As a release operator I do not want that index/constraint rename actions fail when the target already exists.
+                q'[
+declare
+  -- ORA-02264: name already used by an existing constraint
+  e_constraint_name_already_used exception;
+  pragma exception_init(e_constraint_name_already_used, -02264);
+begin
+  execute immediate ']' || 
                 'ALTER TABLE "' ||
                 self.obj.base_object_schema() ||
                 '"."' ||
@@ -30,8 +36,11 @@ begin
                 p_target.obj.object_name() ||
                 '" TO "' ||
                 self.obj.object_name() ||
-                '"' ||
-                ''')'
+                '"' || q'[';
+exception
+  when e_constraint_name_already_used
+  then null;
+end;]'
     , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
@@ -62,7 +71,7 @@ $if pkg_ddl_util.c_#138707615_2 $then
               --
               -- Simple solution: KEEP the INDEX
               --
-              
+
               case l_constraint_object.constraint_type()
                 when 'P' -- primary key
                 then ' DROP PRIMARY KEY KEEP INDEX'
@@ -96,7 +105,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
 $if pkg_ddl_util.c_#138707615_2 $then
-                        
+
   -- Primary/unique constraints with USING INDEX syntax may fail.
   --
   -- a) This may fail when the index is already there:
@@ -148,7 +157,6 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 end add_ddl;
 
--- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
 overriding member procedure execute_ddl
 ( self in t_constraint_ddl
 )

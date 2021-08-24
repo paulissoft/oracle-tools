@@ -31,7 +31,7 @@ $end
       -- maybe a temporary table
       self.tablespace_name$ := null;
   end;
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."info", 'self.tablespace_name$: %s', self.tablespace_name$);
   dbug.leave;
@@ -58,7 +58,7 @@ $end
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
   self.tablespace_name$ := p_tablespace_name;
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end

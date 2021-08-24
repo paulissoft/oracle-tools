@@ -130,10 +130,10 @@ begin
 
   -- select * from all_ind_columns where index_name IN ('MAINTENANCE_PK','ORDER_PK');
   --
-  -- INDEX_OWNER	INDEX_NAME	TABLE_OWNER	TABLE_NAME	COLUMN_NAME	COLUMN_POSITION
+  -- INDEX_OWNER  INDEX_NAME  TABLE_OWNER TABLE_NAME  COLUMN_NAME COLUMN_POSITION
   -- -----------        ----------      -----------     ----------      -----------     ---------------
-  -- <owner>	MAINTENANCE_PK	<owner>	MAINTENANCE	SEQ	        1
-  -- <owner>	ORDER_PK	<owner>	ORDERHEADER	SEQ	        1
+  -- <owner>  MAINTENANCE_PK  <owner> MAINTENANCE SEQ         1
+  -- <owner>  ORDER_PK  <owner> ORDERHEADER SEQ         1
 
   -- GPA 20170126
   -- The problem was that t_schema_object.id ignored base info for an INDEX

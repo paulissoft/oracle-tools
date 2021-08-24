@@ -1,4 +1,4 @@
-create or replace package body DATA_API_PKG
+CREATE OR REPLACE PACKAGE BODY "DATA_API_PKG" 
 is
 
 -- LOCAL

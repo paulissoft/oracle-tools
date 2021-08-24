@@ -46,7 +46,7 @@ begin
     p_target.obj.chk(null);
     raise program_error;
   end if;
-  
+
   -- COMMENT ON TABLE "schema"."object" IS ''
   -- COMMENT ON VIEW "schema"."object" IS ''
   -- COMMENT ON MATERIALIZED VIEW "<owner>"."MV_TTSUBSCRIPTION" IS ''

@@ -1,4 +1,4 @@
-create or replace package body API_PKG -- -*-coding: utf-8-*-
+CREATE OR REPLACE PACKAGE BODY "API_PKG" -- -*-coding: utf-8-*-
 is
 
 -- LOCAL

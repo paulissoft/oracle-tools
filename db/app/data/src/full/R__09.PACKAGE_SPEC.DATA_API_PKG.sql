@@ -1,4 +1,4 @@
-create or replace package data_api_pkg authid current_user is
+CREATE OR REPLACE PACKAGE "DATA_API_PKG" authid current_user is
 
 /**
  * This package has AUTHID CURRENT_USER so that it can be used by 
@@ -141,3 +141,4 @@ $end
 
 end data_api_pkg;
 /
+

@@ -16,7 +16,7 @@ is
 begin
   self.network_link$ := p_network_link;
 end network_link;
-  
+
 final member function object_schema
 return varchar2
 deterministic
@@ -324,7 +324,7 @@ $end
       p_grantable
       ;
   end if;
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_id);
   dbug.leave;
@@ -489,7 +489,7 @@ $end
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
         );
-           
+
     when 'OBJECT_GRANT'
     then
       p_schema_object :=
@@ -505,7 +505,7 @@ $end
         , p_privilege => p_privilege
         , p_grantable => p_grantable
         );
-           
+
     when 'CONSTRAINT'
     then
       p_schema_object :=
@@ -533,7 +533,7 @@ $end
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
         );
-         
+
     when 'SYNONYM'
     then
       p_schema_object :=
@@ -561,7 +561,7 @@ $end
         , p_object_schema => p_object_schema
         , p_column_name => p_column_name
         );
-        
+
     else
 -- when 'SEQUENCE'
 -- when 'TYPE_SPEC'
@@ -716,7 +716,7 @@ return varchar2
 deterministic
 is
   l_object_name varchar2(4000 char);
-  
+
   function get_object_part(p_object_part in varchar2)
   return varchar2
   is
@@ -733,7 +733,7 @@ $end
     || '.'
     || get_object_part(object_name())
     ;
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_object_name);
   dbug.leave;
@@ -787,7 +787,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);
-  
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end

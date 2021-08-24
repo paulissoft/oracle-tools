@@ -14,7 +14,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS
   , schema_ddl t_schema_ddl
   , ready boolean default false -- pipe row has been issued
   );
-  
+
   type t_object_lookup_tab is table of t_object_lookup_rec index by t_object;
 
   -- key is t_schema_object.signature(), value is t_schema_object.id()
@@ -31,7 +31,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS
   -- This means l_object depends on l_object_dependency
 
   type t_object_exclude_name_expr_tab is table of t_text_tab index by t_metadata_object_type;
-  
+
   /* CONSTANTS */
 
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
@@ -203,7 +203,7 @@ $end -- $if cfg_pkg.c_testing $then
   -- ORA-31602: parameter OBJECT_TYPE value "XMLSCHEMA" in function ADD_TRANSFORM inconsistent with HANDLE
   e_wrong_transform_object_type exception;
   pragma exception_init(e_wrong_transform_object_type, -31602);
-  
+
 
 /* VARIABLES */
 
@@ -242,7 +242,7 @@ $end -- $if cfg_pkg.c_testing $then
 $if dbms_db_version.ver_le_10 $then
 
   $error 'Oracle 10 and below not supported.' $end
-  
+
   -- Oracle 10g does not allow us to store a ref cursor as a package variable
   -- not does it allow us to retrieve collections via dbms_sql.
   -- So just put everything into a collection in set_display_ddl_schema_args().
@@ -331,6 +331,8 @@ $end
 
   g_chk_tab t_object_natural_tab;
 
+  g_transform_param_tab t_transform_param_tab;
+
   /* PRIVATE ROUTINES */
 
   type t_longops_rec is record (
@@ -379,7 +381,7 @@ $end
     l_longops_rec.target_desc := p_target_desc;
 
     longops_show(l_longops_rec, 0);
-    
+
     return l_longops_rec;
   end longops_init;
 
@@ -986,12 +988,12 @@ $end
               when l_constraint like l_constraint_expr_tab(4) -- foreign key
               then
                 -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("SEQ")
-                
+
                 -- get the reference object schema, since l_pos2 is the position of the first ')'
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
                 l_pos2 := instr(l_constraint, '"', l_pos1+1);
                 l_ref_object_schema := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
-                
+
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
                 l_pos2 := instr(l_constraint, '"', l_pos1+1);
                 l_ref_object_name := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
@@ -1069,7 +1071,7 @@ $end
                 end loop;
             end;
           end if; -- if l_pos1 > 0 and l_pos2 > l_pos1
-          
+
         -- UNNAMED CHECK CONSTRAINT?
         elsif p_object_type in ('TABLE', 'VIEW') and
               ( l_constraint like l_constraint_expr_tab(5) or
@@ -1081,7 +1083,7 @@ $end
           if l_pos1 > 0 and l_pos2 > l_pos1
           then
             l_search_condition := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
-            
+
             if l_constraint like l_constraint_expr_tab(6)
             then
               l_search_condition := replace(l_search_condition, ' NOT NULL ENABLE', ' IS NOT NULL');
@@ -1420,7 +1422,7 @@ $end
     -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
     add(t_text_tab('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT'), 'SYSTP%');
 
-    -- no datapump tables, see pkg_datapump_util
+    -- no datapump tables
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_SQL\_FILE\_SCHEMA%');
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DDL');
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DML');
@@ -1479,7 +1481,7 @@ $end
                 , name => 'MODIFY'
                 , object_type => l_object_type_tab(i_idx)
                 );
- 
+
               if p_object_schema != p_new_object_schema
               then
                 dbms_metadata.set_remap_param
@@ -1513,7 +1515,7 @@ $end
       else
         begin
           l_transform_handle := dbms_metadata.add_transform(handle => p_handle, name => 'MODIFY');
-        
+
           if nvl(is_dependent_object_type(p_object_type => p_object_type), 1) = 1
           then
             if p_object_type in ('INDEX', 'TRIGGER')
@@ -1596,10 +1598,33 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
   end md_set_remap_param;
 
+  procedure get_transform_param_tab
+  ( p_transform_param_list in varchar2
+  , p_transform_param_tab out nocopy t_transform_param_tab
+  )
+  is
+    l_line_tab dbms_sql.varchar2a;
+  begin
+    p_transform_param_tab := g_transform_param_tab;
+
+    if p_transform_param_list is not null
+    then
+      pkg_str_util.split(p_str => p_transform_param_list, p_delimiter => ',', p_str_tab => l_line_tab);
+      if l_line_tab.count > 0
+      then
+        for i_idx in l_line_tab.first .. l_line_tab.last
+        loop
+          p_transform_param_tab(upper(trim(l_line_tab(i_idx)))) := true;
+        end loop;
+      end if;
+    end if;
+  end get_transform_param_tab;
+
   procedure md_set_transform_param
   ( p_transform_handle in number default dbms_metadata.session_transform
   , p_object_type_tab in t_text_tab default t_text_tab('INDEX', 'TABLE', 'CLUSTER', 'CONSTRAINT', 'TABLE', 'VIEW', 'TYPE_SPEC')
   , p_use_object_type_param in boolean default false
+  , p_transform_param_tab in t_transform_param_tab default g_transform_param_tab
   )
   is
   begin
@@ -1610,9 +1635,9 @@ $end
     loop
       if p_object_type_tab(i_idx) in ('TABLE', 'INDEX', 'CLUSTER', 'CONSTRAINT', 'ROLLBACK_SEGMENT', 'TABLESPACE')
       then
-        dbms_metadata.set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata.set_transform_param(p_transform_handle, 'STORAGE'             , false, case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata.set_transform_param(p_transform_handle, 'TABLESPACE'          , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata.set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata.set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata.set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TABLE'
       then
@@ -1625,12 +1650,12 @@ $end
       end if;
       if p_object_type_tab(i_idx) = 'VIEW'
       then
-        -- GPA 2016-12-01 The FORCE keyword may be removed by the generate_ddl.pl script, dependeing on an option.
+        -- GPA 2016-12-01 The FORCE keyword may be removed by the generate_ddl.pl script, depending on an option.
         dbms_metadata.set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TYPE_SPEC'
       then
-        dbms_metadata.set_transform_param(p_transform_handle, 'OID'                 , false, case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata.set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
     end loop;
   end md_set_transform_param;
@@ -1876,6 +1901,7 @@ $end
   , p_new_object_schema in varchar2
   , p_base_object_schema in varchar2
   , p_base_object_name_tab in t_text_tab
+  , p_transform_param_tab in t_transform_param_tab
   , p_handle out number
   )
   is
@@ -2045,11 +2071,13 @@ $end
       md_set_transform_param
       ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
       , p_use_object_type_param => true
+      , p_transform_param_tab => p_transform_param_tab
       );
     else
       md_set_transform_param
       ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
       , p_object_type_tab => t_text_tab(p_object_type)
+      , p_transform_param_tab => p_transform_param_tab
       );
     end if;
     md_set_filter
@@ -2256,7 +2284,7 @@ $end
         l_base_object_schema := p_new_schema;
       end if;
     end if;
-    
+
     p_object_key :=
       t_schema_object.id
       ( p_object_schema => l_object_schema
@@ -2611,7 +2639,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   end compare_ddl;
-  
+
   procedure add2text
   ( p_str in varchar2
   , p_text_tab in out nocopy t_text_tab
@@ -2732,6 +2760,7 @@ $end
   , p_object_names_include in t_numeric_boolean
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
   )
   return t_schema_ddl_tab
   pipelined
@@ -2741,6 +2770,8 @@ $end
     l_schema_ddl_tab t_schema_ddl_tab;
     l_schema_object_tab t_schema_object_tab;
     l_sort_objects_by_deps_tab t_sort_objects_by_deps_tab;
+    l_transform_param_tab t_transform_param_tab;
+    l_line_tab dbms_sql.varchar2a;
     l_program constant varchar2(30 char) := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
@@ -2756,10 +2787,12 @@ $if cfg_pkg.c_debugging $then
                ,p_object_type
                ,p_object_names);
     dbug.print(dbug."input"
-               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s'
+               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_transform_param_list: %s'
                ,p_object_names_include
                ,p_network_link
-               ,p_grantor_is_schema);
+               ,p_grantor_is_schema
+               ,p_transform_param_list
+               );
 $end
 
     -- input checks
@@ -2771,6 +2804,8 @@ $end
     check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
     check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
     check_network_link(p_network_link => p_network_link);
+
+    get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
 
     if p_network_link is not null
     then
@@ -2792,6 +2827,7 @@ $end
       , p_object_names_include => p_object_names_include
       , p_network_link => p_network_link
       , p_grantor_is_schema => p_grantor_is_schema
+      , p_transform_param_list => p_transform_param_list
       );
 
       open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema' || l_network_link || ' t';
@@ -2821,6 +2857,7 @@ $end
                   , p_new_schema
                   , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
                   , l_schema_object_tab
+                  , p_transform_param_list
                   )
                 ) s
         ;
@@ -2848,7 +2885,7 @@ $end
                   )
                 ) d
         ;
-                    
+
         open l_cursor for
           select  s.schema_ddl
           from    ( select  value(s) as schema_ddl
@@ -2902,6 +2939,7 @@ $end
                     , p_new_schema
                     , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
                     , l_schema_object_tab
+                    , p_transform_param_list
                     )
                   ) s
           order by
@@ -2931,7 +2969,7 @@ $end
           then
             l_schema_ddl_tab(i_idx).obj.network_link(p_network_link);
           end if;
-          
+
           pipe row(l_schema_ddl_tab(i_idx));
 
           longops_show(l_longops_rec);
@@ -2982,7 +3020,7 @@ $end
     "install" constant varchar2(100) := 'install';
     "diff" constant varchar2(100) := 'diff';
     "dbms_metadata_diff" constant varchar2(100) := 'dbms_metadata_diff';
-    
+
     l_action varchar2(100) := "nothing";
     l_comment varchar2(4000 char) := 'there are no changes';
   begin
@@ -3037,7 +3075,7 @@ $end
         then
           raise program_error;
         end if;
-        
+
         /*
         -- Toon originele DDL als
         -- a) indien het een object type is dat kan worden vervangen EN
@@ -3097,12 +3135,12 @@ $end
     ( p_verb => '--'
     , p_text => '-- action: ' || l_action || ' (' || l_comment || ')'
     );
-        
+
     case l_action
       when "nothing"
       then
         null;
-        
+
       when "uninstall"
       then
         /*
@@ -3116,7 +3154,7 @@ $end
         p_schema_ddl.install
         ( p_source => p_source_schema_ddl
         );
-      
+
       else
         p_schema_ddl.migrate
         ( p_source => p_source_schema_ddl
@@ -3145,6 +3183,7 @@ $end
   , p_network_link_source in t_network_link
   , p_network_link_target in t_network_link
   , p_skip_repeatables in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
   )
   return t_schema_ddl_tab
   pipelined
@@ -3195,10 +3234,11 @@ $if cfg_pkg.c_debugging $then
                ,p_schema_source
                ,p_schema_target);
     dbug.print(dbug."input"
-               ,'p_network_link_source: %s; p_network_link_target: %s; p_skip_repeatables: %s'
+               ,'p_network_link_source: %s; p_network_link_target: %s; p_skip_repeatables: %s; p_transform_param_list: %s'
                ,p_network_link_source
                ,p_network_link_target
-               ,p_skip_repeatables);
+               ,p_skip_repeatables
+               ,p_transform_param_list);
 $end
 
     -- input checks
@@ -3234,6 +3274,7 @@ $end
                 , p_object_names_include
                 , p_network_link_source
                 , 0 -- any grantor
+                , p_transform_param_list
                 )
               ) s
       ;
@@ -3277,6 +3318,7 @@ $end
                 , case when p_object_names_include = 1 then p_object_names_include end
                 , p_network_link_target
                 , 1 -- only grantor equal to p_schema_target so we can revoke the grant if necessary
+                , p_transform_param_list
                 )
               ) t
       ;
@@ -3398,7 +3440,6 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."input", 'p_id: %s; p_text: %s', p_id, p_text);
 $end
 
-    -- GPA 2017-06-27 #147914109 - As an release operator I do not want that index/constraint rename actions fail when the target already exists.
     t_schema_ddl.execute_ddl(p_id => p_id, p_text => p_text);
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -3427,7 +3468,7 @@ $end
     if p_network_link is not null
     then
       check_network_link(p_network_link);
-      
+
       l_network_link := get_db_link(p_network_link);
 
       if l_network_link is null
@@ -3596,7 +3637,7 @@ $end
                                                                    ,/*p_network_link_target =>*/ p_network_link_target
                                                                    ,/*p_skip_repeatables =>*/ 0)) t
     ;
-    
+
     -- Skip public synonyms on the same database
     if get_host(p_network_link_source) = get_host(p_network_link_target)
     then
@@ -4200,7 +4241,7 @@ $end
               , p_object_name => r.object_name
               );
         end case;
-        
+
 $if pkg_ddl_util.c_#138707615_1 $then
       end if;
 $end        
@@ -4334,7 +4375,7 @@ $end
     if l_object_types_to_check = g_schema_md_object_type_tab
     then
       -- every object in l_named_object_tab has been checked already by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
-      
+
       -- combine and filter based on the map function of t_schema_object and its subtypes
       -- GPA 2017-01-27 For performance reasons do not use DISTINCT since the sets should be unique and distinct already
       p_schema_object_tab := l_named_object_tab multiset union /*distinct*/ l_schema_object_tab;
@@ -4440,7 +4481,7 @@ $end
     , char_length all_tab_columns.char_length%type
     , char_used all_tab_columns.char_used%type
     );
-    
+
     type t_member_tab is table of t_member;
 
     type t_type_method is record
@@ -4454,7 +4495,7 @@ $end
     , instantiable all_type_methods.instantiable%type
     , overriding all_type_methods.overriding%type
     );
-    
+
     type t_type_method_tab is table of t_type_method;
 
     l_statement varchar2(4000 char) := null;
@@ -4477,7 +4518,7 @@ $end
     l_pos pls_integer;
     l_start pls_integer;
     l_pattern varchar2(4000 char);
-    
+
     "ADD" constant varchar2(5) := ' ADD ';
 
     procedure cleanup
@@ -4561,7 +4602,7 @@ where   col.owner = :b1
 and     col.table_name = :b2
 order by
         member#';
-        
+
         dbms_lob.trim(l_table_ddl_clob, 0);
         pkg_str_util.text2clob
         ( pi_text_tab => p_schema_ddl.ddl_tab(1).text -- CREATE TABLE statement
@@ -4621,7 +4662,7 @@ $if cfg_pkg.c_debugging $then
 $end
                 raise_application_error(-20000, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
             end;
-        
+
           when 'TABLE'
           then
             begin
@@ -4656,9 +4697,9 @@ $end
                 , p_char_length => l_member_tab(i_idx).char_length
                 , p_char_used => l_member_tab(i_idx).char_used
                 );
-                
+
               dbms_lob.trim(l_member_ddl_clob, 0);
-              
+
               pkg_str_util.append_text
               ( pi_buffer => 'ALTER TABLE "' || p_schema_ddl.obj.object_schema() || '"."' || p_schema_ddl.obj.object_name() || '"' || "ADD" -- no ADD COLUMN
               , pio_clob => l_member_ddl_clob
@@ -4682,7 +4723,7 @@ $end
               l_pattern := '"' || l_member_tab(i_idx).member_name || '"';
 
               l_pos := dbms_lob.instr(lob_loc => l_table_ddl_clob, pattern => l_pattern, offset => l_start);
-              
+
 $if cfg_pkg.c_debugging $then
               dbug.print(dbug."info", 'l_pattern: %s; l_start: %s; l_pos: %s', l_pattern, l_start, l_pos);
 $end
@@ -4703,7 +4744,7 @@ $end
                            end;
 
               l_pos := dbms_lob.instr(lob_loc => l_table_ddl_clob, pattern => l_pattern, offset => l_start);
-              
+
 $if cfg_pkg.c_debugging $then
               dbug.print(dbug."info", 'l_pattern: %s; l_start: %s; l_pos: %s', l_pattern, l_start, l_pos);
 $end
@@ -4718,7 +4759,7 @@ $end
                     l_pos := l_pos - 1;
                   end loop;
                 end if;
-                
+
                 -- append part of a clob to another clob
                 dbms_lob.copy
                 ( dest_lob => l_member_ddl_clob
@@ -4753,7 +4794,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
               l_member_ddl.chk(p_schema_ddl.obj.object_schema());
-                
+
               p_member_ddl_tab.extend(1);
               p_member_ddl_tab(p_member_ddl_tab.last) := l_member_ddl;
             exception
@@ -4814,7 +4855,7 @@ and     a.subprogram_id = :b4
 and     a.data_level = 0
 order by
         a.position';
-        
+
         for i_idx in l_type_method_tab.first .. l_type_method_tab.last
         loop
 $if cfg_pkg.c_debugging $then
@@ -4828,7 +4869,7 @@ $end
                   , l_type_method_tab(i_idx).member#;
             fetch l_cursor bulk collect into l_argument_tab;
             close l_cursor;
-            
+
             l_type_method_object :=
               t_type_method_object
               ( p_base_object => treat(p_schema_ddl.obj as t_named_object)
@@ -4864,7 +4905,7 @@ $end
         end loop;
       end if;
     end if; -- if p_schema_ddl.obj.object_type() = 'TYPE_SPEC'
-    
+
     cleanup;
 
 $if cfg_pkg.c_debugging $then
@@ -4912,7 +4953,7 @@ $end
           else 0
         end;
     end if;
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
@@ -4936,7 +4977,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
     l_value := case when g_chk_tab.exists(p_object_type) and g_chk_tab(p_object_type) = 1 then true else false end;
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'return: %s', l_value);
     dbug.leave;
@@ -4985,7 +5026,7 @@ $end
         ') must both be empty or both not empty'
       );
     end if;
-    
+
     if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
     then
       raise_application_error
@@ -5026,7 +5067,7 @@ $end
     else
       raise_application_error(-20000, 'Object schema should be empty or ' || p_schema);
     end if;
-    
+
     if p_dependent_or_granted_object.base_object$ is null
     then
       raise_application_error(-20000, 'Base object should not be empty.');
@@ -5046,12 +5087,12 @@ $end
     then
       raise_application_error(-20000, 'Base object schema should not be empty');
     end if;
-    
+
     if p_dependent_or_granted_object.base_object_type() is null
     then
       raise_application_error(-20000, 'Base object type should not be empty');
     end if;
-    
+
     if p_dependent_or_granted_object.base_object_name() is null
     then
       raise_application_error(-20000, 'Base object name should not be empty');
@@ -5082,7 +5123,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
     chk_schema_object(p_schema_object => p_named_object, p_schema => p_schema);
-    
+
     if p_named_object.object_name() is null
     then
       raise_application_error(-20000, 'Object name should not be empty');
@@ -5122,7 +5163,7 @@ $if pkg_ddl_util.c_#140920801 $then
     exception
       when no_data_found
       then null;
-      
+
       when value_error
       then
         raise_application_error
@@ -5134,7 +5175,7 @@ $if pkg_ddl_util.c_#140920801 $then
         );
     end;
   end if;
-  
+
 $end
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -5185,7 +5226,7 @@ $end
         then
           raise_application_error(-20000, 'Search condition should be empty');
         end if;
-        
+
       when p_constraint_object.constraint_type() in ('C')
       then
         if p_constraint_object.column_names() is not null
@@ -5196,7 +5237,7 @@ $end
         then
           raise_application_error(-20000, 'Search condition should not be empty');
         end if;
-        
+
     end case;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -5208,7 +5249,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
       raise;
 $end
   end chk_schema_object;
-  
+
   /*
   -- helper function
   */
@@ -5255,7 +5296,7 @@ $end
            is_exclude_name_expr(p_metadata_base_object_type, p_base_object_name) = 1
       then
         l_result := 0;
-      
+
       -- exclude certain objects
       when p_metadata_object_type is not null and
            p_object_name is not null and
@@ -5266,7 +5307,7 @@ $end
       when p_metadata_object_type not member of p_object_types_to_check
       then
         l_result := 1; -- anything is fine
-      
+
       when -- filter on object type
            ( p_object_type is null or
              p_object_type = p_metadata_object_type or
@@ -5300,7 +5341,7 @@ $end
 
     return l_result;
   end schema_object_matches_filter;
-  
+
   function is_dependent_object_type
   ( p_object_type in t_metadata_object_type
   )
@@ -5384,6 +5425,7 @@ $end
   , p_new_schema in t_schema
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in t_schema_object_tab
+  , p_transform_param_list in varchar2
   )
   return t_schema_ddl_tab
   pipelined
@@ -5511,6 +5553,8 @@ $end
     r_params c_params%rowtype;
     l_params_idx pls_integer;
 
+    l_transform_param_tab t_transform_param_tab;
+
     l_program constant varchar2(30 char) := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
@@ -5527,13 +5571,16 @@ $end
 $if cfg_pkg.c_debugging $then
       dbug.enter(g_package_prefix || l_program || '.INIT');
 $end
+
+      get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
+
       if p_schema_object_tab is not null and p_schema_object_tab.count > 0
       then
         for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
         loop
           begin
             l_schema_object := p_schema_object_tab(i_idx);
-            
+
             if p_new_schema is not null
             then
               -- If we are going to move to another schema, adjust all schema attributes because the DDL generated
@@ -5581,7 +5628,7 @@ $end
             then
               -- not by constraint name (dbms_metadata does not supply that) but by signature
               l_object_key := l_schema_object.signature();
-          
+
               if not l_constraint_lookup_tab.exists(l_object_key)
               then
                 l_constraint_lookup_tab(l_object_key) := l_schema_object.id();
@@ -5741,13 +5788,14 @@ $end
         , p_base_object_schema => r_params.base_object_schema
         , p_base_object_name_tab => r_params.base_object_name_tab
         , p_new_object_schema => p_new_schema
+        , p_transform_param_tab => l_transform_param_tab
         , p_handle => l_handle
         );
-        
+
         -- open handles
         l_longops_open_rec.target_desc := r_params.object_type;
         longops_show(l_longops_open_rec);
-        
+
         -- objects fetched for this param
         <<fetch_loop>>
         loop
@@ -5867,6 +5915,7 @@ $end
   , p_object_names_include in t_numeric_boolean
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
   )
   is
 $if not(dbms_db_version.ver_le_10) $then
@@ -5884,10 +5933,11 @@ $if cfg_pkg.c_debugging $then
                ,p_object_type
                ,p_object_names);
     dbug.print(dbug."input"
-               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s'
+               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_transform_param_list: %s'
                ,p_object_names_include
                ,p_network_link
-               ,p_grantor_is_schema);
+               ,p_grantor_is_schema
+               ,p_transform_param_list);
 $end
 
     if p_network_link is null
@@ -5906,6 +5956,7 @@ $if dbms_db_version.ver_le_10 $then
                 , p_object_names_include
                 , null -- p_network_link
                 , p_grantor_is_schema
+                , p_transform_param_list
                 )
               ) t;
 $else  
@@ -5921,6 +5972,7 @@ $else
                   , p_object_names_include
                   , null -- p_network_link
                   , p_grantor_is_schema
+                  , p_transform_param_list
                   )
                 ) t;
       -- PLS-00994: Cursor Variables cannot be declared as part of a package
@@ -5954,11 +6006,12 @@ begin
   , p_object_names_include => :b6
   , p_network_link => null
   , p_grantor_is_schema => :b7
+  , p_transform_param_list => :b8
   );
 end;]';
       begin
         execute immediate l_statement
-          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema;
+          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
       exception
         when others
         then raise_application_error(-20000, l_statement, true);
@@ -6465,7 +6518,7 @@ $end
   )
   is
     l_line_tab dbms_sql.varchar2a;
-  
+
     l_source_text clob := null;
     l_target_text clob := null;
 
@@ -6576,14 +6629,14 @@ $end
         )
       ;
     end if;
-              
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'return: %s', substr(l_ddl_text, 1, 255));
     dbug.leave;
 $end
 
     return l_ddl_text;
-    
+
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   exception
     when others
@@ -6875,12 +6928,12 @@ $end
       when no_data_found
       then raise_application_error(-20000, 'User EMPTY must exist', true);
     end;
-    
+
     if get_db_link(g_empty) is null
     then
       raise_application_error(-20000, 'Database link EMPTY must exist');
     end if;
-    
+
     begin
       select  1
       into    l_found
@@ -6953,7 +7006,7 @@ $end
                )
              ) t
       ;
-        
+
     -- dbms_application_info stuff
     l_program constant varchar2(61 char) := 'UT_DISPLAY_DDL_SCHEMA';
     l_longops_rec t_longops_rec;
@@ -7057,7 +7110,7 @@ $end
     , p_sqlcode_expected => -6502
     , p_schema => null
     );
-    
+
     chk
     ( 'Invalid schema indien p_network_link leeg is en p_schema geen correct schema.'
     , p_sqlcode_expected => -44001
@@ -7289,7 +7342,7 @@ $end
       then
         l_longops_rec := longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
       end if;
-    
+
 $if cfg_pkg.c_debugging $then
       dbug.print
       ( dbug."info"
@@ -7307,7 +7360,7 @@ $end
         then
           dbms_lob.trim(l_clob1, 0);
         end if;
-        
+
         for r_text in
         ( select t.obj.object_schema() as object_schema
           ,      t.obj.object_name() as object_name
@@ -8024,7 +8077,7 @@ $end
                   )
                 ) t
         where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW');
-        
+
         ut.expect
         ( l_count
         , l_program || '#mview count#' || r.mview_name || '#' || r.build_mode || '#' || i_test
@@ -8080,7 +8133,7 @@ $end
                   , 1
                   )
                 ) t;
-                
+
         ut.expect
         ( l_count
         , l_program || '#object based on another schema count#' || r.fq_object_name
@@ -8178,7 +8231,7 @@ $end
         , p_schema_ddl => l_drop_schema_ddl_tab(l_drop_schema_ddl_tab.last)
         );
       end loop;
-      
+
       execute_ddl(l_drop_schema_ddl_tab, l_network_link_target);
 
 $if cfg_pkg.c_debugging $then
@@ -8215,19 +8268,19 @@ $end
         then
           l_schema := g_owner;
           l_network_link_source := g_loopback; -- this is l_schema
-          
+
       end case;
 
       /* step 1 */
       begin
         cleanup; -- empty EMPTY
-        
+
         select  count(*)
         into    l_count
         from    all_objects t
         where   t.owner = g_empty
         and     pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) = 0;
-        
+
         ut.expect(l_count, l_program || '#cleanup' || '#' || i_try).to_equal(0);
 $if cfg_pkg.c_debugging $then        
       exception
@@ -8255,7 +8308,7 @@ $end
       from    all_synonyms t
       where   t.owner = 'PUBLIC'
       and     t.table_owner = l_schema;
-      
+
       ut.expect(l_count, l_program || '#no public synonyms' || '#' || i_try).to_equal(0);
 
       /* step 3 */
@@ -8270,7 +8323,7 @@ $end
       );
 
       /* step 4 */
-      
+
       -- Bereken de verschillen, i.e. de CREATE statements.
       -- Gebruik database links om aan te loggen met de juiste gebruiker.
       open c_display_ddl_schema_diff( b_schema_source => l_schema
@@ -8290,7 +8343,7 @@ $end
       */
       -- ORA-01720: grant option does not exist for '<owner>.PARTY'
       remove_object_grants(l_diff_schema_ddl_tab);
-      
+
       begin
         ut.expect(l_diff_schema_ddl_tab.count, l_program || '#differences' || '#' || i_try).to_equal(0);
 $if cfg_pkg.c_debugging $then        
@@ -8347,7 +8400,7 @@ $if cfg_pkg.c_debugging $then
       raise;
 $end
   end ut_sort_objects_by_deps;
-  
+
 $else -- $if cfg_pkg.c_testing $then
 
   -- test functions
@@ -8398,7 +8451,7 @@ $else -- $if cfg_pkg.c_testing $then
   begin
     raise program_error;
   end ut_get_schema_object;
-  
+
   procedure ut_synchronize
   is
   begin
@@ -8410,7 +8463,7 @@ $else -- $if cfg_pkg.c_testing $then
   begin
     raise program_error;
   end ut_sort_objects_by_deps;
-  
+
 $end -- $if cfg_pkg.c_testing $then
 
 begin
@@ -8425,6 +8478,15 @@ begin
   select global_name.global_name into g_dbname from global_name;
 
   i_object_exclude_name_expr_tab;
+
+  g_transform_param_tab('SEGMENT_ATTRIBUTES'  ) := false;
+  g_transform_param_tab('STORAGE'             ) := false;
+  g_transform_param_tab('TABLESPACE'          ) := false;
+  -- g_transform_param_tab('REF_CONSTRAINTS'     ) := false;
+  -- g_transform_param_tab('CONSTRAINTS_AS_ALTER') := false;
+  -- g_transform_param_tab('CONSTRAINTS'         ) := false;
+  -- g_transform_param_tab('FORCE'               ) := false;
+  g_transform_param_tab('OID'                 ) := false;
 end pkg_ddl_util;
 /
 

@@ -15,6 +15,8 @@
   
   <properties>
     <flyway.table>schema_version_tools_ui</flyway.table>
+    <!-- this project uses Flyway placeholders -->
+    <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>UI_APEX_MESSAGES_PKG
 ,UI_ERROR_PKG

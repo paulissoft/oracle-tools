@@ -108,13 +108,13 @@ $end
   , p_target => p_target
   , p_schema_ddl => self
   );
-  
+
   for i_ddl_idx in 1..3
   loop
     l_clob := null;
     l_buffer := null;
     l_changed := false;
-    
+
     pkg_str_util.append_text
     ( pi_text => 'ALTER TABLE "' || l_source_table_column_object.base_object_schema() || '"."' || l_source_table_column_object.base_object_name() || '"' ||
                  ' MODIFY "' || l_source_table_column_object.member_name() || '" '
@@ -166,7 +166,7 @@ $end
           end if;
           l_changed := true;
         end if;
-        
+
       when 3
       then
         if l_source_table_column_object.nullable() != l_target_table_column_object.nullable() 

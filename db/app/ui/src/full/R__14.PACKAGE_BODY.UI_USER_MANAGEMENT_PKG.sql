@@ -1,4 +1,4 @@
-create or replace package body ui_user_management_pkg
+CREATE OR REPLACE PACKAGE BODY "UI_USER_MANAGEMENT_PKG" 
 is
 
 function show_users
@@ -531,3 +531,4 @@ end dml_apex_user;
 
 end ui_user_management_pkg;
 /
+

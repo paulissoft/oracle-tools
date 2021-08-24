@@ -1,4 +1,4 @@
-create or replace package API_PKG authid current_user -- needed to invoke procedures from the calling schema without grants
+CREATE OR REPLACE PACKAGE "API_PKG" authid current_user -- needed to invoke procedures from the calling schema without grants
 is
 
 -- GJP 2020-11-30  Use cfg_pkg.c_debugging instead
@@ -105,3 +105,4 @@ $end
 
 end API_PKG;
 /
+

@@ -73,7 +73,7 @@ $end
   , p_target => p_target
   , p_schema_ddl => self
   );
-  
+
   self.uninstall(p_target => p_target);
   self.install(p_source => p_source);
 

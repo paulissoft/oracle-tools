@@ -20,7 +20,7 @@ begin
     , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
-  
+
 end uninstall;
 
 end;

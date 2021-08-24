@@ -1,13 +1,4 @@
-begin
-  for r in
-  ( select  'grant execute on EXT_LOAD_FILE_PKG to ' || username as cmd
-    from    all_users
-    where   username = replace(user, '_EXT', '_UI')
-    and     username != user
-  )
-  loop
-    dbms_output.put_line(r.cmd);
-    execute immediate r.cmd;
-  end loop;
-end;
-/
+call dbms_application_info.set_module('R__18.OBJECT_GRANT.EXT_LOAD_FILE_PKG.sql', null);
+call dbms_application_info.set_action('SQL statement 1');
+GRANT EXECUTE ON "EXT_LOAD_FILE_PKG" TO PUBLIC;
+

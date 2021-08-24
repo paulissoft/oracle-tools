@@ -123,7 +123,7 @@ begin
         end if;
       end loop;
     end if;
-    
+
     return 'STATIC';
   end if;
 end static_or_member;
@@ -154,7 +154,7 @@ $end
   add(case when self.instantiable() = 'NO' then 'NOT ' end || 'INSTANTIABLE ');
   add(case when self.overriding() = 'NO' then 'NOT ' end || 'OVERRIDING ');
   add(chr(10));
-  
+
   if l_is_constructor
   then
     add('CONSTRUCTOR');
@@ -171,12 +171,12 @@ $end
 
   -- method name
   add(' ' || self.member_name());
-  
+
   -- first the arguments and later the return value
   if cardinality(self.arguments) > self.results() 
   then
     add(chr(10) || '( ');
-   
+
     for i_idx in self.arguments.first + self.results() .. self.arguments.last
     loop
       add
@@ -188,7 +188,7 @@ $end
         case when i_idx < self.arguments.last then chr(10) || ', ' end
       );
     end loop;
-    
+
     add(chr(10) || ')');
   end if;
 
@@ -219,7 +219,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
 $end
 
   pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
-  
+
   if self.parameters() + self.results() = nvl(cardinality(self.arguments), 0)
   then
     null;

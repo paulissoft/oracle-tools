@@ -16,10 +16,11 @@ public class GenerateDDL
     // args[7]: object names (comma separated list)
     // args[8]: skip repeatables (0 or 1)
     // args[9]: interface
-    // args[10]: owner of pkg_ddl_util package
+    // args[10]: a list of DBMS_METADATA transformation parameters
+    // args[11]: owner of pkg_ddl_util package (MUST BE THE LAST PARAMETER)
     public static void main(String[] args) throws SQLException, IOException, Exception
     {
-        final int args_size = 11;
+        final int args_size = 12;
         int nr;
         final PrintStream out = new PrintStream(System.out, true, "UTF-8");
         Connection conn = null;
@@ -30,8 +31,11 @@ public class GenerateDDL
             }
 
             if (args.length != args_size) {
-                throw new Exception("Usage: GenerateDDL <JDBC url> <source schema> <source database link> <target schema> <target database link> " +
-                                                       "<object type> <object names include> <object names> <skip repeatables> <interface> <owner>");
+                throw new Exception("Usage: GenerateDDL <JDBC url> " +
+                                                       "<source schema> <source database link> " +
+                                                       "<target schema> <target database link> " +
+                                                       "<object type> <object names include> <object names> " +
+                                                       "<skip repeatables> <interface> <transform params> <owner>");
             }
 
             final Map<String, String> env = System.getenv();
@@ -107,6 +111,11 @@ public class GenerateDDL
                     break;
 
                 case 10:
+                    // interface
+                    out.println("transform params    : " + args[nr]);
+                    break;
+                    
+                case 11:
                     owner = args[nr];
                     // owner
                     out.println("owner               : " + args[nr]);
@@ -125,7 +134,7 @@ public class GenerateDDL
 
             conn = DriverManager.getConnection(args[++nr]);
     
-            final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?)}");
+            final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?)}");
       
             pstmt.setString(1, args[++nr]);
             pstmt.setString(2, args[++nr]);
@@ -145,10 +154,11 @@ public class GenerateDDL
             pstmt.setString(7, args[++nr]);
             pstmt.setInt(8, Integer.parseInt(args[++nr])); // never null
             pstmt.setString(9, args[++nr]);
-            pstmt.registerOutParameter(10, Types.CLOB);
+            pstmt.setString(10, args[++nr]);
+            pstmt.registerOutParameter(args_size - 1, Types.CLOB);
             pstmt.executeUpdate();
 
-            final Clob clob = pstmt.getClob(10);
+            final Clob clob = pstmt.getClob(args_size - 1);
 
             // Print all at once
             final long len = clob.length();
