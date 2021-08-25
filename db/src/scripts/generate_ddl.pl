@@ -842,8 +842,10 @@ sub add_sql_statement ($$$$;$) {
     $r_sql_statements->{$object}->{seq} = scalar(keys %$r_sql_statements)
         unless exists($r_sql_statements->{$object}->{seq});
 
-    add_object_seq($object)
-        unless exists($object_seq{$object});
+    # ignore errors when $object does not conform to naming convention or already exists
+    eval {
+        add_object_seq($object);
+    };
 
     $r_sql_statements->{$object}->{ddls}->[$ddl_no] = { 'ddl_info' => $ddl_info, 'ddl' => [] }
         unless exists($r_sql_statements->{$object}->{ddls}->[$ddl_no]);
@@ -1374,6 +1376,9 @@ sub split_single_output_file ($) {
 sub add_object_seq ($) {
     my $key = shift @_;
     
+    error("Key '$key' should match 'SCHEMA:TYPE:NAME'")
+        unless $key =~ m/^.+:.+:.+$/;
+    
     error("Object sequence for '$key' already exists.")
         if exists($object_seq{$key});
     
@@ -1391,7 +1396,7 @@ sub read_object_seq ($) {
             or error("Can not open '$install_sequence_txt': $!");
 
         while (<$fh_seq>) {
-            if (m/^(.*)[:.](.*)[:.](.*)$/) {
+            if (m/^(.+)[:.](.+)[:.](.+)$/) {
                 add_object_seq(join(':', $1, $2, $3));
             }
         }
