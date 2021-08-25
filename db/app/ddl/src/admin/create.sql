@@ -1,0 +1,2 @@
+-- for unit testing
+CREATE USER EMPTY IDENTIFIED BY "EMPTY";
