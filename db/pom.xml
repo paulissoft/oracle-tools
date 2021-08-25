@@ -50,7 +50,7 @@
     <!-- ============================ -->
     <!-- UTPLSQL properties (db-test) -->
     <!-- ============================ -->
-    <db.utplsql.path>${db.schema}</db.utplsql.path>
+    <db.utplsql.path>${project.artifactId}</db.utplsql.path>
     <db.test.phase>none</db.test.phase>
 
     <!-- ======================== -->
@@ -192,6 +192,32 @@
                       </not>
                     </condition>
                   </fail>
+
+                  <!-- filesystem: seems to be a problem for filterchain -->
+                  <property name="tmp.flyway.locations"
+                            value="filesystem:${db.src.full.scripts.abs},filesystem:${db.src.incr.scripts.abs},filesystem:${db.src.dml.scripts.abs},filesystem:${db.src.callbacks.scripts.abs}" />
+
+                  <!-- to suppress WARNING: Discarding duplicate location -->
+                  
+                  <!-- https://stackoverflow.com/questions/21179080/removing-dupliates-from-comma-seperate-strings-stored-in-ant-property -->
+
+                  <loadresource property="flyway.locations">
+                    <propertyresource name="tmp.flyway.locations" />
+                    <filterchain>
+                      <tokenfilter>
+                        <filetokenizer />
+                        <replacestring from="," to="${line.separator}" />
+                      </tokenfilter>                      
+                      <sortfilter />
+                      <uniqfilter />
+                      <tokenfilter>
+                        <filetokenizer />
+                        <replacestring from="${line.separator}" to="," />
+                        <replaceregex pattern=",$" replace="" /> <!-- strip last comma -->
+                      </tokenfilter>
+                    </filterchain>
+                  </loadresource>
+        
                 </target>
               </configuration>
               <goals>
@@ -221,12 +247,15 @@
           <version>${flyway.version}</version>
           <configuration>
             <skip>${db.install.skip}</skip>
+            <!-- The section below will not used since the Maven property ${flyway.locations} (set above) has a higher precedence. -->
+            <!--
             <locations>                
               <location>filesystem:${db.src.full.scripts.abs}</location>
               <location>filesystem:${db.src.incr.scripts.abs}</location>
               <location>filesystem:${db.src.dml.scripts.abs}</location>
               <location>filesystem:${db.src.callbacks.scripts.abs}</location>
             </locations>
+            -->
             <baselineVersion>0</baselineVersion>
             <baselineOnMigrate>true</baselineOnMigrate>
             <cleanDisabled>true</cleanDisabled>
