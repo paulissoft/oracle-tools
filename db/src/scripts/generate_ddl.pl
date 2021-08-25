@@ -164,15 +164,15 @@ Show the version.
 
 =head1 AUTHOR
 
-Gert-Jan Paulissen, E<lt>gert.jan.paulissen@gmail.comE<gt>.
-
-=head1 VERSION
-
-$Header$
+Gert-Jan Paulissen
 
 =head1 HISTORY
 
 =over 4
+
+=item 2021-08-25
+
+Solved bug for interface version 5 when file instal_sequence.txt is not there.
 
 =item 2021-08-24
 
@@ -256,6 +256,8 @@ use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 
 # VARIABLES
+
+my $VERSION = "2021-08-25";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -348,9 +350,6 @@ my %object_seq = ();
 
 # A list of modified files so we can remove non-modified files in non single output mode.
 my %file_modified = ();
-
-my $VERSION = "2021-08-24";
-
     
 # PROTOTYPES
 
@@ -363,7 +362,7 @@ sub parse_object ($);
 sub get_object ($$$;$$$);
 sub object_file_name ($$$);                  
 sub open_file ($$$$);
-sub sql_statement_add ($$$$;$);
+sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
 sub all_sql_statements_flush ($$$$);
@@ -375,6 +374,9 @@ sub remove_leading_empty_lines ($);
 sub remove_trailing_empty_lines ($);
 sub beautify_line ($$$$$$);
 sub split_single_output_file($);
+sub add_object_seq ($);
+sub read_object_seq ($);
+sub write_object_seq ($);
 sub error (@);
 sub warning (@);
 sub info (@);
@@ -447,27 +449,7 @@ sub process () {
         $in = \*STDIN;
     }
 
-    my $fh_seq = undef;
-    
-    # read previous object sequence numbers first so we can recreate them even if the directory is removed after
-    if ( -e $install_sequence_txt ) {
-        open($fh_seq, '<', $install_sequence_txt)
-            or error("Can not open '$install_sequence_txt': $!");
-
-        my $line_nr = 0;
-        
-        while (<$fh_seq>) {
-            if (m/^(.*)[:.](.*)[:.](.*)$/) {
-                $_ = join(':', $1, $2, $3);
-                error("Object must be unique: $_")
-                    if exists($object_seq{$_});
-                $object_seq{$_} = ++$line_nr;
-                debug("\$object_seq{$_}:", $object_seq{$_});
-            }
-        }
-        close $fh_seq;
-        $fh_seq = undef;
-    }
+    read_object_seq($install_sequence_txt);
 
     if ($remove_output_directory) {
         # Only when a complete new tree is created, the install.sql script is reliable.
@@ -583,7 +565,7 @@ sub process () {
                     }
                     beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no, \$line);
 
-                    sql_statement_add(\$line, \%sql_statements, $object, $ddl_no, $ddl_info);
+                    add_sql_statement(\$line, \%sql_statements, $object, $ddl_no, $ddl_info);
                 }
             }
         }
@@ -614,15 +596,7 @@ sub process () {
 
     # Only write $install_sequence_txt for version 5
     if ($interface eq PKG_DDL_UTIL_V5) {
-        open($fh_seq, '>', $install_sequence_txt)
-            or error("Can not write '$install_sequence_txt': $!");
-
-        print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
-        print $fh_seq "-- DO NEVER REMOVE LINES BELOW BUT YOU MAY CHANGE THE ORDER OR ADD LINES (AT THE END)\n";
-        foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
-            print $fh_seq "$object\n";
-        }
-        close $fh_seq;
+        write_object_seq($install_sequence_txt);
     }
 
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
@@ -640,8 +614,7 @@ sub process () {
     }
 }
 
-sub process_object_type ($$$$)
-{
+sub process_object_type ($$$$) {
     my ($object_type, $r_object_type_lines, $r_ddl_no, $r_sql_statements) = @_;
 
     debug("Process object type $object_type with $#$r_object_type_lines lines") if (defined($object_type));
@@ -690,7 +663,7 @@ sub process_object_type ($$$$)
                 
                 $last_line = $line;
                 $line =~ s/^\s+//; # strip leading space
-                sql_statement_add(\$line, $r_sql_statements, $object, $ddl_no);
+                add_sql_statement(\$line, $r_sql_statements, $object, $ddl_no);
             } elsif (!defined($object)) {
                 warning("skipping '$line'")
                     if ($line =~ m/\S/);
@@ -705,17 +678,16 @@ sub process_object_type ($$$$)
                     unless defined($last_line);
                 #
                 $last_line = $line;
-                sql_statement_add(\$line, $r_sql_statements, $object, $ddl_no);
+                add_sql_statement(\$line, $r_sql_statements, $object, $ddl_no);
             } else {
                 # empty
-                sql_statement_add(\$line, $r_sql_statements, $object, $ddl_no);
+                add_sql_statement(\$line, $r_sql_statements, $object, $ddl_no);
             }
         }
     }
 }
 
-sub get_object_type_line ($$)
-{
+sub get_object_type_line ($$) {
     my ($object_type, $r_object_type_lines) = @_;
 
     # Remove a block like this:
@@ -744,8 +716,7 @@ sub get_object_type_line ($$)
     return shift(@$r_object_type_lines);
 }
     
-sub parse_object($)
-{
+sub parse_object($) {
     my ($owner, $name) = ($source_schema, @_);
 
     if ($name =~ qr/(?<owner>$id_expr)\s*\.\s*(?<name>$id_expr)/) {
@@ -795,8 +766,7 @@ sub get_object ($$$;$$$) {
     }
 }
 
-sub object_file_name ($$$)
-{
+sub object_file_name ($$$) {
     my ($object_schema, $object_type, $object_name) = @_;
 
     if (length($source_schema) > 0 && $object_schema !~ m/^(PUBLIC|$source_schema)$/) {
@@ -819,8 +789,7 @@ sub object_file_name ($$$)
     my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
     if (!exists($object_seq{$object_seq_key})) {
-        $object_seq{$object_seq_key} = keys(%object_seq) + 1;
-        debug("\$object_seq{$object_seq_key}:", $object_seq{$object_seq_key});
+        add_object_seq($object_seq_key);
     }
     $object_file_name = 
         uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
@@ -833,8 +802,7 @@ sub object_file_name ($$$)
     return $object_file_name;
 }
 
-sub open_file ($$$$)
-{
+sub open_file ($$$$) {
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists) = @_;
 
     if (defined $fh_install_sql && !$install_sql_preamble_printed) {
@@ -866,14 +834,16 @@ sub open_file ($$$$)
     $file_modified{$file} = 1;
 }
                                     
-sub sql_statement_add ($$$$;$)
-{
+sub add_sql_statement ($$$$;$) {
     my ($r_sql_line, $r_sql_statements, $object, $ddl_no, $ddl_info) = @_;
 
     debug("Adding '$$r_sql_line' for object $object and statement $ddl_no");
 
     $r_sql_statements->{$object}->{seq} = scalar(keys %$r_sql_statements)
         unless exists($r_sql_statements->{$object}->{seq});
+
+    add_object_seq($object)
+        unless exists($object_seq{$object});
 
     $r_sql_statements->{$object}->{ddls}->[$ddl_no] = { 'ddl_info' => $ddl_info, 'ddl' => [] }
         unless exists($r_sql_statements->{$object}->{ddls}->[$ddl_no]);
@@ -898,11 +868,7 @@ sub sort_sql_statements ($$$) {
         # just sort by sequence
         $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
     } else {
-        error("\$object_seq{$a} does not exist")
-            unless exists($object_seq{$a});
-        error("\$object_seq{$b} does not exist")
-            unless exists($object_seq{$b});
-        
+        # $object_seq{$a} and $object_seq{$b} will exists do to call to add_object_seq() in add_sql_statement()
         $result = ($object_seq{$a} <=> $object_seq{$b});
     }
 
@@ -924,8 +890,7 @@ sub sort_dependent_objects ($$$) {
     return $a->{ddl}->[0] cmp $b->{ddl}->[0];
 }
 
-sub all_sql_statements_flush ($$$$)
-{
+sub all_sql_statements_flush ($$$$) {
     my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements) = @_;
 
     debug("Flushing all objects");
@@ -942,8 +907,7 @@ sub all_sql_statements_flush ($$$$)
     }
 }
 
-sub object_sql_statements_flush ($$$$$)
-{
+sub object_sql_statements_flush ($$$$$) {
     my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements, $object) = @_;
 
     my $ignore_warning_when_file_exists = 0;
@@ -1047,8 +1011,7 @@ sub object_sql_statements_flush ($$$$$)
     $$r_nr_sql_statements += $nr_sql_statements;
 }
 
-sub sql_statement_flush ($$$$$$)
-{
+sub sql_statement_flush ($$$$$$) {
     my ($fh, $r_nr_sql_statements, $r_sql_statement, $object, $ddl_no, $ddl_info) = @_;
 
     debug("Flushing statement for $object with ", scalar(@$r_sql_statement), " line(s)");
@@ -1270,8 +1233,7 @@ sub sql_statement_flush ($$$$$$)
     print $fh $sql_statement;
 }
 
-sub print_run_info ($$)
-{
+sub print_run_info ($$) {
     my ($fh, $install) = @_;
 
     error("File handle must be defined") unless defined($fh);
@@ -1294,8 +1256,7 @@ sub remove_cr_lf ($) {
     $$r_line =~ s/\r?\n//mg;
 }
 
-sub remove_leading_empty_lines ($) 
-{
+sub remove_leading_empty_lines ($) {
     my $r_lines = $_[0];
     
   REMOVE_LEADING_EMPTY_LINES: {
@@ -1311,8 +1272,7 @@ sub remove_leading_empty_lines ($)
     }
 }
 
-sub remove_trailing_empty_lines ($) 
-{
+sub remove_trailing_empty_lines ($) {
     my $r_lines = $_[0];
     
   REMOVE_TRAILING_EMPTY_LINES: {
@@ -1409,6 +1369,50 @@ sub split_single_output_file ($) {
     close($input_fh);
 
     unlink($input_file);
+}
+
+sub add_object_seq ($) {
+    my $key = shift @_;
+    
+    error("Object sequence for '$key' already exists.")
+        if exists($object_seq{$key});
+    
+    $object_seq{$key} = keys(%object_seq) + 1;
+    debug("\$object_seq{$key}:", $object_seq{$key});
+}
+
+sub read_object_seq ($) {
+    my $install_sequence_txt = shift @_;    
+    my $fh_seq = undef;
+    
+    # read previous object sequence numbers first so we can recreate them even if the directory is removed after
+    if ( -e $install_sequence_txt ) {
+        open($fh_seq, '<', $install_sequence_txt)
+            or error("Can not open '$install_sequence_txt': $!");
+
+        while (<$fh_seq>) {
+            if (m/^(.*)[:.](.*)[:.](.*)$/) {
+                add_object_seq(join(':', $1, $2, $3));
+            }
+        }
+
+        close $fh_seq;
+    }
+}
+
+sub write_object_seq ($) {
+    my $install_sequence_txt = shift @_;    
+    my $fh_seq = undef;
+
+    open($fh_seq, '>', $install_sequence_txt)
+        or error("Can not write '$install_sequence_txt': $!");
+
+    print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
+    print $fh_seq "-- DO NEVER REMOVE LINES BELOW BUT YOU MAY CHANGE THE ORDER OR ADD LINES (AT THE END)\n";
+    foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
+        print $fh_seq "$object\n";
+    }
+    close $fh_seq;
 }
 
 sub error (@) {
