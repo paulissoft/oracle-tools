@@ -50,7 +50,7 @@
     <!-- ============================ -->
     <!-- UTPLSQL properties (db-test) -->
     <!-- ============================ -->
-    <db.utplsql.path>${project.artifactId}</db.utplsql.path>
+    <db.utplsql.path>${db.schema}:${project.artifactId}</db.utplsql.path>
     <db.test.phase>none</db.test.phase>
 
     <!-- ======================== -->

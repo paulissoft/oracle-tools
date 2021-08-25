@@ -6904,8 +6904,6 @@ $if cfg_pkg.c_debugging $then
 $end
   end eq;
 
--- $if cfg_pkg.c_testing $then
-
   -- test functions
   procedure ut_setup
   is

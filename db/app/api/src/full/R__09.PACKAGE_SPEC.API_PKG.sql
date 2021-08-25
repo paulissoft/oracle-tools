@@ -81,6 +81,7 @@ procedure ut_expect_violation
 
 $if cfg_pkg.c_testing $then
 
+--%suitepath(API)
 --%suite
 
 -- for unit testing

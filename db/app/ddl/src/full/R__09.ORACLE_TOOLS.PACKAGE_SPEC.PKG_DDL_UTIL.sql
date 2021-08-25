@@ -492,22 +492,44 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   )
   return clob;
 
+$if cfg_pkg.c_testing $then
+
   -- test functions
+  
+  --%suitepath(DDL)
+  --%suite
+
+  --%beforeall
   procedure ut_setup;
+  
+  --%afterall
   procedure ut_teardown;
 
+  --%test
   procedure ut_display_ddl_schema;
+
+  --%test
   procedure ut_display_ddl_schema_diff;
 
+  --%test
   procedure ut_object_type_order;
+
+  --%test
   procedure ut_dict2metadata_object_type;
+
+  --%test
   procedure ut_is_a_repeatable;
 
+  --%test
   procedure ut_get_schema_object;
 
+  --%test
   procedure ut_synchronize;
 
+  --%test
   procedure ut_sort_objects_by_deps;
+
+$end -- $if cfg_pkg.c_testing $then
 
 end pkg_ddl_util;
 /

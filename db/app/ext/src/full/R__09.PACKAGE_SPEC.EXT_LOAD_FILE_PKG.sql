@@ -679,7 +679,7 @@ procedure parse_object_name
 
 $if cfg_pkg.c_testing $then
 
---%suitepath(${oracle_tools_schema})
+--%suitepath(EXT)
 --%suite
 --%rollback(manual)
 

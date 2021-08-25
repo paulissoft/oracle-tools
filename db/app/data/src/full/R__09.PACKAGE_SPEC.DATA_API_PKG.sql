@@ -132,6 +132,7 @@ pipelined;
 
 $if cfg_pkg.c_testing $then
 
+--%suitepath(DATA)
 --%suite
 
 --%test

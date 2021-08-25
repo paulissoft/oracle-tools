@@ -173,7 +173,7 @@ procedure dml
 
 $if cfg_pkg.c_testing $then
 
---%suitepath(${oracle_tools_schema})
+--%suitepath(UI)
 --%suite
 
 --%beforeall
