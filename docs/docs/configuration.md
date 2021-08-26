@@ -142,15 +142,15 @@ defaults:
 
 This is the POM that can be used as parent for projects that need a database connection.
 
-|Property             |Default                                               |Description                                                              |
-|--------             |-------                                               |-----------                                                              |
-|db.schema            |${project.artifactId}                                 |Defaults to POM artifactId assuming it is named after the database schema|
-|db.password          |${env.DB_PASSWORD}                                    |Defaults to environment variable DB_PASSWORD                             |
-|db.config.dir        |directory of **/conf/env.properties                   |Database configuration directory                                         |
-|db                   |                                                      |One of the subdirectories of ${db.config.dir}                            |
-|db.connect.identifier|//${db.host}:${db.port}/${db.service}                 |Part of the database URL                                                 |
-|db.url               |jdbc:oracle:thin:@${db.connect.identifier}            |JDBC database URL                                                        |
-|db.userid            |${db.username}/${db.password}@${db.connect.identifier}|SQLcl connect string                                                     |
+|Property             |Default                                               |Description                                                               |
+|:-------             |:------                                               |:----------                                                               |
+|db.schema            |${project.artifactId}                                 |Defaults to POM artifactId assuming it is named after the database schema.|
+|db.password          |${env.DB_PASSWORD}                                    |Defaults to environment variable DB_PASSWORD.                             |
+|db.config.dir        |directory of **/conf/env.properties                   |Database configuration directory.                                         |
+|db                   |                                                      |One of the subdirectories of ${db.config.dir}.                            |
+|db.connect.identifier|//${db.host}:${db.port}/${db.service}                 |Part of the database URL.                                                 |
+|db.url               |jdbc:oracle:thin:@${db.connect.identifier}            |JDBC database URL.                                                        |
+|db.userid            |${db.username}/${db.password}@${db.connect.identifier}|SQLcl connect string.                                                     |
 
 ### oracle-tools/db/pom.xml
 
@@ -162,43 +162,43 @@ actions. It has oracle-tools/conf/pom.xml as its parent POM.
 For profiles (action) db-install and db-info:
 
 |Property                |Default                             |Description                                                              |
-|--------                |-------                             |-----------                                                              |
-|db.src.scripts          |src                                 |The root directory for Flyway migration scripts                          |
-|db.src.dml.scripts      |${db.src.scripts}/dml               |The directory containing DML scripts                                     |
-|db.src.full.scripts     |${db.src.scripts}/full              |The directory containing DDL scripts that can be run over and over again |
-|db.src.incr.scripts     |${db.src.scripts}/incr              |The directory containing DDL scripts that can be run only once           |
-|db.src.callbacks.scripts|${oracle-tools.db.src.dir}/callbacks|The directory that contains scripts run before or after Flyway           |
+|:-------                |:------                             |:----------                                                              |
+|db.src.scripts          |src                                 |The root directory for Flyway migration scripts.                         |
+|db.src.dml.scripts      |${db.src.scripts}/dml               |The directory containing DML scripts.                                    |
+|db.src.full.scripts     |${db.src.scripts}/full              |The directory containing DDL scripts that can be run over and over again.|
+|db.src.incr.scripts     |${db.src.scripts}/incr              |The directory containing DDL scripts that can be run only once.          |
+|db.src.callbacks.scripts|${oracle-tools.db.src.dir}/callbacks|The directory that contains scripts run before or after Flyway.          |
 
 #### Properties for generating DDL
 
 For profiles (actions) db-generate-ddl-full and db-generate-ddl-incr:
 
 |Property                            |Default|Description                                                                                  |
-|--------                            |-------|-----------                                                                                  |
-|db.object.type                      |       |Only generate for this object type (Oracle package DBMS_METADATA)                            |
-|db.object.names                     |       |A list of object names to include or exclude (or empty to include all)                       |
-|db.object.names.include             |       |Specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include)     |
+|:-------                            |:------|:----------                                                                                  |
+|db.object.type                      |       |Only generate for this object type (Oracle package DBMS_METADATA).                           |
+|db.object.names                     |       |A list of object names to include or exclude (or empty to include all).                      |
+|db.object.names.include             |       |Specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include).    |
 
 ##### Profile db-generate-ddl-full
 
 |Property                            |Default                      |Description|
-|--------                            |-------                      |-----------|
+|:-------                            |:------                      |:----------|
 |db.full.remove.output.directory     |yes                          |Remove the output directory (${db.src.full.scripts}) before generating DDL scripts?|
 |db.full.force.view                  |no                           |CREATE OR REPLACE **FORCE** VIEW or not?|
 |db.full.skip.install.sql            |yes                          |skip creating install.sql/uninstall.sql scripts?|
-|db.full.interface                   |pkg_ddl_util v5              |Interface version for creating DDL scripts. Script naming convention is &lt;PREFIX&gt;&lt;SEQ&gt;.&lt;OWNER&gt;.&lt;TYPE&gt;.&lt;NAME&gt;.sql where PREFIX is "R__" for replaceable objects and empty otherwise, sequence number SEQ depends on TYPE for "pkg_ddl_util v4" and the place in file install_sequence.txt for "pkg_ddl_util v5"|
-|db.full.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|A comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links)|
+|db.full.interface                   |pkg_ddl_util v5              |Interface version for creating DDL scripts. Script naming convention is &lt;PREFIX&gt;&lt;SEQ&gt;.&lt;OWNER&gt;.&lt;TYPE&gt;.&lt;NAME&gt;.sql where PREFIX is "R__" for replaceable objects and empty otherwise, sequence number SEQ depends on TYPE for "pkg_ddl_util v4" and the place in file install_sequence.txt for "pkg_ddl_util v5".|
+|db.full.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|A comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links).|
 |db.generate.ddl.full.skip           |                             |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists.|
-|db.generate.full.strip.source.schema|0                            |Strip source schema from 'create or replace "source schema"."source name"': yes (1) or no (0)|
+|db.generate.full.strip.source.schema|0                            |Strip source schema from 'create or replace "source schema"."source name"': yes (1) or no (0).|
 
 ##### Profile db-generate-ddl-incr
 
 |Property                            |Default                      |Description                                                                                 |
-|--------                            |-------                      |-----------                                                                                 |
+|:-------                            |:------                      |:----------                                                                                 |
 |db.incr.dynamic.sql                 |no                           |Use dynamic SQL for the incremental migration scripts?                                      |
 |db.incr.skip.repeatables            |yes                          |Skip repeatable/replaceable objects in incremental migration scripts?                       |
-|db.incr.interface                   |pkg_ddl_util v5              |See description for db.full.interface above                                                 |
-|db.incr.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|See description for db.full.transform.params above                                          |
+|db.incr.interface                   |pkg_ddl_util v5              |See description for db.full.interface above.                                                |
+|db.incr.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|See description for db.full.transform.params above.                                         |
 |db.generate.ddl.incr.skip           |                             |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists.|
 
 #### Properties for running utPLSQL
@@ -206,9 +206,9 @@ For profiles (actions) db-generate-ddl-full and db-generate-ddl-incr:
 The profile is db-test:
 
 |Property       |Default                           |Description                                                                   |
-|--------       |-------                           |-----------                                                                   |
-|db.utplsql.path|${db.schema}:${project.artifactId}|Run utPLSQL for packages with utPLSQL suitepath equal to their POM artifactId |
-|db.test.phase  |none                              |Set this to test in your project POM in order to activate it                  |
+|:-------       |:------                           |:----------                                                                   |
+|db.utplsql.path|${db.schema}:${project.artifactId}|Run utPLSQL for packages with utPLSQL suitepath equal to their POM artifactId.|
+|db.test.phase  |none                              |Set this to test in your project POM in order to activate it.                 |
 
 ### oracle-tools/apex/pom.xml
 
@@ -218,11 +218,11 @@ actions. It has oracle-tools/conf/pom.xml as its parent POM.
 For profiles (actions) apex-export and apex-import:
 
 |Property                |Default               |Description                                                               |
-|--------                |-------               |-----------                                                               |
-|apex.src.dir            |${basedir}/src        |The project source directory                                              |
-|apex.application.dir    |${apex.src.dir}/export|The Apex export directory with splitted SQL scripts                       |
-|apex.workspace          |                      |The Apex workspace                                                        |
-|apex.application        |                      |The Apex application id                                                   |
-|apex.application.version|current date/time     |In Java yyyy-MM-dd hh:mm:ss format, used in Apex application version info |
-|sql.home                |                      |The home directory of SQLcl (${sql.home}/bin/sql exists?)                 |
-|env.SQL_HOME            |                      |Idem but now the environment variable SQL_HOME                            |
+|:-------                |:------               |:----------                                                               |
+|apex.src.dir            |${basedir}/src        |The project source directory.                                             |
+|apex.application.dir    |${apex.src.dir}/export|The Apex export directory with splitted SQL scripts.                      |
+|apex.workspace          |                      |The Apex workspace.                                                       |
+|apex.application        |                      |The Apex application id.                                                  |
+|apex.application.version|current date/time     |In Java yyyy-MM-dd hh:mm:ss format, used in Apex application version info.|
+|sql.home                |                      |The home directory of SQLcl (${sql.home}/bin/sql exists?).                |
+|env.SQL_HOME            |                      |Idem but now the environment variable SQL_HOME.                           |

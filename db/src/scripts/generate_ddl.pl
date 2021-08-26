@@ -170,6 +170,11 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2021-08-26
+
+Create the file in the output directory only when it is different from the existing one (or when it does not exist).
+This assures that the file modification date will not change when the DDL has not changed.
+
 =item 2021-08-25
 
 Solved bug for interface version 5 when file instal_sequence.txt is not there.
@@ -242,9 +247,11 @@ use Carp;
 use Data::Dumper;
 use English;
 use File::Basename;
+use File::Compare;
 use File::Copy;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
+use File::Temp;
 use Getopt::Long;
 use Pod::Usage;
 use strict;
@@ -257,7 +264,7 @@ use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 
 # VARIABLES
 
-my $VERSION = "2021-08-25";
+my $VERSION = "2021-08-26";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -350,7 +357,9 @@ my %object_seq = ();
 
 # A list of modified files so we can remove non-modified files in non single output mode.
 my %file_modified = ();
-    
+
+my $TMPDIR = tempdir( CLEANUP => 1 );
+
 # PROTOTYPES
 
 sub main ();
@@ -362,6 +371,7 @@ sub parse_object ($);
 sub get_object ($$$;$$$);
 sub object_file_name ($$$);                  
 sub open_file ($$$$);
+sub close_file ($);
 sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
@@ -465,7 +475,7 @@ sub process () {
     $| = 1;
     select(STDOUT); # back to the default
     $| = 1;
-    
+
     my ($file, $fh) = (undef, undef);
 
     # in case of a set of output files, an install.sql is created in the output directory
@@ -813,10 +823,14 @@ sub open_file ($$$$) {
     print $fh_install_sql "prompt \@\@$file\n\@\@$file\n"
         if (defined $fh_install_sql);
 
-    $file = File::Spec->catfile($output_directory, $file);
+    # GJP 2021-08-26 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
+    
+    # $file = File::Spec->catfile($output_directory, $file);
+    $file = File::Spec->catfile($TMPDIR, $file);
 
     # Just issue a warning till now and append
-    if ($remove_output_directory && -f $file) {
+    # if ($remove_output_directory && -f $file) {
+    if (-f $file) {
         warn "WARNING: File $file already exists. Duplicate objects?"
             unless ($ignore_warning_when_file_exists);
         
@@ -833,7 +847,20 @@ sub open_file ($$$$) {
 
     $file_modified{$file} = 1;
 }
-                                    
+
+sub close_file ($) {
+    my ($file) = @_;
+
+    my $src = File::Spec->catfile($TMPDIR, $file);
+    my $dst = File::Spec->catfile($output_directory, $file);
+
+    if (compare($src, $dst) == 0) {
+        unlink($src) == 1 or die "Removing '$src' failed: $!";
+    } else {
+        copy($src, $dst) or die "Copy from '$src' to '$dst' failed: $!";
+    }
+}
+
 sub add_sql_statement ($$$$;$) {
     my ($r_sql_line, $r_sql_statements, $object, $ddl_no, $ddl_info) = @_;
 
@@ -913,6 +940,7 @@ sub object_sql_statements_flush ($$$$$) {
     my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements, $object) = @_;
 
     my $ignore_warning_when_file_exists = 0;
+    my $file = undef;
     
     debug("Flushing $object with ", scalar(@$r_sql_statements), " statement(s)");
 
@@ -935,7 +963,7 @@ sub object_sql_statements_flush ($$$$$) {
             return;
         }
 
-        my $file = object_file_name($object_schema, $object_type, $object_name);
+        $file = object_file_name($object_schema, $object_type, $object_name);
     
         #
         # remove ALTER ... COMPILE statements
@@ -1009,9 +1037,12 @@ sub object_sql_statements_flush ($$$$$) {
         sql_statement_flush($$r_fh, \$nr_sql_statements, $r_sql_statement->{ddl}, $object, $ddl_no, $r_sql_statement->{ddl_info});
     }
 
+    close_file($file)
+        if ( defined($file) );
+
     # Update the grand total
     $$r_nr_sql_statements += $nr_sql_statements;
-}
+} # object_sql_statements_flush
 
 sub sql_statement_flush ($$$$$$) {
     my ($fh, $r_nr_sql_statements, $r_sql_statement, $object, $ddl_no, $ddl_info) = @_;
