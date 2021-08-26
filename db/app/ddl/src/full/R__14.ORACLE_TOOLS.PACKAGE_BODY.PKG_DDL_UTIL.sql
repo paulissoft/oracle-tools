@@ -1803,6 +1803,11 @@ $end
           dbms_metadata.set_filter(handle => p_handle
                                   ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
                                   ,value => in_list_expr(t_text_tab('schema_version')));
+
+          -- always exclude table "flyway_schema_history" and its indexes, constraints
+          dbms_metadata.set_filter(handle => p_handle
+                                  ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
+                                  ,value => in_list_expr(t_text_tab('flyway_schema_history')));
         else
           if is_dependent_object_type(p_object_type => p_object_type) = 1
           then
@@ -1825,6 +1830,12 @@ $end
           dbms_metadata.set_filter(handle => p_handle
                                   ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
                                   ,value => in_list_expr(t_text_tab('schema_version')));
+
+          -- always exclude table "flyway_schema_history" and its indexes, constraints
+          dbms_metadata.set_filter(handle => p_handle
+                                  ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
+                                  ,value => in_list_expr(t_text_tab('flyway_schema_history')));
+                                  
           if p_object_type = 'OBJECT_GRANT'
           then
             set_exclude_name_expr(p_object_type => 'TYPE_SPEC', p_name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR');
@@ -1878,6 +1889,11 @@ $end
           dbms_metadata.set_filter(handle => p_handle
                                   ,name => 'EXCLUDE_NAME_EXPR'
                                   ,value => in_list_expr(t_text_tab('schema_version')));
+
+          -- always exclude table "flyway_schema_history"
+          dbms_metadata.set_filter(handle => p_handle
+                                  ,name => 'EXCLUDE_NAME_EXPR'
+                                  ,value => in_list_expr(t_text_tab('flyway_schema_history')));
         end if;
 
         if p_object_type = 'TABLE'
@@ -2340,7 +2356,7 @@ $end
       then
         p_object_key := null;
         case
-          when l_object_name like 'schema_version%'
+          when l_object_name like 'schema_version%' or l_object_name like 'flyway_schema_history%'
           then
             -- skip Flyway stuff
             null;
@@ -2357,13 +2373,16 @@ $end
           else
             null;
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-            dbug.print
-            ( dbug."warning"
-            , 'object not found in allowed objects: %s; ddl: %s'
-            , p_object_key
-            , dbms_lob.substr(p_ku$_ddl.ddlText, 100)
-            );
-            raise program_error;
+            if p_ku$_ddl.ddlText is not null and dbms_lob.lenght(p_ku$_ddl.ddlText) > 0
+            then
+              raise_application_error
+              ( -20000
+              , utl_lms.format_message
+                ('object not found in allowed objects; ddl: %s'
+                , dbms_lob.substr(p_ku$_ddl.ddlText, 100)
+                )
+              );
+            end if;
 $end
         end case;
     end;
