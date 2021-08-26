@@ -1,4 +1,4 @@
-/* perl generate_ddl.pl (version 2021-08-24) --nodynamic-sql --force-view --noremove-output-directory --skip-install-sql --nostrip-source-schema */
+/* perl generate_ddl.pl (version 2021-08-26) --nodynamic-sql --force-view --noremove-output-directory --skip-install-sql --nostrip-source-schema */
 
 /*
 -- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl
