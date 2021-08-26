@@ -251,7 +251,7 @@ use File::Compare;
 use File::Copy;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
-use File::Temp;
+use File::Temp qw(tempdir);
 use Getopt::Long;
 use Pod::Usage;
 use strict;
@@ -371,7 +371,7 @@ sub parse_object ($);
 sub get_object ($$$;$$$);
 sub object_file_name ($$$);                  
 sub open_file ($$$$);
-sub close_file ($);
+sub close_file ($$);
 sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
@@ -444,6 +444,12 @@ sub process_command_line ()
     if (!defined($single_output_file)) {
         pod2usage(-message => "$0: output directory does not exist. Run with --help option.\n")
             unless (defined($output_directory) && -d $output_directory);
+    }
+
+    # GJP 2021-08-26 Removing the output drectory is obsolete.
+    if ($remove_output_directory) {
+        warning("The command line option 'remove-output-directory' is obsolete.");
+        $remove_output_directory = 0;
     }
 }
 
@@ -590,7 +596,8 @@ sub process () {
     debug(Data::Dumper->Dump([%sql_statements], [qw(sql_statements)]));
 
     all_sql_statements_flush($fh_install_sql, \$fh, \$nr_sql_statements, \%sql_statements);
-    close($fh);
+    close($fh)
+        if defined($fh); # single output file
     
     close($fh_install_sql)
         if defined($fh_install_sql);
@@ -824,41 +831,50 @@ sub open_file ($$$$) {
         if (defined $fh_install_sql);
 
     # GJP 2021-08-26 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
-    
-    # $file = File::Spec->catfile($output_directory, $file);
-    $file = File::Spec->catfile($TMPDIR, $file);
+
+    my $tmpfile = File::Spec->catfile($TMPDIR, $file);
+    $file = File::Spec->catfile($output_directory, $file);
 
     # Just issue a warning till now and append
-    # if ($remove_output_directory && -f $file) {
-    if (-f $file) {
+    if ($remove_output_directory && -f $file) {
         warn "WARNING: File $file already exists. Duplicate objects?"
             unless ($ignore_warning_when_file_exists);
-        
-        open($$r_fh, ">>$encoding", $file)
-            or error("Can not append to '$file': $!");
-
-        info("Appending to $file");
-    } else {
-        open($$r_fh, ">$encoding", $file)
-            or error("Can not write to '$file': $!");
-
-        info("Writing to $file");
     }
 
+    if (-f $tmpfile) {
+        open($$r_fh, ">>$encoding", $tmpfile)
+            or error("Can not append to '$tmpfile': $!");
+    } else {
+        open($$r_fh, ">$encoding", $tmpfile)
+            or error("Can not write to '$tmpfile': $!");
+    }
+
+    # We just pretend that $file has been modified
     $file_modified{$file} = 1;
 }
 
-sub close_file ($) {
-    my ($file) = @_;
+sub close_file ($$) {
+    my ($file, $r_fh) = @_;
 
-    my $src = File::Spec->catfile($TMPDIR, $file);
-    my $dst = File::Spec->catfile($output_directory, $file);
+    # close before comparing/copying/removing
+    close($$r_fh)
+        or error("Can not close file: $!");
+    $$r_fh = undef;
 
-    if (compare($src, $dst) == 0) {
-        unlink($src) == 1 or die "Removing '$src' failed: $!";
+    # GJP 2021-08-26 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
+    
+    my $tmpfile = File::Spec->catfile($TMPDIR, $file);
+    $file = File::Spec->catfile($output_directory, $file);
+
+    if (-f $file && compare($tmpfile, $file) == 0) {
+        info("File $file has NOT been modified");        
     } else {
-        copy($src, $dst) or die "Copy from '$src' to '$dst' failed: $!";
+        # $file not existing yet or not equal to $tmpfile
+        info("File $file has been modified");
+        copy($tmpfile, $file) or die "Copy from '$tmpfile' to '$file' failed: $!";
     }
+    # always clean up
+    unlink($tmpfile) == 1 or die "Removing '$tmpfile' failed: $!";
 }
 
 sub add_sql_statement ($$$$;$) {
@@ -1037,7 +1053,7 @@ sub object_sql_statements_flush ($$$$$) {
         sql_statement_flush($$r_fh, \$nr_sql_statements, $r_sql_statement->{ddl}, $object, $ddl_no, $r_sql_statement->{ddl_info});
     }
 
-    close_file($file)
+    close_file($file, $r_fh)
         if ( defined($file) );
 
     # Update the grand total
