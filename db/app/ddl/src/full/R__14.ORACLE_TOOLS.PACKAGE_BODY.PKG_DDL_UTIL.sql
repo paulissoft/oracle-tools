@@ -204,7 +204,10 @@ $end -- $if cfg_pkg.c_testing $then
   e_wrong_transform_object_type exception;
   pragma exception_init(e_wrong_transform_object_type, -31602);
 
-
+  -- ORA-44003: invalid SQL name
+  e_invalid_sql_name exception;
+  pragma exception_init(e_invalid_sql_name, -44003);
+  
 /* VARIABLES */
 
   g_object_exclude_name_expr_tab t_object_exclude_name_expr_tab;  
@@ -1673,19 +1676,24 @@ $end
     return varchar2
     is
       l_in_list varchar2(32767 char) := 'IN (';
+      l_object_name user_objects.object_name%type := null;
     begin
       if p_object_name_tab is not null and p_object_name_tab.count > 0
       then
         for i_idx in p_object_name_tab.first .. p_object_name_tab.last
         loop
           -- trim tab, linefeed, carriage return and space from the input
-          l_in_list := l_in_list || '''' || dbms_assert.simple_sql_name(trim(chr(9) from trim(chr(10) from trim(chr(13) from trim(' ' from p_object_name_tab(i_idx)))))) || ''',';
+          l_object_name := trim(chr(9) from trim(chr(10) from trim(chr(13) from trim(' ' from p_object_name_tab(i_idx)))));
+          l_in_list := l_in_list || '''' || dbms_assert.simple_sql_name(l_object_name) || ''',';
         end loop;
         l_in_list := rtrim(l_in_list, ',');
       end if;
       l_in_list := l_in_list || ')';
 
       return l_in_list;
+    exception
+      when e_invalid_sql_name
+      then raise_application_error(-20000, 'Object name: "'|| l_object_name || '"', true);
     end in_list_expr;
 
     procedure set_exclude_name_expr(p_object_type in t_metadata_object_type, p_name in varchar2)
@@ -6904,9 +6912,69 @@ $if cfg_pkg.c_debugging $then
 $end
   end eq;
 
+  procedure cleanup_empty
+  is
+    l_drop_schema_ddl_tab t_schema_ddl_tab;
+    l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
+    l_program constant varchar2(61 char) := 'CLEANUP_EMPTY';
+  begin
+$if cfg_pkg.c_debugging $then
+    dbug.enter(l_program);
+$end
+
+    uninstall
+    ( p_schema_target => g_empty
+    , p_network_link_target => l_network_link_target
+    );
+
+    -- drop objects which are excluded in get_schema_object()
+    l_drop_schema_ddl_tab := t_schema_ddl_tab();
+    for r in
+    ( select  oracle_tools.t_schema_ddl.create_schema_ddl
+              ( p_obj => oracle_tools.t_named_object.create_named_object
+                         ( p_object_type => o.object_type
+                         , p_object_schema => o.object_schema
+                         , p_object_name => o.object_name
+                         )
+              , p_ddl_tab => oracle_tools.t_ddl_tab()
+              ) as obj
+      from    ( select  o.owner as object_schema
+                ,       t_schema_object.dict2metadata_object_type(o.object_type) as object_type
+                ,       o.object_name
+                from    all_objects o
+                where   o.owner = g_empty
+              ) o
+      where   (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
+    )
+    loop
+      l_drop_schema_ddl_tab.extend(1);
+      create_schema_ddl
+      ( p_source_schema_ddl => null
+      , p_target_schema_ddl => r.obj
+      , p_skip_repeatables => 0
+      , p_schema_ddl => l_drop_schema_ddl_tab(l_drop_schema_ddl_tab.last)
+      );
+    end loop;
+
+    execute_ddl(l_drop_schema_ddl_tab, l_network_link_target);
+
+$if cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
+  exception
+    when others
+    then
+      null;
+$if cfg_pkg.c_debugging $then
+      dbug.leave;
+$end
+  end cleanup_empty;
+
   -- test functions
   procedure ut_setup
   is
+    pragma autonomous_transaction;
+    
     l_found pls_integer;
     l_cursor sys_refcursor;
     l_loopback_global_name global_name.global_name%type;
@@ -6916,6 +6984,7 @@ $end
     from    all_synonyms t
     where   t.table_name = 'UT';
 
+    -- schema EMPTY should exist
     begin
       select  1
       into    l_found
@@ -6925,6 +6994,24 @@ $end
     exception
       when no_data_found
       then raise_application_error(-20000, 'User EMPTY must exist', true);
+    end;
+
+    cleanup_empty;
+
+    -- schema EMPTY should be empty
+    begin
+      select  1
+      into    l_found
+      from    all_objects o
+      where   o.owner = g_empty
+      and     rownum = 1
+      ;
+      raise too_many_rows;
+    exception
+      when no_data_found
+      then null;
+      when too_many_rows
+      then raise_application_error(-20000, 'User EMPTY should have NO objects', true);
     end;
 
     if get_db_link(g_empty) is null
@@ -6954,16 +7041,24 @@ $end
       then
         raise_application_error(-20000, 'Private database link LOOPBACK should point to this schema and database.', true);
     end;
+
+    commit;
   end ut_setup;
 
   procedure ut_teardown
   is
+    pragma autonomous_transaction;
+    
   begin
     null;
+
+    commit;
   end ut_teardown;
 
   procedure ut_display_ddl_schema
   is
+    pragma autonomous_transaction;
+    
     l_line1_tab    dbms_sql.varchar2a;
     l_clob1        clob := null;
     l_first1       pls_integer := null;
@@ -7454,6 +7549,8 @@ $end
 
     cleanup;
 
+    commit;
+
 $if cfg_pkg.c_debugging $then
     dbug.leave;
 $end
@@ -7469,6 +7566,8 @@ $end
 
   procedure ut_display_ddl_schema_diff
   is
+    pragma autonomous_transaction;
+    
     l_line1_tab    dbms_sql.varchar2a;
     l_clob1        clob := null;
     l_first1       pls_integer := null;
@@ -7879,6 +7978,8 @@ $end
       longops_show(l_longops_rec);
     end loop;
 
+    commit;
+
 $if cfg_pkg.c_debugging $then
     dbug.leave;
   exception
@@ -7891,12 +7992,18 @@ $end
 
   procedure ut_object_type_order
   is
+    pragma autonomous_transaction;
+    
   begin
     null;
+
+    commit;
   end ut_object_type_order;
 
   procedure ut_dict2metadata_object_type
   is
+    pragma autonomous_transaction;
+    
     l_metadata_object_type t_metadata_object_type;
 
     l_program constant varchar2(61 char) := 'UT_DICT2METADATA_OBJECT_TYPE';
@@ -7927,6 +8034,8 @@ $end
       ut.expect(t_schema_object.dict2metadata_object_type(r.object_type), l_program || '#' || r.object_type).to_equal(l_metadata_object_type);
     end loop;
 
+    commit;
+    
 $if cfg_pkg.c_debugging $then
     dbug.leave;
 $end
@@ -7934,6 +8043,8 @@ $end
 
   procedure ut_is_a_repeatable
   is
+    pragma autonomous_transaction;
+    
     l_program constant varchar2(61 char) := 'UT_IS_A_REPEATABLE';
     l_object_type_tab t_text_tab;
   begin
@@ -7990,6 +8101,8 @@ $end
       end loop;
     end loop;
 
+    commit;
+
 $if cfg_pkg.c_debugging $then
     dbug.leave;
   exception
@@ -8002,6 +8115,8 @@ $end
 
   procedure ut_get_schema_object
   is
+    pragma autonomous_transaction;
+    
     l_schema_object_tab0 t_schema_object_tab;
     l_schema_object_tab1 t_schema_object_tab;
     l_schema t_schema;
@@ -8139,6 +8254,8 @@ $end
       end if;
     end loop;
 
+    commit;
+
 $if cfg_pkg.c_debugging $then
     dbug.leave;
   exception
@@ -8151,6 +8268,8 @@ $end
 
   procedure ut_synchronize
   is
+    pragma autonomous_transaction;
+    
     l_drop_schema_ddl_tab t_schema_ddl_tab;
     l_diff_schema_ddl_tab t_schema_ddl_tab;
 
@@ -8192,55 +8311,7 @@ $end
 
     procedure cleanup is
     begin
-$if cfg_pkg.c_debugging $then
-      dbug.enter(l_program||'.CLEANUP');
-$end
-
-      uninstall
-      ( p_schema_target => g_empty
-      , p_network_link_target => l_network_link_target
-      );
-
-      -- drop objects which are excluded in get_schema_object()
-      l_drop_schema_ddl_tab := t_schema_ddl_tab();
-      for r in
-      ( select  oracle_tools.t_schema_ddl.create_schema_ddl
-                ( p_obj => oracle_tools.t_named_object.create_named_object
-                           ( p_object_type => o.object_type
-                           , p_object_schema => o.object_schema
-                           , p_object_name => o.object_name
-                           )
-                , p_ddl_tab => oracle_tools.t_ddl_tab()
-                ) as obj
-        from    ( select  o.owner as object_schema
-                  ,       t_schema_object.dict2metadata_object_type(o.object_type) as object_type
-                  ,       o.object_name
-                  from    all_objects o
-                  where   o.owner = g_empty
-                ) o
-        where   (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
-      )
-      loop
-        l_drop_schema_ddl_tab.extend(1);
-        create_schema_ddl
-        ( p_source_schema_ddl => null
-        , p_target_schema_ddl => r.obj
-        , p_skip_repeatables => 0
-        , p_schema_ddl => l_drop_schema_ddl_tab(l_drop_schema_ddl_tab.last)
-        );
-      end loop;
-
-      execute_ddl(l_drop_schema_ddl_tab, l_network_link_target);
-
-$if cfg_pkg.c_debugging $then
-      dbug.leave;
-$end
-    exception
-      when others then
-        null;
-$if cfg_pkg.c_debugging $then
-        dbug.leave;
-$end
+      cleanup_empty;
     end cleanup;
   begin
 $if cfg_pkg.c_debugging $then
@@ -8363,6 +8434,8 @@ $end
       cleanup;
     end loop;
 
+    commit;
+
 $if cfg_pkg.c_debugging $then
     dbug.leave;
   exception
@@ -8376,6 +8449,8 @@ $end
 
   procedure ut_sort_objects_by_deps
   is
+    pragma autonomous_transaction;
+    
     l_schema t_schema;    
     l_schema_object_tab t_schema_object_tab;
     l_object_info_tab oracle_tools.t_object_info_tab;
@@ -8389,6 +8464,8 @@ $end
 
     null;
 
+    commit;
+
 $if cfg_pkg.c_debugging $then
     dbug.leave;
   exception
@@ -8397,69 +8474,6 @@ $if cfg_pkg.c_debugging $then
       dbug.leave_on_error;
       raise;
 $end
-  end ut_sort_objects_by_deps;
-
-$else -- $if cfg_pkg.c_testing $then
-
-  -- test functions
-  procedure ut_setup
-  is
-  begin
-    raise program_error;
-  end ut_setup;
-
-  procedure ut_teardown
-  is
-  begin
-    raise program_error;
-  end ut_teardown;
-
-  procedure ut_display_ddl_schema
-  is
-  begin
-    raise program_error;
-  end ut_display_ddl_schema;
-
-  procedure ut_display_ddl_schema_diff
-  is
-  begin
-    raise program_error;
-  end ut_display_ddl_schema_diff;
-
-  procedure ut_object_type_order
-  is
-  begin
-    raise program_error;
-  end ut_object_type_order;
-
-  procedure ut_dict2metadata_object_type
-  is
-  begin
-    raise program_error;
-  end ut_dict2metadata_object_type;
-
-  procedure ut_is_a_repeatable
-  is
-  begin
-    raise program_error;
-  end ut_is_a_repeatable;
-
-  procedure ut_get_schema_object
-  is
-  begin
-    raise program_error;
-  end ut_get_schema_object;
-
-  procedure ut_synchronize
-  is
-  begin
-    raise program_error;
-  end ut_synchronize;
-
-  procedure ut_sort_objects_by_deps
-  is
-  begin
-    raise program_error;
   end ut_sort_objects_by_deps;
 
 $end -- $if cfg_pkg.c_testing $then

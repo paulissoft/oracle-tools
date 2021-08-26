@@ -159,7 +159,7 @@ actions. It has oracle-tools/conf/pom.xml as its parent POM.
 
 #### Flyway related properties
 
-For profile (action) db-install:
+For profiles (action) db-install and db-info:
 
 |Property                |Default                             |Description                                                              |
 |--------                |-------                             |-----------                                                              |
@@ -181,34 +181,34 @@ For profiles (actions) db-generate-ddl-full and db-generate-ddl-incr:
 
 ##### Profile db-generate-ddl-full
 
-|Property                            |Default|Description                                                                                  |
-|--------                            |-------|-----------                                                                                  |
-|db.full.remove.output.directory     |yes    |Remove the output directory (${db.src.full.scripts}) before generating DDL scripts?                                                                                            |
-|db.full.force.view                  |no     |CREATE OR REPLACE **FORCE** VIEW or not?                                                     |
-|db.full.skip.install.sql            |yes    |skip creating install.sql/uninstall.sql scripts?                                             |
-|db.full.interface                   |pkg_ddl_util v5|Interface version for creating DDL scripts. Script naming convention is <PREFIX><SEQ>.<OWNER>.<TYPE>.<NAME>.sql where PREFIX is "R__" for replaceable objects and empty otherwise, sequence number SEQ depends on TYPE for "pkg_ddl_util v4" and the place in file install_sequence.txt for "pkg_ddl_util v5"|
+|Property                            |Default                      |Description|
+|--------                            |-------                      |-----------|
+|db.full.remove.output.directory     |yes                          |Remove the output directory (${db.src.full.scripts}) before generating DDL scripts?|
+|db.full.force.view                  |no                           |CREATE OR REPLACE **FORCE** VIEW or not?|
+|db.full.skip.install.sql            |yes                          |skip creating install.sql/uninstall.sql scripts?|
+|db.full.interface                   |pkg_ddl_util v5              |Interface version for creating DDL scripts. Script naming convention is &lt;PREFIX&gt;&lt;SEQ&gt;.&lt;OWNER&gt;.&lt;TYPE&gt;.&lt;NAME&gt;.sql where PREFIX is "R__" for replaceable objects and empty otherwise, sequence number SEQ depends on TYPE for "pkg_ddl_util v4" and the place in file install_sequence.txt for "pkg_ddl_util v5"|
 |db.full.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|A comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links)|
-|db.generate.ddl.full.skip           |       |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists. |
-|db.generate.full.strip.source.schema|0      |Strip source schema from 'create or replace "source schema"."source name"': yes (1) or no (0)|
+|db.generate.ddl.full.skip           |                             |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists.|
+|db.generate.full.strip.source.schema|0                            |Strip source schema from 'create or replace "source schema"."source name"': yes (1) or no (0)|
 
 ##### Profile db-generate-ddl-incr
 
-|Property                            |Default|Description                                                                                 |
-|--------                            |-------|-----------                                                                                 |
-|db.incr.dynamic.sql                 |no     |Use dynamic SQL for the incremental migration scripts?                                      |
-|db.incr.skip.repeatables            |yes    |Skip repeatable/replaceable objects in incremental migration scripts?                       |
-|db.incr.interface                   |pkg_ddl_util v5|See description for db.full.interface above|
-|db.incr.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|See description for db.full.transform.params above|
-|db.generate.ddl.incr.skip           |       |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists.|
+|Property                            |Default                      |Description                                                                                 |
+|--------                            |-------                      |-----------                                                                                 |
+|db.incr.dynamic.sql                 |no                           |Use dynamic SQL for the incremental migration scripts?                                      |
+|db.incr.skip.repeatables            |yes                          |Skip repeatable/replaceable objects in incremental migration scripts?                       |
+|db.incr.interface                   |pkg_ddl_util v5              |See description for db.full.interface above                                                 |
+|db.incr.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|See description for db.full.transform.params above                                          |
+|db.generate.ddl.incr.skip           |                             |Skip generating full DDL scripts for this project? False when ${db.src.full.scripts} exists.|
 
 #### Properties for running utPLSQL
 
 The profile is db-test:
 
-|Property       |Default     |Description                                                 |
-|--------       |-------     |-----------                                                 |
-|db.utplsql.path|${db.schema}|Run utPLSQL for the packages                                |
-|db.test.phase  |none        |Set this to test in your project POM in order to activate it|
+|Property       |Default                           |Description                                                                   |
+|--------       |-------                           |-----------                                                                   |
+|db.utplsql.path|${db.schema}:${project.artifactId}|Run utPLSQL for packages with utPLSQL suitepath equal to their POM artifactId |
+|db.test.phase  |none                              |Set this to test in your project POM in order to activate it                  |
 
 ### oracle-tools/apex/pom.xml
 
@@ -223,6 +223,6 @@ For profiles (actions) apex-export and apex-import:
 |apex.application.dir    |${apex.src.dir}/export|The Apex export directory with splitted SQL scripts                       |
 |apex.workspace          |                      |The Apex workspace                                                        |
 |apex.application        |                      |The Apex application id                                                   |
-|apex.application.version|current date/time     |In Java yyyy-MM-dd hh:mm:ss format, used in Apex application version info|
+|apex.application.version|current date/time     |In Java yyyy-MM-dd hh:mm:ss format, used in Apex application version info |
 |sql.home                |                      |The home directory of SQLcl (${sql.home}/bin/sql exists?)                 |
 |env.SQL_HOME            |                      |Idem but now the environment variable SQL_HOME                            |

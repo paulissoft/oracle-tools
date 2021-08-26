@@ -498,6 +498,7 @@ $if cfg_pkg.c_testing $then
   
   --%suitepath(DDL)
   --%suite
+  --%rollback(manual)
 
   --%beforeall
   procedure ut_setup;
