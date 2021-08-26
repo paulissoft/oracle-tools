@@ -2373,7 +2373,7 @@ $end
           else
             null;
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-            if p_ku$_ddl.ddlText is not null and dbms_lob.lenght(p_ku$_ddl.ddlText) > 0
+            if p_ku$_ddl.ddlText is not null and dbms_lob.getlength(p_ku$_ddl.ddlText) > 0
             then
               raise_application_error
               ( -20000
