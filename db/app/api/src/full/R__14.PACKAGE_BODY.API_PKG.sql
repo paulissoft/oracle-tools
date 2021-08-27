@@ -375,7 +375,12 @@ return t_errors_tab
 pipelined
 is
   pragma autonomous_transaction; -- DDL is issued
-  l_object_name_tab constant sys.odcivarchar2list := list2collection(p_value_list => p_object_names, p_sep => ',', p_ignore_null => 1);
+  l_object_name_tab constant sys.odcivarchar2list :=
+    list2collection
+    ( p_value_list => replace(replace(replace(p_object_names, chr(9)), chr(10)), chr(13))
+    , p_sep => ','
+    , p_ignore_null => 1
+    );
   l_object_name_type_tab sys.odcivarchar2list := sys.odcivarchar2list();
 begin
   if p_sql_warnings is not null

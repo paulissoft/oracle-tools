@@ -149,8 +149,8 @@
     <property name="compile.classpath" refid="compile.classpath" />
     <property name="runtime.classpath" refid="runtime.classpath" />
 
-    <echo message="compile.classpath: ${compile.classpath}" />
-    <echo message="runtime.classpath: ${runtime.classpath}" />
+    <echo level="verbose" message="compile.classpath: ${compile.classpath}" />
+    <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
   </target>
 
   <target name="init-full" unless="target.db.name">
