@@ -358,10 +358,10 @@ my %object_type_info = (
 my %object_seq = ();
 
 # A list of modified files in output directory so we can remove non-modified files in non single output mode.
-# Key is file name in output directory.
+# Key is file name created by this run in output directory. Value is 0 if file is unchanged, 1 otherwise.
 my %file_modified = ();
 
-# Key: file handle; Value: base file name
+# Key: file handle; Value: base file name.
 my %fh_modified = ();
 
 my $TMPDIR = tempdir( CLEANUP => 1 );
@@ -626,7 +626,8 @@ sub process () {
             unlink(@obsolete_files) == scalar(@obsolete_files) or error("Can not remove obsolete files");
         }
     }
-}
+    info(sprintf("The number of files generated is %d (%d new or changed).", scalar(keys %file_modified), scalar(grep(/1/, values %file_modified))));
+} # process
 
 sub process_object_type ($$$$) {
     my ($object_type, $r_object_type_lines, $r_ddl_no, $r_sql_statements) = @_;
@@ -889,15 +890,15 @@ sub smart_close ($) {
 
     if (-f $file && compare($tmpfile, $file) == 0) {
         debug("File $file has NOT been changed");        
+        $file_modified{$file} = 0;
     } else {
         # $file not existing yet or not equal to $tmpfile
         info("File $file has been " . (-f $file ? "changed": "created"));
         copy($tmpfile, $file) or error("Copy from '$tmpfile' to '$file' failed: $!");
+        $file_modified{$file} = 1;
     }
     # always clean up
     unlink($tmpfile) == 1 or error("Removing '$tmpfile' failed: $!");
-
-    $file_modified{$file} = 1;    
 }
 
 sub add_sql_statement ($$$$;$) {
