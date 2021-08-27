@@ -2243,7 +2243,7 @@ $end
   , p_constraint_lookup_tab in t_constraint_lookup_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab
   , p_ku$_ddl in out nocopy sys.ku$_ddl
-  , p_object_key out nocopy varchar2
+  , p_object_key out nocopy varchar2 -- error if null
   )
   is
     l_verb varchar2(4000 char) := null;
@@ -2257,6 +2257,7 @@ $end
     l_grantee varchar2(4000 char) := null;
     l_privilege varchar2(4000 char) := null;
     l_grantable varchar2(4000 char) := null;
+    l_ddl_text varchar2(32767 char) := null;
 
     procedure cleanup
     is
@@ -2371,19 +2372,21 @@ $end
             null;
 
           else
-            null;
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-            if p_ku$_ddl.ddlText is not null and dbms_lob.getlength(p_ku$_ddl.ddlText) > 0
+            -- GJP 2021-08-27 Ignore this only when the DDL is whitespace only.
+            if p_ku$_ddl.ddlText is not null
             then
-              raise_application_error
-              ( -20000
-              , utl_lms.format_message
-                ('object not found in allowed objects; ddl: %s'
-                , dbms_lob.substr(p_ku$_ddl.ddlText, 100)
-                )
-              );
+              l_ddl_text := trim(replace(replace(dbms_lob.substr(p_ku$_ddl.ddlText, 32767), chr(10), ' '), chr(13), ' '));
+              if l_ddl_text is not null
+              then
+                raise_application_error
+                ( -20000
+                , utl_lms.format_message
+                  ( 'object not found in allowed objects; ddl: "%s"'
+                  , substr(l_ddl_text, 1, 2000)
+                  )
+                );
+              end if;
             end if;
-$end
         end case;
     end;
 
@@ -3596,25 +3599,16 @@ $end
         then
           for i_ddl_idx in p_schema_ddl_tab(i_idx).ddl_tab.first .. p_schema_ddl_tab(i_idx).ddl_tab.last
           loop
-            begin
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-              p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).print();
+            p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).print();
 $end          
-              if p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).verb() = '--' 
-              then
-                -- this is a comment
-                null;
-              else
-                execute_ddl(p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text, p_network_link);
-              end if;
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-            exception
-              when others
-              then
-                p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).print();
-                raise;
-$end          
-            end;
+            if p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).verb() = '--' 
+            then
+              -- this is a comment
+              null;
+            else
+              execute_ddl(p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text, p_network_link);
+            end if;
           end loop;
         end if; -- if cardinality(p_schema_ddl_tab(i_idx).ddl_tab) > 0
       end loop;

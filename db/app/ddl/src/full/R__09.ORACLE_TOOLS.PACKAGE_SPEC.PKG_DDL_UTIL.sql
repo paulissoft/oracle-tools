@@ -1,20 +1,21 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   /**
-  * Dit package bevat DDL utilities gebaseerd op DBMS_METADATA en DBMS_METADATA_DIFF.
+  * This package contains DDL utilities based on DBMS_METADATA and DBMS_METADATA_DIFF.
   *
   * <p>
-  * De volgende functionaliteit wordt beschikbaar gemaakt:
+  * These routines are available:
   * <ul>
-  * <li>Tonen van DDL van een object</li>
-  * <li>Tonen van DDL van een schema</li>
-  * <li>Tonen van verschillen van DDL tussen twee schema's</li>
-  * <li>Uitvoeren van DDL</li>
+  * <li>display_ddl_schema: display DDL for a schema</li>
+  * <li>display_ddl_schema_diff: display DDL differences DDL between two schemas (like the patch utility)</li>
+  * <li>execute_ddl: execute DDL</li>
+  * <li>synchronize: synchronize a target schema based on a source schema</li>
+  * <li>uninstall: uninstall a target schema</li>
   * </ul>
   * </p>
   *
   * <p>
-  * De documentatie is in PL/SQL Developer plsqldoc formaat.
+  * The documentation is in Javadoc format and thus readable by PL/SQL Developer and pldoc.
   * </p>
   *
   */
@@ -23,8 +24,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- see 11g / 12c licensing
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
-  c_debugging constant naturaln := 2; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
-  c_testing constant boolean := true; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
+  c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
   -- pivotal issues
 
@@ -95,10 +95,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   subtype t_dict_object_type is all_objects.object_type%type; 
   subtype t_dict_object_type_nn is t_dict_object_type not null;
 
-  subtype t_metadata_object_type is varchar2(30 char); -- langer dan all_objects.object_type%type
+  subtype t_metadata_object_type is varchar2(30 char);
   subtype t_metadata_object_type_nn is t_metadata_object_type not null;
 
-  subtype t_object_name is varchar2(4000 char); -- standaard maximaal 30 maar langer kan nodig zijn voor lange synoniemnamen (zie  SYS.KU$_SYNONYM_VIEW) of XML schema's
+  subtype t_object_name is varchar2(4000 char);
   subtype t_object_name_nn is t_object_name not null;
 
   -- key: owner.object_type.object_name[.grantee]
@@ -160,40 +160,40 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   return t_text_tab pipelined;
 
   /**
-  * Deze functie toont DDL van een of meerdere objecten van een schema.
+  * This function displays the DDL for one or more schema objects.
   *
   * <p>
-  * Op basis van p_object_type kun je filteren welke objecttypen van belang zijn:
+  * Based on p_object_type you can filter on object types:
   * <ul>
-  * <li>Indien leeg dan alle objecttypen genoemd in documentatie van DBMS_METADATA.</li>
-  * <li>Indien niet leeg dan alle objecttypen die matchen (LIKE) met p_object_type.</li>
+  * <li>If empty display all object types mentioned in the DBMS_METADATA documentation.</li>
+  * <li>Else, only those object types that match (LIKE) p_object_type.</li>
   * </ul>
   * </p>
   *
   * <p>
-  * Op basis van p_object_names en p_object_names_include kun je filteren op objectnamen:
+  * Based on p_object_names and p_object_names_include the filtering is like this:
   * <ul>
-  * <li>Indien p_object_names_include leeg is, dan zijn er geen beperkingen aan objectnamen.</li>
-  * <li>Indien p_object_names_include 1 is, dan zullen alle namen in p_object_names gebruikt worden in een filter zoals in DBMS_METADATA.SET_FILTER(name=>'NAME_EXPR', value=>'IN (...)').</li>
-  * <li>Indien p_object_names_include 0 is, dan zullen alle namen in p_object_names gebruikt worden in een filter zoals in DBMS_METADATA.SET_FILTER(name=>'EXCLUDE_NAME_EXPR', value=>'IN (...)').</li>
+  * <li>If p_object_names_include is empty then there are no constraints regarding object names (although special objects like Flyway tables and Oracle objects will be ignored).</li>
+  * <li>If p_object_names_include is 1, only names in p_object_names will be included like in DBMS_METADATA.SET_FILTER(name=>'NAME_EXPR', value=>'IN (...)').</li>
+  * <li>If p_object_names_include is 0, only names in p_object_names will be excluded like in DBMS_METADATA.SET_FILTER(name=>'EXCLUDE_NAME_EXPR', value=>'IN (...)').</li>
   * </ul>
   * </p>
   *
   * <p>
-  * Parameters p_schema, p_new_schema en p_object_names worden niet geconverteerd naar bijvoorbeeld hoofdletters.
+  * NOTE: parameters p_schema, p_new_schema and p_object_names will NOT be converted to upper case.
   * </p>
   *
-  * @param p_schema                De naam van het schema
-  * @param p_new_schema            De naam van het nieuwe te remappen schema
-  * @param p_sort_objects_by_deps  Sorteer objecten in volgorde van afhankelijkheden opdat er zo min mogelijk compilatiefouten optreden vanwege ontbrekende objecten.
-  * @param p_object_type           Filter op objecttype.
-  * @param p_object_names          Een lijst van namen van het (basis-)object gescheiden door komma's.
-  * @param p_object_names_include  Wat er moet gebeuren met de lijst van namen: include de lijst (1), exclude de lijst (0) of niet gebruiken en dus geen beperking opleggen (null)
-  * @param p_network_link          De netwerk link
+  * @param p_schema                The schema name.
+  * @param p_new_schema            The new schema name.
+  * @param p_sort_objects_by_deps  Sort objecten in dependency order to reduce number of installation errors/warnings.
+  * @param p_object_type           Filter for object type.
+  * @param p_object_names          A comma separated list of (base) object names.
+  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_network_link          The network link.
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
   * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
   *
-  * @return Een lijst van DDL text plus informatie over object.
+  * @return A list of DDL text plus information about the object.
   */
   function display_ddl_schema
   ( p_schema in t_schema_nn default user
@@ -217,23 +217,23 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
 
   /**
-  * Deze functie toont DDL om van een source schema naar target schema te migreren.
+  * Display DDL to migrate from source to target.
   *
   * <p>
-  * Zie display_ddl_schema() voor een beschrijving van het gebruik van p_object_type, p_object_names en p_object_names_include.
+  * See display_ddl_schema() for the usage of p_object_type, p_object_names and p_object_names_include.
   * </p>
   *
-  * @param p_object_type             Filter op objecttype.
-  * @param p_object_names            Een lijst van namen van het (basis-)object gescheiden door komma's.
-  * @param p_object_names_include    Wat er moet gebeuren met de lijst van namen: include de lijst (1), exclude de lijst (0) of niet gebruiken en dus geen beperking opleggen (null)
-  * @param p_schema_source           De naam van het bronschema (mag leeg zijn voor uninstall)
-  * @param p_schema_target           De naam van het doelschema
-  * @param p_network_link_source     De netwerk link van het bronschema
-  * @param p_network_link_target     De netwerk link van het doelschema
+  * @param p_object_type             Filter for object type.
+  * @param p_object_names            A comma separated list of (base) object names.
+  * @param p_object_names_include    How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_schema_source           Source schema (may be empty for uninstall).
+  * @param p_schema_target           Target schema.
+  * @param p_network_link_source     Source network link.
+  * @param p_network_link_target     Target network link.
   * @param pi_skip_repeatables       Skip repeatables objects (1) or check all objects (0)
   * @param p_transform_param_list    A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
   *
-  * @return Een lijst van DDL text plus informatie over object.
+  * @return A list of DDL text plus information about the object.
   */
   function display_ddl_schema_diff
   ( p_object_type in t_metadata_object_type default null
@@ -265,19 +265,19 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
 
   /**
-  * Deze procedure synchroniseert een target schema aan de hand van een source schema.
+  * Synchronize a target schema based on a source schema.
   *
   * <p>
-  * Zie display_ddl_schema() voor een beschrijving van het gebruik van p_object_type, p_object_names en p_object_names_include.
+  * See display_ddl_schema() for the usage of p_object_type, p_object_names and p_object_names_include.
   * </p>
   *
-  * @param p_object_type           Filter op objecttype.
-  * @param p_object_names          Een lijst van namen van het (basis-)object gescheiden door komma's.
-  * @param p_object_names_include  Wat er moet gebeuren met de lijst van namen: include de lijst (1), exclude de lijst (0) of niet gebruiken en dus geen beperking opleggen (null)
-  * @param p_schema_source         De naam van het bronschema
-  * @param p_schema_target         De naam van het doelschema
-  * @param p_network_link_source   De netwerk link van het bronschema
-  * @param p_network_link_target   De netwerk link van het doelschema
+  * @param p_object_type             Filter for object type.
+  * @param p_object_names            A comma separated list of (base) object names.
+  * @param p_object_names_include    How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_schema_source           Source schema (may be empty for uninstall).
+  * @param p_schema_target           Target schema.
+  * @param p_network_link_source     Source network link.
+  * @param p_network_link_target     Target network link.
   */
   procedure synchronize
   ( p_object_type in t_metadata_object_type default null
@@ -290,17 +290,17 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
 
   /**
-  * Deze procedure de-installeert een target schema.
+  * This one uninstalls a target schema.
   *
   * <p>
-  * Zie display_ddl_schema() voor een beschrijving van het gebruik van p_object_type, p_object_names en p_object_names_include.
+  * See display_ddl_schema() for the usage of p_object_type, p_object_names and p_object_names_include.
   * </p>
   *
-  * @param p_object_type           Filter op objecttype.
-  * @param p_object_names          Een lijst van namen van het (basis-)object gescheiden door komma's.
-  * @param p_object_names_include  Wat er moet gebeuren met de lijst van namen: include de lijst (1), exclude de lijst (0) of niet gebruiken en dus geen beperking opleggen (null)
-  * @param p_schema_target         De naam van het doelschema
-  * @param p_network_link_target   De netwerk link van het doelschema
+  * @param p_object_type             Filter for object type.
+  * @param p_object_names            A comma separated list of (base) object names.
+  * @param p_object_names_include    How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_schema_target           Target schema.
+  * @param p_network_link_target     Target network link.
   */
   procedure uninstall
   ( p_object_type in t_metadata_object_type default null
@@ -317,10 +317,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * See display_ddl_schema() for a description of the usage of p_object_type, p_object_names and p_object_names_include.
   * </p>
   *
-  * @param p_schema                Schema name
-  * @param p_object_type           Filter for object type
-  * @param p_object_names          A list of object names separated by a comma
-  * @param p_object_names_include  Either include the list (1), exclude the list (0) or do not use the list (null)
+  * @param p_schema                Schema name.
+  * @param p_object_type           Filter for object type.
+  * @param p_object_names          A list of object names separated by a comma.
+  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
   * @param p_schema_object_tab     Only applicable for the procedure variant. See the description for return.
   *
