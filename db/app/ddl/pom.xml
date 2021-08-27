@@ -84,6 +84,7 @@
 ,V_MY_SCHEMA_DDL_INFO
 ,V_MY_SCHEMA_OBJECT_INFO
     </db.object.names>
+    <db.test.phase>test</db.test.phase>
   </properties>
 
   <build>

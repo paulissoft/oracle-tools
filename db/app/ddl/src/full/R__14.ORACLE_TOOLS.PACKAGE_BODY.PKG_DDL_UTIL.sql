@@ -1684,14 +1684,24 @@ $end
         loop
           -- trim tab, linefeed, carriage return and space from the input
           l_object_name := trim(chr(9) from trim(chr(10) from trim(chr(13) from trim(' ' from p_object_name_tab(i_idx)))));
+          -- GJP 2021-08-27 Do not check for valid SQL names.
+          /*
+          begin
+            l_object_name := dbms_assert.simple_sql_name(l_object_name);
+          exception
+            when e_invalid_sql_name
+            then l_object_name := dbms_assert.enquote_name(l_object_name); -- "ST00001oyY/EaERZngUwEAAH+t7Q="
+          end;
           l_in_list := l_in_list || '''' || dbms_assert.simple_sql_name(l_object_name) || ''',';
+          */
+          l_in_list := l_in_list || '''' || l_object_name || ''',';
         end loop;
         l_in_list := rtrim(l_in_list, ',');
       end if;
       l_in_list := l_in_list || ')';
 
       return l_in_list;
-    exception
+    exception    
       when e_invalid_sql_name
       then raise_application_error(-20000, 'Object name: "'|| l_object_name || '"', true);
     end in_list_expr;
