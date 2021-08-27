@@ -116,11 +116,6 @@ For debugging purposes.
 
 The output directory, default the current directory.
 
-=item B<--remove-output-directory>
-
-A boolean toggle to indicate whether the output-directory option must be
-removed before creating scripts. Default value is NO.
-
 =item B<--single-output-file>
 
 Normally output files will be created for each object in the output
@@ -170,10 +165,18 @@ Gert-Jan Paulissen
 
 =over 4
 
-=item 2021-08-26
+=item 2021-08-27
 
-Create the file in the output directory only when it is different from the existing one (or when it does not exist).
-This assures that the file modification date will not change when the DDL has not changed.
+Create the file in the output directory only when it is different from the
+existing one (or when it does not exist).  This assures that the file
+modification date will not change when the DDL has not changed.
+
+The command line option remove-output-directory is not necessary anymore since
+files are first created in a temporary directory and copied only when not the
+same. Files not created in the temporary directory will be removed at the end
+from the output directory.
+
+For example, say install.sql exists in the output directory.
 
 =item 2021-08-25
 
@@ -249,7 +252,7 @@ use English;
 use File::Basename;
 use File::Compare;
 use File::Copy;
-use File::Path qw(make_path remove_tree);
+use File::Path qw(make_path);
 use File::Spec;
 use File::Temp qw(tempdir);
 use Getopt::Long;
@@ -264,7 +267,7 @@ use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 
 # VARIABLES
 
-my $VERSION = "2021-08-26";
+my $VERSION = "2021-08-27";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -275,7 +278,6 @@ my $dynamic_sql = 0; # displayed in print_run_info()
 my $force_view = 1; # displayed in print_run_info()
 my $input_file = undef;
 my $output_directory = '.';
-my $remove_output_directory = 0; # displayed in print_run_info()
 my $single_output_file = undef;
 my $skip_install_sql = 1; # displayed in print_run_info()
 my $source_schema = ''; # displayed in print_run_info()
@@ -355,8 +357,12 @@ my %object_type_info = (
 
 my %object_seq = ();
 
-# A list of modified files so we can remove non-modified files in non single output mode.
+# A list of modified files in output directory so we can remove non-modified files in non single output mode.
+# Key is file name in output directory.
 my %file_modified = ();
+
+# Key: file handle; Value: base file name
+my %fh_modified = ();
 
 my $TMPDIR = tempdir( CLEANUP => 1 );
 
@@ -372,6 +378,8 @@ sub get_object ($$$;$$$);
 sub object_file_name ($$$);                  
 sub open_file ($$$$);
 sub close_file ($$);
+sub smart_open ($;$);
+sub smart_close ($);
 sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
@@ -423,7 +431,6 @@ sub process_command_line ()
                'help' => sub { pod2usage(-verbose => 2) },
                'input-file=s' => \$input_file,
                'output-directory=s' => \$output_directory,
-               'remove-output-directory!' => \$remove_output_directory,
                'single-output-file:s' => \$single_output_file, # optional
                'skip-install-sql!' => \$skip_install_sql,
                'source-schema:s' => \$source_schema, # option may be empty
@@ -445,12 +452,6 @@ sub process_command_line ()
         pod2usage(-message => "$0: output directory does not exist. Run with --help option.\n")
             unless (defined($output_directory) && -d $output_directory);
     }
-
-    # GJP 2021-08-26 Removing the output drectory is obsolete.
-    if ($remove_output_directory) {
-        warning("The command line option 'remove-output-directory' is obsolete.");
-        $remove_output_directory = 0;
-    }
 }
 
 sub process () {
@@ -466,12 +467,6 @@ sub process () {
     }
 
     read_object_seq($install_sequence_txt);
-
-    if ($remove_output_directory) {
-        # Only when a complete new tree is created, the install.sql script is reliable.
-        # Because when the tree is not removed, the user may just create a single script and not the whole tree.
-        remove_tree($output_directory, { verbose => 0 });
-    }
 
     # always make the output directory
     make_path($output_directory, { verbose => 0 });
@@ -489,14 +484,10 @@ sub process () {
 
     if (defined($single_output_file)) {
         $file = File::Spec->catfile($output_directory, $single_output_file);
-        open($fh, ">$encoding", $file) 
-            or error("Can not write to '$file': $!");
+        $fh = smart_open($file);
     } else {
-        # GJP 2021-07-27  $remove_output_directory should not be a condition so put defined() around it
-        if (defined($remove_output_directory) && defined($install_sql)) {
-            open($fh_install_sql, ">$encoding", $install_sql) 
-                or error("Can not write to '$install_sql': $!");
-        }
+        $fh_install_sql = smart_open($install_sql)
+            if (defined($install_sql));
     }
 
     print_run_info($fh, 0)
@@ -596,10 +587,10 @@ sub process () {
     debug(Data::Dumper->Dump([%sql_statements], [qw(sql_statements)]));
 
     all_sql_statements_flush($fh_install_sql, \$fh, \$nr_sql_statements, \%sql_statements);
-    close($fh)
+    smart_close($fh)
         if defined($fh); # single output file
     
-    close($fh_install_sql)
+    smart_close($fh_install_sql)
         if defined($fh_install_sql);
 
     if (defined($input_file)) { # Suppress 'Filehandle STDIN reopened as $fh_seq only for output'
@@ -617,11 +608,17 @@ sub process () {
     }
 
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
-    if (!$remove_output_directory && !defined($single_output_file)) {
-        # GJP 2021-08-21
-        my @obsolete_files = glob(File::Spec->catfile($output_directory, '*.sql'));
+    if (!defined($single_output_file)) {
+        # GJP 2021-08-21  Add SQL scripts that adhere to the naming convention
+        my @obsolete_files = grep { m/\b(R__)?(\d{2}|\d{4})\./ } glob(File::Spec->catfile($output_directory, '*.sql'));
 
-        @obsolete_files = grep { -f $_ && m/\b(R__)?(\d{2}|\d{4})\./ && !exists($file_modified{$_}) } @obsolete_files;
+        # GJP 2021-08-27  Add install files too
+        push(@obsolete_files,
+             File::Spec->catfile($output_directory, 'install.sql'),
+             File::Spec->catfile($output_directory, 'install_sequence.txt'));
+
+        # When those files have not been created
+        @obsolete_files = grep { -f $_ && !exists($file_modified{$_}) } @obsolete_files;
 
         if (scalar(@obsolete_files) > 0) {
             info('Obsolete files to delete:', @obsolete_files);
@@ -830,51 +827,77 @@ sub open_file ($$$$) {
     print $fh_install_sql "prompt \@\@$file\n\@\@$file\n"
         if (defined $fh_install_sql);
 
-    # GJP 2021-08-26 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
+    # GJP 2021-08-27 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
 
     my $tmpfile = File::Spec->catfile($TMPDIR, $file);
+
     $file = File::Spec->catfile($output_directory, $file);
 
     # Just issue a warning till now and append
-    if ($remove_output_directory && -f $file) {
+    if (-f $tmpfile) {
         warn "WARNING: File $file already exists. Duplicate objects?"
             unless ($ignore_warning_when_file_exists);
-    }
-
-    if (-f $tmpfile) {
-        open($$r_fh, ">>$encoding", $tmpfile)
-            or error("Can not append to '$tmpfile': $!");
+        
+        $$r_fh = smart_open($tmpfile, 1); # append
     } else {
-        open($$r_fh, ">$encoding", $tmpfile)
-            or error("Can not write to '$tmpfile': $!");
+        $$r_fh = smart_open($tmpfile);
     }
-
-    # We just pretend that $file has been modified
-    $file_modified{$file} = 1;
 }
 
 sub close_file ($$) {
     my ($file, $r_fh) = @_;
 
     # close before comparing/copying/removing
-    close($$r_fh)
-        or error("Can not close file: $!");
+    smart_close($$r_fh);
     $$r_fh = undef;
+}
 
-    # GJP 2021-08-26 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
+# GJP 2021-08-27
+# Create the file in $output_directory later on in close_file() so modification date will not change if file is the same.
+# To do this use smart_open() and smart_close() instead of open()/close().
+
+# open file for writing
+sub smart_open ($;$) {
+    my ($file, $append) = @_;
+    my $basename = basename($file);
+    my ($tmpfile, $fh) = (File::Spec->catfile($TMPDIR, $basename));
+
+    # open
+    open($fh, (defined($append) && $append ? ">>" : ">") . $encoding, $tmpfile)
+        or error("Can not write to '$tmpfile': $!");
+
+    $fh_modified{$fh} = $basename;
+
+    return $fh;
+}
+
+sub smart_close ($) {
+    my $fh = shift @_;
+
+    error("File handle unknown")
+        unless exists($fh_modified{$fh});
     
-    my $tmpfile = File::Spec->catfile($TMPDIR, $file);
-    $file = File::Spec->catfile($output_directory, $file);
+    my $basename = $fh_modified{$fh};
+
+    close($fh)
+        or error("Can not close file: $!");
+
+    delete $fh_modified{$fh};
+
+    # Now copy (smart) from temp to output directory
+    my ($tmpfile, $file) = (File::Spec->catfile($TMPDIR, $basename), File::Spec->catfile($output_directory, $basename));
 
     if (-f $file && compare($tmpfile, $file) == 0) {
-        info("File $file has NOT been modified");        
+        debug("File $file has NOT been changed");        
     } else {
         # $file not existing yet or not equal to $tmpfile
-        info("File $file has been modified");
-        copy($tmpfile, $file) or die "Copy from '$tmpfile' to '$file' failed: $!";
+        info("File $file has been " . (-f $file ? "changed": "created"));
+        copy($tmpfile, $file) or error("Copy from '$tmpfile' to '$file' failed: $!");
     }
     # always clean up
-    unlink($tmpfile) == 1 or die "Removing '$tmpfile' failed: $!";
+    unlink($tmpfile) == 1 or error("Removing '$tmpfile' failed: $!");
+
+    $file_modified{$file} = 1;    
 }
 
 sub add_sql_statement ($$$$;$) {
@@ -1290,7 +1313,6 @@ sub print_run_info ($$) {
     print $fh '/* ', "perl generate_ddl.pl (version $VERSION)";
     print $fh sprintf(" --%s%s", ($dynamic_sql ? '' : 'no'), 'dynamic-sql');
     print $fh sprintf(" --%s%s", ($force_view ? '' : 'no'), 'force-view');
-    print $fh sprintf(" --%s%s", ($remove_output_directory ? '' : 'no'), 'remove-output-directory');
     print $fh sprintf(" --%s%s", ($skip_install_sql ? '' : 'no'), 'skip-install-sql');
     print $fh " --source-schema=$source_schema" if (length($source_schema) > 0);
     print $fh sprintf(" --%s%s", ($strip_source_schema ? '' : 'no'), 'strip-source-schema');
@@ -1402,9 +1424,9 @@ sub split_single_output_file ($) {
             $output_file = $input_file;
             $output_file =~ s/\@nr\@/sprintf("%04d", $nr)/e;
             
-            close($output_fh) if (defined($output_fh));
+            smart_close($output_fh) if (defined($output_fh));
                 
-            open($output_fh, ">$encoding", $output_file) 
+            $output_fh = smart_open($output_file) 
                 or error("Can not write to '$output_file': $!");
         }
 
@@ -1414,7 +1436,7 @@ sub split_single_output_file ($) {
             unless $line =~ m/^call\s+dbms_application_info\.(set_module|set_action)\b/;
     }
     
-    close($output_fh) if (defined($output_fh));
+    smart_close($output_fh) if (defined($output_fh));
     close($input_fh);
 
     unlink($input_file);
@@ -1456,7 +1478,7 @@ sub write_object_seq ($) {
     my $install_sequence_txt = shift @_;    
     my $fh_seq = undef;
 
-    open($fh_seq, '>', $install_sequence_txt)
+    $fh_seq = smart_open($install_sequence_txt)
         or error("Can not write '$install_sequence_txt': $!");
 
     print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
@@ -1464,7 +1486,7 @@ sub write_object_seq ($) {
     foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
         print $fh_seq "$object\n";
     }
-    close $fh_seq;
+    smart_close($fh_seq);
 }
 
 sub error (@) {

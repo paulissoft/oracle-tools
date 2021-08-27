@@ -36,8 +36,6 @@
     The build directory.
 
     The following properties are used for generate-ddl-full:
-    - full.remove.output.directory
-    Must we remove the output directory tree before?
     - full.force.view
     Do we remove the FORCE keyword from CREATE OR REPLACE FORCE VIEW?
     - full.output.directory
@@ -180,7 +178,6 @@
     <delete dir="${full.output.directory}/../export"/>
 
     <!-- Boolean properties, see also ../../pom.xml -->
-    <define-perl-property property="full.remove.output.directory" default="yes"/>
     <!-- Pivotal #132752233 -->
     <define-perl-property property="full.force.view" default="no"/>
     <define-perl-property property="full.skip.install.sql" default="yes"/>
@@ -401,7 +398,6 @@ Z       Time zone               RFC 822 time zone   -0800
         <arg value="--${perl.full.force.view}force-view"/>
         <arg value="--output-directory=${full.output.directory}"/>
         <arg value="--${perl.full.skip.install.sql}skip-install-sql"/>
-        <arg value="--${perl.full.remove.output.directory}remove-output-directory"/>
         <arg value="--source-schema=${schema}"/>
         <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
       </perl-arguments>
