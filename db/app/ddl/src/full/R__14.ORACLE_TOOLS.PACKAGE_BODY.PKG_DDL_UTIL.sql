@@ -6840,6 +6840,8 @@ $end
   is
     l_idx1 pls_integer := p_first1;
     l_idx2 pls_integer := p_first2;
+    l_line1 varchar2(32767 char);
+    l_line2 varchar2(32767 char);
     l_result boolean := true;
   begin
 $if cfg_pkg.c_debugging $then
@@ -6875,14 +6877,20 @@ $end
     <<line_loop>>
     while l_result and (l_idx1 <= p_last1 or l_idx2 <= p_last2)
     loop
-      if (l_idx1 <= p_last1 and l_idx2 <= p_last2) and
-         ( ( ( not(p_line1_tab.exists(l_idx1)) or p_line1_tab(l_idx1) is null ) and
-             ( not(p_line2_tab.exists(l_idx2)) or p_line2_tab(l_idx2) is null ) ) or
-           ( p_line1_tab.exists(l_idx1) and
-             p_line2_tab.exists(l_idx2) and
-             p_line1_tab(l_idx1) = p_line2_tab(l_idx2) ) )
+      l_line1 := case when l_idx1 <= p_last1 and p_line1_tab.exists(l_idx1) then p_line1_tab(l_idx1) else null end;
+      l_line2 := case when l_idx2 <= p_last2 and p_line2_tab.exists(l_idx2) then p_line2_tab(l_idx2) else null end;
+      if ( l_line1 is null and l_line2 is null ) or l_line1 = l_line2
       then
         null; -- lines equal
+      elsif l_line1 is null and l_line2 like 'ALTER TRIGGER % ENABLE' or
+            l_line2 is null and l_line1 like 'ALTER TRIGGER % ENABLE'
+      then
+        -- GJP 2021-08-27 Ignore this special case
+        --
+        -- warning: difference found:
+        -- warning: p_line1_tab(38): "<NULL>"
+        -- warning: p_line2_tab(39): "ALTER TRIGGER "ORACLE_TOOLS"."UI_APEX_MESSAGES_TRG" ENABLE"
+        null;
       else
         -- one line does not exist or the lines are not equal
         l_result := false;
@@ -6895,13 +6903,13 @@ $if cfg_pkg.c_debugging $then
         ( dbug."warning"
         , 'p_line1_tab(%s): "%s"'
         , l_idx1
-        , case when p_line1_tab.exists(l_idx1) then p_line1_tab(l_idx1) else '<NOT FOUND>' end
+        , l_line1
         );
         dbug.print
         ( dbug."warning"
         , 'p_line2_tab(%s): "%s"'
         , l_idx2
-        , case when p_line2_tab.exists(l_idx2) then p_line2_tab(l_idx2) else '<NOT FOUND>' end
+        , l_line2
         );
 $end
       end if;

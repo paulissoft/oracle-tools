@@ -366,6 +366,79 @@ exception
 $end
 end ut_expect_violation;
 
+function show_compile_errors
+( p_object_names in varchar2
+, p_object_names_include in integer
+, p_sql_warnings in varchar2
+)
+return t_errors_tab
+pipelined
+is
+  pragma autonomous_transaction; -- DDL is issued
+  l_object_name_tab constant sys.odcivarchar2list := list2collection(p_value_list => p_object_names, p_sep => ',', p_ignore_null => 1);
+  l_object_name_type_tab sys.odcivarchar2list := sys.odcivarchar2list();
+begin
+  if p_sql_warnings is not null
+  then
+    execute immediate q'[alter session set PLSQL_WARNINGS = ']' || p_sql_warnings || q'[']';
+  end if;
+
+  for r_obj in
+  ( select  o.object_name
+    ,       o.object_type
+    ,       case
+              when o.object_type in ('FUNCTION', 'PACKAGE', 'PROCEDURE', 'TRIGGER', 'TYPE', 'VIEW')
+              then 'ALTER ' || o.object_type || ' ' || o.object_name || ' COMPILE'
+              when o.object_type in ('JAVA CLASS', 'JAVA SOURCE')
+              then 'ALTER ' || o.object_type || ' "' || o.object_name || '" COMPILE'
+              when instr(o.object_type, ' BODY') > 0
+              then 'ALTER ' || replace(o.object_type, ' BODY') || ' ' || o.object_name || ' COMPILE BODY'
+            end as command
+    from    user_objects o
+    where   o.object_type in
+            ( 'VIEW'
+            , 'PROCEDURE'
+            , 'FUNCTION'
+            , 'PACKAGE'
+            , 'PACKAGE BODY'
+            , 'TRIGGER'
+            , 'TYPE'
+            , 'TYPE BODY'
+            , 'JAVA SOURCE'
+            , 'JAVA CLASS'
+            )
+    and     o.object_name not like 'BIN$%' -- Oracle 10g Recycle Bin
+    and     o.object_name != $$PLSQL_UNIT -- do not recompile this package (body)
+    and     ( p_object_names_include is null or
+              ( p_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(l_object_name_tab) t ) ) or
+              ( p_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(l_object_name_tab) t ) )
+            )
+  )
+  loop
+    l_object_name_type_tab.extend(1);
+    l_object_name_type_tab(l_object_name_type_tab.last) := r_obj.object_name || '|' || r_obj.object_type;
+    
+    execute immediate r_obj.command;    
+  end loop;
+
+  for r_err in
+  ( select  e.*
+    from    user_errors e
+    where   e.name || '|' || e.type in ( select trim(t.column_value) from table(l_object_name_type_tab) t )
+    order by
+            e.name
+    ,       e.type
+    ,       e.sequence
+  )
+  loop
+    pipe row (r_err);
+  end loop;
+
+  commit;
+
+  return; -- essential
+end show_compile_errors;
+
 $if cfg_pkg.c_testing $then
 
 procedure ut_setup
