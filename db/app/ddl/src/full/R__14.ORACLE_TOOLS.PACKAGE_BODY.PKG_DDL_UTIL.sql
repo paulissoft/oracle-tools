@@ -6111,23 +6111,115 @@ $end
   end get_display_ddl_schema;
 
   /*
-  -- Sorteer objecten op volgorde van afhankelijkheden.
+  -- Get objects (adding GRANT, COMMENT, CONSTRAINT and REF_CONSTRAINT objects besides the standard objects)
   */
-  function sort_objects_by_deps
-  ( p_cursor in sys_refcursor
-  , p_schema in t_schema_nn
+  function get_schema_object_info
+  ( p_schema in t_schema_nn
   )
-  return t_sort_objects_by_deps_tab
+  return t_schema_object_info_tab
+  pipelined
+  is
+    cursor c_schema_objects(b_schema in varchar2) is
+      select  t.*
+      from    ( select t.owner
+                      ,t_schema_object.dict2metadata_object_type(t.object_type) as type
+                      ,t.object_name as name
+                from   all_objects t
+                where  t.owner = b_schema
+                union
+$if pkg_ddl_util.c_#138707615_2 $then
+                -- more simple: just the constraints
+                select c.owner as owner
+                      ,'REF_CONSTRAINT' as type
+                      ,c.constraint_name as name
+                from   all_constraints c
+                where  c.owner = b_schema
+                and    c.constraint_type = 'R'
+                union
+$end
+                -- object grants
+$if dbms_db_version.version >= 12 $then
+                -- from Oracle 12 on there is a type column in all_tab_privs
+                select t1.table_schema as owner
+                      ,'GRANT' as type
+                      ,t1.table_name as name
+                from   all_tab_privs t1
+                where  t1.table_schema = b_schema
+                and    t1.type not like '% BODY'
+                and    t1.type != 'LOB'
+$else
+                select t1.table_schema as owner
+                      ,'GRANT' as type
+                      ,t1.table_name as name
+                from   all_tab_privs t1
+                inner  join all_objects t2
+                on     t2.owner = t1.table_schema
+                and    t2.object_name = t1.table_name
+                and    t2.generated = 'N' -- GPA 2016-12-19 #136334705
+                where  t2.owner = b_schema
+                and    t2.object_type not like '% BODY'
+                and    t2.object_type != 'LOB'
+$end
+                union
+                -- table comments
+                select t1.owner as owner
+                      ,'COMMENT' as type
+                      ,t1.table_name as name
+                from   all_tab_comments t1
+                       -- some SYS comments have no parent table/view
+                       inner join all_objects t2
+                       on t2.owner = t1.owner and t2.object_name = t1.table_name and t2.generated = 'N' -- GPA 2016-12-19 #136334705
+                where  t1.owner = b_schema
+                union
+                -- column comments
+                select t1.owner as owner
+                      ,'COMMENT' as type
+                      ,t1.table_name as name
+                from   all_col_comments t1
+                       -- some SYS comments have no parent table/view
+                       inner join all_objects t2
+                       on t2.owner = t1.owner and t2.object_name = t1.table_name and t2.generated = 'N' -- GPA 2016-12-19 #136334705
+                where  t1.owner = b_schema
+                union
+                -- constraints to indexes
+                select t1.owner as owner
+                      ,case t1.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as type
+                      ,t1.constraint_name as name
+                from   all_constraints t1
+                where  t1.owner = b_schema
+                and    t1.index_owner is not null
+                and    t1.index_name is not null
+              ) t
+      where   t.type is not null
+              -- use subquery scalar cache
+      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(t.type /* meta */, t.name) from dual ) = 0
+      
+    ;
+  begin
+    for r in c_schema_objects(p_schema)
+    loop
+      pipe row (r);
+    end loop;
+    return; -- essential
+  end get_schema_object_info;
+    
+  /*
+  -- Get object dependencies
+  */
+  function get_object_dependencies
+  ( p_schema in t_schema_nn
+  )
+  return t_object_dependencies_tab
   pipelined
   is
     -- bepaal dependencies gebaseerd op PL/SQL
     cursor c_dependencies(b_schema in varchar2) is
       select  t.*
-      from    ( select t.owner as object_owner
-                      ,t.type as object_type
-                      ,t.name as object_name
+      from    ( select t.owner
+                      ,t_schema_object.dict2metadata_object_type(t.type) as type
+                      ,t.name
                       ,t.referenced_owner
-                      ,t.referenced_type
+                      ,t_schema_object.dict2metadata_object_type(t.referenced_type) as referenced_type
                       ,t.referenced_name
                 from   all_dependencies t
                 where  t.owner = b_schema
@@ -6136,9 +6228,9 @@ $end
                 union
 $if not(pkg_ddl_util.c_#138707615_2) $then
                 -- bepaal dependencies gebaseerd op foreign key constraints
-                select t1.owner as object_owner
-                      ,'TABLE' as object_type
-                      ,t1.table_name as object_name
+                select t1.owner as owner
+                      ,'TABLE' as type
+                      ,t1.table_name as name
                       ,t2.owner as referenced_owner
                       ,'TABLE' as referenced_type
                       ,t2.table_name as referenced_name
@@ -6151,9 +6243,9 @@ $if not(pkg_ddl_util.c_#138707615_2) $then
                 and    t1.constraint_type = 'R'
 $else
                 -- more simple: just the constraints
-                select c.owner as object_owner
-                      ,'REF_CONSTRAINT' as object_type
-                      ,c.constraint_name as object_name
+                select c.owner as owner
+                      ,'REF_CONSTRAINT' as type
+                      ,c.constraint_name as name
                       ,c.r_owner as referenced_owner
                       ,'CONSTRAINT' as referenced_type
                       ,c.r_constraint_name as referenced_name
@@ -6163,9 +6255,9 @@ $else
 $end
                 union
                 -- bepaal dependencies gebaseerd op indexen van een tabel
-                select i.owner as object_owner
-                      ,'INDEX' as object_type
-                      ,i.index_name as object_name
+                select i.owner as owner
+                      ,'INDEX' as type
+                      ,i.index_name as name
                       ,i.table_owner as referenced_owner
                       ,'TABLE' as referenced_type
                       ,i.table_name as referenced_name
@@ -6173,11 +6265,11 @@ $end
                 where  i.owner = b_schema
                 union
                 -- bepaal dependencies gebaseerd op indexen van een materialized view (niet PREBUILT)
-                select t1.owner as object_owner
-                      ,'INDEX' as object_type
-                      ,t1.index_name as object_name
+                select t1.owner as owner
+                      ,'INDEX' as type
+                      ,t1.index_name as name
                       ,t1.table_owner as referenced_owner
-                      ,'MATERIALIZED VIEW' as referenced_type
+                      ,'MATERIALIZED_VIEW' as referenced_type
                       ,t1.table_name as referenced_name
                 from   all_indexes t1
                        inner join all_mviews t2
@@ -6187,11 +6279,11 @@ $end
                 and    t2.build_mode != 'PREBUILT'
                 union
                 -- bepaal dependencies gebaseerd op objecten waarnaar wordt verwezen door synoniemen
-                select t1.owner as object_owner
-                      ,'SYNONYM' as object_type
-                      ,t1.synonym_name as object_name
+                select t1.owner as owner
+                      ,'SYNONYM' as type
+                      ,t1.synonym_name as name
                       ,t2.owner as referenced_owner
-                      ,t2.object_type as referenced_type
+                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as referenced_type
                       ,t2.object_name as referenced_name
                 from   all_synonyms t1
                 inner  join all_objects t2
@@ -6206,10 +6298,10 @@ $end
 $if dbms_db_version.version >= 12 $then
                 -- from Oracle 12 on there is a type column in all_tab_privs
                 select t1.table_schema as owner
-                      ,'GRANT' as object_type
-                      ,t1.table_name as object_name
+                      ,'GRANT' as type
+                      ,t1.table_name as name
                       ,t1.table_schema as referenced_owner
-                      ,t1.type as referenced_type
+                      ,t_schema_object.dict2metadata_object_type(t1.type) as referenced_type
                       ,t1.table_name as referenced_name
                 from   all_tab_privs t1
                 where  t1.table_schema = b_schema
@@ -6217,10 +6309,10 @@ $if dbms_db_version.version >= 12 $then
                 and    t1.type != 'LOB'
 $else
                 select t1.table_schema as owner
-                      ,'GRANT' as object_type
-                      ,t1.table_name as object_name
+                      ,'GRANT' as type
+                      ,t1.table_name as name
                       ,t2.owner as referenced_owner
-                      ,t2.object_type as referenced_type
+                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as referenced_type
                       ,t2.object_name as referenced_name
                 from   all_tab_privs t1
                 inner  join all_objects t2
@@ -6233,9 +6325,9 @@ $else
 $end
                 union
                 -- bepaal dependencies gebaseerd op prebuilt tables
-                select t1.owner as object_owner
-                      ,'MATERIALIZED VIEW' as object_type
-                      ,t1.mview_name as object_name
+                select t1.owner as owner
+                      ,'MATERIALIZED_VIEW' as type
+                      ,t1.mview_name as name
                       ,t2.owner as referenced_owner
                       ,'TABLE' as referenced_type
                       ,t2.table_name as referenced_name
@@ -6247,11 +6339,11 @@ $end
                 and    t1.build_mode = 'PREBUILT'
                 union
                 -- bepaal dependencies gebaseerd op table comments
-                select t1.owner as object_owner
-                      ,'COMMENT' as object_type
-                      ,t1.table_name as object_name
+                select t1.owner as owner
+                      ,'COMMENT' as type
+                      ,t1.table_name as name
                       ,t1.owner as referenced_owner
-                      ,t1.table_type as referenced_type
+                      ,t_schema_object.dict2metadata_object_type(t1.table_type) as referenced_type
                       ,t1.table_name as referenced_name
                 from   all_tab_comments t1
                        -- some SYS comments have no parent table/view
@@ -6260,11 +6352,11 @@ $end
                 where  t1.owner = b_schema
                 union
                 -- bepaal dependencies gebaseerd op column comments
-                select t1.owner as object_owner
-                      ,'COMMENT' as object_type
-                      ,t1.table_name as object_name
+                select t1.owner as owner
+                      ,'COMMENT' as type
+                      ,t1.table_name as name
                       ,t1.owner as referenced_owner
-                      ,t2.object_type as referenced_type
+                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as referenced_type
                       ,t1.table_name as referenced_name
                 from   all_col_comments t1
                        -- some SYS comments have no parent table/view
@@ -6273,11 +6365,11 @@ $end
                 where  t1.owner = b_schema
                 union
                 -- bepaal dependencies van tabellen/views met een type als attribuut
-                select t2.owner as object_owner
-                      ,t2.object_type as object_type
-                      ,t2.object_name as object_name
+                select t2.owner as owner
+                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as type
+                      ,t2.object_name as name
                       ,t1.data_type_owner as referenced_owner
-                      ,'TYPE' as referenced_type
+                      ,'TYPE_SPEC' as referenced_type
                       ,t1.data_type as referenced_name
                 from   all_tab_columns t1
                 inner  join all_objects t2
@@ -6288,9 +6380,9 @@ $end
                 and    t1.data_type_owner is not null
                 union
                 -- bepaal dependencies van constraints naar indexen
-                select t1.owner as object_owner
-                      ,case t1.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
-                      ,t1.constraint_name as object_name
+                select t1.owner as owner
+                      ,case t1.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as type
+                      ,t1.constraint_name as name
                       ,t1.index_owner as referenced_owner
                       ,'INDEX' as referenced_type
                       ,t1.index_name as referenced_name
@@ -6299,9 +6391,34 @@ $end
                 and    t1.index_owner is not null
                 and    t1.index_name is not null
               ) t
+      where   t.type is not null
+      and     t.referenced_type is not null
               -- use subquery scalar cache
-      where   ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) from dual ) = 0
-      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.referenced_type), t.referenced_name) from dual ) = 0
+      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(t.type /* meta */, t.name) from dual ) = 0
+      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(t.referenced_type /* meta */, t.referenced_name) from dual ) = 0
+    ;
+  begin
+    for r in c_dependencies(p_schema)
+    loop
+      pipe row (r);
+    end loop;
+    return; -- essential
+  end get_object_dependencies;
+    
+  /*
+  -- Sort objects on dependencies
+  */
+  function sort_objects_by_deps
+  ( p_cursor in sys_refcursor
+  , p_schema in t_schema_nn
+  )
+  return t_sort_objects_by_deps_tab
+  pipelined
+  is
+    -- bepaal dependencies gebaseerd op PL/SQL
+    cursor c_dependencies(b_schema in varchar2) is
+      select  t.*
+      from    table(pkg_ddl_util.get_object_dependencies(b_schema)) t
     ;
 
     l_object_tab        dbms_sql.varchar2_table; -- objects returned by p_cursor
@@ -6386,9 +6503,9 @@ $end
             raise program_error;
           end if;
 
-          l_object := get_object(l_owner, t_schema_object.dict2metadata_object_type(l_type), l_name);
+          l_object := get_object(l_owner, l_type, l_name);
           l_object_dependency := get_object(l_referenced_owner
-                                           ,t_schema_object.dict2metadata_object_type(l_referenced_type)
+                                           ,l_referenced_type
                                            ,l_referenced_name);
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -6444,7 +6561,7 @@ $end
 
       exit fetch_loop when p_cursor%notfound;
 
-      l_object_tab(l_object_tab.count + 1) := get_object(l_owner, l_type, l_name);
+      l_object_tab(l_object_tab.count + 1) := get_object(l_owner,  l_type, l_name);
       l_object_lookup_tab(l_object_tab(l_object_tab.count + 0)) := 1;
     end loop fetch_loop;
 
@@ -6452,13 +6569,19 @@ $end
 
     add_dependencies;
 
-    begin
-      tsort(l_object_dependency_tab, l_object_by_dep_tab);
-    exception
-      when e_not_a_directed_acyclic_graph
-      then
-        l_object_by_dep_tab := l_object_tab;
-    end;
+    -- See function get_sorted_dependency_list for a similar implementation
+    while e_not_a_directed_acyclic_graph.first is not null
+    loop
+      begin
+        tsort(l_object_dependency_tab, l_object_by_dep_tab);
+
+        exit; -- successful: stop
+      exception
+        when e_not_a_directed_acyclic_graph
+        then
+          l_object_dependency_tab.delete(l_object_dependency_tab.first);
+      end;
+    end loop;
 
     if l_object_by_dep_tab.count > 0
     then
@@ -6496,6 +6619,9 @@ $end
         end loop;
       end;
     end if;
+
+    -- GJP 2021-08-28
+    -- TO DO: rest of objects
 
     -- 100%
     longops_done(l_longops_rec);

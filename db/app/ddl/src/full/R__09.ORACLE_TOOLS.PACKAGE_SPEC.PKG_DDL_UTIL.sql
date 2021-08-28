@@ -24,7 +24,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- see 11g / 12c licensing
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
-  c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
+  c_debugging constant naturaln := 2; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
   -- pivotal issues
 
@@ -118,6 +118,25 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   subtype t_network_link_nn is t_network_link not null;
 
   type t_transform_param_tab is table of boolean index by varchar2(4000 char);
+
+  type t_schema_object_info_rec is record
+  ( owner all_dependencies.owner%type
+  , type all_dependencies.type%type
+  , name all_dependencies.name%type
+  );
+
+  type t_schema_object_info_tab is table of t_schema_object_info_rec;
+
+  type t_object_dependencies_rec is record
+  ( owner all_dependencies.owner%type
+  , type all_dependencies.type%type
+  , name all_dependencies.name%type
+  , referenced_owner all_dependencies.referenced_owner%type
+  , referenced_type all_dependencies.referenced_type%type
+  , referenced_name all_dependencies.referenced_name%type
+  );
+
+  type t_object_dependencies_tab is table of t_object_dependencies_rec;
 
   /**
   *
@@ -463,7 +482,25 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   pipelined;
 
   /*
-  -- Sorteer objecten op volgorde van afhankelijkheden.
+  -- Get objects (adding GRANT, COMMENT, CONSTRAINT and REF_CONSTRAINT objects besides the standard objects)
+  */
+  function get_schema_object_info
+  ( p_schema in t_schema_nn
+  )
+  return t_schema_object_info_tab
+  pipelined;
+  
+  /*
+  -- Get object dependencies
+  */
+  function get_object_dependencies
+  ( p_schema in t_schema_nn
+  )
+  return t_object_dependencies_tab
+  pipelined;
+
+  /*
+  -- Sort objects on dependency order.
   */
   function sort_objects_by_deps
   ( p_cursor in sys_refcursor
