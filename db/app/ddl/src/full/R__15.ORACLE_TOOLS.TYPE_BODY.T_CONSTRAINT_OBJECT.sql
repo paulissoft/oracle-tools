@@ -56,6 +56,10 @@ $end
       self.search_condition$ := dbms_utility.get_hash_value(l_search_condition, 37, 1073741824);
   end case;
 
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+
   return;
 end;
 

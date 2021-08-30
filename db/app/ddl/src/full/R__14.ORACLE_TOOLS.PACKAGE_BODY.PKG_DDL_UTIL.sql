@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS
+CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS -- -*-coding: utf-8-*-
 
   /* TYPES */
 
@@ -51,7 +51,10 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS
 
   g_package_prefix constant varchar2(61 char) := g_package || '.';
 
-  c_not_a_directed_acyclic_graph constant integer := -20001;
+  function get_object_no_dependencies_tab
+  return t_object_natural_tab;
+
+  c_object_no_dependencies_tab constant t_object_natural_tab := get_object_no_dependencies_tab; -- initialisation
 
 $if cfg_pkg.c_testing $then
 
@@ -184,9 +187,6 @@ $if cfg_pkg.c_testing $then
 $end -- $if cfg_pkg.c_testing $then
 
   /* EXCEPTIONS */
-
-  e_not_a_directed_acyclic_graph exception;
-  pragma exception_init(e_not_a_directed_acyclic_graph, -20001);
 
   -- ORA-31603: object ... of type MATERIALIZED_VIEW not found in schema ...
   e_object_not_found exception;
@@ -653,15 +653,20 @@ $end
   , p_unmarked_nodes in out nocopy t_object_natural_tab
   , p_marked_nodes in out nocopy t_object_natural_tab
   , p_result in out nocopy dbms_sql.varchar2_table
+  , p_error_n out nocopy t_object
   )
   is
     l_m t_object;
   begin
+    p_error_n := null;
+    
     if p_marked_nodes.exists(p_n)
     then
       if p_marked_nodes(p_n) = 1 /* A */
       then
-        raise_application_error(c_not_a_directed_acyclic_graph, 'Node ' || p_n || ' has been visited before.');
+        -- node has been visited before
+        p_error_n := p_n;
+        return;
       end if;
     else
       if not p_unmarked_nodes.exists(p_n)
@@ -684,7 +689,12 @@ $end
           , p_unmarked_nodes => p_unmarked_nodes
           , p_marked_nodes => p_marked_nodes
           , p_result => p_result
+          , p_error_n => p_error_n
           ); /* E */
+          if p_error_n is not null
+          then
+            return;
+          end if;
           l_m := p_graph(p_n).next(l_m);
         end loop;
       end if;
@@ -698,6 +708,7 @@ $end
   procedure tsort
   ( p_graph in t_graph
   , p_result out nocopy dbms_sql.varchar2_table /* I */
+  , p_error_n out nocopy t_object
   )
   is
     l_unmarked_nodes t_object_natural_tab;
@@ -750,7 +761,50 @@ $end
       , p_unmarked_nodes => l_unmarked_nodes
       , p_marked_nodes => l_marked_nodes
       , p_result => p_result
+      , p_error_n => p_error_n
       );
+      exit when p_error_n is not null;
+    end loop;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+    dbug.print(dbug."output", 'p_error_n: %s', p_error_n);
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end tsort;
+
+  procedure dsort
+  ( p_graph in out nocopy t_graph
+  , p_result out nocopy dbms_sql.varchar2_table /* I */
+  )
+  is
+    l_error_n t_object;
+  begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'DSORT');
+$end
+
+    while true
+    loop
+      tsort(p_graph, p_result, l_error_n);
+
+      exit when l_error_n is null; -- successful: stop
+
+      if p_graph(l_error_n).count = 0
+      then
+        raise program_error;
+      end if;
+      
+      p_graph(l_error_n) := c_object_no_dependencies_tab;
+      
+      if p_graph(l_error_n).count != 0
+      then
+        raise program_error;
+      end if;
     end loop;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -761,7 +815,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
       raise;
 $end
-  end tsort;
+  end dsort;
 
   function get_host(p_network_link in varchar2)
   return varchar2
@@ -2707,89 +2761,15 @@ $end
     return l_text_tab;
   end lines2text;
 
+  function get_object_no_dependencies_tab
+  return t_object_natural_tab
+  is
+    l_object_no_dependencies_tab t_object_natural_tab; -- initialisation
+  begin
+    return l_object_no_dependencies_tab;
+  end get_object_no_dependencies_tab;
+
   /* PUBLIC ROUTINES */
-  function get_sorted_dependency_list
-  ( p_object_tab in t_text_tab
-  , p_dependency_refcursor in sys_refcursor -- query with two columns: object1 depends on object2, i.e. select owner, referenced_owner from all_dependencies ...
-  )
-  return t_text_tab pipelined
-  is
-    l_object_tab t_object_natural_tab;
-    l_object1 t_object;
-    l_object2 t_object;
-    l_graph t_graph;
-    l_result dbms_sql.varchar2_table;
-  begin
-    for i_idx in p_object_tab.first .. p_object_tab.last
-    loop
-      l_object_tab(p_object_tab(i_idx)) := 1;
-    end loop;
-
-    loop
-      fetch p_dependency_refcursor into l_object1, l_object2;
-
-      exit when p_dependency_refcursor%notfound;
-
-      if l_object_tab.exists(l_object1) and l_object_tab.exists(l_object2)
-      then
-        l_graph(l_object2)(l_object1) := 1;
-      end if;
-    end loop;
-
-    close p_dependency_refcursor;
-
-    while l_graph.first is not null
-    loop
-      begin
-        tsort(l_graph, l_result);
-
-        exit; -- successful: stop
-      exception
-        when e_not_a_directed_acyclic_graph
-        then
-          l_graph.delete(l_graph.first);
-      end;
-    end loop;
-
-    if l_result.count > 0
-    then
-      for i_idx in l_result.first .. l_result.last
-      loop
-        pipe row (l_result(i_idx));
-        l_object_tab.delete(l_result(i_idx));
-      end loop;
-    end if;
-
-    while l_object_tab.first is not null
-    loop
-      pipe row (l_object_tab.first);
-      l_object_tab.delete(l_object_tab.first);
-    end loop;
-
-    return;
-  end get_sorted_dependency_list;
-
-  function get_sorted_dependency_list
-  ( p_object_refcursor in sys_refcursor
-  , p_dependency_refcursor in sys_refcursor -- query with two columns: object1 depends on object2, i.e. select owner, referenced_owner from all_dependencies ...
-  )
-  return t_text_tab pipelined
-  is
-    l_object_tab t_text_tab;
-  begin
-    fetch p_object_refcursor bulk collect into l_object_tab;
-    close p_object_refcursor;
-
-    for r in
-    ( select  t.column_value
-      from    table(oracle_tools.pkg_ddl_util.get_sorted_dependency_list(l_object_tab, p_dependency_refcursor)) t
-    )
-    loop
-      pipe row (r.column_value);
-    end loop;
-
-    return;
-  end get_sorted_dependency_list;
 
   function display_ddl_schema
   ( p_schema in t_schema_nn
@@ -2807,11 +2787,10 @@ $end
   is
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
-    l_schema_ddl_tab t_schema_ddl_tab;
     l_schema_object_tab t_schema_object_tab;
-    l_sort_objects_by_deps_tab t_sort_objects_by_deps_tab;
     l_transform_param_tab t_transform_param_tab;
     l_line_tab dbms_sql.varchar2a;
+    l_schema_ddl_tab t_schema_ddl_tab;
     l_program constant varchar2(30 char) := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
@@ -2888,86 +2867,33 @@ $end
 
       if nvl(p_sort_objects_by_deps, 0) != 0
       then
-        select  value(s)
-        bulk collect
-        into    l_schema_ddl_tab
-        from    table
-                ( oracle_tools.pkg_ddl_util.get_schema_ddl
-                  ( p_schema
-                  , p_new_schema
-                  , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
-                  , l_schema_object_tab
-                  , p_transform_param_list
-                  )
-                ) s
-        ;
-
-        select  value(d)
-        bulk collect
-        into    l_sort_objects_by_deps_tab
-        from    table
-                ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
-                  ( cursor( select  distinct
-                                    object_schema
-                            ,       object_type
-                            ,       object_name
-                            from    ( select  nvl(o.object_schema(), o.base_object_schema()) as object_schema
-                                      ,       nvl(o.object_type(), o.base_object_type()) as object_type
-                                      ,       nvl(o.object_name(), o.base_object_name()) as object_name
-                                      from    table(l_schema_object_tab) o
-                                    )
-                            order by
-                                    oracle_tools.t_schema_object.object_type_order(object_type) nulls last
-                            ,       object_name
-                            ,       object_schema
-                          )
-                  , p_schema
-                  )
-                ) d
-        ;
-
         open l_cursor for
           select  s.schema_ddl
           from    ( select  value(s) as schema_ddl
-                    ,       s.obj.object_schema() as object_schema
-                    ,       s.obj.object_type() as object_type
-                    ,       s.obj.object_name() as object_name
-                    ,       s.obj.base_object_schema() as base_object_schema
-                    ,       s.obj.base_object_type() as base_object_type
-                    ,       s.obj.base_object_name() as base_object_name
-                    ,       s.obj.column_name() as column_name
-                    ,       s.obj.grantee() as grantee
-                    ,       s.obj.privilege() as privilege
-                    ,       s.obj.grantable() as grantable
-                    from    table(l_schema_ddl_tab) s
+                    from    table
+                            ( oracle_tools.pkg_ddl_util.get_schema_ddl
+                              ( p_schema
+                              , p_new_schema
+                              , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
+                              , l_schema_object_tab
+                              , p_transform_param_list
+                              )
+                            ) s
                   ) s
                   -- GPA 27-10-2016 We should not forget objects so use left outer join
-                  left outer join
-                  ( select  d.object_schema
-                    ,       d.object_type
-                    ,       d.object_name
-                    ,       d.nr
-                    from    table(l_sort_objects_by_deps_tab) d
+                  inner join
+                  ( select  value(d) as obj
+                    ,       rownum as nr
+                    from    table
+                            ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
+                              ( l_schema_object_tab
+                              , p_schema
+                              )
+                            ) d
                   ) d
-                  -- GPA 21-12-2015 Als er een naar een nieuw schema wordt gesynchroniseerd dan moet wel volgens dependencies uit oude schema worden aangemaakt.
-                  on d.object_schema = nvl
-                                       ( case when s.object_schema = p_new_schema then p_schema else s.object_schema end
-                                       , case when s.base_object_schema = p_new_schema then p_schema else s.base_object_schema end
-                                       ) and
-                     d.object_type = nvl(s.object_type, s.base_object_type) and
-                     d.object_name = nvl(s.object_name, s.base_object_name)
+                  on d.obj = s.schema_ddl.obj
           order by
-                  d.nr nulls last
-          ,       s.object_schema
-          ,       s.object_type
-          ,       s.object_name
-          ,       s.base_object_schema
-          ,       s.base_object_type
-          ,       s.base_object_name
-          ,       s.column_name
-          ,       s.grantee
-          ,       s.privilege
-          ,       s.grantable
+                  d.nr
           ;
       else
         -- normal stuff: no network link, no dependency sorting
@@ -3231,7 +3157,6 @@ $end
     l_schema_ddl t_schema_ddl;
     l_source_schema_ddl_tab t_schema_ddl_tab;
     l_target_schema_ddl_tab t_schema_ddl_tab;
-    l_sort_objects_by_deps_tab t_sort_objects_by_deps_tab;
 
     l_object t_object;
     l_text_tab dbms_sql.varchar2a;
@@ -6111,513 +6036,189 @@ $end
   end get_display_ddl_schema;
 
   /*
-  -- Get objects (adding GRANT, COMMENT, CONSTRAINT and REF_CONSTRAINT objects besides the standard objects)
-  */
-  function get_schema_object_info
-  ( p_schema in t_schema_nn
-  )
-  return t_schema_object_info_tab
-  pipelined
-  is
-    cursor c_schema_objects(b_schema in varchar2) is
-      select  t.*
-      from    ( select t.owner
-                      ,t_schema_object.dict2metadata_object_type(t.object_type) as type
-                      ,t.object_name as name
-                from   all_objects t
-                where  t.owner = b_schema
-                union
-$if pkg_ddl_util.c_#138707615_2 $then
-                -- more simple: just the constraints
-                select c.owner as owner
-                      ,'REF_CONSTRAINT' as type
-                      ,c.constraint_name as name
-                from   all_constraints c
-                where  c.owner = b_schema
-                and    c.constraint_type = 'R'
-                union
-$end
-                -- object grants
-$if dbms_db_version.version >= 12 $then
-                -- from Oracle 12 on there is a type column in all_tab_privs
-                select t1.table_schema as owner
-                      ,'GRANT' as type
-                      ,t1.table_name as name
-                from   all_tab_privs t1
-                where  t1.table_schema = b_schema
-                and    t1.type not like '% BODY'
-                and    t1.type != 'LOB'
-$else
-                select t1.table_schema as owner
-                      ,'GRANT' as type
-                      ,t1.table_name as name
-                from   all_tab_privs t1
-                inner  join all_objects t2
-                on     t2.owner = t1.table_schema
-                and    t2.object_name = t1.table_name
-                and    t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t2.owner = b_schema
-                and    t2.object_type not like '% BODY'
-                and    t2.object_type != 'LOB'
-$end
-                union
-                -- table comments
-                select t1.owner as owner
-                      ,'COMMENT' as type
-                      ,t1.table_name as name
-                from   all_tab_comments t1
-                       -- some SYS comments have no parent table/view
-                       inner join all_objects t2
-                       on t2.owner = t1.owner and t2.object_name = t1.table_name and t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t1.owner = b_schema
-                union
-                -- column comments
-                select t1.owner as owner
-                      ,'COMMENT' as type
-                      ,t1.table_name as name
-                from   all_col_comments t1
-                       -- some SYS comments have no parent table/view
-                       inner join all_objects t2
-                       on t2.owner = t1.owner and t2.object_name = t1.table_name and t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t1.owner = b_schema
-                union
-                -- constraints to indexes
-                select t1.owner as owner
-                      ,case t1.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as type
-                      ,t1.constraint_name as name
-                from   all_constraints t1
-                where  t1.owner = b_schema
-                and    t1.index_owner is not null
-                and    t1.index_name is not null
-              ) t
-      where   t.type is not null
-              -- use subquery scalar cache
-      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(t.type /* meta */, t.name) from dual ) = 0
-      
-    ;
-  begin
-    for r in c_schema_objects(p_schema)
-    loop
-      pipe row (r);
-    end loop;
-    return; -- essential
-  end get_schema_object_info;
-    
-  /*
-  -- Get object dependencies
-  */
-  function get_object_dependencies
-  ( p_schema in t_schema_nn
-  )
-  return t_object_dependencies_tab
-  pipelined
-  is
-    -- bepaal dependencies gebaseerd op PL/SQL
-    cursor c_dependencies(b_schema in varchar2) is
-      select  t.*
-      from    ( select t.owner
-                      ,t_schema_object.dict2metadata_object_type(t.type) as type
-                      ,t.name
-                      ,t.referenced_owner
-                      ,t_schema_object.dict2metadata_object_type(t.referenced_type) as referenced_type
-                      ,t.referenced_name
-                from   all_dependencies t
-                where  t.owner = b_schema
-                and    t.owner = t.referenced_owner
-                and    t.referenced_link_name is null
-                union
-$if not(pkg_ddl_util.c_#138707615_2) $then
-                -- bepaal dependencies gebaseerd op foreign key constraints
-                select t1.owner as owner
-                      ,'TABLE' as type
-                      ,t1.table_name as name
-                      ,t2.owner as referenced_owner
-                      ,'TABLE' as referenced_type
-                      ,t2.table_name as referenced_name
-                from   all_constraints t1
-                inner  join all_constraints t2
-                on     t2.owner = t1.r_owner
-                and    t2.constraint_name = t1.r_constraint_name
-                where  t1.owner = b_schema
-                and    t1.owner = t2.owner /* same schema */
-                and    t1.constraint_type = 'R'
-$else
-                -- more simple: just the constraints
-                select c.owner as owner
-                      ,'REF_CONSTRAINT' as type
-                      ,c.constraint_name as name
-                      ,c.r_owner as referenced_owner
-                      ,'CONSTRAINT' as referenced_type
-                      ,c.r_constraint_name as referenced_name
-                from   all_constraints c
-                where  c.owner = b_schema
-                and    c.constraint_type = 'R'
-$end
-                union
-                -- bepaal dependencies gebaseerd op indexen van een tabel
-                select i.owner as owner
-                      ,'INDEX' as type
-                      ,i.index_name as name
-                      ,i.table_owner as referenced_owner
-                      ,'TABLE' as referenced_type
-                      ,i.table_name as referenced_name
-                from   all_indexes i
-                where  i.owner = b_schema
-                union
-                -- bepaal dependencies gebaseerd op indexen van een materialized view (niet PREBUILT)
-                select t1.owner as owner
-                      ,'INDEX' as type
-                      ,t1.index_name as name
-                      ,t1.table_owner as referenced_owner
-                      ,'MATERIALIZED_VIEW' as referenced_type
-                      ,t1.table_name as referenced_name
-                from   all_indexes t1
-                       inner join all_mviews t2
-                on     t2.owner = t1.table_owner
-                and    t2.mview_name = t1.table_name
-                where  t1.owner = b_schema
-                and    t2.build_mode != 'PREBUILT'
-                union
-                -- bepaal dependencies gebaseerd op objecten waarnaar wordt verwezen door synoniemen
-                select t1.owner as owner
-                      ,'SYNONYM' as type
-                      ,t1.synonym_name as name
-                      ,t2.owner as referenced_owner
-                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as referenced_type
-                      ,t2.object_name as referenced_name
-                from   all_synonyms t1
-                inner  join all_objects t2
-                on     t2.owner = t1.table_owner
-                and    t2.object_name = t1.table_name
-                and    t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t2.owner = b_schema
-                and    t2.object_type not like '% BODY'
-                and    t2.object_type != 'LOB'
-                union
-                -- bepaal dependencies gebaseerd op grants naar objecten
-$if dbms_db_version.version >= 12 $then
-                -- from Oracle 12 on there is a type column in all_tab_privs
-                select t1.table_schema as owner
-                      ,'GRANT' as type
-                      ,t1.table_name as name
-                      ,t1.table_schema as referenced_owner
-                      ,t_schema_object.dict2metadata_object_type(t1.type) as referenced_type
-                      ,t1.table_name as referenced_name
-                from   all_tab_privs t1
-                where  t1.table_schema = b_schema
-                and    t1.type not like '% BODY'
-                and    t1.type != 'LOB'
-$else
-                select t1.table_schema as owner
-                      ,'GRANT' as type
-                      ,t1.table_name as name
-                      ,t2.owner as referenced_owner
-                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as referenced_type
-                      ,t2.object_name as referenced_name
-                from   all_tab_privs t1
-                inner  join all_objects t2
-                on     t2.owner = t1.table_schema
-                and    t2.object_name = t1.table_name
-                and    t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t2.owner = b_schema
-                and    t2.object_type not like '% BODY'
-                and    t2.object_type != 'LOB'
-$end
-                union
-                -- bepaal dependencies gebaseerd op prebuilt tables
-                select t1.owner as owner
-                      ,'MATERIALIZED_VIEW' as type
-                      ,t1.mview_name as name
-                      ,t2.owner as referenced_owner
-                      ,'TABLE' as referenced_type
-                      ,t2.table_name as referenced_name
-                from   all_mviews t1
-                inner  join all_tables t2
-                on     t2.owner = t1.owner
-                and    t2.table_name = t1.mview_name
-                where  t2.owner = b_schema
-                and    t1.build_mode = 'PREBUILT'
-                union
-                -- bepaal dependencies gebaseerd op table comments
-                select t1.owner as owner
-                      ,'COMMENT' as type
-                      ,t1.table_name as name
-                      ,t1.owner as referenced_owner
-                      ,t_schema_object.dict2metadata_object_type(t1.table_type) as referenced_type
-                      ,t1.table_name as referenced_name
-                from   all_tab_comments t1
-                       -- some SYS comments have no parent table/view
-                       inner join all_objects t2
-                       on t2.owner = t1.owner and t2.object_name = t1.table_name and t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t1.owner = b_schema
-                union
-                -- bepaal dependencies gebaseerd op column comments
-                select t1.owner as owner
-                      ,'COMMENT' as type
-                      ,t1.table_name as name
-                      ,t1.owner as referenced_owner
-                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as referenced_type
-                      ,t1.table_name as referenced_name
-                from   all_col_comments t1
-                       -- some SYS comments have no parent table/view
-                       inner join all_objects t2
-                       on t2.owner = t1.owner and t2.object_name = t1.table_name and t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t1.owner = b_schema
-                union
-                -- bepaal dependencies van tabellen/views met een type als attribuut
-                select t2.owner as owner
-                      ,t_schema_object.dict2metadata_object_type(t2.object_type) as type
-                      ,t2.object_name as name
-                      ,t1.data_type_owner as referenced_owner
-                      ,'TYPE_SPEC' as referenced_type
-                      ,t1.data_type as referenced_name
-                from   all_tab_columns t1
-                inner  join all_objects t2
-                on     t2.owner = t1.owner
-                and    t2.object_name = t1.table_name
-                and    t2.generated = 'N' -- GPA 2016-12-19 #136334705
-                where  t2.owner = b_schema
-                and    t1.data_type_owner is not null
-                union
-                -- bepaal dependencies van constraints naar indexen
-                select t1.owner as owner
-                      ,case t1.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as type
-                      ,t1.constraint_name as name
-                      ,t1.index_owner as referenced_owner
-                      ,'INDEX' as referenced_type
-                      ,t1.index_name as referenced_name
-                from   all_constraints t1
-                where  t1.owner = b_schema
-                and    t1.index_owner is not null
-                and    t1.index_name is not null
-              ) t
-      where   t.type is not null
-      and     t.referenced_type is not null
-              -- use subquery scalar cache
-      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(t.type /* meta */, t.name) from dual ) = 0
-      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(t.referenced_type /* meta */, t.referenced_name) from dual ) = 0
-    ;
-  begin
-    for r in c_dependencies(p_schema)
-    loop
-      pipe row (r);
-    end loop;
-    return; -- essential
-  end get_object_dependencies;
-    
-  /*
   -- Sort objects on dependencies
   */
   function sort_objects_by_deps
-  ( p_cursor in sys_refcursor
+  ( p_schema_object_tab in t_schema_object_tab
   , p_schema in t_schema_nn
   )
-  return t_sort_objects_by_deps_tab
+  return t_schema_object_tab
   pipelined
   is
-    -- bepaal dependencies gebaseerd op PL/SQL
     cursor c_dependencies(b_schema in varchar2) is
-      select  t.*
-      from    table(pkg_ddl_util.get_object_dependencies(b_schema)) t
+      with allowed_types as
+      ( select  t.column_value as type
+        from    table(g_schema_md_object_type_tab) t
+      ), deps as
+      ( select  t_schema_object.create_schema_object
+                ( d.owner
+                , t_schema_object.dict2metadata_object_type(d.type)
+                , d.name
+                ) as obj -- a named object
+        ,       t_schema_object.create_schema_object
+                ( d.referenced_owner
+                , t_schema_object.dict2metadata_object_type(d.referenced_type)
+                , d.referenced_name
+                ) as ref_obj -- a named object
+        from    all_dependencies d
+        where   d.owner = b_schema
+        and     d.referenced_owner = b_schema
+                -- ignore database links
+        and     d.referenced_link_name is null
+                -- GJP 2021-08-30 Ignore synonyms: they will be created early like this (no dependencies hence dsort will put them in front)
+        and     d.type != 'SYNONYM'
+        and     d.referenced_type != 'SYNONYM'
+        and     t_schema_object.dict2metadata_object_type(d.type) in ( select t.type from allowed_types t )
+        and     t_schema_object.dict2metadata_object_type(d.referenced_type) in ( select t.type from allowed_types t )
+        union all
+$if not(pkg_ddl_util.c_#138707615_2) $then
+        -- dependencies based on foreign key constraints
+        select  t_schema_object.create_schema_object
+                ( t1.owner
+                , 'TABLE' -- already meta
+                , t1.table_name
+                ) as obj -- a named object
+        ,       t_schema_object.create_schema_object
+                ( t2.owner
+                , 'TABLE' -- already meta
+                , t2.table_name
+                ) as ref_obj -- a named object
+        from    all_constraints t1
+                inner join all_constraints t2
+                on t2.owner = t1.r_owner and t2.constraint_name = t1.r_constraint_name
+        where   t1.owner = b_schema
+        and     t1.owner = t2.owner /* same schema */
+        and     t1.constraint_type = 'R'
+$else
+        -- more simple: just the constraints
+        select  t_schema_object.create_schema_object
+                ( c.owner
+                , 'REF_CONSTRAINT' -- already meta
+                , c.constraint_name
+                , tc.owner
+                , t_schema_object.dict2metadata_object_type(tc.object_type)
+                , tc.object_name
+                ) as obj -- belongs to a base table/mv
+        ,       t_schema_object.create_schema_object
+                ( c.r_owner
+                , 'CONSTRAINT' -- already meta
+                , c.r_constraint_name
+                , tr.owner
+                , t_schema_object.dict2metadata_object_type(tr.object_type)
+                , tr.object_name
+                ) as ref_obj -- belongs to a base table/mv
+        from    all_constraints c
+                inner join all_objects tc
+                on tc.owner = c.owner and tc.object_name = c.table_name
+                inner join all_constraints r
+                on r.owner = c.r_owner and r.constraint_name = c.r_constraint_name
+                inner join all_objects tr
+                on tr.owner = r.owner and tr.object_name = r.table_name
+        where   c.owner = b_schema
+        and     c.constraint_type = 'R'
+        and     t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
+        and     t_schema_object.dict2metadata_object_type(tr.object_type) in ( select t.type from allowed_types t )
+$end
+        union all
+        -- dependencies based on prebuilt tables
+        select  t_schema_object.create_schema_object
+                ( t1.owner
+                , 'MATERIALIZED_VIEW' -- already meta
+                , t1.mview_name
+                ) as obj -- a named object
+        ,       t_schema_object.create_schema_object
+                ( t2.owner
+                , 'TABLE' -- already meta
+                , t2.table_name
+                ) as ref_obj -- a named object
+        from    all_mviews t1
+                inner join all_tables t2
+                on t2.owner = t1.owner and t2.table_name = t1.mview_name
+        where   t2.owner = b_schema
+        and     t1.build_mode = 'PREBUILT'
+        union all
+        -- dependencies from constraints to indexes
+        select  t_schema_object.create_schema_object
+                ( c.owner
+                , case c.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end
+                , c.constraint_name
+                , tc.owner
+                , t_schema_object.dict2metadata_object_type(tc.object_type)
+                , tc.object_name
+                ) as obj -- a named object
+        ,       t_schema_object.create_schema_object
+                ( c.index_owner
+                , 'INDEX'
+                , c.index_name
+                , i.table_owner
+                , t_schema_object.dict2metadata_object_type(i.table_type)
+                , i.table_name
+                ) as ref_obj -- a named object
+        from    all_constraints c
+                inner join all_objects tc
+                on tc.owner = c.owner and tc.object_name = c.table_name
+                inner join all_indexes i
+                on i.owner = c.index_owner and i.index_name = c.index_name
+        where   c.owner = b_schema
+        and     c.index_owner is not null
+        and     c.index_name is not null
+        and     t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
+        and     t_schema_object.dict2metadata_object_type(i.table_type) in ( select t.type from allowed_types t )
+      )
+      select  t1.*
+      from    deps t1
+              inner join ( select value(t2) as obj from table(p_schema_object_tab) t2 ) t2
+              on t2.obj = t1.obj
+              inner join ( select value(t3) as ref_obj from table(p_schema_object_tab) t3 ) t3
+              on t3.ref_obj = t1.ref_obj
     ;
 
-    l_object_tab        dbms_sql.varchar2_table; -- objects returned by p_cursor
-    l_object_lookup_tab t_object_natural_tab; -- objects returned by p_cursor
-    l_object_by_dep_tab dbms_sql.varchar2_table; -- hoe eerder, hoe minder dependencies
+    type t_schema_object_lookup_tab is table of t_schema_object index by t_object;
 
-    -- l_object_dependency_tab(obj1)(obj2) = true means obj1 depends on obj2
+    -- l_schema_object_lookup_tab(object.id) = object;
+    l_schema_object_lookup_tab t_schema_object_lookup_tab;
+    
+    -- l_object_dependency_tab(obj1)(obj2) = true means obj1 must be created before obj2
     l_object_dependency_tab t_object_dependency_tab;
 
-    l_owner all_dependencies.owner%type;
-    l_type t_metadata_object_type;
-    l_name t_object_name;
-    l_referenced_owner all_dependencies.referenced_owner%type;
-    l_referenced_type all_dependencies.referenced_type%type;
-    l_referenced_name t_object_name;
-
-    l_object t_object;
-    l_object_dependency t_object;
-    l_idx pls_integer;
-
+    l_object_by_dep_tab dbms_sql.varchar2_table;
+    
     l_program constant varchar2(30 char) := 'SORT_OBJECTS_BY_DEPS';
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_units => 'objects');
-
-    procedure add_dependencies
-    is
-      l_owner_tab dbms_sql.varchar2_table;
-      l_type_tab dbms_sql.varchar2_table;
-      l_name_tab dbms_sql.varchar2_table;
-      l_referenced_owner_tab dbms_sql.varchar2_table;
-      l_referenced_type_tab dbms_sql.varchar2_table;
-      l_referenced_name_tab dbms_sql.varchar2_table;
-    begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-      dbug.enter(g_package_prefix || l_program || '.ADD_DEPENDENCIES');
-$end
-      open c_dependencies(p_schema);
-      fetch c_dependencies
-      bulk collect
-      into l_owner_tab
-      ,    l_type_tab
-      ,    l_name_tab
-      ,    l_referenced_owner_tab
-      ,    l_referenced_type_tab
-      ,    l_referenced_name_tab;
-      close c_dependencies;
-
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-      dbug.print(dbug."info", 'number of dependencies: %s', l_owner_tab.count);
-$end
-
-      if l_owner_tab.count > 0
-      then
-        for i_idx in l_owner_tab.first .. l_owner_tab.last
-        loop
-          l_owner := l_owner_tab(i_idx);
-          l_type := l_type_tab(i_idx);
-          l_name := l_name_tab(i_idx);
-          l_referenced_owner := l_referenced_owner_tab(i_idx);
-          l_referenced_type := l_referenced_type_tab(i_idx);
-          l_referenced_name := l_referenced_name_tab(i_idx);
-
-          -- sanity checks
-          if l_owner is null
-          then
-            raise program_error;
-          elsif l_type is null
-          then
-            raise program_error;
-          elsif l_name is null
-          then
-            raise program_error;
-          elsif l_referenced_owner is null
-          then
-            raise program_error;
-          elsif l_referenced_type is null
-          then
-            raise program_error;
-          elsif l_referenced_name is null
-          then
-            raise program_error;
-          end if;
-
-          l_object := get_object(l_owner, l_type, l_name);
-          l_object_dependency := get_object(l_referenced_owner
-                                           ,l_referenced_type
-                                           ,l_referenced_name);
-
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-          dbug.print(dbug."info", '%s depends on %s', l_object, l_object_dependency);
-$end
-
-          -- Zowel object als dependency moeten aangeleverd zijn.
-          if not(l_object_lookup_tab.exists(l_object))
-          then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-            dbug.print(dbug."info", '%s not delivered', l_object);
-$else            
-            null;
-$end
-          elsif not(l_object_lookup_tab.exists(l_object_dependency))
-          then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-            dbug.print(dbug."info", '%s not delivered', l_object_dependency);
-$else
-            null;
-$end
-          else
-            -- l_object hangt af van l_object_dependency.
-            l_object_dependency_tab(l_object_dependency)(l_object) := null;
-          end if;
-        end loop;
-      end if;
-
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-      dbug.leave;
-    exception
-      when program_error
-      then
-        dbug.print(dbug."error", 'l_owner: %s; l_type: %s; l_name: %s', l_owner, l_type, l_name);
-        dbug.print(dbug."error", 'l_referenced_owner: %s; l_referenced_type: %s; l_referenced_name: %s', l_referenced_owner, l_referenced_type, l_referenced_name);
-        dbug.leave_on_error;
-        raise;
-$end
-    end add_dependencies;
   begin
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-    -- cursor p_cursor is already open
-    <<fetch_loop>>
+    if p_schema_object_tab.count > 0
+    then
+      for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
+      loop
+        l_schema_object_lookup_tab(p_schema_object_tab(i_idx).id) := p_schema_object_tab(i_idx);
+        -- objects without dependencies must be part of this list too
+        l_object_dependency_tab(p_schema_object_tab(i_idx).id) := c_object_no_dependencies_tab;
+      end loop;
+    end if;
+
+    for r in c_dependencies(p_schema)
     loop
-      fetch p_cursor
-        into l_owner
-            ,l_type
-            ,l_name;
-
-      exit fetch_loop when p_cursor%notfound;
-
-      l_object_tab(l_object_tab.count + 1) := get_object(l_owner,  l_type, l_name);
-      l_object_lookup_tab(l_object_tab(l_object_tab.count + 0)) := 1;
-    end loop fetch_loop;
-
-    close p_cursor;
-
-    add_dependencies;
-
-    -- See function get_sorted_dependency_list for a similar implementation
-    while e_not_a_directed_acyclic_graph.first is not null
-    loop
-      begin
-        tsort(l_object_dependency_tab, l_object_by_dep_tab);
-
-        exit; -- successful: stop
-      exception
-        when e_not_a_directed_acyclic_graph
-        then
-          l_object_dependency_tab.delete(l_object_dependency_tab.first);
-      end;
+      -- object depends on object dependency so the latter must be there first
+      l_object_dependency_tab(r.ref_obj.id)(r.obj.id) := null;
     end loop;
+
+    dsort(l_object_dependency_tab, l_object_by_dep_tab);
 
     if l_object_by_dep_tab.count > 0
     then
-      declare
-        l_str_tab                  dbms_sql.varchar2a;
-        l_sort_objects_by_deps_rec t_sort_objects_by_deps_rec := t_sort_objects_by_deps_rec(null, null, null, null, 0);
-      begin
-        for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
-        loop
-          l_object := l_object_by_dep_tab(i_idx);
+      for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
+      loop
+        pipe row(l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx)));
 
-          pkg_str_util.split(p_str => l_object, p_delimiter => '.', p_str_tab => l_str_tab);
-
-          l_sort_objects_by_deps_rec.object_schema := l_str_tab(1); -- trim('"' from l_str_tab(1));
-          l_sort_objects_by_deps_rec.object_type := l_str_tab(2);
-          l_sort_objects_by_deps_rec.object_name := l_str_tab(3); -- trim('"' from l_str_tab(3));
-          l_sort_objects_by_deps_rec.dependency_list := null;
-          -- GPA 2016-12-12 #135961579
-          l_sort_objects_by_deps_rec.nr := l_sort_objects_by_deps_rec.nr + 1;
-
-          pipe row(l_sort_objects_by_deps_rec);
-
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-          dbug.print
-          ( dbug."info"
-          , 'l_sort_objects_by_deps_rec; object_schema: %s; object_type: %s; object_name: %s; nr: %s'
-          , l_sort_objects_by_deps_rec.object_schema
-          , l_sort_objects_by_deps_rec.object_type
-          , l_sort_objects_by_deps_rec.object_name
-          , l_sort_objects_by_deps_rec.nr
-          );
-$end
-
-          longops_show(l_longops_rec);
-        end loop;
-      end;
+        longops_show(l_longops_rec);
+      end loop;
     end if;
 
     -- GJP 2021-08-28
@@ -7127,22 +6728,15 @@ $if cfg_pkg.c_debugging $then
 $end
   end cleanup_empty;
 
-  -- test functions
-  procedure ut_setup
+
+  procedure ut_cleanup_empty
   is
     pragma autonomous_transaction;
     
     l_found pls_integer;
-    l_cursor sys_refcursor;
-    l_loopback_global_name global_name.global_name%type;
   begin
-    select  t.table_owner
-    into    g_owner_utplsql
-    from    all_synonyms t
-    where   t.table_name = 'UT';
-
-    -- schema EMPTY should exist
     begin
+      -- schema EMPTY should exist
       select  1
       into    l_found
       from    all_users
@@ -7153,9 +6747,14 @@ $end
       then raise_application_error(-20000, 'User EMPTY must exist', true);
     end;
 
-    cleanup_empty;
+    begin
+      cleanup_empty;
+    exception
+      when others
+      then null;
+    end;
 
-    -- schema EMPTY should be empty
+    -- schema EMPTY should be empty now
     begin
       select  1
       into    l_found
@@ -7170,6 +6769,23 @@ $end
       when too_many_rows
       then raise_application_error(-20000, 'User EMPTY should have NO objects', true);
     end;
+
+    commit;
+  end ut_cleanup_empty;
+  
+  -- test functions
+  procedure ut_setup
+  is
+    pragma autonomous_transaction;
+    
+    l_found pls_integer;
+    l_cursor sys_refcursor;
+    l_loopback_global_name global_name.global_name%type;
+  begin
+    select  t.table_owner
+    into    g_owner_utplsql
+    from    all_synonyms t
+    where   t.table_name = 'UT';
 
     if get_db_link(g_empty) is null
     then
@@ -8607,20 +8223,102 @@ $end
   procedure ut_sort_objects_by_deps
   is
     pragma autonomous_transaction;
-    
+
+    l_graph t_graph;
+    l_result dbms_sql.varchar2_table;
+    l_idx pls_integer;
+
     l_schema t_schema;    
-    l_schema_object_tab t_schema_object_tab;
-    l_object_info_tab oracle_tools.t_object_info_tab;
-    l_sort_objects_by_deps_tab1 t_sort_objects_by_deps_tab;
-    l_sort_objects_by_deps_tab2 t_sort_objects_by_deps_tab;
+    l_schema_object_tab1 t_schema_object_tab;
+    l_schema_object_tab2 t_schema_object_tab;
+    l_expected t_object;
+
     l_program constant varchar2(61) := g_package_prefix || 'UT_SORT_OBJECTS_BY_DEPS';
   begin
 $if cfg_pkg.c_debugging $then
     dbug.enter(l_program);
 $end
 
-    null;
+    l_graph('1')('2') := 1;
+    l_graph('1')('3') := 1;
+    l_graph('1')('4') := 1;
+    l_graph('2')('1') := 1;
+    l_graph('2')('3') := 1;
+    l_graph('2')('4') := 1;
+    l_graph('3')('1') := 1;
+    l_graph('3')('2') := 1;
+    l_graph('3')('4') := 1;
+    l_graph('4')('1') := 1;
+    l_graph('4')('2') := 1;
+    l_graph('4')('3') := 1;
 
+    dsort
+    ( l_graph
+    , l_result
+    );
+    
+    ut.expect(l_result.count, l_program || '#0#count').to_equal(4);
+    l_idx := l_result.first;
+    while l_idx is not null
+    loop
+      ut.expect(l_result(l_idx), l_program || '#0#' || to_char(1 + l_idx - l_result.first)).to_equal(to_char(1 + l_result.last - l_idx));      
+      l_idx := l_result.next(l_idx);
+    end loop;
+      
+    for i_test in 1..2
+    loop
+      get_schema_object
+      ( p_schema => user
+      , p_object_type => null
+      , p_object_names => case i_test when 1 then 'PKG_DDL_UTIL,PKG_STR_UTIL' when 2 then 'T_NAMED_OBJECT,T_DEPENDENT_OR_GRANTED_OBJECT,T_SCHEMA_OBJECT' end
+      , p_object_names_include => 1
+      , p_schema_object_tab => l_schema_object_tab1
+      );
+
+      select  value(t)
+      bulk collect
+      into    l_schema_object_tab2
+      from    table
+              ( pkg_ddl_util.sort_objects_by_deps
+                ( p_schema_object_tab => l_schema_object_tab1
+                , p_schema => user
+                )
+              ) t;
+
+      ut.expect(l_schema_object_tab2.count, l_program || '#' || i_test || '#count').to_equal(l_schema_object_tab1.count);
+      
+      for i_idx in l_schema_object_tab2.first .. l_schema_object_tab2.last
+      loop
+        l_expected :=
+          case i_test
+            when 1
+            then
+              case i_idx
+                when 1 then 'ORACLE_TOOLS:PACKAGE_SPEC:PKG_STR_UTIL:::::::'
+                when 2 then 'ORACLE_TOOLS:PACKAGE_SPEC:PKG_DDL_UTIL:::::::'
+                when 3 then 'ORACLE_TOOLS:PACKAGE_BODY:PKG_STR_UTIL:::::::'
+                when 4 then 'ORACLE_TOOLS:PACKAGE_BODY:PKG_DDL_UTIL:::::::'
+                when 5 then ':OBJECT_GRANT::ORACLE_TOOLS::PKG_STR_UTIL::PUBLIC:EXECUTE:NO'
+                when 6 then ':OBJECT_GRANT::ORACLE_TOOLS::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO'
+              end
+              
+            when 2
+            then
+              case i_idx
+                when 1 then 'ORACLE_TOOLS:TYPE_SPEC:T_SCHEMA_OBJECT:::::::'
+                when 2 then 'ORACLE_TOOLS:TYPE_SPEC:T_NAMED_OBJECT:::::::'
+                when 3 then 'ORACLE_TOOLS:TYPE_SPEC:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                when 4 then 'ORACLE_TOOLS:TYPE_BODY:T_SCHEMA_OBJECT:::::::'
+                when 5 then 'ORACLE_TOOLS:TYPE_BODY:T_NAMED_OBJECT:::::::'
+                when 6 then 'ORACLE_TOOLS:TYPE_BODY:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                when 7 then ':OBJECT_GRANT::ORACLE_TOOLS::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO'
+              end
+          end;
+          
+        ut.expect(l_schema_object_tab2(i_idx).id, l_program || '#' || i_test || '#' || i_idx || '#id').to_equal(l_expected);
+      end loop;
+    end loop;
+    
     commit;
 
 $if cfg_pkg.c_debugging $then

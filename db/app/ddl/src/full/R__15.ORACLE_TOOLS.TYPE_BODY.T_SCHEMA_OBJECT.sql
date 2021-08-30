@@ -427,8 +427,10 @@ static procedure create_schema_object
 , p_schema_object out nocopy t_schema_object
 )
 is
+  l_base_object_schema all_objects.owner%type := p_base_object_schema;
+  l_base_object_name all_objects.object_name%type := p_base_object_name;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
   dbug.print
   ( dbug."input"
@@ -461,30 +463,60 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
 $end
 
   case p_object_type
-    when 'INDEX'
+    when 'INDEX' -- a named object with a base named object
     then
+      -- base_object_type is corrected in t_named_object.create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  i.table_owner
+        ,       i.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_indexes i
+        where   i.owner = p_object_schema
+        and     i.index_name = p_object_name
+        and     ( l_base_object_schema is null or i.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or i.table_name = l_base_object_name )
+        ;
+      end if;
+      
       p_schema_object :=
         t_index_object
         ( p_base_object =>
             t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
+            ( p_object_schema => l_base_object_schema
             , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            , p_object_name => l_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
         , p_tablespace_name => null
         );
 
-    when 'TRIGGER'
+    when 'TRIGGER' -- a named object with a base named object
     then
+      -- base_object_type is corrected in t_named_object.create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  t.table_owner
+        ,       t.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_triggers t
+        where   t.owner = p_object_schema
+        and     t.trigger_name = p_object_name
+        and     ( l_base_object_schema is null or t.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or t.table_name = l_base_object_name )
+        ;
+      end if;
+      
       p_schema_object :=
         t_trigger_object
         ( p_base_object =>
             t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
+            ( p_object_schema => l_base_object_schema
             , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            , p_object_name => l_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -534,15 +566,30 @@ $end
         , p_object_name => p_object_name
         );
 
-    when 'SYNONYM'
+    when 'SYNONYM' -- a named object with a base named object
     then
+      -- base_object_type is corrected in t_named_object.create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  s.table_owner
+        ,       s.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_synonyms s
+        where   s.owner = p_object_schema
+        and     s.synonym_name = p_object_name
+        and     ( l_base_object_schema is null or s.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or s.table_name = l_base_object_name )
+        ;
+      end if;
+      
       p_schema_object :=
         t_synonym_object
         ( p_base_object =>
             t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
+            ( p_object_schema => l_base_object_schema
             , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            , p_object_name => l_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -594,7 +641,7 @@ $end
       );
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -645,7 +692,6 @@ $end
   return l_schema_object;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.leave;
 exception
   when others
   then

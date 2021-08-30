@@ -24,7 +24,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- see 11g / 12c licensing
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
-  c_debugging constant naturaln := 2; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
+  c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
   -- pivotal issues
 
@@ -118,65 +118,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   subtype t_network_link_nn is t_network_link not null;
 
   type t_transform_param_tab is table of boolean index by varchar2(4000 char);
-
-  type t_schema_object_info_rec is record
-  ( owner all_dependencies.owner%type
-  , type all_dependencies.type%type
-  , name all_dependencies.name%type
-  );
-
-  type t_schema_object_info_tab is table of t_schema_object_info_rec;
-
-  type t_object_dependencies_rec is record
-  ( owner all_dependencies.owner%type
-  , type all_dependencies.type%type
-  , name all_dependencies.name%type
-  , referenced_owner all_dependencies.referenced_owner%type
-  , referenced_type all_dependencies.referenced_type%type
-  , referenced_name all_dependencies.referenced_name%type
-  );
-
-  type t_object_dependencies_tab is table of t_object_dependencies_rec;
-
-  /**
-  *
-  * Get a sorted dependency list sorted by the least number of dependencies first.
-  *
-  * <p>
-  * When there is a circular dependency, the function will just pick one: it will not abort.
-  * May be used to determine the best installation order for several schemas.
-  * </p>
-  *
-  * <code>
-  * select  t.column_value
-  * from    table
-  *         ( pkg_ddl_util.get_sorted_dependency_list
-  *           ( oracle_tools.t_text_tab
-  *             ( 'APEX_050000'
-  *             , '<owner>'
-  *             )
-  *           , cursor(select owner, referenced_owner from all_dependencies)
-  *           )
-  *         ) t
-  * </code>
-  *
-  * @param p_object_tab            A list of dependencies to resolve.
-  * @param p_object_refcursor      An openend cursor with one column: the object.
-  *                                Example: select username from all_users.
-  * @param p_dependency_refcursor  An opened cursor with two columns where the first column depends on the second column.
-  *                                Example: select owner, referenced_owner from all_dependencies.
-  */  
-  function get_sorted_dependency_list
-  ( p_object_tab in t_text_tab
-  , p_dependency_refcursor in sys_refcursor -- query with two columns: object1 depends on object2, i.e. select owner, referenced_owner from all_dependencies ...
-  )
-  return t_text_tab pipelined;
-
-  function get_sorted_dependency_list
-  ( p_object_refcursor in sys_refcursor
-  , p_dependency_refcursor in sys_refcursor -- query with two columns: object1 depends on object2, i.e. select owner, referenced_owner from all_dependencies ...
-  )
-  return t_text_tab pipelined;
 
   /**
   * This function displays the DDL for one or more schema objects.
@@ -482,31 +423,13 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   pipelined;
 
   /*
-  -- Get objects (adding GRANT, COMMENT, CONSTRAINT and REF_CONSTRAINT objects besides the standard objects)
-  */
-  function get_schema_object_info
-  ( p_schema in t_schema_nn
-  )
-  return t_schema_object_info_tab
-  pipelined;
-  
-  /*
-  -- Get object dependencies
-  */
-  function get_object_dependencies
-  ( p_schema in t_schema_nn
-  )
-  return t_object_dependencies_tab
-  pipelined;
-
-  /*
   -- Sort objects on dependency order.
   */
   function sort_objects_by_deps
-  ( p_cursor in sys_refcursor
+  ( p_schema_object_tab in t_schema_object_tab
   , p_schema in t_schema_nn default user
   )
-  return t_sort_objects_by_deps_tab
+  return t_schema_object_tab
   pipelined;
 
   procedure init_clob;
@@ -532,7 +455,9 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 $if cfg_pkg.c_testing $then
 
   -- test functions
-  
+
+  procedure ut_cleanup_empty;
+
   --%suitepath(DDL)
   --%suite
   --%rollback(manual)
@@ -544,9 +469,11 @@ $if cfg_pkg.c_testing $then
   procedure ut_teardown;
 
   --%test
+  --%beforetest(pkg_ddl_util.ut_cleanup_empty)
   procedure ut_display_ddl_schema;
 
   --%test
+  --%beforetest(pkg_ddl_util.ut_cleanup_empty)
   procedure ut_display_ddl_schema_diff;
 
   --%test
@@ -562,6 +489,7 @@ $if cfg_pkg.c_testing $then
   procedure ut_get_schema_object;
 
   --%test
+  --%beforetest(pkg_ddl_util.ut_cleanup_empty)
   procedure ut_synchronize;
 
   --%test
