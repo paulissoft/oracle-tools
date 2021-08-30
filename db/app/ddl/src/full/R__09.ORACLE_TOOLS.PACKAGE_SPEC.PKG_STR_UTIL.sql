@@ -13,7 +13,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_STR_UTIL" IS
  *
  */
 
-c_revision_label constant varchar2(100 char) := '$Revision:: 1.15	  $';
+c_debugging constant naturaln := 0; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
 type t_clob_tab is table of clob;
 
@@ -72,15 +72,15 @@ procedure trim
  * @param p_str2_tab  De eerste CLOB collectie.
  *
  * @return -1 indien p_str1_tab.count < p_str2_tab.count of
- *	      indien p_str1_tab.count = p_str2_tab.count en er is een rij R met
- *	      dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) < 0 en
- *	      voor alle rijen < R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
- *	    0 p_str1_tab.count = p_str2_tab.count en
- *	      voor alle rijen R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
- *	    1 indien p_str1_tab.count > p_str2_tab.count of
- *	      indien p_str1_tab.count = p_str2_tab.count en er is een rij R met
- *	      dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) > 0 en
- *	      voor alle rijen < R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
+ *        indien p_str1_tab.count = p_str2_tab.count en er is een rij R met
+ *        dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) < 0 en
+ *        voor alle rijen < R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
+ *      0 p_str1_tab.count = p_str2_tab.count en
+ *        voor alle rijen R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
+ *      1 indien p_str1_tab.count > p_str2_tab.count of
+ *        indien p_str1_tab.count = p_str2_tab.count en er is een rij R met
+ *        dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) > 0 en
+ *        voor alle rijen < R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
 
  * @throws ORA-06531  Reference to uninitialized collection
  */
@@ -93,17 +93,17 @@ return integer;
 /**
  * Vergelijkt twee CLOB collecties.
  *
- * @param p_str1_tab		  De eerste CLOB collectie.
- * @param p_str2_tab		  De eerste CLOB collectie.
+ * @param p_str1_tab      De eerste CLOB collectie.
+ * @param p_str2_tab      De eerste CLOB collectie.
  * @param p_first_line_not_equal  De eerste regel die niet gelijk is.
- *				  NULL indien er geen verschillen zijn.
+ *          NULL indien er geen verschillen zijn.
  * @param p_first_char_not_equal  De eerste karakterpositie die niet gelijk is in de eerste regel die niet gelijk is.
- *				  NULL indien er geen verschillen zijn of als de ene collectie groter is dan de andere
- *				  en de kleinere collectie een subset is van de andere (d.w.z. alle regels gelijk).
- *				  Niet NULL als er een regelnummer R is die in beide collecties zit en waarvoor er een
- *				  karakter C zit is waarvoor geldt dat:
- *				  dbms_lob.substr(lob_loc => p_str1_tab(R), offset => C, amount => 1) !=
- *				  dbms_lob.substr(lob_loc => p_str2_tab(R), offset => C, amount => 1)
+ *          NULL indien er geen verschillen zijn of als de ene collectie groter is dan de andere
+ *          en de kleinere collectie een subset is van de andere (d.w.z. alle regels gelijk).
+ *          Niet NULL als er een regelnummer R is die in beide collecties zit en waarvoor er een
+ *          karakter C zit is waarvoor geldt dat:
+ *          dbms_lob.substr(lob_loc => p_str1_tab(R), offset => C, amount => 1) !=
+ *          dbms_lob.substr(lob_loc => p_str2_tab(R), offset => C, amount => 1)
  *
  * @throws ORA-06531  Reference to uninitialized collection
  */
@@ -117,8 +117,8 @@ procedure compare
 /**
  * Append a buffer to a CLOB using dbms_lob.writeappend().
  *
- * @param pi_buffer		  The buffer.
- * @param pio_clob		  The CLOB.
+ * @param pi_buffer     The buffer.
+ * @param pio_clob      The CLOB.
  */
 procedure append_text
 ( pi_buffer in varchar2
@@ -132,9 +132,9 @@ procedure append_text
  * See also http://www.talkapex.com/2009/06/how-to-quickly-append-varchar2-to-clob.html
  * </p>
  *
- * @param pi_text 		  The text to write to the buffer.
- * @param pio_buffer		  The buffer that, when full, is flushed to the CLOB.
- * @param pio_clob		  The CLOB.
+ * @param pi_text       The text to write to the buffer.
+ * @param pio_buffer      The buffer that, when full, is flushed to the CLOB.
+ * @param pio_clob      The CLOB.
  */
 procedure append_text
 ( pi_text in varchar2
@@ -145,8 +145,8 @@ procedure append_text
 /**
  * Write or append a text collection to a CLOB.
  *
- * @param pi_text_tab 		  The text collection.
- * @param pio_clob		  The CLOB. If null a temporary is created.
+ * @param pi_text_tab       The text collection.
+ * @param pio_clob      The CLOB. If null a temporary is created.
  * @param pi_append               Should we append or not? If not the CLOB will be trimmed to zero bytes.
  */
 procedure text2clob
@@ -163,7 +163,7 @@ return clob;
 /**
  * Write or append a text collection to a CLOB.
  *
- * @param pi_clob		  The CLOB. If null a temporary is created.
+ * @param pi_clob     The CLOB. If null a temporary is created.
  * @param pi_trim                 Trim at both ends.
  *
  * @return The text collection

@@ -56,7 +56,7 @@ member procedure base_object_schema
 )
 is
 begin
-  raise_application_error(-20000, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.');
+  raise_application_error(pkg_ddl_error.c_not_implemented, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.');
 end base_object_schema;
 
 member function base_object_type

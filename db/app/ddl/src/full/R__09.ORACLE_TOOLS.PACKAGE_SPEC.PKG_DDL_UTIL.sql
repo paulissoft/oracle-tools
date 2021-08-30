@@ -62,35 +62,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   
   c_transform_param_list constant varchar2(4000 char) := 'SEGMENT_ATTRIBUTES,TABLESPACE';
 
-  /* EXCEPTIONS */
-  c_schema_does_not_exist        constant integer := -20100;
-  e_schema_does_not_exist        exception;
-  pragma exception_init(e_schema_does_not_exist, -20100);
-
-  c_numeric_boolean_wrong   constant integer := -20101;
-  e_numeric_boolean_wrong   exception;
-  pragma exception_init(e_numeric_boolean_wrong, -20101);
-
-  c_database_link_does_not_exist constant integer := -20102;
-  e_database_link_does_not_exist exception;
-  pragma exception_init(e_database_link_does_not_exist, -20102);
-
-  c_schema_wrong                 constant integer := -20103;
-  e_schema_wrong                 exception;
-  pragma exception_init(e_schema_wrong, -20103);
-
-  c_source_and_target_equal      constant integer := -20104;
-  e_source_and_target_equal      exception;
-  pragma exception_init(e_source_and_target_equal, -20104);
-
-  c_object_names_wrong  constant integer := -20105;
-  e_object_names_wrong  exception;
-  pragma exception_init(e_object_names_wrong, -20105);
-
-  c_object_type_wrong  constant integer := -20106;
-  e_object_type_wrong  exception;
-  pragma exception_init(e_object_type_wrong, -20106);
-
   /* TYPES */
   subtype t_dict_object_type is all_objects.object_type%type; 
   subtype t_dict_object_type_nn is t_dict_object_type not null;

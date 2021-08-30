@@ -70,120 +70,6 @@ $if cfg_pkg.c_testing $then
 
   g_loopback constant varchar2(10 char) := 'LOOPBACK';
 
-  g_object_names constant varchar2(32767 char) :=
-'BIU_EBA_DEMO_LOAD_EMP
-,EBA_CM_CHECKLIST_SAMPLE
-,EBA_CM_CHECKLIST_STD
-,EBA_CM_FW
-,EBA_CUST
-,EBA_CUST_FLEX_FW
-,EBA_CUST_FW
-,EBA_CUST_SAMPLE_DATA
-,EBA_DEMO_CHART_DEPT
-,EBA_DEMO_CHART_EMP
-,EBA_DEMO_CHART_POPULATION
-,EBA_DEMO_CHART_PROJECTS
-,EBA_DEMO_CHART_STOCKS
-,EBA_DEMO_CHART_TASKS
-,EBA_DEMO_LOAD_DATA
-,EBA_DEMO_LOAD_DEPT
-,EBA_DEMO_LOAD_EMP
-,EBA_DP
-,EBA_DPS_SEQ
-,EBA_DP_ACCESS_LEVELS
-,EBA_DP_ACTIVE_FILTERS_T
-,EBA_DP_ACTIVE_FILTERS_TBL
-,EBA_DP_CALENDARS
-,EBA_DP_CATEGORIES
-,EBA_DP_DASHBOARD
-,EBA_DP_DATASRC_TYPES
-,EBA_DP_DATA_ACCESS
-,EBA_DP_DATA_SOURCES
-,EBA_DP_DATA_SOURCE_PERMS
-,EBA_DP_DEMO_DATA
-,EBA_DP_DEMO_PROJECTS
-,EBA_DP_DEMO_PROJECT_DATA
-,EBA_DP_ERRORS
-,EBA_DP_ERROR_LOOKUP
-,EBA_DP_FAVORITES
-,EBA_DP_FILES
-,EBA_DP_FILTER2_FW
-,EBA_DP_FILTER_COLUMN_T
-,EBA_DP_FILTER_COL_TBL
-,EBA_DP_FILTER_REPORT
-,EBA_DP_FILTER_RPT_FILTERS
-,EBA_DP_FORMAT_MASKS
-,EBA_DP_FW
-,EBA_DP_HISTORY
-,EBA_DP_INVOCATIONS
-,EBA_DP_NOTES
-,EBA_DP_NOTIFICATIONS
-,EBA_DP_PARSER
-,EBA_DP_PDF
-,EBA_DP_PDF_RPT
-,EBA_DP_PDF_RPT_SRC
-,EBA_DP_PDF_RPT_SRC_COLS
-,EBA_DP_PREFERENCES
-,EBA_DP_REPORTS
-,EBA_DP_REPORT_PERMS
-,EBA_DP_REPORT_VALIDATIONS
-,EBA_DP_RESERVED_NAMES
-,EBA_DP_RPT_TYPES
-,EBA_DP_RPT_VAL_DEPENDENCYS
-,EBA_DP_RPT_VAL_HISTORY_V
-,EBA_DP_RPT_VAL_V
-,EBA_DP_SECURITY
-,EBA_DP_TAGS
-,EBA_DP_TAGS_SUM
-,EBA_DP_TAGS_TYPE_SUM
-,EBA_DP_UI
-,EBA_DP_USERS
-,EBA_DP_USER_PREF
-,EBA_DP_VIEWERS
-,EBA_DP_VIEWER_GROUPS
-,EBA_DP_VIEWER_GROUP_REF
-,EBA_DP_WHITELIST_OBJECTS
-,EBA_DP_WIDGETS
-,EBA_DP_WIDGET_TYPES
-,EBA_GLCL
-,EBA_GLCLS_REMOVE_DATA
-,EBA_GLCL_ACCESS_LEVELS
-,EBA_GLCL_CATEGORIES
-,EBA_GLCL_DATA_LOAD
-,EBA_GLCL_ERRORS
-,EBA_GLCL_ERROR_LOOKUP
-,EBA_GLCL_FILES
-,EBA_GLCL_FW
-,EBA_GLCL_HELP_PAGE
-,EBA_GLCL_HISTORY
-,EBA_GLCL_ITEMS
-,EBA_GLCL_LINKS
-,EBA_GLCL_NOTES
-,EBA_GLCL_NOTIFICATIONS
-,EBA_GLCL_PREFERENCES
-,EBA_GLCL_PROJECTS
-,EBA_GLCL_RPT
-,EBA_GLCL_SEQ
-,EBA_GLCL_STATUS_CODES
-,EBA_GLCL_SUB_CATEGORIES
-,EBA_GLCL_TAGS
-,EBA_GLCL_TAGS_SUM
-,EBA_GLCL_TAGS_TYPE_SUM
-,EBA_GLCL_TZ_PREF
-,EBA_GLCL_USERS
-,EBA_LIVEPOLL
-,EBA_LIVEPOLL_ACCOUNT
-,EBA_LIVEPOLL_EMAIL_API
-,EBA_LIVEPOLL_FW
-,EBA_LIVEPOLL_QUIZ
-,EBA_SALES_ACL_API
-,EBA_SALES_DATA
-,EBA_SALES_FW
-,EBA_SB
-,EBA_SB_EMAIL_API
-,EBA_SB_FW
-,EBA_SB_SAMPLE';
-
 $end -- $if cfg_pkg.c_testing $then
 
   /* EXCEPTIONS */
@@ -452,13 +338,13 @@ $end
     if p_schema is null and
        p_network_link is not null
     then
-      raise_application_error(c_schema_wrong, p_description || ' is empty and the network link not.');
+      raise_application_error(pkg_ddl_error.c_schema_wrong, p_description || ' is empty and the network link not.');
     elsif p_schema is not null and
           p_network_link is null and
           dbms_assert.schema_name(p_schema) is null
     then
       raise_application_error
-      ( c_schema_does_not_exist
+      ( pkg_ddl_error.c_schema_does_not_exist
       , p_description || '"' || p_schema || '"' || ' does not exist.'
       ); -- hier komt ie niet omdat dbms_assert.schema_name() al een exceptie genereert
     end if;
@@ -472,7 +358,7 @@ $end
   begin
     if (p_numeric_boolean is not null and p_numeric_boolean not in (0, 1))
     then
-      raise_application_error(c_numeric_boolean_wrong, p_description || ' (' || p_numeric_boolean || ') is not empty and not 0 or 1.');
+      raise_application_error(pkg_ddl_error.c_numeric_boolean_wrong, p_description || ' (' || p_numeric_boolean || ') is not empty and not 0 or 1.');
     end if;
   end check_numeric_boolean;
 
@@ -485,7 +371,7 @@ $end
     if (p_object_names is not null and p_object_names_include is null)
     then
       raise_application_error
-      ( c_object_names_wrong
+      ( pkg_ddl_error.c_object_names_wrong
       , 'The include flag (' ||
         p_object_names_include ||
         ') is empty and the list of object names is not empty:' ||
@@ -497,7 +383,7 @@ $end
     elsif (p_object_names is null and p_object_names_include is not null)
     then
       raise_application_error
-      ( c_object_names_wrong
+      ( pkg_ddl_error.c_object_names_wrong
       , 'The include flag (' ||
         p_object_names_include ||
         ') is not empty and the list of object names is empty:' ||
@@ -518,7 +404,7 @@ $end
     if p_network_link is not null and
        get_db_link(p_network_link) is null
     then
-      raise_application_error(c_database_link_does_not_exist, p_description || ' "' || p_network_link || '" unknown.');
+      raise_application_error(pkg_ddl_error.c_database_link_does_not_exist, p_description || ' "' || p_network_link || '" unknown.');
     end if;  
   end check_network_link;
 
@@ -535,7 +421,7 @@ $end
        (p_schema_source = p_schema_target)
     then
       -- source and target equal
-      raise_application_error(c_source_and_target_equal, 'Source and target may not be equal.');
+      raise_application_error(pkg_ddl_error.c_source_and_target_equal, 'Source and target may not be equal.');
     end if;
   end check_source_target;
 
@@ -553,7 +439,7 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(c_object_type_wrong, 'Object type (' || p_object_type || ') is not one of the metadata schema object types.');
+      raise_application_error(pkg_ddl_error.c_object_type_wrong, 'Object type (' || p_object_type || ') is not one of the metadata schema object types.');
     end if;
   end check_object_type;
 
@@ -1214,7 +1100,7 @@ $end
         p_object_type := case when instr(l_constraint, ' FOREIGN KEY ') > 0 then 'REF_CONSTRAINT' else 'CONSTRAINT' end;
       elsif l_constraint not like l_constraint_expr_tab(7)
       then
-        raise_application_error(-20000, 'Could not parse "' || l_constraint || '"');
+        raise_application_error(pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_constraint || '"');
       end if;
     end parse_alter;
 
@@ -1283,7 +1169,7 @@ $end
       when others
       then
         raise_application_error
-        ( -20000
+        ( pkg_ddl_error.c_could_not_parse
         , 'Comment: ' || l_comment ||
           '; p_schema: ' || p_schema ||
           '; p_base_object_name: ' || p_base_object_name
@@ -1755,9 +1641,6 @@ $end
       l_in_list := l_in_list || ')';
 
       return l_in_list;
-    exception    
-      when e_invalid_sql_name
-      then raise_application_error(-20000, 'Object name: "'|| l_object_name || '"', true);
     end in_list_expr;
 
     procedure set_exclude_name_expr(p_object_type in t_metadata_object_type, p_name in varchar2)
@@ -2027,7 +1910,7 @@ $end
           null; -- OK
         else
           raise_application_error
-          ( -20000
+          ( pkg_ddl_error.c_invalid_parameters
           , 'p_object_schema ('
             ||p_object_schema
             ||') should be empty, '
@@ -2047,7 +1930,7 @@ $end
             null; -- OK
           else
             raise_application_error
-            ( -20000
+            ( pkg_ddl_error.c_invalid_parameters
             , 'Base object schema ('
               ||p_base_object_schema
               ||') should not be empty.'
@@ -2058,7 +1941,7 @@ $end
           null; -- ok
         else
           raise_application_error
-          ( -20000
+          ( pkg_ddl_error.c_invalid_parameters
           , 'Object schema ('
             ||p_object_schema
             ||') should not be empty, '
@@ -2075,7 +1958,7 @@ $end
           null; -- OK
         else
           raise_application_error
-          ( -20000
+          ( pkg_ddl_error.c_invalid_parameters
           , 'Object schema ('
             ||p_object_schema
             ||') should not be empty, '
@@ -2105,7 +1988,7 @@ $end
           when no_data_found
           then
             raise_application_error
-            ( -20000
+            ( pkg_ddl_error.c_missing_session_role
             , 'User "' || 
               user || 
               '" must have session role SELECT_CATALOG_ROLE to view objects of type "' || p_object_type || '" for "' ||
@@ -2127,7 +2010,7 @@ $end
           when no_data_found
           then
             raise_application_error
-            ( -20000
+            ( pkg_ddl_error.c_missing_session_privilege
             , 'User "' || 
               user || 
               '" must have session privilege CREATE ANY PROCEDURE to view package or type bodies for "' ||
@@ -2193,7 +2076,11 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   exception
     when others then
       dbug.leave_on_error;
-      raise_application_error(-20000, p_object_type||';'||p_object_schema||';'||p_new_object_schema||';'||p_base_object_schema, true);
+      raise_application_error
+      ( pkg_ddl_error.c_reraise_with_backtrace
+      , p_object_type||';'||p_object_schema||';'||p_new_object_schema||';'||p_base_object_schema
+      , true
+      );
 $end
   end md_open;
 
@@ -2410,7 +2297,7 @@ $end
         exception
           when others
           then
-            raise_application_error(-20000, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
+            raise_application_error(pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
         end;
 
         -- the normal stuff
@@ -2443,7 +2330,7 @@ $end
               if l_ddl_text is not null
               then
                 raise_application_error
-                ( -20000
+                ( pkg_ddl_error.c_object_not_found
                 , utl_lms.format_message
                   ( 'object not found in allowed objects; ddl: "%s"'
                   , substr(l_ddl_text, 1, 2000)
@@ -2461,6 +2348,15 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
   exception
+    -- GJP 2021-08-30 Ignore this always.
+    when pkg_ddl_error.e_object_not_found
+    then
+      p_object_key := null;
+      cleanup;
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+      dbug.leave_on_error;
+$end
+
     when others
     then
       p_object_key := null;
@@ -3493,7 +3389,7 @@ exception
     l_last_error_position := 1 + nvl(dbms_sql.last_error_position' || l_network_link || ', 0);
     dbms_sql.close_cursor' || l_network_link || '(l_cursor);
     raise_application_error
-    ( -20000
+    ( pkg_ddl_error.c_execute_via_db_link
     , ''Error at position '' || l_last_error_position || '': '' || substr(oracle_tools.pkg_str_util.text2clob(l_ddl_text_tab), l_last_error_position, 2000)
     , true
     );
@@ -3710,7 +3606,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
           p_schema_object_tab(i_idx).print();
           if l_object_tab.exists(p_schema_object_tab(i_idx).signature())
           then
-            raise_application_error(-20000, 'The signature of the object is a duplicate: ' || p_schema_object_tab(i_idx).signature());
+            raise_application_error(pkg_ddl_error.c_duplicate_item, 'The signature of the object is a duplicate: ' || p_schema_object_tab(i_idx).signature());
           else
             l_object_tab(p_schema_object_tab(i_idx).signature()) := 0;
           end if;
@@ -4616,7 +4512,7 @@ $end
 $if cfg_pkg.c_debugging $then
                 dbug.on_error;
 $end
-                raise_application_error(-20000, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
+                raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
             end;
 
           when 'TABLE'
@@ -4759,7 +4655,7 @@ $end
 $if cfg_pkg.c_debugging $then
                 dbug.on_error;
 $end
-                raise_application_error(-20000, 'column [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
+                raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, 'column [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
             end;
         end case;
       end loop member_loop;
@@ -4856,7 +4752,7 @@ $end
 $if cfg_pkg.c_debugging $then
               dbug.on_error;
 $end
-              raise_application_error(-20000, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
+              raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
           end;
         end loop;
       end if;
@@ -4956,13 +4852,13 @@ $end
 
     if p_schema_object.object_type() is null
     then
-      raise_application_error(-20000, 'Object type should not be empty');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty');
     elsif p_schema_object.dict2metadata_object_type() = p_schema_object.object_type()
     then
       null; -- ok
     else
       raise_application_error
-      ( -20000
+      ( pkg_ddl_error.c_invalid_parameters
       , 'Object type (' ||
         p_schema_object.object_type() ||
         ') should be equal to this DBMS_METADATA object type (' ||
@@ -4974,7 +4870,7 @@ $end
     if (p_schema_object.base_object_type() is null) != (p_schema_object.base_object_schema() is null)
     then
       raise_application_error
-      ( -20000
+      ( pkg_ddl_error.c_invalid_parameters
       , 'Base object type (' ||
         p_schema_object.base_object_type() ||
         ') and base object schema (' ||
@@ -4986,7 +4882,7 @@ $end
     if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
     then
       raise_application_error
-      ( -20000
+      ( pkg_ddl_error.c_invalid_parameters
       , 'Base object name (' ||
         p_schema_object.base_object_name() ||
         ') and base object schema (' ||
@@ -5021,12 +4917,12 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(-20000, 'Object schema should be empty or ' || p_schema);
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty or ' || p_schema);
     end if;
 
     if p_dependent_or_granted_object.base_object$ is null
     then
-      raise_application_error(-20000, 'Base object should not be empty.');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object should not be empty.');
     end if;
 
     -- GPA 2017-01-18 too strict for triggers, synonyms, indexes, etc.
@@ -5035,23 +4931,23 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(-20000, 'Base object schema must be ' || p_schema);
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema);
     end if;
 */
 
     if p_dependent_or_granted_object.base_object_schema() is null
     then
-      raise_application_error(-20000, 'Base object schema should not be empty');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
     end if;
 
     if p_dependent_or_granted_object.base_object_type() is null
     then
-      raise_application_error(-20000, 'Base object type should not be empty');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object type should not be empty');
     end if;
 
     if p_dependent_or_granted_object.base_object_name() is null
     then
-      raise_application_error(-20000, 'Base object name should not be empty');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object name should not be empty');
     end if;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
@@ -5082,14 +4978,14 @@ $end
 
     if p_named_object.object_name() is null
     then
-      raise_application_error(-20000, 'Object name should not be empty');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
     end if;
     if p_named_object.object_schema() = p_schema
     then
       null; -- ok
     else
       raise_application_error
-      ( -20000
+      ( pkg_ddl_error.c_invalid_parameters
       , 'Object schema (' ||
         p_named_object.object_schema() ||
         ') must be ' ||
@@ -5123,7 +5019,7 @@ $if pkg_ddl_util.c_#140920801 $then
       when value_error
       then
         raise_application_error
-        ( -20000
+        ( pkg_ddl_error.c_object_not_valid
         , 'Object status (' ||
           l_status ||
           ') must be VALID'
@@ -5160,15 +5056,15 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(-20000, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
     end if;
     if p_constraint_object.base_object_schema() is null
     then
-      raise_application_error(-20000, 'Base object schema should not be empty.');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
     end if;
     if p_constraint_object.constraint_type() is null
     then
-      raise_application_error(-20000, 'Constraint type should not be empty.');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
     end if;
 
     case 
@@ -5176,22 +5072,22 @@ $end
       then
         if p_constraint_object.column_names() is null
         then
-          raise_application_error(-20000, 'Column names should not be empty');
+          raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
         end if;
         if p_constraint_object.search_condition() is not null
         then
-          raise_application_error(-20000, 'Search condition should be empty');
+          raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Search condition should be empty');
         end if;
 
       when p_constraint_object.constraint_type() in ('C')
       then
         if p_constraint_object.column_names() is not null
         then
-          raise_application_error(-20000, 'Column names should be empty');
+          raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should be empty');
         end if;
         if p_constraint_object.search_condition() is null
         then
-          raise_application_error(-20000, 'Search condition should not be empty');
+          raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Search condition should not be empty');
         end if;
 
     end case;
@@ -5594,12 +5490,17 @@ $end
             end if;
           exception
             when others
-            then raise_application_error(-20000, 'Object id: ' || l_schema_object.id() || chr(10) || 'Object signature: ' || l_object_key, true);
+            then raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, 'Object id: ' || l_schema_object.id() || chr(10) || 'Object signature: ' || l_object_key, true);
           end;  
         end loop;
       end if;
 $if cfg_pkg.c_debugging $then
       dbug.leave;
+    exception
+      when others
+      then
+        dbug.leave_on_error;
+        raise;
 $end
     end init;
 
@@ -5651,6 +5552,11 @@ $end
       end loop find_next_params_loop;
 $if cfg_pkg.c_debugging $then
       dbug.leave;
+    exception
+      when others
+      then
+        dbug.leave_on_error;
+        raise;
 $end
     end find_next_params;
 
@@ -5676,11 +5582,16 @@ $if cfg_pkg.c_debugging $then
         then
           null;
         else
-          raise_application_error(-20000, 'No DDL retrieved for object ' || l_object_key);
+          raise_application_error(pkg_ddl_error.c_no_ddl_retrieved, 'No DDL retrieved for object ' || l_object_key);
         end if;
         l_object_key := l_object_lookup_tab.next(l_object_key);
       end loop;
       dbug.leave;
+    exception
+      when others
+      then
+        dbug.leave_on_error;
+        raise;
     end chk;
 $end
 
@@ -5807,7 +5718,7 @@ $if cfg_pkg.c_debugging $then
           dbug.on_error;
 $end
           raise_application_error
-          ( -20000
+          ( pkg_ddl_error.c_duplicate_item
           , 'Duplicate objects to be retrieved: type: ' || r_params.object_type || '; schema: ' || r_params.object_schema || '; base schema: ' || r_params.base_object_schema
           );
 
@@ -5970,7 +5881,7 @@ end;]';
           using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
       exception
         when others
-        then raise_application_error(-20000, l_statement, true);
+        then raise_application_error(pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       end;
     end if;
 
@@ -6593,7 +6504,7 @@ $end
       null;
     else
       raise_application_error
-      ( -20000
+      ( pkg_ddl_error.c_invalid_parameters
       , 'p_first1: ' || p_first1 || '; p_line1_tab.first: ' || p_line1_tab.first ||
         '; p_last1: ' || p_last1 || '; p_line1_tab.last: ' || p_line1_tab.last
       );
@@ -6605,7 +6516,7 @@ $end
       null;
     else
       raise_application_error
-      ( -20000
+      ( pkg_ddl_error.c_invalid_parameters
       , 'p_first2: ' || p_first2 || '; p_line2_tab.first: ' || p_line2_tab.first ||
         '; p_last2: ' || p_last2 || '; p_line2_tab.last: ' || p_line2_tab.last
       );
@@ -6744,7 +6655,7 @@ $end
       ;
     exception
       when no_data_found
-      then raise_application_error(-20000, 'User EMPTY must exist', true);
+      then raise_application_error(pkg_ddl_error.c_missing_schema, 'User EMPTY must exist', true);
     end;
 
     begin
@@ -6767,7 +6678,7 @@ $end
       when no_data_found
       then null;
       when too_many_rows
-      then raise_application_error(-20000, 'User EMPTY should have NO objects', true);
+      then raise_application_error(pkg_ddl_error.c_schema_not_empty, 'User EMPTY should have NO objects', true);
     end;
 
     commit;
@@ -6789,7 +6700,7 @@ $end
 
     if get_db_link(g_empty) is null
     then
-      raise_application_error(-20000, 'Database link EMPTY must exist');
+      raise_application_error(pkg_ddl_error.c_missing_db_link, 'Database link EMPTY must exist');
     end if;
 
     begin
@@ -6812,7 +6723,7 @@ $end
     exception
       when no_data_found
       then
-        raise_application_error(-20000, 'Private database link LOOPBACK should point to this schema and database.', true);
+        raise_application_error(pkg_ddl_error.c_wrong_db_link, 'Private database link LOOPBACK should point to this schema and database.', true);
     end;
 
     commit;
@@ -7012,9 +6923,9 @@ $end
       ( p_description => 'Sort_objects_by_deps (' || r.column_value || ')'
       , p_sqlcode_expected => case
                                  when r.column_value is null then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
-                                 when r.column_value in (0, 1) then c_object_names_wrong 
+                                 when r.column_value in (0, 1) then pkg_ddl_error.c_object_names_wrong 
                                  when r.column_value < 0 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
-                                 else c_numeric_boolean_wrong
+                                 else pkg_ddl_error.c_numeric_boolean_wrong
                                end
       , p_sort_objects_by_deps => r.column_value
       , p_object_names => 'ABC'
@@ -7023,13 +6934,13 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include leeg.'
-    , p_sqlcode_expected => c_object_names_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_object_names_wrong
     , p_object_names => 'ABC'
     );
 
     chk
     ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include niet leeg en niet in (0, 1).'
-    , p_sqlcode_expected => c_numeric_boolean_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_numeric_boolean_wrong
     , p_object_names => 'ABC'
     , p_object_names_include => 2
     );
@@ -7043,7 +6954,7 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names leeg is en p_object_names_include niet leeg.'
-    , p_sqlcode_expected => c_object_names_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_object_names_wrong
     , p_object_names => null
     , p_object_names_include => 0
     );
@@ -7067,7 +6978,7 @@ $end
                                  when r.column_value is null then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
                                  when r.column_value in (0, 1) then c_no_exception_raised
                                  when r.column_value < 0 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
-                                 else c_numeric_boolean_wrong
+                                 else pkg_ddl_error.c_numeric_boolean_wrong
                                end
       , p_grantor_is_schema => r.column_value
       , p_object_names => 'ABC'
@@ -7459,13 +7370,13 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include leeg.'
-    , p_sqlcode_expected => c_object_names_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_object_names_wrong
     , p_object_names => 'ABC'
     );
 
     chk
     ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include niet leeg en niet in (0, 1).'
-    , p_sqlcode_expected => c_numeric_boolean_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_numeric_boolean_wrong
     , p_object_names => 'ABC'
     , p_object_names_include => 2
     );
@@ -7479,13 +7390,13 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names leeg is en p_object_names_include niet leeg.'
-    , p_sqlcode_expected => c_object_names_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_object_names_wrong
     , p_object_names_include => 1
     );
 
     chk
     ( p_description => 'Indien p_schema_source leeg is en p_network_link_source niet leeg.'
-    , p_sqlcode_expected => c_schema_wrong
+    , p_sqlcode_expected => pkg_ddl_error.c_schema_wrong
     , p_schema_source => null
     , p_network_link_source => g_dbname
     );
@@ -7510,20 +7421,20 @@ $end
 
     chk
     ( p_description => 'source en target zijn gelijk.'
-    , p_sqlcode_expected => c_source_and_target_equal
+    , p_sqlcode_expected => pkg_ddl_error.c_source_and_target_equal
     , p_schema_source => user
     , p_schema_target => user
     );
 
     chk
     ( p_description => 'p_network_link_source niet leeg en onbekend.'
-    , p_sqlcode_expected => c_database_link_does_not_exist
+    , p_sqlcode_expected => pkg_ddl_error.c_database_link_does_not_exist
     , p_network_link_source => 'ABC'
     );
 
     chk
     ( p_description => 'p_network_link_target niet leeg en onbekend.'
-    , p_sqlcode_expected => c_database_link_does_not_exist
+    , p_sqlcode_expected => pkg_ddl_error.c_database_link_does_not_exist
     , p_network_link_target => 'ABC'
     );
 
@@ -7547,7 +7458,7 @@ $end
                                 when r.column_value is null then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
                                 when r.column_value in (0, 1) then c_no_exception_raised
                                 when r.column_value < 0 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
-                                else c_numeric_boolean_wrong
+                                else pkg_ddl_error.c_numeric_boolean_wrong
                               end
       , p_skip_repeatables => r.column_value
       , p_object_names => 'ABC'

@@ -13,10 +13,6 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 )
 authid current_user
 as
-  c_could_not_process constant pls_integer := -20099;
-  e_could_not_process exception;
-  pragma exception_init(e_could_not_process, -20099);
-
   -- to reduce typos we use constant identifiers
   "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4'; -- pkg_ddl_util
   "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5'; -- pkg_ddl_util
@@ -188,7 +184,7 @@ $end
                                                  ,units => l_units);
 
       else
-        raise_application_error(c_could_not_process, 'Could not process interface ' || l_interface_tab(i_interface_idx));
+        raise_application_error(pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || l_interface_tab(i_interface_idx));
       end if;
 
       l_processed := true;
@@ -209,7 +205,7 @@ $end
 
   if not(l_processed)
   then
-    raise_application_error(c_could_not_process, 'Could not process interface ' || pi_interface);
+    raise_application_error(pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || pi_interface);
   end if;
 
 $if cfg_pkg.c_debugging $then
@@ -221,7 +217,7 @@ exception
 $if cfg_pkg.c_debugging $then
     dbug.leave_on_error;
 $end    
-    raise_application_error(-20000, dbms_utility.format_error_backtrace, true);
+    raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, dbms_utility.format_error_backtrace, true);
 end p_generate_ddl;
 /
 

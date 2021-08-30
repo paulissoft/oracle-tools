@@ -58,7 +58,7 @@ $end
     when 'JAVA_SOURCE'           then p_named_object := t_java_source_object(p_object_schema, p_object_name);
     when 'REFRESH_GROUP'         then p_named_object := t_refresh_group_object(p_object_schema, p_object_name);
     when 'PROCOBJ'               then p_named_object := t_procobj_object(p_object_schema, p_object_name);
-    else raise_application_error(-20000, 'Object type "' || l_object_type || '" is not listed here.');
+    else raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object type "' || l_object_type || '" is not listed here.');
   end case;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then

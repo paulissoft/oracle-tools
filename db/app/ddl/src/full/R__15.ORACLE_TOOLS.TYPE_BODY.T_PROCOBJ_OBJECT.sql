@@ -66,7 +66,7 @@ $end
 
   if self.dict_object_type() is null
   then
-    raise_application_error(-20000, 'Dictionary object type should not be null.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Dictionary object type should not be null.');
   end if;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then

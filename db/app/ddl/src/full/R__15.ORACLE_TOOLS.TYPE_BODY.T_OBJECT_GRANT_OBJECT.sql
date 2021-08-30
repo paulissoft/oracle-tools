@@ -94,28 +94,28 @@ $end
 
   if self.object_schema() is not null
   then
-    raise_application_error(-20000, 'Object schema should be empty.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
   end if;
   if self.object_name() is not null
   then
-    raise_application_error(-20000, 'Object name should be empty.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
   end if;
 
   if self.column_name() is not null
   then
-    raise_application_error(-20000, 'Column name should be null.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column name should be null.');
   end if;
   if self.grantee() is null
   then
-    raise_application_error(-20000, 'Grantee should not be null.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Grantee should not be null.');
   end if;
   if self.privilege() is null
   then
-    raise_application_error(-20000, 'Privilege should not be null.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Privilege should not be null.');
   end if;
   if self.grantable() is null
   then
-    raise_application_error(-20000, 'Grantable should not be null.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Grantable should not be null.');
   end if;
 
 $if pkg_ddl_util.c_#140920801 $then

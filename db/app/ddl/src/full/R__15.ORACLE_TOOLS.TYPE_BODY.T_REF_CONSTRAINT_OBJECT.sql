@@ -217,7 +217,7 @@ $end
 
   if self.ref_object$ is null
   then
-    raise_application_error(-20000, 'Reference object should not be empty.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Reference object should not be empty.');
   end if;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then

@@ -75,27 +75,27 @@ $end
   then
     null; -- ok
   else
-    raise_application_error(-20000, 'Object schema must be PUBLIC or ' || p_schema);
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema must be PUBLIC or ' || p_schema);
   end if;
 
   if self.object_schema() = 'PUBLIC'
   then
     if (self.base_object_schema() is null)
     then
-      raise_application_error(-20000, 'Base object schema should not be empty');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
     end if;
     if self.base_object_schema() = p_schema
     then
       null; -- ok
     else
-      raise_application_error(-20000, 'Base object schema must be ' || p_schema || ' for a PUBLIC synonym');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema || ' for a PUBLIC synonym');
     end if;
   else
     if self.object_schema() = p_schema
     then
       null; -- ok
     else
-      raise_application_error(-20000, 'Object schema must be ' || p_schema || ' for a private synonym');
+      raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema must be ' || p_schema || ' for a private synonym');
     end if;
 
     pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);

@@ -18,6 +18,7 @@
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>F_GENERATE_DDL
+,PKG_DDL_ERROR
 ,PKG_DDL_UTIL
 ,PKG_STR_UTIL
 ,P_GENERATE_DDL

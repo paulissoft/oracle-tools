@@ -16,7 +16,7 @@ begin
     );
   else
     raise_application_error
-    ( -20000
+    ( pkg_ddl_error.c_not_implemented
     , 'Uninstalling ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name() || ' not implemented.'
     );
   end if;

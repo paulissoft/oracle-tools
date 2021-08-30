@@ -68,11 +68,11 @@ $end
   then
     null; -- ok
   else
-    raise_application_error(-20000, 'Object schema (' || self.object_schema() || ') must be ' || p_schema);
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema (' || self.object_schema() || ') must be ' || p_schema);
   end if;
   if self.base_object_schema() is null
   then
-    raise_application_error(-20000, 'Base object schema should not be empty.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
   end if;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then

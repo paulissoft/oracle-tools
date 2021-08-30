@@ -292,13 +292,13 @@ $end
 
   if self.ddl_tab is null or self.ddl_tab.count = 0
   then
-    raise_application_error(-20000, 'The number of ddl statements must be at least 1');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'The number of ddl statements must be at least 1');
   else
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
     loop
       if self.ddl_tab(i_idx).text is null or self.ddl_tab(i_idx).text.count = 0
       then
-        raise_application_error(-20000, 'There is no ddl text for ddl statement ' || i_idx);
+        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx);
       end if;
     end loop;
   end if;
@@ -354,7 +354,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave_on_error;
 $end
     raise_application_error
-    ( -20000
+    ( pkg_ddl_error.c_reraise_with_backtrace
     , '# parts: ' || l_part_tab.count ||
       '; part #0: ' || case when l_part_tab.count >= l_part_tab.first+0 then l_part_tab(l_part_tab.first+0) end ||
       '; part #1: ' || case when l_part_tab.count >= l_part_tab.first+1 then l_part_tab(l_part_tab.first+1) end ||

@@ -225,7 +225,7 @@ $end
     null;
   else
     raise_application_error
-    ( -20000
+    ( pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') has "' ||
@@ -243,7 +243,7 @@ $end
     null;
   else
     raise_application_error
-    ( -20000
+    ( pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') must have a TYPE_SPEC as its base object: ' ||

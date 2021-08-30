@@ -66,11 +66,11 @@ $end
 
   if self.object_schema() is not null
   then
-    raise_application_error(-20000, 'Object schema should be empty.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
   end if;
   if self.object_name() is not null
   then
-    raise_application_error(-20000, 'Object name should be empty.');
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
   end if;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
