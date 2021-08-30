@@ -90,14 +90,14 @@ procedure ut_expect_violation
  *
  * @param p_object_names          A comma separated list of object names.
  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
- * @param p_sql_warnings          For "alter session set PLSQL_WARNINGS = '<p_sql_warnings>'"
+ * @param p_plsql_warnings        For "alter session set PLSQL_WARNINGS = '<p_sql_warnings>'"
  *
  * @return A list of USER_ERRORS rows ordered by name, type, sequence.
  */
 function show_compile_errors
 ( p_object_names in varchar2 default null
 , p_object_names_include in integer default null
-, p_sql_warnings in varchar2 default 'ENABLE:ALL'
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
 )
 return t_errors_tab
 pipelined;

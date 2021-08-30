@@ -369,7 +369,7 @@ end ut_expect_violation;
 function show_compile_errors
 ( p_object_names in varchar2
 , p_object_names_include in integer
-, p_sql_warnings in varchar2
+, p_plsql_warnings in varchar2
 )
 return t_errors_tab
 pipelined
@@ -383,10 +383,7 @@ is
     );
   l_object_name_type_tab sys.odcivarchar2list := sys.odcivarchar2list();
 begin
-  if p_sql_warnings is not null
-  then
-    execute immediate q'[alter session set PLSQL_WARNINGS = ']' || p_sql_warnings || q'[']';
-  end if;
+  cfg_install_pkg.setup_session(p_plsql_warnings => p_plsql_warnings);
 
   for r_obj in
   ( select  o.object_name
