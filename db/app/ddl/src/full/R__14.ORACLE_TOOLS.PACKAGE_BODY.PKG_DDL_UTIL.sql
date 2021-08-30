@@ -1363,6 +1363,9 @@ $end
 
     -- no Flashback archive tables/indexes
     add(t_text_tab('TABLE', 'INDEX'), 'SYS\_FBA\_%');
+    
+    -- no Oracle Java table
+    add(t_text_tab('TABLE'), 'CREATE$JAVA$LOB$TABLE');
 
     -- no system generated indexes
     add('INDEX', 'SYS\_C%');
@@ -2866,13 +2869,13 @@ $if cfg_pkg.c_debugging $then
 $end
       null; -- not a real error, just a way to some cleanup
 
-    when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
+    when no_data_found -- disappears otherwise
     then
 $if cfg_pkg.c_debugging $then
       dbug.leave_on_error;
 $end
-      raise program_error;
-
+      raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      
 $if cfg_pkg.c_debugging $then
     when others
     then
@@ -3291,7 +3294,7 @@ $end
 $if cfg_pkg.c_debugging $then
       dbug.leave_on_error;
 $end
-      raise program_error;
+      raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
 
     when others
     then
@@ -4324,6 +4327,10 @@ $end
     end if;
     longops_done(l_longops_rec);
     return;
+  exception
+    when no_data_found
+    then
+      raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
   end get_schema_object;
 
   procedure get_member_ddl
@@ -5779,6 +5786,13 @@ $end
 
     return; -- essential for a pipelined function
   exception
+    when no_data_found
+    then
+$if cfg_pkg.c_debugging $then
+      dbug.leave_on_error;
+$end
+      raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+    
     when others
     then
       cleanup;
@@ -5970,6 +5984,13 @@ $end
 $if cfg_pkg.c_debugging $then
     dbug.leave;
 $end
+  exception
+    when no_data_found
+    then
+$if cfg_pkg.c_debugging $then
+      dbug.leave_on_error;
+$end
+      raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, l_program, true);    
   end get_display_ddl_schema;
 
   /*
@@ -6201,7 +6222,7 @@ $end
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise program_error;
+      raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
     when others
@@ -6684,7 +6705,6 @@ $if cfg_pkg.c_debugging $then
       dbug.leave;
 $end
   end cleanup_empty;
-
 
   procedure ut_cleanup_empty
   is
@@ -8041,7 +8061,7 @@ $end
 
     procedure cleanup is
     begin
-      cleanup_empty;
+      null; -- special beforetest annotation will take care of cleaning EMPTY
     end cleanup;
   begin
 $if cfg_pkg.c_debugging $then
@@ -8064,6 +8084,11 @@ $end
     loop
       case i_try
         when 1
+        then
+          l_schema := g_owner;
+          l_network_link_source := null; -- this is l_schema
+
+        when 2 -- GJP 2021-08-31
         then
           l_schema := g_owner;
           l_network_link_source := g_loopback; -- this is l_schema

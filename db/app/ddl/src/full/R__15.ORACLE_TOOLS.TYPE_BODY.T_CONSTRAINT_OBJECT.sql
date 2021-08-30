@@ -65,6 +65,18 @@ $end
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 exception
+  when no_data_found
+  then
+    raise_application_error
+    ( pkg_ddl_error.c_reraise_with_backtrace
+    , utl_lms.format_message
+      ( 'p_object_schema: %s; p_object_name: %s'
+      , p_object_schema
+      , p_object_name
+      )
+    , true
+    );
+
   when others
   then
     dbug.leave_on_error;
