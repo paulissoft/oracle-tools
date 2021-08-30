@@ -15,6 +15,7 @@ is
 begin
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_CONSTRAINT_OBJECT.T_CONSTRAINT_OBJECT');
+  p_base_object.print;
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
   dbug.print(dbug."input", 'p_constraint_type: %s; p_column_names: %s; p_search_condition: %s', p_constraint_type, p_column_names, p_search_condition);
 $end
@@ -61,6 +62,14 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   return;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end;
 
 -- begin of getter(s)
@@ -166,6 +175,14 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   return l_column_names;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end    
 end get_column_names;
 
 overriding member procedure chk
@@ -182,6 +199,11 @@ $end
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end chk;
 

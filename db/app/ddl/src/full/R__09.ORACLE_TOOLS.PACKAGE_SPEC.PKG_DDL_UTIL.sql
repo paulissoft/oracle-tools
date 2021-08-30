@@ -24,7 +24,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- see 11g / 12c licensing
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
-  c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
+  c_debugging constant naturaln := 2; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
   -- pivotal issues
 
@@ -399,6 +399,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   function sort_objects_by_deps
   ( p_schema_object_tab in t_schema_object_tab
   , p_schema in t_schema_nn default user
+  , p_new_schema in t_schema default null
   )
   return t_schema_object_tab
   pipelined;

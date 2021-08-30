@@ -286,6 +286,14 @@ $end
       p_longops_rec.totalwork := p_longops_rec.sofar;
       longops_show(p_longops_rec, 0);
     end if;
+$if cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'p_longops_rec.target_desc: %s; p_longops_rec.totalwork: %s'
+    , p_longops_rec.target_desc
+    , p_longops_rec.totalwork
+    );
+$end
   end longops_done;
 
   function get_db_link
@@ -2784,6 +2792,7 @@ $end
                             ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
                               ( l_schema_object_tab
                               , p_schema
+                              , p_new_schema
                               )
                             ) d
                   ) d
@@ -2850,7 +2859,8 @@ $end
     return;
 
   exception
-    when no_data_needed then
+    when no_data_needed
+    then
 $if cfg_pkg.c_debugging $then
       dbug.leave_on_error;
 $end
@@ -2864,7 +2874,8 @@ $end
       raise program_error;
 
 $if cfg_pkg.c_debugging $then
-    when others then
+    when others
+    then
       dbug.leave_on_error;
       raise;
 $end
@@ -4290,6 +4301,10 @@ $end
   pipelined
   is
     l_schema_object_tab t_schema_object_tab;
+    l_program constant varchar2(30 char) := 'GET_SCHEMA_OBJECT'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+
+    -- dbms_application_info stuff
+    l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
   begin
     oracle_tools.pkg_ddl_util.get_schema_object
     ( p_schema => p_schema
@@ -4304,8 +4319,11 @@ $end
       for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
       loop
         pipe row (l_schema_object_tab(i_idx));
+        longops_show(l_longops_rec);
       end loop;
     end if;
+    longops_done(l_longops_rec);
+    return;
   end get_schema_object;
 
   procedure get_member_ddl
@@ -5909,9 +5927,13 @@ $if not(dbms_db_version.ver_le_10) $then
     l_cursor sys_refcursor;
     l_schema_ddl t_schema_ddl;
 $end    
+    l_program constant varchar2(30 char) := 'GET_DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+
+    -- dbms_application_info stuff
+    l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
   begin
 $if cfg_pkg.c_debugging $then
-    dbug.enter(g_package_prefix || 'GET_DISPLAY_DDL_SCHEMA');
+    dbug.enter(g_package_prefix || l_program);
 $end
 
 $if dbms_db_version.ver_le_10 $then
@@ -5920,6 +5942,7 @@ $if dbms_db_version.ver_le_10 $then
       for i_idx in g_schema_ddl_tab.first .. g_schema_ddl_tab.last
       loop
         pipe row (g_schema_ddl_tab(i_idx));
+        longops_show(l_longops_rec);
       end loop;
     end if;
 $else
@@ -5937,9 +5960,12 @@ $end
       fetch l_cursor into l_schema_ddl;
       exit when l_cursor%notfound;
       pipe row (l_schema_ddl);
+      longops_show(l_longops_rec);
     end loop;
     close l_cursor;
 $end
+
+    longops_done(l_longops_rec);
 
 $if cfg_pkg.c_debugging $then
     dbug.leave;
@@ -5952,11 +5978,12 @@ $end
   function sort_objects_by_deps
   ( p_schema_object_tab in t_schema_object_tab
   , p_schema in t_schema_nn
+  , p_new_schema in t_schema
   )
   return t_schema_object_tab
   pipelined
   is
-    cursor c_dependencies(b_schema in varchar2) is
+    cursor c_dependencies is
       with allowed_types as
       ( select  t.column_value as type
         from    table(g_schema_md_object_type_tab) t
@@ -5972,8 +5999,8 @@ $end
                 , d.referenced_name
                 ) as ref_obj -- a named object
         from    all_dependencies d
-        where   d.owner = b_schema
-        and     d.referenced_owner = b_schema
+        where   d.owner = p_schema
+        and     d.referenced_owner = p_schema
                 -- ignore database links
         and     d.referenced_link_name is null
                 -- GJP 2021-08-30 Ignore synonyms: they will be created early like this (no dependencies hence dsort will put them in front)
@@ -5997,7 +6024,7 @@ $if not(pkg_ddl_util.c_#138707615_2) $then
         from    all_constraints t1
                 inner join all_constraints t2
                 on t2.owner = t1.r_owner and t2.constraint_name = t1.r_constraint_name
-        where   t1.owner = b_schema
+        where   t1.owner = p_schema
         and     t1.owner = t2.owner /* same schema */
         and     t1.constraint_type = 'R'
 $else
@@ -6025,7 +6052,7 @@ $else
                 on r.owner = c.r_owner and r.constraint_name = c.r_constraint_name
                 inner join all_objects tr
                 on tr.owner = r.owner and tr.object_name = r.table_name
-        where   c.owner = b_schema
+        where   c.owner = p_schema
         and     c.constraint_type = 'R'
         and     t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
         and     t_schema_object.dict2metadata_object_type(tr.object_type) in ( select t.type from allowed_types t )
@@ -6045,7 +6072,7 @@ $end
         from    all_mviews t1
                 inner join all_tables t2
                 on t2.owner = t1.owner and t2.table_name = t1.mview_name
-        where   t2.owner = b_schema
+        where   t2.owner = p_schema
         and     t1.build_mode = 'PREBUILT'
         union all
         -- dependencies from constraints to indexes
@@ -6070,7 +6097,7 @@ $end
                 on tc.owner = c.owner and tc.object_name = c.table_name
                 inner join all_indexes i
                 on i.owner = c.index_owner and i.index_name = c.index_name
-        where   c.owner = b_schema
+        where   c.owner = p_schema
         and     c.index_owner is not null
         and     c.index_name is not null
         and     t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
@@ -6093,15 +6120,18 @@ $end
     l_object_dependency_tab t_object_dependency_tab;
 
     l_object_by_dep_tab dbms_sql.varchar2_table;
+
+    l_schema_object t_schema_object;
     
     l_program constant varchar2(30 char) := 'SORT_OBJECTS_BY_DEPS';
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_units => 'objects');
   begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
-    dbug.print(dbug."input", 'p_schema: %s', p_schema);
+    dbug.print(dbug."input", 'p_schema: %s; p_new_schema: %s; p_schema_object_tab.count: %s', p_schema, p_new_schema, p_schema_object_tab.count);
+    dbug.print(dbug."input", 'p_schema_object_tab(1).id: %s', case when p_schema_object_tab.count > 0 then p_schema_object_tab(1).id end);    
 $end
 
     if p_schema_object_tab.count > 0
@@ -6114,7 +6144,7 @@ $end
       end loop;
     end if;
 
-    for r in c_dependencies(p_schema)
+    for r in c_dependencies
     loop
       -- object depends on object dependency so the latter must be there first
       l_object_dependency_tab(r.ref_obj.id)(r.obj.id) := null;
@@ -6126,7 +6156,21 @@ $end
     then
       for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
       loop
-        pipe row(l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx)));
+        l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
+        if p_new_schema is not null
+        then
+          l_schema_object :=
+            t_schema_object.create_schema_object
+            ( case when l_schema_object.object_schema() = p_schema then p_new_schema else l_schema_object.object_schema() end
+            , l_schema_object.object_type() 
+            , l_schema_object.object_name()
+            , case when l_schema_object.base_object_schema() = p_schema then p_new_schema else l_schema_object.base_object_schema() end
+            , l_schema_object.base_object_type() 
+            , l_schema_object.base_object_name() 
+            );
+        end if;
+        
+        pipe row(l_schema_object);
 
         longops_show(l_longops_rec);
       end loop;
@@ -6138,28 +6182,30 @@ $end
     -- 100%
     longops_done(l_longops_rec);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
     return; -- essential for a pipelined function
 
   exception
-    when no_data_needed then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+    when no_data_needed
+    then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       null; -- not a real error, just a way to some cleanup
 
     when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
-     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+    then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise program_error;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-    when others then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+    when others
+    then
       dbug.leave_on_error;
       raise;
 $end
@@ -6996,14 +7042,14 @@ $end
       ( select u.text
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                 ( g_owner
-                 , null
-                 , 1
-                 , null
-                 , g_package
-                 , 1
-                 , null
-                 , 0
+                 ( p_schema => g_owner
+                 , p_new_schema => null
+                 , p_sort_objects_by_deps => 1
+                 , p_object_type => null
+                 , p_object_names => g_package
+                 , p_object_names_include => 1
+                 , p_network_link => null
+                 , p_grantor_is_schema => 0
                  )
                ) t
         ,      table(t.ddl_tab) u
@@ -7022,14 +7068,14 @@ $end
       ( select u.text
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                 ( g_owner
-                 , g_empty
-                 , 1
-                 , null
-                 , g_package
-                 , 1
-                 , null
-                 , 0
+                 ( p_schema => g_owner
+                 , p_new_schema => g_empty
+                 , p_sort_objects_by_deps => 1
+                 , p_object_type => null
+                 , p_object_names => g_package
+                 , p_object_names_include => 1
+                 , p_network_link => null
+                 , p_grantor_is_schema => 0
                  )
                ) t
         ,      table(t.ddl_tab) u

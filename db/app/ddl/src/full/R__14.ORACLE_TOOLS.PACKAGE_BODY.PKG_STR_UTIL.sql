@@ -420,11 +420,11 @@ $end
   loop
     if l_line_idx > p_str1_tab.count and l_line_idx > p_str2_tab.count
     then
-      -- geen enkel verschil gevonden: stop
+      -- no differnce found: stop
       exit line_loop;
     elsif l_line_idx > p_str1_tab.count or l_line_idx > p_str2_tab.count
     then
-      -- er is verschil want de ene collectie is groter dan de andere: stop
+      -- there is a difference since one collection is larger than the other: stop
       p_first_line_not_equal := l_line_idx;
 
       exit line_loop;
@@ -446,7 +446,7 @@ $end
     p_first_line_not_equal := l_line_idx;
     p_first_char_not_equal := l_char_idx;
 
-    exit line_loop; -- eerste verschil gevonden: stop
+    exit line_loop; -- first difference found: stop
   end if;
 
   l_char_idx := l_char_idx + 1;
