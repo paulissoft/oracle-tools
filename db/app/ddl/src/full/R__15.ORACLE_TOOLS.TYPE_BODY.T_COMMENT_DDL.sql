@@ -39,7 +39,7 @@ is
       q'[ IS '']';
   end;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_COMMENT_DDL.UNINSTALL');
   dbug.print
   ( dbug."input"
@@ -90,7 +90,7 @@ $end
   , p_add_sqlterminator => 0 -- the target text should already contain a sqlterminator (or not)
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others

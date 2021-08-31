@@ -442,7 +442,7 @@ $if cfg_pkg.c_testing $then
   --%test
   procedure ut_sort_objects_by_deps;
 
-$end -- $if cfg_pkg.c_testing $then
+$end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 end pkg_ddl_util;
 /

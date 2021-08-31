@@ -56,7 +56,7 @@ member procedure base_object_schema
 )
 is
 begin
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.');
 end base_object_schema;
 
 member function base_object_type
@@ -183,7 +183,7 @@ deterministic
 is
   l_id varchar2(4000 char) := null;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_SCHEMA_OBJECT.ID');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
   if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
@@ -325,7 +325,7 @@ $end
       ;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_id);
   dbug.leave;
 $end
@@ -366,9 +366,9 @@ static function dict2metadata_object_type
 return varchar2
 deterministic
 is
-  l_metadata_object_type pkg_ddl_util.t_metadata_object_type;
+  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_SCHEMA_OBJECT.DICT2METADATA_OBJECT_TYPE');
 $end
 
@@ -385,7 +385,7 @@ $end
                               else replace(p_dict_object_type, ' ', '_')
                             end;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -403,7 +403,7 @@ end dict2metadata_object_type;
 member procedure print(self in t_schema_object)
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter('T_SCHEMA_OBJECT.PRINT');
   dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id());
   dbug.print(dbug."info", 'signature: %s', self.signature());
@@ -429,7 +429,7 @@ static procedure create_schema_object
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
 end create_schema_object;
 
 static function create_schema_object
@@ -448,7 +448,7 @@ return t_schema_object
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
 end create_schema_object;
 
 static function is_a_repeatable
@@ -521,7 +521,7 @@ is
     return case when upper(p_object_part) != p_object_part then '"' || p_object_part || '"' else p_object_part end;
   end get_object_part;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_SCHEMA_OBJECT.FQ_OBJECT_NAME');
 $end
 
@@ -531,7 +531,7 @@ $end
     || get_object_part(object_name())
     ;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_object_name);
   dbug.leave;
 $end
@@ -543,16 +543,16 @@ member function dict_object_type
 return varchar2
 deterministic
 is
-  l_dict_object_type pkg_ddl_util.t_dict_object_type;
-  l_metadata_object_type pkg_ddl_util.t_metadata_object_type;
+  l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
+  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_SCHEMA_OBJECT.DICT_OBJECT_TYPE');
 $end
 
   l_metadata_object_type := self.object_type();
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."info", 'l_metadata_object_type: %s', l_metadata_object_type);
 $end
 
@@ -565,7 +565,7 @@ $end
       else replace(l_metadata_object_type, '_', ' ')
     end;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_dict_object_type);
   dbug.leave;
 $end
@@ -579,13 +579,13 @@ member procedure chk
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_SCHEMA_OBJECT.CHK');
 $end
 
-  pkg_schema_object.chk_schema_object(p_schema_object => self, p_schema => p_schema);
+  oracle_tools.pkg_schema_object.chk_schema_object(p_schema_object => self, p_schema => p_schema);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end chk;

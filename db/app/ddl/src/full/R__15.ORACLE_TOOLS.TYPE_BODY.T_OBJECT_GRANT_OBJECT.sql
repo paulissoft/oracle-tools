@@ -11,7 +11,7 @@ constructor function t_object_grant_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_OBJECT_GRANT_OBJECT.T_OBJECT_GRANT_OBJECT');
   p_base_object.print();
   dbug.print
@@ -31,7 +31,7 @@ $end
   self.privilege$ := p_privilege;
   self.grantable$ := p_grantable;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -79,51 +79,51 @@ overriding member procedure chk
 , p_schema in varchar2
 )
 is
-$if pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
   pragma autonomous_transaction;
 
   -- Capture invalid objects before releasing to next enviroment.
   l_statement varchar2(4000 char) := null;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_OBJECT_GRANT_OBJECT.CHK');
 $end
 
-  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_schema() is not null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
   end if;
   if self.object_name() is not null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
   end if;
 
   if self.column_name() is not null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column name should be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column name should be null.');
   end if;
   if self.grantee() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Grantee should not be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Grantee should not be null.');
   end if;
   if self.privilege() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Privilege should not be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Privilege should not be null.');
   end if;
   if self.grantable() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Grantable should not be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Grantable should not be null.');
   end if;
 
-$if pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
   -- This is implemented by re-granting the grant statement when the grantor is equal to the logged in user.
 
-  if pkg_ddl_util.do_chk(self.object_type()) and self.network_link() is null
+  if oracle_tools.pkg_ddl_util.do_chk(self.object_type()) and self.network_link() is null
   then
     begin
       select  'GRANT ' ||
@@ -167,7 +167,7 @@ $end
 
 $end
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end chk;

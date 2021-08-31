@@ -12,7 +12,7 @@ is
   l_target_member_ddl_tab t_schema_ddl_tab;
   l_type_attribute_ddl t_schema_ddl;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TYPE_SPEC_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
@@ -46,7 +46,7 @@ $end
     l_type_attribute_ddl := null;
     if r.source_schema_ddl is null
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
@@ -58,7 +58,7 @@ $end
       l_type_attribute_ddl.uninstall(r.target_schema_ddl);
     elsif r.target_schema_ddl is null
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
 $end      
@@ -70,7 +70,7 @@ $end
       l_type_attribute_ddl.install(r.source_schema_ddl);
     elsif r.source_schema_ddl <> r.target_schema_ddl
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
       dbug.print(dbug."info", '*** target column ***');
@@ -97,7 +97,7 @@ $end
         );
       end loop;
     end if;
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     if l_type_attribute_ddl is not null
     then
       dbug.print(dbug."info", '*** result column ***');
@@ -106,7 +106,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;

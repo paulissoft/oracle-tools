@@ -20,7 +20,7 @@ is
   l_base_object_schema all_objects.owner%type := p_base_object_schema;
   l_base_object_name all_objects.object_name%type := p_base_object_name;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CREATE_SCHEMA_OBJECT (1)');
   dbug.print
   ( dbug."input"
@@ -243,7 +243,7 @@ $end
       );
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -270,7 +270,7 @@ return t_schema_object
 is
   l_schema_object t_schema_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CREATE_SCHEMA_OBJECT (2)');
 $end
 
@@ -289,13 +289,13 @@ $end
   , p_schema_object => l_schema_object
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 
   return l_schema_object;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 exception
   when others
   then
@@ -314,7 +314,7 @@ procedure create_named_object
 is
   l_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type := p_object_type;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CREATE_NAMED_OBJECT (1)');
   dbug.print
   ( dbug."input"
@@ -355,10 +355,10 @@ $end
     when 'JAVA_SOURCE'           then p_named_object := t_java_source_object(p_object_schema, p_object_name);
     when 'REFRESH_GROUP'         then p_named_object := t_refresh_group_object(p_object_schema, p_object_name);
     when 'PROCOBJ'               then p_named_object := create_procobj_object(p_owner, p_object_schema, p_object_name);
-    else raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object type "' || l_object_type || '" is not listed here.');
+    else raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type "' || l_object_type || '" is not listed here.');
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -378,7 +378,7 @@ return t_named_object
 is
   l_named_object t_schema_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CREATE_NAMED_OBJECT (2)');
 $end
 
@@ -390,13 +390,13 @@ $end
   , p_named_object => l_named_object
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 
   return treat(l_named_object as t_named_object);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 exception
   when others
   then
@@ -417,7 +417,7 @@ procedure create_constraint_object
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CREATE_CONSTRAINT_OBJECT (1)');
   p_base_object.print;
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
@@ -462,12 +462,12 @@ $end
       p_obj.search_condition$ := dbms_utility.get_hash_value(p_search_condition, 37, 1073741824);
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 exception
   when no_data_found
   then
     raise_application_error
-    ( pkg_ddl_error.c_reraise_with_backtrace
+    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
     , utl_lms.format_message
       ( 'p_object_schema: %s; p_object_name: %s'
       , p_object_schema
@@ -496,7 +496,7 @@ return t_constraint_object
 is
   l_obj t_constraint_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CREATE_CONSTRAINT_OBJECT (2)');
 $end
 
@@ -511,12 +511,12 @@ $end
   , p_obj => l_obj
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 $end
 
   return l_obj;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 exception
   when others
   then
@@ -536,7 +536,7 @@ return t_index_object
 is
   l_obj t_index_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter(g_package_prefix || 'CREATE_INDEX_OBJECT');
   dbug.print
   ( dbug."input"
@@ -563,7 +563,7 @@ $end
     and     ind.index_name = p_object_name;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -579,7 +579,7 @@ return t_procobj_object
 is
   l_obj t_procobj_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter(g_package_prefix || 'T_PROCOBJ_OBJECT');
   dbug.print
   ( dbug."input"
@@ -599,7 +599,7 @@ $end
   and     obj.object_name = p_object_name
   ;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -636,7 +636,7 @@ is
 
   r_con c_con%rowtype;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter(g_package_prefix || 'CREATE_REF_CONSTRAINT_OBJECT (1)');
   dbug.print
   ( dbug."input"
@@ -733,7 +733,7 @@ $end
     end;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end create_ref_constraint_object;
@@ -751,7 +751,7 @@ return t_ref_constraint_object
 is
   l_obj t_ref_constraint_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter(g_package_prefix || 'CREATE_REF_CONSTRAINT_OBJECT (2)');
 $end
 
@@ -766,7 +766,7 @@ $end
   , p_obj => l_obj
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -783,7 +783,7 @@ return t_table_object
 is
   l_obj t_table_object;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter(g_package_prefix || 'T_TABLE_OBJECT');
   dbug.print
   ( dbug."input"
@@ -816,7 +816,7 @@ $end
     end;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."info", 'l_obj.tablespace_name$: %s', l_obj.tablespace_name$);
   dbug.leave;
 $end
@@ -833,7 +833,7 @@ return varchar2
 is
   l_column_names varchar2(4000 char) := null;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'GET_COLUMN_NAMES (1)');
   dbug.print(dbug."input", 'p_owner: %s; p_constraint_name: %s; p_table_name: %s', p_owner, p_constraint_name, p_table_name);
 $end
@@ -852,14 +852,14 @@ $end
     l_column_names := case when l_column_names is not null then l_column_names || ',' end || '"' || r.column_name || '"'; -- " for pkg_ddl_util.parse_ddl
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'return: %s', l_column_names);
   dbug.leave;
 $end
 
   return l_column_names;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 exception
   when others
   then
@@ -876,18 +876,18 @@ return varchar2
 is
   l_column_names varchar2(4000 char) := null;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'GET_COLUMN_NAMES (2)');
   dbug.print(dbug."input", 'p_owner: %s; p_index_name: %s', p_owner, p_index_name);
 $end
 
   for r in
   ( select  ic.column_name
-$if pkg_ddl_util.c_#138550749 $then
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
     ,       ie.column_expression
 $end
     from    all_ind_columns ic
-$if pkg_ddl_util.c_#138550749 $then
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
             left join all_ind_expressions ie
             on ie.index_owner = ic.index_owner and ie.index_name = ic.index_name and ie.column_position = ic.column_position
 $end    
@@ -900,7 +900,7 @@ $end
   loop
     l_column_names :=
       case when l_column_names is not null then l_column_names || ',' end ||
-$if pkg_ddl_util.c_#138550749 $then
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
       case
         when r.column_expression is not null
         then to_char(dbms_utility.get_hash_value(r.column_expression, 37, 1073741824))
@@ -912,7 +912,7 @@ $end
     ;
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'return: %s', l_column_names);
   dbug.leave;
 $end
@@ -926,7 +926,7 @@ procedure chk_schema_object
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (1)');
   dbug.print(dbug."input", 'p_schema_object:');
   p_schema_object.print();
@@ -934,13 +934,13 @@ $end
 
   if p_schema_object.object_type() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty');
   elsif p_schema_object.dict2metadata_object_type() = p_schema_object.object_type()
   then
     null; -- ok
   else
     raise_application_error
-    ( pkg_ddl_error.c_invalid_parameters
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Object type (' ||
       p_schema_object.object_type() ||
       ') should be equal to this DBMS_METADATA object type (' ||
@@ -952,7 +952,7 @@ $end
   if (p_schema_object.base_object_type() is null) != (p_schema_object.base_object_schema() is null)
   then
     raise_application_error
-    ( pkg_ddl_error.c_invalid_parameters
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Base object type (' ||
       p_schema_object.base_object_type() ||
       ') and base object schema (' ||
@@ -964,7 +964,7 @@ $end
   if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
   then
     raise_application_error
-    ( pkg_ddl_error.c_invalid_parameters
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Base object name (' ||
       p_schema_object.base_object_name() ||
       ') and base object schema (' ||
@@ -973,7 +973,7 @@ $end
     );
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -989,7 +989,7 @@ procedure chk_schema_object
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (2)');
 $end
 
@@ -999,12 +999,12 @@ $end
   then
     null; -- ok
   else
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty or ' || p_schema);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty or ' || p_schema);
   end if;
 
   if p_dependent_or_granted_object.base_object$ is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object should not be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object should not be empty.');
   end if;
 
   -- GPA 2017-01-18 too strict for triggers, synonyms, indexes, etc.
@@ -1013,26 +1013,26 @@ $end
   then
     null; -- ok
   else
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema);
   end if;
   */
 
   if p_dependent_or_granted_object.base_object_schema() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
   end if;
 
   if p_dependent_or_granted_object.base_object_type() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object type should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object type should not be empty');
   end if;
 
   if p_dependent_or_granted_object.base_object_name() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object name should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object name should not be empty');
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -1047,12 +1047,12 @@ procedure chk_schema_object
 , p_schema in varchar2
 )
 is
-$if pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
   -- Capture invalid objects before releasing to next enviroment.
   l_status all_objects.status%type := null;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (3)');
 $end
 
@@ -1060,14 +1060,14 @@ $end
 
   if p_named_object.object_name() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
   end if;
   if p_named_object.object_schema() = p_schema
   then
     null; -- ok
   else
     raise_application_error
-    ( pkg_ddl_error.c_invalid_parameters
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Object schema (' ||
       p_named_object.object_schema() ||
       ') must be ' ||
@@ -1075,10 +1075,10 @@ $end
     );
   end if;
 
-$if pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
-  if pkg_ddl_util.do_chk(p_named_object.object_type()) and p_named_object.network_link() is null
+  if oracle_tools.pkg_ddl_util.do_chk(p_named_object.object_type()) and p_named_object.network_link() is null
   then
     begin
       select  obj.status
@@ -1101,7 +1101,7 @@ $if pkg_ddl_util.c_#140920801 $then
       when value_error
       then
         raise_application_error
-        ( pkg_ddl_error.c_object_not_valid
+        ( oracle_tools.pkg_ddl_error.c_object_not_valid
         , 'Object status (' ||
           l_status ||
           ') must be VALID'
@@ -1112,7 +1112,7 @@ $if pkg_ddl_util.c_#140920801 $then
 
 $end
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -1128,25 +1128,25 @@ procedure chk_schema_object
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (4)');
 $end
 
-  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => p_constraint_object, p_schema => p_schema);
+  oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => p_constraint_object, p_schema => p_schema);
 
   if p_constraint_object.object_schema() = p_schema
   then
     null; -- ok
   else
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
   end if;
   if p_constraint_object.base_object_schema() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
   end if;
   if p_constraint_object.constraint_type() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
   end if;
 
   case 
@@ -1154,27 +1154,27 @@ $end
     then
       if p_constraint_object.column_names() is null
       then
-        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
       end if;
       if p_constraint_object.search_condition() is not null
       then
-        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Search condition should be empty');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Search condition should be empty');
       end if;
 
     when p_constraint_object.constraint_type() in ('C')
     then
       if p_constraint_object.column_names() is not null
       then
-        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should be empty');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should be empty');
       end if;
       if p_constraint_object.search_condition() is null
       then
-        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Search condition should not be empty');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Search condition should not be empty');
       end if;
 
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others

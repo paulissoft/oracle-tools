@@ -1,4 +1,4 @@
-create or replace package pkg_ddl_error is
+create or replace package oracle_tools.pkg_ddl_error is
 
 -- The error_code is an integer in the range -20000..-20999 and the message is a character string of at most 2048 bytes.
 

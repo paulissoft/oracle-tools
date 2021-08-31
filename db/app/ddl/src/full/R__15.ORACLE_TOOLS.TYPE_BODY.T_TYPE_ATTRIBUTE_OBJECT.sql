@@ -16,7 +16,7 @@ constructor function t_type_attribute_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_ATTRIBUTE_OBJECT.T_TYPE_ATTRIBUTE_OBJECT');
   dbug.print
   ( dbug."input"
@@ -49,7 +49,7 @@ $end
   self.data_scale$ := p_data_scale;
   self.character_set_name$ := p_character_set_name;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end  
 

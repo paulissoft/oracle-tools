@@ -10,7 +10,7 @@ is
   l_pos pls_integer;
   l_start pls_integer;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.SPLIT (1)');
   dbug.print(dbug."input", 'p_str: %s; p_delimiter: %s', p_str, p_delimiter);
 $end
@@ -30,7 +30,7 @@ $end
     end if;
   end loop split_loop;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'p_str_tab.count: %s', p_str_tab.count);
   dbug.leave;
 exception
@@ -51,7 +51,7 @@ is
   l_start pls_integer;
   l_length pls_integer;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.SPLIT (2)');
   dbug.print(dbug."input", 'p_str length: %s; p_delimiter: %s', dbms_lob.getlength(p_str), p_delimiter);
 $end
@@ -91,7 +91,7 @@ $end
     end loop split_loop;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'p_str_tab.count: %s', p_str_tab.count);
   dbug.leave;
 exception
@@ -113,7 +113,7 @@ is
   l_length pls_integer;
   l_amount pls_integer;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.SPLIT (3)');
   dbug.print(dbug."input", 'p_str length: %s; p_delimiter: %s', l_length, p_delimiter);
 $end
@@ -133,7 +133,7 @@ $end
 
       l_amount := case when l_pos > 0 then l_pos - l_start else l_length + 1 - l_start end;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
       dbug.print(dbug."debug", 'l_start: %s; l_pos: %s; l_amount: %s', l_start, l_pos, l_amount);
 $end
 
@@ -158,7 +158,7 @@ $end
     end loop split_loop;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'p_str_tab.count: %s', case when p_str_tab is not null then p_str_tab.count end);
   dbug.leave;
 exception
@@ -178,14 +178,14 @@ is
   l_start pls_integer := null;
   l_end pls_integer := null;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.TRIM (1)');
   dbug.print(dbug."input", 'p_str length: %s; p_set: %s', dbms_lob.getlength(p_str), p_set);
 $end
 
   -- een dummy loop om er snel uit te springen en niet teveel if statements te hebben
   loop
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
     dbug.print(dbug."debug", 'l_length: %s', l_length);
 $end
 
@@ -211,7 +211,7 @@ $end
        end if;
     end loop;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
     dbug.print(dbug."debug", 'l_start: %s', l_start);
 $end
 
@@ -239,7 +239,7 @@ $end
        end if;
     end loop;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
     dbug.print(dbug."debug", 'l_end: %s', l_end);
 $end
 
@@ -270,7 +270,7 @@ $end
     exit; -- essentieel
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'p_str length: %s', dbms_lob.getlength(p_str));
   dbug.leave;
 exception
@@ -287,7 +287,7 @@ procedure trim
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.TRIM (2)');
   dbug.print(dbug."input", 'p_str_tab.count: %s; p_set: %s', case when p_str_tab is not null then p_str_tab.count end, p_set);
 $end
@@ -308,7 +308,7 @@ $end
     end loop;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'p_str_tab.count: %s', case when p_str_tab is not null then p_str_tab.count end);
   dbug.leave;
 exception
@@ -327,7 +327,7 @@ return integer
 is
   l_retval pls_integer;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.COMPARE (1)');
   dbug.print
   ( dbug."input"
@@ -360,7 +360,7 @@ $end
     then 1
     else dbms_lob.compare(p_str1_tab(i_idx), p_str2_tab(i_idx))
   end;
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
       dbug.print
       ( dbug."debug"
       , 'p_str1_tab(%s) length: %s; p_str1_tab(%s) length: %s; l_retval: %s'
@@ -375,14 +375,14 @@ $end
     end loop;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'return: %s', l_retval);
   dbug.leave;
 $end
 
   return l_retval;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
 exception
   when others
   then
@@ -403,7 +403,7 @@ is
   l_str2_length binary_integer;
   l_char_idx binary_integer;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.COMPARE (2)');
   dbug.print
   ( dbug."input"
@@ -456,7 +456,7 @@ $end
     l_line_idx := l_line_idx + 1;
   end loop line_loop;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print
   ( dbug."output"
   , 'p_first_line_not_equal: %s; p_first_char_not_equal: %s'
@@ -478,7 +478,7 @@ procedure append_text
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.APPEND_TEXT (1)');
   dbug.print
   ( dbug."input"
@@ -497,7 +497,7 @@ $end
     dbms_lob.writeappend(lob_loc => pio_clob, amount => length(pi_buffer), buffer => pi_buffer);
   end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print
   ( dbug."output"
   , 'dbms_lob.getlength(pio_clob): %s'
@@ -514,7 +514,7 @@ procedure append_text
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.APPEND_TEXT (2)');
 $end
 
@@ -527,7 +527,7 @@ $end
       pio_buffer := pi_text;
   end;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.leave;
 $end
 end append_text;
@@ -541,7 +541,7 @@ is
   l_buffer varchar2(32767 char) := null;
   l_text varchar2(32767 char);
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.TEXT2CLOB (1)');
   dbug.print
   ( dbug."input"
@@ -561,7 +561,7 @@ $end
   then
     for i_idx in pi_text_tab.first .. pi_text_tab.last
     loop
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'i_idx: %s', i_idx);
 $end
       l_text := pi_text_tab(i_idx); -- GPA 2016-11-30 Otherwise we get a VALUE_ERROR (?!)
@@ -571,7 +571,7 @@ $end
   -- flush the rest of the buffer
   oracle_tools.pkg_str_util.append_text(pi_buffer => l_buffer, pio_clob => pio_clob);
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.leave;
 $end
 end text2clob;
@@ -583,7 +583,7 @@ return clob
 is
   l_clob clob := null;
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.TEXT2CLOB (2)');
   dbug.print
   ( dbug."input"
@@ -598,7 +598,7 @@ $end
   , pi_append => false
   );
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.leave;
 $end
 
@@ -615,7 +615,7 @@ is
   l_first pls_integer := 1;
   l_last pls_integer := dbms_lob.getlength(pi_clob);
 begin
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter('PKG_STR_UTIL.CLOB2TEXT');
   dbug.print
   ( dbug."input"
@@ -643,7 +643,7 @@ $end
       end loop;
     end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'l_first: %s; l_last: %s', l_first, l_last);
 $end
 
@@ -666,7 +666,7 @@ $end
     end if;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_str_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.leave;
 $end
 

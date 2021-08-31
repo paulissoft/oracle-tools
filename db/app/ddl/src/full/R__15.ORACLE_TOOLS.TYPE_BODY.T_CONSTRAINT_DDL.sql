@@ -41,7 +41,7 @@ exception
   when e_constraint_name_already_used
   then null;
 end;]'
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 end migrate;
@@ -51,7 +51,7 @@ overriding member procedure uninstall
 , p_target in t_schema_ddl
 )
 is
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
   l_constraint_object t_constraint_object := treat(p_target.obj as t_constraint_object);
 $end  
 begin
@@ -65,7 +65,7 @@ begin
               '"."' ||
               p_target.obj.base_object_name() ||
               '"' ||
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
               -- When a primary/unique constraint is dropped, the associated index may be dropped too.
               -- In that case the DROP INDEX may fail.
               --
@@ -82,7 +82,7 @@ $if pkg_ddl_util.c_#138707615_2 $then
 $else
               ' DROP CONSTRAINT ' || p_target.obj.object_name()
 $end
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 end uninstall;
 
@@ -93,18 +93,18 @@ overriding member procedure add_ddl
 , p_add_sqlterminator in integer
 )
 is
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
   l_ddl_text clob;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_CONSTRAINT_DDL.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
 $end
 
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
 
   -- Primary/unique constraints with USING INDEX syntax may fail.
   --
@@ -152,7 +152,7 @@ $else
 $end
 
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
@@ -162,7 +162,7 @@ overriding member procedure execute_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_CONSTRAINT_DDL.EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -170,7 +170,7 @@ $end
 
   t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end execute_ddl;  

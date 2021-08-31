@@ -8,7 +8,7 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 , pi_object_names in varchar2 default null
 , pi_skip_repeatables in naturaln default 1
 , pi_interface in varchar2 default null
-, pi_transform_param_list in varchar2 default pkg_ddl_util.c_transform_param_list
+, pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
 , po_clob out nocopy clob
 )
 authid current_user
@@ -44,7 +44,7 @@ as
   l_units   constant varchar2(10 char) := 'rows';
   l_program constant varchar2(30 char) := 'P_GENERATE_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter('P_GENERATE_DDL');
   dbug.print
   ( dbug."input"
@@ -184,7 +184,7 @@ $end
                                                  ,units => l_units);
 
       else
-        raise_application_error(pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || l_interface_tab(i_interface_idx));
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || l_interface_tab(i_interface_idx));
       end if;
 
       l_processed := true;
@@ -192,7 +192,7 @@ $end
     exception
       when others
       then
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
         dbug.on_error;
 $end
         -- when this is the last interface tried we must reraise otherwise we try the next
@@ -205,19 +205,19 @@ $end
 
   if not(l_processed)
   then
-    raise_application_error(pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || pi_interface);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || pi_interface);
   end if;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end  
 exception
   when others
   then
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
 $end    
-    raise_application_error(pkg_ddl_error.c_reraise_with_backtrace, dbms_utility.format_error_backtrace, true);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, dbms_utility.format_error_backtrace, true);
 end p_generate_ddl;
 /
 

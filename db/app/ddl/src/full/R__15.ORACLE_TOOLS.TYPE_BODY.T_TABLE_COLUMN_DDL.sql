@@ -12,7 +12,7 @@ is
   "ADD" constant varchar2(5) := ' ADD ';
   l_data_default t_text_tab;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TABLE_COLUMN_DDL.T_TABLE_COLUMN_DDL');
 $end
 
@@ -21,7 +21,7 @@ $end
 
   /* construct the ALTER TABLE ADD COLUMN here */ 
 
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TABLE "' || l_table_column_object.base_object_schema() || '"."' || l_table_column_object.base_object_name() || '"' ||
                "ADD" || '"' || l_table_column_object.column_name() || '" '
   , pio_buffer => l_buffer
@@ -29,7 +29,7 @@ $end
   );
 
   -- datatype
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => l_table_column_object.data_type()
   , pio_buffer => l_buffer
   , pio_clob => l_clob
@@ -38,7 +38,7 @@ $end
   -- default?
   if l_table_column_object.default_length() > 0 and l_table_column_object.data_default() is not null
   then
-    pkg_str_util.append_text
+    oracle_tools.pkg_str_util.append_text
     ( pi_text => ' DEFAULT '
     , pio_buffer => l_buffer
     , pio_clob => l_clob
@@ -46,7 +46,7 @@ $end
     l_data_default := l_table_column_object.data_default();
     for i_idx in l_data_default.first .. l_data_default.last
     loop
-      pkg_str_util.append_text
+      oracle_tools.pkg_str_util.append_text
       ( pi_text => l_data_default(i_idx)
       , pio_buffer => l_buffer
       , pio_clob => l_clob
@@ -56,7 +56,7 @@ $end
 
   if l_table_column_object.nullable() = 'N'
   then
-    pkg_str_util.append_text
+    oracle_tools.pkg_str_util.append_text
     ( pi_text => ' NOT NULL'
     , pio_buffer => l_buffer
     , pio_clob => l_clob
@@ -64,7 +64,7 @@ $end
   end if;
 
   -- append the buffer to l_clob (if that has not already been done)
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_buffer => l_buffer
   , pio_clob => l_clob
   );
@@ -72,12 +72,12 @@ $end
   self.add_ddl
   ( p_verb => 'ALTER'
   , p_text => l_clob
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 
   dbms_lob.freetemporary(l_clob);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -97,7 +97,7 @@ is
   l_data_default t_text_tab;
   l_changed boolean;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TABLE_COLUMN_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
@@ -115,7 +115,7 @@ $end
     l_buffer := null;
     l_changed := false;
 
-    pkg_str_util.append_text
+    oracle_tools.pkg_str_util.append_text
     ( pi_text => 'ALTER TABLE "' || l_source_table_column_object.base_object_schema() || '"."' || l_source_table_column_object.base_object_name() || '"' ||
                  ' MODIFY "' || l_source_table_column_object.member_name() || '" '
     , pio_buffer => l_buffer
@@ -128,7 +128,7 @@ $end
         -- datatype changed?
         if l_source_table_column_object.data_type() != l_target_table_column_object.data_type()
         then
-          pkg_str_util.append_text
+          oracle_tools.pkg_str_util.append_text
           ( pi_text => l_source_table_column_object.data_type()
           , pio_buffer => l_buffer
           , pio_clob => l_clob
@@ -141,7 +141,7 @@ $end
         -- default changed?
         if l_source_table_column_object.data_default() != l_target_table_column_object.data_default()
         then
-          pkg_str_util.append_text
+          oracle_tools.pkg_str_util.append_text
           ( pi_text => 'DEFAULT '
           , pio_buffer => l_buffer
           , pio_clob => l_clob
@@ -151,14 +151,14 @@ $end
           then
             for i_idx in l_data_default.first .. l_data_default.last
             loop
-              pkg_str_util.append_text
+              oracle_tools.pkg_str_util.append_text
               ( pi_text => l_data_default(i_idx)
               , pio_buffer => l_buffer
               , pio_clob => l_clob
               );
             end loop;
           else
-            pkg_str_util.append_text
+            oracle_tools.pkg_str_util.append_text
             ( pi_text => 'NULL'
             , pio_buffer => l_buffer
             , pio_clob => l_clob
@@ -171,7 +171,7 @@ $end
       then
         if l_source_table_column_object.nullable() != l_target_table_column_object.nullable() 
         then
-          pkg_str_util.append_text
+          oracle_tools.pkg_str_util.append_text
           ( pi_text => case l_source_table_column_object.nullable() when 'N' then 'NOT NULL' else 'NULL' end
           , pio_buffer => l_buffer
           , pio_clob => l_clob
@@ -183,7 +183,7 @@ $end
     if l_changed
     then
       -- append the buffer to l_clob (if that has not already been done)
-      pkg_str_util.append_text
+      oracle_tools.pkg_str_util.append_text
       ( pi_buffer => l_buffer
       , pio_clob => l_clob
       );
@@ -191,7 +191,7 @@ $end
       self.add_ddl
       ( p_verb => 'ALTER'
       , p_text => l_clob
-      , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+      , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
       );
     end if;
   end loop;
@@ -201,7 +201,7 @@ $end
     dbms_lob.freetemporary(l_clob);
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
@@ -212,7 +212,7 @@ overriding member procedure uninstall
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TABLE_COLUMN_DDL.UNINSTALL');
 $end
 
@@ -229,10 +229,10 @@ $end
               ' DROP COLUMN "' ||
               treat(p_target.obj as t_table_column_object).member_name() ||
               '"'
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;

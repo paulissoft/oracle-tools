@@ -29,7 +29,7 @@ begin
                 '" REBUILD TABLESPACE "' ||
                 l_source_index_object.tablespace_name() ||
                 '"'
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 
@@ -65,7 +65,7 @@ exception
   when e_name_already_used
   then null;
 end;]'
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 end migrate;
@@ -78,7 +78,7 @@ is
   e_name_already_used exception;
   pragma exception_init(e_name_already_used, -955);
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_INDEX_DDL.EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -86,13 +86,13 @@ $end
 
   t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 exception
   when e_name_already_used
   then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
     null;

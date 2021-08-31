@@ -10,7 +10,7 @@ return self as result
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.CREATE_INDEX_OBJECT
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
 end;
 
 constructor function t_index_object
@@ -24,7 +24,7 @@ return self as result
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.CREATE_INDEX_OBJECT
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
 end;
 
 -- begin of getter(s)
@@ -113,7 +113,7 @@ return varchar2
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.GET_COLUMN_NAMES
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.GET_COLUMN_NAMES');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.GET_COLUMN_NAMES');
 end get_column_names;
 
 overriding member procedure chk
@@ -122,22 +122,22 @@ overriding member procedure chk
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_INDEX_OBJECT.CHK');
 $end
 
-  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_name() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
   end if;
   if self.column_names() is null
   then
-    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end chk;

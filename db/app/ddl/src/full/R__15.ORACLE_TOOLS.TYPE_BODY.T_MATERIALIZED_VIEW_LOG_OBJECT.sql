@@ -8,7 +8,7 @@ constructor function t_materialized_view_log_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_MATERIALIZED_VIEW_LOG_OBJECT.T_MATERIALIZED_VIEW_LOG_OBJECT');
   dbug.print
   ( dbug."input"
@@ -22,7 +22,7 @@ $end
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 

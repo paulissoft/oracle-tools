@@ -13,7 +13,7 @@ return self as result
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.CREATE_CONSTRAINT_OBJECT
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_CONSTRAINT_OBJECT.T_CONSTRAINT_OBJECT');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_CONSTRAINT_OBJECT.T_CONSTRAINT_OBJECT');
 end;
 
 -- begin of getter(s)
@@ -94,7 +94,7 @@ return varchar2
 is
 begin
   -- must use PKG_SCHEMA_OBJECT.GET_COLUMN_NAMES
-  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_CONSTRAINT_OBJECT.GET_COLUMN_NAMES');
+  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_CONSTRAINT_OBJECT.GET_COLUMN_NAMES');
 end get_column_names;
 
 overriding member procedure chk
@@ -103,13 +103,13 @@ overriding member procedure chk
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_CONSTRAINT_OBJECT.CHK');
 $end
 
-  pkg_schema_object.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
+  oracle_tools.pkg_schema_object.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others

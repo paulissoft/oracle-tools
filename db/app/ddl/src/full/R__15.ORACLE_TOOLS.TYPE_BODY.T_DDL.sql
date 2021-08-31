@@ -9,7 +9,7 @@ constructor function t_ddl
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_DDL.T_DDL');
 $end
 
@@ -17,7 +17,7 @@ $end
   self.verb$ := p_verb;
   self.text := p_text;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -44,12 +44,12 @@ member procedure print
 ( self in t_ddl
 )
 is
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   l_clob clob := null;
   l_lines_tab dbms_sql.varchar2a;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter('T_DDL.PRINT');
   dbug.print
   ( dbug."info"
@@ -59,12 +59,12 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
   );
   if cardinality(self.text) > 0
   then
-    pkg_str_util.text2clob
+    oracle_tools.pkg_str_util.text2clob
     ( pi_text_tab => self.text
     , pio_clob => l_clob
     , pi_append => false
     );
-    pkg_str_util.split
+    oracle_tools.pkg_str_util.split
     ( p_str => l_clob
     , p_delimiter => chr(10)
     , p_str_tab => l_lines_tab
@@ -113,7 +113,7 @@ is
       end;
   end cmp;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_DDL.COMPARE');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -169,7 +169,7 @@ $end
     end if;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'result: %s', l_result);
   dbug.leave;
 $end

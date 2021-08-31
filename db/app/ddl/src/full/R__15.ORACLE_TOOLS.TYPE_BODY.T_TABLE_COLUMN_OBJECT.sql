@@ -22,7 +22,7 @@ constructor function t_table_column_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TABLE_COLUMN_OBJECT.T_TABLE_COLUMN_OBJECT');
   dbug.print
   ( dbug."input"
@@ -50,7 +50,7 @@ $end
   self.char_length$ := p_char_length;
   self.char_used$ := p_char_used;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 

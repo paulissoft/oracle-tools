@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION "ORACLE_TOOLS"."F_GENERATE_DDL"
 , pi_object_names_include in natural default null
 , pi_object_names in varchar2 default null
 , pi_skip_repeatables in naturaln default 1
-, pi_transform_param_list in varchar2 default pkg_ddl_util.c_transform_param_list
+, pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
 , pi_interface in varchar2 default null
 )
 return clob
@@ -17,7 +17,7 @@ as
 
   l_clob clob := null;
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter('F_GENERATE_DDL');
   dbug.print
   ( dbug."input"
@@ -54,13 +54,13 @@ $end
 
   commit; -- see the pragma
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 
   return l_clob;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then

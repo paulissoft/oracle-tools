@@ -12,7 +12,7 @@ is
   l_target_member_ddl_tab t_schema_ddl_tab;
   l_table_column_ddl t_schema_ddl;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TABLE_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
@@ -24,7 +24,7 @@ $end
   , p_schema_ddl => self
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print
   ( dbug."info"
   , 'l_source_table_object.tablespace_name(): %s; l_target_table_object.tablespace_name(): %s'
@@ -46,7 +46,7 @@ $end
                 '" MOVE TABLESPACE "' ||
                 l_source_table_object.tablespace_name() ||
                 '"'
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
 
     -- the table indexes will become unusable after the move tablespace so rebuild them (dynamically)
@@ -68,7 +68,7 @@ BEGIN
     EXECUTE IMMEDIATE R.CMD;
   END LOOP;
 END;]'
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 
@@ -94,7 +94,7 @@ END;]'
     l_table_column_ddl := null;
     if r.source_schema_ddl is null
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
@@ -106,7 +106,7 @@ $end
       l_table_column_ddl.uninstall(r.target_schema_ddl);
     elsif r.target_schema_ddl is null
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
 $end      
@@ -118,7 +118,7 @@ $end
       l_table_column_ddl.install(r.source_schema_ddl);
     elsif r.source_schema_ddl <> r.target_schema_ddl
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
       dbug.print(dbug."info", '*** target column ***');
@@ -145,7 +145,7 @@ $end
         );
       end loop;
     end if;
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     if l_table_column_ddl is not null
     then
       dbug.print(dbug."info", '*** result column ***');
@@ -154,7 +154,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
@@ -165,17 +165,17 @@ overriding member procedure uninstall
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TABLE_DDL.UNINSTALL');
 $end
 
   self.add_ddl
   ( p_verb => 'DROP'
   , p_text => 'DROP ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name() || ' PURGE'
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;  
@@ -191,7 +191,7 @@ is
   l_find_expr constant varchar2(100) := '(SEGMENT CREATION (DEFERRED|IMMEDIATE))';
   l_repl_expr constant varchar2(100) := null;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TABLE_DDL.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -204,7 +204,7 @@ $end
   , p_add_sqlterminator => p_add_sqlterminator
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;

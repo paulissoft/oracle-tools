@@ -16,7 +16,7 @@ constructor function t_type_method_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_METHOD_OBJECT.T_TYPE_METHOD_OBJECT');
   dbug.print
   ( dbug."input"
@@ -38,7 +38,7 @@ $end
   self.overriding$ := p_overriding;
   self.arguments := p_arguments;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -146,7 +146,7 @@ is
     l_signature := l_signature || p_text;
   end add;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_METHOD_OBJECT.SIGNATURE');
 $end
 
@@ -199,7 +199,7 @@ $end
     add(case when l_is_constructor then 'SELF AS RESULT' else self.arguments(1).data_type() end);
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_signature);
   dbug.leave;
 $end
@@ -213,19 +213,19 @@ overriding member procedure chk
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_METHOD_OBJECT.CHK');
   dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.parameters() + self.results() = nvl(cardinality(self.arguments), 0)
   then
     null;
   else
     raise_application_error
-    ( pkg_ddl_error.c_invalid_parameters
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') has "' ||
@@ -243,7 +243,7 @@ $end
     null;
   else
     raise_application_error
-    ( pkg_ddl_error.c_invalid_parameters
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') must have a TYPE_SPEC as its base object: ' ||
@@ -251,7 +251,7 @@ $end
     );
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;

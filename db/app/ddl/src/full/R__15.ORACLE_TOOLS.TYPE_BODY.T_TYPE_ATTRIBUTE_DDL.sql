@@ -12,7 +12,7 @@ is
   " ADD " constant varchar2(5) := ' ADD ';
   l_data_default t_text_tab;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_ATTRIBUTE_DDL.T_TYPE_ATTRIBUTE_DDL');
 $end
 
@@ -21,7 +21,7 @@ $end
 
   /* construct the ALTER TYPE ADD ATTRIBUTE here */ 
 
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TYPE "' || l_type_attribute_object.base_object_schema() || '"."' || l_type_attribute_object.base_object_name() || '"' ||
                " ADD " || 'ATTRIBUTE "' || l_type_attribute_object.member_name() || '" ' || l_type_attribute_object.data_type()
   , pio_buffer => l_buffer
@@ -29,7 +29,7 @@ $end
   );
 
   -- append the buffer to l_clob (if that has not already been done)
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_buffer => l_buffer
   , pio_clob => l_clob
   );
@@ -41,7 +41,7 @@ $end
 
   dbms_lob.freetemporary(l_clob);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -60,7 +60,7 @@ is
   l_target_type_attribute_object t_type_attribute_object := treat(p_target.obj as t_type_attribute_object);
   l_changed boolean;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_ATTRIBUTE_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
@@ -74,7 +74,7 @@ $end
 
   l_changed := false;
 
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TYPE "' || l_source_type_attribute_object.base_object_schema() || '"."' || l_source_type_attribute_object.base_object_name() || '"' ||
                ' MODIFY "' || l_source_type_attribute_object.member_name() || '" '
   , pio_buffer => l_buffer
@@ -84,7 +84,7 @@ $end
   -- datatype changed?
   if l_source_type_attribute_object.data_type() != l_target_type_attribute_object.data_type()
   then
-    pkg_str_util.append_text
+    oracle_tools.pkg_str_util.append_text
     ( pi_text => l_source_type_attribute_object.data_type()
     , pio_buffer => l_buffer
     , pio_clob => l_clob
@@ -95,7 +95,7 @@ $end
   if l_changed
   then
     -- append the buffer to l_clob (if that has not already been done)
-    pkg_str_util.append_text
+    oracle_tools.pkg_str_util.append_text
     ( pi_buffer => l_buffer
     , pio_clob => l_clob
     );
@@ -103,7 +103,7 @@ $end
     self.add_ddl
     ( p_verb => 'ALTER'
     , p_text => l_clob
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 
@@ -112,7 +112,7 @@ $end
     dbms_lob.freetemporary(l_clob);
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end migrate;
@@ -123,7 +123,7 @@ overriding member procedure uninstall
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_ATTRIBUTE_DDL.UNINSTALL');
 $end
 
@@ -140,10 +140,10 @@ $end
               ' DROP ATTRIBUTE "' ||
               treat(p_target.obj as t_type_attribute_object).member_name() ||
               '"'
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end uninstall;

@@ -11,7 +11,7 @@ is
   l_clob clob := null;
   " ADD  " constant varchar2(6) := ' ADD  '; -- so we can replace 'ADD ' by 'DROP'
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('T_TYPE_METHOD_DDL.T_TYPE_METHOD_DDL');
 $end
 
@@ -19,26 +19,26 @@ $end
   self.ddl_tab := t_ddl_tab();
 
   /* construct the ALTER TYPE ADD METHOD here */ 
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TYPE "' || l_type_method_object.base_object_schema() || '"."' || l_type_method_object.base_object_name() || '"' || " ADD  " || chr(10)
   , pio_buffer => l_buffer
   , pio_clob => l_clob
   );
 
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => l_type_method_object.signature()
   , pio_buffer => l_buffer
   , pio_clob => l_clob
   );
 
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_text => chr(10) || 'CASCADE'
   , pio_buffer => l_buffer
   , pio_clob => l_clob
   );
 
   -- append the buffer to l_clob (if that has not already been done)
-  pkg_str_util.append_text
+  oracle_tools.pkg_str_util.append_text
   ( pi_buffer => l_buffer
   , pio_clob => l_clob
   );
@@ -48,7 +48,7 @@ $end
 
   dbms_lob.freetemporary(l_clob);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -62,7 +62,7 @@ overriding member procedure migrate
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TYPE_METHOD_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
@@ -77,7 +77,7 @@ $end
   self.uninstall(p_target => p_target);
   self.install(p_source => p_source);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
@@ -88,7 +88,7 @@ overriding member procedure uninstall
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_TYPE_METHOD_DDL.UNINSTALL');
 $end
 
@@ -96,7 +96,7 @@ $end
 
   self.ddl_tab(1).text(1) := replace(self.ddl_tab(1).text(1), 'ADD ', 'DROP');
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;
