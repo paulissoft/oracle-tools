@@ -3,6 +3,70 @@ is
 
 -- LOCAL
 
+type t_longops_rec is record (
+  rindex binary_integer
+, slno binary_integer
+, sofar binary_integer
+, totalwork binary_integer
+, op_name varchar2(64 char)
+, units varchar2(10 char)
+, target_desc varchar2(32 char)
+);
+
+function longops_init
+( p_target_desc in varchar2
+, p_totalwork in binary_integer default 0
+, p_op_name in varchar2 default 'fetch'
+, p_units in varchar2 default 'rows'
+)
+return t_longops_rec
+is
+  l_longops_rec t_longops_rec;
+begin
+  l_longops_rec.rindex := dbms_application_info.set_session_longops_nohint;
+  l_longops_rec.slno := null;
+  l_longops_rec.sofar := 0;
+  l_longops_rec.totalwork := p_totalwork;
+  l_longops_rec.op_name := p_op_name;
+  l_longops_rec.units := p_units;
+  l_longops_rec.target_desc := p_target_desc;
+
+  longops_show(l_longops_rec, 0);
+
+  return l_longops_rec;
+end longops_init;
+
+procedure longops_show
+( p_longops_rec in out nocopy t_longops_rec
+, p_increment in naturaln default 1
+)
+is
+begin
+  p_longops_rec.sofar := p_longops_rec.sofar + p_increment;
+  dbms_application_info.set_session_longops( rindex => p_longops_rec.rindex
+                                           , slno => p_longops_rec.slno
+                                           , op_name => p_longops_rec.op_name
+                                           , sofar => p_longops_rec.sofar
+                                           , totalwork => p_longops_rec.totalwork
+                                           , target_desc => p_longops_rec.target_desc
+                                           , units => p_longops_rec.units
+                                           );
+end longops_show;                                             
+
+procedure longops_done
+( p_longops_rec in out nocopy t_longops_rec
+)
+is
+begin
+  if p_longops_rec.totalwork = p_longops_rec.sofar
+  then
+    null; -- nothing has changed and dbms_application_info.set_session_longops() would show a duplicate
+  else
+    p_longops_rec.totalwork := p_longops_rec.sofar;
+    longops_show(p_longops_rec, 0);
+  end if;
+end longops_done;
+
 $if cfg_pkg.c_testing $then
 
 function called_by_utplsql
@@ -375,18 +439,18 @@ return t_errors_tab
 pipelined
 is
   pragma autonomous_transaction; -- DDL is issued
+
   l_object_name_tab constant sys.odcivarchar2list :=
     list2collection
     ( p_value_list => replace(replace(replace(p_object_names, chr(9)), chr(10)), chr(13))
     , p_sep => ','
     , p_ignore_null => 1
     );
+    
   l_object_name_type_tab sys.odcivarchar2list := sys.odcivarchar2list();
-begin
-  cfg_install_pkg.setup_session(p_plsql_warnings => p_plsql_warnings);
-
-  for r_obj in
-  ( select  o.object_name
+  
+  cursor c_obj is
+    select  o.object_name
     ,       o.object_type
     ,       case
               when o.object_type in ('FUNCTION', 'PACKAGE', 'PROCEDURE', 'TRIGGER', 'TYPE', 'VIEW')
@@ -396,6 +460,7 @@ begin
               when instr(o.object_type, ' BODY') > 0
               then 'ALTER ' || replace(o.object_type, ' BODY') || ' ' || o.object_name || ' COMPILE BODY'
             end as command
+    ,       ( select count(*) from user_dependencies d where d.type = o.object_type and d.name = o.object_name ) as nr_deps
     from    user_objects o
     where   o.object_type in
             ( 'VIEW'
@@ -410,18 +475,52 @@ begin
             , 'JAVA CLASS'
             )
     and     o.object_name not like 'BIN$%' -- Oracle 10g Recycle Bin
-    and     o.object_name != $$PLSQL_UNIT -- do not recompile this package (body)
+    and     o.object_name not in ($$PLSQL_UNIT, 'CFG_INSTALL_PKG') -- do not recompile this package (body) nor cfg_install_pkg due to cfg_install_pkg.setup_session()
     and     ( p_object_names_include is null or
               ( p_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(l_object_name_tab) t ) ) or
               ( p_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(l_object_name_tab) t ) )
             )
-  )
-  loop
-    l_object_name_type_tab.extend(1);
-    l_object_name_type_tab(l_object_name_type_tab.last) := r_obj.object_name || '|' || r_obj.object_type;
-    
-    execute immediate r_obj.command;    
-  end loop;
+    order by
+            nr_deps;
+
+  type t_obj_tab is table of c_obj%rowtype;
+
+  l_obj_tab t_obj_tab;
+
+  r_obj c_obj%rowtype;
+
+  -- dbms_application_info stuff
+  l_longops_rec t_longops_rec;
+begin
+  cfg_install_pkg.setup_session(p_plsql_warnings => p_plsql_warnings);
+
+  open c_obj;
+  fetch c_obj bulk collect into l_obj_tab;
+  close c_obj;
+
+  l_longops_rec := longops_init(p_target_desc => 'SHOW_COMPILE_ERRORS', p_totalwork => l_obj_tab.count, p_op_name => 'compile', p_units => 'objects');
+
+  if l_obj_tab.count > 0
+  then
+    for i_idx in l_obj_tab.first .. l_obj_tab.last
+    loop
+      r_obj := l_obj_tab(i_idx);
+      
+      l_object_name_type_tab.extend(1);
+      l_object_name_type_tab(l_object_name_type_tab.last) := r_obj.object_name || '|' || r_obj.object_type;
+
+      begin
+        execute immediate r_obj.command;
+      exception
+        when others
+        then null;
+      end;
+
+      longops_show(l_longops_rec);
+    end loop;
+  end if;
+
+  longops_done(l_longops_rec);
 
   for r_err in
   ( select  e.*
