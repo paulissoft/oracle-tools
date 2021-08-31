@@ -8,36 +8,8 @@ constructor function t_table_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TABLE_OBJECT.T_TABLE_OBJECT (1)');
-  dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
-$end
-
-  self.network_link$ := null;
-  self.object_schema$ := p_object_schema;
-  self.object_name$ := p_object_name;
-
-  begin
-    -- standard table?
-    select  t.tablespace_name
-    into    self.tablespace_name$
-    from    all_tables t
-    where   t.owner = p_object_schema
-    and     t.table_name = p_object_name
-    ;
-  exception
-    when no_data_found
-    then
-      -- maybe a temporary table
-      self.tablespace_name$ := null;
-  end;
-
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.print(dbug."info", 'self.tablespace_name$: %s', self.tablespace_name$);
-  dbug.leave;
-$end
-
-  return;
+  -- must use PKG_DDL_UTIL.CREATE_TABLE_OBJECT
+  raise_application_error(pkg_ddl_error.c_not_implemented, 'T_TABLE_OBJECT.T_TABLE_OBJECT (1)');
 end;
 
 constructor function t_table_object

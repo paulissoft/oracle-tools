@@ -447,6 +447,11 @@ procedure dbms_output_enable
 )
 is
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.DBMS_OUTPUT_ENABLE');
+  dbug.print(dbug."input", 'p_db_link: %s; p_buffer_size: %s', p_db_link, p_buffer_size);
+$end
+
   -- check SQL injection
   if dbms_assert.simple_sql_name(p_db_link) is null
   then
@@ -456,6 +461,15 @@ begin
   execute immediate
     utl_lms.format_message('call dbms_output.enable@%s(:b1)', p_db_link)
     using p_buffer_size;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end dbms_output_enable;
 
 procedure dbms_output_clear
@@ -463,6 +477,11 @@ procedure dbms_output_clear
 )
 is
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.DBMS_OUTPUT_CLEAR');
+  dbug.print(dbug."input", 'p_db_link: %s', p_db_link);
+$end
+
   -- check SQL injection
   if dbms_assert.simple_sql_name(p_db_link) is null
   then
@@ -480,6 +499,15 @@ begin
 end;'
     , p_db_link
     );
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end dbms_output_clear;    
 
 procedure dbms_output_flush
@@ -487,6 +515,11 @@ procedure dbms_output_flush
 )
 is
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.DBMS_OUTPUT_FLUSH');
+  dbug.print(dbug."input", 'p_db_link: %s', p_db_link);
+$end
+
   -- check SQL injection
   if dbms_assert.simple_sql_name(p_db_link) is null
   then
@@ -508,6 +541,15 @@ begin
 end;'
     , p_db_link
     );
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end dbms_output_flush;
 
 $if cfg_pkg.c_testing $then

@@ -56,6 +56,14 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS -- -*-coding: ut
 
   c_object_no_dependencies_tab constant t_object_natural_tab := get_object_no_dependencies_tab; -- initialisation
 
+  "schema_version" constant user_objects.object_name%type := 'schema_version';
+  
+  "flyway_schema_history" constant user_objects.object_name%type := 'flyway_schema_history';
+
+  "CREATE$JAVA$LOB$TABLE" constant user_objects.object_name%type := 'CREATE$JAVA$LOB$TABLE';
+
+  c_object_to_ignore_tab constant t_text_tab := t_text_tab("schema_version", "flyway_schema_history", "CREATE$JAVA$LOB$TABLE");
+
 $if cfg_pkg.c_testing $then
 
   "EMPTY"                    constant all_objects.owner%type := 'EMPTY';
@@ -913,24 +921,27 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
 
             l_base_object :=
-              t_named_object.create_named_object
-              ( p_object_type => p_base_object_type
+              pkg_schema_object.create_named_object
+              ( p_owner => p_schema
+              , p_object_type => p_base_object_type
               , p_object_schema => p_base_object_schema
               , p_object_name => p_base_object_name
               );
 
             case
               when l_constraint like l_constraint_expr_tab(2) -- primary key
-              then l_constraint_object := t_constraint_object
-                                          ( p_base_object => l_base_object
+              then l_constraint_object := pkg_schema_object.create_constraint_object
+                                          ( p_owner => p_schema
+                                          , p_base_object => l_base_object
                                           , p_object_schema => p_base_object_schema
                                           , p_object_name => null -- constraint name is not known
                                           , p_constraint_type => 'P'
                                           , p_column_names => l_column_names
                                           );
               when l_constraint like l_constraint_expr_tab(3) -- unique key
-              then l_constraint_object := t_constraint_object
-                                          ( p_base_object => l_base_object
+              then l_constraint_object := pkg_schema_object.create_constraint_object
+                                          ( p_owner => p_schema
+                                          , p_base_object => l_base_object
                                           , p_object_schema => p_base_object_schema
                                           , p_object_name => null -- constraint name is not known
                                           , p_constraint_type => 'U'
@@ -956,8 +967,9 @@ $end
                 and     obj.object_name = l_ref_object_name;
 
                 l_ref_object :=
-                  t_named_object.create_named_object
-                  ( p_object_schema => l_ref_object_schema
+                  pkg_schema_object.create_named_object
+                  ( p_owner => p_schema
+                  , p_object_schema => l_ref_object_schema
                   , p_object_type => l_ref_object_type
                   , p_object_name => l_ref_object_name
                   );
@@ -966,8 +978,9 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
                 l_ref_object.print();
 $end
 
-                l_constraint_object := t_ref_constraint_object
-                                       ( p_base_object => l_base_object
+                l_constraint_object := pkg_schema_object.create_ref_constraint_object
+                                       ( p_owner => p_schema
+                                       , p_base_object => l_base_object
                                        , p_object_schema => p_base_object_schema
                                        , p_object_name => null -- constraint name unknown
                                        , p_constraint_type => 'R'
@@ -993,10 +1006,10 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
 $end
                 for r_cc in
                 ( select  c.constraint_name
-                  ,       oracle_tools.t_constraint_object.get_column_names
-                          ( c.owner
-                          , c.constraint_name
-                          , c.table_name
+                  ,       pkg_schema_object.get_column_names
+                          ( p_owner => p_schema /* c.owner */ -- GJP 2021-08-31 Necessary in case of a remap
+                          , p_constraint_name => c.constraint_name
+                          , p_table_name => c.table_name
                           ) as column_names
                   from    all_constraints c
                   where   c.owner = p_schema
@@ -1041,14 +1054,16 @@ $end
             end if;
 
             l_base_object :=
-              t_named_object.create_named_object
-              ( p_object_type => p_base_object_type
+              pkg_schema_object.create_named_object
+              ( p_owner => p_schema
+              , p_object_type => p_base_object_type
               , p_object_schema => p_base_object_schema
               , p_object_name => p_base_object_name
               );
 
-            l_constraint_object := t_constraint_object
-                                   ( p_base_object => l_base_object
+            l_constraint_object := pkg_schema_object.create_constraint_object
+                                   ( p_owner => p_schema
+                                   , p_base_object => l_base_object
                                    , p_object_schema => p_base_object_schema
                                    , p_object_name => null -- constraint name is not known
                                    , p_constraint_type => 'C'
@@ -1242,7 +1257,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     ( dbug."input"
     , 'p_schema: %s; p_ddl.ddlText: %s'
     , p_schema
-    , dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 100)
+    , dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 200)
     );
 $end
 
@@ -1364,9 +1379,6 @@ $end
     -- no Flashback archive tables/indexes
     add(t_text_tab('TABLE', 'INDEX'), 'SYS\_FBA\_%');
     
-    -- no Oracle Java table
-    add(t_text_tab('TABLE'), 'CREATE$JAVA$LOB$TABLE');
-
     -- no system generated indexes
     add('INDEX', 'SYS\_C%');
 
@@ -1383,11 +1395,11 @@ $end
     -- no Oracle generated datapump tables
     add(t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_EXPORT\_FULL\_%');
 
-    -- no Flyway stuff
-    -- old schema history table
-    add(t_text_tab('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT'), 'schema_version%');
-    -- new schema history table
-    add(t_text_tab('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT'), 'flyway_schema_history%');
+    -- no Flyway stuff and other Oracle things
+    for i_idx in c_object_to_ignore_tab.first .. c_object_to_ignore_tab.last
+    loop
+      add(t_text_tab('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT'), c_object_to_ignore_tab(i_idx) || '%');
+    end loop;
 
     -- no identity column sequences
     add(t_text_tab('SEQUENCE', 'OBJECT_GRANT'), 'ISEQ$$%');
@@ -1425,45 +1437,49 @@ $end
 
           for i_idx in l_object_type_tab.first .. l_object_type_tab.last
           loop
-            begin
+            -- ORA-31604: invalid transform NAME parameter "MODIFY" for object type PROCOBJ in function ADD_TRANSFORM
+            if l_object_type_tab(i_idx) not in ('PROCOBJ')
+            then
+              begin
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-              dbug.print(dbug."info", 'l_object_type_tab(%s): %s', i_idx, l_object_type_tab(i_idx));
+                dbug.print(dbug."info", 'l_object_type_tab(%s): %s', i_idx, l_object_type_tab(i_idx));
 $end
-              l_transform_handle :=
-                dbms_metadata.add_transform
-                ( handle => p_handle
-                , name => 'MODIFY'
-                , object_type => l_object_type_tab(i_idx)
-                );
+                l_transform_handle :=
+                  dbms_metadata.add_transform
+                  ( handle => p_handle
+                  , name => 'MODIFY'
+                  , object_type => l_object_type_tab(i_idx)
+                  );
 
-              if p_object_schema != p_new_object_schema
-              then
-                dbms_metadata.set_remap_param
-                ( transform_handle => l_transform_handle
-                , name => 'REMAP_SCHEMA'
-                , old_value => p_object_schema
-                , new_value => p_new_object_schema
-                , object_type => l_object_type_tab(i_idx)
-                );
-              end if;
-              if p_base_object_schema != p_new_object_schema
-              then
-                dbms_metadata.set_remap_param
-                ( transform_handle => l_transform_handle
-                , name => 'REMAP_SCHEMA'
-                , old_value => p_base_object_schema
-                , new_value => p_new_object_schema
-                , object_type => l_object_type_tab(i_idx)
-                );
-              end if;
-            exception
-              when e_invalid_transform_parameter or e_wrong_transform_object_type
-              then
+                if p_object_schema != p_new_object_schema
+                then
+                  dbms_metadata.set_remap_param
+                  ( transform_handle => l_transform_handle
+                  , name => 'REMAP_SCHEMA'
+                  , old_value => p_object_schema
+                  , new_value => p_new_object_schema
+                  , object_type => l_object_type_tab(i_idx)
+                  );
+                end if;
+                if p_base_object_schema != p_new_object_schema
+                then
+                  dbms_metadata.set_remap_param
+                  ( transform_handle => l_transform_handle
+                  , name => 'REMAP_SCHEMA'
+                  , old_value => p_base_object_schema
+                  , new_value => p_new_object_schema
+                  , object_type => l_object_type_tab(i_idx)
+                  );
+                end if;
+              exception
+                when e_invalid_transform_parameter or e_wrong_transform_object_type
+                then
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-                dbug.on_error;
+                  dbug.on_error;
 $end
-                null;
-            end;
+                  null;
+              end;
+            end if;
           end loop;
         end if;
       else
@@ -1654,6 +1670,33 @@ $end
       return l_in_list;
     end in_list_expr;
 
+    procedure set_filter(handle in number, name in varchar2, value in varchar2)
+    is
+    begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+      dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
+$end
+      dbms_metadata.set_filter(handle, name, value);
+    end set_filter;
+
+    procedure set_filter(handle in number, name in varchar2, value in boolean default true)
+    is
+    begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+      dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, dbug.cast_to_varchar2(value));
+$end
+      dbms_metadata.set_filter(handle, name, value);
+    end set_filter;
+
+    procedure set_filter(handle in number, name in varchar2, value in number)
+    is
+    begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+      dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
+$end
+      dbms_metadata.set_filter(handle, name, value);
+    end set_filter;
+ 
     procedure set_exclude_name_expr(p_object_type in t_metadata_object_type, p_name in varchar2)
     is
       l_exclude_name_expr_tab t_text_tab;
@@ -1663,7 +1706,7 @@ $end
       then
         for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
         loop
-          dbms_metadata.set_filter(handle => p_handle, name => p_name, value => q'[LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']');
+          set_filter(handle => p_handle, name => p_name, value => q'[LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']');
         end loop;
       end if;
     end set_exclude_name_expr;
@@ -1680,9 +1723,9 @@ $end
     if p_object_type = 'SCHEMA_EXPORT'
     then
       -- Use filters to specify the schema. See SCHEMA_EXPORT_OBJECTS for a complete overview.
-      dbms_metadata.set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
-      -- dbms_metadata.set_filter(handle => p_handle, name => 'INCLUDE_USER', value => true);
-      dbms_metadata.set_filter
+      set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+      -- set_filter(handle => p_handle, name => 'INCLUDE_USER', value => true);
+      set_filter
       ( handle => p_handle
       , name =>  'EXCLUDE_PATH_EXPR'
       , value => 'in ('   ||
@@ -1738,34 +1781,28 @@ $end
             raise program_error;
           end if;
 
-          dbms_metadata.set_filter(handle => p_handle, name => 'SYSTEM_GENERATED', value => false);
-          dbms_metadata.set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+          set_filter(handle => p_handle, name => 'SYSTEM_GENERATED', value => false);
+          set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
 
           if p_object_name_tab is not null and
              p_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata.set_filter(handle => p_handle
-                                    ,name => 'NAME_EXPR'
-                                    ,value => in_list_expr(p_object_name_tab));
+            set_filter(handle => p_handle
+                      ,name => 'NAME_EXPR'
+                      ,value => in_list_expr(p_object_name_tab));
           end if;
 
           if p_base_object_name_tab is not null and
              p_base_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata.set_filter(handle => p_handle
-                                    ,name => 'BASE_OBJECT_NAME_EXPR'
-                                    ,value => in_list_expr(p_base_object_name_tab));
+            set_filter(handle => p_handle
+                      ,name => 'BASE_OBJECT_NAME_EXPR'
+                      ,value => in_list_expr(p_base_object_name_tab));
           end if;
 
-          -- always exclude table "schema_version" and its indexes, constraints
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
-                                  ,value => in_list_expr(t_text_tab('schema_version')));
-
-          -- always exclude table "flyway_schema_history" and its indexes, constraints
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
-                                  ,value => in_list_expr(t_text_tab('flyway_schema_history')));
+          set_filter(handle => p_handle
+                    ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
+                    ,value => in_list_expr(c_object_to_ignore_tab));
         else
           if is_dependent_object_type(p_object_type => p_object_type) = 1
           then
@@ -1774,25 +1811,19 @@ $end
             raise program_error;
           end if;
 
-          dbms_metadata.set_filter(handle => p_handle, name => 'BASE_OBJECT_SCHEMA', value => p_base_object_schema);
+          set_filter(handle => p_handle, name => 'BASE_OBJECT_SCHEMA', value => p_base_object_schema);
 
           if p_base_object_name_tab is not null and
              p_base_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata.set_filter(handle => p_handle
-                                    ,name => 'BASE_OBJECT_NAME_EXPR'
-                                    ,value => in_list_expr(p_base_object_name_tab));
+            set_filter(handle => p_handle
+                      ,name => 'BASE_OBJECT_NAME_EXPR'
+                      ,value => in_list_expr(p_base_object_name_tab));
           end if;
 
-          -- always exclude table "schema_version" and its indexes, constraints
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
-                                  ,value => in_list_expr(t_text_tab('schema_version')));
-
-          -- always exclude table "flyway_schema_history" and its indexes, constraints
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
-                                  ,value => in_list_expr(t_text_tab('flyway_schema_history')));
+          set_filter(handle => p_handle
+                    ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
+                    ,value => in_list_expr(c_object_to_ignore_tab));
                                   
           if p_object_type = 'OBJECT_GRANT'
           then
@@ -1801,7 +1832,7 @@ $end
         end if;
       elsif p_object_type = 'SYNONYM'
       then
-        dbms_metadata.set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+        set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
 
         -- Voor synoniemen moet gelden:
         -- 1a) lange naam van synonym moet gelijk zijn aan korte naam EN
@@ -1809,28 +1840,28 @@ $end
         if p_object_schema != 'PUBLIC'
         then
           -- simple custom filter: always allowed
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'CUSTOM_FILTER'
-                                  ,value => '/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME');
+          set_filter(handle => p_handle
+                    ,name => 'CUSTOM_FILTER'
+                    ,value => '/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME');
         else
           -- simple custom filter: always allowed
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'CUSTOM_FILTER'
-                                  ,value => q'[/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME AND /* 1b */ KU$.OWNER_NAME = ']' ||
-                                            dbms_assert.schema_name(p_base_object_schema) || q'[']');
+          set_filter(handle => p_handle
+                    ,name => 'CUSTOM_FILTER'
+                    ,value => q'[/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME AND /* 1b */ KU$.OWNER_NAME = ']' ||
+                              dbms_assert.schema_name(p_base_object_schema) || q'[']');
         end if;
 
         if p_object_name_tab is not null and
            p_object_name_tab.count between 1 and c_max_object_name_tab_count
         then
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'NAME_EXPR'
-                                  ,value => in_list_expr(p_object_name_tab));
+          set_filter(handle => p_handle
+                    ,name => 'NAME_EXPR'
+                    ,value => in_list_expr(p_object_name_tab));
         end if;
       else
         if p_object_schema != 'DBA'
         then
-          dbms_metadata.set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+          set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
         end if;
 
         if p_object_type not in ('DEFAULT_ROLE', 'FGA_POLICY', 'ROLE_GRANT')
@@ -1838,25 +1869,19 @@ $end
           if p_object_name_tab is not null and
              p_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata.set_filter(handle => p_handle
-                                    ,name => 'NAME_EXPR'
-                                    ,value => in_list_expr(p_object_name_tab));
+            set_filter(handle => p_handle
+                      ,name => 'NAME_EXPR'
+                      ,value => in_list_expr(p_object_name_tab));
           end if;
 
-          -- always exclude table "schema_version"
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'EXCLUDE_NAME_EXPR'
-                                  ,value => in_list_expr(t_text_tab('schema_version')));
-
-          -- always exclude table "flyway_schema_history"
-          dbms_metadata.set_filter(handle => p_handle
-                                  ,name => 'EXCLUDE_NAME_EXPR'
-                                  ,value => in_list_expr(t_text_tab('flyway_schema_history')));
+          set_filter(handle => p_handle
+                    ,name => 'EXCLUDE_NAME_EXPR'
+                    ,value => in_list_expr(c_object_to_ignore_tab));
         end if;
 
         if p_object_type = 'TABLE'
         then
-          dbms_metadata.set_filter(handle => p_handle, name => 'SECONDARY', value => false);
+          set_filter(handle => p_handle, name => 'SECONDARY', value => false);
         end if;
       end if;
 
@@ -2220,6 +2245,8 @@ $end
     l_privilege varchar2(4000 char) := null;
     l_grantable varchar2(4000 char) := null;
     l_ddl_text varchar2(32767 char) := null;
+    l_exclude_name_expr_tab t_text_tab;
+    l_exclude_found t_object := null;
 
     procedure cleanup
     is
@@ -2272,13 +2299,16 @@ $end
       end if;
     end if;
 
+    l_object_type := t_schema_object.dict2metadata_object_type(l_object_type);
+    l_base_object_type := t_schema_object.dict2metadata_object_type(l_base_object_type);
+    
     p_object_key :=
       t_schema_object.id
       ( p_object_schema => l_object_schema
-      , p_object_type => t_schema_object.dict2metadata_object_type(l_object_type)
+      , p_object_type => l_object_type
       , p_object_name => l_object_name
       , p_base_object_schema => l_base_object_schema
-      , p_base_object_type => t_schema_object.dict2metadata_object_type(l_base_object_type)
+      , p_base_object_type => l_base_object_type
       , p_base_object_name => l_base_object_name
       , p_column_name => l_column_name
       , p_grantee => l_grantee
@@ -2317,21 +2347,76 @@ $end
     exception
       when no_data_found
       then
-        p_object_key := null;
-        case
-          when l_object_name like 'schema_version%' or l_object_name like 'flyway_schema_history%'
-          then
-            -- skip Flyway stuff
-            null;
+        l_exclude_found := null;
 
-          when t_schema_object.dict2metadata_object_type(l_object_type) = 'PROCACT_SCHEMA'
+        if l_object_type is not null
+        then
+          if not(l_object_type member of g_schema_md_object_type_tab)
           then
-            null;
+            l_exclude_found := l_object_type;
+          elsif l_object_name is not null
+          then
+            get_exclude_name_expr_tab(p_object_type => l_object_type, p_exclude_name_expr_tab => l_exclude_name_expr_tab);
+            if l_exclude_name_expr_tab.count > 0
+            then
+              for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
+              loop
+                if l_object_name like l_exclude_name_expr_tab(i_idx) escape '\'
+                then
+                  l_exclude_found := l_object_type || ':' || l_exclude_name_expr_tab(i_idx);
+                  exit;
+                end if;
+              end loop;
+            end if;
+          end if;
+        end if;
+
+        if l_exclude_found is null and l_base_object_type is not null
+        then
+          if not(l_base_object_type member of g_schema_md_object_type_tab)
+          then
+            l_exclude_found := l_base_object_type;
+          elsif l_base_object_name is not null
+          then
+            get_exclude_name_expr_tab(p_object_type => l_base_object_type, p_exclude_name_expr_tab => l_exclude_name_expr_tab);
+            if l_exclude_name_expr_tab.count > 0
+            then
+              for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
+              loop
+                if l_base_object_name like l_exclude_name_expr_tab(i_idx) escape '\'
+                then
+                  l_exclude_found := l_base_object_type || ':' || l_exclude_name_expr_tab(i_idx);
+                  exit;
+                end if;
+              end loop;
+            end if;
+          end if;
+        end if;
+
+        case
+          when l_exclude_found is not null
+          then
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+            dbug.print
+            ( dbug."info"
+            , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name; l_exclude_found: %s'
+            , l_object_type
+            , l_object_name
+            , l_base_object_type
+            , l_base_object_name
+            , l_exclude_found
+            );
+$end
+            p_object_key := null;
+          
+          when l_object_type = 'PROCACT_SCHEMA'
+          then
+            p_object_key := null;
 
           -- GPA 2017-02-05 Ignore the old job package DBMS_JOB
-          when t_schema_object.dict2metadata_object_type(l_object_type) = 'PROCOBJ' and l_verb = 'DBMS_JOB.SUBMIT'
+          when l_object_type = 'PROCOBJ' and l_verb = 'DBMS_JOB.SUBMIT'
           then
-            null;
+            p_object_key := null;
 
           else
             -- GJP 2021-08-27 Ignore this only when the DDL is whitespace only.
@@ -2343,7 +2428,8 @@ $end
                 raise_application_error
                 ( pkg_ddl_error.c_object_not_found
                 , utl_lms.format_message
-                  ( 'object not found in allowed objects; ddl: "%s"'
+                  ( 'object "%s" not found in allowed objects; ddl: "%s"'
+                  , p_object_key
                   , substr(l_ddl_text, 1, 2000)
                   )
                 );
@@ -3695,8 +3781,9 @@ $if pkg_ddl_util.c_get_queue_ddl $then
          ) = 1
       then
         l_named_object_tab.extend(1);
-        t_named_object.create_named_object
-        ( p_object_type => 'AQ_QUEUE_TABLE'
+        pkg_schema_object.create_named_object
+        ( p_owner => p_schema
+        , p_object_type => 'AQ_QUEUE_TABLE'
         , p_object_schema => r.owner
         , p_object_name => r.queue_table
         , p_named_object => l_named_object_tab(l_named_object_tab.last)
@@ -3788,7 +3875,7 @@ $end
          , p_object_name => r.table_name
          ) = 1
       then
-        l_schema_object := t_table_object(r.owner, r.table_name, r.tablespace_name);
+        l_schema_object := pkg_schema_object.create_table_object(p_schema, r.owner, r.table_name, r.tablespace_name);
         if not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
         then
           l_named_object_tab.extend(1);
@@ -3840,8 +3927,9 @@ $end
     loop
       longops_show(l_longops_rec);
       l_named_object_tab.extend(1);
-      t_named_object.create_named_object
-      ( p_object_type => r.object_type
+      pkg_schema_object.create_named_object
+      ( p_owner => p_schema
+      , p_object_type => r.object_type
       , p_object_schema => r.owner
       , p_object_name => r.object_name
       , p_named_object => l_named_object_tab(l_named_object_tab.last)
@@ -4019,8 +4107,9 @@ $end
                 ,       c.owner as object_schema
                 ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
                 ,       c.constraint_name as object_name
-$if pkg_ddl_util.c_#138707615_1 $then
+                ,       c.constraint_type
                 ,       c.search_condition
+$if pkg_ddl_util.c_#138707615_1 $then
                 ,       case c.constraint_type
                           when 'C'
                           then ( select  cc.column_name
@@ -4107,19 +4196,25 @@ $end
           when 'REF_CONSTRAINT'
           then
             l_schema_object_tab(l_schema_object_tab.last) :=
-              t_ref_constraint_object
-              ( p_base_object => treat(r.base_object as t_named_object)
+              pkg_schema_object.create_ref_constraint_object
+              ( p_owner => p_schema
+              , p_base_object => treat(r.base_object as t_named_object)
               , p_object_schema => r.object_schema
               , p_object_name => r.object_name
+              , p_constraint_type => r.constraint_type
+              , p_column_names => null
               );
 
           when 'CONSTRAINT'
           then
             l_schema_object_tab(l_schema_object_tab.last) :=
-              t_constraint_object
-              ( p_base_object => treat(r.base_object as t_named_object)
+              pkg_schema_object.create_constraint_object
+              ( p_owner => p_schema
+              , p_base_object => treat(r.base_object as t_named_object)
               , p_object_schema => r.object_schema
               , p_object_name => r.object_name
+              , p_constraint_type => r.constraint_type
+              , p_search_condition => r.search_condition
               );
         end case;
 
@@ -4184,8 +4279,9 @@ $end
     loop
       longops_show(l_longops_rec);
       l_schema_object_tab.extend(1);
-      t_schema_object.create_schema_object
-      ( p_object_schema => r.object_schema
+      pkg_schema_object.create_schema_object
+      ( p_owner => p_schema
+      , p_object_schema => r.object_schema
       , p_object_type => r.object_type
       , p_object_name => r.object_name
       , p_base_object_schema => r.base_object_schema
@@ -4236,10 +4332,12 @@ $end
       longops_show(l_longops_rec);
       l_schema_object_tab.extend(1);
       l_schema_object_tab(l_schema_object_tab.last) :=
-        t_index_object
-        ( p_base_object =>
-            t_named_object.create_named_object
-            ( p_object_schema => r.base_object_schema
+        pkg_schema_object.create_index_object
+        ( p_owner => p_schema
+        , p_base_object =>
+            pkg_schema_object.create_named_object
+            ( p_owner => p_schema
+            , p_object_schema => r.base_object_schema
             , p_object_type => r.base_object_type
             , p_object_name => r.base_object_name
             )
@@ -5412,6 +5510,7 @@ $end
                             where   l.object_type || 'X' = t.object_type || 'X' -- null == null
                             and     l.object_schema || 'X' = t.object_schema || 'X'
                             and     l.base_object_schema || 'X' = t.base_object_schema || 'X'
+                            and     l.object_name is not null
                           ) as oracle_tools.t_text_tab
                         ) as object_name_tab
                 ,       cast
@@ -5670,6 +5769,22 @@ $end
 
       r_params := l_params_tab(l_params_idx);
 
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging > 1 $then
+      dbug.print
+      ( dbug."debug"
+      , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
+      , r_params.object_type
+      , r_params.object_schema
+      , r_params.base_object_schema
+      , r_params.object_name_tab.count
+      , r_params.base_object_name_tab.count
+      );
+      dbug.print
+      ( dbug."debug"
+      , 'r_params.nr_objects: %s'
+      , r_params.nr_objects
+      );
+$end
       declare
         -- dbms_application_info stuff
         l_longops_type_rec t_longops_rec :=
@@ -5722,6 +5837,7 @@ $end
               , p_object_lookup_tab => l_object_lookup_tab
               , p_object_key => l_object_key
               );
+
               if l_object_key is not null
               then
                 -- some checks
@@ -6031,13 +6147,15 @@ $end
       ( select  t.column_value as type
         from    table(g_schema_md_object_type_tab) t
       ), deps as
-      ( select  t_schema_object.create_schema_object
-                ( d.owner
+      ( select  pkg_schema_object.create_schema_object
+                ( p_schema
+                , d.owner
                 , t_schema_object.dict2metadata_object_type(d.type)
                 , d.name
                 ) as obj -- a named object
-        ,       t_schema_object.create_schema_object
-                ( d.referenced_owner
+        ,       pkg_schema_object.create_schema_object
+                ( p_schema
+                , d.referenced_owner
                 , t_schema_object.dict2metadata_object_type(d.referenced_type)
                 , d.referenced_name
                 ) as ref_obj -- a named object
@@ -6054,13 +6172,15 @@ $end
         union all
 $if not(pkg_ddl_util.c_#138707615_2) $then
         -- dependencies based on foreign key constraints
-        select  t_schema_object.create_schema_object
-                ( t1.owner
+        select  pkg_schema_object.create_schema_object
+                ( p_schema
+                , t1.owner
                 , 'TABLE' -- already meta
                 , t1.table_name
                 ) as obj -- a named object
-        ,       t_schema_object.create_schema_object
-                ( t2.owner
+        ,       pkg_schema_object.create_schema_object
+                ( p_schema
+                , t2.owner
                 , 'TABLE' -- already meta
                 , t2.table_name
                 ) as ref_obj -- a named object
@@ -6072,16 +6192,18 @@ $if not(pkg_ddl_util.c_#138707615_2) $then
         and     t1.constraint_type = 'R'
 $else
         -- more simple: just the constraints
-        select  t_schema_object.create_schema_object
-                ( c.owner
+        select  pkg_schema_object.create_schema_object
+                ( p_schema
+                , c.owner
                 , 'REF_CONSTRAINT' -- already meta
                 , c.constraint_name
                 , tc.owner
                 , t_schema_object.dict2metadata_object_type(tc.object_type)
                 , tc.object_name
                 ) as obj -- belongs to a base table/mv
-        ,       t_schema_object.create_schema_object
-                ( c.r_owner
+        ,       pkg_schema_object.create_schema_object
+                ( p_schema
+                , c.r_owner
                 , 'CONSTRAINT' -- already meta
                 , c.r_constraint_name
                 , tr.owner
@@ -6102,13 +6224,15 @@ $else
 $end
         union all
         -- dependencies based on prebuilt tables
-        select  t_schema_object.create_schema_object
-                ( t1.owner
+        select  pkg_schema_object.create_schema_object
+                ( p_schema
+                , t1.owner
                 , 'MATERIALIZED_VIEW' -- already meta
                 , t1.mview_name
                 ) as obj -- a named object
-        ,       t_schema_object.create_schema_object
-                ( t2.owner
+        ,       pkg_schema_object.create_schema_object
+                ( p_schema
+                , t2.owner
                 , 'TABLE' -- already meta
                 , t2.table_name
                 ) as ref_obj -- a named object
@@ -6119,16 +6243,18 @@ $end
         and     t1.build_mode = 'PREBUILT'
         union all
         -- dependencies from constraints to indexes
-        select  t_schema_object.create_schema_object
-                ( c.owner
+        select  pkg_schema_object.create_schema_object
+                ( p_schema
+                , c.owner
                 , case c.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end
                 , c.constraint_name
                 , tc.owner
                 , t_schema_object.dict2metadata_object_type(tc.object_type)
                 , tc.object_name
                 ) as obj -- a named object
-        ,       t_schema_object.create_schema_object
-                ( c.index_owner
+        ,       pkg_schema_object.create_schema_object
+                ( p_schema
+                , c.index_owner
                 , 'INDEX'
                 , c.index_name
                 , i.table_owner
@@ -6203,8 +6329,9 @@ $end
         if p_new_schema is not null
         then
           l_schema_object :=
-            t_schema_object.create_schema_object
-            ( case when l_schema_object.object_schema() = p_schema then p_new_schema else l_schema_object.object_schema() end
+            pkg_schema_object.create_schema_object
+            ( p_schema
+            , case when l_schema_object.object_schema() = p_schema then p_new_schema else l_schema_object.object_schema() end
             , l_schema_object.object_type() 
             , l_schema_object.object_name()
             , case when l_schema_object.base_object_schema() = p_schema then p_new_schema else l_schema_object.base_object_schema() end
@@ -6689,8 +6816,9 @@ $end
     l_drop_schema_ddl_tab := t_schema_ddl_tab();
     for r in
     ( select  oracle_tools.t_schema_ddl.create_schema_ddl
-              ( p_obj => oracle_tools.t_named_object.create_named_object
-                         ( p_object_type => o.object_type
+              ( p_obj => pkg_schema_object.create_named_object
+                         ( p_owner => o.object_schema
+                         , p_object_type => o.object_type
                          , p_object_schema => o.object_schema
                          , p_object_name => o.object_name
                          )
@@ -8360,4 +8488,3 @@ begin
   g_transform_param_tab('OID'                 ) := false;
 end pkg_ddl_util;
 /
-
