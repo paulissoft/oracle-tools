@@ -441,6 +441,75 @@ begin
   return; -- essential
 end show_compile_errors;
 
+procedure dbms_output_enable
+( p_db_link in varchar2
+, p_buffer_size in integer default null
+)
+is
+begin
+  -- check SQL injection
+  if dbms_assert.simple_sql_name(p_db_link) is null
+  then
+    raise value_error;
+  end if;
+
+  execute immediate
+    utl_lms.format_message('call dbms_output.enable@%s(:b1)', p_db_link)
+    using p_buffer_size;
+end dbms_output_enable;
+
+procedure dbms_output_clear
+( p_db_link in varchar2
+)
+is
+begin
+  -- check SQL injection
+  if dbms_assert.simple_sql_name(p_db_link) is null
+  then
+    raise value_error;
+  end if;
+
+  execute immediate
+    utl_lms.format_message
+    ( '
+declare 
+  l_line varchar2(32767 char); 
+  l_status integer; 
+begin 
+  dbms_output.get_line@%s(l_line, l_status);
+end;'
+    , p_db_link
+    );
+end dbms_output_clear;    
+
+procedure dbms_output_flush
+( p_db_link in varchar2
+)
+is
+begin
+  -- check SQL injection
+  if dbms_assert.simple_sql_name(p_db_link) is null
+  then
+    raise value_error;
+  end if;
+
+  execute immediate
+    utl_lms.format_message
+    ( '
+declare
+  l_line varchar2(32767 char);
+  l_status integer;
+begin
+  loop
+    dbms_output.get_line@%s(line => l_line, status => l_status);
+    exit when l_status != 0;
+    dbms_output.put_line(l_line);
+  end loop;
+end;'
+    , p_db_link
+    );
+end dbms_output_flush;
+
 $if cfg_pkg.c_testing $then
 
 procedure ut_setup

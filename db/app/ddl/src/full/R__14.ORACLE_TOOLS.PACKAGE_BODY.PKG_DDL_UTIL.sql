@@ -2740,8 +2740,6 @@ $end
       if l_network_link is null
       then
         raise program_error;
-      else
-        l_network_link := '@' || l_network_link;
       end if;
 
       pkg_ddl_util.set_display_ddl_schema_args
@@ -2756,7 +2754,7 @@ $end
       , p_transform_param_list => p_transform_param_list
       );
 
-      open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema' || l_network_link || ' t';
+      open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema@' || l_network_link || ' t';
     else -- local
       /* GPA 27-10-2016
          The queries below may invoke the objects clause twice.
@@ -3349,15 +3347,15 @@ $end
       if l_network_link is null
       then
         raise program_error;
-      else
-        l_network_link := '@' || l_network_link;
       end if;
     end if;
 
-    l_statement := '
+    l_statement :=
+      utl_lms.format_message
+      ( q'[
 declare
   l_ddl_text_tab constant oracle_tools.t_text_tab := :b1;
-  l_ddl_tab dbms_sql.varchar2a' || l_network_link || ';
+  l_ddl_tab dbms_sql.varchar2a@%s;
   l_cursor integer;
   l_last_error_position integer := null;
 
@@ -3371,7 +3369,7 @@ declare
   e_grant_option_does_not_exist exception;
   pragma exception_init(e_grant_option_does_not_exist, -1720);
 begin
-  l_cursor := dbms_sql.open_cursor' || l_network_link || ';
+  l_cursor := dbms_sql.open_cursor@%s;
   -- kopieer naar (remote) array
   if l_ddl_text_tab.count > 0
   then
@@ -3381,7 +3379,7 @@ begin
     end loop;
   end if;
   --
-  dbms_sql.parse' || l_network_link || '
+  dbms_sql.parse@%s
   ( c => l_cursor
   , statement => l_ddl_tab
   , lb => l_ddl_tab.first
@@ -3390,26 +3388,43 @@ begin
   , language_flag => dbms_sql.native
   );
   --
-  dbms_sql.close_cursor' || l_network_link || '(l_cursor);
+  dbms_sql.close_cursor@%s(l_cursor);
 exception
   when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist
-  then dbms_sql.close_cursor' || l_network_link || '(l_cursor);
+  then dbms_sql.close_cursor@%s(l_cursor);
   when others
   then
     /* DBMS_SQL.LAST_ERROR_POSITION 
        This function returns the byte offset in the SQL statement text where the error occurred. 
        The first character in the SQL statement is at position 0. 
     */
-    l_last_error_position := 1 + nvl(dbms_sql.last_error_position' || l_network_link || ', 0);
-    dbms_sql.close_cursor' || l_network_link || '(l_cursor);
+    l_last_error_position := 1 + nvl(dbms_sql.last_error_position@%s, 0);
+    dbms_sql.close_cursor@%s(l_cursor);
     raise_application_error
     ( pkg_ddl_error.c_execute_via_db_link
-    , ''Error at position '' || l_last_error_position || '': '' || substr(oracle_tools.pkg_str_util.text2clob(l_ddl_text_tab), l_last_error_position, 2000)
+    , 'Error at position ' || l_last_error_position || ': ' || substr(oracle_tools.pkg_str_util.text2clob(l_ddl_text_tab), l_last_error_position, 2000)
     , true
     );
-end;';
+end;]', l_network_link
+      , l_network_link
+      , l_network_link
+      , l_network_link
+      , l_network_link
+      , l_network_link
+      , l_network_link
+      );
 
-    execute immediate l_statement using p_ddl_text_tab;
+    begin
+      api_pkg.dbms_output_enable(l_network_link);
+      api_pkg.dbms_output_clear(l_network_link);
+      execute immediate l_statement using p_ddl_text_tab;
+      api_pkg.dbms_output_flush(l_network_link);
+    exception
+      when others
+      then
+        api_pkg.dbms_output_flush(l_network_link);
+        raise;
+    end;
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
@@ -5889,14 +5904,14 @@ $end
       if l_network_link is null
       then
         raise program_error;
-      else
-        l_network_link := '@' || l_network_link;
       end if;
 
       declare
-        l_statement constant varchar2(4000 char) := q'[
+        l_statement constant varchar2(4000 char) :=
+          utl_lms.format_message
+          ( '
 begin
-  oracle_tools.pkg_ddl_util.set_display_ddl_schema_args]' || l_network_link || q'[
+  oracle_tools.pkg_ddl_util.set_display_ddl_schema_args@%s
   ( p_schema => :b1
   , p_new_schema => :b2
   , p_sort_objects_by_deps => :b3
@@ -5907,13 +5922,20 @@ begin
   , p_grantor_is_schema => :b7
   , p_transform_param_list => :b8
   );
-end;]';
+end;'
+          , l_network_link 
+          );
       begin
+        api_pkg.dbms_output_enable(l_network_link);
+        api_pkg.dbms_output_clear(l_network_link);
         execute immediate l_statement
           using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
+        api_pkg.dbms_output_flush(l_network_link);
       exception
         when others
-        then raise_application_error(pkg_ddl_error.c_execute_via_db_link, l_statement, true);
+        then
+          api_pkg.dbms_output_flush(l_network_link);
+          raise_application_error(pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       end;
     end if;
 

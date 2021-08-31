@@ -102,6 +102,90 @@ function show_compile_errors
 return t_errors_tab
 pipelined;
 
+/**
+ * Enable the DBMS_OUTPUT buffer for a database link session.
+ *
+ * Usefull while debugging a remote session using dbms_output.
+ *
+ * Will issue:
+ *
+ *   execute immediate
+ *     utl_lms.format_message('call dbms_output.enable@%s(:b1)', p_db_link)
+ *     using p_buffer_size
+ *
+ * @param p_db_link      The database link.
+ * @param p_buffer_size  The buffer size
+ */
+procedure dbms_output_enable
+( p_db_link in varchar2
+, p_buffer_size in integer default null
+);
+
+/**
+ * Clear the DBMS_OUTPUT buffer for a database link session.
+ *
+ * Usefull while debugging a remote session using dbms_output.
+ *
+ * Will issue:
+ *
+ *   execute immediate
+ *     utl_lms.format_message
+ *     ( 'declare 
+ *          l_line varchar2(32767 char); 
+ *          l_status integer; 
+ *        begin 
+ *          dbms_output.get_line@%s(l_line, l_status);
+ *        end;'
+ *     , p_db_link
+ *     ) 
+ *
+ * NOTE from the Oracle documentation: 
+ *
+ * <blockquote>
+ * After calling GET_LINE or GET_LINES, any lines not retrieved before the next call to
+ * PUT, PUT_LINE, or NEW_LINE are discarded to avoid confusing them with the next
+ * message. 
+ * </blockquote>
+ *
+ * So this means that a single call to get_line is enough.
+ *
+ * @param p_db_link  The database link.
+ */
+procedure dbms_output_clear
+( p_db_link in varchar2
+);
+
+/**
+ * Flush the DBMS_OUTPUT buffer for a database link session.
+ *
+ * Usefull while debugging a remote session using dbms_output.
+ *
+ * The general idea is to invoke dbms_output_enable and dbms_output_clear before the
+ * remote call and to invoke dbms_output_flush after the call.
+ *
+ * This procedure will issue:
+ *
+ *   execute immediate
+ *     utl_lms.format_message
+ *     ( 'declare
+ *          l_line varchar2(32767 char);
+ *          l_status integer;
+ *        begin
+ *          loop
+ *            dbms_output.get_line@%s(line => l_line, status => l_status);
+ *            exit when l_status != 0;
+ *            dbms_output.put_line(l_line);
+ *          end loop;
+ *        end;'
+ *     , p_db_link
+ *     ) 
+ *
+ * @param p_db_link  The database link.
+ */
+procedure dbms_output_flush
+( p_db_link in varchar2
+);
+
 $if cfg_pkg.c_testing $then
 
 --%suitepath(API)
