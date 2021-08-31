@@ -13,6 +13,12 @@ type t_longops_rec is record (
 , target_desc varchar2(32 char)
 );
 
+-- forward declaration
+procedure longops_show
+( p_longops_rec in out nocopy t_longops_rec
+, p_increment in naturaln default 1
+);
+
 function longops_init
 ( p_target_desc in varchar2
 , p_totalwork in binary_integer default 0
