@@ -16,7 +16,7 @@ final static procedure create_named_object
 )
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_NAMED_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_NAMED_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_NAMED_OBJECT.CREATE_NAMED_OBJECT (1)');
 end create_named_object;
 
@@ -28,7 +28,7 @@ final static function create_named_object
 return t_named_object
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_NAMED_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_NAMED_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_NAMED_OBJECT.CREATE_NAMED_OBJECT (2)');
 end create_named_object;
 
@@ -42,7 +42,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_NAMED_OBJECT.CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_named_object => self, p_schema => p_schema);
+  pkg_schema_object.chk_schema_object(p_named_object => self, p_schema => p_schema);
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

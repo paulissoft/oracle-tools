@@ -428,7 +428,7 @@ static procedure create_schema_object
 )
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_SCHEMA_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
 end create_schema_object;
 
@@ -447,7 +447,7 @@ static function create_schema_object
 return t_schema_object
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_SCHEMA_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
 end create_schema_object;
 
@@ -583,7 +583,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_SCHEMA_OBJECT.CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);
+  pkg_schema_object.chk_schema_object(p_schema_object => self, p_schema => p_schema);
 
 $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

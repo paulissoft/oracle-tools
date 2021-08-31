@@ -12,7 +12,7 @@ constructor function t_ref_constraint_object
 return self as result
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_REF_CONSTRAINT_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_REF_CONSTRAINT_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_REF_CONSTRAINT_OBJECT.T_REF_CONSTRAINT_OBJECT');
 end;
 
@@ -99,7 +99,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_REF_CONSTRAINT_OBJECT.CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
+  pkg_schema_object.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
 
   if self.ref_object$ is null
   then

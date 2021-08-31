@@ -218,7 +218,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.parameters() + self.results() = nvl(cardinality(self.arguments), 0)
   then

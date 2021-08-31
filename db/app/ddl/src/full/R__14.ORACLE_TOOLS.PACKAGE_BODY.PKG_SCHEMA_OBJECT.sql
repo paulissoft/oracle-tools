@@ -920,6 +920,270 @@ $end
   return l_column_names;
 end get_column_names;
 
+procedure chk_schema_object
+( p_schema_object in t_schema_object
+, p_schema in varchar2
+)
+is
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (1)');
+  dbug.print(dbug."input", 'p_schema_object:');
+  p_schema_object.print();
+$end
+
+  if p_schema_object.object_type() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty');
+  elsif p_schema_object.dict2metadata_object_type() = p_schema_object.object_type()
+  then
+    null; -- ok
+  else
+    raise_application_error
+    ( pkg_ddl_error.c_invalid_parameters
+    , 'Object type (' ||
+      p_schema_object.object_type() ||
+      ') should be equal to this DBMS_METADATA object type (' ||
+      p_schema_object.dict2metadata_object_type() ||
+      ')'
+    );
+  end if;
+
+  if (p_schema_object.base_object_type() is null) != (p_schema_object.base_object_schema() is null)
+  then
+    raise_application_error
+    ( pkg_ddl_error.c_invalid_parameters
+    , 'Base object type (' ||
+      p_schema_object.base_object_type() ||
+      ') and base object schema (' ||
+      p_schema_object.base_object_schema() ||
+      ') must both be empty or both not empty'
+    );
+  end if;
+
+  if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
+  then
+    raise_application_error
+    ( pkg_ddl_error.c_invalid_parameters
+    , 'Base object name (' ||
+      p_schema_object.base_object_name() ||
+      ') and base object schema (' ||
+      p_schema_object.base_object_schema() ||
+      ') must both be empty or both not empty'
+    );
+  end if;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end chk_schema_object;
+
+procedure chk_schema_object
+( p_dependent_or_granted_object in t_dependent_or_granted_object
+, p_schema in varchar2
+)
+is
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (2)');
+$end
+
+  chk_schema_object(p_schema_object => p_dependent_or_granted_object, p_schema => p_schema);
+
+  if p_dependent_or_granted_object.object_schema() is null or p_dependent_or_granted_object.object_schema() = p_schema
+  then
+    null; -- ok
+  else
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty or ' || p_schema);
+  end if;
+
+  if p_dependent_or_granted_object.base_object$ is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object should not be empty.');
+  end if;
+
+  -- GPA 2017-01-18 too strict for triggers, synonyms, indexes, etc.
+  /*
+  if p_dependent_or_granted_object.base_object_schema() = p_schema
+  then
+    null; -- ok
+  else
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema);
+  end if;
+  */
+
+  if p_dependent_or_granted_object.base_object_schema() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
+  end if;
+
+  if p_dependent_or_granted_object.base_object_type() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object type should not be empty');
+  end if;
+
+  if p_dependent_or_granted_object.base_object_name() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object name should not be empty');
+  end if;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end chk_schema_object;
+
+procedure chk_schema_object
+( p_named_object in t_named_object
+, p_schema in varchar2
+)
+is
+$if pkg_ddl_util.c_#140920801 $then
+  -- Capture invalid objects before releasing to next enviroment.
+  l_status all_objects.status%type := null;
+$end  
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (3)');
+$end
+
+  chk_schema_object(p_schema_object => p_named_object, p_schema => p_schema);
+
+  if p_named_object.object_name() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
+  end if;
+  if p_named_object.object_schema() = p_schema
+  then
+    null; -- ok
+  else
+    raise_application_error
+    ( pkg_ddl_error.c_invalid_parameters
+    , 'Object schema (' ||
+      p_named_object.object_schema() ||
+      ') must be ' ||
+      p_schema
+    );
+  end if;
+
+$if pkg_ddl_util.c_#140920801 $then
+
+  -- Capture invalid objects before releasing to next enviroment.
+  if pkg_ddl_util.do_chk(p_named_object.object_type()) and p_named_object.network_link() is null
+  then
+    begin
+      select  obj.status
+      into    l_status
+      from    all_objects obj
+      where   obj.owner = p_named_object.object_schema()
+      and     obj.object_type = p_named_object.dict_object_type()
+      and     obj.object_name = p_named_object.object_name()
+      ;
+      if l_status = 'VALID'
+      then
+        null;
+      else
+        raise value_error;
+      end if;
+    exception
+      when no_data_found
+      then null;
+
+      when value_error
+      then
+        raise_application_error
+        ( pkg_ddl_error.c_object_not_valid
+        , 'Object status (' ||
+          l_status ||
+          ') must be VALID'
+        , true
+        );
+    end;
+  end if;
+
+$end
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end chk_schema_object;
+
+procedure chk_schema_object
+( p_constraint_object in t_constraint_object
+, p_schema in varchar2
+)
+is
+begin
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (4)');
+$end
+
+  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => p_constraint_object, p_schema => p_schema);
+
+  if p_constraint_object.object_schema() = p_schema
+  then
+    null; -- ok
+  else
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
+  end if;
+  if p_constraint_object.base_object_schema() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
+  end if;
+  if p_constraint_object.constraint_type() is null
+  then
+    raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
+  end if;
+
+  case 
+    when p_constraint_object.constraint_type() in ('P', 'U', 'R')
+    then
+      if p_constraint_object.column_names() is null
+      then
+        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
+      end if;
+      if p_constraint_object.search_condition() is not null
+      then
+        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Search condition should be empty');
+      end if;
+
+    when p_constraint_object.constraint_type() in ('C')
+    then
+      if p_constraint_object.column_names() is not null
+      then
+        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Column names should be empty');
+      end if;
+      if p_constraint_object.search_condition() is null
+      then
+        raise_application_error(pkg_ddl_error.c_invalid_parameters, 'Search condition should not be empty');
+      end if;
+
+  end case;
+
+$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end chk_schema_object;
+
 end pkg_schema_object;
 /
 

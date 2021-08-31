@@ -127,6 +127,31 @@ function get_column_names
 )
 return varchar2;
 
+/*
+-- Various super type check procedures
+-- Oracle 11g has a (object as supertype).chk() syntax but Oracle 10i not.
+-- So we invoke package procedure from the type bodies.
+*/
+procedure chk_schema_object
+( p_schema_object in t_schema_object
+, p_schema in varchar2
+);
+
+procedure chk_schema_object
+( p_dependent_or_granted_object in t_dependent_or_granted_object
+, p_schema in varchar2
+);
+
+procedure chk_schema_object
+( p_named_object in t_named_object
+, p_schema in varchar2
+);
+
+procedure chk_schema_object
+( p_constraint_object in t_constraint_object
+, p_schema in varchar2
+);
+
 end pkg_schema_object;
 /
 

@@ -9,7 +9,7 @@ constructor function t_index_object
 return self as result
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_INDEX_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_INDEX_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
 end;
 
@@ -23,7 +23,7 @@ constructor function t_index_object
 return self as result
 is
 begin
-  -- must use PKG_DDL_UTIL.CREATE_INDEX_OBJECT
+  -- must use PKG_SCHEMA_OBJECT.CREATE_INDEX_OBJECT
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
 end;
 
@@ -112,7 +112,7 @@ static function get_column_names
 return varchar2
 is
 begin
-  -- must use PKG_DDL_UTIL.GET_COLUMN_NAMES
+  -- must use PKG_SCHEMA_OBJECT.GET_COLUMN_NAMES
   raise_application_error(pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.GET_COLUMN_NAMES');
 end get_column_names;
 
@@ -126,7 +126,7 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_INDEX_OBJECT.CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_name() is null
   then
