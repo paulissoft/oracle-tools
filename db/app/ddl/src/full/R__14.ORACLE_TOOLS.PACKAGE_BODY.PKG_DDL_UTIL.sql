@@ -2210,7 +2210,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
             p_object_key := null;
           
-          when l_object_type = 'PROCACT_SCHEMA'
+          when l_object_type = 'PROCACT_SCHEMA' or
+               l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT')
           then
             p_object_key := null;
 
@@ -2570,20 +2571,9 @@ $end
   )
   return varchar2
   is
-    l_ddl_text varchar2(32767 char) := p_ddl_text;
+    l_ddl_text varchar2(32767 char) := p_ddl_text;    
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.enter(g_package_prefix || 'MODIFY_DDL_TEXT');
-    dbug.print
-    ( dbug."input"
-    , 'p_schema: %s; p_new_schema: %s; p_ddl_text: %s'
-    , p_schema
-    , p_new_schema
-    , substr(p_ddl_text, 1, 255)
-    );
-$end
-
-    if p_schema <> p_new_schema
+    if p_schema <> p_new_schema and l_ddl_text is not null
     then
       /*
          ON "<owner>"."<table>" must be replaced by ON "EMPTY"."<table>"
@@ -2595,30 +2585,27 @@ $end
       
       -- replace p_schema
       --
-      -- A) not case sensitive
+      -- A) (NOT CASE SENSITIVE)
       --    1) at the start of a line or after a non Oracle identifier character
       --    2) before a dot
       l_ddl_text :=
-        regexp_replace(l_ddl_text, '(^|[^_a-zA-Z0-9$#])' || lower(p_schema) || '\.', '\1' || p_new_schema, 1, 0, 'i');
-      -- B) case sensitive, between " and "
+        regexp_replace(l_ddl_text, '(^|[^_a-zA-Z0-9$#])' || p_schema || '\.', '\1' || p_new_schema || '.');
       l_ddl_text :=
-        regexp_replace(l_ddl_text, '"' || p_schema || '"', '"' || p_new_schema || '"');
+        regexp_replace(l_ddl_text, '(^|[^_a-zA-Z0-9$#])' || lower(p_schema) || '\.', '\1' || lower(p_new_schema) || '.');
+      -- B) CASE SENSITIVE, between " and "
+      l_ddl_text :=
+        replace(l_ddl_text, '"' || p_schema || '"', '"' || p_new_schema || '"');
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      if p_ddl_text != l_ddl_text
+      then
+        dbug.print(dbug."info", 'old ddl text: %s', substr(p_ddl_text, 1, 255));
+        dbug.print(dbug."info", 'new ddl text: %s', substr(l_ddl_text, 1, 255));
+      end if;
+$end
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.print(dbug."output", 'return: %s', substr(l_ddl_text, 1, 255));
-    dbug.leave;
-$end
-
     return l_ddl_text;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
   end modify_ddl_text;
 
   procedure remap_schema
@@ -2629,7 +2616,7 @@ $end
   is
     l_ref_constraint_object oracle_tools.t_ref_constraint_object;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (1)');
     p_schema_object.print;
 $end
@@ -2657,7 +2644,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     p_schema_object.print;
     dbug.leave;
   exception
@@ -2675,7 +2662,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
 $end
 
@@ -2692,7 +2679,7 @@ $end
       end loop;
     end if;
     
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -2709,7 +2696,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (3)');
 $end
 
@@ -2725,7 +2712,7 @@ $end
       end loop;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -2742,7 +2729,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (4)');
 $end
 
@@ -2757,7 +2744,7 @@ $end
     , p_ddl_tab => p_schema_ddl.ddl_tab
     );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -2774,7 +2761,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (5)');
     dbug.print
     ( dbug."input"
@@ -2800,7 +2787,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -7678,6 +7665,11 @@ $end
         then
           dbms_lob.trim(l_clob1, 0);
         end if;
+        
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", 'try %s; retrieving l_line1_tab', i_try);
+$end
+
         for r_text in
         ( select t.obj.object_schema() as object_schema
           ,      t.obj.object_type() as object_type
@@ -7743,6 +7735,10 @@ $end
           l_first1 := l_first1 + 1;
           skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
         end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", 'try %s; retrieving l_line2_tab', i_try);
+$end
 
         get_source(p_owner => r.owner
                   ,p_object_type => r.object_type
