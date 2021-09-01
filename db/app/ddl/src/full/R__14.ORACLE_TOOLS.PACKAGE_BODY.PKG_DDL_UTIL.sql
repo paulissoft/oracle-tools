@@ -3483,6 +3483,8 @@ $end
       then
         raise program_error;
       end if;
+
+      l_network_link := '@' || l_network_link;
     end if;
 
     l_statement :=
@@ -3490,7 +3492,7 @@ $end
       ( q'[
 declare
   l_ddl_text_tab constant oracle_tools.t_text_tab := :b1;
-  l_ddl_tab dbms_sql.varchar2a@%s;
+  l_ddl_tab dbms_sql.varchar2a%s;
   l_cursor integer;
   l_last_error_position integer := null;
 
@@ -3504,7 +3506,7 @@ declare
   e_grant_option_does_not_exist exception;
   pragma exception_init(e_grant_option_does_not_exist, -1720);
 begin
-  l_cursor := dbms_sql.open_cursor@%s;
+  l_cursor := dbms_sql.open_cursor%s;
   -- kopieer naar (remote) array
   if l_ddl_text_tab.count > 0
   then
@@ -3514,7 +3516,7 @@ begin
     end loop;
   end if;
   --
-  dbms_sql.parse@%s
+  dbms_sql.parse%s
   ( c => l_cursor
   , statement => l_ddl_tab
   , lb => l_ddl_tab.first
@@ -3523,18 +3525,18 @@ begin
   , language_flag => dbms_sql.native
   );
   --
-  dbms_sql.close_cursor@%s(l_cursor);
+  dbms_sql.close_cursor%s(l_cursor);
 exception
   when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist
-  then dbms_sql.close_cursor@%s(l_cursor);
+  then dbms_sql.close_cursor%s(l_cursor);
   when others
   then
     /* DBMS_SQL.LAST_ERROR_POSITION 
        This function returns the byte offset in the SQL statement text where the error occurred. 
        The first character in the SQL statement is at position 0. 
     */
-    l_last_error_position := 1 + nvl(dbms_sql.last_error_position@%s, 0);
-    dbms_sql.close_cursor@%s(l_cursor);
+    l_last_error_position := 1 + nvl(dbms_sql.last_error_position%s, 0);
+    dbms_sql.close_cursor%s(l_cursor);
     raise_application_error
     ( oracle_tools.pkg_ddl_error.c_execute_via_db_link
     , 'Error at position ' || l_last_error_position || ': ' || substr(oracle_tools.pkg_str_util.text2clob(l_ddl_text_tab), l_last_error_position, 2000)
@@ -3550,14 +3552,25 @@ end;]', l_network_link
       );
 
     begin
-      api_pkg.dbms_output_enable(l_network_link);
-      api_pkg.dbms_output_clear(l_network_link);
+      if l_network_link is not null
+      then
+        api_pkg.dbms_output_enable(l_network_link);
+        api_pkg.dbms_output_clear(l_network_link);
+      end if;
+      
       execute immediate l_statement using p_ddl_text_tab;
-      api_pkg.dbms_output_flush(l_network_link);
+      
+      if l_network_link is not null
+      then
+        api_pkg.dbms_output_flush(l_network_link);
+      end if;
     exception
       when others
       then
-        api_pkg.dbms_output_flush(l_network_link);
+        if l_network_link is not null
+        then
+          api_pkg.dbms_output_flush(l_network_link);
+        end if;
         raise;
     end;
 
