@@ -32,6 +32,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS -- -*-coding: ut
 
   type t_object_exclude_name_expr_tab is table of oracle_tools.t_text_tab index by t_metadata_object_type;
 
+  subtype t_module is varchar2(100);
+
   /* CONSTANTS */
 
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
@@ -47,9 +49,9 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS -- -*-coding: ut
 
   g_dbname global_name.global_name%type := null;
 
-  g_package constant varchar2(61 char) := 'oracle_tools.pkg_ddl_util';
+  g_package constant t_module := 'ORACLE_TOOLS.PKG_DDL_UTIL';
 
-  g_package_prefix constant varchar2(61 char) := g_package || '.';
+  g_package_prefix constant t_module := g_package || '.';
 
   function get_object_no_dependencies_tab
   return t_object_natural_tab;
@@ -2830,7 +2832,7 @@ $end
     l_transform_param_tab t_transform_param_tab;
     l_line_tab dbms_sql.varchar2a;
     l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
-    l_program constant varchar2(30 char) := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
@@ -3203,7 +3205,7 @@ $end
 
     l_object t_object;
     l_text_tab dbms_sql.varchar2a;
-    l_program constant varchar2(30 char) := 'DISPLAY_DDL_SCHEMA_DIFF';
+    l_program constant t_module := 'DISPLAY_DDL_SCHEMA_DIFF';
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program);
@@ -3645,7 +3647,7 @@ $end
     l_diff_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    l_program constant varchar2(61) := g_package_prefix || 'SYNCHRONIZE';
+    l_program constant t_module := g_package_prefix || 'SYNCHRONIZE';
 $end
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -3696,7 +3698,7 @@ $end
     l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    l_program constant varchar2(61) := g_package_prefix || 'UNINSTALL';
+    l_program constant t_module := g_package_prefix || 'UNINSTALL';
 $end
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -4472,7 +4474,7 @@ $end
   pipelined
   is
     l_schema_object_tab oracle_tools.t_schema_object_tab;
-    l_program constant varchar2(30 char) := 'GET_SCHEMA_OBJECT'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'GET_SCHEMA_OBJECT'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
@@ -5604,7 +5606,7 @@ $end
 
     l_transform_param_tab t_transform_param_tab;
 
-    l_program constant varchar2(30 char) := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec;
@@ -6104,7 +6106,7 @@ $end
   is
     l_cursor sys_refcursor;
     l_schema_ddl oracle_tools.t_schema_ddl;
-    l_program constant varchar2(30 char) := 'GET_DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'GET_DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
@@ -6295,7 +6297,7 @@ $end
 
     l_schema_object oracle_tools.t_schema_object;
     
-    l_program constant varchar2(30 char) := 'SORT_OBJECTS_BY_DEPS';
+    l_program constant t_module := 'SORT_OBJECTS_BY_DEPS';
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_units => 'objects');
@@ -6725,7 +6727,7 @@ $end
   is
     l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
     l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
-    l_program constant varchar2(61 char) := 'CLEANUP_EMPTY';
+    l_program constant t_module := 'CLEANUP_EMPTY';
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(l_program);
@@ -6924,7 +6926,7 @@ $end
       ;
 
     -- dbms_application_info stuff
-    l_program constant varchar2(61 char) := 'UT_DISPLAY_DDL_SCHEMA';
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA';
     l_longops_rec t_longops_rec;
 
     c_no_exception_raised constant integer := -20001;
@@ -7428,7 +7430,7 @@ $end
       ;
 
     -- dbms_application_info stuff
-    l_program constant varchar2(61 char) := 'UT_DISPLAY_DDL_SCHEMA_DIFF';
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_DIFF';
     l_longops_rec t_longops_rec;
 
     c_no_exception_raised constant integer := -20001;
@@ -7817,7 +7819,7 @@ $end
     
     l_metadata_object_type t_metadata_object_type;
 
-    l_program constant varchar2(61 char) := 'UT_DICT2METADATA_OBJECT_TYPE';
+    l_program constant t_module := 'UT_DICT2METADATA_OBJECT_TYPE';
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || l_program);
@@ -7856,7 +7858,7 @@ $end
   is
     pragma autonomous_transaction;
     
-    l_program constant varchar2(61 char) := 'UT_IS_A_REPEATABLE';
+    l_program constant t_module := 'UT_IS_A_REPEATABLE';
     l_object_type_tab oracle_tools.t_text_tab;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -7939,7 +7941,7 @@ $end
 
     l_count pls_integer;
 
-    l_program constant varchar2(61 char) := 'UT_GET_SCHEMA_OBJECT';
+    l_program constant t_module := 'UT_GET_SCHEMA_OBJECT';
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || l_program);
@@ -8118,7 +8120,7 @@ $end
 
     l_count pls_integer;
 
-    l_program constant varchar2(61) := g_package || '.UT_SYNCHRONIZE';
+    l_program constant t_module := g_package || '.UT_SYNCHRONIZE';
 
     procedure cleanup is
     begin
@@ -8276,7 +8278,7 @@ $end
     l_schema_object_tab2 oracle_tools.t_schema_object_tab;
     l_expected t_object;
 
-    l_program constant varchar2(61) := g_package_prefix || 'UT_SORT_OBJECTS_BY_DEPS';
+    l_program constant t_module := g_package_prefix || 'UT_SORT_OBJECTS_BY_DEPS';
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(l_program);
