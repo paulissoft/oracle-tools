@@ -993,7 +993,13 @@ $end
               when others
               then
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-                dbug.print( dbug."warning", 'p_object_name could not be determined by lookup: %s', sqlerrm);
+                dbug.print
+                ( dbug."warning"
+                , 'constraint signature: %s; constraint looked up: %s; p_object_name could not be determined by lookup: %s'
+                , l_constraint_object.signature()
+                , case when p_constraint_lookup_tab.exists(l_constraint_object.signature()) then p_constraint_lookup_tab(l_constraint_object.signature()) end
+                , sqlerrm
+                );
 $end
                 for r_cc in
                 ( select  c.constraint_name
@@ -2614,13 +2620,18 @@ $end
   end modify_ddl_text;
 
   procedure remap_schema
-  ( p_schema in varchar2
-  , p_new_schema in varchar2
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema_nn
   , p_schema_object in out nocopy t_schema_object
   )
   is
     l_ref_constraint_object t_ref_constraint_object;
   begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'REMAP_SCHEMA (1)');
+    p_schema_object.print;
+$end
+
     if p_schema != p_new_schema -- implies both not null
     then
       -- If we are going to move to another schema, adjust all schema attributes because the DDL generated
@@ -2643,6 +2654,16 @@ $end
         end if;
       end if;
     end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    p_schema_object.print;
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end remap_schema;
 
   procedure remap_schema
@@ -2652,6 +2673,10 @@ $end
   )
   is
   begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
+$end
+
     if p_ddl.text is not null and p_ddl.text.count > 0
     then
       for i_idx in p_ddl.text.first .. p_ddl.text.last
@@ -2664,6 +2689,15 @@ $end
           );
       end loop;
     end if;
+    
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end remap_schema;
 
   procedure remap_schema
@@ -2673,6 +2707,10 @@ $end
   )
   is
   begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'REMAP_SCHEMA (3)');
+$end
+
     if p_ddl_tab is not null and p_ddl_tab.count > 0
     then
       for i_idx in p_ddl_tab.first .. p_ddl_tab.last
@@ -2684,6 +2722,15 @@ $end
         );
       end loop;
     end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end remap_schema;
 
   procedure remap_schema
@@ -2693,6 +2740,10 @@ $end
   )
   is
   begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'REMAP_SCHEMA (4)');
+$end
+
     remap_schema
     ( p_schema => p_schema
     , p_new_schema => p_new_schema
@@ -2703,24 +2754,35 @@ $end
     , p_new_schema => p_new_schema
     , p_ddl_tab => p_schema_ddl.ddl_tab
     );
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end remap_schema;
 
   procedure remap_schema
-  ( p_schema in t_schema_nn
-  , p_new_schema in t_schema_nn
+  ( p_schema in varchar2
+  , p_new_schema in varchar2
   , p_schema_ddl_tab in out nocopy t_schema_ddl_tab
   )
   is
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.enter(g_package_prefix || 'REMAP_SCHEMA');
+    dbug.enter(g_package_prefix || 'REMAP_SCHEMA (5)');
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s; p_new_schema: %s; p_object_type: %s'
+    , 'p_schema: %s; p_new_schema: %s; cardinality(p_schema_ddl_tab): %s'
     , p_schema
     , p_new_schema
+    , cardinality(p_schema_ddl_tab)
     );
 $end
+
     if p_schema != p_new_schema -- implies both not null
     then
       if p_schema_ddl_tab is not null and p_schema_ddl_tab.count > 0
