@@ -42,7 +42,7 @@ as
   l_sofar  binary_integer := 0;
   l_op_name constant varchar2(10 char) := 'processed';
   l_units   constant varchar2(10 char) := 'rows';
-  l_program constant varchar2(30 char) := 'oracle_tools.p_generate_ddl'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+  l_program constant varchar2(61 char) := 'ORACLE_TOOLS.P_GENERATE_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter('oracle_tools.p_generate_ddl');
