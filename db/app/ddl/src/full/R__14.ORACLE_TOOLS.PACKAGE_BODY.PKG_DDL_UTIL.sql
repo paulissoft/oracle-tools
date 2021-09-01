@@ -7659,7 +7659,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
       <<try_loop>>
-      for i_try in 1 .. case when g_loopback is not null then 2 else 1 end
+      for i_try in 1 .. 1 -- GJP 2021-09-01 case when g_loopback is not null then 2 else 1 end
       loop
         if l_clob1 is not null
         then
@@ -7709,6 +7709,13 @@ $if oracle_tools.cfg_pkg.c_debugging $then
           , r_text.object_type
           , r_text.object_name
           );
+          if cardinality(r_text.text) > 0
+          then
+            for i_line_idx in r_text.text.first .. r_text.text.last
+            loop
+              dbug.print(dbug."info", 'line1: %s', r_text.text(i_line_idx));
+            end loop;
+          end if;
 $end
           oracle_tools.pkg_str_util.text2clob(r_text.text, l_clob1, true);
         end loop;
@@ -7760,6 +7767,13 @@ $end
         then
           for i_line_idx in l_first2 .. l_last2
           loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+            dbug.print
+            ( dbug."info"
+            , 'line2: %s'
+            , l_line2_tab(i_line_idx)
+            );
+$end
             l_line2_tab(i_line_idx) :=
               modify_ddl_text
               ( p_ddl_text => l_line2_tab(i_line_idx)
@@ -7770,7 +7784,7 @@ $end
         end if;
 
         begin
-          ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#eq').to_be_true();
+          ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq').to_be_true();
 $if oracle_tools.cfg_pkg.c_debugging $then
         exception
           when others
