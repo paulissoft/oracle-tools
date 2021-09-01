@@ -33,7 +33,8 @@ begin
 end base_object_name;
 
 overriding final member procedure base_object_schema
-( p_base_object_schema in varchar2
+( self in out nocopy oracle_tools.t_dependent_or_granted_object
+, p_base_object_schema in varchar2
 )
 is
 begin
