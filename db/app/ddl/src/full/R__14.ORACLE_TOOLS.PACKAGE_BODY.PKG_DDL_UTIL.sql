@@ -3554,22 +3554,22 @@ end;]', l_network_link
     begin
       if l_network_link is not null
       then
-        api_pkg.dbms_output_enable(l_network_link);
-        api_pkg.dbms_output_clear(l_network_link);
+        oracle_tools.api_pkg.dbms_output_enable(l_network_link);
+        oracle_tools.api_pkg.dbms_output_clear(l_network_link);
       end if;
       
       execute immediate l_statement using p_ddl_text_tab;
       
       if l_network_link is not null
       then
-        api_pkg.dbms_output_flush(l_network_link);
+        oracle_tools.api_pkg.dbms_output_flush(l_network_link);
       end if;
     exception
       when others
       then
         if l_network_link is not null
         then
-          api_pkg.dbms_output_flush(l_network_link);
+          oracle_tools.api_pkg.dbms_output_flush(l_network_link);
         end if;
         raise;
     end;
@@ -6066,15 +6066,15 @@ end;'
           , l_network_link 
           );
       begin
-        api_pkg.dbms_output_enable(l_network_link);
-        api_pkg.dbms_output_clear(l_network_link);
+        oracle_tools.api_pkg.dbms_output_enable(l_network_link);
+        oracle_tools.api_pkg.dbms_output_clear(l_network_link);
         execute immediate l_statement
           using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list, OUT l_error_backtrace;
-        api_pkg.dbms_output_flush(l_network_link);
+        oracle_tools.api_pkg.dbms_output_flush(l_network_link);
       exception
         when others
         then
-          api_pkg.dbms_output_flush(l_network_link);
+          oracle_tools.api_pkg.dbms_output_flush(l_network_link);
 $if oracle_tools.cfg_pkg.c_debugging $then
           dbug.print(dbug."error", 'l_error_backtrace: %s', l_error_backtrace);
 $end

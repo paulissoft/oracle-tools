@@ -414,7 +414,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
   );
 
-$if cfg_pkg.c_testing $then
+$if oracle_tools.cfg_pkg.c_testing $then
 
   -- test functions
 
