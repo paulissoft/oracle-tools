@@ -164,7 +164,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('T_CONSTRAINT_OBJECT.GET_COLUMN_NAMES');
-  dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s; p_table_name: %s', p_object_scehma, p_object_name, p_table_name);
+  dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s; p_table_name: %s', p_object_schema, p_object_name, p_table_name);
 $end
 
   for r in

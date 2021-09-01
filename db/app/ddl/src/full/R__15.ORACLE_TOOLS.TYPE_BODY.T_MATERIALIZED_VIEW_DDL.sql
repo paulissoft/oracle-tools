@@ -28,6 +28,7 @@ $end
   from    table
           ( oracle_tools.pkg_ddl_util.display_ddl_schema
             ( p_schema => l_tgt_materialized_view_object.object_schema()
+            , p_new_schema => null
             , p_sort_objects_by_deps => 0
             , p_object_type => 'OBJECT_GRANT'
             , p_object_names => null

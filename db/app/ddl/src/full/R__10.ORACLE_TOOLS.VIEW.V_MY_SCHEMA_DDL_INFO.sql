@@ -15,6 +15,7 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDL_INFO" ("OBJECT_SCHEMA", "
 from    table
         ( oracle_tools.pkg_ddl_util.display_ddl_schema
           ( p_schema => user
+          , p_new_schema => null
           , p_sort_objects_by_deps => 1
           , p_object_type => null
           , p_object_names => null

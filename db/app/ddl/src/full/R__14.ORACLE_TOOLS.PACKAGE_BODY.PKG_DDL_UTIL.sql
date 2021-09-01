@@ -2936,7 +2936,7 @@ $end
     when no_data_needed
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.leave_on_error;
+      dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
@@ -3356,7 +3356,7 @@ $end
     when no_data_needed
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.leave_on_error;
+      dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
@@ -4421,6 +4421,10 @@ $end
     longops_done(l_longops_rec);
     return;
   exception
+    when no_data_needed
+    then
+      null; -- not a real error, just a way to some cleanup
+
     when no_data_found
     then
       raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
@@ -5870,6 +5874,13 @@ $end
 
     return; -- essential for a pipelined function
   exception
+    when no_data_needed
+    then
+      cleanup;
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.leave;
+$end
+    
     when no_data_found
     then
       cleanup;
@@ -5904,6 +5915,7 @@ $end
   is
     l_cursor sys_refcursor;
     l_network_link all_db_links.db_link%type := null;
+    l_error_backtrace varchar2(32767 char) := null;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS');
@@ -5958,7 +5970,7 @@ $end
         l_statement constant varchar2(4000 char) :=
           utl_lms.format_message
           ( '
-begin
+begin  
   oracle_tools.pkg_ddl_util.set_display_ddl_schema_args@%s
   ( p_schema => :b1
   , p_new_schema => :b2
@@ -5970,6 +5982,11 @@ begin
   , p_grantor_is_schema => :b7
   , p_transform_param_list => :b8
   );
+exception
+  when others
+  then
+    :b9 := dbms_utility.format_error_backtrace;
+    raise;
 end;'
           , l_network_link 
           );
@@ -5977,12 +5994,15 @@ end;'
         api_pkg.dbms_output_enable(l_network_link);
         api_pkg.dbms_output_clear(l_network_link);
         execute immediate l_statement
-          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
+          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list, OUT l_error_backtrace;
         api_pkg.dbms_output_flush(l_network_link);
       exception
         when others
         then
           api_pkg.dbms_output_flush(l_network_link);
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print(dbug."error", 'l_error_backtrace: %s', l_error_backtrace);
+$end
           raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       end;
     end if;
@@ -6257,7 +6277,7 @@ $end
     when no_data_needed
     then
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave_on_error;
+      dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
