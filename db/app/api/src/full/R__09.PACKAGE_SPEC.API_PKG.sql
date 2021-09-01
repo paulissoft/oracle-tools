@@ -13,8 +13,6 @@ type t_tab is table of t_rec;
 
 type t_cur is ref cursor return t_rec;
 
-type t_errors_tab is table of user_errors%rowtype;
-
 /**
  * Return the owner of the package DATA_API_PKG.
  *
@@ -80,27 +78,6 @@ procedure ut_expect_violation
 , p_sqlerrm in varchar2 -- default sqlerrm
 , p_data_owner in all_tables.owner%type -- default get_data_owner
 );
-
-/**
- * Compile objects in the current schema and show the errors associated with them.
- *
- * <p>
- * Both package/type specifications and bodies will be compiled.
- * </p>
- *
- * @param p_object_names          A comma separated list of object names.
- * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
- * @param p_plsql_warnings        For "alter session set PLSQL_WARNINGS = '<p_sql_warnings>'"
- *
- * @return A list of USER_ERRORS rows ordered by name, type, sequence.
- */
-function show_compile_errors
-( p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
-)
-return t_errors_tab
-pipelined;
 
 /**
  * Enable the DBMS_OUTPUT buffer for a database link session.

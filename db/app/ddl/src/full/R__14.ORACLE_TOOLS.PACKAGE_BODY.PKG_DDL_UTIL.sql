@@ -2555,6 +2555,64 @@ $end
     return l_object_no_dependencies_tab;
   end get_object_no_dependencies_tab;
 
+  function modify_ddl_text
+  ( p_ddl_text in varchar2
+  , p_schema in t_schema_nn
+  , p_new_schema in t_schema
+  )
+  return varchar2
+  is
+    l_ddl_text varchar2(32767 char) := p_ddl_text;
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'MODIFY_DDL_TEXT');
+    dbug.print
+    ( dbug."input"
+    , 'p_schema: %s; p_new_schema: %s; p_ddl_text: %s'
+    , p_schema
+    , p_new_schema
+    , substr(p_ddl_text, 1, 255)
+    );
+$end
+
+    if p_schema <> p_new_schema
+    then
+      /*
+         ON "<owner>"."<table>" must be replaced by ON "EMPTY"."<table>"
+
+         CREATE OR REPLACE EDITIONABLE TRIGGER "EMPTY"."<trigger>"
+         BEFORE INSERT OR DELETE OR UPDATE ON "<owner>"."<table>"
+         REFERENCING FOR EACH ROW
+      */
+      
+      -- replace p_schema
+      --
+      -- A) not case sensitive
+      --    1) at the start of a line or after a non Oracle identifier character
+      --    2) before a dot
+      l_ddl_text :=
+        regexp_replace(l_ddl_text, '(^|[^_a-zA-Z0-9$#])' || lower(p_schema) || '\.', '\1' || p_new_schema, 1, 0, 'i');
+      -- B) case sensitive, between " and "
+      l_ddl_text :=
+        regexp_replace(l_ddl_text, '"' || p_schema || '"', '"' || p_new_schema || '"');
+    end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.print(dbug."output", 'return: %s', substr(l_ddl_text, 1, 255));
+    dbug.leave;
+$end
+
+    return l_ddl_text;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end modify_ddl_text;
+
   procedure remap_schema
   ( p_schema in varchar2
   , p_new_schema in varchar2
@@ -2590,7 +2648,6 @@ $end
   procedure remap_schema
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
   , p_ddl in out nocopy t_ddl
   )
   is
@@ -2600,14 +2657,10 @@ $end
       for i_idx in p_ddl.text.first .. p_ddl.text.last
       loop
         p_ddl.text(i_idx) :=
-          dbms_lob.substr
-          ( lob_loc => modify_ddl_text
-                       ( p_ddl_text => p_ddl.text(i_idx)
-                       , p_schema => p_schema
-                       , p_new_schema => p_new_schema
-                       , p_object_type => p_object_type
-                       )
-          , amount => 4000             
+          modify_ddl_text
+          ( p_ddl_text => p_ddl.text(i_idx)
+          , p_schema => p_schema
+          , p_new_schema => p_new_schema
           );
       end loop;
     end if;
@@ -2616,7 +2669,6 @@ $end
   procedure remap_schema
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
   , p_ddl_tab in out nocopy t_ddl_tab
   )
   is
@@ -2628,7 +2680,6 @@ $end
         remap_schema
         ( p_schema => p_schema
         , p_new_schema => p_new_schema
-        , p_object_type => p_object_type
         , p_ddl => p_ddl_tab(i_idx)
         );
       end loop;
@@ -2650,7 +2701,6 @@ $end
     remap_schema
     ( p_schema => p_schema
     , p_new_schema => p_new_schema
-    , p_object_type => p_schema_ddl.obj.object_type()
     , p_ddl_tab => p_schema_ddl.ddl_tab
     );
   end remap_schema;
@@ -6299,90 +6349,6 @@ $end
       raise;
   end migrate_schema_ddl;
 
-  function modify_ddl_text
-  ( p_ddl_text in clob
-  , p_schema in t_schema_nn
-  , p_new_schema in t_schema
-  , p_object_type in t_metadata_object_type
-  )
-  return clob
-  is
-    l_ddl_text clob := null;
-    l_str_tab dbms_sql.varchar2a;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.enter(g_package_prefix || 'MODIFY_DDL_TEXT');
-    dbug.print
-    ( dbug."input"
-    , 'p_schema: %s; p_new_schema: %s; p_object_type: %s; p_ddl_text: %s'
-    , p_schema
-    , p_new_schema
-    , p_object_type
-    , substr(p_ddl_text, 1, 255)
-    );
-$end
-
-    if p_schema <> p_new_schema
-    then
-      /*
-         ON "<owner>"."<table>" must be replaced by ON "EMPTY"."<table>"
-
-         CREATE OR REPLACE EDITIONABLE TRIGGER "EMPTY"."<trigger>"
-         BEFORE INSERT OR DELETE OR UPDATE ON "<owner>"."<table>"
-         REFERENCING FOR EACH ROW
-      */
-      
-      oracle_tools.pkg_str_util.split
-      ( p_str => p_ddl_text
-      , p_delimiter => chr(10)
-      , p_str_tab => l_str_tab
-      );
-
-      if l_str_tab.count > 0
-      then
-        init_clob;
-        
-        for i_idx in l_str_tab.first .. l_str_tab.last
-        loop
-          -- replace p_schema
-          --
-          -- A) not case sensitive
-          --    1) at the start of a line or after a non Oracle identifier character
-          --    2) before a dot
-          l_str_tab(i_idx) :=
-            regexp_replace(l_str_tab(i_idx), '(^|[^_a-zA-Z0-9$#])' || lower(p_schema) || '\.', '\1' || p_new_schema, 1, 0, 'i');
-          -- B) case sensitive, between " and "
-          l_str_tab(i_idx) :=
-            regexp_replace(l_str_tab(i_idx), '"' || p_schema || '"', '"' || p_new_schema || '"');
-          append_clob(l_str_tab(i_idx) || chr(10));
-        end loop;
-
-        dbms_lob.copy
-        ( dest_lob => l_ddl_text
-        , src_lob => g_clob
-        , amount => dbms_lob.getlength(g_clob)
-        , dest_offset => 1
-        , src_offset => 1
-        );
-      end if;
-    end if;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.print(dbug."output", 'return: %s', substr(l_ddl_text, 1, 255));
-    dbug.leave;
-$end
-
-    return l_ddl_text;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end modify_ddl_text;
-
 $if oracle_tools.cfg_pkg.c_testing $then
 
   /*
@@ -7680,7 +7646,6 @@ $end
               ( p_ddl_text => l_line2_tab(i_line_idx)
               , p_schema => r.owner
               , p_new_schema => g_empty
-              , p_object_type => r.object_type
               );
           end loop;
         end if;

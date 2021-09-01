@@ -411,14 +411,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema_ddl in out nocopy t_schema_ddl
   );
 
-  function modify_ddl_text
-  ( p_ddl_text in clob
-  , p_schema in t_schema_nn
-  , p_new_schema in t_schema
-  , p_object_type in t_metadata_object_type default null
-  )
-  return clob;
-
 $if cfg_pkg.c_testing $then
 
   -- test functions
