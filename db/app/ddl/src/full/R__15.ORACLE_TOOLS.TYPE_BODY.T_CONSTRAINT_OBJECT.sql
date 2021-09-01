@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_CONSTRAINT_OBJECT" AS
 
 constructor function t_constraint_object
-( self in out nocopy t_constraint_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_constraint_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_constraint_type in varchar2 default null
@@ -13,14 +13,14 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_OBJECT.T_CONSTRAINT_OBJECT (1)');
+  dbug.enter('oracle_tools.t_constraint_object.oracle_tools.t_constraint_object (1)');
   p_base_object.print;
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
   dbug.print(dbug."input", 'p_constraint_type: %s; p_column_names: %s; p_search_condition: %s', p_constraint_type, p_column_names, p_search_condition);
 $end
 
   -- default constructor
-  self := t_constraint_object(null, p_object_schema, p_base_object, p_object_name, p_column_names, p_search_condition, p_constraint_type);
+  self := oracle_tools.t_constraint_object(null, p_object_schema, p_base_object, p_object_name, p_column_names, p_search_condition, p_constraint_type);
 
   if p_constraint_type is not null and (p_constraint_type <> 'C' or p_search_condition is not null)
   then
@@ -45,7 +45,7 @@ $end
     then
       if self.column_names$ is null
       then
-        self.column_names$ := t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name);
+        self.column_names$ := oracle_tools.t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name);
       end if;
       self.search_condition$ := null;
 
@@ -163,7 +163,7 @@ is
   l_column_names varchar2(4000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_OBJECT.GET_COLUMN_NAMES');
+  dbug.enter('oracle_tools.t_constraint_object.GET_COLUMN_NAMES');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s; p_table_name: %s', p_object_schema, p_object_name, p_table_name);
 $end
 
@@ -178,7 +178,7 @@ $end
     ,       cc.column_name
   )
   loop
-    l_column_names := case when l_column_names is not null then l_column_names || ',' end || '"' || r.column_name || '"'; -- " for pkg_ddl_util.parse_ddl
+    l_column_names := case when l_column_names is not null then l_column_names || ',' end || '"' || r.column_name || '"'; -- " for oracle_tools.pkg_ddl_util.parse_ddl
   end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
@@ -198,13 +198,13 @@ $end
 end get_column_names;
 
 overriding member procedure chk
-( self in t_constraint_object
+( self in oracle_tools.t_constraint_object
 , p_schema in varchar2
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_OBJECT.CHK');
+  dbug.enter('oracle_tools.t_constraint_object.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);

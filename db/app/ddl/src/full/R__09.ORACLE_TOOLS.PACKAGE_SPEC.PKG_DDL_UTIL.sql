@@ -137,14 +137,14 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list 
   )
-  return t_schema_ddl_tab
+  return oracle_tools.t_schema_ddl_tab
   pipelined;
 
   procedure create_schema_ddl
-  ( p_source_schema_ddl in t_schema_ddl
-  , p_target_schema_ddl in t_schema_ddl
+  ( p_source_schema_ddl in oracle_tools.t_schema_ddl
+  , p_target_schema_ddl in oracle_tools.t_schema_ddl
   , p_skip_repeatables in t_numeric_boolean
-  , p_schema_ddl out nocopy t_schema_ddl
+  , p_schema_ddl out nocopy oracle_tools.t_schema_ddl
   );
 
   /**
@@ -177,7 +177,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Default for Flyway with repeatable migrations
   , p_transform_param_list in varchar2 default c_transform_param_list
   )
-  return t_schema_ddl_tab
+  return oracle_tools.t_schema_ddl_tab
   pipelined;
 
   procedure execute_ddl
@@ -186,12 +186,12 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
 
   procedure execute_ddl
-  ( p_ddl_text_tab in t_text_tab
+  ( p_ddl_text_tab in oracle_tools.t_text_tab
   , p_network_link in varchar2 default null
   );
 
   procedure execute_ddl
-  ( p_schema_ddl_tab in t_schema_ddl_tab
+  ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
   , p_network_link in varchar2 default null
   );
 
@@ -263,7 +263,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names in t_object_names default null
   , p_object_names_include in t_numeric_boolean default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
-  , p_schema_object_tab out nocopy t_schema_object_tab
+  , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   );
 
   function get_schema_object
@@ -273,12 +273,12 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   )
-  return t_schema_object_tab
+  return oracle_tools.t_schema_object_tab
   pipelined;
 
   procedure get_member_ddl
-  ( p_schema_ddl in t_schema_ddl
-  , p_member_ddl_tab out nocopy t_schema_ddl_tab
+  ( p_schema_ddl in oracle_tools.t_schema_ddl
+  , p_member_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
   );
 
   -- set checks for an object type
@@ -298,22 +298,22 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- So we invoke package procedure from the type bodies.
   */
   procedure chk_schema_object
-  ( p_schema_object in t_schema_object
+  ( p_schema_object in oracle_tools.t_schema_object
   , p_schema in varchar2
   );
 
   procedure chk_schema_object
-  ( p_dependent_or_granted_object in t_dependent_or_granted_object
+  ( p_dependent_or_granted_object in oracle_tools.t_dependent_or_granted_object
   , p_schema in varchar2
   );
 
   procedure chk_schema_object
-  ( p_named_object in t_named_object
+  ( p_named_object in oracle_tools.t_named_object
   , p_schema in varchar2
   );
 
   procedure chk_schema_object
-  ( p_constraint_object in t_constraint_object
+  ( p_constraint_object in oracle_tools.t_constraint_object
   , p_schema in varchar2
   );
 
@@ -325,7 +325,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
     p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
   , p_object_names_include in t_numeric_boolean
-  , p_object_types_to_check in t_text_tab
+  , p_object_types_to_check in oracle_tools.t_text_tab
     -- database values
   , p_metadata_object_type in t_metadata_object_type
   , p_object_name in t_object_name
@@ -345,7 +345,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   procedure get_exclude_name_expr_tab
   ( p_object_type in varchar2
   , p_object_name in varchar2 default null
-  , p_exclude_name_expr_tab out nocopy t_text_tab
+  , p_exclude_name_expr_tab out nocopy oracle_tools.t_text_tab
   );
 
   function is_exclude_name_expr
@@ -361,10 +361,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   function get_schema_ddl
   ( p_schema in t_schema_nn
   , p_use_schema_export in t_numeric_boolean_nn
-  , p_schema_object_tab in t_schema_object_tab
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list
   )
-  return t_schema_ddl_tab
+  return oracle_tools.t_schema_ddl_tab
   pipelined;
 
   /*
@@ -389,17 +389,17 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- Remark 2: A call to display_ddl_schema() with a database linke will invoke set_display_ddl_schema() at the remote database.
   */
   function get_display_ddl_schema
-  return t_schema_ddl_tab
+  return oracle_tools.t_schema_ddl_tab
   pipelined;
 
   /*
   -- Sort objects on dependency order.
   */
   function sort_objects_by_deps
-  ( p_schema_object_tab in t_schema_object_tab
+  ( p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_schema in t_schema_nn default user
   )
-  return t_schema_object_tab
+  return oracle_tools.t_schema_object_tab
   pipelined;
 
   procedure init_clob;
@@ -409,9 +409,9 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   function get_clob return clob;
 
   procedure migrate_schema_ddl
-  ( p_source in t_schema_ddl
-  , p_target in t_schema_ddl
-  , p_schema_ddl in out nocopy t_schema_ddl
+  ( p_source in oracle_tools.t_schema_ddl
+  , p_target in oracle_tools.t_schema_ddl
+  , p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
   );
 
 $if cfg_pkg.c_testing $then
@@ -431,11 +431,11 @@ $if cfg_pkg.c_testing $then
   procedure ut_teardown;
 
   --%test
-  --%beforetest(pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
   procedure ut_display_ddl_schema;
 
   --%test
-  --%beforetest(pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
   procedure ut_display_ddl_schema_diff;
 
   --%test
@@ -451,7 +451,7 @@ $if cfg_pkg.c_testing $then
   procedure ut_get_schema_object;
 
   --%test
-  --%beforetest(pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
   procedure ut_synchronize;
 
   --%test

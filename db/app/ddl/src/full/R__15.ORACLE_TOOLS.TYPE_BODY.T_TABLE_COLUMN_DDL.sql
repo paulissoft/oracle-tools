@@ -1,23 +1,23 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TABLE_COLUMN_DDL" AS
 
 constructor function t_table_column_ddl
-( self in out nocopy t_table_column_ddl
-, p_obj in t_schema_object
+( self in out nocopy oracle_tools.t_table_column_ddl
+, p_obj in oracle_tools.t_schema_object
 )
 return self as result
 is
-  l_table_column_object t_table_column_object := treat(p_obj as t_table_column_object);
+  l_table_column_object oracle_tools.t_table_column_object := treat(p_obj as oracle_tools.t_table_column_object);
   l_buffer varchar2(32767 char) := null;
   l_clob clob := null;
   "ADD" constant varchar2(5) := ' ADD ';
-  l_data_default t_text_tab;
+  l_data_default oracle_tools.t_text_tab;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TABLE_COLUMN_DDL.T_TABLE_COLUMN_DDL');
+  dbug.enter('oracle_tools.t_table_column_ddl.oracle_tools.t_table_column_ddl');
 $end
 
   self.obj := p_obj;
-  self.ddl_tab := t_ddl_tab();
+  self.ddl_tab := oracle_tools.t_ddl_tab();
 
   /* construct the ALTER TABLE ADD COLUMN here */ 
 
@@ -85,25 +85,25 @@ $end
 end;
 
 overriding member procedure migrate
-( self in out nocopy t_table_column_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_table_column_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
   l_buffer varchar2(32767 char) := null;
   l_clob clob := null;
-  l_source_table_column_object t_table_column_object := treat(p_source.obj as t_table_column_object);
-  l_target_table_column_object t_table_column_object := treat(p_target.obj as t_table_column_object);
-  l_data_default t_text_tab;
+  l_source_table_column_object oracle_tools.t_table_column_object := treat(p_source.obj as oracle_tools.t_table_column_object);
+  l_target_table_column_object oracle_tools.t_table_column_object := treat(p_target.obj as oracle_tools.t_table_column_object);
+  l_data_default oracle_tools.t_text_tab;
   l_changed boolean;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TABLE_COLUMN_DDL.MIGRATE');
+  dbug.enter('oracle_tools.t_table_column_ddl.MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
 
   -- invoke the super method
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -207,13 +207,13 @@ $end
 end migrate;
 
 overriding member procedure uninstall
-( self in out nocopy t_table_column_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_table_column_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TABLE_COLUMN_DDL.UNINSTALL');
+  dbug.enter('oracle_tools.t_table_column_ddl.UNINSTALL');
 $end
 
   -- ALTER TABLE "owner"."table" DROP COLUMN "column"
@@ -227,7 +227,7 @@ $end
               p_target.obj.base_object_name() ||
               '"' ||
               ' DROP COLUMN "' ||
-              treat(p_target.obj as t_table_column_object).member_name() ||
+              treat(p_target.obj as oracle_tools.t_table_column_object).member_name() ||
               '"'
   , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
   );

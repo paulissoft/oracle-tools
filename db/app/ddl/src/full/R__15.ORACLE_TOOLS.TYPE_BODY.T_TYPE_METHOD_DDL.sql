@@ -1,22 +1,22 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_METHOD_DDL" AS
 
 constructor function t_type_method_ddl
-( self in out nocopy t_type_method_ddl
-, p_obj in t_schema_object
+( self in out nocopy oracle_tools.t_type_method_ddl
+, p_obj in oracle_tools.t_schema_object
 )
 return self as result
 is
-  l_type_method_object t_type_method_object := treat(p_obj as t_type_method_object);
+  l_type_method_object oracle_tools.t_type_method_object := treat(p_obj as oracle_tools.t_type_method_object);
   l_buffer varchar2(32767 char) := null;
   l_clob clob := null;
   " ADD  " constant varchar2(6) := ' ADD  '; -- so we can replace 'ADD ' by 'DROP'
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TYPE_METHOD_DDL.T_TYPE_METHOD_DDL');
+  dbug.enter('oracle_tools.t_type_method_ddl.oracle_tools.t_type_method_ddl');
 $end
 
   self.obj := p_obj;
-  self.ddl_tab := t_ddl_tab();
+  self.ddl_tab := oracle_tools.t_ddl_tab();
 
   /* construct the ALTER TYPE ADD METHOD here */ 
   oracle_tools.pkg_str_util.append_text
@@ -56,19 +56,19 @@ $end
 end;
 
 overriding member procedure migrate
-( self in out nocopy t_type_method_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_type_method_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TYPE_METHOD_DDL.MIGRATE');
+  dbug.enter('oracle_tools.t_type_method_ddl.MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
 
   -- first the standard things
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -83,13 +83,13 @@ $end
 end migrate;
 
 overriding member procedure uninstall
-( self in out nocopy t_type_method_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_type_method_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TYPE_METHOD_DDL.UNINSTALL');
+  dbug.enter('oracle_tools.t_type_method_ddl.UNINSTALL');
 $end
 
   self.ddl_tab := p_target.ddl_tab;

@@ -1,24 +1,24 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TABLE_DDL" IS
 
 overriding member procedure migrate
-( self in out nocopy t_table_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_table_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
-  l_source_table_object t_table_object := treat(p_source.obj as t_table_object);
-  l_target_table_object t_table_object := treat(p_target.obj as t_table_object);
-  l_source_member_ddl_tab t_schema_ddl_tab;
-  l_target_member_ddl_tab t_schema_ddl_tab;
-  l_table_column_ddl t_schema_ddl;
+  l_source_table_object oracle_tools.t_table_object := treat(p_source.obj as oracle_tools.t_table_object);
+  l_target_table_object oracle_tools.t_table_object := treat(p_target.obj as oracle_tools.t_table_object);
+  l_source_member_ddl_tab oracle_tools.t_schema_ddl_tab;
+  l_target_member_ddl_tab oracle_tools.t_schema_ddl_tab;
+  l_table_column_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TABLE_DDL.MIGRATE');
+  dbug.enter('oracle_tools.t_table_ddl.MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
 
   -- first the standard things
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -98,9 +98,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
-      t_schema_ddl.create_schema_ddl
+      oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
-      , t_ddl_tab()
+      , oracle_tools.t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.uninstall(r.target_schema_ddl);
@@ -110,9 +110,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
 $end      
-      t_schema_ddl.create_schema_ddl
+      oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , t_ddl_tab()
+      , oracle_tools.t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.install(r.source_schema_ddl);
@@ -124,9 +124,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
-      t_schema_ddl.create_schema_ddl
+      oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , t_ddl_tab()
+      , oracle_tools.t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.migrate
@@ -160,13 +160,13 @@ $end
 end migrate;
 
 overriding member procedure uninstall
-( self in out nocopy t_table_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_table_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TABLE_DDL.UNINSTALL');
+  dbug.enter('oracle_tools.t_table_ddl.UNINSTALL');
 $end
 
   self.add_ddl
@@ -181,7 +181,7 @@ $end
 end uninstall;  
 
 overriding member procedure add_ddl
-( self in out nocopy t_table_ddl
+( self in out nocopy oracle_tools.t_table_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -192,7 +192,7 @@ is
   l_repl_expr constant varchar2(100) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TABLE_DDL.ADD_DDL');
+  dbug.enter('oracle_tools.t_table_ddl.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);

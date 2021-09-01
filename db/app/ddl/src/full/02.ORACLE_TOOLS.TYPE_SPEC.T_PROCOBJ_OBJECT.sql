@@ -1,7 +1,7 @@
-CREATE TYPE "ORACLE_TOOLS"."T_PROCOBJ_OBJECT" authid current_user under t_named_object
+CREATE TYPE "ORACLE_TOOLS"."T_PROCOBJ_OBJECT" authid current_user under oracle_tools.t_named_object
 ( dict_object_type$ varchar2(19 char)
 , constructor function t_procobj_object
-  ( self in out nocopy t_procobj_object
+  ( self in out nocopy oracle_tools.t_procobj_object
   , p_object_schema in varchar2
   , p_object_name in varchar2
   )
@@ -11,7 +11,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_PROCOBJ_OBJECT" authid current_user under t_named_
 , overriding member function object_type return varchar2 deterministic
   -- end of getter(s)
 , overriding member procedure chk
-  ( self in t_procobj_object
+  ( self in oracle_tools.t_procobj_object
   , p_schema in varchar2
   )
 )

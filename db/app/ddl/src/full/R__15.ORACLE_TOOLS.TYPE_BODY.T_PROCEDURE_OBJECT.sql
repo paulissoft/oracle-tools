@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_PROCEDURE_OBJECT" AS
 
 constructor function t_procedure_object
-( self in out nocopy t_procedure_object
+( self in out nocopy oracle_tools.t_procedure_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
@@ -9,7 +9,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_PROCEDURE_OBJECT.T_PROCEDURE_OBJECT');
+  dbug.enter('oracle_tools.t_procedure_object.oracle_tools.t_procedure_object');
   dbug.print
   ( dbug."input"
   , 'p_object_schema: %s; p_object_name: %s'

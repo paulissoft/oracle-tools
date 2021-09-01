@@ -1,4 +1,4 @@
-CREATE TYPE "ORACLE_TOOLS"."T_MEMBER_OBJECT" authid current_user under t_dependent_or_granted_object
+CREATE TYPE "ORACLE_TOOLS"."T_MEMBER_OBJECT" authid current_user under oracle_tools.t_dependent_or_granted_object
 ( member#$ integer
 , member_name$ varchar2(128 char)
 -- begin of getter(s)/setter(s)

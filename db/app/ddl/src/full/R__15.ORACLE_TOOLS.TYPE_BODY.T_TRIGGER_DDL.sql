@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TRIGGER_DDL" IS
 
 overriding member procedure add_ddl
-( self in out nocopy t_trigger_ddl
+( self in out nocopy oracle_tools.t_trigger_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -13,7 +13,7 @@ is
   l_repl_expr constant varchar2(100) := '\2';
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TRIGGER_DDL.ADD_DDL');
+  dbug.enter('oracle_tools.t_trigger_ddl.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);

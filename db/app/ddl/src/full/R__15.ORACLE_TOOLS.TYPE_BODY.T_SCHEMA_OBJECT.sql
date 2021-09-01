@@ -9,7 +9,7 @@ begin
 end network_link;
 
 final member procedure network_link
-( self in out nocopy t_schema_object
+( self in out nocopy oracle_tools.t_schema_object
 , p_network_link in varchar2
 )
 is
@@ -26,7 +26,7 @@ begin
 end object_schema;
 
 final member procedure object_schema
-( self in out nocopy t_schema_object
+( self in out nocopy oracle_tools.t_schema_object
 , p_object_schema in varchar2
 )
 is
@@ -51,7 +51,7 @@ begin
 end base_object_schema;
 
 member procedure base_object_schema
-( self in out nocopy t_schema_object
+( self in out nocopy oracle_tools.t_schema_object
 , p_base_object_schema in varchar2
 )
 is
@@ -163,7 +163,7 @@ return integer
 deterministic
 is
 begin
-  return t_schema_object.object_type_order(self.object_type);
+  return oracle_tools.t_schema_object.object_type_order(self.object_type);
 end object_type_order;
 
 static function id
@@ -184,7 +184,7 @@ is
   l_id varchar2(4000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_SCHEMA_OBJECT.ID');
+  dbug.enter('oracle_tools.t_schema_object.ID');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
   if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
   then
@@ -246,7 +246,7 @@ $end
   elsif p_object_type in ('INDEX')
   then
     l_id :=
-      -- DBMS_METADATA does not need to determine base object, but we do in pkg_ddl_util.parse_ddl()
+      -- DBMS_METADATA does not need to determine base object, but we do in oracle_tools.pkg_ddl_util.parse_ddl()
       -- <owner>:INDEX:DOCUMENT_PK::::
       p_object_schema || ':' ||
       p_object_type || ':' ||
@@ -338,7 +338,7 @@ return varchar2
 deterministic
 is
 begin
-  return t_schema_object.id
+  return oracle_tools.t_schema_object.id
          ( p_object_schema => self.object_schema
          , p_object_type => self.object_type
          , p_object_name => self.object_name
@@ -369,7 +369,7 @@ is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_SCHEMA_OBJECT.DICT2METADATA_OBJECT_TYPE');
+  dbug.enter('oracle_tools.t_schema_object.DICT2METADATA_OBJECT_TYPE');
 $end
 
   l_metadata_object_type := case
@@ -397,14 +397,14 @@ return varchar2
 deterministic
 is
 begin
-  return t_schema_object.dict2metadata_object_type(self.object_type);
+  return oracle_tools.t_schema_object.dict2metadata_object_type(self.object_type);
 end dict2metadata_object_type;
 
-member procedure print(self in t_schema_object)
+member procedure print(self in oracle_tools.t_schema_object)
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('T_SCHEMA_OBJECT.PRINT');
+  dbug.enter('oracle_tools.t_schema_object.PRINT');
   dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id());
   dbug.print(dbug."info", 'signature: %s', self.signature());
   dbug.leave;
@@ -424,14 +424,14 @@ static procedure create_schema_object
 , p_grantee in varchar2 default null
 , p_privilege in varchar2 default null
 , p_grantable in varchar2 default null
-, p_schema_object out nocopy t_schema_object
+, p_schema_object out nocopy oracle_tools.t_schema_object
 )
 is
   l_base_object_schema all_objects.owner%type := p_base_object_schema;
   l_base_object_name all_objects.object_name%type := p_base_object_name;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
+  dbug.enter('oracle_tools.t_schema_object.CREATE_SCHEMA_OBJECT (1)');
   dbug.print
   ( dbug."input"
   , 'p_object_schema: %s; p_object_type: %s; p_object_name: %s'
@@ -481,9 +481,9 @@ $end
       end if;
       
       p_schema_object :=
-        t_index_object
+        oracle_tools.t_index_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => l_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => l_base_object_name
@@ -511,9 +511,9 @@ $end
       end if;
       
       p_schema_object :=
-        t_trigger_object
+        oracle_tools.t_trigger_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => l_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => l_base_object_name
@@ -525,9 +525,9 @@ $end
     when 'OBJECT_GRANT'
     then
       p_schema_object :=
-        t_object_grant_object
+        oracle_tools.t_object_grant_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => p_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => p_base_object_name
@@ -541,9 +541,9 @@ $end
     when 'CONSTRAINT'
     then
       p_schema_object :=
-        t_constraint_object
+        oracle_tools.t_constraint_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => p_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => p_base_object_name
@@ -555,9 +555,9 @@ $end
     when 'REF_CONSTRAINT'
     then
       p_schema_object :=
-        t_ref_constraint_object
+        oracle_tools.t_ref_constraint_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => p_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => p_base_object_name
@@ -584,9 +584,9 @@ $end
       end if;
       
       p_schema_object :=
-        t_synonym_object
+        oracle_tools.t_synonym_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => l_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => l_base_object_name
@@ -598,9 +598,9 @@ $end
     when 'COMMENT'
     then
       p_schema_object :=
-        t_comment_object
+        oracle_tools.t_comment_object
         ( p_base_object =>
-            t_named_object.create_named_object
+            oracle_tools.t_named_object.create_named_object
             ( p_object_schema => p_base_object_schema
             , p_object_type => p_base_object_type
             , p_object_name => p_base_object_name
@@ -633,7 +633,7 @@ $end
 -- when 'REFRESH_GROUP'
 -- when 'XMLSCHEMA'
 -- when 'PROCOBJ'
-      t_named_object.create_named_object
+      oracle_tools.t_named_object.create_named_object
       ( p_object_schema => p_object_schema
       , p_object_type => p_object_type
       , p_object_name => p_object_name
@@ -663,15 +663,15 @@ static function create_schema_object
 , p_privilege in varchar2 default null
 , p_grantable in varchar2 default null
 )
-return t_schema_object
+return oracle_tools.t_schema_object
 is
-   l_schema_object t_schema_object;
+   l_schema_object oracle_tools.t_schema_object;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
+  dbug.enter('oracle_tools.t_schema_object.CREATE_SCHEMA_OBJECT (2)');
 $end
 
-  t_schema_object.create_schema_object
+  oracle_tools.t_schema_object.create_schema_object
   ( p_object_schema => p_object_schema
   , p_object_type => p_object_type
   , p_object_name => p_object_name
@@ -755,7 +755,7 @@ return integer
 deterministic
 is
 begin
-  return t_schema_object.is_a_repeatable(self.object_type());
+  return oracle_tools.t_schema_object.is_a_repeatable(self.object_type());
 end is_a_repeatable;
 
 final member function fq_object_name
@@ -772,7 +772,7 @@ is
   end get_object_part;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_SCHEMA_OBJECT.FQ_OBJECT_NAME');
+  dbug.enter('oracle_tools.t_schema_object.FQ_OBJECT_NAME');
 $end
 
   l_object_name :=
@@ -797,7 +797,7 @@ is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_SCHEMA_OBJECT.DICT_OBJECT_TYPE');
+  dbug.enter('oracle_tools.t_schema_object.DICT_OBJECT_TYPE');
 $end
 
   l_metadata_object_type := self.object_type();
@@ -824,13 +824,13 @@ $end
 end dict_object_type;
 
 member procedure chk
-( self in t_schema_object
+( self in oracle_tools.t_schema_object
 , p_schema in varchar2
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_OBJECT.CHK');
+  dbug.enter('oracle_tools.t_schema_object.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);

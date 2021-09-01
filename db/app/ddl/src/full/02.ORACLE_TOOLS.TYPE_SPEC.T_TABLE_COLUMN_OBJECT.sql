@@ -1,6 +1,6 @@
-CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under t_type_attribute_object
+CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under oracle_tools.t_type_attribute_object
 ( /*
-  From USER_TAB_COLUMNS (see also T_TYPE_ATTRIBUTE_OBJECT):
+  From USER_TAB_COLUMNS (see also oracle_tools.t_type_attribute_object):
 
   Column                Datatype              Description
   ------                --------              -----------
@@ -10,7 +10,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under t_t
                                            -- The constraint should be in an ENABLE VALIDATE state.
 , default_length$       number             -- Length of default value for the column.
                                            -- This starts at the default expression after DEFAULT plus whitespace till the next token.
-, data_default$         t_text_tab         -- Default value for the column
+, data_default$         oracle_tools.t_text_tab         -- Default value for the column
 , char_col_decl_length$ number             -- Length
 , char_length$          number             -- Displays the length of the column in characters. This value only applies to the following datatypes:
                                            -- CHAR
@@ -26,8 +26,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under t_t
                                            -- NCHAR
                                            -- NVARCHAR2
 , constructor function t_table_column_object
-  ( self in out nocopy t_table_column_object
-  , p_base_object in t_named_object
+  ( self in out nocopy oracle_tools.t_table_column_object
+  , p_base_object in oracle_tools.t_named_object
   , p_member# in integer
   , p_member_name in varchar2
   , p_data_type_name in varchar2
@@ -39,7 +39,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under t_t
   , p_character_set_name in varchar2
   , p_nullable in varchar2
   , p_default_length in number
-  , p_data_default in t_text_tab
+  , p_data_default in oracle_tools.t_text_tab
   , p_char_col_decl_length in number
   , p_char_length number
   , p_char_used in varchar2
@@ -50,7 +50,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under t_t
 , overriding member function column_name return varchar2 deterministic
 , member function nullable return varchar2 deterministic
 , member function default_length return number deterministic
-, member function data_default return t_text_tab deterministic
+, member function data_default return oracle_tools.t_text_tab deterministic
 , member function char_col_decl_length return number deterministic
 , overriding member function char_length return number deterministic
 , overriding member function char_used return varchar2 deterministic

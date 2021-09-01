@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_GRANT_OBJECT" AS
 
 constructor function t_object_grant_object
-( self in out nocopy t_object_grant_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_object_grant_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_grantee in varchar2
 , p_privilege in varchar2
@@ -12,7 +12,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_OBJECT_GRANT_OBJECT.T_OBJECT_GRANT_OBJECT');
+  dbug.enter('oracle_tools.t_object_grant_object.oracle_tools.t_object_grant_object');
   p_base_object.print();
   dbug.print
   ( dbug."input"
@@ -75,7 +75,7 @@ end grantable;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in t_object_grant_object
+( self in oracle_tools.t_object_grant_object
 , p_schema in varchar2
 )
 is
@@ -87,7 +87,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_OBJECT_GRANT_OBJECT.CHK');
+  dbug.enter('oracle_tools.t_object_grant_object.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);

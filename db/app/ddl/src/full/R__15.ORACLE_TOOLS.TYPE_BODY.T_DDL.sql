@@ -1,16 +1,16 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_DDL" AS
 
 constructor function t_ddl
-( self in out nocopy t_ddl
+( self in out nocopy oracle_tools.t_ddl
 , p_ddl# in integer
 , p_verb in varchar2
-, p_text in t_text_tab
+, p_text in oracle_tools.t_text_tab
 )
 return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_DDL.T_DDL');
+  dbug.enter('oracle_tools.t_ddl.oracle_tools.t_ddl');
 $end
 
   self.ddl#$ := p_ddl#;
@@ -41,7 +41,7 @@ begin
 end ddl#;
 
 member procedure print
-( self in t_ddl
+( self in oracle_tools.t_ddl
 )
 is
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -50,7 +50,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('T_DDL.PRINT');
+  dbug.enter('oracle_tools.t_ddl.PRINT');
   dbug.print
   ( dbug."info"
   , 'ddl#: %s; verb: %s'
@@ -81,7 +81,7 @@ $else
 $end
 end print;
 
-order member function match( p_ddl in t_ddl ) 
+order member function match( p_ddl in oracle_tools.t_ddl ) 
 return integer
 deterministic
 is
@@ -89,14 +89,14 @@ begin
   return compare(p_ddl);
 end match;
 
-member function compare( p_ddl in t_ddl )
+member function compare( p_ddl in oracle_tools.t_ddl )
 return integer
 deterministic
 is
   l_result binary_integer := 0;
   l_idx binary_integer;
-  l_text1_tab t_text_tab := null;
-  l_text2_tab t_text_tab := null;
+  l_text1_tab oracle_tools.t_text_tab := null;
+  l_text2_tab oracle_tools.t_text_tab := null;
 
   function cmp(p_val1 in varchar2, p_val2 in varchar2)
   return binary_integer
@@ -114,7 +114,7 @@ is
   end cmp;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_DDL.COMPARE');
+  dbug.enter('oracle_tools.t_ddl.COMPARE');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_ddl:');
@@ -177,7 +177,7 @@ $end
   return l_result;
 end compare;
 
-member procedure text_to_compare( self in t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
+member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
 is
 begin
   p_text_tab := self.text;

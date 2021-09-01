@@ -4,19 +4,19 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
 -- begin of getter(s)/setter(s)
 , final member function network_link return varchar2 deterministic
 , final member procedure network_link
-  ( self in out nocopy t_schema_object
+  ( self in out nocopy oracle_tools.t_schema_object
   , p_network_link in varchar2
   ) 
 , final member function object_schema return varchar2 deterministic
 , final member procedure object_schema
-  ( self in out nocopy t_schema_object
+  ( self in out nocopy oracle_tools.t_schema_object
   , p_object_schema in varchar2
   )
 , not instantiable member function object_type return varchar2 deterministic
 , member function object_name return varchar2 deterministic
 , member function base_object_schema return varchar2 deterministic
 , member procedure base_object_schema
-  ( self in out nocopy t_schema_object
+  ( self in out nocopy oracle_tools.t_schema_object
   , p_base_object_schema in varchar2
   )
 , member function base_object_type return varchar2 deterministic
@@ -53,7 +53,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   deterministic
 , final member function dict2metadata_object_type return varchar2 deterministic
 , member procedure print
-  ( self in t_schema_object
+  ( self in oracle_tools.t_schema_object
   )
 , static procedure create_schema_object
   ( p_object_schema in varchar2
@@ -66,7 +66,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   , p_grantee in varchar2 default null
   , p_privilege in varchar2 default null
   , p_grantable in varchar2 default null
-  , p_schema_object out nocopy t_schema_object
+  , p_schema_object out nocopy oracle_tools.t_schema_object
   )
 , static function create_schema_object
   ( p_object_schema in varchar2
@@ -80,7 +80,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   , p_privilege in varchar2 default null
   , p_grantable in varchar2 default null
   )
-  return t_schema_object
+  return oracle_tools.t_schema_object
 , static function is_a_repeatable
   ( p_object_type in varchar2
   )
@@ -90,7 +90,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
 , final member function fq_object_name return varchar2 deterministic
 , member function dict_object_type return varchar2 deterministic
 , member procedure chk
-  ( self in t_schema_object
+  ( self in oracle_tools.t_schema_object
   , p_schema in varchar2
   )
 , member function base_dict_object_type return varchar2 deterministic

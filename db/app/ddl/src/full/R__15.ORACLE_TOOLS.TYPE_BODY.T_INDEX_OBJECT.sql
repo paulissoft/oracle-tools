@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_INDEX_OBJECT" AS
 
 constructor function t_index_object
-( self in out nocopy t_index_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_index_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
+  dbug.enter('oracle_tools.t_index_object.oracle_tools.t_index_object (1)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
@@ -22,9 +22,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := t_index_object(null, p_object_schema, p_base_object, p_object_name, null, null);
+  self := oracle_tools.t_index_object(null, p_object_schema, p_base_object, p_object_name, null, null);
 
-  self.column_names$ := t_index_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name);
+  self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name);
 
   if self.tablespace_name$ is null
   then
@@ -43,8 +43,8 @@ $end
 end;
 
 constructor function t_index_object
-( self in out nocopy t_index_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_index_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_tablespace_name in varchar2
@@ -53,7 +53,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
+  dbug.enter('oracle_tools.t_index_object.oracle_tools.t_index_object (2)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
@@ -68,7 +68,7 @@ $end
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
-  self.column_names$ := t_index_object.get_column_names(p_object_schema, p_object_name);
+  self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema, p_object_name);
   self.tablespace_name$ := p_tablespace_name;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
@@ -88,7 +88,7 @@ begin
 end tablespace_name;
 
 member procedure tablespace_name
-( self in out nocopy t_index_object
+( self in out nocopy oracle_tools.t_index_object
 , p_tablespace_name in varchar2
 )
 is
@@ -139,7 +139,7 @@ begin
   -- <owner>  ORDER_PK  <owner> ORDERHEADER SEQ         1
 
   -- GPA 20170126
-  -- The problem was that t_schema_object.id ignored base info for an INDEX
+  -- The problem was that oracle_tools.t_schema_object.id ignored base info for an INDEX
 
   return self.object_schema ||
          ':' ||
@@ -165,7 +165,7 @@ is
   l_column_names varchar2(4000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_INDEX_OBJECT.GET_COLUMN_NAMES');
+  dbug.enter('oracle_tools.t_index_object.GET_COLUMN_NAMES');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
 $end
 
@@ -209,13 +209,13 @@ $end
 end get_column_names;
 
 overriding member procedure chk
-( self in t_index_object
+( self in oracle_tools.t_index_object
 , p_schema in varchar2
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_INDEX_OBJECT.CHK');
+  dbug.enter('oracle_tools.t_index_object.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);

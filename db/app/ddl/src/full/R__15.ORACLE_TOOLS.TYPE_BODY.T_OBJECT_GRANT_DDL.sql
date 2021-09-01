@@ -1,13 +1,13 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_GRANT_DDL" AS
 
 overriding member procedure uninstall
-( self in out nocopy t_object_grant_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_object_grant_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_OBJECT_GRANT_DDL.UNINSTALL');
+  dbug.enter('oracle_tools.t_object_grant_ddl.UNINSTALL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_target:');
@@ -37,7 +37,7 @@ $end
 end uninstall;
 
 overriding member procedure add_ddl
-( self in out nocopy t_object_grant_ddl
+( self in out nocopy oracle_tools.t_object_grant_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -47,7 +47,7 @@ is
   l_pos2 pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_OBJECT_GRANT_DDL.ADD_DDL');
+  dbug.enter('oracle_tools.t_object_grant_ddl.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
@@ -69,7 +69,7 @@ $end
   end if;
 
   -- Oracle 11g has a new feature - support for generalized invocation
-  (self as t_schema_ddl).add_ddl
+  (self as oracle_tools.t_schema_ddl).add_ddl
   ( p_verb => p_verb
   , p_text => case
                 when substr(p_text, 1, 2) = '--' /* do not execute comments */
@@ -93,7 +93,7 @@ $end
 end add_ddl;
 
 overriding member procedure execute_ddl
-( self in t_object_grant_ddl
+( self in oracle_tools.t_object_grant_ddl
 )
 is
   -- ORA-01917: user or role does not exist
@@ -110,12 +110,12 @@ is
   pragma exception_init(e_ora_02224, -2224);    
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_OBJECT_GRANT_DDL.EXECUTE_DDL');
+  dbug.enter('oracle_tools.t_object_grant_ddl.EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
 $end
 
-  t_schema_ddl.execute_ddl(p_schema_ddl => self);
+  oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

@@ -1,17 +1,17 @@
-CREATE TYPE "ORACLE_TOOLS"."T_INDEX_OBJECT" authid current_user under t_dependent_or_granted_object
+CREATE TYPE "ORACLE_TOOLS"."T_INDEX_OBJECT" authid current_user under oracle_tools.t_dependent_or_granted_object
 ( object_name$ varchar2(4000 char)
 , column_names$ varchar2(4000 char)
 , tablespace_name$ varchar2(30 char)
 , constructor function t_index_object
-  ( self in out nocopy t_index_object
-  , p_base_object in t_named_object
+  ( self in out nocopy oracle_tools.t_index_object
+  , p_base_object in oracle_tools.t_named_object
   , p_object_schema in varchar2
   , p_object_name in varchar2
   )
   return self as result
 , constructor function t_index_object
-  ( self in out nocopy t_index_object
-  , p_base_object in t_named_object
+  ( self in out nocopy oracle_tools.t_index_object
+  , p_base_object in oracle_tools.t_named_object
   , p_object_schema in varchar2
   , p_object_name in varchar2
   , p_tablespace_name in varchar2
@@ -23,7 +23,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_INDEX_OBJECT" authid current_user under t_dependen
 , member function column_names return varchar2 deterministic
 , member function tablespace_name return varchar2 deterministic
 , member procedure tablespace_name
-  ( self in out nocopy t_index_object
+  ( self in out nocopy oracle_tools.t_index_object
   , p_tablespace_name in varchar2
   )
 -- end of getter(s)/setter(s)
@@ -34,7 +34,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_INDEX_OBJECT" authid current_user under t_dependen
   )
   return varchar2
 , overriding member procedure chk
-  ( self in t_index_object
+  ( self in oracle_tools.t_index_object
   , p_schema in varchar2
   )
 )

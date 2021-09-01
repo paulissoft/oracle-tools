@@ -41,13 +41,13 @@ begin
 end base_object_schema;
 
 overriding member procedure chk
-( self in t_dependent_or_granted_object
+( self in oracle_tools.t_dependent_or_granted_object
 , p_schema in varchar2
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_DEPENDENT_OR_GRANTED_OBJECT.CHK');
+  dbug.enter('oracle_tools.t_dependent_or_granted_object.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);

@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TRIGGER_OBJECT" AS
 
 constructor function t_trigger_object
-( self in out nocopy t_trigger_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_trigger_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TRIGGER_OBJECT.T_TRIGGER_OBJECT');
+  dbug.enter('oracle_tools.t_trigger_object.oracle_tools.t_trigger_object');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_object_schema: %s; p_object_name: %s'
@@ -53,13 +53,13 @@ end object_name;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in t_trigger_object
+( self in oracle_tools.t_trigger_object
 , p_schema in varchar2
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TRIGGER_OBJECT.CHK');
+  dbug.enter('oracle_tools.t_trigger_object.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);

@@ -1,6 +1,6 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_DDL_SEQUENCE" AS
 
-overriding member procedure text_to_compare( self in t_ddl_sequence, p_text_tab out nocopy oracle_tools.t_text_tab )
+overriding member procedure text_to_compare( self in oracle_tools.t_ddl_sequence, p_text_tab out nocopy oracle_tools.t_text_tab )
 is
   l_find_regexp constant varchar2(100) := '( START WITH )(\d+)';
   l_repl_regexp constant varchar2(100) := '\1 1';

@@ -14,8 +14,8 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 authid current_user
 as
   -- to reduce typos we use constant identifiers
-  "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4'; -- pkg_ddl_util
-  "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5'; -- pkg_ddl_util
+  "pkg_ddl_util v4" constant varchar2(30 char) := 'oracle_tools.pkg_ddl_util v4'; -- oracle_tools.pkg_ddl_util
+  "pkg_ddl_util v5" constant varchar2(30 char) := 'oracle_tools.pkg_ddl_util v5'; -- oracle_tools.pkg_ddl_util
 
   -- try the interfaces in this order
   -- the first one which matches pi_interface and which does not return an error, wins
@@ -42,10 +42,10 @@ as
   l_sofar  binary_integer := 0;
   l_op_name constant varchar2(10 char) := 'processed';
   l_units   constant varchar2(10 char) := 'rows';
-  l_program constant varchar2(30 char) := 'P_GENERATE_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+  l_program constant varchar2(30 char) := 'oracle_tools.p_generate_ddl'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter('P_GENERATE_DDL');
+  dbug.enter('oracle_tools.p_generate_ddl');
   dbug.print
   ( dbug."input"
   , 'pi_source_schema: %s; pi_source_database_link: %s; pi_target_schema: %s; pi_target_database_link: %s'

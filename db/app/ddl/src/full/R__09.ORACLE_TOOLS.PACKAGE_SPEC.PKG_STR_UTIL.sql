@@ -172,5 +172,5 @@ function clob2text
 )
 return oracle_tools.t_text_tab;
 
-END PKG_STR_UTIL;
+END pkg_str_util;
 /

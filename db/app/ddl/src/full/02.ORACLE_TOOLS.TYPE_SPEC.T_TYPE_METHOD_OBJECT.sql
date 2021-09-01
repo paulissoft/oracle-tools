@@ -1,4 +1,4 @@
-CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under t_member_object
+CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under oracle_tools.t_member_object
 ( /*
   From USER_TYPE_METHODS:
 
@@ -25,8 +25,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under t_me
 , arguments           t_argument_object_tab -- List of arguments, if any.
 
 , constructor function t_type_method_object
-  ( self in out nocopy t_type_method_object
-  , p_base_object in t_named_object -- the type specification
+  ( self in out nocopy oracle_tools.t_type_method_object
+  , p_base_object in oracle_tools.t_named_object -- the type specification
   , p_member# in integer -- the METHOD_NO
   , p_member_name in varchar2 -- the METHOD_NAME
   , p_method_type in varchar2
@@ -49,7 +49,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under t_me
 -- end of getter(s)/setter(s)
 , member function static_or_member return varchar2 deterministic
 , overriding final map member function signature return varchar2 deterministic
-, overriding member procedure chk( self in t_type_method_object, p_schema in varchar2 )
+, overriding member procedure chk( self in oracle_tools.t_type_method_object, p_schema in varchar2 )
 )
 not final;
 /

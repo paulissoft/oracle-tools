@@ -11,7 +11,7 @@ is
   l_start pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.SPLIT (1)');
+  dbug.enter('oracle_tools.pkg_str_util.SPLIT (1)');
   dbug.print(dbug."input", 'p_str: %s; p_delimiter: %s', p_str, p_delimiter);
 $end
 
@@ -52,7 +52,7 @@ is
   l_length pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.SPLIT (2)');
+  dbug.enter('oracle_tools.pkg_str_util.SPLIT (2)');
   dbug.print(dbug."input", 'p_str length: %s; p_delimiter: %s', dbms_lob.getlength(p_str), p_delimiter);
 $end
 
@@ -114,7 +114,7 @@ is
   l_amount pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.SPLIT (3)');
+  dbug.enter('oracle_tools.pkg_str_util.SPLIT (3)');
   dbug.print(dbug."input", 'p_str length: %s; p_delimiter: %s', l_length, p_delimiter);
 $end
 
@@ -179,7 +179,7 @@ is
   l_end pls_integer := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.TRIM (1)');
+  dbug.enter('oracle_tools.pkg_str_util.TRIM (1)');
   dbug.print(dbug."input", 'p_str length: %s; p_set: %s', dbms_lob.getlength(p_str), p_set);
 $end
 
@@ -288,7 +288,7 @@ procedure trim
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.TRIM (2)');
+  dbug.enter('oracle_tools.pkg_str_util.TRIM (2)');
   dbug.print(dbug."input", 'p_str_tab.count: %s; p_set: %s', case when p_str_tab is not null then p_str_tab.count end, p_set);
 $end
 
@@ -328,7 +328,7 @@ is
   l_retval pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.COMPARE (1)');
+  dbug.enter('oracle_tools.pkg_str_util.COMPARE (1)');
   dbug.print
   ( dbug."input"
   , 'p_str1_tab.count: %s; p_str2_tab.count: %s'
@@ -404,7 +404,7 @@ is
   l_char_idx binary_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.COMPARE (2)');
+  dbug.enter('oracle_tools.pkg_str_util.COMPARE (2)');
   dbug.print
   ( dbug."input"
   , 'p_str1_tab.count: %s; p_str2_tab.count: %s'
@@ -479,7 +479,7 @@ procedure append_text
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.APPEND_TEXT (1)');
+  dbug.enter('oracle_tools.pkg_str_util.APPEND_TEXT (1)');
   dbug.print
   ( dbug."input"
   , 'pi_buffer (max 100): %s; dbms_lob.getlength(pio_clob): %s'
@@ -515,7 +515,7 @@ procedure append_text
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.APPEND_TEXT (2)');
+  dbug.enter('oracle_tools.pkg_str_util.APPEND_TEXT (2)');
 $end
 
   begin
@@ -542,7 +542,7 @@ is
   l_text varchar2(32767 char);
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.TEXT2CLOB (1)');
+  dbug.enter('oracle_tools.pkg_str_util.TEXT2CLOB (1)');
   dbug.print
   ( dbug."input"
   , 'pi_text_tab.count: %s; dbms_lob.getlength(pio_clob): %s; pi_append: %s'
@@ -584,7 +584,7 @@ is
   l_clob clob := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.TEXT2CLOB (2)');
+  dbug.enter('oracle_tools.pkg_str_util.TEXT2CLOB (2)');
   dbug.print
   ( dbug."input"
   , 'pi_text_tab.count: %s'
@@ -616,7 +616,7 @@ is
   l_last pls_integer := dbms_lob.getlength(pi_clob);
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-  dbug.enter('PKG_STR_UTIL.CLOB2TEXT');
+  dbug.enter('oracle_tools.pkg_str_util.CLOB2TEXT');
   dbug.print
   ( dbug."input"
   , 'pi_clob length: %s; pi_trim: %s'
