@@ -140,10 +140,6 @@ $if dbms_db_version.ver_le_10 $then
 
   $error 'Oracle 10 and below not supported.' $end
 
-  -- Oracle 10g does not allow us to store a ref cursor as a package variable
-  -- not does it allow us to retrieve collections via dbms_sql.
-  -- So just put everything into a collection in set_display_ddl_schema_args().
-  g_schema_ddl_tab t_schema_ddl_tab;
 $else
   -- PLS-00994: Cursor Variables cannot be declared as part of a package
   -- So store a dbms_sql cursor (integer) and convert to sys_refcursor whenever necessary.
@@ -921,27 +917,24 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
             l_base_object :=
-              oracle_tools.pkg_schema_object.create_named_object
-              ( p_owner => p_schema
-              , p_object_type => p_base_object_type
+              oracle_tools.t_named_object.create_named_object
+              ( p_object_type => p_base_object_type
               , p_object_schema => p_base_object_schema
               , p_object_name => p_base_object_name
               );
 
             case
               when l_constraint like l_constraint_expr_tab(2) -- primary key
-              then l_constraint_object := oracle_tools.pkg_schema_object.create_constraint_object
-                                          ( p_owner => p_schema
-                                          , p_base_object => l_base_object
+              then l_constraint_object := oracle_tools.t_constraint_object
+                                          ( p_base_object => l_base_object
                                           , p_object_schema => p_base_object_schema
                                           , p_object_name => null -- constraint name is not known
                                           , p_constraint_type => 'P'
                                           , p_column_names => l_column_names
                                           );
               when l_constraint like l_constraint_expr_tab(3) -- unique key
-              then l_constraint_object := oracle_tools.pkg_schema_object.create_constraint_object
-                                          ( p_owner => p_schema
-                                          , p_base_object => l_base_object
+              then l_constraint_object := oracle_tools.t_constraint_object
+                                          ( p_base_object => l_base_object
                                           , p_object_schema => p_base_object_schema
                                           , p_object_name => null -- constraint name is not known
                                           , p_constraint_type => 'U'
@@ -967,9 +960,8 @@ $end
                 and     obj.object_name = l_ref_object_name;
 
                 l_ref_object :=
-                  oracle_tools.pkg_schema_object.create_named_object
-                  ( p_owner => p_schema
-                  , p_object_schema => l_ref_object_schema
+                  oracle_tools.t_named_object.create_named_object
+                  ( p_object_schema => l_ref_object_schema
                   , p_object_type => l_ref_object_type
                   , p_object_name => l_ref_object_name
                   );
@@ -978,9 +970,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
                 l_ref_object.print();
 $end
 
-                l_constraint_object := oracle_tools.pkg_schema_object.create_ref_constraint_object
-                                       ( p_owner => p_schema
-                                       , p_base_object => l_base_object
+                l_constraint_object := oracle_tools.t_ref_constraint_object
+                                       ( p_base_object => l_base_object
                                        , p_object_schema => p_base_object_schema
                                        , p_object_name => null -- constraint name unknown
                                        , p_constraint_type => 'R'
@@ -1006,9 +997,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
                 for r_cc in
                 ( select  c.constraint_name
-                  ,       oracle_tools.pkg_schema_object.get_column_names
-                          ( p_owner => p_schema /* c.owner */ -- GJP 2021-08-31 Necessary in case of a remap
-                          , p_constraint_name => c.constraint_name
+                  ,       oracle_tools.t_constraint_object.get_column_names
+                          ( p_object_schema => c.owner
+                          , p_object_name => c.constraint_name
                           , p_table_name => c.table_name
                           ) as column_names
                   from    all_constraints c
@@ -1054,16 +1045,14 @@ $end
             end if;
 
             l_base_object :=
-              oracle_tools.pkg_schema_object.create_named_object
-              ( p_owner => p_schema
-              , p_object_type => p_base_object_type
+              oracle_tools.t_named_object.create_named_object
+              ( p_object_type => p_base_object_type
               , p_object_schema => p_base_object_schema
               , p_object_name => p_base_object_name
               );
 
-            l_constraint_object := oracle_tools.pkg_schema_object.create_constraint_object
-                                   ( p_owner => p_schema
-                                   , p_base_object => l_base_object
+            l_constraint_object := oracle_tools.t_constraint_object
+                                   ( p_base_object => l_base_object
                                    , p_object_schema => p_base_object_schema
                                    , p_object_name => null -- constraint name is not known
                                    , p_constraint_type => 'C'
@@ -1405,169 +1394,6 @@ $end
     add(t_text_tab('SEQUENCE', 'OBJECT_GRANT'), 'ISEQ$$%');
   end i_object_exclude_name_expr_tab;
 
-  procedure md_set_remap_param
-  ( p_object_type in varchar2
-  , p_object_schema in varchar2
-  , p_new_object_schema in varchar2
-  , p_base_object_schema in varchar2
-  , p_handle in number
-  )
-  is
-    l_transform_handle number := null;
-    l_object_type_tab t_text_tab;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.enter(g_package_prefix || 'MD_SET_REMAP_PARAM');
-    dbug.print(dbug."input"
-               ,'p_object_type: %s; p_object_schema: %s; p_new_object_schema: %s; p_base_object_schema: %s'
-               ,p_object_type
-               ,p_object_schema
-               ,p_new_object_schema
-               ,p_base_object_schema);
-$end
-
-    -- first, are we going to remap?
-    if p_object_schema != p_new_object_schema or p_base_object_schema != p_new_object_schema
-    then
-      if p_object_type = 'SCHEMA_EXPORT'
-      then
-        if p_object_schema != p_new_object_schema
-        then
-          l_object_type_tab := g_schema_md_object_type_tab;
-
-          for i_idx in l_object_type_tab.first .. l_object_type_tab.last
-          loop
-            -- ORA-31604: invalid transform NAME parameter "MODIFY" for object type PROCOBJ in function ADD_TRANSFORM
-            if l_object_type_tab(i_idx) not in ('PROCOBJ')
-            then
-              begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-                dbug.print(dbug."info", 'l_object_type_tab(%s): %s', i_idx, l_object_type_tab(i_idx));
-$end
-                l_transform_handle :=
-                  dbms_metadata.add_transform
-                  ( handle => p_handle
-                  , name => 'MODIFY'
-                  , object_type => l_object_type_tab(i_idx)
-                  );
-
-                if p_object_schema != p_new_object_schema
-                then
-                  dbms_metadata.set_remap_param
-                  ( transform_handle => l_transform_handle
-                  , name => 'REMAP_SCHEMA'
-                  , old_value => p_object_schema
-                  , new_value => p_new_object_schema
-                  , object_type => l_object_type_tab(i_idx)
-                  );
-                end if;
-                if p_base_object_schema != p_new_object_schema
-                then
-                  dbms_metadata.set_remap_param
-                  ( transform_handle => l_transform_handle
-                  , name => 'REMAP_SCHEMA'
-                  , old_value => p_base_object_schema
-                  , new_value => p_new_object_schema
-                  , object_type => l_object_type_tab(i_idx)
-                  );
-                end if;
-              exception
-                when e_invalid_transform_parameter or e_wrong_transform_object_type
-                then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-                  dbug.on_error;
-$end
-                  null;
-              end;
-            end if;
-          end loop;
-        end if;
-      else
-        begin
-          l_transform_handle := dbms_metadata.add_transform(handle => p_handle, name => 'MODIFY');
-
-          if nvl(is_dependent_object_type(p_object_type => p_object_type), 1) = 1
-          then
-            if p_object_type in ('INDEX', 'TRIGGER')
-            then
-              if is_dependent_object_type(p_object_type => p_object_type) is null
-              then
-                null; -- OK
-              else
-                raise program_error;
-              end if;
-
-              if p_object_schema != p_new_object_schema
-              then
-                dbms_metadata.set_remap_param(transform_handle => l_transform_handle
-                                             ,name => 'REMAP_SCHEMA'
-                                             ,old_value => p_object_schema
-                                             ,new_value => p_new_object_schema);
-              end if;
-            else
-              if is_dependent_object_type(p_object_type => p_object_type) = 1
-              then
-                null; -- OK
-              else
-                raise program_error;
-              end if;
-
-              if p_base_object_schema != p_new_object_schema
-              then
-                dbms_metadata.set_remap_param(transform_handle => l_transform_handle
-                                             ,name => 'REMAP_SCHEMA'
-                                             ,old_value => p_base_object_schema
-                                             ,new_value => p_new_object_schema);
-              end if;
-            end if;
-          elsif p_object_type = 'SYNONYM'
-          then
-            if p_object_schema != 'PUBLIC' and p_object_schema != p_new_object_schema
-            then
-              dbms_metadata.set_remap_param(transform_handle => l_transform_handle
-                                           ,name => 'REMAP_SCHEMA'
-                                           ,old_value => p_object_schema
-                                           ,new_value => p_new_object_schema);
-            elsif p_object_schema = 'PUBLIC' and p_base_object_schema != p_new_object_schema
-            then
-              dbms_metadata.set_remap_param(transform_handle => l_transform_handle
-                                           ,name => 'REMAP_SCHEMA'
-                                           ,old_value => p_base_object_schema
-                                           ,new_value => p_new_object_schema);
-            end if;
-          else
-            if p_object_schema != 'DBA'
-            then
-              if p_object_schema != p_new_object_schema
-              then
-                dbms_metadata.set_remap_param(transform_handle => l_transform_handle
-                                             ,name => 'REMAP_SCHEMA'
-                                             ,old_value => p_object_schema
-                                             ,new_value => p_new_object_schema);
-              end if;
-            end if;
-          end if;
-        exception
-          when e_invalid_transform_parameter or e_wrong_transform_object_type
-          then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-            dbug.on_error;
-$end
-            null;
-        end;
-      end if; -- if p_object_type = 'SCHEMA_EXPORT'
-    end if;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end md_set_remap_param;
-
   procedure get_transform_param_tab
   ( p_transform_param_list in varchar2
   , p_transform_param_tab out nocopy t_transform_param_tab
@@ -1905,7 +1731,6 @@ $end
   ( p_object_type in t_metadata_object_type
   , p_object_schema in varchar2
   , p_object_name_tab in t_text_tab
-  , p_new_object_schema in varchar2
   , p_base_object_schema in varchar2
   , p_base_object_name_tab in t_text_tab
   , p_transform_param_tab in t_transform_param_tab
@@ -1917,10 +1742,9 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MD_OPEN');
     dbug.print(dbug."input"
-               ,'p_object_type: %s; p_object_schema: %s; p_new_object_schema: %s; p_base_object_schema: %s'
+               ,'p_object_type: %s; p_object_schema: %s; p_base_object_schema: %s'
                ,p_object_type
                ,p_object_schema
-               ,p_new_object_schema
                ,p_base_object_schema);
 $end
 
@@ -2066,13 +1890,6 @@ $end
     -- ORA-06502: PL/SQL: numeric or value error
     -- LPX-00210: expected '<' instead of '\'
 
-    md_set_remap_param
-    ( p_object_type => p_object_type
-    , p_object_schema => p_object_schema
-    , p_new_object_schema => p_new_object_schema
-    , p_base_object_schema => p_base_object_schema
-    , p_handle => p_handle
-    );
     if p_object_type = 'SCHEMA_EXPORT'
     then
       md_set_transform_param
@@ -2114,7 +1931,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.leave_on_error;
       raise_application_error
       ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
-      , p_object_type||';'||p_object_schema||';'||p_new_object_schema||';'||p_base_object_schema
+      , p_object_type||';'||p_object_schema||';'||p_base_object_schema
       , true
       );
 $end
@@ -2226,7 +2043,6 @@ $end
 
   procedure parse_object
   ( p_schema in varchar2
-  , p_new_schema in varchar2
   , p_constraint_lookup_tab in t_constraint_lookup_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab
   , p_ku$_ddl in out nocopy sys.ku$_ddl
@@ -2262,9 +2078,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s; p_new_schema: %s'
+    , 'p_schema: %s'
     , p_schema
-    , p_new_schema
     );
 $end
 
@@ -2285,19 +2100,6 @@ $end
     , l_privilege
     , l_grantable
     );
-
-    -- GPA 2017-02-05 parse_ddl() did not change base_object_schema for OBJECT_GRANT
-    if p_new_schema != p_schema
-    then
-      if l_object_schema = p_schema
-      then
-        l_object_schema := p_new_schema;
-      end if;
-      if l_base_object_schema = p_schema
-      then
-        l_base_object_schema := p_new_schema;
-      end if;
-    end if;
 
     l_object_type := t_schema_object.dict2metadata_object_type(l_object_type);
     l_base_object_type := t_schema_object.dict2metadata_object_type(l_base_object_type);
@@ -2321,20 +2123,11 @@ $end
       then
         p_object_lookup_tab(p_object_key).schema_ddl.add_ddl
         ( p_verb => l_verb
-        , p_text => case
-                      when p_new_schema != p_schema
-                      then modify_ddl_text
-                           ( p_ddl_text => p_ku$_ddl.ddlText
-                           , p_schema => p_schema
-                           , p_new_schema => p_new_schema
-                           , p_object_type => p_object_lookup_tab(p_object_key).schema_ddl.obj.object_type()
-                           )
-                      else p_ku$_ddl.ddlText
-                    end
+        , p_text => p_ku$_ddl.ddlText
         );
 
         begin
-          p_object_lookup_tab(p_object_key).schema_ddl.chk(nvl(p_new_schema, p_schema));
+          p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema);
         exception
           when others
           then
@@ -2762,11 +2555,151 @@ $end
     return l_object_no_dependencies_tab;
   end get_object_no_dependencies_tab;
 
+  procedure remap_schema
+  ( p_schema in varchar2
+  , p_new_schema in varchar2
+  , p_schema_object in out nocopy t_schema_object
+  )
+  is
+    l_ref_constraint_object t_ref_constraint_object;
+  begin
+    if p_schema != p_new_schema -- implies both not null
+    then
+      -- If we are going to move to another schema, adjust all schema attributes because the DDL generated
+      -- will also be changed due to dbms_metadata.set_remap_param() being called.
+      if p_schema_object.object_schema() = p_schema
+      then
+        p_schema_object.object_schema(p_new_schema);
+      end if;
+      if p_schema_object.base_object_schema() = p_schema
+      then
+        p_schema_object.base_object_schema(p_new_schema);
+      end if;
+      if p_schema_object is of (t_ref_constraint_object)
+      then
+        l_ref_constraint_object := treat(p_schema_object as t_ref_constraint_object);
+        if l_ref_constraint_object.ref_object_schema() = p_schema
+        then
+          l_ref_constraint_object.ref_object_schema(p_new_schema);
+          p_schema_object := l_ref_constraint_object;
+        end if;
+      end if;
+    end if;
+  end remap_schema;
+
+  procedure remap_schema
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema_nn
+  , p_object_type in t_metadata_object_type
+  , p_ddl in out nocopy t_ddl
+  )
+  is
+  begin
+    if p_ddl.text is not null and p_ddl.text.count > 0
+    then
+      for i_idx in p_ddl.text.first .. p_ddl.text.last
+      loop
+        p_ddl.text(i_idx) :=
+          dbms_lob.substr
+          ( lob_loc => modify_ddl_text
+                       ( p_ddl_text => p_ddl.text(i_idx)
+                       , p_schema => p_schema
+                       , p_new_schema => p_new_schema
+                       , p_object_type => p_object_type
+                       )
+          , amount => 4000             
+          );
+      end loop;
+    end if;
+  end remap_schema;
+
+  procedure remap_schema
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema_nn
+  , p_object_type in t_metadata_object_type
+  , p_ddl_tab in out nocopy t_ddl_tab
+  )
+  is
+  begin
+    if p_ddl_tab is not null and p_ddl_tab.count > 0
+    then
+      for i_idx in p_ddl_tab.first .. p_ddl_tab.last
+      loop
+        remap_schema
+        ( p_schema => p_schema
+        , p_new_schema => p_new_schema
+        , p_object_type => p_object_type
+        , p_ddl => p_ddl_tab(i_idx)
+        );
+      end loop;
+    end if;
+  end remap_schema;
+
+  procedure remap_schema
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema_nn
+  , p_schema_ddl in out nocopy t_schema_ddl
+  )
+  is
+  begin
+    remap_schema
+    ( p_schema => p_schema
+    , p_new_schema => p_new_schema
+    , p_schema_object => p_schema_ddl.obj
+    );
+    remap_schema
+    ( p_schema => p_schema
+    , p_new_schema => p_new_schema
+    , p_object_type => p_schema_ddl.obj.object_type()
+    , p_ddl_tab => p_schema_ddl.ddl_tab
+    );
+  end remap_schema;
+
+  procedure remap_schema
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema_nn
+  , p_schema_ddl_tab in out nocopy t_schema_ddl_tab
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'REMAP_SCHEMA');
+    dbug.print
+    ( dbug."input"
+    , 'p_schema: %s; p_new_schema: %s; p_object_type: %s'
+    , p_schema
+    , p_new_schema
+    );
+$end
+    if p_schema != p_new_schema -- implies both not null
+    then
+      if p_schema_ddl_tab is not null and p_schema_ddl_tab.count > 0
+      then
+        for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
+        loop
+          remap_schema
+          ( p_schema => p_schema
+          , p_new_schema => p_new_schema
+          , p_schema_ddl => p_schema_ddl_tab(i_idx)
+          );
+        end loop;
+      end if;
+    end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end remap_schema;
+
   /* PUBLIC ROUTINES */
 
   function display_ddl_schema
   ( p_schema in t_schema_nn
-  , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
@@ -2792,9 +2725,8 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || 'DISPLAY_DDL_SCHEMA');
     dbug.print(dbug."input"
-               ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
+               ,'p_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
-               ,p_new_schema
                ,p_sort_objects_by_deps
                ,p_object_type
                ,p_object_names);
@@ -2830,7 +2762,6 @@ $end
 
       oracle_tools.pkg_ddl_util.set_display_ddl_schema_args
       ( p_schema => p_schema
-      , p_new_schema => p_new_schema
       , p_sort_objects_by_deps => p_sort_objects_by_deps
       , p_object_type => p_object_type
       , p_object_names => p_object_names
@@ -2864,7 +2795,6 @@ $end
                     from    table
                             ( oracle_tools.pkg_ddl_util.get_schema_ddl
                               ( p_schema
-                              , p_new_schema
                               , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
                               , l_schema_object_tab
                               , p_transform_param_list
@@ -2879,7 +2809,6 @@ $end
                             ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
                               ( l_schema_object_tab
                               , p_schema
-                              , p_new_schema
                               )
                             ) d
                   ) d
@@ -2894,7 +2823,6 @@ $end
           from    table
                   ( oracle_tools.pkg_ddl_util.get_schema_ddl
                     ( p_schema
-                    , p_new_schema
                     , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
                     , l_schema_object_tab
                     , p_transform_param_list
@@ -3225,19 +3153,23 @@ $end
       into    l_source_schema_ddl_tab
       from    table
               ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                ( p_schema_source
-                , p_schema_target
-                , 1 -- sort for create
-                , p_object_type
-                , p_object_names
-                , p_object_names_include
-                , p_network_link_source
-                , 0 -- any grantor
-                , p_transform_param_list
+                ( p_schema => p_schema_source
+                , p_sort_objects_by_deps => 1 -- sort for create
+                , p_object_type => p_object_type
+                , p_object_names => p_object_names
+                , p_object_names_include => p_object_names_include
+                , p_network_link => p_network_link_source
+                , p_grantor_is_schema => 0 -- any grantor
+                , p_transform_param_list => p_transform_param_list
                 )
               ) s
       ;
       free_memory(l_source_schema_ddl_tab);
+      remap_schema
+      ( p_schema => p_schema_source
+      , p_new_schema => p_schema_target
+      , p_schema_ddl_tab => l_source_schema_ddl_tab
+      );
     end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -3257,10 +3189,9 @@ $end
       into    l_target_schema_ddl_tab
       from    table
               ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                ( p_schema_target
-                , null
-                , 1 -- sort for drop
-                , p_object_type
+                ( p_schema => p_schema_target
+                , p_sort_objects_by_deps => 1 -- sort for drop
+                , p_object_type => p_object_type
                   /*
                   -- GPA 2017-01-12
                   -- When the source objects are named, we also just compare
@@ -3273,11 +3204,11 @@ $end
                   -- So we get rid of obsolete target objects if the objects
                   -- are not named explicitly (i.e. p_object_names_include != 1).
                   */
-                , case when p_object_names_include = 1 then p_object_names end 
-                , case when p_object_names_include = 1 then p_object_names_include end
-                , p_network_link_target
-                , 1 -- only grantor equal to p_schema_target so we can revoke the grant if necessary
-                , p_transform_param_list
+                , p_object_names => case when p_object_names_include = 1 then p_object_names end 
+                , p_object_names_include => case when p_object_names_include = 1 then p_object_names_include end
+                , p_network_link => p_network_link_target
+                , p_grantor_is_schema => 1 -- only grantor equal to p_schema_target so we can revoke the grant if necessary
+                , p_transform_param_list => p_transform_param_list
                 )
               ) t
       ;
@@ -3595,14 +3526,14 @@ $end
     select value(t)
     bulk collect
     into   l_diff_schema_ddl_tab
-    from   table(oracle_tools.pkg_ddl_util.display_ddl_schema_diff(/*p_object_type =>*/ p_object_type
-                                                                   ,/*p_object_names =>*/ p_object_names
-                                                                   ,/*p_object_names_include =>*/ p_object_names_include
-                                                                   ,/*p_schema_source =>*/ p_schema_source
-                                                                   ,/*p_schema_target =>*/ p_schema_target
-                                                                   ,/*p_network_link_source =>*/ p_network_link_source
-                                                                   ,/*p_network_link_target =>*/ p_network_link_target
-                                                                   ,/*p_skip_repeatables =>*/ 0)) t
+    from   table(oracle_tools.pkg_ddl_util.display_ddl_schema_diff(p_object_type => p_object_type
+                                                                  ,p_object_names => p_object_names
+                                                                  ,p_object_names_include => p_object_names_include
+                                                                  ,p_schema_source => p_schema_source
+                                                                  ,p_schema_target => p_schema_target
+                                                                  ,p_network_link_source => p_network_link_source
+                                                                  ,p_network_link_target => p_network_link_target
+                                                                  ,p_skip_repeatables => 0)) t
     ;
 
     -- Skip public synonyms on the same database
@@ -3781,9 +3712,8 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
          ) = 1
       then
         l_named_object_tab.extend(1);
-        oracle_tools.pkg_schema_object.create_named_object
-        ( p_owner => p_schema
-        , p_object_type => 'AQ_QUEUE_TABLE'
+        oracle_tools.t_schema_object.create_named_object
+        ( p_object_type => 'AQ_QUEUE_TABLE'
         , p_object_schema => r.owner
         , p_object_name => r.queue_table
         , p_named_object => l_named_object_tab(l_named_object_tab.last)
@@ -3875,7 +3805,7 @@ $end
          , p_object_name => r.table_name
          ) = 1
       then
-        l_schema_object := oracle_tools.pkg_schema_object.create_table_object(p_schema, r.owner, r.table_name, r.tablespace_name);
+        l_schema_object := oracle_tools.t_table_object(r.owner, r.table_name, r.tablespace_name);
         if not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
         then
           l_named_object_tab.extend(1);
@@ -3927,9 +3857,8 @@ $end
     loop
       longops_show(l_longops_rec);
       l_named_object_tab.extend(1);
-      oracle_tools.pkg_schema_object.create_named_object
-      ( p_owner => p_schema
-      , p_object_type => r.object_type
+      oracle_tools.t_named_object.create_named_object
+      ( p_object_type => r.object_type
       , p_object_schema => r.owner
       , p_object_name => r.object_name
       , p_named_object => l_named_object_tab(l_named_object_tab.last)
@@ -4196,9 +4125,8 @@ $end
           when 'REF_CONSTRAINT'
           then
             l_schema_object_tab(l_schema_object_tab.last) :=
-              oracle_tools.pkg_schema_object.create_ref_constraint_object
-              ( p_owner => p_schema
-              , p_base_object => treat(r.base_object as t_named_object)
+              oracle_tools.t_ref_constraint_object
+              ( p_base_object => treat(r.base_object as t_named_object)
               , p_object_schema => r.object_schema
               , p_object_name => r.object_name
               , p_constraint_type => r.constraint_type
@@ -4208,9 +4136,8 @@ $end
           when 'CONSTRAINT'
           then
             l_schema_object_tab(l_schema_object_tab.last) :=
-              oracle_tools.pkg_schema_object.create_constraint_object
-              ( p_owner => p_schema
-              , p_base_object => treat(r.base_object as t_named_object)
+              oracle_tools.t_constraint_object
+              ( p_base_object => treat(r.base_object as t_named_object)
               , p_object_schema => r.object_schema
               , p_object_name => r.object_name
               , p_constraint_type => r.constraint_type
@@ -4279,9 +4206,8 @@ $end
     loop
       longops_show(l_longops_rec);
       l_schema_object_tab.extend(1);
-      oracle_tools.pkg_schema_object.create_schema_object
-      ( p_owner => p_schema
-      , p_object_schema => r.object_schema
+      oracle_tools.t_schema_object.create_schema_object
+      ( p_object_schema => r.object_schema
       , p_object_type => r.object_type
       , p_object_name => r.object_name
       , p_base_object_schema => r.base_object_schema
@@ -4332,12 +4258,10 @@ $end
       longops_show(l_longops_rec);
       l_schema_object_tab.extend(1);
       l_schema_object_tab(l_schema_object_tab.last) :=
-        oracle_tools.pkg_schema_object.create_index_object
-        ( p_owner => p_schema
-        , p_base_object =>
-            oracle_tools.pkg_schema_object.create_named_object
-            ( p_owner => p_schema
-            , p_object_schema => r.base_object_schema
+        oracle_tools.t_index_object
+        ( p_base_object =>
+            oracle_tools.t_named_object.create_named_object
+            ( p_object_schema => r.base_object_schema
             , p_object_type => r.base_object_type
             , p_object_name => r.base_object_name
             )
@@ -4975,7 +4899,271 @@ $end
 
     return l_value;
   end do_chk;
-  
+
+  procedure chk_schema_object
+  ( p_schema_object in t_schema_object
+  , p_schema in varchar2
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (1)');
+    dbug.print(dbug."input", 'p_schema_object:');
+    p_schema_object.print();
+$end
+
+    if p_schema_object.object_type() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty');
+    elsif p_schema_object.dict2metadata_object_type() = p_schema_object.object_type()
+    then
+      null; -- ok
+    else
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Object type (' ||
+        p_schema_object.object_type() ||
+        ') should be equal to this DBMS_METADATA object type (' ||
+        p_schema_object.dict2metadata_object_type() ||
+        ')'
+      );
+    end if;
+
+    if (p_schema_object.base_object_type() is null) != (p_schema_object.base_object_schema() is null)
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Base object type (' ||
+        p_schema_object.base_object_type() ||
+        ') and base object schema (' ||
+        p_schema_object.base_object_schema() ||
+        ') must both be empty or both not empty'
+      );
+    end if;
+
+    if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Base object name (' ||
+        p_schema_object.base_object_name() ||
+        ') and base object schema (' ||
+        p_schema_object.base_object_schema() ||
+        ') must both be empty or both not empty'
+      );
+    end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end chk_schema_object;
+
+  procedure chk_schema_object
+  ( p_dependent_or_granted_object in t_dependent_or_granted_object
+  , p_schema in varchar2
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (2)');
+$end
+
+    chk_schema_object(p_schema_object => p_dependent_or_granted_object, p_schema => p_schema);
+
+    if p_dependent_or_granted_object.object_schema() is null or p_dependent_or_granted_object.object_schema() = p_schema
+    then
+      null; -- ok
+    else
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty or ' || p_schema);
+    end if;
+
+    if p_dependent_or_granted_object.base_object$ is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object should not be empty.');
+    end if;
+
+    -- GPA 2017-01-18 too strict for triggers, synonyms, indexes, etc.
+    /*
+    if p_dependent_or_granted_object.base_object_schema() = p_schema
+    then
+      null; -- ok
+    else
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema);
+    end if;
+    */
+
+    if p_dependent_or_granted_object.base_object_schema() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
+    end if;
+
+    if p_dependent_or_granted_object.base_object_type() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object type should not be empty');
+    end if;
+
+    if p_dependent_or_granted_object.base_object_name() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object name should not be empty');
+    end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end chk_schema_object;
+
+  procedure chk_schema_object
+  ( p_named_object in t_named_object
+  , p_schema in varchar2
+  )
+  is
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
+    -- Capture invalid objects before releasing to next enviroment.
+    l_status all_objects.status%type := null;
+$end  
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (3)');
+$end
+
+    chk_schema_object(p_schema_object => p_named_object, p_schema => p_schema);
+
+    if p_named_object.object_name() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
+    end if;
+    if p_named_object.object_schema() = p_schema
+    then
+      null; -- ok
+    else
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Object schema (' ||
+        p_named_object.object_schema() ||
+        ') must be ' ||
+        p_schema
+      );
+    end if;
+
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
+
+    -- Capture invalid objects before releasing to next enviroment.
+    if oracle_tools.pkg_ddl_util.do_chk(p_named_object.object_type()) and p_named_object.network_link() is null
+    then
+      begin
+        select  obj.status
+        into    l_status
+        from    all_objects obj
+        where   obj.owner = p_named_object.object_schema()
+        and     obj.object_type = p_named_object.dict_object_type()
+        and     obj.object_name = p_named_object.object_name()
+        ;
+        if l_status = 'VALID'
+        then
+          null;
+        else
+          raise value_error;
+        end if;
+      exception
+        when no_data_found
+        then null;
+
+        when value_error
+        then
+          raise_application_error
+          ( oracle_tools.pkg_ddl_error.c_object_not_valid
+          , 'Object status (' ||
+            l_status ||
+            ') must be VALID'
+          , true
+          );
+      end;
+    end if;
+
+$end
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end chk_schema_object;
+
+  procedure chk_schema_object
+  ( p_constraint_object in t_constraint_object
+  , p_schema in varchar2
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (4)');
+$end
+
+    oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => p_constraint_object, p_schema => p_schema);
+
+    if p_constraint_object.object_schema() = p_schema
+    then
+      null; -- ok
+    else
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
+    end if;
+    if p_constraint_object.base_object_schema() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
+    end if;
+    if p_constraint_object.constraint_type() is null
+    then
+      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
+    end if;
+
+    case 
+      when p_constraint_object.constraint_type() in ('P', 'U', 'R')
+      then
+        if p_constraint_object.column_names() is null
+        then
+          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
+        end if;
+        if p_constraint_object.search_condition() is not null
+        then
+          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Search condition should be empty');
+        end if;
+
+      when p_constraint_object.constraint_type() in ('C')
+      then
+        if p_constraint_object.column_names() is not null
+        then
+          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should be empty');
+        end if;
+        if p_constraint_object.search_condition() is null
+        then
+          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Search condition should not be empty');
+        end if;
+
+    end case;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end chk_schema_object;
+
   /*
   -- helper function
   */
@@ -5148,7 +5336,6 @@ $end
   */
   function get_schema_ddl
   ( p_schema in t_schema_nn
-  , p_new_schema in t_schema
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in t_schema_object_tab
   , p_transform_param_list in varchar2
@@ -5308,30 +5495,7 @@ $end
           begin
             l_schema_object := p_schema_object_tab(i_idx);
 
-            if p_new_schema is not null
-            then
-              -- If we are going to move to another schema, adjust all schema attributes because the DDL generated
-              -- will also be changed due to dbms_metadata.set_remap_param() being called.
-              if l_schema_object.object_schema() = p_schema
-              then
-                l_schema_object.object_schema(p_new_schema);
-              end if;
-              if l_schema_object.base_object_schema() = p_schema
-              then
-                l_schema_object.base_object_schema(p_new_schema);
-              end if;
-              if l_schema_object is of (t_ref_constraint_object)
-              then
-                l_ref_constraint_object := treat(l_schema_object as t_ref_constraint_object);
-                if l_ref_constraint_object.ref_object_schema() = p_schema
-                then
-                  l_ref_constraint_object.ref_object_schema(p_new_schema);
-                  l_schema_object := l_ref_constraint_object;
-                end if;
-              end if;
-            end if;
-
-            l_schema_object.chk(nvl(p_new_schema, p_schema));
+            l_schema_object.chk(p_schema);
 
             l_object_key := l_schema_object.id();
 
@@ -5480,9 +5644,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s; p_new_schema: %s; p_use_schema_export: %s; p_schema_object_tab.count: %s'
+    , 'p_schema: %s; p_use_schema_export: %s; p_schema_object_tab.count: %s'
     , p_schema
-    , p_new_schema
     , p_use_schema_export
     , case when p_schema_object_tab is not null then p_schema_object_tab.count end
     );
@@ -5545,7 +5708,6 @@ $end
         , p_object_name_tab => r_params.object_name_tab
         , p_base_object_schema => r_params.base_object_schema
         , p_base_object_name_tab => r_params.base_object_name_tab
-        , p_new_object_schema => p_new_schema
         , p_transform_param_tab => l_transform_param_tab
         , p_handle => l_handle
         );
@@ -5567,7 +5729,6 @@ $end
             loop
               parse_object
               ( p_schema => p_schema
-              , p_new_schema => p_new_schema
               , p_ku$_ddl => l_ddl_tab(i_ku$ddls_idx)
               , p_constraint_lookup_tab => l_constraint_lookup_tab
               , p_object_lookup_tab => l_object_lookup_tab
@@ -5674,7 +5835,6 @@ $end
   */
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
-  , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
@@ -5684,17 +5844,14 @@ $end
   , p_transform_param_list in varchar2
   )
   is
-$if not(dbms_db_version.ver_le_10) $then
     l_cursor sys_refcursor;
-$end    
     l_network_link all_db_links.db_link%type := null;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS');
     dbug.print(dbug."input"
-               ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
+               ,'p_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
-               ,p_new_schema
                ,p_sort_objects_by_deps
                ,p_object_type
                ,p_object_names);
@@ -5708,45 +5865,24 @@ $end
 
     if p_network_link is null
     then
-$if dbms_db_version.ver_le_10 $then
-      select  value(t) as schema_ddl
-      bulk collect 
-      into    g_schema_ddl_tab
-      from    table
-              ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                ( p_schema
-                , p_new_schema
-                , p_sort_objects_by_deps
-                , p_object_type
-                , p_object_names
-                , p_object_names_include
-                , null -- p_network_link
-                , p_grantor_is_schema
-                , p_transform_param_list
-                )
-              ) t;
-$else  
       open l_cursor for
         select  value(t) as schema_ddl
         from    table
                 ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                  ( p_schema
-                  , p_new_schema
-                  , p_sort_objects_by_deps
-                  , p_object_type
-                  , p_object_names
-                  , p_object_names_include
-                  , null -- p_network_link
-                  , p_grantor_is_schema
-                  , p_transform_param_list
+                  ( p_schema => p_schema
+                  , p_sort_objects_by_deps => p_sort_objects_by_deps
+                  , p_object_type => p_object_type
+                  , p_object_names => p_object_names
+                  , p_object_names_include => p_object_names_include
+                  , p_network_link => null -- p_network_link
+                  , p_grantor_is_schema => p_grantor_is_schema
+                  , p_transform_param_list => p_transform_param_list
                   )
                 ) t;
       -- PLS-00994: Cursor Variables cannot be declared as part of a package
       g_cursor := dbms_sql.to_cursor_number(l_cursor);  
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
-$end
-
 $end
     else
       -- check whether database link exists
@@ -5765,7 +5901,6 @@ $end
 begin
   oracle_tools.pkg_ddl_util.set_display_ddl_schema_args@%s
   ( p_schema => :b1
-  , p_new_schema => :b2
   , p_sort_objects_by_deps => :b3
   , p_object_type => :b4
   , p_object_names => :b5
@@ -5781,7 +5916,7 @@ end;'
         api_pkg.dbms_output_enable(l_network_link);
         api_pkg.dbms_output_clear(l_network_link);
         execute immediate l_statement
-          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
+          using p_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
         api_pkg.dbms_output_flush(l_network_link);
       exception
         when others
@@ -5811,10 +5946,8 @@ $end
   return t_schema_ddl_tab
   pipelined
   is
-$if not(dbms_db_version.ver_le_10) $then
     l_cursor sys_refcursor;
     l_schema_ddl t_schema_ddl;
-$end    
     l_program constant varchar2(30 char) := 'GET_DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
@@ -5824,16 +5957,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
-$if dbms_db_version.ver_le_10 $then
-    if g_schema_ddl_tab is not null and g_schema_ddl_tab.count > 0
-    then
-      for i_idx in g_schema_ddl_tab.first .. g_schema_ddl_tab.last
-      loop
-        pipe row (g_schema_ddl_tab(i_idx));
-        longops_show(l_longops_rec);
-      end loop;
-    end if;
-$else
     -- PLS-00994: Cursor Variables cannot be declared as part of a package
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
@@ -5851,7 +5974,6 @@ $end
       longops_show(l_longops_rec);
     end loop;
     close l_cursor;
-$end
 
     longops_done(l_longops_rec);
 
@@ -5873,7 +5995,6 @@ $end
   function sort_objects_by_deps
   ( p_schema_object_tab in t_schema_object_tab
   , p_schema in t_schema_nn
-  , p_new_schema in t_schema
   )
   return t_schema_object_tab
   pipelined
@@ -5883,15 +6004,13 @@ $end
       ( select  t.column_value as type
         from    table(g_schema_md_object_type_tab) t
       ), deps as
-      ( select  oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , d.owner
+      ( select  oracle_tools.t_schema_object.create_schema_object
+                ( d.owner
                 , t_schema_object.dict2metadata_object_type(d.type)
                 , d.name
                 ) as obj -- a named object
-        ,       oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , d.referenced_owner
+        ,       oracle_tools.t_schema_object.create_schema_object
+                ( d.referenced_owner
                 , t_schema_object.dict2metadata_object_type(d.referenced_type)
                 , d.referenced_name
                 ) as ref_obj -- a named object
@@ -5908,15 +6027,13 @@ $end
         union all
 $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then
         -- dependencies based on foreign key constraints
-        select  oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , t1.owner
+        select  oracle_tools.t_schema_object.create_schema_object
+                ( t1.owner
                 , 'TABLE' -- already meta
                 , t1.table_name
                 ) as obj -- a named object
-        ,       oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , t2.owner
+        ,       oracle_tools.t_schema_object.create_schema_object
+                ( t2.owner
                 , 'TABLE' -- already meta
                 , t2.table_name
                 ) as ref_obj -- a named object
@@ -5928,18 +6045,16 @@ $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then
         and     t1.constraint_type = 'R'
 $else
         -- more simple: just the constraints
-        select  oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , c.owner
+        select  oracle_tools.t_schema_object.create_schema_object
+                ( c.owner
                 , 'REF_CONSTRAINT' -- already meta
                 , c.constraint_name
                 , tc.owner
                 , t_schema_object.dict2metadata_object_type(tc.object_type)
                 , tc.object_name
                 ) as obj -- belongs to a base table/mv
-        ,       oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , c.r_owner
+        ,       oracle_tools.t_schema_object.create_schema_object
+                ( c.r_owner
                 , 'CONSTRAINT' -- already meta
                 , c.r_constraint_name
                 , tr.owner
@@ -5960,15 +6075,13 @@ $else
 $end
         union all
         -- dependencies based on prebuilt tables
-        select  oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , t1.owner
+        select  oracle_tools.t_schema_object.create_schema_object
+                ( t1.owner
                 , 'MATERIALIZED_VIEW' -- already meta
                 , t1.mview_name
                 ) as obj -- a named object
-        ,       oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , t2.owner
+        ,       oracle_tools.t_schema_object.create_schema_object
+                ( t2.owner
                 , 'TABLE' -- already meta
                 , t2.table_name
                 ) as ref_obj -- a named object
@@ -5979,18 +6092,16 @@ $end
         and     t1.build_mode = 'PREBUILT'
         union all
         -- dependencies from constraints to indexes
-        select  oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , c.owner
+        select  oracle_tools.t_schema_object.create_schema_object
+                ( c.owner
                 , case c.constraint_type when 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end
                 , c.constraint_name
                 , tc.owner
                 , t_schema_object.dict2metadata_object_type(tc.object_type)
                 , tc.object_name
                 ) as obj -- a named object
-        ,       oracle_tools.pkg_schema_object.create_schema_object
-                ( p_schema
-                , c.index_owner
+        ,       oracle_tools.t_schema_object.create_schema_object
+                ( c.index_owner
                 , 'INDEX'
                 , c.index_name
                 , i.table_owner
@@ -6035,7 +6146,7 @@ $end
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
-    dbug.print(dbug."input", 'p_schema: %s; p_new_schema: %s; p_schema_object_tab.count: %s', p_schema, p_new_schema, p_schema_object_tab.count);
+    dbug.print(dbug."input", 'p_schema: %s; p_schema_object_tab.count: %s', p_schema, p_schema_object_tab.count);
     dbug.print(dbug."input", 'p_schema_object_tab(1).id: %s', case when p_schema_object_tab.count > 0 then p_schema_object_tab(1).id end);    
 $end
 
@@ -6062,19 +6173,6 @@ $end
       for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
       loop
         l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
-        if p_new_schema is not null
-        then
-          l_schema_object :=
-            oracle_tools.pkg_schema_object.create_schema_object
-            ( p_schema
-            , case when l_schema_object.object_schema() = p_schema then p_new_schema else l_schema_object.object_schema() end
-            , l_schema_object.object_type() 
-            , l_schema_object.object_name()
-            , case when l_schema_object.base_object_schema() = p_schema then p_new_schema else l_schema_object.base_object_schema() end
-            , l_schema_object.base_object_type() 
-            , l_schema_object.base_object_name() 
-            );
-        end if;
         
         pipe row(l_schema_object);
 
@@ -6210,6 +6308,7 @@ $end
   return clob
   is
     l_ddl_text clob := null;
+    l_str_tab dbms_sql.varchar2a;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MODIFY_DDL_TEXT');
@@ -6223,32 +6322,49 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     );
 $end
 
-    l_ddl_text := p_ddl_text;
-
-    /*
-       ON "<owner>"."<table>" must be replaced by ON "EMPTY"."<table>"
-
-       CREATE OR REPLACE EDITIONABLE TRIGGER "EMPTY"."<trigger>"
-       BEFORE INSERT OR DELETE OR UPDATE ON "<owner>"."<table>"
-       REFERENCING FOR EACH ROW
-    */
     if p_schema <> p_new_schema
     then
-      l_ddl_text :=
-        replace
-        ( replace
-          ( replace
-            ( l_ddl_text
-            , '"' || p_schema || '"'
-            , '"' || p_new_schema || '"'
-            )
-          , ' ' || p_schema || '.'
-          , ' ' || p_new_schema || '.'
-          )
-        , ' ' || lower(p_schema) || '.'
-        , ' ' || lower(p_new_schema) || '.'
-        )
-      ;
+      /*
+         ON "<owner>"."<table>" must be replaced by ON "EMPTY"."<table>"
+
+         CREATE OR REPLACE EDITIONABLE TRIGGER "EMPTY"."<trigger>"
+         BEFORE INSERT OR DELETE OR UPDATE ON "<owner>"."<table>"
+         REFERENCING FOR EACH ROW
+      */
+      
+      oracle_tools.pkg_str_util.split
+      ( p_str => p_ddl_text
+      , p_delimiter => chr(10)
+      , p_str_tab => l_str_tab
+      );
+
+      if l_str_tab.count > 0
+      then
+        init_clob;
+        
+        for i_idx in l_str_tab.first .. l_str_tab.last
+        loop
+          -- replace p_schema
+          --
+          -- A) not case sensitive
+          --    1) at the start of a line or after a non Oracle identifier character
+          --    2) before a dot
+          l_str_tab(i_idx) :=
+            regexp_replace(l_str_tab(i_idx), '(^|[^_a-zA-Z0-9$#])' || lower(p_schema) || '\.', '\1' || p_new_schema, 1, 0, 'i');
+          -- B) case sensitive, between " and "
+          l_str_tab(i_idx) :=
+            regexp_replace(l_str_tab(i_idx), '"' || p_schema || '"', '"' || p_new_schema || '"');
+          append_clob(l_str_tab(i_idx) || chr(10));
+        end loop;
+
+        dbms_lob.copy
+        ( dest_lob => l_ddl_text
+        , src_lob => g_clob
+        , amount => dbms_lob.getlength(g_clob)
+        , dest_offset => 1
+        , src_offset => 1
+        );
+      end if;
     end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
@@ -6552,9 +6668,8 @@ $end
     l_drop_schema_ddl_tab := t_schema_ddl_tab();
     for r in
     ( select  oracle_tools.t_schema_ddl.create_schema_ddl
-              ( p_obj => oracle_tools.pkg_schema_object.create_named_object
-                         ( p_owner => o.object_schema
-                         , p_object_type => o.object_type
+              ( p_obj => oracle_tools.t_named_object.create_named_object
+                         ( p_object_type => o.object_type
                          , p_object_schema => o.object_schema
                          , p_object_name => o.object_name
                          )
@@ -6712,7 +6827,6 @@ $end
 
     cursor c_display_ddl_schema
     ( b_schema in varchar2
-    , b_new_schema in varchar2
     , b_sort_objects_by_deps in number
     , b_object_type in varchar2
     , b_object_names in varchar2
@@ -6724,14 +6838,13 @@ $end
       select value(t)
       from   table
              ( oracle_tools.pkg_ddl_util.display_ddl_schema
-               ( b_schema
-               , b_new_schema
-               , b_sort_objects_by_deps
-               , b_object_type
-               , b_object_names
-               , b_object_names_include
-               , b_network_link
-               , b_grantor_is_schema
+               ( p_schema => b_schema
+               , p_sort_objects_by_deps => b_sort_objects_by_deps
+               , p_object_type => b_object_type
+               , p_object_names => b_object_names
+               , p_object_names_include => b_object_names_include
+               , p_network_link => b_network_link
+               , p_grantor_is_schema => b_grantor_is_schema
                )
              ) t
       ;
@@ -6746,7 +6859,6 @@ $end
     ( p_description in varchar2
     , p_sqlcode_expected in integer
     , p_schema in varchar2 default user
-    , p_new_schema in varchar2 default null
     , p_sort_objects_by_deps in number default 0
     , p_object_type in varchar2 default null
     , p_object_names in varchar2 default null
@@ -6760,11 +6872,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.enter(g_package_prefix || l_program || '.CHK');
       dbug.print
       ( dbug."input"
-      , 'p_description: %s; p_sqlcode_expected: %s; p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s'
+      , 'p_description: %s; p_sqlcode_expected: %s; p_schema: %s; p_sort_objects_by_deps: %s'
       , p_description
       , p_sqlcode_expected
       , p_schema
-      , p_new_schema
       , p_sort_objects_by_deps
       );
       dbug.print
@@ -6779,7 +6890,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
       open c_display_ddl_schema
            ( p_schema
-           , p_new_schema
            , p_sort_objects_by_deps
            , p_object_type
            , p_object_names
@@ -6849,13 +6959,6 @@ $end
     chk
     ( p_description => 'New schema empty'
     , p_sqlcode_expected => c_no_exception_raised
-    , p_new_schema => null
-    );
-
-    chk
-    ( p_description => 'New schema ABC'
-    , p_sqlcode_expected => c_no_exception_raised
-    , p_new_schema => 'ABC'
     );
 
     for r in
@@ -6949,7 +7052,6 @@ $end
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
                  ( p_schema => g_owner
-                 , p_new_schema => null
                  , p_sort_objects_by_deps => 1
                  , p_object_type => null
                  , p_object_names => g_package
@@ -6975,7 +7077,6 @@ $end
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
                  ( p_schema => g_owner
-                 , p_new_schema => g_empty
                  , p_sort_objects_by_deps => 1
                  , p_object_type => null
                  , p_object_names => g_package
@@ -7097,14 +7198,13 @@ $end
           ,      u.text
           from   table
                  ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                   ( r.owner
-                   , null
-                   , 0
-                   , oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
-                   , r.object_name
-                   , 1
-                   , case when i_try = 2 then g_loopback end
-                   , 0
+                   ( p_schema => r.owner
+                   , p_sort_objects_by_deps => 0
+                   , p_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
+                   , p_object_names => r.object_name
+                   , p_object_names_include => 1
+                   , p_network_link=> case when i_try = 2 then g_loopback end
+                   , p_grantor_is_schema => 0
                    )
                  ) t
           ,      table(t.ddl_tab) u
@@ -7228,14 +7328,14 @@ $end
       select value(t)
       from   table
              ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
-               ( b_object_type
-               , b_object_names
-               , b_object_names_include
-               , b_schema_source
-               , b_schema_target
-               , b_network_link_source
-               , b_network_link_target
-               , b_skip_repeatables
+               ( p_object_type => b_object_type
+               , p_object_names => b_object_names
+               , p_object_names_include => b_object_names_include
+               , p_schema_source => b_schema_source
+               , p_schema_target => b_schema_target
+               , p_network_link_source => b_network_link_source
+               , p_network_link_target => b_network_link_target
+               , p_skip_repeatables => b_skip_repeatables
                )
              ) t
       ;
@@ -7494,25 +7594,14 @@ $end
           ,      t.obj.object_type() as object_type
           ,      t.obj.object_name() as object_name
           ,      u.text
-$if dbms_db_version.ver_le_10 $then
-          from   table(oracle_tools.pkg_ddl_util.display_ddl_schema_diff( oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
-                                                                         , r.object_name
-                                                                         , 1
-                                                                         , r.owner
-                                                                         , g_empty
-                                                                         , case when i_try = 2 then g_loopback end
-                                                                         , case when i_try = 2 then g_loopback end
-                                                                         , 0)) t
-$else
           from   table(oracle_tools.pkg_ddl_util.display_ddl_schema_diff( p_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
-                                                                         , p_object_names => r.object_name
-                                                                         , p_object_names_include => 1
-                                                                         , p_schema_source => r.owner
-                                                                         , p_schema_target => g_empty
-                                                                         , p_network_link_source => case when i_try = 2 then g_loopback end
-                                                                         , p_network_link_target => case when i_try = 2 then g_loopback end
-                                                                         , p_skip_repeatables => 0)) t
-$end
+                                                                        , p_object_names => r.object_name
+                                                                        , p_object_names_include => 1
+                                                                        , p_schema_source => r.owner
+                                                                        , p_schema_target => g_empty
+                                                                        , p_network_link_source => case when i_try = 2 then g_loopback end
+                                                                        , p_network_link_target => case when i_try = 2 then g_loopback end
+                                                                        , p_skip_repeatables => 0)) t
           ,      table(t.ddl_tab) u                                                          
           where  u.verb() != '--' -- no comments
           and    t.obj.object_type() = oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
@@ -7927,14 +8016,14 @@ $end
       select value(t)
       from   table
              ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
-               ( b_object_type
-               , b_object_names
-               , b_object_names_include
-               , b_schema_source
-               , b_schema_target
-               , b_network_link_source
-               , b_network_link_target
-               , b_skip_repeatables
+               ( p_object_type => b_object_type
+               , p_object_names => b_object_names
+               , p_object_names_include => b_object_names_include
+               , p_schema_source => b_schema_source
+               , p_schema_target => b_schema_target
+               , p_network_link_source => b_network_link_source
+               , p_network_link_target => b_network_link_target
+               , p_skip_repeatables => b_skip_repeatables
                )
              ) t
       ,      table(t.ddl_tab) u

@@ -427,9 +427,228 @@ static procedure create_schema_object
 , p_schema_object out nocopy t_schema_object
 )
 is
+  l_base_object_schema all_objects.owner%type := p_base_object_schema;
+  l_base_object_name all_objects.object_name%type := p_base_object_name;
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter('T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_object_schema: %s; p_object_type: %s; p_object_name: %s'
+  , p_object_schema
+  , p_object_type
+  , p_object_name
+  );
+  if p_base_object_schema is not null or p_base_object_type is not null or p_base_object_name is not null
+  then
+    dbug.print
+    ( dbug."input"
+    , 'p_base_object_schema: %s; p_base_object_type: %s; p_base_object_name: %s'
+    , p_base_object_schema
+    , p_base_object_type
+    , p_base_object_name
+    );
+  end if;
+  if p_column_name is not null or p_grantee is not null or p_privilege is not null or p_grantable is not null
+  then
+    dbug.print
+    ( dbug."input"
+    , 'p_column_name: %s; p_grantee: %s; p_privilege: %s; p_grantable: %s'
+    , p_column_name
+    , p_grantee
+    , p_privilege
+    , p_grantable
+    );
+  end if;
+$end
+
+  case p_object_type
+    when 'INDEX' -- a named object with a base named object
+    then
+      -- base_object_type is corrected in create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  i.table_owner
+        ,       i.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_indexes i
+        where   i.owner = p_object_schema
+        and     i.index_name = p_object_name
+        and     ( l_base_object_schema is null or i.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or i.table_name = l_base_object_name )
+        ;
+      end if;
+      
+      p_schema_object :=
+        t_index_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => l_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => l_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        , p_tablespace_name => null
+        );
+
+    when 'TRIGGER' -- a named object with a base named object
+    then
+      -- base_object_type is corrected in create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  t.table_owner
+        ,       t.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_triggers t
+        where   t.owner = p_object_schema
+        and     t.trigger_name = p_object_name
+        and     ( l_base_object_schema is null or t.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or t.table_name = l_base_object_name )
+        ;
+      end if;
+      
+      p_schema_object :=
+        t_trigger_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => l_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => l_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'OBJECT_GRANT'
+    then
+      p_schema_object :=
+        t_object_grant_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => p_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_grantee => p_grantee
+        , p_privilege => p_privilege
+        , p_grantable => p_grantable
+        );
+
+    when 'CONSTRAINT'
+    then
+      p_schema_object :=
+        t_constraint_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => p_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'REF_CONSTRAINT'
+    then
+      p_schema_object :=
+        t_ref_constraint_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => p_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'SYNONYM' -- a named object with a base named object
+    then
+      -- base_object_type is corrected in create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  s.table_owner
+        ,       s.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_synonyms s
+        where   s.owner = p_object_schema
+        and     s.synonym_name = p_object_name
+        and     ( l_base_object_schema is null or s.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or s.table_name = l_base_object_name )
+        ;
+      end if;
+      
+      p_schema_object :=
+        t_synonym_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => l_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => l_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'COMMENT'
+    then
+      p_schema_object :=
+        t_comment_object
+        ( p_base_object =>
+            t_named_object.create_named_object
+            ( p_object_schema => p_base_object_schema
+            , p_object_type => p_base_object_type
+            , p_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_column_name => p_column_name
+        );
+
+    else
+-- when 'SEQUENCE'
+-- when 'TYPE_SPEC'
+-- when 'CLUSTER'
+-- when 'AQ_QUEUE_TABLE'
+-- when 'AQ_QUEUE'
+-- when 'TABLE'
+-- when 'DB_LINK'
+-- when 'FUNCTION'
+-- when 'PACKAGE_SPEC'
+-- when 'VIEW'
+-- when 'PROCEDURE'
+-- when 'MATERIALIZED_VIEW'
+-- when 'MATERIALIZED_VIEW_LOG'
+-- when 'PACKAGE_BODY'
+-- when 'TYPE_BODY'
+-- when 'DIMENSION'
+-- when 'INDEXTYPE'
+-- when 'JAVA_SOURCE'
+-- when 'LIBRARY'
+-- when 'OPERATOR'
+-- when 'REFRESH_GROUP'
+-- when 'XMLSCHEMA'
+-- when 'PROCOBJ'
+      t_named_object.create_named_object
+      ( p_object_schema => p_object_schema
+      , p_object_type => p_object_type
+      , p_object_name => p_object_name
+      , p_named_object => p_schema_object
+      );
+  end case;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end create_schema_object;
 
 static function create_schema_object
@@ -446,9 +665,40 @@ static function create_schema_object
 )
 return t_schema_object
 is
+   l_schema_object t_schema_object;
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter('T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
+$end
+
+  t_schema_object.create_schema_object
+  ( p_object_schema => p_object_schema
+  , p_object_type => p_object_type
+  , p_object_name => p_object_name
+  , p_base_object_schema => p_base_object_schema
+  , p_base_object_type => p_base_object_type
+  , p_base_object_name => p_base_object_name
+  , p_column_name => p_column_name
+  , p_grantee => p_grantee
+  , p_privilege => p_privilege
+  , p_grantable => p_grantable
+  , p_schema_object => l_schema_object
+  );
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+
+  return l_schema_object;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end create_schema_object;
 
 static function is_a_repeatable
@@ -583,7 +833,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter('T_SCHEMA_OBJECT.CHK');
 $end
 
-  oracle_tools.pkg_schema_object.chk_schema_object(p_schema_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

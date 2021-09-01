@@ -8,8 +8,31 @@ constructor function t_procobj_object
 return self as result
 is
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_PROCOBJ_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_PROCOBJ_OBJECT.T_PROCOBJ_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_PROCOBJ_OBJECT.T_PROCOBJ_OBJECT');
+  dbug.print
+  ( dbug."input"
+  , 'p_object_schema: %s; p_object_name: %s'
+  , p_object_schema
+  , p_object_name
+  );
+$end
+
+  -- default constructor
+  self := t_procobj_object(null, p_object_schema, p_object_name, null);
+
+  select  obj.object_type
+  into    self.dict_object_type$
+  from    all_objects obj
+  where   obj.owner = p_object_schema
+  and     obj.object_name = p_object_name
+  ;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+
+  return;
 end;
 
 overriding member function dict_object_type 
@@ -38,7 +61,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter('T_PROCOBJ_OBJECT.CHK');
 $end
 
-  oracle_tools.pkg_schema_object.chk_schema_object(p_named_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_named_object => self, p_schema => p_schema);
 
   if self.dict_object_type() is null
   then

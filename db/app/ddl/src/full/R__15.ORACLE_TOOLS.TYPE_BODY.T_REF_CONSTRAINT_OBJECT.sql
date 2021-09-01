@@ -11,9 +11,127 @@ constructor function t_ref_constraint_object
 )
 return self as result
 is
+  l_owner all_objects.owner%type;
+  l_table_name all_objects.object_name%type;
+  l_tablespace_name all_tables.tablespace_name%type;
+
+  cursor c_con(b_owner in varchar2, b_constraint_name in varchar2, b_table_name in varchar2)
+  is
+    select  con.owner
+    ,       con.constraint_type
+    ,       con.table_name
+    ,       con.r_owner
+    ,       con.r_constraint_name
+    from    all_constraints con
+    where   con.owner = b_owner
+    and     con.constraint_name = b_constraint_name
+    and     (b_table_name is null or con.table_name = b_table_name)
+    ;
+
+  r_con c_con%rowtype;
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_REF_CONSTRAINT_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_REF_CONSTRAINT_OBJECT.T_REF_CONSTRAINT_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_REF_CONSTRAINT_OBJECT.T_REF_CONSTRAINT_OBJECT');
+  dbug.print
+  ( dbug."input"
+  , 'p_base_object.id(): %s; p_object_schema: %s; p_object_name: %s; p_constraint_type: %s; p_column_names: %s'
+  , p_base_object.id()
+  , p_object_schema
+  , p_object_name
+  , p_constraint_type
+  , p_column_names
+  );
+  if p_ref_object is not null
+  then
+    p_ref_object.print();
+  end if;
+$end
+
+  -- default constructor
+  self := t_ref_constraint_object
+          ( null
+          , p_object_schema
+          , p_base_object
+          , p_object_name
+          , nvl(p_column_names, t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name()))
+          , null -- search condition
+          , p_constraint_type
+          , p_ref_object
+          );
+
+  -- GPA 2017-01-18
+  -- one combined query (twice all_constraints and once all_objects) was too slow.
+  if p_constraint_type is not null and p_ref_object is not null
+  then
+    null;
+  else
+    begin
+      self.constraint_type$ := null; -- to begin with
+
+      open c_con(p_object_schema, p_object_name, p_base_object.object_name());
+      fetch c_con into r_con;
+      if c_con%found
+      then
+        close c_con; -- closed cursor indicates success
+
+        self.constraint_type$ := r_con.constraint_type;
+
+        -- get the referenced table/view
+        open c_con(r_con.r_owner, r_con.r_constraint_name, null);
+        fetch c_con into r_con;
+        if c_con%found
+        then
+          close c_con; -- closed cursor indicates success
+
+          begin
+            select  t.owner
+            ,       t.table_name as table_name
+            ,       t.tablespace_name as tablespace_name
+            into    l_owner
+            ,       l_table_name
+            ,       l_tablespace_name
+            from    all_tables t
+            where   t.owner = r_con.owner
+            and     t.table_name = r_con.table_name
+            ;
+            self.ref_object$ := t_table_object(p_object_schema => l_owner, p_object_name => l_table_name, p_tablespace_name => l_tablespace_name);
+          exception
+            when no_data_found
+            then
+              -- reference constraints to views are possible too...
+              select  v.owner
+              ,       v.view_name as table_name
+              into    l_owner
+              ,       l_table_name
+              from    all_views v
+              where   v.owner = r_con.owner
+              and     v.view_name = r_con.table_name
+              ;
+              self.ref_object$ := t_view_object(l_owner, l_table_name);
+          end;
+        end if;
+      end if;
+
+      -- closed cursor indicates success
+      if c_con%isopen
+      then
+        close c_con;
+        raise no_data_found;
+      end if;
+
+    exception
+      when others
+      then
+        self.ref_object$ := null;
+        -- chk() will signal this later on
+    end;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+
+  return;
 end;
 
 -- begin of getter(s)
@@ -99,7 +217,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter('T_REF_CONSTRAINT_OBJECT.CHK');
 $end
 
-  oracle_tools.pkg_schema_object.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
 
   if self.ref_object$ is null
   then

@@ -27,14 +27,13 @@ $end
   into    l_schema_ddl_tab
   from    table
           ( oracle_tools.pkg_ddl_util.display_ddl_schema
-            ( l_tgt_materialized_view_object.object_schema() -- p_schema
-            , null                                           -- p_new_schema
-            , 0                                              -- p_sort_objects_by_deps
-            , 'OBJECT_GRANT'                                 -- p_object_type
-            , null                                           -- p_object_names
-            , null                                           -- p_object_names_include
-            , l_tgt_materialized_view_object.network_link()  -- p_network_link
-            , 0                                              -- p_grantor_is_schema
+            ( p_schema => l_tgt_materialized_view_object.object_schema()
+            , p_sort_objects_by_deps => 0
+            , p_object_type => 'OBJECT_GRANT'
+            , p_object_names => null
+            , p_object_names_include => null
+            , p_network_link=> l_tgt_materialized_view_object.network_link()
+            , p_grantor_is_schema => 0
             )
           ) t
   ;

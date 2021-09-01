@@ -67,7 +67,7 @@ $end
   -- GPA 2017-01-18
   -- Do not call
   --
-  --   oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  --   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
   --
   -- for a PUBLIC synonym
 
@@ -98,7 +98,7 @@ $end
       raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema must be ' || p_schema || ' for a private synonym');
     end if;
 
-    oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+    oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then

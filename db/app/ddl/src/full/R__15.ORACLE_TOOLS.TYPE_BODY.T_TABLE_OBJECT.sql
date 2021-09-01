@@ -8,8 +8,45 @@ constructor function t_table_object
 return self as result
 is
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_TABLE_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_TABLE_OBJECT.T_TABLE_OBJECT (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_TABLE_OBJECT.T_TABLE_OBJECT (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_owner: %s; p_object_schema: %s; p_object_name: %s'
+  , p_owner
+  , p_object_schema
+  , p_object_name
+  , p_tablespace_name
+  );
+$end
+
+ -- non default constructor
+  self := t_table_object(p_object_schema, p_object_name, null);
+
+  if self.tablespace_name$ is null
+  then
+    begin
+      -- standard table?
+      select  t.tablespace_name
+      into    self.tablespace_name$
+      from    all_tables t
+      where   t.owner = p_object_schema
+      and     t.table_name = p_object_name
+      ;
+    exception
+      when no_data_found
+      then
+        -- maybe a temporary table
+        self.tablespace_name$ := null;
+    end;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."info", 'self.tablespace_name$: %s', self.tablespace_name$);
+  dbug.leave;
+$end
+
+  return;
 end;
 
 constructor function t_table_object
@@ -73,7 +110,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter('T_TABLE_OBJECT.CHK');
 $end
 
-  oracle_tools.pkg_schema_object.chk_schema_object(p_named_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_named_object => self, p_schema => p_schema);
 
   -- tablespace name may or may not be empty
 

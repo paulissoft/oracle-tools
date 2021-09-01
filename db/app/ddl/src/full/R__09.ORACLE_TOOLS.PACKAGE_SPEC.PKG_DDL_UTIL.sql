@@ -111,11 +111,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * </p>
   *
   * <p>
-  * NOTE: parameters p_schema, p_new_schema and p_object_names will NOT be converted to upper case.
+  * NOTE: parameters p_schema and p_object_names will NOT be converted to upper case.
   * </p>
   *
   * @param p_schema                The schema name.
-  * @param p_new_schema            The new schema name.
   * @param p_sort_objects_by_deps  Sort objecten in dependency order to reduce number of installation errors/warnings.
   * @param p_object_type           Filter for object type.
   * @param p_object_names          A comma separated list of (base) object names.
@@ -128,7 +127,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   function display_ddl_schema
   ( p_schema in t_schema_nn default user
-  , p_new_schema in t_schema default null
   , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- >= 0, not null
   , p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
@@ -291,7 +289,32 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   ( p_object_type in t_metadata_object_type
   )
   return boolean;
-  
+
+  /*
+  -- Various super type check procedures
+  -- Oracle 11g has a (object as supertype).chk() syntax but Oracle 10i not.
+  -- So we invoke package procedure from the type bodies.
+  */
+  procedure chk_schema_object
+  ( p_schema_object in t_schema_object
+  , p_schema in varchar2
+  );
+
+  procedure chk_schema_object
+  ( p_dependent_or_granted_object in t_dependent_or_granted_object
+  , p_schema in varchar2
+  );
+
+  procedure chk_schema_object
+  ( p_named_object in t_named_object
+  , p_schema in varchar2
+  );
+
+  procedure chk_schema_object
+  ( p_constraint_object in t_constraint_object
+  , p_schema in varchar2
+  );
+
   /*
   -- helper function
   */
@@ -335,7 +358,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   function get_schema_ddl
   ( p_schema in t_schema_nn
-  , p_new_schema in t_schema
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list
@@ -348,7 +370,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
-  , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
@@ -374,7 +395,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   function sort_objects_by_deps
   ( p_schema_object_tab in t_schema_object_tab
   , p_schema in t_schema_nn default user
-  , p_new_schema in t_schema default null
   )
   return t_schema_object_tab
   pipelined;

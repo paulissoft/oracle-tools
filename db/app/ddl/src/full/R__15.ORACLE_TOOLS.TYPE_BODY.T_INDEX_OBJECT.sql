@@ -9,8 +9,37 @@ constructor function t_index_object
 return self as result
 is
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_INDEX_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
+  , p_base_object.id()
+  , p_object_schema
+  , p_object_name
+  , p_tablespace_name
+  );
+$end
+
+  -- default constructor
+  self := t_index_object(null, p_object_schema, p_base_object, p_object_name, null, null);
+
+  self.column_names$ := t_index_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name);
+
+  if self.tablespace_name$ is null
+  then
+    select  ind.tablespace_name
+    into    self.tablespace_name$
+    from    all_indexes ind
+    where   ind.owner = p_object_schema
+    and     ind.index_name = p_object_name;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+
+  return;
 end;
 
 constructor function t_index_object
@@ -23,8 +52,30 @@ constructor function t_index_object
 return self as result
 is
 begin
-  -- must use PKG_SCHEMA_OBJECT.CREATE_INDEX_OBJECT
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter('T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
+  dbug.print
+  ( dbug."input"
+  , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
+  , p_base_object.id()
+  , p_object_schema
+  , p_object_name
+  , p_tablespace_name
+  );
+$end
+
+  self.base_object$ := p_base_object;
+  self.network_link$ := null;
+  self.object_schema$ := p_object_schema;
+  self.object_name$ := p_object_name;
+  self.column_names$ := t_index_object.get_column_names(p_object_schema, p_object_name);
+  self.tablespace_name$ := p_tablespace_name;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end  
+
+  return;
 end;
 
 -- begin of getter(s)
@@ -111,9 +162,50 @@ static function get_column_names
 )
 return varchar2
 is
+  l_column_names varchar2(4000 char) := null;
 begin
-  -- must use PKG_SCHEMA_OBJECT.GET_COLUMN_NAMES
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'T_INDEX_OBJECT.GET_COLUMN_NAMES');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter('T_INDEX_OBJECT.GET_COLUMN_NAMES');
+  dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
+$end
+
+  for r in
+  ( select  ic.column_name
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
+    ,       ie.column_expression
+$end
+    from    all_ind_columns ic
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
+            left join all_ind_expressions ie
+            on ie.index_owner = ic.index_owner and ie.index_name = ic.index_name and ie.column_position = ic.column_position
+$end    
+    where   ic.index_owner = p_object_schema
+    and     ic.index_name = p_object_name
+    order by
+            ic.column_position asc nulls first
+    ,       ic.column_name
+  )
+  loop
+    l_column_names :=
+      case when l_column_names is not null then l_column_names || ',' end ||
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
+      case
+        when r.column_expression is not null
+        then to_char(dbms_utility.get_hash_value(r.column_expression, 37, 1073741824))
+        else r.column_name
+      end
+$else
+      r.column_name
+$end
+    ;
+  end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.print(dbug."output", 'return: %s', l_column_names);
+  dbug.leave;
+$end
+
+  return l_column_names;
 end get_column_names;
 
 overriding member procedure chk
@@ -126,7 +218,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter('T_INDEX_OBJECT.CHK');
 $end
 
-  oracle_tools.pkg_schema_object.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_name() is null
   then
