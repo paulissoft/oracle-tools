@@ -151,18 +151,18 @@ $end
 
   -- DBMS_METADATA object types voor DBA gerelateerde taken (DBA rol)
   g_dba_md_object_type_tab constant t_text_tab := t_text_tab( 'CONTEXT'
-                                                                                      /*, 'DEFAULT_ROLE'*/
-                                                                                      , 'DIRECTORY'
-                                                                                      /*, 'FGA_POLICY'*/
-                                                                                      /*, 'ROLE'*/
-                                                                                      /*, 'ROLE_GRANT'*/
-                                                                                      /*, 'ROLLBACK_SEGMENT'*/
-                                                                                      , 'SYSTEM_GRANT'
-                                                                                      /*, 'TABLESPACE'*/
-                                                                                      /*, 'TABLESPACE_QUOTA'*/
-                                                                                      /*, 'TRUSTED_DB_LINK'*/
-                                                                                      /*, 'USER'*/
-                                                                                      );
+                                                            /*, 'DEFAULT_ROLE'*/
+                                                            , 'DIRECTORY'
+                                                            /*, 'FGA_POLICY'*/
+                                                            /*, 'ROLE'*/
+                                                            /*, 'ROLE_GRANT'*/
+                                                            /*, 'ROLLBACK_SEGMENT'*/
+                                                            , 'SYSTEM_GRANT'
+                                                            /*, 'TABLESPACE'*/
+                                                            /*, 'TABLESPACE_QUOTA'*/
+                                                            /*, 'TRUSTED_DB_LINK'*/
+                                                            /*, 'USER'*/
+                                                            );
 
   -- DBMS_METADATA object types voor de PUBLIC rol
   g_public_md_object_type_tab constant t_text_tab := t_text_tab('DB_LINK');
@@ -2750,6 +2750,7 @@ $end
 
   function display_ddl_schema
   ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
@@ -2775,8 +2776,9 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || 'DISPLAY_DDL_SCHEMA');
     dbug.print(dbug."input"
-               ,'p_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
+               ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
+               ,p_new_schema
                ,p_sort_objects_by_deps
                ,p_object_type
                ,p_object_names);
@@ -2812,6 +2814,7 @@ $end
 
       oracle_tools.pkg_ddl_util.set_display_ddl_schema_args
       ( p_schema => p_schema
+      , p_new_schema => p_new_schema
       , p_sort_objects_by_deps => p_sort_objects_by_deps
       , p_object_type => p_object_type
       , p_object_names => p_object_names
@@ -2893,6 +2896,12 @@ $end
         ;
       end if;
     end if;
+
+    remap_schema
+    ( p_schema => p_schema
+    , p_new_schema => p_new_schema
+    , p_schema_ddl_tab => l_schema_ddl_tab
+    );
 
     <<fetch_loop>>
     loop
@@ -3204,6 +3213,7 @@ $end
       from    table
               ( oracle_tools.pkg_ddl_util.display_ddl_schema
                 ( p_schema => p_schema_source
+                , p_new_schema => p_schema_target
                 , p_sort_objects_by_deps => 1 -- sort for create
                 , p_object_type => p_object_type
                 , p_object_names => p_object_names
@@ -3215,11 +3225,6 @@ $end
               ) s
       ;
       free_memory(l_source_schema_ddl_tab);
-      remap_schema
-      ( p_schema => p_schema_source
-      , p_new_schema => p_schema_target
-      , p_schema_ddl_tab => l_source_schema_ddl_tab
-      );
     end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -3240,6 +3245,7 @@ $end
       from    table
               ( oracle_tools.pkg_ddl_util.display_ddl_schema
                 ( p_schema => p_schema_target
+                , p_new_schema => null
                 , p_sort_objects_by_deps => 1 -- sort for drop
                 , p_object_type => p_object_type
                   /*
@@ -3762,7 +3768,7 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
          ) = 1
       then
         l_named_object_tab.extend(1);
-        oracle_tools.t_schema_object.create_named_object
+        oracle_tools.t_named_object.create_named_object
         ( p_object_type => 'AQ_QUEUE_TABLE'
         , p_object_schema => r.owner
         , p_object_name => r.queue_table
@@ -5866,6 +5872,7 @@ $end
   exception
     when no_data_found
     then
+      cleanup;
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.leave_on_error;
 $end
@@ -5885,6 +5892,7 @@ $end
   */
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
@@ -5900,8 +5908,9 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS');
     dbug.print(dbug."input"
-               ,'p_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
+               ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
+               ,p_new_schema
                ,p_sort_objects_by_deps
                ,p_object_type
                ,p_object_names);
@@ -5920,6 +5929,7 @@ $end
         from    table
                 ( oracle_tools.pkg_ddl_util.display_ddl_schema
                   ( p_schema => p_schema
+                  , p_new_schema => p_new_schema
                   , p_sort_objects_by_deps => p_sort_objects_by_deps
                   , p_object_type => p_object_type
                   , p_object_names => p_object_names
@@ -5951,6 +5961,7 @@ $end
 begin
   oracle_tools.pkg_ddl_util.set_display_ddl_schema_args@%s
   ( p_schema => :b1
+  , p_new_schema => :b2
   , p_sort_objects_by_deps => :b3
   , p_object_type => :b4
   , p_object_names => :b5
@@ -5966,7 +5977,7 @@ end;'
         api_pkg.dbms_output_enable(l_network_link);
         api_pkg.dbms_output_clear(l_network_link);
         execute immediate l_statement
-          using p_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
+          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list;
         api_pkg.dbms_output_flush(l_network_link);
       exception
         when others
@@ -6793,6 +6804,7 @@ $end
 
     cursor c_display_ddl_schema
     ( b_schema in varchar2
+    , b_new_schema in varchar2
     , b_sort_objects_by_deps in number
     , b_object_type in varchar2
     , b_object_names in varchar2
@@ -6805,6 +6817,7 @@ $end
       from   table
              ( oracle_tools.pkg_ddl_util.display_ddl_schema
                ( p_schema => b_schema
+               , p_new_schema => b_new_schema
                , p_sort_objects_by_deps => b_sort_objects_by_deps
                , p_object_type => b_object_type
                , p_object_names => b_object_names
@@ -6825,6 +6838,7 @@ $end
     ( p_description in varchar2
     , p_sqlcode_expected in integer
     , p_schema in varchar2 default user
+    , p_new_schema in varchar2 default null
     , p_sort_objects_by_deps in number default 0
     , p_object_type in varchar2 default null
     , p_object_names in varchar2 default null
@@ -6838,10 +6852,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.enter(g_package_prefix || l_program || '.CHK');
       dbug.print
       ( dbug."input"
-      , 'p_description: %s; p_sqlcode_expected: %s; p_schema: %s; p_sort_objects_by_deps: %s'
+      , 'p_description: %s; p_sqlcode_expected: %s; p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s'
       , p_description
       , p_sqlcode_expected
       , p_schema
+      , p_new_schema
       , p_sort_objects_by_deps
       );
       dbug.print
@@ -6856,6 +6871,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
       open c_display_ddl_schema
            ( p_schema
+           , p_new_schema
            , p_sort_objects_by_deps
            , p_object_type
            , p_object_names
@@ -6925,6 +6941,13 @@ $end
     chk
     ( p_description => 'New schema empty'
     , p_sqlcode_expected => c_no_exception_raised
+    , p_new_schema => null
+    );
+
+    chk
+    ( p_description => 'New schema ABC'
+    , p_sqlcode_expected => c_no_exception_raised
+    , p_new_schema => 'ABC'
     );
 
     for r in
@@ -7018,6 +7041,7 @@ $end
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
                  ( p_schema => g_owner
+                 , p_new_schema => null
                  , p_sort_objects_by_deps => 1
                  , p_object_type => null
                  , p_object_names => g_package
@@ -7043,6 +7067,7 @@ $end
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
                  ( p_schema => g_owner
+                 , p_new_schema => g_empty
                  , p_sort_objects_by_deps => 1
                  , p_object_type => null
                  , p_object_names => g_package
@@ -7165,6 +7190,7 @@ $end
           from   table
                  ( oracle_tools.pkg_ddl_util.display_ddl_schema
                    ( p_schema => r.owner
+                   , p_new_schema => null
                    , p_sort_objects_by_deps => 0
                    , p_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
                    , p_object_names => r.object_name

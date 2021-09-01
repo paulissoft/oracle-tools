@@ -115,6 +115,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * </p>
   *
   * @param p_schema                The schema name.
+  * @param p_new_schema            The new schema name.
   * @param p_sort_objects_by_deps  Sort objecten in dependency order to reduce number of installation errors/warnings.
   * @param p_object_type           Filter for object type.
   * @param p_object_names          A comma separated list of (base) object names.
@@ -127,6 +128,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   function display_ddl_schema
   ( p_schema in t_schema_nn default user
+  , p_new_schema in t_schema default null
   , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- >= 0, not null
   , p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
@@ -370,6 +372,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
