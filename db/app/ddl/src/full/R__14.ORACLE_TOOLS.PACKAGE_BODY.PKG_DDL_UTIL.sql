@@ -3476,7 +3476,6 @@ $end
   is
     l_statement varchar2(32767) := null;
     l_network_link all_db_links.db_link%type := null;
-    l_error_backtrace varchar2(32767 char) := null;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (2)');
@@ -3503,24 +3502,8 @@ $end
 declare
   l_ddl_text_tab constant oracle_tools.t_text_tab := :b1;
   l_ddl_tab dbms_sql.varchar2a%s;
-  l_cursor integer;
-  l_last_error_position integer := null;
-
-  -- ORA-24344: success with compilation error due to missing privileges
-  e_s6_with_compilation_error exception;
-  pragma exception_init(e_s6_with_compilation_error, -24344);
-  -- ORA-04063: view "EMPTY.V_DISPLAY_DDL_SCHEMA" has errors
-  e_view_has_errors exception;
-  pragma exception_init(e_view_has_errors, -4063);
-  -- ORA-01720: grant option does not exist for <owner>.PARTY
-  e_grant_option_does_not_exist exception;
-  pragma exception_init(e_grant_option_does_not_exist, -1720);
-  -- ORA-01927: cannot REVOKE privileges you did not grant
-  e_cannot_revoke exception;
-  pragma exception_init(e_cannot_revoke, -1927);
 begin
-  l_cursor := dbms_sql.open_cursor%s;
-  -- kopieer naar (remote) array
+  -- copy to (remote) array
   if l_ddl_text_tab.count > 0
   then
     for i_idx in l_ddl_text_tab.first .. l_ddl_text_tab.last
@@ -3529,62 +3512,23 @@ begin
     end loop;
   end if;
   --
-  dbms_sql.parse%s
-  ( c => l_cursor
-  , statement => l_ddl_tab
-  , lb => l_ddl_tab.first
-  , ub => l_ddl_tab.last
-  , lfflg => false
-  , language_flag => dbms_sql.native
-  );
-  --
-  dbms_sql.close_cursor%s(l_cursor);
-exception
-  when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist or e_cannot_revoke
-  then 
-    dbms_sql.close_cursor%s(l_cursor);
-    :b2 := dbms_utility.format_error_backtrace;
-  when others
-  then
-    /* DBMS_SQL.LAST_ERROR_POSITION 
-       This function returns the byte offset in the SQL statement text where the error occurred. 
-       The first character in the SQL statement is at position 0. 
-    */
-    l_last_error_position := 1 + nvl(dbms_sql.last_error_position%s, 0);
-    dbms_sql.close_cursor%s(l_cursor);
-    :b2 := dbms_utility.format_error_backtrace;
-    raise_application_error
-    ( oracle_tools.pkg_ddl_error.c_execute_via_db_link
-    , 'Error at position ' || l_last_error_position || ': ' || substr(oracle_tools.pkg_str_util.text2clob(l_ddl_text_tab), l_last_error_position, 2000)
-    , true
-    );
+  oracle_tools.pkg_ddl_util.execute_ddl%s(l_ddl_tab);
 end;]', l_network_link
-      , l_network_link
-      , l_network_link
-      , l_network_link
-      , l_network_link
-      , l_network_link
       , l_network_link
       );
 
     begin
       if l_network_link is null
       then
-        execute immediate l_statement using p_ddl_text_tab, out l_error_backtrace;
+        execute immediate l_statement using p_ddl_text_tab;
       else
         oracle_tools.api_pkg.dbms_output_enable(substr(l_network_link, 2));
         oracle_tools.api_pkg.dbms_output_clear(substr(l_network_link, 2));
         
-        execute immediate l_statement using p_ddl_text_tab, out l_error_backtrace;
+        execute immediate l_statement using p_ddl_text_tab;
         
         oracle_tools.api_pkg.dbms_output_flush(substr(l_network_link, 2));
       end if;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      if l_error_backtrace is not null
-      then
-        dbug.print(dbug."warning", 'error backtrace: %s', l_error_backtrace);
-      end if;
-$end
     exception
       when others
       then
@@ -3592,12 +3536,6 @@ $end
         then
           oracle_tools.api_pkg.dbms_output_flush(substr(l_network_link, 2));
         end if;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        if l_error_backtrace is not null
-        then
-          dbug.print(dbug."error", 'error backtrace: %s', l_error_backtrace);
-        end if;
-$end
         raise;
     end;
 
@@ -3612,13 +3550,81 @@ $end
   end execute_ddl;
 
   procedure execute_ddl
+  ( p_ddl_tab in dbms_sql.varchar2a
+  )
+  is
+    l_cursor integer;
+    l_last_error_position integer := null;
+    
+    -- ORA-24344: success with compilation error due to missing privileges
+    e_s6_with_compilation_error exception;
+    pragma exception_init(e_s6_with_compilation_error, -24344);
+    -- ORA-04063: view "EMPTY.V_DISPLAY_DDL_SCHEMA" has errors
+    e_view_has_errors exception;
+    pragma exception_init(e_view_has_errors, -4063);
+    -- ORA-01720: grant option does not exist for <owner>.PARTY
+    e_grant_option_does_not_exist exception;
+    pragma exception_init(e_grant_option_does_not_exist, -1720);
+    -- ORA-01927: cannot REVOKE privileges you did not grant
+    e_cannot_revoke exception;
+    pragma exception_init(e_cannot_revoke, -1927);
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.enter(g_package_prefix || 'EXECUTE_DDL (3)');
+    dbug.print(dbug."input", 'p_ddl_tab.count: %s', p_ddl_tab.count);
+$end
+
+    l_cursor := dbms_sql.open_cursor;
+    --
+    dbms_sql.parse
+    ( c => l_cursor
+    , statement => p_ddl_tab
+    , lb => p_ddl_tab.first
+    , ub => p_ddl_tab.last
+    , lfflg => false
+    , language_flag => dbms_sql.native
+    );
+    --
+    dbms_sql.close_cursor(l_cursor);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.leave;
+$end
+  exception
+    when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist or e_cannot_revoke
+    then 
+      dbms_sql.close_cursor(l_cursor);
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+      dbug.leave_on_error;
+$end
+      null; -- no reraise
+
+    when others
+    then
+      /* DBMS_SQL.LAST_ERROR_POSITION 
+         This function returns the byte offset in the SQL statement text where the error occurred. 
+         The first character in the SQL statement is at position 0. 
+      */
+      l_last_error_position := 1 + nvl(dbms_sql.last_error_position, 0);
+      dbms_sql.close_cursor(l_cursor);
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+      dbug.leave_on_error;
+$end
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_execute_via_db_link
+      , 'Error at position ' || l_last_error_position || '; ddl:' || chr(10) || substr(p_ddl_tab(p_ddl_tab.first), 1, 255)
+      , true
+      );
+  end execute_ddl;
+
+  procedure execute_ddl
   ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
   , p_network_link in varchar2 default null
   )
   is
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.enter(g_package_prefix || 'EXECUTE_DDL (3)');
+    dbug.enter(g_package_prefix || 'EXECUTE_DDL (4)');
     dbug.print(dbug."input"
                ,'p_schema_ddl_tab.count: %s; p_network_link: %s'
                ,case when p_schema_ddl_tab is not null then p_schema_ddl_tab.count end
