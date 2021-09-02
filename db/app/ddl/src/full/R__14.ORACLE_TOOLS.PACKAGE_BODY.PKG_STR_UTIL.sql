@@ -1,4 +1,5 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_STR_UTIL" IS
+
 g_clob clob;
 
 procedure split
@@ -139,14 +140,14 @@ $end
 
       if l_amount > 0
       then
-  dbms_lob.createtemporary(p_str_tab(p_str_tab.last), true);
-  dbms_lob.copy
-  ( dest_lob => p_str_tab(p_str_tab.last)
-  , src_lob => p_str
-  , amount => l_amount
-  , dest_offset => 1
-  , src_offset => l_start
-  );
+        dbms_lob.createtemporary(p_str_tab(p_str_tab.last), true);
+        dbms_lob.copy
+        ( dest_lob => p_str_tab(p_str_tab.last)
+        , src_lob => p_str
+        , amount => l_amount
+        , dest_offset => 1
+        , src_offset => l_start
+        );
       end if;
 
       if l_pos > 0
@@ -677,4 +678,3 @@ begin
   dbms_lob.createtemporary(g_clob, true);
 end pkg_str_util;
 /
-

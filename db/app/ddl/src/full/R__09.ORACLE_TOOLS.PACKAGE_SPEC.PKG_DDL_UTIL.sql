@@ -404,7 +404,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   procedure init_clob;
 
-  procedure append_clob(p_line in varchar2);
+  procedure append_clob
+  ( p_buffer in varchar2
+  , p_append in varchar2 default chr(10)
+  );
 
   function get_clob return clob;
 
@@ -456,6 +459,9 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   procedure ut_sort_objects_by_deps;
+
+  --%test
+  procedure ut_modify_ddl_text;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

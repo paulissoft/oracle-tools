@@ -2571,7 +2571,11 @@ $end
   )
   return varchar2
   is
-    l_ddl_text varchar2(32767 char) := p_ddl_text;    
+    l_ddl_text varchar2(32767 char) := p_ddl_text;
+    l_schema varchar2(32767 char);
+    l_new_schema varchar2(32767 char);
+    l_match_mode varchar2(2);
+    "([^_a-zA-Z0-9$#])" constant varchar2(100) := '([^_a-zA-Z0-9$#])';
   begin
     if p_schema <> p_new_schema and l_ddl_text is not null
     then
@@ -2584,17 +2588,32 @@ $end
       */
       
       -- replace p_schema
-      --
-      -- A) (NOT CASE SENSITIVE)
-      --    1) at the start of a line or after a non Oracle identifier character
-      --    2) before a dot
-      l_ddl_text :=
-        regexp_replace(l_ddl_text, '(^|[^_a-zA-Z0-9$#])' || p_schema || '\.', '\1' || p_new_schema || '.');
-      l_ddl_text :=
-        regexp_replace(l_ddl_text, '(^|[^_a-zA-Z0-9$#])' || lower(p_schema) || '\.', '\1' || lower(p_new_schema) || '.');
-      -- B) CASE SENSITIVE, between " and "
+
+      -- A) CASE SENSITIVE, between " and "
       l_ddl_text :=
         replace(l_ddl_text, '"' || p_schema || '"', '"' || p_new_schema || '"');
+        
+      -- B) (NOT CASE SENSITIVE)
+      --    1) at the start of a line or after a non Oracle identifier character (extra $ and #)
+      --    2) before a non Oracle identifier character or the end of a line
+      for i_case_idx in 1..2
+      loop
+        l_schema := case i_case_idx when 1 then lower(p_schema) else p_schema end;
+        l_new_schema := case i_case_idx when 1 then lower(p_new_schema) else p_new_schema end;
+        l_match_mode := case i_case_idx when 1 then 'c' else 'i' end || -- case sensitive for 1, case insensitive for 2
+                        'm'; -- multi line mode
+                        
+        for i_repl_idx in 1 .. 4
+        loop
+        l_ddl_text :=
+          case i_repl_idx
+            when 1 then regexp_replace(l_ddl_text, '^' || l_schema || '$'                                , l_new_schema                , 1, 0, l_match_mode)
+            when 2 then regexp_replace(l_ddl_text, "([^_a-zA-Z0-9$#])" || l_schema || '$'                , '\1' || l_new_schema        , 1, 0, l_match_mode)
+            when 3 then regexp_replace(l_ddl_text, '^' || l_schema || "([^_a-zA-Z0-9$#])"                , l_new_schema || '\1'        , 1, 0, l_match_mode)
+            when 4 then regexp_replace(l_ddl_text, "([^_a-zA-Z0-9$#])" || l_schema || "([^_a-zA-Z0-9$#])", '\1' || l_new_schema || '\2', 1, 0, l_match_mode)
+          end;
+        end loop;
+      end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       if p_ddl_text != l_ddl_text
@@ -2666,18 +2685,39 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
 $end
 
-    if p_ddl.text is not null and p_ddl.text.count > 0
-    then
-      for i_idx in p_ddl.text.first .. p_ddl.text.last
-      loop
-        p_ddl.text(i_idx) :=
-          modify_ddl_text
-          ( p_ddl_text => p_ddl.text(i_idx)
-          , p_schema => p_schema
-          , p_new_schema => p_new_schema
-          );
-      end loop;
-    end if;
+    begin
+      if p_ddl.text is not null and p_ddl.text.count > 0
+      then
+        for i_idx in p_ddl.text.first .. p_ddl.text.last
+        loop
+          p_ddl.text(i_idx) := modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema);
+        end loop;
+      end if;
+    exception
+      when value_error
+      then
+        -- when the new schema length is larger we may need to convert p_ddl
+        if length(p_schema) >= length(p_new_schema)
+        then
+          raise; -- clearly an other error
+        else
+          init_clob;
+
+          for i_idx in p_ddl.text.first .. p_ddl.text.last
+          loop
+            append_clob
+            ( p_buffer => modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema)
+            , p_append => null
+            );
+          end loop;
+
+          p_ddl.text :=
+            oracle_tools.pkg_str_util.clob2text
+            ( pi_clob => get_clob
+            , pi_trim => 0
+            );
+        end if;
+    end;
     
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -2733,6 +2773,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (4)');
 $end
 
+    if p_schema = p_new_schema
+    then
+      raise program_error;
+    end if;
+      
     remap_schema
     ( p_schema => p_schema
     , p_new_schema => p_new_schema
@@ -2743,49 +2788,6 @@ $end
     , p_new_schema => p_new_schema
     , p_ddl_tab => p_schema_ddl.ddl_tab
     );
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end remap_schema;
-
-  procedure remap_schema
-  ( p_schema in varchar2
-  , p_new_schema in varchar2
-  , p_schema_ddl_tab in out nocopy oracle_tools.t_schema_ddl_tab
-  )
-  is
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'REMAP_SCHEMA (5)');
-    dbug.print
-    ( dbug."input"
-    , 'p_schema: %s; p_new_schema: %s; cardinality(p_schema_ddl_tab): %s'
-    , p_schema
-    , p_new_schema
-    , cardinality(p_schema_ddl_tab)
-    );
-$end
-
-    if p_schema != p_new_schema -- implies both not null
-    then
-      if p_schema_ddl_tab is not null and p_schema_ddl_tab.count > 0
-      then
-        for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
-        loop
-          remap_schema
-          ( p_schema => p_schema
-          , p_new_schema => p_new_schema
-          , p_schema_ddl => p_schema_ddl_tab(i_idx)
-          );
-        end loop;
-      end if;
-    end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -2948,15 +2950,10 @@ $end
       end if;
     end if;
 
-    remap_schema
-    ( p_schema => p_schema
-    , p_new_schema => p_new_schema
-    , p_schema_ddl_tab => l_schema_ddl_tab
-    );
-
     <<fetch_loop>>
     loop
-      fetch l_cursor bulk collect into l_schema_ddl_tab limit c_fetch_limit;
+      fetch l_cursor bulk collect into l_schema_ddl_tab limit c_fetch_limit;    
+
       if l_schema_ddl_tab.count > 0
       then
         for i_idx in l_schema_ddl_tab.first .. l_schema_ddl_tab.last
@@ -2964,6 +2961,15 @@ $end
           if p_network_link is not null
           then
             l_schema_ddl_tab(i_idx).obj.network_link(p_network_link);
+          end if;
+
+          if p_schema != p_new_schema
+          then
+            remap_schema
+            ( p_schema => p_schema
+            , p_new_schema => p_new_schema
+            , p_schema_ddl => l_schema_ddl_tab(i_idx)
+            );
           end if;
 
           pipe row(l_schema_ddl_tab(i_idx));
@@ -3543,22 +3549,22 @@ end;]', l_network_link
     begin
       if l_network_link is not null
       then
-        oracle_tools.api_pkg.dbms_output_enable(l_network_link);
-        oracle_tools.api_pkg.dbms_output_clear(l_network_link);
+        oracle_tools.api_pkg.dbms_output_enable(substr(l_network_link, 2));
+        oracle_tools.api_pkg.dbms_output_clear(substr(l_network_link, 2));
       end if;
       
       execute immediate l_statement using p_ddl_text_tab;
       
       if l_network_link is not null
       then
-        oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+        oracle_tools.api_pkg.dbms_output_flush(substr(l_network_link, 2));
       end if;
     exception
       when others
       then
         if l_network_link is not null
         then
-          oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+          oracle_tools.api_pkg.dbms_output_flush(substr(l_network_link, 2));
         end if;
         raise;
     end;
@@ -6365,9 +6371,12 @@ $end
     dbms_lob.trim(g_clob, 0);
   end init_clob;
 
-  procedure append_clob(p_line in varchar2) is
+  procedure append_clob
+  ( p_buffer in varchar2
+  , p_append in varchar2
+  ) is
   begin
-    dbms_lob.writeappend(lob_loc => g_clob, amount => length(p_line || chr(10)), buffer => p_line || chr(10));
+    dbms_lob.writeappend(lob_loc => g_clob, amount => length(p_buffer || p_append), buffer => p_buffer || p_append);
   end append_clob;
 
   function get_clob return clob is
@@ -8385,6 +8394,87 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       raise;
 $end
   end ut_sort_objects_by_deps;
+
+  procedure ut_modify_ddl_text
+  is
+    l_text constant varchar2(32767 char) :=
+      chr(10) || -- test multi line
+      'oracle_tools' || -- yes
+      chr(10) ||
+      ' oracle_tools' || -- yes
+      chr(10) ||
+      'oracle_tools ' || -- yes
+      chr(10) ||
+      ' Oracle_tools ' || -- yes (upper)
+      chr(10) ||
+      ' ORACLE_TOOLS.' || -- yes
+      chr(10) ||
+      '$oracle_tools' || -- no
+      chr(10) ||
+      '#oracle_tools' || -- no
+      chr(10) ||
+      '_oracle_tools' || -- no
+      chr(10) ||
+      '0oracle_tools' || -- no
+      chr(10) ||
+      'aoracle_tools' || -- no
+      chr(10) ||
+      'Zoracle_tools' || -- no
+      chr(10) ||
+      '(oracle_tools)' || -- yes
+      chr(10) ||
+      ' abcdefghij   ' || -- no
+      chr(10)
+    ;  
+    l_text_actual constant varchar2(32767 char) :=
+      modify_ddl_text
+      ( p_ddl_text => l_text
+      , p_schema => 'ORACLE_TOOLS'
+      , p_new_schema => g_empty
+      );
+    l_text_expected constant varchar2(32767 char) :=
+      chr(10) || -- test multi line
+      'empty' || -- yes
+      chr(10) ||
+      ' empty' || -- yes
+      chr(10) ||
+      'empty ' || -- yes
+      chr(10) ||
+      ' EMPTY ' || -- yes (upper)
+      chr(10) ||
+      ' EMPTY.' || -- yes
+      chr(10) ||
+      '$oracle_tools' || -- no
+      chr(10) ||
+      '#oracle_tools' || -- no
+      chr(10) ||
+      '_oracle_tools' || -- no
+      chr(10) ||
+      '0oracle_tools' || -- no
+      chr(10) ||
+      'aoracle_tools' || -- no
+      chr(10) ||
+      'Zoracle_tools' || -- no
+      chr(10) ||
+      '(empty)' || -- yes
+      chr(10) ||
+      ' abcdefghij   ' || -- no
+      chr(10)
+    ;  
+  begin
+    ut.expect(l_text_actual, 'total').to_equal(l_text_expected);
+    -- show just the first different index
+    for i_idx in 1 .. greatest(length(l_text_actual), length(l_text_expected))
+    loop
+      ut.expect(ascii(substr(l_text_actual, i_idx, 1)), 'ascii char at index ' || i_idx).to_equal(ascii(substr(l_text_expected, i_idx, 1)));
+      if substr(l_text_actual, i_idx, 1) = substr(l_text_expected, i_idx, 1)
+      then
+        null;
+      else
+        exit;
+      end if;
+     end loop;
+  end ut_modify_ddl_text;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

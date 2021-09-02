@@ -66,7 +66,7 @@ procedure trim
 );
 
 /**
- * Comparse two CLOB collections and returns 0 if totally equal (count and each element).
+ * Compare two CLOB collections and returns 0 if totally equal (count and each element).
  *
  * @param p_str1_tab  The first CLOB collection.
  * @param p_str2_tab  The second CLOB collection.
@@ -91,7 +91,7 @@ function compare
 return integer;
 
 /**
- * Compares two CLOB collecties.
+ * Compares two CLOB collections.
  *
  * @param p_str1_tab              The first CLOB collection.
  * @param p_str2_tab              The second CLOB collection.
