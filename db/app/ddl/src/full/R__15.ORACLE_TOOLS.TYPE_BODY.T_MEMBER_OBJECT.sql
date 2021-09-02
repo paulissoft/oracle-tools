@@ -22,7 +22,7 @@ deterministic
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_member_object.ID');
+  dbug.enter('ORACLE_TOOLS.T_MEMBER_OBJECT.ID');
   dbug.print(dbug."output", 'return: %s', member_name());
   dbug.leave;
 $end  

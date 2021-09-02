@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_synonym_object.oracle_tools.t_synonym_object');
+  dbug.enter('ORACLE_TOOLS.T_SYNONYM_OBJECT');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_object_schema: %s; p_object_name: %s'
@@ -59,7 +59,7 @@ overriding member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_synonym_object.CHK');
+  dbug.enter('ORACLE_TOOLS.T_SYNONYM_OBJECT.CHK');
   dbug.print(dbug."input", 'self:');
   self.print();
 $end

@@ -9,7 +9,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_view_object.oracle_tools.t_view_object');
+  dbug.enter('ORACLE_TOOLS.T_VIEW_OBJECT');
   dbug.print
   ( dbug."input"
   , 'p_object_schema: %s; p_object_name: %s'

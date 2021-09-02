@@ -13,7 +13,7 @@ is
   l_repl_expr constant varchar2(100) := '\2';
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_trigger_ddl.ADD_DDL');
+  dbug.enter('ORACLE_TOOLS.T_TRIGGER_DDL.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);

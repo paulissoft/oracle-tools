@@ -13,7 +13,7 @@ is
   l_type_attribute_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_type_spec_ddl.MIGRATE');
+  dbug.enter('ORACLE_TOOLS.T_TYPE_SPEC_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
 

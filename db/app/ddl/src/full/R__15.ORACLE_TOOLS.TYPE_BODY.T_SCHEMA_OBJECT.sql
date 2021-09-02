@@ -184,7 +184,7 @@ is
   l_id varchar2(4000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_schema_object.ID');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.ID');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
   if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
   then
@@ -369,7 +369,7 @@ is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_schema_object.DICT2METADATA_OBJECT_TYPE');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.DICT2METADATA_OBJECT_TYPE');
 $end
 
   l_metadata_object_type := case
@@ -404,7 +404,7 @@ member procedure print(self in oracle_tools.t_schema_object)
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('oracle_tools.t_schema_object.PRINT');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.PRINT');
   dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id());
   dbug.print(dbug."info", 'signature: %s', self.signature());
   dbug.leave;
@@ -431,7 +431,7 @@ is
   l_base_object_name all_objects.object_name%type := p_base_object_name;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_schema_object.CREATE_SCHEMA_OBJECT (1)');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (1)');
   dbug.print
   ( dbug."input"
   , 'p_object_schema: %s; p_object_type: %s; p_object_name: %s'
@@ -668,7 +668,7 @@ is
    l_schema_object oracle_tools.t_schema_object;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_schema_object.CREATE_SCHEMA_OBJECT (2)');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.CREATE_SCHEMA_OBJECT (2)');
 $end
 
   oracle_tools.t_schema_object.create_schema_object
@@ -772,7 +772,7 @@ is
   end get_object_part;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_schema_object.FQ_OBJECT_NAME');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.FQ_OBJECT_NAME');
 $end
 
   l_object_name :=
@@ -797,7 +797,7 @@ is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_schema_object.DICT_OBJECT_TYPE');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.DICT_OBJECT_TYPE');
 $end
 
   l_metadata_object_type := self.object_type();
@@ -830,7 +830,7 @@ member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_schema_object.CHK');
+  dbug.enter('ORACLE_TOOLS.T_SCHEMA_OBJECT.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);

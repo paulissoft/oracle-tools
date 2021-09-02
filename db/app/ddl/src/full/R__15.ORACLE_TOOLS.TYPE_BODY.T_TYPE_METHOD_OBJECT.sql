@@ -17,7 +17,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_type_method_object.oracle_tools.t_type_method_object');
+  dbug.enter('ORACLE_TOOLS.T_TYPE_METHOD_OBJECT');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_member#: %s; p_member_name: %s'
@@ -147,7 +147,7 @@ is
   end add;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_type_method_object.SIGNATURE');
+  dbug.enter('ORACLE_TOOLS.T_TYPE_METHOD_OBJECT.SIGNATURE');
 $end
 
   add(case when self.final() = 'NO' then 'NOT ' end || 'FINAL ');
@@ -214,7 +214,7 @@ overriding member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_type_method_object.CHK');
+  dbug.enter('ORACLE_TOOLS.T_TYPE_METHOD_OBJECT.CHK');
   dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 

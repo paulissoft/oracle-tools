@@ -31,7 +31,7 @@ is
   r_con c_con%rowtype;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_ref_constraint_object.oracle_tools.t_ref_constraint_object');
+  dbug.enter('ORACLE_TOOLS.T_REF_CONSTRAINT_OBJECT');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_object_schema: %s; p_object_name: %s; p_constraint_type: %s; p_column_names: %s'
@@ -214,7 +214,7 @@ overriding member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_ref_constraint_object.CHK');
+  dbug.enter('ORACLE_TOOLS.T_REF_CONSTRAINT_OBJECT.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);

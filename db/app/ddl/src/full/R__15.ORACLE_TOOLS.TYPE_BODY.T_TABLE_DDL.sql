@@ -13,7 +13,7 @@ is
   l_table_column_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_table_ddl.MIGRATE');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
 
@@ -166,7 +166,7 @@ overriding member procedure uninstall
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_table_ddl.UNINSTALL');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_DDL.UNINSTALL');
 $end
 
   self.add_ddl
@@ -192,7 +192,7 @@ is
   l_repl_expr constant varchar2(100) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_table_ddl.ADD_DDL');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_DDL.ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);

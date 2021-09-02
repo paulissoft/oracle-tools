@@ -13,7 +13,7 @@ is
   l_data_default oracle_tools.t_text_tab;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_table_column_ddl.oracle_tools.t_table_column_ddl');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_COLUMN_DDL');
 $end
 
   self.obj := p_obj;
@@ -98,7 +98,7 @@ is
   l_changed boolean;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_table_column_ddl.MIGRATE');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_COLUMN_DDL.MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
 
@@ -213,7 +213,7 @@ overriding member procedure uninstall
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_table_column_ddl.UNINSTALL');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_COLUMN_DDL.UNINSTALL');
 $end
 
   -- ALTER TABLE "owner"."table" DROP COLUMN "column"

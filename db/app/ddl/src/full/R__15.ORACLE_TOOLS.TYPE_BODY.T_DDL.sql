@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_ddl.oracle_tools.t_ddl');
+  dbug.enter('ORACLE_TOOLS.T_DDL');
 $end
 
   self.ddl#$ := p_ddl#;
@@ -50,13 +50,15 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('oracle_tools.t_ddl.PRINT');
+  dbug.enter('ORACLE_TOOLS.T_DDL.PRINT');
   dbug.print
   ( dbug."info"
-  , 'ddl#: %s; verb: %s'
+  , 'ddl#: %s; verb: %s; cardinality: %s'
   , self.ddl#()
   , self.verb()
+  , cardinality(self.text)
   );
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   if cardinality(self.text) > 0
   then
     oracle_tools.pkg_str_util.text2clob
@@ -75,6 +77,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     end loop;
     dbms_lob.freetemporary(l_clob);
   end if;
+$end  
   dbug.leave;
 $else
   null;
@@ -112,9 +115,29 @@ is
         else 0
       end;
   end cmp;
+
+  function pos_not_equal(p_text1 in varchar2, p_text2 in varchar2)
+  return pls_integer
+  is
+  begin
+    if p_text1 is null or p_text2 is null
+    then
+      return 1;
+    else
+      for i_idx in 1 .. greatest(length(p_text1), length(p_text2))
+      loop
+        if substr(p_text1, i_idx, 1) = substr(p_text2, i_idx, 1)
+        then
+          null;
+        else
+          return i_idx;
+        end if;
+      end loop;
+    end if;
+  end pos_not_equal;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_ddl.COMPARE');
+  dbug.enter('ORACLE_TOOLS.T_DDL.COMPARE');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_ddl:');
@@ -163,6 +186,21 @@ $end
         else
           l_result := +1;
         end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+        if l_result != 0
+        then
+          dbug.print
+          ( dbug."warning"
+          , 'idx: %s; result: %s; text1: %s; text2: %s; index not equal: %s'
+          , l_idx
+          , l_result
+          , l_text1_tab(l_idx)
+          , case when l_idx <= l_text2_tab.last then l_text2_tab(l_idx) end
+          , pos_not_equal(l_text1_tab(l_idx), case when l_idx <= l_text2_tab.last then l_text2_tab(l_idx) end)
+          );
+        end if;
+$end
 
         l_idx := l_text1_tab.next(l_idx);
       end loop;

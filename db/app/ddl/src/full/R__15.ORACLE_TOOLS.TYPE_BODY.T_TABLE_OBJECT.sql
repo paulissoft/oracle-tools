@@ -9,7 +9,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_table_object.oracle_tools.t_table_object (1)');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_OBJECT (1)');
   dbug.print
   ( dbug."input"
   , 'p_owner: %s; p_object_schema: %s; p_object_name: %s'
@@ -59,7 +59,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_table_object.oracle_tools.t_table_object (2)');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_OBJECT (2)');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s', p_object_schema, p_object_name, p_tablespace_name);
 $end
 
@@ -107,7 +107,7 @@ overriding member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('oracle_tools.t_table_object.CHK');
+  dbug.enter('ORACLE_TOOLS.T_TABLE_OBJECT.CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_named_object => self, p_schema => p_schema);

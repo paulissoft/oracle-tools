@@ -3389,6 +3389,22 @@ $end
                 end asc nulls last -- create next
     )
     loop
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+      dbug.print
+      ( dbug."debug"
+      , 'sofar: %s; source signature: %s; target signature: %s; id different: %s'
+      , to_char(l_longops_rec.sofar + 1)
+      , case when r_schema_ddl.source_schema_ddl is not null then r_schema_ddl.source_schema_ddl.obj.signature() end
+      , case when r_schema_ddl.target_schema_ddl is not null then r_schema_ddl.target_schema_ddl.obj.signature() end
+      , dbug.cast_to_varchar2
+        ( case
+            when r_schema_ddl.source_schema_ddl is not null and
+                 r_schema_ddl.target_schema_ddl is not null
+            then r_schema_ddl.source_schema_ddl.obj.id() != r_schema_ddl.target_schema_ddl.obj.id()
+          end
+        )
+      );
+$end
       create_schema_ddl
       ( p_source_schema_ddl => r_schema_ddl.source_schema_ddl
       , p_target_schema_ddl => r_schema_ddl.target_schema_ddl
@@ -8104,8 +8120,8 @@ $end
 
     -- GJP 2021-09-02
     c_object_type constant t_metadata_object_type := 'TYPE_SPEC';
-    c_object_names constant t_object_name := 'EXCELTABLEIMPL';
-    c_object_names_include constant t_numeric_boolean := 1;
+    c_object_names constant t_object_name := null; -- 'EXCELTABLEIMPL';
+    c_object_names_include constant t_numeric_boolean := null; -- 1;
     
     cursor c_display_ddl_schema_diff
     ( b_object_type in t_metadata_object_type default c_object_type
@@ -8262,7 +8278,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
           dbug.print(dbug."error", 'schema DDL %s', i_idx);
           l_diff_schema_ddl_tab(i_idx).print();
         end loop;
-        raise program_error;
+        raise_application_error(-20000, 'schema DDL differences found');
       end if;
 $end          
 

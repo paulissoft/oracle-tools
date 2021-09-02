@@ -9,7 +9,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('oracle_tools.t_java_source_object.oracle_tools.t_java_source_object');
+  dbug.enter('ORACLE_TOOLS.T_JAVA_SOURCE_OBJECT');
 $end
 
   self.network_link$ := null;
