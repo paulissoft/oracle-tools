@@ -116,6 +116,7 @@ is
       end;
   end cmp;
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   function pos_not_equal(p_text1 in varchar2, p_text2 in varchar2)
   return pls_integer
   is
@@ -125,6 +126,7 @@ is
       return 0;
     elsif p_text1 is null or p_text2 is null
     then
+      dbug.print(dbug.warning, 'p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, 1, 20), substr(p_text2, 1, 20));
       return 1;
     else
       for i_idx in 1 .. greatest(length(p_text1), length(p_text2))
@@ -133,12 +135,14 @@ is
         then
           null;
         else
+          dbug.print(dbug.warning, 'p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, i_idx, 20), substr(p_text2, i_idx, 20));
           return i_idx;
         end if;
       end loop;
       return 0;
     end if;    
   end pos_not_equal;
+$end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter('ORACLE_TOOLS.T_DDL.COMPARE');
@@ -196,11 +200,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         then
           dbug.print
           ( dbug."warning"
-          , 'idx: %s; result: %s; text1: %s; text2: %s; index not equal: %s'
+          , 'idx: %s; result: %s; index not equal: %s'
           , l_idx
           , l_result
-          , l_text1_tab(l_idx)
-          , case when l_idx <= l_text2_tab.last then l_text2_tab(l_idx) end
           , pos_not_equal(l_text1_tab(l_idx), case when l_idx <= l_text2_tab.last then l_text2_tab(l_idx) end)
           );
         end if;

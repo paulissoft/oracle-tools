@@ -57,7 +57,7 @@ overriding member procedure chk
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('ORACLE_TOOLS.T_PROCOBJ_OBJECT.CHK');
 $end
 
@@ -68,7 +68,7 @@ $end
     raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Dictionary object type should not be null.');
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;

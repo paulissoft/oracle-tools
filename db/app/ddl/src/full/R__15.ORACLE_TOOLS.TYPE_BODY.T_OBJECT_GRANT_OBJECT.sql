@@ -86,7 +86,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
   l_statement varchar2(4000 char) := null;
 $end  
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter('ORACLE_TOOLS.T_OBJECT_GRANT_OBJECT.CHK');
 $end
 
@@ -167,7 +167,7 @@ $end
 
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;
