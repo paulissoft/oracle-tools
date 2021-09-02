@@ -3568,6 +3568,9 @@ $end
     -- ORA-01927: cannot REVOKE privileges you did not grant
     e_cannot_revoke exception;
     pragma exception_init(e_cannot_revoke, -1927);
+    -- ORA-04045: errors during recompilation/revalidation of EMPTY.T_TRIGGER_DDL
+    e_errors_during_recompilation exception;
+    pragma exception_init(e_errors_during_recompilation, -4045);
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (3)');
@@ -3591,7 +3594,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.leave;
 $end
   exception
-    when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist or e_cannot_revoke
+    when e_s6_with_compilation_error or
+         e_view_has_errors or
+         e_grant_option_does_not_exist or
+         e_cannot_revoke or
+         e_errors_during_recompilation
     then 
       dbms_sql.close_cursor(l_cursor);
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
