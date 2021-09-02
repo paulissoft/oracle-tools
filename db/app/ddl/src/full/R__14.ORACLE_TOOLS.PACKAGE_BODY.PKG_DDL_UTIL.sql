@@ -8120,7 +8120,7 @@ $end
     l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
 
     -- GJP 2021-09-02
-    c_object_type constant t_metadata_object_type := 'TYPE_SPEC';
+    c_object_type constant t_metadata_object_type := null; -- 'TYPE_SPEC';
     c_object_names constant t_object_name := null; -- 'EXCELTABLEIMPL';
     c_object_names_include constant t_numeric_boolean := null; -- 1;
     
