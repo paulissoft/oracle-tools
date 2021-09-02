@@ -120,7 +120,10 @@ is
   return pls_integer
   is
   begin
-    if p_text1 is null or p_text2 is null
+    if p_text1 is null and p_text2 is null
+    then
+      return 0;
+    elsif p_text1 is null or p_text2 is null
     then
       return 1;
     else
@@ -133,7 +136,8 @@ is
           return i_idx;
         end if;
       end loop;
-    end if;
+      return 0;
+    end if;    
   end pos_not_equal;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
