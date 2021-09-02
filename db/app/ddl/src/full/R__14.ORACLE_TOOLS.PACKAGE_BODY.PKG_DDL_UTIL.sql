@@ -7668,7 +7668,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
       <<try_loop>>
-      for i_try in 1 .. 1 -- GJP 2021-09-01 case when g_loopback is not null then 2 else 1 end
+      for i_try in 1 .. case when g_loopback is not null then 2 else 1 end
       loop
         if l_clob1 is not null
         then
