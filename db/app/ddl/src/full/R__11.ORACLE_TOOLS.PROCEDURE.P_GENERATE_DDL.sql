@@ -14,8 +14,8 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 authid current_user
 as
   -- to reduce typos we use constant identifiers
-  "pkg_ddl_util v4" constant varchar2(30 char) := 'oracle_tools.pkg_ddl_util v4'; -- oracle_tools.pkg_ddl_util
-  "pkg_ddl_util v5" constant varchar2(30 char) := 'oracle_tools.pkg_ddl_util v5'; -- oracle_tools.pkg_ddl_util
+  "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4';
+  "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5';
 
   -- try the interfaces in this order
   -- the first one which matches pi_interface and which does not return an error, wins
