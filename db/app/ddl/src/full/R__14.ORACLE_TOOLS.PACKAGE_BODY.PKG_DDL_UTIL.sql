@@ -3344,7 +3344,7 @@ $end
       )
       -- GPA 2017-03-24 #142307767 The incremental DDL generator handles changed check constraints incorrectly.
       --
-      -- Since the map function is used (which uses signature()) some objects may have the seem id but not
+      -- Since the map function is used (which uses signature()) some objects may have the same id but not
       -- the same signature.
       --
       -- For example if a check constraint has the same name but a different check condition
@@ -3440,7 +3440,7 @@ $end
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (1)');
-    dbug.print(dbug."input", 'p_id: %s; p_text: %s', p_id, p_text);
+    dbug.print(dbug."input", 'p_id: %s; p_text[:255]: %s', p_id, substr(p_text, 1, 255));
 $end
 
     oracle_tools.t_schema_ddl.execute_ddl(p_id => p_id, p_text => p_text);
@@ -3462,10 +3462,11 @@ $end
   is
     l_statement varchar2(32767) := null;
     l_network_link all_db_links.db_link%type := null;
+    l_error_backtrace varchar2(32767 char) := null;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (2)');
-    dbug.print(dbug."input", 'p_network_link: %s; p_ddl_text_tab(1): %s', p_network_link, p_ddl_text_tab(1));
+    dbug.print(dbug."input", 'p_network_link: %s; p_ddl_text_tab(1)[:255]: %s', p_network_link, substr(p_ddl_text_tab(1), 1, 255));
 $end
 
     if p_network_link is not null
@@ -3523,7 +3524,9 @@ begin
   dbms_sql.close_cursor%s(l_cursor);
 exception
   when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist
-  then dbms_sql.close_cursor%s(l_cursor);
+  then 
+    dbms_sql.close_cursor%s(l_cursor);
+    :b2 := dbms_utility.format_error_backtrace;
   when others
   then
     /* DBMS_SQL.LAST_ERROR_POSITION 
@@ -3532,6 +3535,7 @@ exception
     */
     l_last_error_position := 1 + nvl(dbms_sql.last_error_position%s, 0);
     dbms_sql.close_cursor%s(l_cursor);
+    :b2 := dbms_utility.format_error_backtrace;
     raise_application_error
     ( oracle_tools.pkg_ddl_error.c_execute_via_db_link
     , 'Error at position ' || l_last_error_position || ': ' || substr(oracle_tools.pkg_str_util.text2clob(l_ddl_text_tab), l_last_error_position, 2000)
@@ -3547,18 +3551,23 @@ end;]', l_network_link
       );
 
     begin
-      if l_network_link is not null
+      if l_network_link is null
       then
+        execute immediate l_statement using p_ddl_text_tab, out l_error_backtrace;
+      else
         oracle_tools.api_pkg.dbms_output_enable(substr(l_network_link, 2));
         oracle_tools.api_pkg.dbms_output_clear(substr(l_network_link, 2));
-      end if;
-      
-      execute immediate l_statement using p_ddl_text_tab;
-      
-      if l_network_link is not null
-      then
+        
+        execute immediate l_statement using p_ddl_text_tab, out l_error_backtrace;
+        
         oracle_tools.api_pkg.dbms_output_flush(substr(l_network_link, 2));
       end if;
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      if l_error_backtrace is not null
+      then
+        dbug.print(dbug."warning", 'error backtrace: %s', l_error_backtrace);
+      end if;
+$end
     exception
       when others
       then
@@ -3566,6 +3575,12 @@ end;]', l_network_link
         then
           oracle_tools.api_pkg.dbms_output_flush(substr(l_network_link, 2));
         end if;
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        if l_error_backtrace is not null
+        then
+          dbug.print(dbug."error", 'error backtrace: %s', l_error_backtrace);
+        end if;
+$end
         raise;
     end;
 
@@ -6064,14 +6079,14 @@ end;'
         oracle_tools.api_pkg.dbms_output_enable(l_network_link);
         oracle_tools.api_pkg.dbms_output_clear(l_network_link);
         execute immediate l_statement
-          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list, OUT l_error_backtrace;
+          using p_schema, p_new_schema, p_sort_objects_by_deps, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_transform_param_list, out l_error_backtrace;
         oracle_tools.api_pkg.dbms_output_flush(l_network_link);
       exception
         when others
         then
           oracle_tools.api_pkg.dbms_output_flush(l_network_link);
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."error", 'l_error_backtrace: %s', l_error_backtrace);
+          dbug.print(dbug."error", 'error backtrace: %s', l_error_backtrace);
 $end
           raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       end;
@@ -8087,10 +8102,15 @@ $end
     l_network_link_source t_network_link;
     l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
 
+    -- GJP 2021-09-02
+    c_object_type constant t_metadata_object_type := 'TYPE_SPEC';
+    c_object_names constant t_object_name := 'EXCELTABLEIMPL';
+    c_object_names_include constant t_numeric_boolean := 1;
+    
     cursor c_display_ddl_schema_diff
-    ( b_object_type in t_metadata_object_type default null
-    , b_object_names in t_object_names default null
-    , b_object_names_include in t_numeric_boolean default null
+    ( b_object_type in t_metadata_object_type default c_object_type
+    , b_object_names in t_object_names default c_object_names
+    , b_object_names_include in t_numeric_boolean default c_object_names_include
     , b_schema_source in t_schema default user
     , b_schema_target in t_schema default user
     , b_network_link_source in t_network_link default null
@@ -8169,6 +8189,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       if l_count != 0
       then
+        dbug.print(dbug."error", 'schema %s should not contain objects', g_empty);
         for r in
         ( select  o.object_type
           ,       o.object_name
@@ -8179,8 +8200,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
           ,       o.object_name
         )
         loop
-          dbug.print(dbug."warning", 'object_type: %s; object_name: %s', r.object_type, r.object_name);
+          dbug.print(dbug."error", 'object_type: %s; object_name: %s', r.object_type, r.object_name);
         end loop;
+        raise_application_error(oracle_tools.pkg_ddl_error.c_schema_not_empty, g_empty);
       end if;
 $end          
 
@@ -8195,9 +8217,9 @@ $end
 
       /* step 3 */
       synchronize
-      ( p_object_type => null
-      , p_object_names => null
-      , p_object_names_include => null
+      ( p_object_type => c_object_type
+      , p_object_names => c_object_names
+      , p_object_names_include => c_object_names_include
       , p_schema_source => l_schema
       , p_schema_target => g_empty
       , p_network_link_source => l_network_link_source
@@ -8208,7 +8230,10 @@ $end
 
       -- Bereken de verschillen, i.e. de CREATE statements.
       -- Gebruik database links om aan te loggen met de juiste gebruiker.
-      open c_display_ddl_schema_diff( b_schema_source => l_schema
+      open c_display_ddl_schema_diff( b_object_type => c_object_type
+                                    , b_object_names => c_object_names
+                                    , b_object_names_include => c_object_names_include
+                                    , b_schema_source => l_schema
                                     , b_schema_target => g_empty
                                     , b_network_link_source => l_network_link_source
                                     , b_network_link_target => l_network_link_target
@@ -8228,13 +8253,16 @@ $end
 
       ut.expect(l_diff_schema_ddl_tab.count, l_program || '#differences' || '#' || i_try).to_equal(0);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       if l_diff_schema_ddl_tab.count > 0
       then
+        dbug.print(dbug."error", 'schema DDL differences found');
         for i_idx in l_diff_schema_ddl_tab.first .. l_diff_schema_ddl_tab.last
         loop
+          dbug.print(dbug."error", 'schema DDL %s', i_idx);
           l_diff_schema_ddl_tab(i_idx).print();
         end loop;
+        raise program_error;
       end if;
 $end          
 
