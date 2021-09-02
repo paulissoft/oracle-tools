@@ -8191,6 +8191,10 @@ $end
 
       end case;
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 1');
+$end
+
       /* step 1 */
       cleanup; -- empty EMPTY
 
@@ -8222,6 +8226,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       end if;
 $end          
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 2');
+$end
+
       /* step 2 */
       select  count(*)
       into    l_count
@@ -8230,6 +8238,10 @@ $end
       and     t.table_owner = l_schema;
 
       ut.expect(l_count, l_program || '#no public synonyms' || '#' || i_try).to_equal(0);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 3');
+$end
 
       /* step 3 */
       synchronize
@@ -8242,6 +8254,9 @@ $end
       , p_network_link_target => l_network_link_target
       );
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 4');
+$end
       /* step 4 */
 
       -- Bereken de verschillen, i.e. de CREATE statements.
@@ -8256,6 +8271,10 @@ $end
                                     );
       fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab;
       close c_display_ddl_schema_diff;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 5');
+$end
 
       /* step 5 */
 
