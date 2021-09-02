@@ -126,7 +126,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       return 0;
     elsif p_text1 is null or p_text2 is null
     then
-      dbug.print(dbug.warning, 'p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, 1, 20), substr(p_text2, 1, 20));
+      dbug.print(dbug.warning, 'equal: "%s"; p_text1 remainder: "%s"; p_text2 remainder: "%s"', null, substr(p_text1, 1, 20), substr(p_text2, 1, 20));
       return 1;
     else
       for i_idx in 1 .. greatest(length(p_text1), length(p_text2))
@@ -135,7 +135,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         then
           null;
         else
-          dbug.print(dbug.warning, 'p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, i_idx, 20), substr(p_text2, i_idx, 20));
+          dbug.print(dbug.warning, 'equal: "%s"; p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, 1, i_idx - 1), substr(p_text1, i_idx, 20), substr(p_text2, i_idx, 20));
           return i_idx;
         end if;
       end loop;
