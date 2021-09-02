@@ -2685,39 +2685,37 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
 $end
 
-    begin
-      if p_ddl.text is not null and p_ddl.text.count > 0
+    if p_ddl.text is not null and p_ddl.text.count > 0 
+    then
+      if length(p_schema) = length(p_new_schema)
       then
+        -- GJP 2021-09-02
+        -- The replacement will not change the length: do not change p_ddl.text itself just its elements
         for i_idx in p_ddl.text.first .. p_ddl.text.last
         loop
           p_ddl.text(i_idx) := modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema);
         end loop;
+      else
+        -- GJP 2021-09-02
+        -- The replacement will change the length and it may either become too big or too small
+        -- (remainder empty which will cause compare problems).
+        init_clob;
+
+        for i_idx in p_ddl.text.first .. p_ddl.text.last
+        loop
+          append_clob
+          ( p_buffer => modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema)
+          , p_append => null
+          );
+        end loop;
+
+        p_ddl.text :=
+          oracle_tools.pkg_str_util.clob2text
+          ( pi_clob => get_clob
+          , pi_trim => 0
+          );
       end if;
-    exception
-      when value_error
-      then
-        -- when the new schema length is larger we may need to convert p_ddl
-        if length(p_schema) >= length(p_new_schema)
-        then
-          raise; -- clearly an other error
-        else
-          init_clob;
-
-          for i_idx in p_ddl.text.first .. p_ddl.text.last
-          loop
-            append_clob
-            ( p_buffer => modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema)
-            , p_append => null
-            );
-          end loop;
-
-          p_ddl.text :=
-            oracle_tools.pkg_str_util.clob2text
-            ( pi_clob => get_clob
-            , pi_trim => 0
-            );
-        end if;
-    end;
+    end if;
     
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -3517,6 +3515,9 @@ declare
   -- ORA-01720: grant option does not exist for <owner>.PARTY
   e_grant_option_does_not_exist exception;
   pragma exception_init(e_grant_option_does_not_exist, -1720);
+  -- ORA-01927: cannot REVOKE privileges you did not grant
+  e_cannot_revoke exception;
+  pragma exception_init(e_cannot_revoke, -1927);
 begin
   l_cursor := dbms_sql.open_cursor%s;
   -- kopieer naar (remote) array
@@ -3539,7 +3540,7 @@ begin
   --
   dbms_sql.close_cursor%s(l_cursor);
 exception
-  when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist
+  when e_s6_with_compilation_error or e_view_has_errors or e_grant_option_does_not_exist or e_cannot_revoke
   then 
     dbms_sql.close_cursor%s(l_cursor);
     :b2 := dbms_utility.format_error_backtrace;
