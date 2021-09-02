@@ -174,3 +174,4 @@ return oracle_tools.t_text_tab;
 
 END pkg_str_util;
 /
+

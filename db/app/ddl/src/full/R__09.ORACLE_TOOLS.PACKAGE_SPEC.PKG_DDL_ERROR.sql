@@ -1,4 +1,4 @@
-create or replace package oracle_tools.pkg_ddl_error is
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_ERROR" IS
 
 -- The error_code is an integer in the range -20000..-20999 and the message is a character string of at most 2048 bytes.
 
@@ -101,3 +101,4 @@ pragma exception_init(e_not_implemented, -20122);
 
 end pkg_ddl_error;
 /
+

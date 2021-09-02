@@ -8535,3 +8535,4 @@ begin
   g_transform_param_tab('OID'                 ) := false;
 end pkg_ddl_util;
 /
+

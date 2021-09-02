@@ -678,3 +678,4 @@ begin
   dbms_lob.createtemporary(g_clob, true);
 end pkg_str_util;
 /
+
