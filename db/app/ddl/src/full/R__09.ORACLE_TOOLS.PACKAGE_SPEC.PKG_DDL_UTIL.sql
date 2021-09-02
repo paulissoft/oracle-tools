@@ -191,6 +191,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
 
   procedure execute_ddl
+  ( p_ddl_tab in dbms_sql.varchar2a
+  );
+
+  procedure execute_ddl
   ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
   , p_network_link in varchar2 default null
   );
