@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_INDEX_OBJECT (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || ' (1)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
@@ -53,7 +53,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_INDEX_OBJECT (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || ' (2)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
@@ -165,7 +165,7 @@ is
   l_column_names varchar2(4000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_INDEX_OBJECT.GET_COLUMN_NAMES');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_COLUMN_NAMES');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
 $end
 
@@ -215,7 +215,7 @@ overriding member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_INDEX_OBJECT.CHK');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);

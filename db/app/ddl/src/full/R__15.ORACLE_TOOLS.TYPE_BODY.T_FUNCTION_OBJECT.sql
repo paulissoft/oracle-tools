@@ -9,7 +9,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_FUNCTION_OBJECT');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'p_object_schema: %s; p_object_name: %s'

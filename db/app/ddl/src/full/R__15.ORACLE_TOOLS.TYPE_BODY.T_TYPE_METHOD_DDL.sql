@@ -12,7 +12,7 @@ is
   " ADD  " constant varchar2(6) := ' ADD  '; -- so we can replace 'ADD ' by 'DROP'
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_TYPE_METHOD_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
 $end
 
   self.obj := p_obj;
@@ -63,7 +63,7 @@ overriding member procedure migrate
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_TYPE_METHOD_DDL.MIGRATE');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
 
@@ -89,7 +89,7 @@ overriding member procedure uninstall
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_TYPE_METHOD_DDL.UNINSTALL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
 $end
 
   self.ddl_tab := p_target.ddl_tab;

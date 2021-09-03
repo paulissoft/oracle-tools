@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
 $end
 
   self.ddl#$ := p_ddl#;
@@ -50,7 +50,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('ORACLE_TOOLS.T_DDL.PRINT');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   dbug.print
   ( dbug."info"
   , 'ddl#: %s; verb: %s; cardinality: %s'
@@ -145,7 +145,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_DDL.COMPARE');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'COMPARE');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_ddl:');

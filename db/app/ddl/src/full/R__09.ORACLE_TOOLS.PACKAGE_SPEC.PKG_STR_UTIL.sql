@@ -18,6 +18,25 @@ c_debugging constant naturaln := 0; -- 0: none, 1: standard, 2: verbose, 3: even
 type t_clob_tab is table of clob;
 
 /**
+ * An enhancement for dbms_lob.substr().
+ *
+ * It appears that dbms_lob.substr(amount => 32767) returns at most 32764 characters.
+ * This function corrects that.
+ *
+ * @param p_clob       The CLOB.
+ * @param p_amount     The amount.
+ * @param p_offset     The offset.
+ *
+ * @return The substring
+ */
+function dbms_lob_substr
+( p_clob in clob
+, p_amount in naturaln := 32767
+, p_offset in positiven := 1
+)
+return varchar2;
+
+/**
  * Split a string separated by a delimiter string.
  *
  * @param p_str        The input string to split.
@@ -171,6 +190,51 @@ function clob2text
 , pi_trim in naturaln default 0
 )
 return oracle_tools.t_text_tab;
+
+$if oracle_tools.cfg_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(DDL)
+--%suite
+
+--%test
+procedure ut_split1;
+
+--%test
+procedure ut_split2;
+
+--%test
+procedure ut_split3;
+
+--%test
+procedure ut_trim1;
+
+--%test
+procedure ut_trim2;
+
+--%test
+procedure ut_compare1;
+
+--%test
+procedure ut_compare2;
+
+--%test
+procedure ut_append_text1;
+
+--%test
+procedure ut_append_text2;
+
+--%test
+procedure ut_text2clob1;
+
+--%test
+procedure ut_text2clob2;
+
+--%test
+procedure ut_clob2text;
+
+$end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 END pkg_str_util;
 /

@@ -42,10 +42,10 @@ as
   l_sofar  binary_integer := 0;
   l_op_name constant varchar2(10 char) := 'processed';
   l_units   constant varchar2(10 char) := 'rows';
-  l_program constant varchar2(61 char) := 'ORACLE_TOOLS.P_GENERATE_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+  l_program constant varchar2(61 char) := $$PLSQL_UNIT; -- no schema because l_program is used in dbms_application_info
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter('oracle_tools.p_generate_ddl');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'pi_source_schema: %s; pi_source_database_link: %s; pi_target_schema: %s; pi_target_database_link: %s'

@@ -40,7 +40,7 @@ is
   end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_COMMENT_DDL.UNINSTALL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
   dbug.print
   ( dbug."input"
   , 'p_target.obj.object_schema: %s; p_target.obj.object_type: %s; p_target.obj.object_name: %s'

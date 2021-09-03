@@ -18,7 +18,7 @@ as
   l_clob clob := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter('oracle_tools.f_generate_ddl');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'pi_source_schema: %s; pi_source_database_link: %s; pi_target_schema: %s; pi_target_database_link: %s'

@@ -10,7 +10,7 @@ is
   l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_MATERIALIZED_VIEW_DDL.MIGRATE');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
 

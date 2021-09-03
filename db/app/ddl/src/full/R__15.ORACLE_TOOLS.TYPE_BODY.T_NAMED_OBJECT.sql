@@ -18,7 +18,7 @@ is
   l_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type := p_object_type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_NAMED_OBJECT.CREATE_NAMED_OBJECT (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_NAMED_OBJECT (1)');
   dbug.print
   ( dbug."input"
   , 'p_object_type: %s; p_object_schema: %s; p_object_name: %s'
@@ -81,7 +81,7 @@ is
   l_named_object oracle_tools.t_schema_object;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_NAMED_OBJECT.CREATE_NAMED_OBJECT (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_NAMED_OBJECT (2)');
 $end
 
   oracle_tools.t_named_object.create_named_object
@@ -113,7 +113,7 @@ overriding member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('ORACLE_TOOLS.T_NAMED_OBJECT.CHK');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_named_object => self, p_schema => p_schema);

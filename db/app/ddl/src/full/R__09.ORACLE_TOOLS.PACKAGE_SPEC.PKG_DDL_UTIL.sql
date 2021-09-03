@@ -324,6 +324,28 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   /*
   -- helper function
   */
+  /**
+   * Determine whether a schema object matches a filter.
+   *
+   * Rules:
+   * <ol>
+   * <li>A schema base object where is_exclude_name_expr() = 1: return 0</li>
+   * <li>A schema object where is_exclude_name_expr() = 1: return 0</li>
+   * <li>If p_metadata_object_type is not member of p_object_types_to_check: return 1</li>
+   * <li>When p_object_type is empty or equal to the (base) object type and the combination of p_object_name and p_object_names_include matches p_object_names: return 1</li>
+   * <li>Else: return 0</li>
+   * </ol>
+   *
+   * @param p_object_type                 A metadata object type (from client).
+   * @param p_object_names                A comma separated list of object names (from client).
+   * @param p_object_names_include        How to treat the object name list: include (1), exclude (0) or don't care (null)?
+   * @param p_object_types_to_check       A list of metadata object types to check for (null = check all).
+   * @param p_metadata_object_type        The schema object type (metadata).
+   * @param p_object_name                 The schema object name.
+   * @param p_metadata_base_object_type   The schema base object type (metadata).
+   * @param p_base_object_name            The schema base object name.
+   *
+   */
   function schema_object_matches_filter
   ( -- filter values
     p_object_type in t_metadata_object_type
@@ -364,6 +386,9 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   function get_schema_ddl
   ( p_schema in t_schema_nn
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list

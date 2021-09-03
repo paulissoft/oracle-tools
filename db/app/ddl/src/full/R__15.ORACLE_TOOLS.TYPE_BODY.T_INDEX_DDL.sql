@@ -79,7 +79,7 @@ is
   pragma exception_init(e_name_already_used, -955);
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_INDEX_DDL.EXECUTE_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
 $end

@@ -8,7 +8,7 @@ static procedure create_schema_ddl
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.CREATE_SCHEMA_DDL (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (1)');
 $end
 
   case
@@ -45,7 +45,7 @@ is
   l_schema_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.CREATE_SCHEMA_DDL (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (2)');
 $end
 
   oracle_tools.t_schema_ddl.create_schema_ddl
@@ -67,7 +67,7 @@ member procedure print
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.PRINT');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   self.obj.print();
   dbug.print(dbug."info", 'cardinality(self.ddl_tab): %s', cardinality(self.ddl_tab));
   if self.ddl_tab is not null and self.ddl_tab.count > 0
@@ -92,7 +92,7 @@ member procedure add_ddl
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.ADD_DDL (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
 $end
 
   self.ddl_tab.extend(1);
@@ -118,7 +118,7 @@ is
   l_text_tab oracle_tools.t_text_tab;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.ADD_DDL (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (2)');
 $end
 
   l_text_tab := oracle_tools.pkg_str_util.clob2text(p_text, 1); -- text
@@ -146,7 +146,7 @@ is
   l_count2 integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.MATCH');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCH');
 $end
 
   case
@@ -205,7 +205,7 @@ final member procedure install
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.INSTALL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'INSTALL');
 $end
 
   for i_ddl_idx in p_source.ddl_tab.first .. p_source.ddl_tab.last
@@ -229,7 +229,7 @@ static procedure migrate
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.MIGRATE');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
 $end
 
   oracle_tools.pkg_ddl_util.migrate_schema_ddl
@@ -264,7 +264,7 @@ member procedure uninstall
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.UNINSTALL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
 $end
 
   self.add_ddl
@@ -285,7 +285,7 @@ member procedure chk
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.CHK');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
   self.obj.chk(p_schema);
@@ -320,7 +320,7 @@ is
   l_schema_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.EXECUTE_DDL (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (1)');
 $end
 
   oracle_tools.pkg_str_util.split(p_str => p_id, p_delimiter => ':', p_str_tab => l_part_tab);
@@ -377,7 +377,7 @@ member procedure execute_ddl
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.EXECUTE_DDL (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (2)');
   self.obj.print();
 $end
 
@@ -396,7 +396,7 @@ static procedure execute_ddl(p_schema_ddl in oracle_tools.t_schema_ddl)
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SCHEMA_DDL.EXECUTE_DDL (3)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (3)');
 $end
 
   execute immediate p_schema_ddl.ddl_tab(1).text(1);

@@ -8,7 +8,7 @@ overriding member procedure add_ddl
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_SEQUENCE_DDL.ADD_DDL (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
 $end
 
   self.ddl_tab.extend(1);

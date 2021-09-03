@@ -49,7 +49,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS -- -*-coding: ut
 
   g_dbname global_name.global_name%type := null;
 
-  g_package constant t_module := 'ORACLE_TOOLS.PKG_DDL_UTIL';
+  g_package constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT;
 
   g_package_prefix constant t_module := g_package || '.';
 
@@ -70,7 +70,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   "EMPTY"                    constant all_objects.owner%type := 'EMPTY';
 
-  g_owner constant all_objects.owner%type := 'ORACLE_TOOLS';
+  g_owner constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
   g_owner_utplsql all_objects.owner%type; -- not a real constant but set only once
 
@@ -769,7 +769,7 @@ $end
   is
     procedure parse_alter
     is
-      l_constraint varchar2(32767 char) := dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 32767);
+      l_constraint varchar2(32767 char) := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 32767);
       l_constraint_expr_tab constant oracle_tools.t_text_tab :=
         oracle_tools.t_text_tab
         ( -- 1) ALTER TABLE "<owner>"."<table>" ADD CONSTRAINT "<pk>" PRIMARY KEY (...)
@@ -1132,7 +1132,7 @@ $end
     -- COMMENT ON COLUMN "schema"."object"."column" IS
       l_pos1 pls_integer := dbms_lob.instr(lob_loc => p_ddl.ddlText, pattern => ' IS ');
       l_pos2 pls_integer;
-      l_comment constant all_tab_comments.comments%type := dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => case when l_pos1 > 0 then l_pos1 else 2000 end);
+      l_comment constant all_tab_comments.comments%type := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => case when l_pos1 > 0 then l_pos1 else 2000 end);
     begin
       if p_base_object_schema is null
       then
@@ -1199,7 +1199,7 @@ $end
 
     procedure parse_procobj
     is
-      l_plsql_block varchar2(4000 char) := dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 4000);
+      l_plsql_block varchar2(4000 char) := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 4000);
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
@@ -1213,7 +1213,7 @@ $end
 
     procedure parse_index
     is
-      l_index varchar2(4000 char) := dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 4000);
+      l_index varchar2(4000 char) := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 4000);
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
@@ -1234,7 +1234,7 @@ $end
 
     procedure parse_object_grant
     is
-      l_object_grant varchar2(4000 char) := dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 4000);
+      l_object_grant varchar2(4000 char) := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 4000);
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
@@ -1254,7 +1254,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     ( dbug."input"
     , 'p_schema: %s; p_ddl.ddlText: %s'
     , p_schema
-    , dbms_lob.substr(lob_loc => p_ddl.ddlText, amount => 200)
+    , oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 200)
     );
 $end
 
@@ -1973,7 +1973,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
         for i_ku$ddls_idx in p_ddl_tab.first .. l_ddl_tab_last
         loop
-          l_statement := dbms_lob.substr(lob_loc => p_ddl_tab(i_ku$ddls_idx).ddlText, offset => 1, amount => 4000);
+          l_statement := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl_tab(i_ku$ddls_idx).ddlText, p_offset => 1, p_amount => 4000);
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print(dbug."info", 'i_ku$ddls_idx: %s; ltrim(l_statement): %s', i_ku$ddls_idx, ltrim(l_statement));
 $end
@@ -2051,6 +2051,9 @@ $end
 
   procedure parse_object
   ( p_schema in varchar2
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
   , p_constraint_lookup_tab in t_constraint_lookup_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab
   , p_ku$_ddl in out nocopy sys.ku$_ddl
@@ -2070,7 +2073,6 @@ $end
     l_grantable varchar2(4000 char) := null;
     l_ddl_text varchar2(32767 char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
-    l_exclude_found t_object := null;
 
     procedure cleanup
     is
@@ -2086,8 +2088,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s'
+    , 'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s'
     , p_schema
+    , p_object_type
+    , p_object_names
+    , p_object_names_include
     );
 $end
 
@@ -2148,64 +2153,28 @@ $end
     exception
       when no_data_found
       then
-        l_exclude_found := null;
-
-        if l_object_type is not null
-        then
-          if not(l_object_type member of g_schema_md_object_type_tab)
-          then
-            l_exclude_found := l_object_type;
-          elsif l_object_name is not null
-          then
-            get_exclude_name_expr_tab(p_object_type => l_object_type, p_exclude_name_expr_tab => l_exclude_name_expr_tab);
-            if l_exclude_name_expr_tab.count > 0
-            then
-              for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
-              loop
-                if l_object_name like l_exclude_name_expr_tab(i_idx) escape '\'
-                then
-                  l_exclude_found := l_object_type || ':' || l_exclude_name_expr_tab(i_idx);
-                  exit;
-                end if;
-              end loop;
-            end if;
-          end if;
-        end if;
-
-        if l_exclude_found is null and l_base_object_type is not null
-        then
-          if not(l_base_object_type member of g_schema_md_object_type_tab)
-          then
-            l_exclude_found := l_base_object_type;
-          elsif l_base_object_name is not null
-          then
-            get_exclude_name_expr_tab(p_object_type => l_base_object_type, p_exclude_name_expr_tab => l_exclude_name_expr_tab);
-            if l_exclude_name_expr_tab.count > 0
-            then
-              for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
-              loop
-                if l_base_object_name like l_exclude_name_expr_tab(i_idx) escape '\'
-                then
-                  l_exclude_found := l_base_object_type || ':' || l_exclude_name_expr_tab(i_idx);
-                  exit;
-                end if;
-              end loop;
-            end if;
-          end if;
-        end if;
-
         case
-          when l_exclude_found is not null
+          when schema_object_matches_filter
+               ( -- filter values
+                 p_object_type => p_object_type
+               , p_object_names => p_object_names
+               , p_object_names_include => p_object_names_include
+               , p_object_types_to_check => null
+                 -- database values
+               , p_metadata_object_type => l_object_type
+               , p_object_name => l_object_name
+               , p_metadata_base_object_type => l_base_object_type
+               , p_base_object_name => l_base_object_name
+               ) = 1
           then
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             dbug.print
             ( dbug."info"
-            , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name; l_exclude_found: %s'
+            , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name'
             , l_object_type
             , l_object_name
             , l_base_object_type
             , l_base_object_name
-            , l_exclude_found
             );
 $end
             p_object_key := null;
@@ -2224,7 +2193,7 @@ $end
             -- GJP 2021-08-27 Ignore this only when the DDL is whitespace only.
             if p_ku$_ddl.ddlText is not null
             then
-              l_ddl_text := trim(replace(replace(dbms_lob.substr(p_ku$_ddl.ddlText, 32767), chr(10), ' '), chr(13), ' '));
+              l_ddl_text := trim(replace(replace(oracle_tools.pkg_str_util.dbms_lob_substr(p_ku$_ddl.ddlText, 32767), chr(10), ' '), chr(13), ' '));
               if l_ddl_text is not null
               then
                 raise_application_error
@@ -2813,6 +2782,11 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
+    l_object_names constant t_object_names :=
+      ',' ||
+      replace(replace(replace(replace(p_object_names, chr(9)), chr(13)), chr(10)), chr(32)) ||
+      ',';
+
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
     l_schema_object_tab oracle_tools.t_schema_object_tab;
@@ -2898,10 +2872,13 @@ $end
           from    ( select  value(s) as schema_ddl
                     from    table
                             ( oracle_tools.pkg_ddl_util.get_schema_ddl
-                              ( p_schema
-                              , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
-                              , l_schema_object_tab
-                              , p_transform_param_list
+                              ( p_schema => p_schema
+                              , p_object_type => p_object_type
+                              , p_object_names => l_object_names
+                              , p_object_names_include => p_object_names_include
+                              , p_use_schema_export => case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
+                              , p_schema_object_tab => l_schema_object_tab
+                              , p_transform_param_list => p_transform_param_list
                               )
                             ) s
                   ) s
@@ -2926,10 +2903,13 @@ $end
           select  value(s) as schema_ddl
           from    table
                   ( oracle_tools.pkg_ddl_util.get_schema_ddl
-                    ( p_schema
-                    , case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
-                    , l_schema_object_tab
-                    , p_transform_param_list
+                    ( p_schema => p_schema
+                    , p_object_type => p_object_type
+                    , p_object_names => l_object_names
+                    , p_object_names_include => p_object_names_include
+                    , p_use_schema_export => case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
+                    , p_schema_object_tab => l_schema_object_tab
+                    , p_transform_param_list => p_transform_param_list
                     )
                   ) s
           order by
@@ -4843,7 +4823,7 @@ $end
                 if i_idx < l_member_tab.last
                 then
                   -- strip command and whitespace before "<next column>"
-                  while dbms_lob.substr(lob_loc => l_table_ddl_clob, amount => 1, offset => l_pos - 1) in (',', ' ', chr(9), chr(10), chr(13))
+                  while oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => l_table_ddl_clob, p_amount => 1, p_offset => l_pos - 1) in (',', ' ', chr(9), chr(10), chr(13))
                   loop
                     l_pos := l_pos - 1;
                   end loop;
@@ -5363,8 +5343,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || 'SCHEMA_OBJECT_MATCHES_FILTER');
     dbug.print
     ( dbug."input"
-    , 'p_object_types_to_check.count: %s; p_metadata_object_type: %s; p_object_name: %s; p_metadata_base_object_type: %s; p_base_object_name: %s'
-    , p_object_types_to_check.count
+    , 'cardinality(p_object_types_to_check): %s; p_metadata_object_type: %s; p_object_name: %s; p_metadata_base_object_type: %s; p_base_object_name: %s'
+    , cardinality(p_object_types_to_check)
     , p_metadata_object_type
     , p_object_name
     , p_metadata_base_object_type
@@ -5393,7 +5373,7 @@ $end
       then
         l_result := 0;
 
-      when p_metadata_object_type not member of p_object_types_to_check
+      when p_object_types_to_check is not null and p_metadata_object_type not member of p_object_types_to_check
       then
         l_result := 1; -- anything is fine
 
@@ -5511,6 +5491,9 @@ $end
   */
   function get_schema_ddl
   ( p_schema in t_schema_nn
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2
@@ -5904,6 +5887,9 @@ $end
             loop
               parse_object
               ( p_schema => p_schema
+              , p_object_type => p_object_type
+              , p_object_names => p_object_names
+              , p_object_names_include => p_object_names_include
               , p_ku$_ddl => l_ddl_tab(i_ku$ddls_idx)
               , p_constraint_lookup_tab => l_constraint_lookup_tab
               , p_object_lookup_tab => l_object_lookup_tab
@@ -8381,7 +8367,7 @@ $end
       get_schema_object
       ( p_schema => user
       , p_object_type => null
-      , p_object_names => case i_test when 1 then 'oracle_tools.pkg_ddl_util,oracle_tools.pkg_str_util' when 2 then 'oracle_tools.t_named_object,oracle_tools.t_dependent_or_granted_object,oracle_tools.t_schema_object' end
+      , p_object_names => case i_test when 1 then 'pkg_ddl_util,pkg_str_util' when 2 then 't_named_object,t_dependent_or_granted_object,t_schema_object' end
       , p_object_names_include => 1
       , p_schema_object_tab => l_schema_object_tab1
       );
@@ -8396,7 +8382,8 @@ $end
                 )
               ) t;
 
-      ut.expect(l_schema_object_tab2.count, l_program || '#' || i_test || '#count').to_equal(l_schema_object_tab1.count);
+      ut.expect(l_schema_object_tab1.count, l_program || '#' || i_test || '#count#1').not_to_equal(0);
+      ut.expect(l_schema_object_tab2.count, l_program || '#' || i_test || '#count#2').to_equal(l_schema_object_tab1.count);
       
       for i_idx in l_schema_object_tab2.first .. l_schema_object_tab2.last
       loop
@@ -8405,24 +8392,24 @@ $end
             when 1
             then
               case i_idx
-                when 1 then 'ORACLE_TOOLS:PACKAGE_SPEC:oracle_tools.pkg_str_util:::::::'
-                when 2 then 'ORACLE_TOOLS:PACKAGE_SPEC:oracle_tools.pkg_ddl_util:::::::'
-                when 3 then 'ORACLE_TOOLS:PACKAGE_BODY:oracle_tools.pkg_str_util:::::::'
-                when 4 then 'ORACLE_TOOLS:PACKAGE_BODY:oracle_tools.pkg_ddl_util:::::::'
-                when 5 then ':OBJECT_GRANT::ORACLE_TOOLS::oracle_tools.pkg_str_util::PUBLIC:EXECUTE:NO'
-                when 6 then ':OBJECT_GRANT::ORACLE_TOOLS::oracle_tools.pkg_ddl_util::PUBLIC:EXECUTE:NO'
+                when 1 then 'ORACLE_TOOLS:PACKAGE_SPEC:PKG_STR_UTIL:::::::'
+                when 2 then 'ORACLE_TOOLS:PACKAGE_SPEC:PKG_DDL_UTIL:::::::'
+                when 3 then 'ORACLE_TOOLS:PACKAGE_BODY:PKG_STR_UTIL:::::::'
+                when 4 then 'ORACLE_TOOLS:PACKAGE_BODY:PKG_DDL_UTIL:::::::'
+                when 5 then ':OBJECT_GRANT::ORACLE_TOOLS::PKG_STR_UTIL::PUBLIC:EXECUTE:NO'
+                WHEN 6 THEN ':OBJECT_GRANT::ORACLE_TOOLS::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO'
               end
               
             when 2
             then
               case i_idx
-                when 1 then 'ORACLE_TOOLS:TYPE_SPEC:oracle_tools.t_schema_object:::::::'
-                when 2 then 'ORACLE_TOOLS:TYPE_SPEC:oracle_tools.t_named_object:::::::'
-                when 3 then 'ORACLE_TOOLS:TYPE_SPEC:oracle_tools.t_dependent_or_granted_object:::::::'
-                when 4 then 'ORACLE_TOOLS:TYPE_BODY:oracle_tools.t_schema_object:::::::'
-                when 5 then 'ORACLE_TOOLS:TYPE_BODY:oracle_tools.t_named_object:::::::'
-                when 6 then 'ORACLE_TOOLS:TYPE_BODY:oracle_tools.t_dependent_or_granted_object:::::::'
-                when 7 then ':OBJECT_GRANT::ORACLE_TOOLS::oracle_tools.t_schema_object::PUBLIC:EXECUTE:NO'
+                WHEN 1 THEN 'ORACLE_TOOLS:TYPE_SPEC:T_SCHEMA_OBJECT:::::::'
+                WHEN 2 THEN 'ORACLE_TOOLS:TYPE_SPEC:T_NAMED_OBJECT:::::::'
+                WHEN 3 THEN 'ORACLE_TOOLS:TYPE_SPEC:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                WHEN 4 THEN 'ORACLE_TOOLS:TYPE_BODY:T_SCHEMA_OBJECT:::::::'
+                WHEN 5 THEN 'ORACLE_TOOLS:TYPE_BODY:T_NAMED_OBJECT:::::::'
+                WHEN 6 THEN 'ORACLE_TOOLS:TYPE_BODY:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                WHEN 7 THEN ':OBJECT_GRANT::ORACLE_TOOLS::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO'
               end
           end;
           

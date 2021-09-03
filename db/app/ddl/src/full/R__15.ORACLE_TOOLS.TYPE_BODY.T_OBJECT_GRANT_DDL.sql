@@ -7,7 +7,7 @@ overriding member procedure uninstall
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_OBJECT_GRANT_DDL.UNINSTALL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_target:');
@@ -47,7 +47,7 @@ is
   l_pos2 pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_OBJECT_GRANT_DDL.ADD_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
@@ -110,7 +110,7 @@ is
   pragma exception_init(e_ora_02224, -2224);    
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_OBJECT_GRANT_DDL.EXECUTE_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
 $end

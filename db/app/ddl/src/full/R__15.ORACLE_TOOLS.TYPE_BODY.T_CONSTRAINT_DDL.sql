@@ -98,7 +98,7 @@ $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_CONSTRAINT_DDL.ADD_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
@@ -163,7 +163,7 @@ overriding member procedure execute_ddl
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('ORACLE_TOOLS.T_CONSTRAINT_DDL.EXECUTE_DDL');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
 $end
