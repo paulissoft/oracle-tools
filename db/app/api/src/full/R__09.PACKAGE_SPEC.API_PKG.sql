@@ -1,9 +1,8 @@
 CREATE OR REPLACE PACKAGE "API_PKG" authid current_user -- needed to invoke procedures from the calling schema without grants
 is
 
--- GJP 2020-11-30  Use cfg_pkg.c_debugging instead
--- -- for conditional compiling
--- c_debugging constant pls_integer := data_api_pkg.c_debugging;
+-- for conditional compiling
+c_debugging constant pls_integer := 0;
 
 type t_rec is record
 ( id integer
