@@ -431,15 +431,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   return oracle_tools.t_schema_object_tab
   pipelined;
 
-  procedure init_clob;
-
-  procedure append_clob
-  ( p_buffer in varchar2
-  , p_append in varchar2 default chr(10)
-  );
-
-  function get_clob return clob;
-
   procedure migrate_schema_ddl
   ( p_source in oracle_tools.t_schema_ddl
   , p_target in oracle_tools.t_schema_ddl

@@ -2649,6 +2649,16 @@ $end
   , p_ddl in out nocopy oracle_tools.t_ddl
   )
   is
+    l_str_tab dbms_sql.varchar2a;
+
+    procedure append_clob
+    ( p_clob in out nocopy clob
+    , p_buffer in varchar2
+    , p_append in varchar2
+    ) is
+    begin
+      dbms_lob.writeappend(lob_loc => p_clob, amount => length(p_buffer || p_append), buffer => p_buffer || p_append);
+    end append_clob;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
@@ -2668,19 +2678,53 @@ $end
         -- GJP 2021-09-02
         -- The replacement will change the length and it may either become too big or too small
         -- (remainder empty which will cause compare problems).
-        init_clob;
 
-        for i_idx in p_ddl.text.first .. p_ddl.text.last
-        loop
-          append_clob
-          ( p_buffer => modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema)
-          , p_append => null
-          );
-        end loop;
+        -- GJP 2021-09-03
+        -- It is not sufficient to replace the individual chunks from p_ddl.text since
+        -- those are not lines, but just chunks. This will give a problem if the old schema starts at index i and ends at index i+1.
+        -- In that case it will not be replaced.
+        --
+        -- The solution:
+        -- A) concatenate all the chunks from the text array to a CLOB (initially trimmed)
+        -- B) split them into lines using the linefeed character
+        -- C) trim the CLOB
+        -- D) modify each line and append it to the CLOB (add a new line except for the last line)
+        -- E) convert the CLOB to the text array element
 
+        -- See A
+        oracle_tools.pkg_str_util.text2clob
+        ( pi_text_tab => p_ddl.text
+        , pio_clob => g_clob
+        , pi_append => false -- trim g_clob first
+        );
+
+        -- See B
+        oracle_tools.pkg_str_util.split
+        ( p_str => g_clob
+        , p_delimiter => chr(10)
+        , p_str_tab  => l_str_tab
+        );
+
+        -- See C
+        dbms_lob.trim(g_clob, 0);
+
+        -- See D
+        if l_str_tab.count > 0
+        then
+          for i_idx in l_str_tab.first .. l_str_tab.last
+          loop
+            append_clob
+            ( p_clob => g_clob
+            , p_buffer => modify_ddl_text(p_ddl_text => l_str_tab(i_idx), p_schema => p_schema, p_new_schema => p_new_schema)
+            , p_append => case when i_idx < l_str_tab.last then chr(10) end -- add a new line but NOT for the last line
+            );
+          end loop;
+        end if;
+
+        -- See E
         p_ddl.text :=
           oracle_tools.pkg_str_util.clob2text
-          ( pi_clob => get_clob
+          ( pi_clob => g_clob
           , pi_trim => 0
           );
       end if;
@@ -6397,24 +6441,6 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
   end sort_objects_by_deps;
 
-  procedure init_clob is
-  begin
-    dbms_lob.trim(g_clob, 0);
-  end init_clob;
-
-  procedure append_clob
-  ( p_buffer in varchar2
-  , p_append in varchar2
-  ) is
-  begin
-    dbms_lob.writeappend(lob_loc => g_clob, amount => length(p_buffer || p_append), buffer => p_buffer || p_append);
-  end append_clob;
-
-  function get_clob return clob is
-  begin
-    return g_clob;
-  end get_clob;
-
   procedure migrate_schema_ddl
   ( p_source in oracle_tools.t_schema_ddl
   , p_target in oracle_tools.t_schema_ddl
@@ -8392,24 +8418,24 @@ $end
             when 1
             then
               case i_idx
-                when 1 then 'ORACLE_TOOLS:PACKAGE_SPEC:PKG_STR_UTIL:::::::'
-                when 2 then 'ORACLE_TOOLS:PACKAGE_SPEC:PKG_DDL_UTIL:::::::'
-                when 3 then 'ORACLE_TOOLS:PACKAGE_BODY:PKG_STR_UTIL:::::::'
-                when 4 then 'ORACLE_TOOLS:PACKAGE_BODY:PKG_DDL_UTIL:::::::'
-                when 5 then ':OBJECT_GRANT::ORACLE_TOOLS::PKG_STR_UTIL::PUBLIC:EXECUTE:NO'
-                WHEN 6 THEN ':OBJECT_GRANT::ORACLE_TOOLS::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO'
+                when 1 then $$PLSQL_UNIT_OWNER || ':PACKAGE_SPEC:PKG_STR_UTIL:::::::'
+                when 2 then $$PLSQL_UNIT_OWNER || ':PACKAGE_SPEC:PKG_DDL_UTIL:::::::'
+                when 3 then $$PLSQL_UNIT_OWNER || ':PACKAGE_BODY:PKG_STR_UTIL:::::::'
+                when 4 then $$PLSQL_UNIT_OWNER || ':PACKAGE_BODY:PKG_DDL_UTIL:::::::'
+                when 5 then ':OBJECT_GRANT::' || $$PLSQL_UNIT_OWNER || '::PKG_STR_UTIL::PUBLIC:EXECUTE:NO'
+                WHEN 6 THEN ':OBJECT_GRANT::' || $$PLSQL_UNIT_OWNER || '::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO'
               end
               
             when 2
             then
               case i_idx
-                WHEN 1 THEN 'ORACLE_TOOLS:TYPE_SPEC:T_SCHEMA_OBJECT:::::::'
-                WHEN 2 THEN 'ORACLE_TOOLS:TYPE_SPEC:T_NAMED_OBJECT:::::::'
-                WHEN 3 THEN 'ORACLE_TOOLS:TYPE_SPEC:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
-                WHEN 4 THEN 'ORACLE_TOOLS:TYPE_BODY:T_SCHEMA_OBJECT:::::::'
-                WHEN 5 THEN 'ORACLE_TOOLS:TYPE_BODY:T_NAMED_OBJECT:::::::'
-                WHEN 6 THEN 'ORACLE_TOOLS:TYPE_BODY:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
-                WHEN 7 THEN ':OBJECT_GRANT::ORACLE_TOOLS::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO'
+                WHEN 1 THEN $$PLSQL_UNIT_OWNER || ':TYPE_SPEC:T_SCHEMA_OBJECT:::::::'
+                WHEN 2 THEN $$PLSQL_UNIT_OWNER || ':TYPE_SPEC:T_NAMED_OBJECT:::::::'
+                WHEN 3 THEN $$PLSQL_UNIT_OWNER || ':TYPE_SPEC:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                WHEN 4 THEN $$PLSQL_UNIT_OWNER || ':TYPE_BODY:T_SCHEMA_OBJECT:::::::'
+                WHEN 5 THEN $$PLSQL_UNIT_OWNER || ':TYPE_BODY:T_NAMED_OBJECT:::::::'
+                WHEN 6 THEN $$PLSQL_UNIT_OWNER || ':TYPE_BODY:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                WHEN 7 THEN ':OBJECT_GRANT::' || $$PLSQL_UNIT_OWNER || '::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO'
               end
           end;
           
