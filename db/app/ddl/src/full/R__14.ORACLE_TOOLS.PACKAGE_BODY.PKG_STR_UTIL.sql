@@ -819,6 +819,8 @@ procedure split
 , p_str_tab out nocopy dbms_sql.varchar2a
 );
 */
+  dbms_lob.trim(g_clob, 0);
+  
   split("null clob", null, l_str_tab);
         
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
@@ -886,6 +888,8 @@ procedure split
 , p_str_tab out nocopy t_clob_tab
 );
 */
+  dbms_lob.trim(g_clob, 0);
+  
   split("null clob", null, l_str_tab);
         
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);

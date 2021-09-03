@@ -208,30 +208,39 @@ procedure ut_split2;
 procedure ut_split3;
 
 --%test
+--%disabled
 procedure ut_trim1;
 
 --%test
+--%disabled
 procedure ut_trim2;
 
 --%test
+--%disabled
 procedure ut_compare1;
 
 --%test
+--%disabled
 procedure ut_compare2;
 
 --%test
+--%disabled
 procedure ut_append_text1;
 
 --%test
+--%disabled
 procedure ut_append_text2;
 
 --%test
+--%disabled
 procedure ut_text2clob1;
 
 --%test
+--%disabled
 procedure ut_text2clob2;
 
 --%test
+--%disabled
 procedure ut_clob2text;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
