@@ -2165,7 +2165,7 @@ $end
                , p_object_name => l_object_name
                , p_metadata_base_object_type => l_base_object_type
                , p_base_object_name => l_base_object_name
-               ) = 1
+               ) = 0 -- object not but on purpose
           then
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             dbug.print
@@ -6987,7 +6987,7 @@ $end
     procedure chk
     ( p_description in varchar2
     , p_sqlcode_expected in integer
-    , p_schema in varchar2 default user
+    , p_schema in varchar2 default g_owner
     , p_new_schema in varchar2 default null
     , p_sort_objects_by_deps in number default 0
     , p_object_type in varchar2 default null
@@ -7484,8 +7484,8 @@ $end
     , p_object_type in varchar2 default null
     , p_object_names in varchar2 default null
     , p_object_names_include in number default null
-    , p_schema_source in varchar2 default user
-    , p_schema_target in varchar2 default user
+    , p_schema_source in varchar2 default g_owner
+    , p_schema_target in varchar2 default g_owner
     , p_network_link_source in varchar2 default null
     , p_network_link_target in varchar2 default null
     , p_skip_repeatables in number default 1
@@ -7606,8 +7606,8 @@ $end
     chk
     ( p_description => 'source en target zijn gelijk.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_source_and_target_equal
-    , p_schema_source => user
-    , p_schema_target => user
+    , p_schema_source => g_owner
+    , p_schema_target => g_owner
     );
 
     chk
@@ -8153,8 +8153,8 @@ $end
     ( b_object_type in t_metadata_object_type default c_object_type
     , b_object_names in t_object_names default c_object_names
     , b_object_names_include in t_numeric_boolean default c_object_names_include
-    , b_schema_source in t_schema default user
-    , b_schema_target in t_schema default user
+    , b_schema_source in t_schema default g_owner
+    , b_schema_target in t_schema default g_owner
     , b_network_link_source in t_network_link default null
     , b_network_link_target in t_network_link default null
     , b_skip_repeatables in t_numeric_boolean default 1
@@ -8391,7 +8391,7 @@ $end
     for i_test in 1..2
     loop
       get_schema_object
-      ( p_schema => user
+      ( p_schema => g_owner
       , p_object_type => null
       , p_object_names => case i_test when 1 then 'PKG_DDL_UTIL,PKG_STR_UTIL' when 2 then 'T_NAMED_OBJECT,T_DEPENDENT_OR_GRANTED_OBJECT,T_SCHEMA_OBJECT' END
       , p_object_names_include => 1
@@ -8404,7 +8404,7 @@ $end
       from    table
               ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
                 ( p_schema_object_tab => l_schema_object_tab1
-                , p_schema => user
+                , p_schema => g_owner
                 )
               ) t;
 
@@ -8420,26 +8420,26 @@ $end
               when 1
               then
                 case i_idx
-                  when 1 then user || ':PACKAGE_SPEC:PKG_STR_UTIL:::::::'
-                  when 2 then user || ':PACKAGE_SPEC:PKG_DDL_UTIL:::::::'
-                  when 3 then user || ':PACKAGE_BODY:PKG_STR_UTIL:::::::'
-                  when 4 then user || ':PACKAGE_BODY:PKG_DDL_UTIL:::::::'
-                  when 5 then ':OBJECT_GRANT::' || user || '::PKG_STR_UTIL::PUBLIC:EXECUTE:NO'
-                  when 6 then ':OBJECT_GRANT::' || user || '::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO'
+                  when 1 then g_owner || ':PACKAGE_SPEC:PKG_STR_UTIL:::::::'
+                  when 2 then g_owner || ':PACKAGE_SPEC:PKG_DDL_UTIL:::::::'
+                  when 3 then g_owner || ':PACKAGE_BODY:PKG_STR_UTIL:::::::'
+                  when 4 then g_owner || ':PACKAGE_BODY:PKG_DDL_UTIL:::::::'
+                  when 5 then ':OBJECT_GRANT::' || g_owner || '::PKG_STR_UTIL::PUBLIC:EXECUTE:NO'
+                  when 6 then ':OBJECT_GRANT::' || g_owner || '::PKG_DDL_UTIL::PUBLIC:EXECUTE:NO'
                 end
                 
               when 2
               then
                 case i_idx
-                  when 1 then user || ':TYPE_SPEC:T_SCHEMA_OBJECT:::::::'
-                  when 2 then user || ':TYPE_SPEC:T_NAMED_OBJECT:::::::'
-                  when 3 then user || ':TYPE_SPEC:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
-                  when 4 then user || ':TYPE_BODY:T_SCHEMA_OBJECT:::::::'
-                  when 5 then user || ':TYPE_BODY:T_NAMED_OBJECT:::::::'
-                  when 6 then user || ':TYPE_BODY:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
-                  when 7 then ':OBJECT_GRANT::' || user || '::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO'
-                  when 8 then ':OBJECT_GRANT::' || user || '::T_NAMED_OBJECT::PUBLIC:EXECUTE:NO'
-                  when 9 then ':OBJECT_GRANT::' || user || '::T_DEPENDENT_OR_GRANTED_OBJECT::PUBLIC:EXECUTE:NO'
+                  when 1 then g_owner || ':TYPE_SPEC:T_SCHEMA_OBJECT:::::::'
+                  when 2 then g_owner || ':TYPE_SPEC:T_NAMED_OBJECT:::::::'
+                  when 3 then g_owner || ':TYPE_SPEC:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                  when 4 then g_owner || ':TYPE_BODY:T_SCHEMA_OBJECT:::::::'
+                  when 5 then g_owner || ':TYPE_BODY:T_NAMED_OBJECT:::::::'
+                  when 6 then g_owner || ':TYPE_BODY:T_DEPENDENT_OR_GRANTED_OBJECT:::::::'
+                  when 7 then ':OBJECT_GRANT::' || g_owner || '::T_SCHEMA_OBJECT::PUBLIC:EXECUTE:NO'
+                  when 8 then ':OBJECT_GRANT::' || g_owner || '::T_NAMED_OBJECT::PUBLIC:EXECUTE:NO'
+                  when 9 then ':OBJECT_GRANT::' || g_owner || '::T_DEPENDENT_OR_GRANTED_OBJECT::PUBLIC:EXECUTE:NO'
                 end
             end;
             
