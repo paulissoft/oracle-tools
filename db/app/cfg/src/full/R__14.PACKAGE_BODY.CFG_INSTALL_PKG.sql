@@ -183,13 +183,14 @@ end compile_objects;
 
 function show_compiler_messages
 ( p_object_schema in varchar2 default user
+, p_object_type in varchar2 default null
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
 , p_recompile in integer default 0
 , p_plsql_warnings in varchar2 default 'ENABLE:ALL'
 , p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
 )
-return t_compiler_messages_tab
+return t_compiler_message_tab
 pipelined
 is
   pragma autonomous_transaction; -- DDL is issued
@@ -229,6 +230,15 @@ is
             )
     and     o.object_name not like 'BIN$%' -- Oracle 10g Recycle Bin
     and     o.owner = p_object_schema
+    and     ( p_object_type is null or
+              o.object_type = case
+                                when p_object_type like '%\_SPEC' escape '\' -- meta
+                                then replace(p_object_type, '_SPEC', null)
+                                when p_object_type like '%\_BODY' escape '\' -- meta
+                                then replace(p_object_type, '_', ' ')
+                                else p_object_type
+                              end
+            )                  
     and     ( p_object_names_include is null or
               ( p_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(l_object_name_tab) t ) ) or
               ( p_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(l_object_name_tab) t ) )
@@ -456,6 +466,50 @@ begin
 
   return; -- essential
 end show_compiler_messages;
+
+function format_compiler_messages
+( p_object_schema in varchar2 default user
+, p_object_type in varchar2 default null
+, p_object_names in varchar2 default null
+, p_object_names_include in integer default null
+, p_recompile in integer default 0
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
+)
+return t_message_tab
+pipelined
+is
+begin
+  for r_message in
+  ( select  t.type || ' ' || t.owner || '.' || t.name || ' ' ||
+            '(' || t.line ||
+            case when t.position is not null then ',' || t.position end ||
+            ') ' ||
+            case
+              when t.sequence is not null
+              then 'PL/SQL'
+              else 'PL/SCOPE'
+            end || ' ' ||
+            t.attribute || ' ' ||
+            t.text as text
+    from    table
+            ( oracle_tools.cfg_install_pkg.show_compiler_messages
+              ( p_object_schema => p_object_schema
+              , p_object_type => p_object_type
+              , p_object_names => p_object_names 
+              , p_object_names_include => p_object_names_include 
+              , p_recompile => p_recompile 
+              , p_plsql_warnings => p_plsql_warnings
+              , p_plscope_settings => p_plscope_settings
+              )
+            ) t
+  )
+  loop
+    pipe row (r_message.text);
+  end loop;
+
+  return;
+end format_compiler_messages;
 
 end cfg_install_pkg;
 /

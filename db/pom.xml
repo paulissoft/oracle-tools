@@ -402,15 +402,36 @@
             <artifactId>sql-maven-plugin</artifactId>
             <executions>
               <execution>
-                <id>db-code-check</id>
+                <id>db-code-check-properties</id>
                 <phase>test</phase>
                 <goals>
                   <goal>execute</goal>
                 </goals>
                 <configuration>
                   <autocommit>false</autocommit>
-                  <sqlCommand>select * from table(oracle_tools.cfg_install_pkg.show_compiler_messages('${db.schema}', '${db.object.names}', '${db.object.names.include}', 1));</sqlCommand>
+                  <sqlCommand>
+                    select 'db.schema: ${db.schema}' as "=== properties ===" from dual union all
+                    select 'db.object.type: ${db.object.type}' from dual union all
+                    select 'db.object.names: ${db.object.names}' from dual union all
+                    select 'db.object.names.include: ${db.object.names.include}' from dual;
+                  </sqlCommand>
                   <printResultSet>true</printResultSet>
+                  <outputDelimiter>|</outputDelimiter>
+                </configuration>
+              </execution>
+              <execution>
+                <id>db-code-check-contents</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <autocommit>false</autocommit>
+                  <sqlCommand>
+                    select t.column_value as "=== messages ===" from table(oracle_tools.cfg_install_pkg.format_compiler_messages('${db.schema}', '${db.object.type}', '${db.object.names}', '${db.object.names.include}', 1)) t;
+                  </sqlCommand>
+                  <printResultSet>true</printResultSet>
+                  <outputDelimiter>|</outputDelimiter>
                 </configuration>
               </execution>
             </executions>
