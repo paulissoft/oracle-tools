@@ -3,76 +3,6 @@ is
 
 -- LOCAL
 
-type t_longops_rec is record (
-  rindex binary_integer
-, slno binary_integer
-, sofar binary_integer
-, totalwork binary_integer
-, op_name varchar2(64 char)
-, units varchar2(10 char)
-, target_desc varchar2(32 char)
-);
-
--- forward declaration
-procedure longops_show
-( p_longops_rec in out nocopy t_longops_rec
-, p_increment in naturaln default 1
-);
-
-function longops_init
-( p_target_desc in varchar2
-, p_totalwork in binary_integer default 0
-, p_op_name in varchar2 default 'fetch'
-, p_units in varchar2 default 'rows'
-)
-return t_longops_rec
-is
-  l_longops_rec t_longops_rec;
-begin
-  l_longops_rec.rindex := dbms_application_info.set_session_longops_nohint;
-  l_longops_rec.slno := null;
-  l_longops_rec.sofar := 0;
-  l_longops_rec.totalwork := p_totalwork;
-  l_longops_rec.op_name := p_op_name;
-  l_longops_rec.units := p_units;
-  l_longops_rec.target_desc := p_target_desc;
-
-  longops_show(l_longops_rec, 0);
-
-  return l_longops_rec;
-end longops_init;
-
-procedure longops_show
-( p_longops_rec in out nocopy t_longops_rec
-, p_increment in naturaln default 1
-)
-is
-begin
-  p_longops_rec.sofar := p_longops_rec.sofar + p_increment;
-  dbms_application_info.set_session_longops( rindex => p_longops_rec.rindex
-                                           , slno => p_longops_rec.slno
-                                           , op_name => p_longops_rec.op_name
-                                           , sofar => p_longops_rec.sofar
-                                           , totalwork => p_longops_rec.totalwork
-                                           , target_desc => p_longops_rec.target_desc
-                                           , units => p_longops_rec.units
-                                           );
-end longops_show;                                             
-
-procedure longops_done
-( p_longops_rec in out nocopy t_longops_rec
-)
-is
-begin
-  if p_longops_rec.totalwork = p_longops_rec.sofar
-  then
-    null; -- nothing has changed and dbms_application_info.set_session_longops() would show a duplicate
-  else
-    p_longops_rec.totalwork := p_longops_rec.sofar;
-    longops_show(p_longops_rec, 0);
-  end if;
-end longops_done;
-
 function list2collection
 ( p_value_list in varchar2
 , p_sep in varchar2
@@ -121,6 +51,7 @@ end list2collection;
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 procedure setup_session
 ( p_plsql_warnings in varchar2 default 'DISABLE:ALL'
+, p_plscope_settings in varchar2 default null
 )
 is
   l_plsql_flags varchar2(4000) := null;
@@ -173,6 +104,11 @@ begin
   if p_plsql_warnings is not null
   then
     l_statement := l_statement || q'[ PLSQL_WARNINGS = ']' || p_plsql_warnings || q'[']';
+  end if;
+  
+  if p_plscope_settings is not null
+  then
+    l_statement := l_statement || q'[ PLSCOPE_SETTINGS = ']' || p_plscope_settings || q'[']';
   end if;
   
   if l_statement is not null
@@ -245,12 +181,15 @@ begin
   end if;
 end compile_objects;
 
-function show_compile_errors
-( p_object_names in varchar2
-, p_object_names_include in integer
-, p_plsql_warnings in varchar2
+function show_compiler_messages
+( p_object_schema in varchar2 default user
+, p_object_names in varchar2 default null
+, p_object_names_include in integer default null
+, p_recompile in integer default 0
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
 )
-return t_errors_tab
+return t_compiler_messages_tab
 pipelined
 is
   pragma autonomous_transaction; -- DDL is issued
@@ -262,10 +201,9 @@ is
     , p_ignore_null => 1
     );
     
-  l_object_name_type_tab sys.odcivarchar2list := sys.odcivarchar2list();
-  
   cursor c_obj is
-    select  o.object_name
+    select  o.owner
+    ,       o.object_name
     ,       o.object_type
     ,       case
               when o.object_type in ('FUNCTION', 'PACKAGE', 'PROCEDURE', 'TRIGGER', 'TYPE', 'VIEW')
@@ -275,8 +213,8 @@ is
               when instr(o.object_type, ' BODY') > 0
               then 'ALTER ' || replace(o.object_type, ' BODY') || ' ' || o.object_name || ' COMPILE BODY'
             end as command
-    ,       ( select count(*) from user_dependencies d where d.type = o.object_type and d.name = o.object_name ) as nr_deps
-    from    user_objects o
+    ,       ( select count(*) from all_dependencies d where d.owner = o.owner and d.type = o.object_type and d.name = o.object_name ) as nr_deps
+    from    all_objects o
     where   o.object_type in
             ( 'VIEW'
             , 'PROCEDURE'
@@ -290,13 +228,17 @@ is
             , 'JAVA CLASS'
             )
     and     o.object_name not like 'BIN$%' -- Oracle 10g Recycle Bin
-    and     o.object_name != $$PLSQL_UNIT -- do not recompile this package (body)
+    and     o.owner = p_object_schema
     and     ( p_object_names_include is null or
               ( p_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(l_object_name_tab) t ) ) or
               ( p_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(l_object_name_tab) t ) )
             )
     order by
-            nr_deps;
+            case when p_recompile != 0 then nr_deps end
+    ,       o.owner
+    ,       o.object_name
+    ,       o.object_type
+    ;
 
   type t_obj_tab is table of c_obj%rowtype;
 
@@ -304,56 +246,216 @@ is
 
   r_obj c_obj%rowtype;
 
-  -- dbms_application_info stuff
-  l_longops_rec t_longops_rec;
+  cursor c_compiler_messages
+  ( b_owner in varchar2
+  , b_object_name in varchar2
+  , b_object_type in varchar2
+  )
+  is
+    with identifiers as
+    ( select  name
+      ,       type
+      ,       usage
+      ,       line
+      ,       first_value(line) over (partition by name, usage order by line asc) first_line
+      ,       first_value(line) over (partition by name, usage order by line desc) last_line
+      from    all_identifiers
+      where   owner = b_owner
+      and     object_name = b_object_name
+      and     object_type = b_object_type
+      and     type in ('VARIABLE', 'CONSTANT', 'EXCEPTION')
+    ), last_assignments as -- the last assignment of every identifier
+    ( select  *
+      from    identifiers
+      where   usage = 'ASSIGNMENT'
+      and     line = last_line
+    ), last_references as  -- the last reference of every identifier
+    ( select  *
+      from    identifiers
+      where   usage = 'REFERENCE'
+      and     line = last_line
+    ), first_references as -- the first reference of every identifier
+    ( select  *
+      from    identifiers
+      where   usage = 'REFERENCE'
+      and     line = first_line
+    ), first_assignments as -- the first assignment of every identifier
+    ( select  *
+      from    identifiers
+      where   usage = 'ASSIGNMENT'
+      and     line = first_line
+    )
+    , declarations     -- the declaration for every identifier
+    as
+    ( select  *
+      from    identifiers
+      where   usage = 'DECLARATION'
+    )
+    select  b_owner as owner
+    ,       b_object_name as name
+    ,       b_object_type as type
+    ,       to_number(null) as sequence
+    ,       case
+              when lr.line is null
+              then la.line
+              when la.line > lr.line
+              then la.line
+              else lr.line
+            end as line
+    ,       to_number(null) as position       
+    ,       case
+              when lr.line is null or la.line > lr.line
+              then la.type || ' ' || la.name || ' has not been used after this assignment'
+            end as text
+    ,       'WARNING' as attribute
+    ,       to_number(null) as message_number
+    from    last_assignments la
+            left outer join
+            last_references  lr
+            on lr.name = la.name
+    where   la.type != 'CONSTANT'
+    and     ( lr.line is null or la.line > lr.line )
+    union all
+    select  b_owner as owner
+    ,       b_object_name as name
+    ,       b_object_type as type
+    ,       null as sequence
+    ,       case
+              when la.line is null
+              then lr.line
+            end as line
+    ,       to_number(null) as position       
+    ,       case
+              when la.line is null
+              then lr.type || ' ' || lr.name || ' has not been initialized (assigned a value)'
+            end as text
+    ,       'WARNING' as attribute
+    ,       to_number(null) as message_number
+    from    last_assignments la
+            right outer join
+            last_references  lr
+            on lr.name = la.name
+            inner join declarations de
+            on de.name = lr.name
+    where   la.line is null
+    union all
+    select  b_owner as owner
+    ,       b_object_name as name
+    ,       b_object_type as type
+    ,       null as sequence
+    ,       case
+              when fa.line > fr.line
+              then fr.line
+            end as line
+    ,       null as position       
+    ,       case
+              when fa.line > fr.line
+              then fa.type || ' ' || fa.name || ' has not been been initialized (assigned a value)'
+            end as text
+    ,       'WARNING' as attribute
+    ,       null as message_number
+    from    first_assignments fa
+            inner join
+            first_references  fr
+            on fr.name = fa.name
+    where   fa.line > fr.line       
+    union all
+    select  b_owner as owner
+    ,       b_object_name as name
+    ,       b_object_type as type
+    ,       null as sequence
+    ,       case
+              when fr.line is null
+              then de.line
+            end as line
+    ,       null as position       
+    ,       case
+              when fr.line is null
+              then de.type || ' ' || de.name || ' has been declared but never used'
+            end as text
+    ,       'WARNING' as attribute
+    ,       null as message_number
+    from    declarations de
+            left outer join
+            last_references fr
+            on fr.name = de.name
+    where   fr.line is null
+    order by
+            owner
+    ,       name
+    ,       type
+    ,       sequence
+    ,       line
+    ,       position
+  ;
 begin
-  setup_session(p_plsql_warnings => p_plsql_warnings);
+  if p_object_names is not null and p_object_names_include is null
+  then
+    raise value_error;
+  end if;
+  
+  if p_recompile != 0
+  then
+    setup_session(p_plsql_warnings => p_plsql_warnings, p_plscope_settings => p_plscope_settings);
+  end if;
 
   open c_obj;
   fetch c_obj bulk collect into l_obj_tab;
   close c_obj;
-
-  l_longops_rec := longops_init(p_target_desc => 'SHOW_COMPILE_ERRORS', p_totalwork => l_obj_tab.count, p_op_name => 'compile', p_units => 'objects');
 
   if l_obj_tab.count > 0
   then
     for i_idx in l_obj_tab.first .. l_obj_tab.last
     loop
       r_obj := l_obj_tab(i_idx);
+
+      if p_recompile != 0 and r_obj.object_name != $$PLSQL_UNIT -- do not recompile this package (body)
+      then
+        begin
+          execute immediate r_obj.command;
+        exception
+          when others
+          then null;
+        end;
+      end if;
+
+      for r_compiler_messages in
+      ( select  e.owner
+        ,       e.name
+        ,       e.type
+        ,       e.sequence
+        ,       e.line
+        ,       e.position
+        ,       e.text
+        ,       e.attribute
+        ,       e.message_number
+        from    all_errors e
+        where   e.owner = r_obj.owner
+        and     e.name = r_obj.object_name
+        and     e.type = r_obj.object_type
+        order by
+                e.owner
+        ,       e.name
+        ,       e.type
+        ,       e.sequence
+        ,       e.line
+        ,       e.position
+      )
+      loop
+        pipe row (r_compiler_messages);
+      end loop;
       
-      l_object_name_type_tab.extend(1);
-      l_object_name_type_tab(l_object_name_type_tab.last) := r_obj.object_name || '|' || r_obj.object_type;
-
-      begin
-        execute immediate r_obj.command;
-      exception
-        when others
-        then null;
-      end;
-
-      longops_show(l_longops_rec);
+      for r_compiler_messages in c_compiler_messages(r_obj.owner, r_obj.object_name, r_obj.object_type)
+      loop
+        pipe row (r_compiler_messages);
+      end loop;        
     end loop;
   end if;
-
-  longops_done(l_longops_rec);
-
-  for r_err in
-  ( select  e.*
-    from    user_errors e
-    where   e.name || '|' || e.type in ( select trim(t.column_value) from table(l_object_name_type_tab) t )
-    order by
-            e.name
-    ,       e.type
-    ,       e.sequence
-  )
-  loop
-    pipe row (r_err);
-  end loop;
 
   commit;
 
   return; -- essential
-end show_compile_errors;
+end show_compiler_messages;
 
 end cfg_install_pkg;
 /

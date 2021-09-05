@@ -2180,6 +2180,7 @@ $end
             p_object_key := null;
           
           when l_object_type = 'PROCACT_SCHEMA' or
+               l_object_type = 'PROCACT_SYSTEM' or
                l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT')
           then
             p_object_key := null;
@@ -3580,7 +3581,7 @@ $end
     l_cursor integer;
     l_last_error_position integer := null;
     
-    -- ORA-24344: success with compilation error due to missing privileges
+    -- ORA-24344: success with compilation error -- due to missing privileges
     e_s6_with_compilation_error exception;
     pragma exception_init(e_s6_with_compilation_error, -24344);
     -- ORA-04063: view "EMPTY.V_DISPLAY_DDL_SCHEMA" has errors

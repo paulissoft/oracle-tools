@@ -296,6 +296,27 @@
             </execution>
           </executions>
         </plugin>
+
+        <!-- sql maven plugin -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>sql-maven-plugin</artifactId>
+          <dependencies>
+            <!-- specify the dependent jdbc driver here -->
+            <dependency>
+              <groupId>com.oracle.ojdbc</groupId>
+              <artifactId>ojdbc8</artifactId>
+              <version>${ojdbc8.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <forceMojoExecution>true</forceMojoExecution>
+            <driver>oracle.jdbc.OracleDriver</driver>
+            <url>${db.url}</url>
+            <username>${db.username}</username>
+            <password>${db.password}</password>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -349,6 +370,50 @@
           <plugin>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-code-check</id>
+      <properties>
+        <default.goal>test</default.goal>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-install-init</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>sql-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-code-check</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <autocommit>false</autocommit>
+                  <sqlCommand>select * from table(oracle_tools.cfg_install_pkg.show_compiler_messages('${db.schema}', '${db.object.names}', '${db.object.names.include}', 1));</sqlCommand>
+                  <printResultSet>true</printResultSet>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>

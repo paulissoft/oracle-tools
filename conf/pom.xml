@@ -98,6 +98,21 @@
         <!-- Make sure this isn't included on any classpath-->
         <scope>provided</scope>
       </dependency>
+      <dependency>
+        <groupId>com.oracle.ojdbc</groupId>
+        <artifactId>ojdbc8</artifactId>
+        <version>${ojdbc8.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.oracle.database.ha</groupId>
+            <artifactId>simplefan</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.oracle.database.ha</groupId>
+            <artifactId>ons</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -105,17 +120,6 @@
     <dependency>
       <groupId>com.oracle.ojdbc</groupId>
       <artifactId>ojdbc8</artifactId>
-      <version>${ojdbc8.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.oracle.database.ha</groupId>
-          <artifactId>simplefan</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.oracle.database.ha</groupId>
-          <artifactId>ons</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 

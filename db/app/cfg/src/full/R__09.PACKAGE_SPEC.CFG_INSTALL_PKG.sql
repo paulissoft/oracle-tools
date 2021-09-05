@@ -1,7 +1,7 @@
 CREATE OR REPLACE PACKAGE "CFG_INSTALL_PKG" authid current_user
 is 
 
-type t_errors_tab is table of user_errors%rowtype;
+type t_compiler_messages_tab is table of all_errors%rowtype;
 
 /**
  * Setup a session.
@@ -18,6 +18,7 @@ type t_errors_tab is table of user_errors%rowtype;
  */
 procedure setup_session
 ( p_plsql_warnings in varchar2 default 'DISABLE:ALL'
+, p_plscope_settings in varchar2 default null
 );
 
 /**
@@ -32,24 +33,26 @@ procedure compile_objects
 );
 
 /**
- * Compile objects in the current schema and show the errors associated with them.
+ * Show compiler messages.
  *
- * <p>
- * Both package/type specifications and bodies will be compiled.
- * </p>
- *
+ * @param p_object_schema         The schema owner of the objects to show.
  * @param p_object_names          A comma separated list of object names.
  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
- * @param p_plsql_warnings        For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'"
+ * @param p_recompile             Do we need to recompile the objects before showing the messages? 0 means no.
+ * @param p_plsql_warnings        For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
+ * @param p_plscope_settings      For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
  *
  * @return A list of USER_ERRORS rows ordered by name, type, sequence.
  */
-function show_compile_errors
-( p_object_names in varchar2 default null
+function show_compiler_messages
+( p_object_schema in varchar2 default user
+, p_object_names in varchar2 default null
 , p_object_names_include in integer default null
+, p_recompile in integer default 0
 , p_plsql_warnings in varchar2 default 'ENABLE:ALL'
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
 )
-return t_errors_tab
+return t_compiler_messages_tab
 pipelined;
 
 end cfg_install_pkg;
