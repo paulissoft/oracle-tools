@@ -411,18 +411,13 @@ is
     ,       position
   ;
 begin
-  if p_object_names is not null and p_object_names_include is null
-  then
-    raise value_error;
-  end if;
-  
   if p_recompile != 0
   then
     setup_session(p_plsql_warnings => p_plsql_warnings, p_plscope_settings => p_plscope_settings);
   end if;
 
   -- bulk fetch instead of loop because DDL is issued inside the loop which may impact the open cursor
-  open c_obj(p_object_schema, l_object_type, l_object_name_tab, p_object_names_include, p_recompile);
+  open c_obj(p_object_schema, l_object_type, l_object_name_tab, nvl(p_object_names_include, 1), p_recompile);
   fetch c_obj bulk collect into l_obj_tab;
   close c_obj;
 
