@@ -327,7 +327,7 @@ is
     ,       to_number(null) as position       
     ,       case
               when lr.line is null or la.line > lr.line
-              then la.type || ' ' || la.name || ' has not been used after this assignment'
+              then la.type || ' ' || la.name || ' may not have been used after this assignment'
             end as text
     ,       'WARNING' as attribute
     ,       to_number(null) as message_number
@@ -372,7 +372,7 @@ is
     ,       null as position       
     ,       case
               when fa.line > fr.line
-              then fa.type || ' ' || fa.name || ' has not been been initialized (assigned a value)'
+              then fa.type || ' ' || fa.name || ' has not been initialized (assigned a value)'
             end as text
     ,       'WARNING' as attribute
     ,       null as message_number
@@ -392,8 +392,9 @@ is
             end as line
     ,       null as position       
     ,       case
-              when fr.line is null
-              then de.type || ' ' || de.name || ' has been declared but never used'
+              -- use may in the text since fetch ... bulk collect into ... limit X does not recognize the reference to X
+              when fr.line is null              
+              then de.type || ' ' || de.name || ' has been declared but may have never been used'
             end as text
     ,       'WARNING' as attribute
     ,       null as message_number

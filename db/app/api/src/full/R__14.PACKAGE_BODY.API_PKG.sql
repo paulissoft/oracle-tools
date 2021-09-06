@@ -39,7 +39,9 @@ procedure ut_setup
 , p_insert_procedure in all_procedures.object_name%type
 )
 is
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   l_dynamic_depth pls_integer := utl_call_stack.dynamic_depth;
+$end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.UT_SETUP');
@@ -265,10 +267,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $
   dbug.print(dbug."input", 'p_sep: %s; p_value_list: %s; p_ignore_null: %s', p_sep, p_value_list, p_ignore_null);
 $end
 
-  select  t.value
+  select  t.val
   bulk collect
   into    l_collection
-  from    ( select  substr(str, pos + 1, lead(pos, 1, l_max_pos) over(order by pos) - pos - 1) value
+  from    ( select  substr(str, pos + 1, lead(pos, 1, l_max_pos) over(order by pos) - pos - 1) val
             from    ( select  str
                       ,       instr(str, p_sep, 1, level) pos
                       from    ( select  p_value_list as str
@@ -279,7 +281,7 @@ $end
                               level <= length(str) - nvl(length(replace(str, p_sep)), 0) /* number of separators */ + 1
                     )
           ) t
-  where   ( p_ignore_null = 0 or t.value is not null );
+  where   ( p_ignore_null = 0 or t.val is not null );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.print(dbug."output", 'l_collection.count: %s', case when l_collection is not null then l_collection.count end);
