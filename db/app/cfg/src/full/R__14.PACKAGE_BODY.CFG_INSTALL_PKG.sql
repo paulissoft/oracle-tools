@@ -195,14 +195,30 @@ pipelined
 is
   pragma autonomous_transaction; -- DDL is issued
 
+  l_object_type constant all_objects.object_type%type :=
+    case
+      when p_object_type like '%\_SPEC' escape '\' -- meta
+      then replace(p_object_type, '_SPEC', null)
+      when p_object_type like '%\_BODY' escape '\' -- meta
+      then replace(p_object_type, '_', ' ')
+      else p_object_type
+    end;
+    
   l_object_name_tab constant sys.odcivarchar2list :=
     list2collection
     ( p_value_list => replace(replace(replace(p_object_names, chr(9)), chr(10)), chr(13))
     , p_sep => ','
     , p_ignore_null => 1
     );
-    
-  cursor c_obj is
+
+  cursor c_obj
+  ( b_object_schema in varchar2
+  , b_object_type in varchar2
+  , b_object_name_tab in sys.odcivarchar2list
+  , b_object_names_include in integer
+  , b_recompile in integer
+  )
+  is
     select  o.owner
     ,       o.object_name
     ,       o.object_type
@@ -229,22 +245,16 @@ is
             , 'JAVA CLASS'
             )
     and     o.object_name not like 'BIN$%' -- Oracle 10g Recycle Bin
-    and     o.owner = p_object_schema
-    and     ( p_object_type is null or
-              o.object_type = case
-                                when p_object_type like '%\_SPEC' escape '\' -- meta
-                                then replace(p_object_type, '_SPEC', null)
-                                when p_object_type like '%\_BODY' escape '\' -- meta
-                                then replace(p_object_type, '_', ' ')
-                                else p_object_type
-                              end
-            )                  
-    and     ( p_object_names_include is null or
-              ( p_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(l_object_name_tab) t ) ) or
-              ( p_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(l_object_name_tab) t ) )
+    and     o.owner = b_object_schema
+    and     ( b_object_type is null or o.object_type = b_object_type )                  
+    and     ( b_object_names_include is null or
+              ( b_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(b_object_name_tab) t ) ) or
+              ( b_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(b_object_name_tab) t ) )
             )
     order by
-            case when p_recompile != 0 then nr_deps end
+            -- it is better to recompile first those objects that have the least number of dependencies,
+            -- i.e. that impact least their dependent objects
+            case when b_recompile != 0 then nr_deps end
     ,       o.owner
     ,       o.object_name
     ,       o.object_type
@@ -263,17 +273,19 @@ is
   )
   is
     with identifiers as
-    ( select  name
-      ,       type
-      ,       usage
-      ,       line
-      ,       first_value(line) over (partition by name, usage order by line asc) first_line
-      ,       first_value(line) over (partition by name, usage order by line desc) last_line
-      from    all_identifiers
-      where   owner = b_owner
-      and     object_name = b_object_name
-      and     object_type = b_object_type
-      and     type in ('VARIABLE', 'CONSTANT', 'EXCEPTION')
+    ( select  i.name
+      ,       i.type
+      ,       i.usage
+      ,       i.line
+      ,       first_value(i.line) over (partition by i.name, i.usage order by i.line asc) first_line
+      ,       first_value(i.line) over (partition by i.name, i.usage order by i.line desc) last_line
+      from    all_identifiers i
+      where   i.owner = b_owner
+      and     i.object_name = b_object_name
+      and     i.object_type = b_object_type
+      and     i.type in ('VARIABLE', 'CONSTANT', 'EXCEPTION')
+      -- do not show package/type specification identifiers
+      and     b_object_type not in ('PACKAGE', 'TYPE')
     ), last_assignments as -- the last assignment of every identifier
     ( select  *
       from    identifiers
@@ -325,7 +337,7 @@ is
             on lr.name = la.name
     where   la.type != 'CONSTANT'
     and     ( lr.line is null or la.line > lr.line )
-    union all
+    union
     select  b_owner as owner
     ,       b_object_name as name
     ,       b_object_type as type
@@ -348,7 +360,7 @@ is
             inner join declarations de
             on de.name = lr.name
     where   la.line is null
-    union all
+    union
     select  b_owner as owner
     ,       b_object_name as name
     ,       b_object_type as type
@@ -369,7 +381,7 @@ is
             first_references  fr
             on fr.name = fa.name
     where   fa.line > fr.line       
-    union all
+    union
     select  b_owner as owner
     ,       b_object_name as name
     ,       b_object_type as type
@@ -409,7 +421,8 @@ begin
     setup_session(p_plsql_warnings => p_plsql_warnings, p_plscope_settings => p_plscope_settings);
   end if;
 
-  open c_obj;
+  -- bulk fetch instead of loop because DDL is issued inside the loop which may impact the open cursor
+  open c_obj(p_object_schema, l_object_type, l_object_name_tab, p_object_names_include, p_recompile);
   fetch c_obj bulk collect into l_obj_tab;
   close c_obj;
 

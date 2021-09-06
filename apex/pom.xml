@@ -105,7 +105,7 @@
                        The following property should be set:
                        - application
                   -->
-                  <echo message="Reading apex properties from file ${apex.config.dir}/apex.properties" />
+                  <echo level="${ant.log.level}" message="Reading apex properties from file ${apex.config.dir}/apex.properties" />
                   <property file="${apex.config.dir}/apex.properties" prefix="apex" />
                 </target>
               </configuration>

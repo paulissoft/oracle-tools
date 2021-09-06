@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "CFG_PKG" 
+CREATE OR REPLACE PACKAGE "CFG_PKG" AUTHID DEFINER
 is
 
 c_debugging constant boolean := $if $$Debugging $then true $else false $end;

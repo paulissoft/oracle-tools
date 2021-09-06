@@ -130,7 +130,7 @@
                   <!-- If the file is not there: no problem according to the Ant documentation. -->
                   <dirname file="${env.properties.abs}"
                            property="env.properties.dir" />
-                  <echo>Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
+                  <echo level="${ant.log.level}">Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
                   <!-- no prefix needed -->
                   <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
 
@@ -139,7 +139,7 @@
                   <!-- If the file is not there: no problem according to the Ant documentation. -->
                   <dirname file="${db.properties.abs}"
                            property="db.properties.dir" />
-                  <echo>Reading flyway-db properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
+                  <echo level="${ant.log.level}">Reading flyway-db properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
                   <!-- no prefix needed -->
                   <property file="${db.properties.dir}${file.separator}flyway-db.conf" />
                 </target>
@@ -260,8 +260,8 @@
             <baselineOnMigrate>true</baselineOnMigrate>
             <cleanDisabled>true</cleanDisabled>
             <user>${db.username}</user>
-            <password>${db.password}</password>
             <!-- The password may be set on the command line -->
+            <password>${db.password}</password>
             <url>${db.url}</url>
           </configuration>
           <executions>
@@ -402,7 +402,7 @@
             <artifactId>sql-maven-plugin</artifactId>
             <executions>
               <execution>
-                <id>db-code-check-properties</id>
+                <id>db-code-check</id>
                 <phase>test</phase>
                 <goals>
                   <goal>execute</goal>
@@ -410,25 +410,39 @@
                 <configuration>
                   <autocommit>false</autocommit>
                   <sqlCommand>
-                    select 'db.schema: ${db.schema}' as "=== properties ===" from dual union all
-                    select 'db.object.type: ${db.object.type}' from dual union all
-                    select 'db.object.names: ${db.object.names}' from dual union all
-                    select 'db.object.names.include: ${db.object.names.include}' from dual;
-                  </sqlCommand>
-                  <printResultSet>true</printResultSet>
-                  <outputDelimiter>|</outputDelimiter>
-                </configuration>
-              </execution>
-              <execution>
-                <id>db-code-check-contents</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <autocommit>false</autocommit>
-                  <sqlCommand>
-                    select t.column_value as "=== messages ===" from table(oracle_tools.cfg_install_pkg.format_compiler_messages('${db.schema}', '${db.object.type}', '${db.object.names}', '${db.object.names.include}', 1)) t;
+                    select 'db.schema: ${db.schema}' as "=== Maven properties ==="
+                    from dual
+                    union all
+                    select 'db.object.type: ${db.object.type}'
+                    from dual
+                    union all
+                    select 'db.object.names: ${db.object.names}'
+                    from dual
+                    union all
+                    select 'db.object.names.include: ${db.object.names.include}'
+                    from dual
+                    union all
+                    select 'db.recompile: ${db.recompile}'
+                    from dual
+                    union all
+                    select 'db.plsql.warnings: ${db.plsql.warnings}'
+                    from dual
+                    union all
+                    select 'db.plscope.settings: ${db.plscope.settings}'
+                    from dual;                    
+
+                    select t.column_value as "=== Compiler messages ==="
+                    from table
+                         ( oracle_tools.cfg_install_pkg.format_compiler_messages
+                           ( p_object_schema => '${db.schema}'
+                           , p_object_type => '${db.object.type}'
+                           , p_object_names => '${db.object.names}'
+                           , p_object_names_include => '${db.object.names.include}'
+                           , p_recompile => '${db.recompile}'
+                           , p_plsql_warnings => '${db.plsql.warnings}'
+                           , p_plscope_settings => '${db.plscope.settings}'
+                           )
+                         ) t;
                   </sqlCommand>
                   <printResultSet>true</printResultSet>
                   <outputDelimiter>|</outputDelimiter>
