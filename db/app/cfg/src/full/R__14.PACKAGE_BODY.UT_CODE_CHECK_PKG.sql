@@ -72,7 +72,7 @@ begin
   return null;
 end;
 
--- Variables getting out of scope
+-- Identifiers shadowing another identifier
 procedure ut_variables_out_of_scope
 is
   i_idx integer;
