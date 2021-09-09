@@ -272,144 +272,330 @@ is
   , b_object_type in varchar2
   )
   is
-    with identifiers as
-    ( select  i.name
-      ,       i.type
-      ,       i.usage
-      ,       i.line
-      ,       first_value(i.line) over (partition by i.name, i.usage order by i.line asc) first_line
-      ,       first_value(i.line) over (partition by i.name, i.usage order by i.line desc) last_line
-      from    all_identifiers i
-      where   i.owner = b_owner
-      and     i.object_name = b_object_name
-      and     i.object_type = b_object_type
-      and     i.type in ('VARIABLE', 'CONSTANT', 'EXCEPTION')
-      -- do not show package/type specification identifiers
-      and     b_object_type not in ('PACKAGE', 'TYPE')
-    ), last_assignments as -- the last assignment of every identifier
-    ( select  *
-      from    identifiers
-      where   usage = 'ASSIGNMENT'
-      and     line = last_line
-    ), last_references as  -- the last reference of every identifier
-    ( select  *
-      from    identifiers
-      where   usage = 'REFERENCE'
-      and     line = last_line
-    ), first_references as -- the first reference of every identifier
-    ( select  *
-      from    identifiers
-      where   usage = 'REFERENCE'
-      and     line = first_line
-    ), first_assignments as -- the first assignment of every identifier
-    ( select  *
-      from    identifiers
-      where   usage = 'ASSIGNMENT'
-      and     line = first_line
+    with src0 as (
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_context_id
+      ,       usage_id
+      ,       line
+      ,       col
+      from    all_identifiers
+      where   owner = b_owner
+      and     object_name = b_object_name
+      and     object_type = b_object_type
+    ), src1 as (
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       name
+      ,       type
+      ,       usage
+              -- Sometimes a usage_context_id does not exists as a usage_id, often when it refers to a context SYS object.
+              -- In such a case use the latest definition as usage context id.
+      ,       ( select  nvl(max(p.usage_id), 0)
+                from    src0 p
+                where   p.owner = c.owner
+                and     p.object_name = c.object_name
+                and     p.object_type = c.object_type
+                and     ( p.usage_id = c.usage_context_id or
+                          ( p.usage_id < c.usage_context_id and p.usage = 'DEFINITION' )
+                        )
+              ) as usage_context_id
+      ,       usage_id
+      ,       line
+      ,       col
+      from    src0 c
     )
-    , declarations     -- the declaration for every identifier
-    as
-    ( select  *
+    , src2 as (
+      select  src1.*
+      ,       rtrim(replace(sys_connect_by_path(case when usage = 'DEFINITION' then usage_id || '.' end, '|'), '|'), '.') as usage_id_scope
+      from    src1
+      start with
+              usage_id = 1
+      connect by  
+              usage_context_id = prior usage_id
+    )
+    , src3 as (
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_context_id
+      ,       usage_id
+      ,       line
+      ,       col
+      ,       usage_id_scope
+      ,       row_number() over (partition by owner, object_name, object_type, name, type, usage_id order by length(usage_id_scope) desc nulls last) as seq -- longest usage_id_scope first
+      from    src2
+    ), identifiers as (
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_context_id
+      ,       usage_id
+      ,       line
+      ,       col
+      ,       usage_id_scope
+      from    src3
+      where   seq = 1
+    )
+    , declarations as (
+      select  *
       from    identifiers
       where   usage = 'DECLARATION'
     )
-    select  b_owner as owner
-    ,       b_object_name as name
-    ,       b_object_type as type
-    ,       to_number(null) as sequence
-    ,       case
-              when lr.line is null
-              then la.line
-              when la.line > lr.line
-              then la.line
-              else lr.line
-            end as line
-    ,       to_number(null) as position       
-    ,       case
-              when lr.line is null or la.line > lr.line
-              then la.type || ' ' || la.name || ' may not have been used after this assignment'
-            end as text
-    ,       'WARNING' as attribute
-    ,       to_number(null) as message_number
-    from    last_assignments la
-            left outer join
-            last_references  lr
-            on lr.name = la.name
-    where   la.type != 'CONSTANT'
-    and     ( lr.line is null or la.line > lr.line )
-    union
-    select  b_owner as owner
-    ,       b_object_name as name
-    ,       b_object_type as type
-    ,       null as sequence
-    ,       case
-              when la.line is null
-              then lr.line
-            end as line
-    ,       to_number(null) as position       
-    ,       case
-              when la.line is null
-              then lr.type || ' ' || lr.name || ' has not been initialized (assigned a value)'
-            end as text
-    ,       'WARNING' as attribute
-    ,       to_number(null) as message_number
-    from    last_assignments la
-            right outer join
-            last_references  lr
-            on lr.name = la.name
-            inner join declarations de
-            on de.name = lr.name
-    where   la.line is null
-    union
-    select  b_owner as owner
-    ,       b_object_name as name
-    ,       b_object_type as type
-    ,       null as sequence
-    ,       case
-              when fa.line > fr.line
-              then fr.line
-            end as line
-    ,       null as position       
-    ,       case
-              when fa.line > fr.line
-              then fa.type || ' ' || fa.name || ' has not been initialized (assigned a value)'
-            end as text
-    ,       'WARNING' as attribute
-    ,       null as message_number
-    from    first_assignments fa
-            inner join
-            first_references  fr
-            on fr.name = fa.name
-    where   fa.line > fr.line       
-    union
-    select  b_owner as owner
-    ,       b_object_name as name
-    ,       b_object_type as type
-    ,       null as sequence
-    ,       case
-              when fr.line is null
-              then de.line
-            end as line
-    ,       null as position       
-    ,       case
-              -- use may in the text since fetch ... bulk collect into ... limit X does not recognize the reference to X
-              when fr.line is null              
-              then de.type || ' ' || de.name || ' has been declared but may have never been used'
-            end as text
-    ,       'WARNING' as attribute
-    ,       null as message_number
-    from    declarations de
-            left outer join
-            last_references fr
-            on fr.name = de.name
-    where   fr.line is null
-    order by
-            owner
-    ,       name
-    ,       type
-    ,       sequence
+    , non_declarations as (
+      select  i.*
+      ,       di.usage_id_scope as declaration_usage_id_scope
+      from    identifiers i
+              left outer join declarations di
+              on di.owner = i.owner and
+                 di.object_name = i.object_name and
+                 di.object_type = i.object_type and
+                 di.name = i.name and
+                 di.type = i.type and
+                 i.usage_id_scope like di.usage_id_scope || '%'
+      where   i.usage != 'DECLARATION'        
+    )
+    , unused_identifiers as (
+      select  d.*
+      ,       1 as message_number
+      ,       'is declared but never used' as text
+      from    declarations d
+              left outer join non_declarations nd              
+              on nd.owner = d.owner and
+                 nd.object_name = d.object_name and
+                 nd.object_type = d.object_type and
+                 nd.name = d.name and
+                 nd.type = d.type and
+                 nd.declaration_usage_id_scope = d.usage_id_scope and
+                 -- skip assignments to a variable/constant but not for instance to a parameter
+                 not(nd.usage = 'ASSIGNMENT' and nd.type in ('VARIABLE', 'CONSTANT'))
+      where   d.object_type not in ('PACKAGE', 'TYPE')
+      and     d.type not in ('FUNCTION', 'PROCEDURE') -- skip unused functions/procedures
+      and     nd.name is null
+    )
+    , assignments as (
+      select  nd.*
+      ,       first_value(usage_id) over (partition by owner, object_name, object_type, name, type, usage, usage_context_id order by line desc) last_usage_id
+      from    non_declarations nd
+      where   nd.usage = 'ASSIGNMENT'
+    )
+    , references as (
+      select  nd.*
+      ,       first_value(usage_id) over (partition by owner, object_name, object_type, name, type, usage, usage_context_id order by line asc) first_usage_id
+      from    non_declarations nd
+      where   nd.usage = 'REFERENCE'
+    )
+    , unset_identifiers as (
+      -- Variables that are referenced but never assigned a value (before that reference)
+      select  d.*
+      ,       2 as message_number
+      ,       'is referenced but never assigned a value (before that reference)' as text
+      from    declarations d
+              inner join references r
+              on r.owner = d.owner and
+                 r.object_name = d.object_name and
+                 r.object_type = d.object_type and
+                 r.name = d.name and
+                 r.type = d.type and
+                 r.declaration_usage_id_scope = d.usage_id_scope and
+                 r.usage_id = r.first_usage_id -- first reference
+              left outer join assignments a
+              on a.owner = d.owner and
+                 a.object_name = d.object_name and
+                 a.object_type = d.object_type and
+                 a.name = d.name and
+                 a.type = d.type and
+                 a.declaration_usage_id_scope = d.usage_id_scope and
+                 a.usage_id < r.usage_id -- the assignment is before the (first) reference
+      where   d.type in ('CONSTANT', 'VARIABLE')
+      and     d.object_type not in ('PACKAGE', 'TYPE')
+      and     a.name is null -- there is nu such an assignment
+    )
+    , assigned_unused_identifiers as (
+      select  d.*
+      ,       3 as message_number
+      ,       'is assigned a value but never used (after that assignment)' as text
+      from    declarations d
+              inner join assignments a
+              on a.owner = d.owner and
+                 a.object_name = d.object_name and
+                 a.object_type = d.object_type and
+                 a.name = d.name and
+                 a.type = d.type and
+                 a.declaration_usage_id_scope = d.usage_id_scope and
+                 a.usage_id = a.last_usage_id and
+                 a.usage_context_id != d.usage_id -- last assignment (but not initialization)
+              left outer join references r
+              on r.owner = d.owner and
+                 r.object_name = d.object_name and
+                 r.object_type = d.object_type and
+                 r.name = d.name and
+                 r.type = d.type and
+                 r.declaration_usage_id_scope = d.usage_id_scope and
+                 r.usage_id > a.usage_id -- after last assignment
+      where   d.type in ('CONSTANT', 'VARIABLE')
+      and     d.object_type not in ('PACKAGE', 'TYPE')
+      and     r.name is null -- there is none
+    )
+    , unset_output_parameters as (
+      select  d.*
+      ,       4 as message_number
+      ,       '(' || replace(d.type, 'FORMAL ') || ') should be assigned a value' as text
+      from    declarations d
+              left outer join assignments a
+              on a.owner = d.owner and
+                 a.object_name = d.object_name and
+                 a.object_type = d.object_type and
+                 a.name = d.name and
+                 a.type = d.type and
+                 a.declaration_usage_id_scope = d.usage_id_scope
+      where   d.type in ('FORMAL IN OUT', 'FORMAL OUT')
+      and     d.object_type not in ('PACKAGE', 'TYPE')
+      and     a.name is null -- there is none
+    )
+    , function_output_parameters as (
+      select  d.*
+      ,       5 as message_number
+      ,       '(' || replace(d.type, 'FORMAL ') || ') should not be used in a function' as text
+      from    declarations d
+              inner join identifiers i
+              on i.owner = d.owner and
+                 i.object_name = d.object_name and
+                 i.object_type = d.object_type and
+                 i.usage_id = d.usage_context_id and
+                 i.type = 'FUNCTION'
+      where   d.type in ('FORMAL IN OUT', 'FORMAL OUT')
+    )
+    , shadowing_identifiers as (
+      select  distinct -- every time when an identifier shadows another it is listed (just once)
+              d2.*
+      ,       6 as message_number
+      ,       'shadows another identifier of the same name' as text
+      from    declarations d1
+              inner join declarations d2
+              on d2.owner = d1.owner and
+                 d2.object_name = d1.object_name and
+                 d2.object_type = d1.object_type and
+                 d2.name = d1.name and
+                 d2.usage_context_id = d1.usage_context_id and
+                 d2.usage_id > d1.usage_id
+      where   d1.object_type not in ('PACKAGE', 'TYPE')
+      and     d2.object_type not in ('PACKAGE', 'TYPE')
+    )
+    , checks as (
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_id
+      ,       usage_context_id
+      ,       message_number
+      ,       text
+      from    unused_identifiers
+      union all
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_id
+      ,       usage_context_id
+      ,       message_number
+      ,       text
+      from    unset_identifiers
+      union all
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_id
+      ,       usage_context_id
+      ,       message_number
+      ,       text
+      from    assigned_unused_identifiers
+      union all
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_id
+      ,       usage_context_id
+      ,       message_number
+      ,       text
+      from    unset_output_parameters 
+      union all
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_id
+      ,       usage_context_id
+      ,       message_number
+      ,       text
+      from    function_output_parameters 
+      union all
+      select  owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       name
+      ,       type
+      ,       usage
+      ,       usage_id
+      ,       usage_context_id
+      ,       message_number
+      ,       text
+      from    shadowing_identifiers
+      order by
+              owner
+      ,       object_name
+      ,       object_type
+      ,       line
+      ,       col
+      ,       message_number
+    )
+    -- turn it into all_errors
+    select  owner
+    ,       object_name as name
+    ,       object_type as type
+    ,       rownum as sequence
     ,       line
-    ,       position
+    ,       col as position
+    ,       'PLC-' || to_char(c.message_number, 'FM00000') || ': ' || case when c.type like 'FORMAL %' then 'parameter' else lower(c.type) end || ' "' || c.name || '" ' || c.text as text
+    ,       'CHECK' as attribute
+    ,       message_number
+    from    checks c
   ;
 begin
   if p_recompile != 0
@@ -490,7 +676,7 @@ pipelined
 is
 begin
   for r_message in
-  ( select  t.type || ' ' || t.owner || '.' || t.name || ' ' ||
+  ( select  lower(t.type) || ' ' || t.owner || '.' || t.name || ' ' ||
             '(' || t.line ||
             case when t.position is not null then ',' || t.position end ||
             ') ' ||
