@@ -110,7 +110,7 @@ begin
   then
     l_statement := l_statement || q'[ PLSCOPE_SETTINGS = ']' || p_plscope_settings || q'[']';
   end if;
-  
+
   if l_statement is not null
   then
     l_statement := 'alter session set ' || l_statement;
@@ -381,7 +381,7 @@ is
                  -- skip assignments to a variable/constant but not for instance to a parameter
                  not(nd.usage = 'ASSIGNMENT' and nd.type in ('VARIABLE', 'CONSTANT'))
       where   d.object_type not in ('PACKAGE', 'TYPE')
-      and     d.type not in ('FUNCTION', 'PROCEDURE') -- skip unused functions/procedures
+      and     d.type not in ('FUNCTION', 'PROCEDURE', 'LABEL') -- skip unused functions/procedures
       and     nd.name is null
     )
     , assignments as (
@@ -398,10 +398,12 @@ is
     )
     , unset_identifiers as (
       -- Variables that are referenced but never assigned a value (before that reference)
-      select  d.*
+      select  r.*
       ,       2 as message_number
       ,       'is referenced but never assigned a value (before that reference)' as text
       from    declarations d
+              inner join non_declarations td -- type declaration via usage_context_id
+              on td.usage_context_id = d.usage_id and td.type != 'REFCURSOR' -- ignore REFCURSOR
               inner join references r
               on r.owner = d.owner and
                  r.object_name = d.object_name and
@@ -423,7 +425,7 @@ is
       and     a.name is null -- there is nu such an assignment
     )
     , assigned_unused_identifiers as (
-      select  d.*
+      select  a.*
       ,       3 as message_number
       ,       'is assigned a value but never used (after that assignment)' as text
       from    declarations d
@@ -478,8 +480,7 @@ is
       where   d.type in ('FORMAL IN OUT', 'FORMAL OUT')
     )
     , shadowing_identifiers as (
-      select  distinct -- every time when an identifier shadows another it is listed (just once)
-              d2.*
+      select  d2.*
       ,       6 as message_number
       ,       'shadows another identifier of the same name' as text
       from    declarations d1
@@ -491,6 +492,7 @@ is
                  d2.usage_context_id = d1.usage_context_id and
                  d2.usage_id > d1.usage_id
       where   d1.object_type not in ('PACKAGE', 'TYPE')
+      and     d1.type not in ('ITERATOR', 'RECORD ITERATOR')
       and     d2.object_type not in ('PACKAGE', 'TYPE')
     )
     , checks as (
@@ -507,7 +509,7 @@ is
       ,       message_number
       ,       text
       from    unused_identifiers
-      union all
+      union
       select  owner
       ,       object_name
       ,       object_type
@@ -521,7 +523,7 @@ is
       ,       message_number
       ,       text
       from    unset_identifiers
-      union all
+      union
       select  owner
       ,       object_name
       ,       object_type
@@ -535,7 +537,7 @@ is
       ,       message_number
       ,       text
       from    assigned_unused_identifiers
-      union all
+      union
       select  owner
       ,       object_name
       ,       object_type
@@ -549,7 +551,7 @@ is
       ,       message_number
       ,       text
       from    unset_output_parameters 
-      union all
+      union
       select  owner
       ,       object_name
       ,       object_type
@@ -563,7 +565,7 @@ is
       ,       message_number
       ,       text
       from    function_output_parameters 
-      union all
+      union
       select  owner
       ,       object_name
       ,       object_type

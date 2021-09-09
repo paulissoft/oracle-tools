@@ -8,7 +8,7 @@ type t_message_tab is table of varchar2(4000 char);
 /**
  * Setup a session.
  *
- * Used by Flyway to define PL/SQL flags (PLSQL_CCFlags) and PL/SQL warnings (PLSQL_WARNINGS).
+ * Used by Flyway to define PL/SQL flags (PLSQL_CCFlags), PL/SQL warnings (PLSQL_WARNINGS) and PL/Scope settings (PLSCOPE_SETTINGS).
  *
  * PLSQL_CCFlags:
  * <ol>
@@ -16,7 +16,8 @@ type t_message_tab is table of varchar2(4000 char);
  * <li>$$Testing (is utPLSQL package UT available)</li>
  * </ol>
  *
- * @param p_plsql_warnings  For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'"
+ * @param p_plsql_warnings    For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'"
+ * @param p_plscope_settings  For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'"
  */
 procedure setup_session
 ( p_plsql_warnings in varchar2 default 'DISABLE:ALL'
