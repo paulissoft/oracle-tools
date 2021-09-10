@@ -19,6 +19,21 @@ This chapter describes the configuration you can define for Oracle Tools.
 
 ---
 
+## Profiles
+
+Before we dive into the configuration it is important to note that Maven profiles are available to execute the following actions:
+
+|Profile (action)    |Description|
+|:---------------    |:----------|
+|db-info             |Show Flyway information about (to be) installed migrations.|
+|db-install          |Perform Flyway migrations.|
+|db-code-check       |Use native PL/SQL code checks based on PL/SQL warnings and PL/Scope.|
+|db-test             |Execute a unit test using utPLSQL v3.|
+|db-generate-ddl-full|Generate DDL scripts assuming that there are no objects yet.|
+|db-generate-ddl-incr|Generate DDL scripts to migrate non repeatable objects that may already be there.|
+
+It is possible to work without Maven profiles but why should you?
+
 ## Database configuration directory
 
 In oracle-tools there is a directory conf/src that contains the database configuration:
@@ -159,7 +174,7 @@ actions. It has oracle-tools/conf/pom.xml as its parent POM.
 
 #### Flyway related properties
 
-For profiles (action) db-install and db-info:
+For profiles (actions) db-info and db-install:
 
 |Property                |Default                             |Description                                                              |
 |:-------                |:------                             |:----------                                                              |
@@ -169,15 +184,34 @@ For profiles (action) db-install and db-info:
 |db.src.incr.scripts     |${db.src.scripts}/incr              |The directory containing DDL scripts that can be run only once.          |
 |db.src.callbacks.scripts|${oracle-tools.db.src.dir}/callbacks|The directory that contains scripts run before or after Flyway.          |
 
-#### Properties for generating DDL
+#### Properties for code checks and generating DDL
 
-For profiles (actions) db-generate-ddl-full and db-generate-ddl-incr:
+For profiles (actions) db-code-check, db-generate-ddl-full and db-generate-ddl-incr the following properties are common:
 
 |Property                            |Default|Description                                                                                  |
 |:-------                            |:------|:----------                                                                                  |
-|db.object.type                      |       |Only generate for this object type (Oracle package DBMS_METADATA).                           |
+|db.object.type                      |       |Only generate for this object type (see Oracle package DBMS_METADATA for possible values).   |
 |db.object.names                     |       |A list of object names to include or exclude (or empty to include all).                      |
 |db.object.names.include             |       |Specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include).    |
+
+##### Profile db-code-check
+
+|Property                            |Default                      |Description|
+|:-------                            |:------                      |:----------|
+|db.recompile                        |1                            |Must the code checker recompile objects to have a detailed analysis: yes (1) or no (0)? Probably not in production!|
+|db.plsql.warnings                   |ENABLE:ALL                   |For "alter session set PLSQL_WARNINGS = '${db.plsql.warnings}'".|
+|db.plscope.settings                 |IDENTIFIERS:ALL              |For "alter session set PLSCOPE_SETTINGS = '${db.plscope.settings}'".|
+
+Please note that these properties are defined in oracle-tools/conf/pom.xml but
+only when they have not been defined before. So you can for example add this line
+
+```
+recompile=0
+```
+
+to a production db.properties file (prefix db. is added by default for such a
+file) to ensure that by default no recompilation takes place in production
+when you invoke db-code-check.
 
 ##### Profile db-generate-ddl-full
 
@@ -203,7 +237,7 @@ For profiles (actions) db-generate-ddl-full and db-generate-ddl-incr:
 
 #### Properties for running utPLSQL
 
-The profile is db-test:
+The profile (action) is db-test:
 
 |Property       |Default                           |Description                                                                   |
 |:-------       |:------                           |:----------                                                                   |
