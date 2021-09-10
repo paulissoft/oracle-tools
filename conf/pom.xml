@@ -98,6 +98,21 @@
         <!-- Make sure this isn't included on any classpath-->
         <scope>provided</scope>
       </dependency>
+      <dependency>
+        <groupId>com.oracle.ojdbc</groupId>
+        <artifactId>ojdbc8</artifactId>
+        <version>${ojdbc8.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.oracle.database.ha</groupId>
+            <artifactId>simplefan</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.oracle.database.ha</groupId>
+            <artifactId>ons</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -105,17 +120,6 @@
     <dependency>
       <groupId>com.oracle.ojdbc</groupId>
       <artifactId>ojdbc8</artifactId>
-      <version>${ojdbc8.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.oracle.database.ha</groupId>
-          <artifactId>simplefan</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.oracle.database.ha</groupId>
-          <artifactId>ons</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 
@@ -149,14 +153,16 @@
               <id>conf-debug-before</id>
               <phase>${conf.phase.init}</phase>
               <configuration>
+                <exportAntProperties>true</exportAntProperties>
                 <target if="maven.debug">
+                  <property name="ant.log.level" value="info" />
                   <!-- also dbUrl, dbUser, dbPass -->
                   <echoproperties prefix="java." />
                   <echoproperties prefix="maven." />
                   <echoproperties prefix="db." />
                   <echoproperties prefix="oracle-tools." />
                   <echoproperties prefix="oracle." />
-                  <echoproperties prefix="conf." />
+                  <echoproperties prefix="conf." />                 
                 </target>
               </configuration>
               <goals>
@@ -188,6 +194,9 @@
                        
                        This reduces the need for duplicate folders/files.
                   -->
+
+                  <!-- GJP 2021-09-06 For the time being display always the "Reading ... properties from file ..." -->
+                  <property name="ant.log.level" value="info" />
 
                   <property name="db.config.dir.env.properties" value="${db.config.dir}${file.separator}env.properties" />
                   
@@ -242,7 +251,7 @@
                       1) read the file env.properties (file may not exist)
                       2) the file should set db and maybe db.prev (for backwards compability we also check db.source and db.target)
                   -->
-                  <echo message="Reading environment properties from file ${env.properties.abs}" />
+                  <echo level="${ant.log.level}" message="Reading environment properties from file ${env.properties.abs}" />
                   <property file="${env.properties.abs}" />
                   
                   <!-- backwards compability -->
@@ -264,7 +273,7 @@
                     <available file="${db.config.dir}${file.separator}${db}${file.separator}db.properties" type="file" />
                   </condition>
                   <property name="db.properties.abs" location="${db.properties}" />
-                  <echo message="Reading db properties from file ${db.properties.abs}" />
+                  <echo level="${ant.log.level}" message="Reading db properties from file ${db.properties.abs}" />
                   <!-- prefixValues="true" is needed for correctly expanding
                        username=prxy[${schema}] -->
                   <property file="${db.properties.abs}" prefix="db"
@@ -287,6 +296,11 @@
                   <property name="dbUser" value="${db.username}" />
                   <property name="dbPass" value="${db.password}" />
 
+                  <!-- set code check properties -->
+                  <property name="db.recompile" value="1" /> <!-- 0 or 1 -->
+                  <property name="db.plsql.warnings" value="ENABLE:ALL" /> <!-- alter session set PLSQL_WARNINGS = ... -->
+                  <property name="db.plscope.settings" value="IDENTIFIERS:ALL" /> <!-- alter session set PLSCOPE_SETTINGS = ... -->
+
                   <!-- READ THE db.prev.properties FILE. -->
                   
                   <!-- DB.PREV -->
@@ -296,7 +310,7 @@
                   </condition>
                   <property name="db.prev.properties.abs" location="${db.prev.properties}" />
                   <!-- target info -->
-                  <echo message="Reading db.prev properties from file ${db.prev.properties.abs}" />
+                  <echo level="${ant.log.level}" message="Reading db.prev properties from file ${db.prev.properties.abs}" />
                   <property file="${db.prev.properties.abs}" prefix="db.prev" />
                   <!-- db.prev.database.link is empty meaning the previous database schema is used -->
                   <property name="db.prev.database.link"

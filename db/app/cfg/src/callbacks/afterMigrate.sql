@@ -8,7 +8,10 @@ l_reuse_settings constant boolean := case when upper(substr('${reuse_settings}',
 -- This procedure must be in sync with the same procedure in ../full/R__14.PACKAGE_BODY.CFG_INSTALL_PKG.sql
 --
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-procedure compile_objects(p_compile_all in boolean, p_reuse_settings in boolean)
+procedure compile_objects
+( p_compile_all in boolean
+, p_reuse_settings in boolean
+)
 is
   l_message varchar2(2047) := null; -- one less than the maximum for raise_application_error because a newline is added later on
 begin

@@ -1,15 +1,15 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_PACKAGE_SPEC_OBJECT" AS
 
 constructor function t_package_spec_object
-( self in out nocopy t_package_spec_object
+( self in out nocopy oracle_tools.t_package_spec_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_PACKAGE_SPEC_OBJECT.T_PACKAGE_SPEC_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'p_object_schema: %s; p_object_name: %s'
@@ -22,7 +22,7 @@ $end
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 

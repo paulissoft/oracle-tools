@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" AS
 
 constructor function t_type_method_object
-( self in out nocopy t_type_method_object
-, p_base_object in t_named_object -- the type specification
+( self in out nocopy oracle_tools.t_type_method_object
+, p_base_object in oracle_tools.t_named_object -- the type specification
 , p_member# in integer -- the METHOD_NO
 , p_member_name in varchar2 -- the METHOD_NAME
 , p_method_type in varchar2
@@ -16,8 +16,8 @@ constructor function t_type_method_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TYPE_METHOD_OBJECT.T_TYPE_METHOD_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_member#: %s; p_member_name: %s'
@@ -38,7 +38,7 @@ $end
   self.overriding$ := p_overriding;
   self.arguments := p_arguments;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -146,8 +146,8 @@ is
     l_signature := l_signature || p_text;
   end add;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TYPE_METHOD_OBJECT.SIGNATURE');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SIGNATURE');
 $end
 
   add(case when self.final() = 'NO' then 'NOT ' end || 'FINAL ');
@@ -199,7 +199,7 @@ $end
     add(case when l_is_constructor then 'SELF AS RESULT' else self.arguments(1).data_type() end);
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_signature);
   dbug.leave;
 $end
@@ -208,24 +208,24 @@ $end
 end signature;
 
 overriding member procedure chk
-( self in t_type_method_object
+( self in oracle_tools.t_type_method_object
 , p_schema in varchar2
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TYPE_METHOD_OBJECT.CHK');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
   dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.parameters() + self.results() = nvl(cardinality(self.arguments), 0)
   then
     null;
   else
     raise_application_error
-    ( -20000
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') has "' ||
@@ -243,7 +243,7 @@ $end
     null;
   else
     raise_application_error
-    ( -20000
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') must have a TYPE_SPEC as its base object: ' ||
@@ -251,7 +251,7 @@ $end
     );
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;

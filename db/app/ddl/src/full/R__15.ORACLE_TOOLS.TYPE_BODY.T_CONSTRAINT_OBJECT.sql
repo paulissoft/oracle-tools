@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_CONSTRAINT_OBJECT" AS
 
 constructor function t_constraint_object
-( self in out nocopy t_constraint_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_constraint_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_constraint_type in varchar2 default null
@@ -11,27 +11,28 @@ constructor function t_constraint_object
 )
 return self as result
 is
-  l_search_condition varchar2(32767 char) := null; --for LONG conversion
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_OBJECT.T_CONSTRAINT_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
+  p_base_object.print;
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
   dbug.print(dbug."input", 'p_constraint_type: %s; p_column_names: %s; p_search_condition: %s', p_constraint_type, p_column_names, p_search_condition);
 $end
 
-  self.base_object$ := p_base_object;
-  self.network_link$ := null;
-  self.object_schema$ := p_object_schema;
-  self.object_name$ := p_object_name;
+  -- default constructor
+  self := oracle_tools.t_constraint_object(null, p_object_schema, p_base_object, p_object_name, p_column_names, p_search_condition, p_constraint_type);
 
   if p_constraint_type is not null and (p_constraint_type <> 'C' or p_search_condition is not null)
   then
-    self.constraint_type$ := p_constraint_type;
-    l_search_condition := case when p_constraint_type = 'C' then p_search_condition end;
+    case
+      when p_constraint_type = 'C'
+      then null;
+      else self.search_condition$ := null;
+    end case;
   else
     select  c.search_condition
     ,       c.constraint_type
-    into    l_search_condition
+    into    self.search_condition$
     ,       self.constraint_type$
     from    all_constraints c
     where   c.owner = p_object_schema
@@ -42,21 +43,45 @@ $end
   case 
     when self.constraint_type$ in ('P', 'U')
     then
-      self.column_names$ := nvl(p_column_names, t_constraint_object.get_column_names(p_object_schema, p_object_name, p_base_object.object_name));
+      if self.column_names$ is null
+      then
+        self.column_names$ := oracle_tools.t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name);
+      end if;
       self.search_condition$ := null;
 
     when self.constraint_type$ in ('C')
     then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-      dbug.print(dbug."info", 'l_search_condition: "%s"', l_search_condition);
-$end
       -- Since the search_condition may well be beyond 4000 characters, we just use a hash.
       -- When the hash for two search conditions is the same, the search condition will normally be the same too
       self.column_names$ := null;
-      self.search_condition$ := dbms_utility.get_hash_value(l_search_condition, 37, 1073741824);
+      self.search_condition$ := dbms_utility.get_hash_value(self.search_condition$, 37, 1073741824);
   end case;
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+
   return;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+exception
+  when no_data_found
+  then
+    raise_application_error
+    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
+    , utl_lms.format_message
+      ( 'p_object_schema: %s; p_object_name: %s'
+      , p_object_schema
+      , p_object_name
+      )
+    , true
+    );
+
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end;
 
 -- begin of getter(s)
@@ -137,8 +162,8 @@ return varchar2
 is
   l_column_names varchar2(4000 char) := null;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_OBJECT.GET_COLUMN_NAMES');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_COLUMN_NAMES');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s; p_table_name: %s', p_object_schema, p_object_name, p_table_name);
 $end
 
@@ -153,31 +178,44 @@ $end
     ,       cc.column_name
   )
   loop
-    l_column_names := case when l_column_names is not null then l_column_names || ',' end || '"' || r.column_name || '"'; -- " for pkg_ddl_util.parse_ddl
+    l_column_names := case when l_column_names is not null then l_column_names || ',' end || '"' || r.column_name || '"'; -- " for oracle_tools.pkg_ddl_util.parse_ddl
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'return: %s', l_column_names);
   dbug.leave;
 $end
 
   return l_column_names;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end    
 end get_column_names;
 
 overriding member procedure chk
-( self in t_constraint_object
+( self in oracle_tools.t_constraint_object
 , p_schema in varchar2
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_OBJECT.CHK');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end chk;
 

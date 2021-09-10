@@ -1,0 +1,2 @@
+drop type T_SORT_OBJECTS_BY_DEPS_TAB;
+drop type T_SORT_OBJECTS_BY_DEPS_REC;

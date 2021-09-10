@@ -25,3 +25,32 @@ temporary tablespace &&tablespace_temp;
 
 alter user &&oracle_tools_username -
 quota unlimited on &&tablespace_users;
+
+declare
+  l_found pls_integer;
+begin
+  -- does ut.version (utPLSQL V3) or utconfig.showfailuresonly (utPLSQL v1 and v2) exist?
+  begin
+    select  1
+    into    l_found
+    from    all_procedures
+    where   ( object_name = 'UT' and procedure_name = 'VERSION' )
+    or      ( object_name = 'UTCONFIG' and procedure_name = 'SHOWFAILURESONLY' );
+
+  exception
+    when no_data_found
+    then
+      l_found := 0;
+    when too_many_rows
+    then
+      l_found := 1;
+  end;
+
+  -- when utPLSQL exists create a user EMPTY for unit testing
+  if l_found = 1
+  then
+    execute immediate 'create user EMPTY identified by "EMPTY" default tablespace &&tablespace_users temporary tablespace &&tablespace_temp';
+    execute immediate 'alter user EMPTY quota unlimited on &&tablespace_users';
+  end if;
+end;
+/

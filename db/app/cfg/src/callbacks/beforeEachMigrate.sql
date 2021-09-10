@@ -6,9 +6,11 @@ declare
 --
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 procedure setup_session
+( p_plsql_warnings in varchar2 default 'DISABLE:ALL'
+)
 is
   l_plsql_flags varchar2(4000) := null;
-  l_statement varchar2(2000);
+  l_statement varchar2(2000) := null;
   l_found pls_integer;
 begin
   -- does dbug.activate exists?
@@ -51,7 +53,17 @@ begin
   then
     l_plsql_flags := ltrim(l_plsql_flags, ',');
     -- if so, alter the session PLSQL_CCFlags and compile with debug info
-    l_statement := q'[alter session set PLSQL_CCFlags = ']' || l_plsql_flags || q'[' PLSQL_WARNINGS = 'DISABLE:ALL']';
+    l_statement := l_statement || q'[ PLSQL_CCFlags = ']' || l_plsql_flags || q'[']';
+  end if;
+  
+  if p_plsql_warnings is not null
+  then
+    l_statement := l_statement || q'[ PLSQL_WARNINGS = ']' || p_plsql_warnings || q'[']';
+  end if;
+  
+  if l_statement is not null
+  then
+    l_statement := 'alter session set ' || l_statement;
     execute immediate l_statement;
   end if;
 end setup_session;

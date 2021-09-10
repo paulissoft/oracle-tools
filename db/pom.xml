@@ -50,7 +50,7 @@
     <!-- ============================ -->
     <!-- UTPLSQL properties (db-test) -->
     <!-- ============================ -->
-    <db.utplsql.path>${db.schema}</db.utplsql.path>
+    <db.utplsql.path>${db.schema}:${project.artifactId}</db.utplsql.path>
     <db.test.phase>none</db.test.phase>
 
     <!-- ======================== -->
@@ -130,7 +130,7 @@
                   <!-- If the file is not there: no problem according to the Ant documentation. -->
                   <dirname file="${env.properties.abs}"
                            property="env.properties.dir" />
-                  <echo>Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
+                  <echo level="${ant.log.level}">Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf (if any)</echo>
                   <!-- no prefix needed -->
                   <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
 
@@ -139,7 +139,7 @@
                   <!-- If the file is not there: no problem according to the Ant documentation. -->
                   <dirname file="${db.properties.abs}"
                            property="db.properties.dir" />
-                  <echo>Reading flyway-db properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
+                  <echo level="${ant.log.level}">Reading flyway-db properties from file ${db.properties.dir}${file.separator}flyway-db.conf (if any)</echo>
                   <!-- no prefix needed -->
                   <property file="${db.properties.dir}${file.separator}flyway-db.conf" />
                 </target>
@@ -192,6 +192,32 @@
                       </not>
                     </condition>
                   </fail>
+
+                  <!-- filesystem: seems to be a problem for filterchain -->
+                  <property name="tmp.flyway.locations"
+                            value="filesystem:${db.src.full.scripts.abs},filesystem:${db.src.incr.scripts.abs},filesystem:${db.src.dml.scripts.abs},filesystem:${db.src.callbacks.scripts.abs}," />
+
+                  <!-- to suppress WARNING: Discarding duplicate location -->
+                  
+                  <!-- https://stackoverflow.com/questions/21179080/removing-dupliates-from-comma-seperate-strings-stored-in-ant-property -->
+
+                  <loadresource property="flyway.locations">
+                    <propertyresource name="tmp.flyway.locations" />
+                    <filterchain>
+                      <tokenfilter>
+                        <filetokenizer />
+                        <replacestring from="," to="${line.separator}" />
+                      </tokenfilter>                      
+                      <sortfilter />
+                      <uniqfilter />
+                      <tokenfilter>
+                        <filetokenizer />
+                        <replacestring from="${line.separator}" to="," />
+                        <replaceregex pattern="^,|,$" replace="" />
+                      </tokenfilter>
+                    </filterchain>
+                  </loadresource>
+        
                 </target>
               </configuration>
               <goals>
@@ -221,18 +247,21 @@
           <version>${flyway.version}</version>
           <configuration>
             <skip>${db.install.skip}</skip>
+            <!-- The section below will not used since the Maven property ${flyway.locations} (set above) has a higher precedence. -->
+            <!--
             <locations>                
               <location>filesystem:${db.src.full.scripts.abs}</location>
               <location>filesystem:${db.src.incr.scripts.abs}</location>
               <location>filesystem:${db.src.dml.scripts.abs}</location>
               <location>filesystem:${db.src.callbacks.scripts.abs}</location>
             </locations>
+            -->
             <baselineVersion>0</baselineVersion>
             <baselineOnMigrate>true</baselineOnMigrate>
             <cleanDisabled>true</cleanDisabled>
             <user>${db.username}</user>
-            <password>${db.password}</password>
             <!-- The password may be set on the command line -->
+            <password>${db.password}</password>
             <url>${db.url}</url>
           </configuration>
           <executions>
@@ -267,6 +296,27 @@
             </execution>
           </executions>
         </plugin>
+
+        <!-- sql maven plugin -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>sql-maven-plugin</artifactId>
+          <dependencies>
+            <!-- specify the dependent jdbc driver here -->
+            <dependency>
+              <groupId>com.oracle.ojdbc</groupId>
+              <artifactId>ojdbc8</artifactId>
+              <version>${ojdbc8.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <forceMojoExecution>true</forceMojoExecution>
+            <driver>oracle.jdbc.OracleDriver</driver>
+            <url>${db.url}</url>
+            <username>${db.username}</username>
+            <password>${db.password}</password>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -290,6 +340,24 @@
   <profiles>
     <!-- profile to be called by the user -->
     <profile>
+      <id>db-info</id>
+      <properties>
+        <default.goal>${db.phase.process} flyway:info</default.goal>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
       <id>db-install</id>
       <properties>
         <default.goal>${db.phase.process} flyway:repair flyway:migrate</default.goal>
@@ -302,6 +370,85 @@
           <plugin>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>db-code-check</id>
+      <properties>
+        <default.goal>test</default.goal>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-install-init</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>sql-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-code-check</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <autocommit>false</autocommit>
+                  <sqlCommand>
+                    select 'db.schema: ${db.schema}' as "=== Maven properties ==="
+                    from dual
+                    union all
+                    select 'db.object.type: ${db.object.type}'
+                    from dual
+                    union all
+                    select 'db.object.names: ${db.object.names}'
+                    from dual
+                    union all
+                    select 'db.object.names.include: ${db.object.names.include}'
+                    from dual
+                    union all
+                    select 'db.recompile: ${db.recompile}'
+                    from dual
+                    union all
+                    select 'db.plsql.warnings: ${db.plsql.warnings}'
+                    from dual
+                    union all
+                    select 'db.plscope.settings: ${db.plscope.settings}'
+                    from dual;                    
+
+                    select t.column_value as "=== Compiler messages ==="
+                    from table
+                         ( oracle_tools.cfg_install_pkg.format_compiler_messages
+                           ( p_object_schema => '${db.schema}'
+                           , p_object_type => '${db.object.type}'
+                           , p_object_names => '${db.object.names}'
+                           , p_object_names_include => '${db.object.names.include}'
+                           , p_recompile => '${db.recompile}'
+                           , p_plsql_warnings => '${db.plsql.warnings}'
+                           , p_plscope_settings => '${db.plscope.settings}'
+                           )
+                         ) t;
+                  </sqlCommand>
+                  <printResultSet>true</printResultSet>
+                  <outputDelimiter>|</outputDelimiter>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
@@ -341,8 +488,6 @@
       <id>db-generate-ddl-full</id>
       <properties>
         <default.goal>${db.phase.process}</default.goal>       
-        <!-- Must we remove the output directory tree before creating full scripts? -->
-        <db.full.remove.output.directory>yes</db.full.remove.output.directory>
         <!-- Pivotal #132752233 GPA 2016-10-19
              Is the FORCE keyword in scripts (CREATE OR REPLACE FORCE VIEW)
              generated by profile generate-ddl-full allowed? -->
@@ -385,7 +530,6 @@
                       <property name="object.type" value="${db.object.type}" />
                       <property name="object.names" value="${db.object.names}" />
                       <property name="object.names.include" value="${db.object.names.include}" />
-                      <property name="full.remove.output.directory" value="${db.full.remove.output.directory}" />
                       <property name="full.force.view" value="${db.full.force.view}" />
                       <property name="full.output.directory" value="${db.src.full.scripts}" />
                       <property name="full.skip.install.sql" value="${db.full.skip.install.sql}" />

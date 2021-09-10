@@ -1,17 +1,17 @@
-CREATE TYPE "ORACLE_TOOLS"."T_TYPE_ATTRIBUTE_DDL" authid current_user under t_schema_ddl
+CREATE TYPE "ORACLE_TOOLS"."T_TYPE_ATTRIBUTE_DDL" authid current_user under oracle_tools.t_schema_ddl
 ( constructor function t_type_attribute_ddl
-  ( self in out nocopy t_type_attribute_ddl
-  , p_obj in t_schema_object
+  ( self in out nocopy oracle_tools.t_type_attribute_ddl
+  , p_obj in oracle_tools.t_schema_object
   )
   return self as result
 , overriding member procedure migrate
-  ( self in out nocopy t_type_attribute_ddl
-  , p_source in t_schema_ddl
-  , p_target in t_schema_ddl
+  ( self in out nocopy oracle_tools.t_type_attribute_ddl
+  , p_source in oracle_tools.t_schema_ddl
+  , p_target in oracle_tools.t_schema_ddl
   )
 , overriding member procedure uninstall
-  ( self in out nocopy t_type_attribute_ddl
-  , p_target in t_schema_ddl
+  ( self in out nocopy oracle_tools.t_type_attribute_ddl
+  , p_target in oracle_tools.t_schema_ddl
   )
 )
 not final;

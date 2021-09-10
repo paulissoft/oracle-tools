@@ -8,18 +8,14 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 , pi_object_names in varchar2 default null
 , pi_skip_repeatables in naturaln default 1
 , pi_interface in varchar2 default null
-, pi_transform_param_list in varchar2 default pkg_ddl_util.c_transform_param_list
+, pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
 , po_clob out nocopy clob
 )
 authid current_user
 as
-  c_could_not_process constant pls_integer := -20099;
-  e_could_not_process exception;
-  pragma exception_init(e_could_not_process, -20099);
-
   -- to reduce typos we use constant identifiers
-  "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4'; -- pkg_ddl_util
-  "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5'; -- pkg_ddl_util
+  "pkg_ddl_util v4" constant varchar2(30 char) := 'pkg_ddl_util v4';
+  "pkg_ddl_util v5" constant varchar2(30 char) := 'pkg_ddl_util v5';
 
   -- try the interfaces in this order
   -- the first one which matches pi_interface and which does not return an error, wins
@@ -46,10 +42,10 @@ as
   l_sofar  binary_integer := 0;
   l_op_name constant varchar2(10 char) := 'processed';
   l_units   constant varchar2(10 char) := 'rows';
-  l_program constant varchar2(30 char) := 'P_GENERATE_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+  l_program constant varchar2(61 char) := $$PLSQL_UNIT; -- no schema because l_program is used in dbms_application_info
 begin
-$if cfg_pkg.c_debugging $then
-  dbug.enter('P_GENERATE_DDL');
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'pi_source_schema: %s; pi_source_database_link: %s; pi_target_schema: %s; pi_target_database_link: %s'
@@ -188,7 +184,7 @@ $end
                                                  ,units => l_units);
 
       else
-        raise_application_error(c_could_not_process, 'Could not process interface ' || l_interface_tab(i_interface_idx));
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || l_interface_tab(i_interface_idx));
       end if;
 
       l_processed := true;
@@ -196,7 +192,7 @@ $end
     exception
       when others
       then
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
         dbug.on_error;
 $end
         -- when this is the last interface tried we must reraise otherwise we try the next
@@ -209,19 +205,19 @@ $end
 
   if not(l_processed)
   then
-    raise_application_error(c_could_not_process, 'Could not process interface ' || pi_interface);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || pi_interface);
   end if;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end  
 exception
   when others
   then
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
 $end    
-    raise_application_error(-20000, dbms_utility.format_error_backtrace, true);
+    raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, dbms_utility.format_error_backtrace, true);
 end p_generate_ddl;
 /
 

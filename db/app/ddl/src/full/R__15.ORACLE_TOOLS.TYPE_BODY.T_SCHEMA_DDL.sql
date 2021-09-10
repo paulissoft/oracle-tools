@@ -1,60 +1,60 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_SCHEMA_DDL" AS
 
 static procedure create_schema_ddl
-( p_obj in t_schema_object
-, p_ddl_tab in t_ddl_tab
-, p_schema_ddl out nocopy t_schema_ddl
+( p_obj in oracle_tools.t_schema_object
+, p_ddl_tab in oracle_tools.t_ddl_tab
+, p_schema_ddl out nocopy oracle_tools.t_schema_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.CREATE_SCHEMA_DDL (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (1)');
 $end
 
   case
-    when p_obj is of (t_comment_object) then p_schema_ddl := t_comment_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_index_object) then p_schema_ddl := t_index_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_object_grant_object) then p_schema_ddl := t_object_grant_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_procobj_object) then p_schema_ddl := t_procobj_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_refresh_group_object) then p_schema_ddl := t_refresh_group_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_constraint_object) then p_schema_ddl := t_constraint_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_synonym_object) then p_schema_ddl := t_synonym_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_table_object) then p_schema_ddl := t_table_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_type_spec_object) then p_schema_ddl := t_type_spec_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_materialized_view_object) then p_schema_ddl := t_materialized_view_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_sequence_object) then p_schema_ddl := t_sequence_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_comment_object) then p_schema_ddl := oracle_tools.t_comment_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_index_object) then p_schema_ddl := oracle_tools.t_index_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_object_grant_object) then p_schema_ddl := oracle_tools.t_object_grant_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_procobj_object) then p_schema_ddl := oracle_tools.t_procobj_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_refresh_group_object) then p_schema_ddl := oracle_tools.t_refresh_group_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_constraint_object) then p_schema_ddl := oracle_tools.t_constraint_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_synonym_object) then p_schema_ddl := oracle_tools.t_synonym_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_table_object) then p_schema_ddl := oracle_tools.t_table_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_type_spec_object) then p_schema_ddl := oracle_tools.t_type_spec_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_materialized_view_object) then p_schema_ddl := oracle_tools.t_materialized_view_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_sequence_object) then p_schema_ddl := oracle_tools.t_sequence_ddl(p_obj, p_ddl_tab);
     -- GPA 2017-03-27 #142494703 The DDL generator should remove leading whitespace before WHEN clauses in triggers because that generates differences.
-    when p_obj is of (t_trigger_object) then p_schema_ddl := t_trigger_ddl(p_obj, p_ddl_tab);
-    -- t_table_column_object inherits from t_type_attribute_object
-    when p_obj is of (t_table_column_object) then p_schema_ddl := t_table_column_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (t_type_attribute_object) then p_schema_ddl := t_type_attribute_ddl(p_obj, p_ddl_tab);
-    else p_schema_ddl := t_schema_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_trigger_object) then p_schema_ddl := oracle_tools.t_trigger_ddl(p_obj, p_ddl_tab);
+    -- oracle_tools.t_table_column_object inherits from oracle_tools.t_type_attribute_object
+    when p_obj is of (oracle_tools.t_table_column_object) then p_schema_ddl := oracle_tools.t_table_column_ddl(p_obj, p_ddl_tab);
+    when p_obj is of (oracle_tools.t_type_attribute_object) then p_schema_ddl := oracle_tools.t_type_attribute_ddl(p_obj, p_ddl_tab);
+    else p_schema_ddl := oracle_tools.t_schema_ddl(p_obj, p_ddl_tab);
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end create_schema_ddl;
 
 static function create_schema_ddl
-( p_obj in t_schema_object
-, p_ddl_tab in t_ddl_tab
+( p_obj in oracle_tools.t_schema_object
+, p_ddl_tab in oracle_tools.t_ddl_tab
 )
-return t_schema_ddl
+return oracle_tools.t_schema_ddl
 is
-  l_schema_ddl t_schema_ddl;
+  l_schema_ddl oracle_tools.t_schema_ddl;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.CREATE_SCHEMA_DDL (2)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (2)');
 $end
 
-  t_schema_ddl.create_schema_ddl
+  oracle_tools.t_schema_ddl.create_schema_ddl
   ( p_obj => p_obj
   , p_ddl_tab => p_ddl_tab
   , p_schema_ddl => l_schema_ddl
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 
@@ -62,12 +62,12 @@ $end
 end create_schema_ddl;
 
 member procedure print
-( self in t_schema_ddl
+( self in oracle_tools.t_schema_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('T_SCHEMA_DDL.PRINT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   self.obj.print();
   dbug.print(dbug."info", 'cardinality(self.ddl_tab): %s', cardinality(self.ddl_tab));
   if self.ddl_tab is not null and self.ddl_tab.count > 0
@@ -85,40 +85,40 @@ $end
 end print;
 
 member procedure add_ddl
-( self in out nocopy t_schema_ddl
+( self in out nocopy oracle_tools.t_schema_ddl
 , p_verb in varchar2
-, p_text in t_text_tab
+, p_text in oracle_tools.t_text_tab
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.ADD_DDL (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
 $end
 
   self.ddl_tab.extend(1);
   self.ddl_tab(self.ddl_tab.last) :=
-    t_ddl
+    oracle_tools.t_ddl
     ( p_ddl# => self.ddl_tab.last
     , p_verb => p_verb
     , p_text => p_text
     );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
 
 member procedure add_ddl
-( self in out nocopy t_schema_ddl
+( self in out nocopy oracle_tools.t_schema_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
 )
 is
-  l_text_tab t_text_tab;
+  l_text_tab oracle_tools.t_text_tab;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.ADD_DDL (2)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (2)');
 $end
 
   l_text_tab := oracle_tools.pkg_str_util.clob2text(p_text, 1); -- text
@@ -132,12 +132,12 @@ $end
   , p_text => l_text_tab
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
 
-order member function match( p_schema_ddl in t_schema_ddl ) 
+order member function match( p_schema_ddl in oracle_tools.t_schema_ddl ) 
 return integer
 deterministic
 is
@@ -145,8 +145,8 @@ is
   l_count1 integer;
   l_count2 integer;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.MATCH');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCH');
 $end
 
   case
@@ -190,7 +190,7 @@ $end
       end case;
   end case;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'return: %s', l_result);
   dbug.leave;
 $end
@@ -199,13 +199,13 @@ $end
 end match;
 
 final member procedure install
-( self in out nocopy t_schema_ddl
-, p_source in t_schema_ddl
+( self in out nocopy oracle_tools.t_schema_ddl
+, p_source in oracle_tools.t_schema_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.INSTALL');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'INSTALL');
 $end
 
   for i_ddl_idx in p_source.ddl_tab.first .. p_source.ddl_tab.last
@@ -216,41 +216,41 @@ $end
     );
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end install;    
 
 static procedure migrate
-( p_source in t_schema_ddl
-, p_target in t_schema_ddl
-, p_schema_ddl in out nocopy t_schema_ddl
+( p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
+, p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.MIGRATE');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
 $end
 
-  pkg_ddl_util.migrate_schema_ddl
+  oracle_tools.pkg_ddl_util.migrate_schema_ddl
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => p_schema_ddl
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
 
 member procedure migrate
-( self in out nocopy t_schema_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_schema_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -258,52 +258,52 @@ begin
 end migrate;
 
 member procedure uninstall
-( self in out nocopy t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.UNINSTALL');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
 $end
 
   self.add_ddl
   ( p_verb => 'DROP'
   , p_text => 'DROP ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name()
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;  
 
 member procedure chk
-( self in t_schema_ddl
+( self in oracle_tools.t_schema_ddl
 , p_schema in varchar2
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.CHK');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
   self.obj.chk(p_schema);
 
   if self.ddl_tab is null or self.ddl_tab.count = 0
   then
-    raise_application_error(-20000, 'The number of ddl statements must be at least 1');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'The number of ddl statements must be at least 1');
   else
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
     loop
       if self.ddl_tab(i_idx).text is null or self.ddl_tab(i_idx).text.count = 0
       then
-        raise_application_error(-20000, 'There is no ddl text for ddl statement ' || i_idx);
+        raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx);
       end if;
     end loop;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -319,12 +319,12 @@ is
   l_verb_tab dbms_sql.varchar2a;
   l_schema_ddl oracle_tools.t_schema_ddl;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.EXECUTE_DDL (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (1)');
 $end
 
-  pkg_str_util.split(p_str => p_id, p_delimiter => ':', p_str_tab => l_part_tab);
-  pkg_str_util.split(p_str => p_text, p_delimiter => ' ', p_str_tab => l_verb_tab);
+  oracle_tools.pkg_str_util.split(p_str => p_id, p_delimiter => ':', p_str_tab => l_part_tab);
+  oracle_tools.pkg_str_util.split(p_str => p_text, p_delimiter => ' ', p_str_tab => l_verb_tab);
 
   l_schema_ddl :=
     oracle_tools.t_schema_ddl.create_schema_ddl
@@ -344,17 +344,17 @@ $end
     );
   l_schema_ddl.execute_ddl();  
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 exception
   when others
   then
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave_on_error;
 $end
     raise_application_error
-    ( -20000
+    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
     , '# parts: ' || l_part_tab.count ||
       '; part #0: ' || case when l_part_tab.count >= l_part_tab.first+0 then l_part_tab(l_part_tab.first+0) end ||
       '; part #1: ' || case when l_part_tab.count >= l_part_tab.first+1 then l_part_tab(l_part_tab.first+1) end ||
@@ -372,18 +372,18 @@ $end
 end execute_ddl;
 
 member procedure execute_ddl
-( self in t_schema_ddl
+( self in oracle_tools.t_schema_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.EXECUTE_DDL (2)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (2)');
   self.obj.print();
 $end
 
-  t_schema_ddl.execute_ddl(p_schema_ddl => self);
+  oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -392,16 +392,16 @@ exception
 $end
 end execute_ddl;
 
-static procedure execute_ddl(p_schema_ddl in t_schema_ddl)
+static procedure execute_ddl(p_schema_ddl in oracle_tools.t_schema_ddl)
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_SCHEMA_DDL.EXECUTE_DDL (3)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (3)');
 $end
 
   execute immediate p_schema_ddl.ddl_tab(1).text(1);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others

@@ -1,16 +1,16 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_COMMENT_OBJECT" AS
 
 constructor function t_comment_object
-( self in out nocopy t_comment_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_comment_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_column_name in varchar2
 )
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_COMMENT_OBJECT.T_COMMENT_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_object_schema: %s; p_column_name: %s'
@@ -25,7 +25,7 @@ $end
   self.object_schema$ := p_object_schema;
   self.column_name$ := p_column_name;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 
@@ -53,27 +53,27 @@ end column_name;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in t_comment_object
+( self in oracle_tools.t_comment_object
 , p_schema in varchar2
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_COMMENT_OBJECT.CHK');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_schema() is not null
   then
-    raise_application_error(-20000, 'Object schema should be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
   end if;
   if self.object_name() is not null
   then
-    raise_application_error(-20000, 'Object name should be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end  
 end chk;

@@ -1,14 +1,14 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_CONSTRAINT_DDL" AS
 
 overriding member procedure migrate
-( self in out nocopy t_constraint_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_constraint_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
 begin
   -- first the standard things
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -41,18 +41,18 @@ exception
   when e_constraint_name_already_used
   then null;
 end;]'
-    , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 end migrate;
 
 overriding member procedure uninstall
-( self in out nocopy t_constraint_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_constraint_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
-$if pkg_ddl_util.c_#138707615_2 $then
-  l_constraint_object t_constraint_object := treat(p_target.obj as t_constraint_object);
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
+  l_constraint_object oracle_tools.t_constraint_object := treat(p_target.obj as oracle_tools.t_constraint_object);
 $end  
 begin
   -- ALTER TABLE cust_table DROP CONSTRAINT fk_cust_table_ref;
@@ -65,7 +65,7 @@ begin
               '"."' ||
               p_target.obj.base_object_name() ||
               '"' ||
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
               -- When a primary/unique constraint is dropped, the associated index may be dropped too.
               -- In that case the DROP INDEX may fail.
               --
@@ -82,29 +82,29 @@ $if pkg_ddl_util.c_#138707615_2 $then
 $else
               ' DROP CONSTRAINT ' || p_target.obj.object_name()
 $end
-  , p_add_sqlterminator => case when pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 end uninstall;
 
 overriding member procedure add_ddl
-( self in out nocopy t_constraint_ddl
+( self in out nocopy oracle_tools.t_constraint_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
 )
 is
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
   l_ddl_text clob;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_DDL.ADD_DDL');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
 $end
 
-$if pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
 
   -- Primary/unique constraints with USING INDEX syntax may fail.
   --
@@ -152,25 +152,25 @@ $else
 $end
 
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
 
 overriding member procedure execute_ddl
-( self in t_constraint_ddl
+( self in oracle_tools.t_constraint_ddl
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_CONSTRAINT_DDL.EXECUTE_DDL');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
 $end
 
-  t_schema_ddl.execute_ddl(p_schema_ddl => self);
+  oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end execute_ddl;  

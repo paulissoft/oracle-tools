@@ -1,21 +1,21 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_MATERIALIZED_VIEW_DDL" IS
 
 overriding member procedure migrate
-( self in out nocopy t_materialized_view_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_materialized_view_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
-  l_tgt_materialized_view_object t_materialized_view_object := treat(p_target.obj as t_materialized_view_object);
-  l_schema_ddl_tab t_schema_ddl_tab;
+  l_tgt_materialized_view_object oracle_tools.t_materialized_view_object := treat(p_target.obj as oracle_tools.t_materialized_view_object);
+  l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_MATERIALIZED_VIEW_DDL.MIGRATE');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
 $end
 
   -- first the standard things
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -27,14 +27,14 @@ $end
   into    l_schema_ddl_tab
   from    table
           ( oracle_tools.pkg_ddl_util.display_ddl_schema
-            ( l_tgt_materialized_view_object.object_schema() -- p_schema
-            , null                                           -- p_new_schema
-            , 0                                              -- p_sort_objects_by_deps
-            , 'OBJECT_GRANT'                                 -- p_object_type
-            , null                                           -- p_object_names
-            , null                                           -- p_object_names_include
-            , l_tgt_materialized_view_object.network_link()  -- p_network_link
-            , 0                                              -- p_grantor_is_schema
+            ( p_schema => l_tgt_materialized_view_object.object_schema()
+            , p_new_schema => null
+            , p_sort_objects_by_deps => 0
+            , p_object_type => 'OBJECT_GRANT'
+            , p_object_names => null
+            , p_object_names_include => null
+            , p_network_link=> l_tgt_materialized_view_object.network_link()
+            , p_grantor_is_schema => 0
             )
           ) t
   ;
@@ -61,7 +61,7 @@ $end
     end loop;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;

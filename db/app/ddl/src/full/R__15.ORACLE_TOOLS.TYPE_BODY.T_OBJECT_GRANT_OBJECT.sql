@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_GRANT_OBJECT" AS
 
 constructor function t_object_grant_object
-( self in out nocopy t_object_grant_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_object_grant_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_grantee in varchar2
 , p_privilege in varchar2
@@ -11,8 +11,8 @@ constructor function t_object_grant_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_OBJECT_GRANT_OBJECT.T_OBJECT_GRANT_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   p_base_object.print();
   dbug.print
   ( dbug."input"
@@ -31,7 +31,7 @@ $end
   self.privilege$ := p_privilege;
   self.grantable$ := p_grantable;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -75,55 +75,55 @@ end grantable;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in t_object_grant_object
+( self in oracle_tools.t_object_grant_object
 , p_schema in varchar2
 )
 is
-$if pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
   pragma autonomous_transaction;
 
   -- Capture invalid objects before releasing to next enviroment.
   l_statement varchar2(4000 char) := null;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_OBJECT_GRANT_OBJECT.CHK');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_schema() is not null
   then
-    raise_application_error(-20000, 'Object schema should be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
   end if;
   if self.object_name() is not null
   then
-    raise_application_error(-20000, 'Object name should be empty.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
   end if;
 
   if self.column_name() is not null
   then
-    raise_application_error(-20000, 'Column name should be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column name should be null.');
   end if;
   if self.grantee() is null
   then
-    raise_application_error(-20000, 'Grantee should not be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Grantee should not be null.');
   end if;
   if self.privilege() is null
   then
-    raise_application_error(-20000, 'Privilege should not be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Privilege should not be null.');
   end if;
   if self.grantable() is null
   then
-    raise_application_error(-20000, 'Grantable should not be null.');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Grantable should not be null.');
   end if;
 
-$if pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_util.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
   -- This is implemented by re-granting the grant statement when the grantor is equal to the logged in user.
 
-  if pkg_ddl_util.do_chk(self.object_type()) and self.network_link() is null
+  if oracle_tools.pkg_ddl_util.do_chk(self.object_type()) and self.network_link() is null
   then
     begin
       select  'GRANT ' ||
@@ -167,7 +167,7 @@ $end
 
 $end
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;

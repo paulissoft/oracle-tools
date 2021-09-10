@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TRIGGER_DDL" IS
 
 overriding member procedure add_ddl
-( self in out nocopy t_trigger_ddl
+( self in out nocopy oracle_tools.t_trigger_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -12,8 +12,8 @@ is
   l_find_expr constant varchar2(100) := '^(\s+)(when\s(|.*[^:a-zA-Z0-9$#_])(old|new)\..*)$'; -- :old or :new is used in trigger body, not the triggering event
   l_repl_expr constant varchar2(100) := '\2';
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_TRIGGER_DDL.ADD_DDL');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
@@ -25,7 +25,7 @@ $end
   , p_add_sqlterminator => p_add_sqlterminator
   );
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;

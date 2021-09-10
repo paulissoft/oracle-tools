@@ -21,8 +21,8 @@ return varchar2
 deterministic
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_MEMBER_OBJECT.ID');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ID');
   dbug.print(dbug."output", 'return: %s', member_name());
   dbug.leave;
 $end  

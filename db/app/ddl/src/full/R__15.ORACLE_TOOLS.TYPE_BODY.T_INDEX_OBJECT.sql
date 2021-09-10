@@ -1,47 +1,50 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_INDEX_OBJECT" AS
 
 constructor function t_index_object
-( self in out nocopy t_index_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_index_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_INDEX_OBJECT.T_INDEX_OBJECT (1)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || ' (1)');
   dbug.print
   ( dbug."input"
-  , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s'
+  , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
   , p_base_object.id()
   , p_object_schema
   , p_object_name
+  , p_tablespace_name
   );
 $end
 
-  self.base_object$ := p_base_object;
-  self.network_link$ := null;
-  self.object_schema$ := p_object_schema;
-  self.object_name$ := p_object_name;
-  self.column_names$ := t_index_object.get_column_names(p_object_schema, p_object_name);
+  -- default constructor
+  self := oracle_tools.t_index_object(null, p_object_schema, p_base_object, p_object_name, null, null);
 
-  select  ind.tablespace_name
-  into    self.tablespace_name$
-  from    all_indexes ind
-  where   ind.owner = p_object_schema
-  and     ind.index_name = p_object_name;
+  self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name);
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+  if self.tablespace_name$ is null
+  then
+    select  ind.tablespace_name
+    into    self.tablespace_name$
+    from    all_indexes ind
+    where   ind.owner = p_object_schema
+    and     ind.index_name = p_object_name;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
-$end  
+$end
 
   return;
 end;
 
 constructor function t_index_object
-( self in out nocopy t_index_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_index_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_tablespace_name in varchar2
@@ -49,8 +52,8 @@ constructor function t_index_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_INDEX_OBJECT.T_INDEX_OBJECT (2)');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || ' (2)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
@@ -65,10 +68,10 @@ $end
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
-  self.column_names$ := t_index_object.get_column_names(p_object_schema, p_object_name);
+  self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema, p_object_name);
   self.tablespace_name$ := p_tablespace_name;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end  
 
@@ -85,7 +88,7 @@ begin
 end tablespace_name;
 
 member procedure tablespace_name
-( self in out nocopy t_index_object
+( self in out nocopy oracle_tools.t_index_object
 , p_tablespace_name in varchar2
 )
 is
@@ -136,7 +139,7 @@ begin
   -- <owner>  ORDER_PK  <owner> ORDERHEADER SEQ         1
 
   -- GPA 20170126
-  -- The problem was that t_schema_object.id ignored base info for an INDEX
+  -- The problem was that oracle_tools.t_schema_object.id ignored base info for an INDEX
 
   return self.object_schema ||
          ':' ||
@@ -161,18 +164,18 @@ return varchar2
 is
   l_column_names varchar2(4000 char) := null;
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_INDEX_OBJECT.GET_COLUMN_NAMES');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_COLUMN_NAMES');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s', p_object_schema, p_object_name);
 $end
 
   for r in
   ( select  ic.column_name
-$if pkg_ddl_util.c_#138550749 $then
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
     ,       ie.column_expression
 $end
     from    all_ind_columns ic
-$if pkg_ddl_util.c_#138550749 $then
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
             left join all_ind_expressions ie
             on ie.index_owner = ic.index_owner and ie.index_name = ic.index_name and ie.column_position = ic.column_position
 $end    
@@ -185,7 +188,7 @@ $end
   loop
     l_column_names :=
       case when l_column_names is not null then l_column_names || ',' end ||
-$if pkg_ddl_util.c_#138550749 $then
+$if oracle_tools.pkg_ddl_util.c_#138550749 $then
       case
         when r.column_expression is not null
         then to_char(dbms_utility.get_hash_value(r.column_expression, 37, 1073741824))
@@ -197,7 +200,7 @@ $end
     ;
   end loop;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'return: %s', l_column_names);
   dbug.leave;
 $end
@@ -206,27 +209,27 @@ $end
 end get_column_names;
 
 overriding member procedure chk
-( self in t_index_object
+( self in oracle_tools.t_index_object
 , p_schema in varchar2
 )
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_INDEX_OBJECT.CHK');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
-  pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
   if self.object_name() is null
   then
-    raise_application_error(-20000, 'Object name should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
   end if;
   if self.column_names() is null
   then
-    raise_application_error(-20000, 'Column names should not be empty');
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;

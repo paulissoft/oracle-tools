@@ -1,28 +1,47 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_STR_UTIL" IS
 /**
- * <h1>Functionaliteit</h1>
+ * <h1>Functionality</h1>
  * <p>
  * String utilities.
  * </p>
  * <h2>NOTE 1</h2>
  * <p>
- * De documentatie is in PLDoc formaat
+ * The documentation is in PLDoc format
  * (<a href="http://www.sourceforge.net/projects/pldoc">http://www.sourceforge.net/projects/pldoc</a>).
  * </p>
  * @headcom
  *
  */
 
-c_revision_label constant varchar2(100 char) := '$Revision:: 1.15	  $';
+c_debugging constant naturaln := 0; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
 type t_clob_tab is table of clob;
 
 /**
- * Splitst een string gescheiden door een karakterreeks in meerdere delen.
+ * An enhancement for dbms_lob.substr().
  *
- * @param p_str        De te splitsen string.
- * @param p_delimiter  De scheiding tussen delen.
- * @param p_str_tab    De afzonderlijke delen.
+ * It appears that dbms_lob.substr(amount => 32767) returns at most 32764 characters.
+ * This function corrects that.
+ *
+ * @param p_clob       The CLOB.
+ * @param p_amount     The amount.
+ * @param p_offset     The offset.
+ *
+ * @return The substring
+ */
+function dbms_lob_substr
+( p_clob in clob
+, p_amount in naturaln := 32767
+, p_offset in positiven := 1
+)
+return varchar2;
+
+/**
+ * Split a string separated by a delimiter string.
+ *
+ * @param p_str        The input string to split.
+ * @param p_delimiter  The separator string.
+ * @param p_str_tab    The output table.
  */
 procedure split
 ( p_str in varchar2
@@ -43,10 +62,10 @@ procedure split
 );
 
 /**
- * Verwijdert rechts aan het begin en links aan het einde van de string alle karakters die in de set zitten.
+ * Removes left and right from the input string all characters in a set.
  *
- * @param p_str  De string. Als de string alleen maar uit karakters van set bestaat, wordt die leeg (null).
- * @param p_set  De set van karakters die niet meer aan begin of einde mogen.
+ * @param p_str  The input string. If it consists only of characters from the set it will become empty.
+ * @param p_set  The set of characters to remove from the begin and end.
  */
 procedure trim
 ( p_str in out nocopy clob
@@ -54,11 +73,11 @@ procedure trim
 );
 
 /**
- * Verwijdert voor elk element rechts aan het begin en links aan het einde alle karakters die in de set zitten.
- * Hierna worden alle null elementen vanaf het einde verwijderd.
+ * Removes left and right from the input table all characters in a set.
+ * All null elements will be removed.
  *
- * @param p_str_tab  Een collectie van strings.
- * @param p_set      De set van karakters die niet meer aan begin of einde mogen.
+ * @param p_str_tab  A string collection.
+ * @param p_set      The set of characters to remove from the begin and end.
  */
 procedure trim
 ( p_str_tab in out nocopy t_clob_tab
@@ -66,23 +85,23 @@ procedure trim
 );
 
 /**
- * Vergelijkt twee CLOB collecties en retourneert 0 indien ze gelijk zijn qua aantal elementen en ook per element.
+ * Compare two CLOB collections and returns 0 if totally equal (count and each element).
  *
- * @param p_str1_tab  De eerste CLOB collectie.
- * @param p_str2_tab  De eerste CLOB collectie.
+ * @param p_str1_tab  The first CLOB collection.
+ * @param p_str2_tab  The second CLOB collection.
  *
- * @return -1 indien p_str1_tab.count < p_str2_tab.count of
- *	      indien p_str1_tab.count = p_str2_tab.count en er is een rij R met
- *	      dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) < 0 en
- *	      voor alle rijen < R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
- *	    0 p_str1_tab.count = p_str2_tab.count en
- *	      voor alle rijen R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
- *	    1 indien p_str1_tab.count > p_str2_tab.count of
- *	      indien p_str1_tab.count = p_str2_tab.count en er is een rij R met
- *	      dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) > 0 en
- *	      voor alle rijen < R geldt dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
+ * @return -1 if p_str1_tab.count < p_str2_tab.count or
+ *            p_str1_tab.count = p_str2_tab.count and there is a row R for which
+ *            dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) < 0 and
+ *            for all rows R' < R dbms_lob.compare(p_str1_tab(R'), p_str2_tab(R')) = 0
+ *          0 if p_str1_tab.count = p_str2_tab.count and
+ *            for all rows R dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) = 0
+ *          1 if p_str1_tab.count > p_str2_tab.count or
+ *            if p_str1_tab.count = p_str2_tab.count and there is a row R with
+ *            dbms_lob.compare(p_str1_tab(R), p_str2_tab(R)) > 0 and
+ *            for all rows R' < R dbms_lob.compare(p_str1_tab(R'), p_str2_tab(R')) = 0
 
- * @throws ORA-06531  Reference to uninitialized collection
+ * @throws ORA-06531  Reference to an uninitialized collection
  */
 function compare
 ( p_str1_tab in t_clob_tab
@@ -91,19 +110,17 @@ function compare
 return integer;
 
 /**
- * Vergelijkt twee CLOB collecties.
+ * Compares two CLOB collections.
  *
- * @param p_str1_tab		  De eerste CLOB collectie.
- * @param p_str2_tab		  De eerste CLOB collectie.
- * @param p_first_line_not_equal  De eerste regel die niet gelijk is.
- *				  NULL indien er geen verschillen zijn.
- * @param p_first_char_not_equal  De eerste karakterpositie die niet gelijk is in de eerste regel die niet gelijk is.
- *				  NULL indien er geen verschillen zijn of als de ene collectie groter is dan de andere
- *				  en de kleinere collectie een subset is van de andere (d.w.z. alle regels gelijk).
- *				  Niet NULL als er een regelnummer R is die in beide collecties zit en waarvoor er een
- *				  karakter C zit is waarvoor geldt dat:
- *				  dbms_lob.substr(lob_loc => p_str1_tab(R), offset => C, amount => 1) !=
- *				  dbms_lob.substr(lob_loc => p_str2_tab(R), offset => C, amount => 1)
+ * @param p_str1_tab              The first CLOB collection.
+ * @param p_str2_tab              The second CLOB collection.
+ * @param p_first_line_not_equal  The first line not equal (null when there are no differences).
+ * @param p_first_char_not_equal  The first character position that differs for line p_first_line_not_equal.
+ *                                NULL when no differences or one collection is a sub set of the other (but not equal).
+ *                                Not NULL if there is a row R and character position C for which:
+ *
+ *                                dbms_lob.substr(lob_loc => p_str1_tab(R), offset => C, amount => 1) !=
+ *                                dbms_lob.substr(lob_loc => p_str2_tab(R), offset => C, amount => 1)
  *
  * @throws ORA-06531  Reference to uninitialized collection
  */
@@ -117,8 +134,8 @@ procedure compare
 /**
  * Append a buffer to a CLOB using dbms_lob.writeappend().
  *
- * @param pi_buffer		  The buffer.
- * @param pio_clob		  The CLOB.
+ * @param pi_buffer     The buffer.
+ * @param pio_clob      The CLOB.
  */
 procedure append_text
 ( pi_buffer in varchar2
@@ -132,9 +149,9 @@ procedure append_text
  * See also http://www.talkapex.com/2009/06/how-to-quickly-append-varchar2-to-clob.html
  * </p>
  *
- * @param pi_text 		  The text to write to the buffer.
- * @param pio_buffer		  The buffer that, when full, is flushed to the CLOB.
- * @param pio_clob		  The CLOB.
+ * @param pi_text       The text to write to the buffer.
+ * @param pio_buffer    The buffer that, when full, is flushed to the CLOB.
+ * @param pio_clob      The CLOB.
  */
 procedure append_text
 ( pi_text in varchar2
@@ -145,9 +162,9 @@ procedure append_text
 /**
  * Write or append a text collection to a CLOB.
  *
- * @param pi_text_tab 		  The text collection.
- * @param pio_clob		  The CLOB. If null a temporary is created.
- * @param pi_append               Should we append or not? If not the CLOB will be trimmed to zero bytes.
+ * @param pi_text_tab   The text collection.
+ * @param pio_clob      The CLOB. If null a temporary is created.
+ * @param pi_append     Should we append or not? If not the CLOB will be trimmed to zero bytes.
  */
 procedure text2clob
 ( pi_text_tab in oracle_tools.t_text_tab
@@ -163,8 +180,8 @@ return clob;
 /**
  * Write or append a text collection to a CLOB.
  *
- * @param pi_clob		  The CLOB. If null a temporary is created.
- * @param pi_trim                 Trim at both ends.
+ * @param pi_clob     The CLOB. If null a temporary is created.
+ * @param pi_trim     Trim at both ends.
  *
  * @return The text collection
  */
@@ -174,6 +191,60 @@ function clob2text
 )
 return oracle_tools.t_text_tab;
 
-END PKG_STR_UTIL;
+$if oracle_tools.cfg_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(DDL)
+--%suite
+
+--%test
+procedure ut_split1;
+
+--%test
+procedure ut_split2;
+
+--%test
+procedure ut_split3;
+
+--%test
+--%disabled
+procedure ut_trim1;
+
+--%test
+--%disabled
+procedure ut_trim2;
+
+--%test
+--%disabled
+procedure ut_compare1;
+
+--%test
+--%disabled
+procedure ut_compare2;
+
+--%test
+--%disabled
+procedure ut_append_text1;
+
+--%test
+--%disabled
+procedure ut_append_text2;
+
+--%test
+--%disabled
+procedure ut_text2clob1;
+
+--%test
+--%disabled
+procedure ut_text2clob2;
+
+--%test
+--%disabled
+procedure ut_clob2text;
+
+$end -- $if oracle_tools.cfg_pkg.c_testing $then
+
+END pkg_str_util;
 /
 

@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_ATTRIBUTE_OBJECT" IS
 
 constructor function t_type_attribute_object
-( self in out nocopy t_type_attribute_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_type_attribute_object
+, p_base_object in oracle_tools.t_named_object
 , p_member# in integer
 , p_member_name in varchar2
 , p_data_type_name in varchar2
@@ -16,8 +16,8 @@ constructor function t_type_attribute_object
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_TYPE_ATTRIBUTE_OBJECT.T_TYPE_ATTRIBUTE_OBJECT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_member#: %s; p_member_name: %s; p_data_type_name: %s; p_data_type_mod: %s'
@@ -49,7 +49,7 @@ $end
   self.data_scale$ := p_data_scale;
   self.character_set_name$ := p_character_set_name;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end  
 

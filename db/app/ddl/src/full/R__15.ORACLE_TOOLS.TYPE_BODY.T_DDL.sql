@@ -1,23 +1,23 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_DDL" AS
 
 constructor function t_ddl
-( self in out nocopy t_ddl
+( self in out nocopy oracle_tools.t_ddl
 , p_ddl# in integer
 , p_verb in varchar2
-, p_text in t_text_tab
+, p_text in oracle_tools.t_text_tab
 )
 return self as result
 is
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter('T_DDL.T_DDL');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
 $end
 
   self.ddl#$ := p_ddl#;
   self.verb$ := p_verb;
   self.text := p_text;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -41,30 +41,32 @@ begin
 end ddl#;
 
 member procedure print
-( self in t_ddl
+( self in oracle_tools.t_ddl
 )
 is
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   l_clob clob := null;
   l_lines_tab dbms_sql.varchar2a;
 $end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter('T_DDL.PRINT');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   dbug.print
   ( dbug."info"
-  , 'ddl#: %s; verb: %s'
+  , 'ddl#: %s; verb: %s; cardinality: %s'
   , self.ddl#()
   , self.verb()
+  , cardinality(self.text)
   );
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   if cardinality(self.text) > 0
   then
-    pkg_str_util.text2clob
+    oracle_tools.pkg_str_util.text2clob
     ( pi_text_tab => self.text
     , pio_clob => l_clob
     , pi_append => false
     );
-    pkg_str_util.split
+    oracle_tools.pkg_str_util.split
     ( p_str => l_clob
     , p_delimiter => chr(10)
     , p_str_tab => l_lines_tab
@@ -75,13 +77,14 @@ $if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 1 $then
     end loop;
     dbms_lob.freetemporary(l_clob);
   end if;
+$end  
   dbug.leave;
 $else
   null;
 $end
 end print;
 
-order member function match( p_ddl in t_ddl ) 
+order member function match( p_ddl in oracle_tools.t_ddl ) 
 return integer
 deterministic
 is
@@ -89,14 +92,14 @@ begin
   return compare(p_ddl);
 end match;
 
-member function compare( p_ddl in t_ddl )
+member function compare( p_ddl in oracle_tools.t_ddl )
 return integer
 deterministic
 is
   l_result binary_integer := 0;
   l_idx binary_integer;
-  l_text1_tab t_text_tab := null;
-  l_text2_tab t_text_tab := null;
+  l_text1_tab oracle_tools.t_text_tab := null;
+  l_text2_tab oracle_tools.t_text_tab := null;
 
   function cmp(p_val1 in varchar2, p_val2 in varchar2)
   return binary_integer
@@ -112,9 +115,37 @@ is
         else 0
       end;
   end cmp;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  function pos_not_equal(p_text1 in varchar2, p_text2 in varchar2)
+  return pls_integer
+  is
+  begin
+    if p_text1 is null and p_text2 is null
+    then
+      return 0;
+    elsif p_text1 is null or p_text2 is null
+    then
+      dbug.print(dbug.warning, 'equal: "%s"; p_text1 remainder: "%s"; p_text2 remainder: "%s"', null, substr(p_text1, 1, 20), substr(p_text2, 1, 20));
+      return 1;
+    else
+      for i_idx in 1 .. greatest(length(p_text1), length(p_text2))
+      loop
+        if substr(p_text1, i_idx, 1) = substr(p_text2, i_idx, 1)
+        then
+          null;
+        else
+          dbug.print(dbug.warning, 'equal: "%s"; p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, 1, i_idx - 1), substr(p_text1, i_idx, 20), substr(p_text2, i_idx, 20));
+          return i_idx;
+        end if;
+      end loop;
+      return 0;
+    end if;    
+  end pos_not_equal;
+$end  
 begin
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter('T_DDL.COMPARE');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'COMPARE');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_ddl:');
@@ -164,12 +195,25 @@ $end
           l_result := +1;
         end if;
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+        if l_result != 0
+        then
+          dbug.print
+          ( dbug."warning"
+          , 'idx: %s; result: %s; index not equal: %s'
+          , l_idx
+          , l_result
+          , pos_not_equal(l_text1_tab(l_idx), case when l_idx <= l_text2_tab.last then l_text2_tab(l_idx) end)
+          );
+        end if;
+$end
+
         l_idx := l_text1_tab.next(l_idx);
       end loop;
     end if;
   end if;
 
-$if cfg_pkg.c_debugging and pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.print(dbug."output", 'result: %s', l_result);
   dbug.leave;
 $end
@@ -177,7 +221,7 @@ $end
   return l_result;
 end compare;
 
-member procedure text_to_compare( self in t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
+member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
 is
 begin
   p_text_tab := self.text;

@@ -18,6 +18,7 @@
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>F_GENERATE_DDL
+,PKG_DDL_ERROR
 ,PKG_DDL_UTIL
 ,PKG_STR_UTIL
 ,P_GENERATE_DDL
@@ -29,8 +30,6 @@
 ,T_CONSTRAINT_DDL
 ,T_CONSTRAINT_OBJECT
 ,T_DDL
-,T_DDL_INFO_REC
-,T_DDL_INFO_TAB
 ,T_DDL_SEQUENCE
 ,T_DDL_TAB
 ,T_DEPENDENT_OR_GRANTED_OBJECT
@@ -61,8 +60,6 @@
 ,T_SCHEMA_OBJECT_TAB
 ,T_SEQUENCE_DDL
 ,T_SEQUENCE_OBJECT
-,T_SORT_OBJECTS_BY_DEPS_REC
-,T_SORT_OBJECTS_BY_DEPS_TAB
 ,T_SYNONYM_DDL
 ,T_SYNONYM_OBJECT
 ,T_TABLE_COLUMN_DDL
@@ -84,6 +81,7 @@
 ,V_MY_SCHEMA_DDL_INFO
 ,V_MY_SCHEMA_OBJECT_INFO
     </db.object.names>
+    <db.test.phase>test</db.test.phase>
   </properties>
 
   <build>

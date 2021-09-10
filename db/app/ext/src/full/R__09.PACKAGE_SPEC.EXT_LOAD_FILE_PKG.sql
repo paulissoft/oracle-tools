@@ -1,4 +1,4 @@
-create or replace package ext_load_file_pkg as
+create or replace package ext_load_file_pkg authid definer as
 
 -- to speed it up
 create_collection_from_query constant boolean := false;
@@ -679,7 +679,7 @@ procedure parse_object_name
 
 $if cfg_pkg.c_testing $then
 
---%suitepath(${oracle_tools_schema})
+--%suitepath(EXT)
 --%suite
 --%rollback(manual)
 

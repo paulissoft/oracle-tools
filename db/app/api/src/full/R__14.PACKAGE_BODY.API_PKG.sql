@@ -1,8 +1,6 @@
 CREATE OR REPLACE PACKAGE BODY "API_PKG" -- -*-coding: utf-8-*-
 is
 
--- LOCAL
-
 $if cfg_pkg.c_testing $then
 
 function called_by_utplsql
@@ -41,9 +39,11 @@ procedure ut_setup
 , p_insert_procedure in all_procedures.object_name%type
 )
 is
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   l_dynamic_depth pls_integer := utl_call_stack.dynamic_depth;
+$end  
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.UT_SETUP');
 
   for i_idx in 1 .. l_dynamic_depth
@@ -67,7 +67,7 @@ $end
     execute immediate 'begin ' || p_insert_procedure || '; end;';
   end if;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.leave;
 exception
   when others
@@ -134,7 +134,7 @@ is
   l_limit constant pls_integer := 100;
   l_tab t_tab;
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.SHOW_CURSOR');
 $end
 
@@ -151,7 +151,7 @@ $end
     exit when p_cursor%notfound;
   end loop;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 
@@ -170,7 +170,7 @@ is
   l_error_code varchar2(2000 char) := null;
   l_error_message varchar2(2000 char) := null;
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.TRANSLATE_ERROR');
   dbug.print
   ( dbug."input"
@@ -182,7 +182,7 @@ $end
 
   if l_sqlerrm like l_generic_exception
   then
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
     dbug.print(dbug."info", 'Generic exception; l_separator_expr: %s; first txt: %s', l_separator_expr, regexp_substr(l_sqlerrm, l_separator_expr, 1, 1)); 
 $end
 
@@ -194,7 +194,7 @@ $end
               regexp_substr(l_sqlerrm, l_separator_expr, 1, level) is not null
     )
     loop
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
       dbug.print(dbug."info", 'r.nr: %s; r.txt: %s', r.nr, r.txt);
 $end
 
@@ -209,20 +209,20 @@ $end
 
           execute immediate 'begin :1 := ' || p_function || '(:2); end;' using out l_error_message, in l_error_code;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
           dbug.print(dbug."info", 'l_error_code: %s; l_error_message: %s', l_error_code, l_error_message); 
 $end
 
         else -- param 1, 2, 3, etcetera
           l_error_message := replace(l_error_message, '<p' || r.nr || '>', r.txt);
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
           dbug.print(dbug."info", 'l_error_message: %s', l_error_message);
 $end
 
       end case;
     end loop;
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   else
     dbug.print(dbug."info", 'Error does not match: %s', l_generic_exception); 
 $end
@@ -236,14 +236,14 @@ $end
     l_error_message := l_sqlerrm;
   end if;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.print(dbug."output", 'return: %s', nvl(l_error_message, l_sqlerrm));
   dbug.leave;
 $end
 
   return nvl(l_error_message, l_sqlerrm);
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
 exception
   when others
   then
@@ -262,15 +262,15 @@ is
   l_collection sys.odcivarchar2list;
   l_max_pos constant integer := 32767; -- or 4000
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.LIST2COLLECTION');
   dbug.print(dbug."input", 'p_sep: %s; p_value_list: %s; p_ignore_null: %s', p_sep, p_value_list, p_ignore_null);
 $end
 
-  select  t.value
+  select  t.val
   bulk collect
   into    l_collection
-  from    ( select  substr(str, pos + 1, lead(pos, 1, l_max_pos) over(order by pos) - pos - 1) value
+  from    ( select  substr(str, pos + 1, lead(pos, 1, l_max_pos) over(order by pos) - pos - 1) val
             from    ( select  str
                       ,       instr(str, p_sep, 1, level) pos
                       from    ( select  p_value_list as str
@@ -281,9 +281,9 @@ $end
                               level <= length(str) - nvl(length(replace(str, p_sep)), 0) /* number of separators */ + 1
                     )
           ) t
-  where   ( p_ignore_null = 0 or t.value is not null );
+  where   ( p_ignore_null = 0 or t.val is not null );
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.print(dbug."output", 'l_collection.count: %s', case when l_collection is not null then l_collection.count end);
   dbug.leave;
 $end
@@ -317,7 +317,7 @@ procedure ut_expect_violation
 )
 is
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.UT_EXPECT_VIOLATION');
   dbug.print
   ( dbug."input"
@@ -356,7 +356,7 @@ $end
       raise_application_error(-20000, 'Unknown sqlcode: ' || p_sqlcode);
   end case;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.leave;
 exception
   when others
@@ -365,6 +365,117 @@ exception
     raise;
 $end
 end ut_expect_violation;
+
+procedure dbms_output_enable
+( p_db_link in varchar2
+, p_buffer_size in integer default null
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT || '.DBMS_OUTPUT_ENABLE');
+  dbug.print(dbug."input", 'p_db_link: %s; p_buffer_size: %s', p_db_link, p_buffer_size);
+$end
+
+  -- check SQL injection
+  if dbms_assert.simple_sql_name(p_db_link) is null
+  then
+    raise value_error;
+  end if;
+
+  execute immediate
+    utl_lms.format_message('call dbms_output.enable@%s(:b1)', p_db_link)
+    using p_buffer_size;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end dbms_output_enable;
+
+procedure dbms_output_clear
+( p_db_link in varchar2
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT || '.DBMS_OUTPUT_CLEAR');
+  dbug.print(dbug."input", 'p_db_link: %s', p_db_link);
+$end
+
+  -- check SQL injection
+  if dbms_assert.simple_sql_name(p_db_link) is null
+  then
+    raise value_error;
+  end if;
+
+  execute immediate
+    utl_lms.format_message
+    ( '
+declare 
+  l_line varchar2(32767 char); 
+  l_status integer; 
+begin 
+  dbms_output.get_line@%s(l_line, l_status);
+end;'
+    , p_db_link
+    );
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end dbms_output_clear;    
+
+procedure dbms_output_flush
+( p_db_link in varchar2
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT || '.DBMS_OUTPUT_FLUSH');
+  dbug.print(dbug."input", 'p_db_link: %s', p_db_link);
+$end
+
+  -- check SQL injection
+  if dbms_assert.simple_sql_name(p_db_link) is null
+  then
+    raise value_error;
+  end if;
+
+  execute immediate
+    utl_lms.format_message
+    ( '
+declare
+  l_line varchar2(32767 char);
+  l_status integer;
+begin
+  loop
+    dbms_output.get_line@%s(line => l_line, status => l_status);
+    exit when l_status != 0;
+    dbms_output.put_line(l_line);
+  end loop;
+end;'
+    , p_db_link
+    );
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end dbms_output_flush;
 
 $if cfg_pkg.c_testing $then
 
@@ -376,7 +487,7 @@ procedure ut_setup
 )
 is
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.UT_SETUP');
   dbug.print
   ( dbug."input"
@@ -399,7 +510,7 @@ $end
     else ut_setup(p_br_package_tab, p_insert_procedure);
   end case;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.leave;
 exception
   when others
@@ -417,7 +528,7 @@ procedure ut_teardown
 )
 is
 begin
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT || '.UT_TEARDOWN');
   dbug.print
   ( dbug."input"
@@ -442,7 +553,7 @@ $end
     else ut_teardown(p_br_package_tab, p_delete_procedure);
   end case;
 
-$if cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
   dbug.leave;
 exception
   when others
