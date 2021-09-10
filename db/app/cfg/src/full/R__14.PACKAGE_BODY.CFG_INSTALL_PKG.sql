@@ -381,7 +381,7 @@ is
                  -- skip assignments to a variable/constant but not for instance to a parameter
                  not(nd.usage = 'ASSIGNMENT' and nd.type in ('VARIABLE', 'CONSTANT'))
       where   d.object_type not in ('PACKAGE', 'TYPE')
-      and     d.type not in ('FUNCTION', 'PROCEDURE', 'LABEL') -- skip unused functions/procedures
+      and     d.type not in ('FUNCTION', 'PROCEDURE') -- skip unused functions/procedures
       and     nd.name is null
     )
     , assignments as (
@@ -403,7 +403,7 @@ is
       ,       'is referenced but never assigned a value (before that reference)' as text
       from    declarations d
               inner join non_declarations td -- type declaration via usage_context_id
-              on td.usage_context_id = d.usage_id and td.type != 'REFCURSOR' -- ignore REFCURSOR
+              on td.usage_context_id = d.usage_id and td.type != 'REFCURSOR' -- ignore REFCURSOR variables since they are not assigned a value
               inner join references r
               on r.owner = d.owner and
                  r.object_name = d.object_name and
@@ -482,7 +482,7 @@ is
     , shadowing_identifiers as (
       select  d2.*
       ,       6 as message_number
-      ,       'shadows another identifier of the same name' as text
+      ,       'may shadow another identifier with the same name declared at (' || d1.line || ',' || d1.col || ')' as text
       from    declarations d1
               inner join declarations d2
               on d2.owner = d1.owner and
@@ -492,7 +492,7 @@ is
                  d2.usage_context_id = d1.usage_context_id and
                  d2.usage_id > d1.usage_id
       where   d1.object_type not in ('PACKAGE', 'TYPE')
-      and     d1.type not in ('ITERATOR', 'RECORD ITERATOR')
+      --and     d1.type not in ('ITERATOR', 'RECORD ITERATOR')
       and     d2.object_type not in ('PACKAGE', 'TYPE')
     )
     , checks as (
