@@ -21,7 +21,11 @@ This chapter describes the configuration you can define for Oracle Tools.
 
 ## Profiles
 
-Before we dive into the configuration it is important to note that Maven profiles are available to execute the following actions:
+Before we dive into the configuration it is important to note that Maven profiles are available to execute the following actions.
+
+Of course it is possible to work without Maven profiles but why should you?
+
+### Database
 
 |Profile (action)    |Description|
 |:---------------    |:----------|
@@ -32,11 +36,16 @@ Before we dive into the configuration it is important to note that Maven profile
 |db-generate-ddl-full|Generate DDL scripts assuming that there are no objects yet.|
 |db-generate-ddl-incr|Generate DDL scripts to migrate non repeatable objects that may already be there.|
 
-It is possible to work without Maven profiles but why should you?
+### Apex
 
-## Database configuration directory
+|Profile (action)    |Description|
+|:---------------    |:----------|
+|apex-export         |Export an Apex application.|
+|apex-import         |Import an Apex application.|
 
-In oracle-tools there is a directory conf/src that contains the database configuration:
+## Configuration files directory
+
+In oracle-tools there is a directory conf/src that contains the configuration files:
 
 ```
 |   env.properties
@@ -48,7 +57,12 @@ In oracle-tools there is a directory conf/src that contains the database configu
         flyway-db.conf
 ```
 
-The property db.config.dir in Oracle Tools points to this directory.
+Here orcl is the logical name for a database.
+
+The property db.config.dir in Oracle Tools by defaults points to the directory conf/src.
+
+However you can set db.config.dir to another directory anywhere provided you
+have a file called env.properties there and other database directories below.
 
 ### env.properties
 
