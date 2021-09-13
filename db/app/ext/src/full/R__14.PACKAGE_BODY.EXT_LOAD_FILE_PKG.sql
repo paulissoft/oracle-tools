@@ -3358,6 +3358,15 @@ is
   l_column2_tab sys.odcinumberlist;
   l_prefix varchar2(100 char);
   l_cursor sys_refcursor;
+  l_csv constant clob := to_clob('Column1;Column2
+2020;2020
+abcde;1
+;
+fghij;2
+klmno;3
+pqrst;4');
+  l_eol varchar2(2) := null;
+  l_field_separator varchar2(1) := null;
  
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'UT_LOAD_CSV';
 begin
@@ -3365,20 +3374,21 @@ $if cfg_pkg.c_debugging $then
   dbug.enter(l_module_name);
 $end
 
+  determine_csv_info
+  ( p_csv => l_csv
+  , p_field_separators => ';'
+  , p_eol => l_eol
+  , p_field_separator => l_field_separator
+  );
+
   l_nr_rows := 
     load_csv
     ( p_object_name => get_owner || '."myobject"'
     , p_column_info_tab => g_column_info_tab
     , p_action => 'I'
-    , p_clob => 'Column1;Column2
-2020;2020
-abcde;1
-;
-fghij;2
-klmno;3
-pqrst;4'
-    , p_eol => chr(10)
-    , p_field_separator => ';'
+    , p_clob => l_csv
+    , p_eol => l_eol
+    , p_field_separator => l_field_separator
     , p_quote_char => '"'
     , p_header_row_from => 1
     , p_header_row_till => 2
@@ -3407,7 +3417,7 @@ end ut_load_csv;
 
 procedure ut_get_column_info_tab
 is
-  l_csv constant clob := q'[account,date,description,position (EUR),running_total (EUR)
+  l_csv constant clob := to_clob(q'[account,date,description,position (EUR),running_total (EUR)
 -------,----,-----------,--------------,-------------------
 Expenses:Bank:CreditAgricole:Checking:Compte1:Fine,2019-03-20,STMTTRN - COM INTERVENTION - XCEBR400 2019031900029511000001 2 OPERATIONS,16.0,16.0
 Expenses:Bank:CreditAgricole:Checking:Compte2:Fine,2019-05-17,STMTTRN - FRAIS ENVOI CHEQUIER - XCCCD050 2019051600009931000001 PLI SIMPLE 0000226,1.2,17.2
@@ -3429,7 +3439,9 @@ Expenses:Bank:CreditAgricole:Checking:Compte3:Fine,2020-03-19,STMTTRN - COM INTE
 Expenses:Bank:CreditAgricole:Checking:Compte2:Fine,2020-04-28,STMTTRN - FRAIS ACHAT ETRANGER DI - XCPCB200 2020042800008968000001 COMMISSION CB 270420 CHANGE.OR,0.53,357.61
 Expenses:Bank:CreditAgricole:Checking:Compte3:Fine,2020-05-20,STMTTRN - COM INTERVENTION XCEBR400 2020051900036583000001 1 OPERATION,8.0,365.61
 Expenses:Bank:CreditAgricole:Checking:Compte3:Fine,2020-05-20,STMTTRN - FRAIS VIREMENT IMPAYE XCEBR060 2020051900036582000001 1 REJET,12.0,377.61
-]';
+]');
+  l_eol varchar2(2) := null;
+  l_field_separator varchar2(1) := null;
 
   l_object_info_rec t_object_info_rec;
   l_view_name user_views.view_name%type := null;
@@ -3519,6 +3531,13 @@ $end
         );
     end case;
 
+    determine_csv_info
+    ( p_csv => l_csv
+    , p_field_separators => ','
+    , p_eol => l_eol
+    , p_field_separator => l_field_separator 
+    );
+
     get_column_info_tab
     ( -- common parameters
       p_apex_file_id => null
@@ -3532,8 +3551,8 @@ $end
     , p_view_name => l_view_name
       -- CSV parameters
     , p_clob => l_csv
-    , p_eol => chr(10)
-    , p_field_separator => ','
+    , p_eol => l_eol
+    , p_field_separator => l_field_separator
     , p_quote_char => '"'
       -- Spreadsheet parameters
     , p_blob => null
@@ -3576,34 +3595,40 @@ procedure ut_determine_csv_info
 is
   l_eol varchar2(2 char);
   l_field_separator varchar2(1 char);
+  l_csv varchar2(32767 char);
+
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'UT_DETERMINE_CSV_INFO';
 begin
   dbug.enter(l_module_name);
 
-  determine_csv_info
-  ( p_csv => q'[Name,Surname,Salary
+  l_csv := q'[Name,Surname,Salary
 John,Doe,"$2,130"
 Fred;Nurk;"$1,500"
 Hans;Meier;"$1,650"
-Ivan;Horvat;"$3,200"]'
+Ivan;Horvat;"$3,200"]';
+
+  determine_csv_info
+  ( p_csv => to_clob(l_csv)
   , p_eol => l_eol
   , p_field_separator => l_field_separator
   );
 
-  ut.expect(l_eol, 'eol #1').to_equal(chr(10));
+  ut.expect(l_eol, 'eol #1').to_equal(case when instr(l_csv, chr(13)||chr(10)) > 0 then chr(13)||chr(10) else chr(10) end);
   ut.expect(l_field_separator, 'separator #1').to_equal(',');
 
-  determine_csv_info
-  ( p_csv => q'[John;Doe,"let use have a multi line
+  l_csv := q'[John;Doe,"let use have a multi line
  field with an embedded comma separator ,"
 Fred;Nurk;"$1,500"
 Hans;Meier;"$1,650"
-Ivan;Horvat;"$3,200"]'
+Ivan;Horvat;"$3,200"]';
+
+  determine_csv_info
+  ( p_csv => to_clob(l_csv)
   , p_eol => l_eol
   , p_field_separator => l_field_separator
   );
 
-  ut.expect(l_eol, 'eol #2').to_equal(chr(10));
+  ut.expect(l_eol, 'eol #2').to_equal(case when instr(l_csv, chr(13)||chr(10)) > 0 then chr(13)||chr(10) else chr(10) end);
   ut.expect(l_field_separator, 'separator #2').to_equal(';');
 
   determine_csv_info
