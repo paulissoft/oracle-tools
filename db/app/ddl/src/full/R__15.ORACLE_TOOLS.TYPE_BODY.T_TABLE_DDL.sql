@@ -1,16 +1,16 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TABLE_DDL" IS
 
 overriding member procedure migrate
-( self in out nocopy oracle_tools.t_table_ddl
-, p_source in oracle_tools.t_schema_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_table_ddl
+, p_source in t_schema_ddl
+, p_target in t_schema_ddl
 )
 is
-  l_source_table_object oracle_tools.t_table_object := treat(p_source.obj as oracle_tools.t_table_object);
-  l_target_table_object oracle_tools.t_table_object := treat(p_target.obj as oracle_tools.t_table_object);
-  l_source_member_ddl_tab oracle_tools.t_schema_ddl_tab;
-  l_target_member_ddl_tab oracle_tools.t_schema_ddl_tab;
-  l_table_column_ddl oracle_tools.t_schema_ddl;
+  l_source_table_object t_table_object := treat(p_source.obj as t_table_object);
+  l_target_table_object t_table_object := treat(p_target.obj as t_table_object);
+  l_source_member_ddl_tab t_schema_ddl_tab;
+  l_target_member_ddl_tab t_schema_ddl_tab;
+  l_table_column_ddl t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
@@ -18,7 +18,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- first the standard things
-  oracle_tools.t_schema_ddl.migrate
+  t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -88,7 +88,7 @@ END;]'
             full outer join table(l_target_member_ddl_tab) t
             on t.obj = s.obj -- map function is used
     order by
-            treat(s.obj as oracle_tools.t_table_column_object).member#() nulls last -- dropping columns after adding (since we might drop the last column if we reverse it)
+            treat(s.obj as t_table_column_object).member#() nulls last -- dropping columns after adding (since we might drop the last column if we reverse it)
   )
   loop
     l_table_column_ddl := null;
@@ -98,9 +98,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
-      oracle_tools.t_schema_ddl.create_schema_ddl
+      t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
-      , oracle_tools.t_ddl_tab()
+      , t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.uninstall(r.target_schema_ddl);
@@ -110,9 +110,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
 $end      
-      oracle_tools.t_schema_ddl.create_schema_ddl
+      t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , oracle_tools.t_ddl_tab()
+      , t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.install(r.source_schema_ddl);
@@ -124,9 +124,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
-      oracle_tools.t_schema_ddl.create_schema_ddl
+      t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , oracle_tools.t_ddl_tab()
+      , t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.migrate
@@ -160,8 +160,8 @@ $end
 end migrate;
 
 overriding member procedure uninstall
-( self in out nocopy oracle_tools.t_table_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_table_ddl
+, p_target in t_schema_ddl
 )
 is
 begin
@@ -181,7 +181,7 @@ $end
 end uninstall;  
 
 overriding member procedure add_ddl
-( self in out nocopy oracle_tools.t_table_ddl
+( self in out nocopy t_table_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -198,7 +198,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
 $end
 
-  (self as oracle_tools.t_schema_ddl).add_ddl
+  (self as t_schema_ddl).add_ddl
   ( p_verb => p_verb
   , p_text => regexp_replace(p_text, l_find_expr, l_repl_expr, 1, 1, 'im') -- case insensitive multi-line search/replace
   , p_add_sqlterminator => p_add_sqlterminator

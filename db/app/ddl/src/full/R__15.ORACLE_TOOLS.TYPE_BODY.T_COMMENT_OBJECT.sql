@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_COMMENT_OBJECT" AS
 
 constructor function t_comment_object
-( self in out nocopy oracle_tools.t_comment_object
-, p_base_object in oracle_tools.t_named_object
+( self in out nocopy t_comment_object
+, p_base_object in t_named_object
 , p_object_schema in varchar2
 , p_column_name in varchar2
 )
@@ -53,7 +53,7 @@ end column_name;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in oracle_tools.t_comment_object
+( self in t_comment_object
 , p_schema in varchar2
 )
 is

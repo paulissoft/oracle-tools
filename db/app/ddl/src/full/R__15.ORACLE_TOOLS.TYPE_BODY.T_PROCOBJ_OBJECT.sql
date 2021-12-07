@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_PROCOBJ_OBJECT" AS
 
 constructor function t_procobj_object
-( self in out nocopy oracle_tools.t_procobj_object
+( self in out nocopy t_procobj_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
@@ -19,7 +19,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := oracle_tools.t_procobj_object(null, p_object_schema, p_object_name, null);
+  self := t_procobj_object(null, p_object_schema, p_object_name, null);
 
   select  obj.object_type
   into    self.dict_object_type$
@@ -52,7 +52,7 @@ begin
 end object_type;
 
 overriding member procedure chk
-( self in oracle_tools.t_procobj_object
+( self in t_procobj_object
 , p_schema in varchar2
 )
 is

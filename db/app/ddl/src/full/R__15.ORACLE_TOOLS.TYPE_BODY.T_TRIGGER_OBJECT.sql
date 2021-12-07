@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TRIGGER_OBJECT" AS
 
 constructor function t_trigger_object
-( self in out nocopy oracle_tools.t_trigger_object
-, p_base_object in oracle_tools.t_named_object
+( self in out nocopy t_trigger_object
+, p_base_object in t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
@@ -53,7 +53,7 @@ end object_name;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in oracle_tools.t_trigger_object
+( self in t_trigger_object
 , p_schema in varchar2
 )
 is

@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_GRANT_DDL" AS
 
 overriding member procedure uninstall
-( self in out nocopy oracle_tools.t_object_grant_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_object_grant_ddl
+, p_target in t_schema_ddl
 )
 is
 begin
@@ -37,7 +37,7 @@ $end
 end uninstall;
 
 overriding member procedure add_ddl
-( self in out nocopy oracle_tools.t_object_grant_ddl
+( self in out nocopy t_object_grant_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -69,7 +69,7 @@ $end
   end if;
 
   -- Oracle 11g has a new feature - support for generalized invocation
-  (self as oracle_tools.t_schema_ddl).add_ddl
+  (self as t_schema_ddl).add_ddl
   ( p_verb => p_verb
   , p_text => case
                 when substr(p_text, 1, 2) = '--' /* do not execute comments */
@@ -93,7 +93,7 @@ $end
 end add_ddl;
 
 overriding member procedure execute_ddl
-( self in oracle_tools.t_object_grant_ddl
+( self in t_object_grant_ddl
 )
 is
   -- ORA-01917: user or role does not exist
@@ -115,7 +115,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   self.print();
 $end
 
-  oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
+  t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

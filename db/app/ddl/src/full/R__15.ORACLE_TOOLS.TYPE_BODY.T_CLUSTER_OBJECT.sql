@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_CLUSTER_OBJECT" AS
 
 constructor function t_cluster_object
-( self in out nocopy oracle_tools.t_cluster_object
+( self in out nocopy t_cluster_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )

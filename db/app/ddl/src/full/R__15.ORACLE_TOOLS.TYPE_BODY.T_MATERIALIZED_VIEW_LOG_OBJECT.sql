@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_MATERIALIZED_VIEW_LOG_OBJECT" AS
 
 constructor function t_materialized_view_log_object
-( self in out nocopy oracle_tools.t_materialized_view_log_object
+( self in out nocopy t_materialized_view_log_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )

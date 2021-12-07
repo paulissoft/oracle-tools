@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_ARGUMENT_OBJECT" AS
 
 constructor function t_argument_object
-( self in out nocopy oracle_tools.t_argument_object
+( self in out nocopy t_argument_object
 , p_argument# in integer
 , p_argument_name in varchar2
 , p_data_type_name in varchar2

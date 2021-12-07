@@ -1,13 +1,13 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_MATERIALIZED_VIEW_DDL" IS
 
 overriding member procedure migrate
-( self in out nocopy oracle_tools.t_materialized_view_ddl
-, p_source in oracle_tools.t_schema_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_materialized_view_ddl
+, p_source in t_schema_ddl
+, p_target in t_schema_ddl
 )
 is
-  l_tgt_materialized_view_object oracle_tools.t_materialized_view_object := treat(p_target.obj as oracle_tools.t_materialized_view_object);
-  l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+  l_tgt_materialized_view_object t_materialized_view_object := treat(p_target.obj as t_materialized_view_object);
+  l_schema_ddl_tab t_schema_ddl_tab;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
@@ -15,7 +15,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- first the standard things
-  oracle_tools.t_schema_ddl.migrate
+  t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self

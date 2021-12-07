@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_SYNONYM_DDL" AS
 
 overriding member procedure uninstall
-( self in out nocopy oracle_tools.t_synonym_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_synonym_ddl
+, p_target in t_schema_ddl
 )
 is
 begin

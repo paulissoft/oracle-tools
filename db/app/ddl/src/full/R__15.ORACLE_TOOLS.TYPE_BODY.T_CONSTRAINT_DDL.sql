@@ -1,14 +1,14 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_CONSTRAINT_DDL" AS
 
 overriding member procedure migrate
-( self in out nocopy oracle_tools.t_constraint_ddl
-, p_source in oracle_tools.t_schema_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_constraint_ddl
+, p_source in t_schema_ddl
+, p_target in t_schema_ddl
 )
 is
 begin
   -- first the standard things
-  oracle_tools.t_schema_ddl.migrate
+  t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -47,12 +47,12 @@ end;]'
 end migrate;
 
 overriding member procedure uninstall
-( self in out nocopy oracle_tools.t_constraint_ddl
-, p_target in oracle_tools.t_schema_ddl
+( self in out nocopy t_constraint_ddl
+, p_target in t_schema_ddl
 )
 is
 $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
-  l_constraint_object oracle_tools.t_constraint_object := treat(p_target.obj as oracle_tools.t_constraint_object);
+  l_constraint_object t_constraint_object := treat(p_target.obj as t_constraint_object);
 $end  
 begin
   -- ALTER TABLE cust_table DROP CONSTRAINT fk_cust_table_ref;
@@ -87,7 +87,7 @@ $end
 end uninstall;
 
 overriding member procedure add_ddl
-( self in out nocopy oracle_tools.t_constraint_ddl
+( self in out nocopy t_constraint_ddl
 , p_verb in varchar2
 , p_text in clob
 , p_add_sqlterminator in integer
@@ -134,7 +134,7 @@ $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
                 );
 
   -- Oracle 11g has a new feature - support for generalized invocation
-  (self as oracle_tools.t_schema_ddl).add_ddl
+  (self as t_schema_ddl).add_ddl
   ( p_verb => p_verb
   , p_text => l_ddl_text
   , p_add_sqlterminator => p_add_sqlterminator
@@ -143,7 +143,7 @@ $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
 $else
 
   -- Oracle 11g has a new feature - support for generalized invocation
-  (self as oracle_tools.t_schema_ddl).add_ddl
+  (self as t_schema_ddl).add_ddl
   ( p_verb => p_verb
   , p_text => p_text
   , p_add_sqlterminator => p_add_sqlterminator
@@ -158,7 +158,7 @@ $end
 end add_ddl;
 
 overriding member procedure execute_ddl
-( self in oracle_tools.t_constraint_ddl
+( self in t_constraint_ddl
 )
 is
 begin
@@ -168,7 +168,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   self.print();
 $end
 
-  oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
+  t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

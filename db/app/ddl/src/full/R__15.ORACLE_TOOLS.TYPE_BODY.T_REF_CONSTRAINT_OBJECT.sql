@@ -1,13 +1,13 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" AS
 
 constructor function t_ref_constraint_object
-( self in out nocopy oracle_tools.t_ref_constraint_object
-, p_base_object in oracle_tools.t_named_object
+( self in out nocopy t_ref_constraint_object
+, p_base_object in t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_constraint_type in varchar2 default null
 , p_column_names in varchar2 default null
-, p_ref_object in oracle_tools.t_named_object default null
+, p_ref_object in t_named_object default null
 )
 return self as result
 is
@@ -48,12 +48,12 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := oracle_tools.t_ref_constraint_object
+  self := t_ref_constraint_object
           ( null
           , p_object_schema
           , p_base_object
           , p_object_name
-          , nvl(p_column_names, oracle_tools.t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name()))
+          , nvl(p_column_names, t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name()))
           , null -- search condition
           , p_constraint_type
           , p_ref_object
@@ -94,7 +94,7 @@ $end
             where   t.owner = r_con.owner
             and     t.table_name = r_con.table_name
             ;
-            self.ref_object$ := oracle_tools.t_table_object(p_object_schema => l_owner, p_object_name => l_table_name, p_tablespace_name => l_tablespace_name);
+            self.ref_object$ := t_table_object(p_object_schema => l_owner, p_object_name => l_table_name, p_tablespace_name => l_tablespace_name);
           exception
             when no_data_found
             then
@@ -107,7 +107,7 @@ $end
               where   v.owner = r_con.owner
               and     v.view_name = r_con.table_name
               ;
-              self.ref_object$ := oracle_tools.t_view_object(l_owner, l_table_name);
+              self.ref_object$ := t_view_object(l_owner, l_table_name);
           end;
         end if;
       end if;
@@ -153,7 +153,7 @@ begin
 end ref_object_schema;  
 
 final member procedure ref_object_schema
-( self in out nocopy oracle_tools.t_ref_constraint_object
+( self in out nocopy t_ref_constraint_object
 , p_ref_object_schema in varchar2
 )
 is
@@ -208,7 +208,7 @@ begin
 end signature;
 
 overriding member procedure chk
-( self in oracle_tools.t_ref_constraint_object
+( self in t_ref_constraint_object
 , p_schema in varchar2
 )
 is

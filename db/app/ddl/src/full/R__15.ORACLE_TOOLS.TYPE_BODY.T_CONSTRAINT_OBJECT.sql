@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_CONSTRAINT_OBJECT" AS
 
 constructor function t_constraint_object
-( self in out nocopy oracle_tools.t_constraint_object
-, p_base_object in oracle_tools.t_named_object
+( self in out nocopy t_constraint_object
+, p_base_object in t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_constraint_type in varchar2 default null
@@ -20,7 +20,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := oracle_tools.t_constraint_object(null, p_object_schema, p_base_object, p_object_name, p_column_names, p_search_condition, p_constraint_type);
+  self := t_constraint_object(null, p_object_schema, p_base_object, p_object_name, p_column_names, p_search_condition, p_constraint_type);
 
   if p_constraint_type is not null and (p_constraint_type <> 'C' or p_search_condition is not null)
   then
@@ -45,7 +45,7 @@ $end
     then
       if self.column_names$ is null
       then
-        self.column_names$ := oracle_tools.t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name);
+        self.column_names$ := t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name);
       end if;
       self.search_condition$ := null;
 
@@ -198,7 +198,7 @@ $end
 end get_column_names;
 
 overriding member procedure chk
-( self in oracle_tools.t_constraint_object
+( self in t_constraint_object
 , p_schema in varchar2
 )
 is
