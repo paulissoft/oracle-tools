@@ -2073,6 +2073,7 @@ $end
     l_grantable varchar2(4000 char) := null;
     l_ddl_text varchar2(32767 char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
+    l_schema_object oracle_tools.t_schema_object;
 
     procedure cleanup
     is
@@ -2117,8 +2118,8 @@ $end
     l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
     l_base_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_base_object_type);
     
-    p_object_key :=
-      oracle_tools.t_schema_object.id
+    l_schema_object :=
+      oracle_tools.t_schema_object.create_schema_object
       ( p_object_schema => l_object_schema
       , p_object_type => l_object_type
       , p_object_name => l_object_name
@@ -2130,6 +2131,11 @@ $end
       , p_privilege => l_privilege
       , p_grantable => l_grantable
       );
+
+    -- check the object type (base object set if necessary and so on)
+    l_schema_object.chk(p_schema);
+
+    p_object_key := l_schema_object.id();
 
     begin
       if not(p_object_lookup_tab(p_object_key).ready)
@@ -5935,9 +5941,9 @@ $end
               , p_object_type => p_object_type
               , p_object_names => p_object_names
               , p_object_names_include => p_object_names_include
-              , p_ku$_ddl => l_ddl_tab(i_ku$ddls_idx)
               , p_constraint_lookup_tab => l_constraint_lookup_tab
               , p_object_lookup_tab => l_object_lookup_tab
+              , p_ku$_ddl => l_ddl_tab(i_ku$ddls_idx)
               , p_object_key => l_object_key
               );
 
@@ -5946,7 +5952,10 @@ $end
                 -- some checks
                 if not(l_object_lookup_tab.exists(l_object_key))
                 then
-                  raise program_error;
+                  raise_application_error
+                  ( oracle_tools.pkg_ddl_error.c_object_not_found
+                  , 'Can not find object with key "' || l_object_key || '"'
+                  );
                 end if;
 
                 if not(l_object_lookup_tab(l_object_key).ready)
@@ -5981,8 +5990,21 @@ $end
           , 'Duplicate objects to be retrieved: type: ' || r_params.object_type || '; schema: ' || r_params.object_schema || '; base schema: ' || r_params.base_object_schema
           );
 
-        when program_error
+        when oracle_tools.pkg_ddl_error.e_object_not_found
         then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          l_object_key := l_object_lookup_tab.first;
+          <<object_loop>>
+          while l_object_key is not null
+          loop
+            dbug.print
+            ( dbug."debug"
+            , 'Object key: %s'
+            , l_object_key
+            );
+            l_object_key := l_object_lookup_tab.next(l_object_key);
+          end loop object_loop;
+$end        
           raise;
 
         when others

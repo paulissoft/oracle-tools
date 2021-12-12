@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_PROCEDURE_OBJECT" AS
 
 constructor function t_procedure_object
-( self in out nocopy t_procedure_object
+( self in out nocopy oracle_tools.t_procedure_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )

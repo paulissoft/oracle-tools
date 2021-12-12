@@ -1,12 +1,12 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_COMMENT_DDL" AS
 
 overriding member procedure uninstall
-( self in out nocopy t_comment_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_comment_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
-  l_base_object constant t_schema_object :=
-    t_schema_object.create_schema_object
+  l_base_object constant oracle_tools.t_schema_object :=
+    oracle_tools.t_schema_object.create_schema_object
     ( p_object_schema => p_target.obj.base_object_schema
     , p_object_type => p_target.obj.base_object_type
     , p_object_name => p_target.obj.base_object_name

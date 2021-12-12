@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_SPEC_OBJECT" AS
 
 constructor function t_type_spec_object
-( self in out nocopy t_type_spec_object
+( self in out nocopy oracle_tools.t_type_spec_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )

@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TABLE_OBJECT" AS
 
 constructor function t_table_object
-( self in out nocopy t_table_object
+( self in out nocopy oracle_tools.t_table_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 )
@@ -21,7 +21,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
  -- non default constructor
-  self := t_table_object(p_object_schema, p_object_name, null);
+  self := oracle_tools.t_table_object(p_object_schema, p_object_name, null);
 
   if self.tablespace_name$ is null
   then
@@ -50,7 +50,7 @@ $end
 end;
 
 constructor function t_table_object
-( self in out nocopy t_table_object
+( self in out nocopy oracle_tools.t_table_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
 , p_tablespace_name in varchar2
@@ -84,7 +84,7 @@ begin
 end tablespace_name;
 
 member procedure tablespace_name
-( self in out nocopy t_table_object
+( self in out nocopy oracle_tools.t_table_object
 , p_tablespace_name in varchar2
 )
 is
@@ -101,7 +101,7 @@ begin
 end object_type;
 
 overriding member procedure chk
-( self in t_table_object
+( self in oracle_tools.t_table_object
 , p_schema in varchar2
 )
 is

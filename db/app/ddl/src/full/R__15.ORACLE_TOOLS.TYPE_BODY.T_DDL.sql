@@ -1,7 +1,7 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_DDL" AS
 
 constructor function t_ddl
-( self in out nocopy t_ddl
+( self in out nocopy oracle_tools.t_ddl
 , p_ddl# in integer
 , p_verb in varchar2
 , p_text in t_text_tab
@@ -41,7 +41,7 @@ begin
 end ddl#;
 
 member procedure print
-( self in t_ddl
+( self in oracle_tools.t_ddl
 )
 is
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -84,7 +84,7 @@ $else
 $end
 end print;
 
-order member function match( p_ddl in t_ddl ) 
+order member function match( p_ddl in oracle_tools.t_ddl ) 
 return integer
 deterministic
 is
@@ -92,7 +92,7 @@ begin
   return compare(p_ddl);
 end match;
 
-member function compare( p_ddl in t_ddl )
+member function compare( p_ddl in oracle_tools.t_ddl )
 return integer
 deterministic
 is
@@ -221,7 +221,7 @@ $end
   return l_result;
 end compare;
 
-member procedure text_to_compare( self in t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
+member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy t_text_tab )
 is
 begin
   p_text_tab := self.text;

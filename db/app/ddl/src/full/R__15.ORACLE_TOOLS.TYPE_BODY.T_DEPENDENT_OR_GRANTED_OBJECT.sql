@@ -33,7 +33,7 @@ begin
 end base_object_name;
 
 overriding final member procedure base_object_schema
-( self in out nocopy t_dependent_or_granted_object
+( self in out nocopy oracle_tools.t_dependent_or_granted_object
 , p_base_object_schema in varchar2
 )
 is
@@ -42,7 +42,7 @@ begin
 end base_object_schema;
 
 overriding member procedure chk
-( self in t_dependent_or_granted_object
+( self in oracle_tools.t_dependent_or_granted_object
 , p_schema in varchar2
 )
 is

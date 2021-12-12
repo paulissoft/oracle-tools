@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" IS
 
 constructor function t_table_column_object
-( self in out nocopy t_table_column_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_table_column_object
+, p_base_object in oracle_tools.t_named_object
 , p_member# in integer
 , p_member_name in varchar2
 , p_data_type_name in varchar2
@@ -14,7 +14,7 @@ constructor function t_table_column_object
 , p_character_set_name in varchar2
 , p_nullable in varchar2
 , p_default_length in number
-, p_data_default in t_text_tab
+, p_data_default in oracle_tools.t_text_tab
 , p_char_col_decl_length in number
 , p_char_length number
 , p_char_used in varchar2
@@ -87,7 +87,7 @@ begin
 end default_length;
 
 member function data_default
-return t_text_tab
+return oracle_tools.t_text_tab
 is
 begin
   return data_default$;

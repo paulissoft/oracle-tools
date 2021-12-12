@@ -1,16 +1,16 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_SPEC_DDL" IS
 
 overriding member procedure migrate
-( self in out nocopy t_type_spec_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_type_spec_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
-  l_source_type_spec_object t_type_spec_object := treat(p_source.obj as t_type_spec_object);
-  l_target_type_spec_object t_type_spec_object := treat(p_target.obj as t_type_spec_object);
+  l_source_type_spec_object oracle_tools.t_type_spec_object := treat(p_source.obj as oracle_tools.t_type_spec_object);
+  l_target_type_spec_object oracle_tools.t_type_spec_object := treat(p_target.obj as oracle_tools.t_type_spec_object);
   l_source_member_ddl_tab t_schema_ddl_tab;
   l_target_member_ddl_tab t_schema_ddl_tab;
-  l_type_attribute_ddl t_schema_ddl;
+  l_type_attribute_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
@@ -18,7 +18,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- first the standard things
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -40,7 +40,7 @@ $end
             full outer join table(l_target_member_ddl_tab) t
             on t.obj = s.obj -- map function is used
     order by
-            treat(s.obj as t_type_attribute_object).member#() nulls last  -- dropping attributes after adding (since we might drop the last attribute if we reverse it)
+            treat(s.obj as oracle_tools.t_type_attribute_object).member#() nulls last  -- dropping attributes after adding (since we might drop the last attribute if we reverse it)
   )
   loop
     l_type_attribute_ddl := null;
@@ -50,7 +50,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
-      t_schema_ddl.create_schema_ddl
+      oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
       , t_ddl_tab()
       , l_type_attribute_ddl
@@ -62,7 +62,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
 $end      
-      t_schema_ddl.create_schema_ddl
+      oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
       , t_ddl_tab()
       , l_type_attribute_ddl
@@ -76,7 +76,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end      
-      t_schema_ddl.create_schema_ddl
+      oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
       , t_ddl_tab()
       , l_type_attribute_ddl

@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_GRANT_OBJECT" AS
 
 constructor function t_object_grant_object
-( self in out nocopy t_object_grant_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_object_grant_object
+, p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_grantee in varchar2
 , p_privilege in varchar2
@@ -75,7 +75,7 @@ end grantable;
 -- end of getter(s)
 
 overriding member procedure chk
-( self in t_object_grant_object
+( self in oracle_tools.t_object_grant_object
 , p_schema in varchar2
 )
 is

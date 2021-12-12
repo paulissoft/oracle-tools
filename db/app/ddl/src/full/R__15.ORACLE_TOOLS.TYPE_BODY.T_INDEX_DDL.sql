@@ -1,16 +1,16 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_INDEX_DDL" AS
 
 overriding member procedure migrate
-( self in out nocopy t_index_ddl
-, p_source in t_schema_ddl
-, p_target in t_schema_ddl
+( self in out nocopy oracle_tools.t_index_ddl
+, p_source in oracle_tools.t_schema_ddl
+, p_target in oracle_tools.t_schema_ddl
 )
 is
-  l_source_index_object t_index_object := treat(p_source.obj as t_index_object);
-  l_target_index_object t_index_object := treat(p_target.obj as t_index_object);
+  l_source_index_object oracle_tools.t_index_object := treat(p_source.obj as oracle_tools.t_index_object);
+  l_target_index_object oracle_tools.t_index_object := treat(p_target.obj as oracle_tools.t_index_object);
 begin
   -- first the standard things
-  t_schema_ddl.migrate
+  oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
   , p_target => p_target
   , p_schema_ddl => self
@@ -71,7 +71,7 @@ end;]'
 end migrate;
 
 overriding member procedure execute_ddl
-( self in t_index_ddl
+( self in oracle_tools.t_index_ddl
 )
 is
   -- ORA-00955: name is already used by an existing object
@@ -84,7 +84,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   self.print();
 $end
 
-  t_schema_ddl.execute_ddl(p_schema_ddl => self);
+  oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

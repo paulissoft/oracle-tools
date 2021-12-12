@@ -1,8 +1,8 @@
 CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_TYPE_ATTRIBUTE_OBJECT" IS
 
 constructor function t_type_attribute_object
-( self in out nocopy t_type_attribute_object
-, p_base_object in t_named_object
+( self in out nocopy oracle_tools.t_type_attribute_object
+, p_base_object in oracle_tools.t_named_object
 , p_member# in integer
 , p_member_name in varchar2
 , p_data_type_name in varchar2
