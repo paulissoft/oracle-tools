@@ -4,7 +4,7 @@ constructor function t_ddl
 ( self in out nocopy oracle_tools.t_ddl
 , p_ddl# in integer
 , p_verb in varchar2
-, p_text in t_text_tab
+, p_text in oracle_tools.t_text_tab
 )
 return self as result
 is
@@ -98,8 +98,8 @@ deterministic
 is
   l_result binary_integer := 0;
   l_idx binary_integer;
-  l_text1_tab t_text_tab := null;
-  l_text2_tab t_text_tab := null;
+  l_text1_tab oracle_tools.t_text_tab := null;
+  l_text2_tab oracle_tools.t_text_tab := null;
 
   function cmp(p_val1 in varchar2, p_val2 in varchar2)
   return binary_integer
@@ -221,7 +221,7 @@ $end
   return l_result;
 end compare;
 
-member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy t_text_tab )
+member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
 is
 begin
   p_text_tab := self.text;
