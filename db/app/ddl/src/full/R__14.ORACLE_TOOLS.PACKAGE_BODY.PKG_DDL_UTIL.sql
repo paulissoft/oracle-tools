@@ -6359,7 +6359,7 @@ $end
                 ) as ref_obj -- a named object
         from    all_constraints c
                 inner join all_objects tc
-                on tc.owner = c.owner and tc.object_name = c.table_name
+                on tc.owner = c.owner and tc.object_name = c.table_name and tc.object_type in ('TABLE', 'VIEW') /* GJP 2021-12-15 A table name can be the same as an index or materialized view name but the base object must be a table/view */
                 inner join all_indexes i
                 on i.owner = c.index_owner and i.index_name = c.index_name
         where   c.owner = p_schema
