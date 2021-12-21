@@ -2150,6 +2150,9 @@ $end
         exception
           when others
           then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            p_object_lookup_tab(p_object_key).schema_ddl.print();
+$end            
             raise_application_error(oracle_tools.pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
         end;
 

@@ -93,6 +93,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
+  dbug.print(dbug."input", 'self.obj.id(): %s; self.ddl_tab.count: %s; p_text.count: %s', self.obj.id(), self.ddl_tab.count, case when p_text is not null then p_text.count end);
 $end
 
   self.ddl_tab.extend(1);
@@ -119,19 +120,30 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (2)');
+  dbug.print
+  ( dbug."input"
+  , 'p_verb: %s; p_text[1,100]: "%s"; p_add_sqlterminator: %s'
+  , p_verb
+  , dbms_lob.substr(lob_loc => p_text, amount => 100)
+  , p_add_sqlterminator
+  );
 $end
 
   l_text_tab := oracle_tools.pkg_str_util.clob2text(p_text, 1); -- text
-  if p_add_sqlterminator > 0
+  -- ORA-20113: Object BC_PORTAL:INDEX:bcp_addresses_l1:BC_PORTAL::BCP_ADDRESSES:::: is not correct.
+  if cardinality(l_text_tab) > 0
   then
-    l_text_tab.extend(1);
-    l_text_tab(l_text_tab.last) := chr(10) || '/';
+    if p_add_sqlterminator > 0
+    then
+      l_text_tab.extend(1);
+      l_text_tab(l_text_tab.last) := chr(10) || '/';
+    end if;
+    self.add_ddl
+    ( p_verb => p_verb
+    , p_text => l_text_tab
+    );
   end if;
-  self.add_ddl
-  ( p_verb => p_verb
-  , p_text => l_text_tab
-  );
-
+  
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
