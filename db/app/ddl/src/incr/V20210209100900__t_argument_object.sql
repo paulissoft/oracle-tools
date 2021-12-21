@@ -1,6 +1,6 @@
 begin
   execute immediate q'[
-create type t_argument_object authid current_user is object
+create type oracle_tools.t_argument_object authid current_user is object
 ( /*
   From USER_ARGUMENTS:
 
@@ -24,7 +24,7 @@ create type t_argument_object authid current_user is object
 , type_name$          varchar2(30 char)  -- Name of the type of the argument.
 
 , constructor function t_argument_object
-  ( self in out nocopy t_argument_object
+  ( self in out nocopy oracle_tools.t_argument_object
   , p_argument# in integer
   , p_argument_name in varchar2
   , p_data_type_name in varchar2

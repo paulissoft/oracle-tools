@@ -1,8 +1,8 @@
 begin
   execute immediate q'[
-create type t_package_body_object authid current_user under t_named_object
+create type oracle_tools.t_package_body_object authid current_user under oracle_tools.t_named_object
 ( constructor function t_package_body_object
-  ( self in out nocopy t_package_body_object
+  ( self in out nocopy oracle_tools.t_package_body_object
   , p_object_schema in varchar2
   , p_object_name in varchar2
   )

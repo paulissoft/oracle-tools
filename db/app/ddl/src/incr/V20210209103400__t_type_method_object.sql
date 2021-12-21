@@ -1,6 +1,6 @@
 begin
   execute immediate q'[
-create type t_type_method_object authid current_user under t_member_object
+create type oracle_tools.t_type_method_object authid current_user under oracle_tools.t_member_object
 ( /*
   From USER_TYPE_METHODS:
 
@@ -24,11 +24,11 @@ create type t_type_method_object authid current_user under t_member_object
 , final$              varchar2(3 char)      -- Indicates whether the method is final (YES) or not (NO)
 , instantiable$       varchar2(3 char)      -- Indicates whether the method is instantiable (YES) or not (NO)
 , overriding$         varchar2(3 char)      -- Indicates whether the method is overriding a supertype method (YES) or not (NO)
-, arguments           t_argument_object_tab -- List of arguments, if any.
+, arguments           oracle_tools.t_argument_object_tab -- List of arguments, if any.
 
 , constructor function t_type_method_object
-  ( self in out nocopy t_type_method_object
-  , p_base_object in t_named_object -- the type specification
+  ( self in out nocopy oracle_tools.t_type_method_object
+  , p_base_object in oracle_tools.t_named_object -- the type specification
   , p_member# in integer -- the METHOD_NO
   , p_member_name in varchar2 -- the METHOD_NAME
   , p_method_type in varchar2
@@ -37,7 +37,7 @@ create type t_type_method_object authid current_user under t_member_object
   , p_final in varchar2
   , p_instantiable in varchar2
   , p_overriding in varchar2
-  , p_arguments in t_argument_object_tab default null
+  , p_arguments in oracle_tools.t_argument_object_tab default null
   )
   return self as result
 -- begin of getter(s)/setter(s)
@@ -51,7 +51,7 @@ create type t_type_method_object authid current_user under t_member_object
 -- end of getter(s)/setter(s)
 , member function static_or_member return varchar2 deterministic
 , overriding final map member function signature return varchar2 deterministic
-, overriding member procedure chk( self in t_type_method_object, p_schema in varchar2 )
+, overriding member procedure chk( self in oracle_tools.t_type_method_object, p_schema in varchar2 )
 )
 not final]';
 end;

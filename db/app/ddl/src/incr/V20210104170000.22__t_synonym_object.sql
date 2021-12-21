@@ -1,10 +1,10 @@
 begin
   execute immediate q'[
-create type t_synonym_object authid current_user under t_dependent_or_granted_object
+create type oracle_tools.t_synonym_object authid current_user under oracle_tools.t_dependent_or_granted_object
 ( object_name$ varchar2(4000 char)
 , constructor function t_synonym_object
-  ( self in out nocopy t_synonym_object
-  , p_base_object in t_named_object
+  ( self in out nocopy oracle_tools.t_synonym_object
+  , p_base_object in oracle_tools.t_named_object
   , p_object_schema in varchar2
   , p_object_name in varchar2
   )
@@ -14,7 +14,7 @@ create type t_synonym_object authid current_user under t_dependent_or_granted_ob
 , overriding member function object_name return varchar2 deterministic
 -- end of getter(s)
 , overriding member procedure chk
-  ( self in t_synonym_object
+  ( self in oracle_tools.t_synonym_object
   , p_schema in varchar2
   )
 )
