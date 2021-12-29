@@ -58,7 +58,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   , self.verb()
   , cardinality(self.text)
   );
-$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+--$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   if cardinality(self.text) > 0
   then
     oracle_tools.pkg_str_util.text2clob
@@ -77,7 +77,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     end loop;
     dbms_lob.freetemporary(l_clob);
   end if;
-$end  
+--$end  
   dbug.leave;
 $else
   null;

@@ -8,8 +8,8 @@ overriding member procedure migrate
 is
   l_source_type_spec_object oracle_tools.t_type_spec_object := treat(p_source.obj as oracle_tools.t_type_spec_object);
   l_target_type_spec_object oracle_tools.t_type_spec_object := treat(p_target.obj as oracle_tools.t_type_spec_object);
-  l_source_member_ddl_tab oracle_tools.t_schema_ddl_tab;
-  l_target_member_ddl_tab oracle_tools.t_schema_ddl_tab;
+  l_source_member_ddl_tab t_schema_ddl_tab;
+  l_target_member_ddl_tab t_schema_ddl_tab;
   l_type_attribute_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
@@ -52,7 +52,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end      
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
-      , oracle_tools.t_ddl_tab()
+      , t_ddl_tab()
       , l_type_attribute_ddl
       );
       l_type_attribute_ddl.uninstall(r.target_schema_ddl);
@@ -64,7 +64,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end      
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , oracle_tools.t_ddl_tab()
+      , t_ddl_tab()
       , l_type_attribute_ddl
       );
       l_type_attribute_ddl.install(r.source_schema_ddl);
@@ -78,7 +78,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end      
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , oracle_tools.t_ddl_tab()
+      , t_ddl_tab()
       , l_type_attribute_ddl
       );
       l_type_attribute_ddl.migrate

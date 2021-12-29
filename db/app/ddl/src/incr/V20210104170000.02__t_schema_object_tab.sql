@@ -1,5 +1,5 @@
 begin
   execute immediate q'[
-create type t_schema_object_tab as table of t_schema_object]';
+create type oracle_tools.t_schema_object_tab as table of oracle_tools.t_schema_object]';
 end;
 /

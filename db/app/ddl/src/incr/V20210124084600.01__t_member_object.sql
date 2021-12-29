@@ -1,6 +1,6 @@
 begin
   execute immediate q'[
-create type t_member_object authid current_user under t_dependent_or_granted_object
+create type oracle_tools.t_member_object authid current_user under oracle_tools.t_dependent_or_granted_object
 ( member#$ integer
 , member_name$ varchar2(128 char)
 -- begin of getter(s)/setter(s)

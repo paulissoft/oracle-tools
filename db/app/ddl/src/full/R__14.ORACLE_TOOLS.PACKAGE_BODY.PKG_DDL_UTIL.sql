@@ -441,19 +441,26 @@ $end
 
   procedure check_object_type
   ( p_object_type in t_metadata_object_type
+  , p_exclude_allowed in boolean
   )
   is
+    l_object_type constant t_metadata_object_type :=
+      case
+        when p_exclude_allowed and substr(p_object_type, 1, 1) = '!'
+        then substr(p_object_type, 2)
+        else p_object_type
+      end;
   begin
-    if p_object_type is null or
+    if l_object_type is null or
 $if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
-       p_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
+       l_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
-       p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') or
-       p_object_type member of g_schema_md_object_type_tab
+       l_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') or
+       l_object_type member of g_schema_md_object_type_tab
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_object_type_wrong, 'Object type (' || p_object_type || ') is not one of the metadata schema object types.');
+      raise_application_error(oracle_tools.pkg_ddl_error.c_object_type_wrong, 'Object type (' || l_object_type || ') is not one of the metadata schema object types.');
     end if;
   end check_object_type;
 
@@ -2073,6 +2080,7 @@ $end
     l_grantable varchar2(4000 char) := null;
     l_ddl_text varchar2(32767 char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
+    l_schema_object oracle_tools.t_schema_object;
 
     procedure cleanup
     is
@@ -2117,8 +2125,8 @@ $end
     l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
     l_base_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_base_object_type);
     
-    p_object_key :=
-      oracle_tools.t_schema_object.id
+    l_schema_object :=
+      oracle_tools.t_schema_object.create_schema_object
       ( p_object_schema => l_object_schema
       , p_object_type => l_object_type
       , p_object_name => l_object_name
@@ -2130,6 +2138,11 @@ $end
       , p_privilege => l_privilege
       , p_grantable => l_grantable
       );
+
+    -- check the object type (base object set if necessary and so on)
+    l_schema_object.chk(p_schema);
+
+    p_object_key := l_schema_object.id();
 
     begin
       if not(p_object_lookup_tab(p_object_key).ready)
@@ -2144,6 +2157,9 @@ $end
         exception
           when others
           then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            p_object_lookup_tab(p_object_key).schema_ddl.print();
+$end            
             raise_application_error(oracle_tools.pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
         end;
 
@@ -2827,6 +2843,14 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
+    l_use_schema_export constant pls_integer := 
+      case
+        when p_object_type is not null and substr(p_object_type, 1, 1) != '!'
+        then 0
+        when p_object_names_include = 1
+        then 0
+        else 1
+      end;
     l_object_names constant t_object_names :=
       ',' ||
       replace(replace(replace(replace(p_object_names, chr(9)), chr(13)), chr(10)), chr(32)) ||
@@ -2865,7 +2889,7 @@ $end
     check_schema(p_schema => p_schema, p_network_link => p_network_link);
     -- no checks for new schema: it may be null or any name
     check_numeric_boolean(p_numeric_boolean => p_sort_objects_by_deps, p_description => 'Sort objects by deps');
-    check_object_type(p_object_type => p_object_type);
+    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
     check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
     check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
     check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
@@ -2921,7 +2945,7 @@ $end
                               , p_object_type => p_object_type
                               , p_object_names => l_object_names
                               , p_object_names_include => p_object_names_include
-                              , p_use_schema_export => case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
+                              , p_use_schema_export => l_use_schema_export
                               , p_schema_object_tab => l_schema_object_tab
                               , p_transform_param_list => p_transform_param_list
                               )
@@ -2952,7 +2976,7 @@ $end
                     , p_object_type => p_object_type
                     , p_object_names => l_object_names
                     , p_object_names_include => p_object_names_include
-                    , p_use_schema_export => case when p_object_type is not null then 0 when p_object_names_include = 1 then 0 else 1 end
+                    , p_use_schema_export => l_use_schema_export
                     , p_schema_object_tab => l_schema_object_tab
                     , p_transform_param_list => p_transform_param_list
                     )
@@ -3268,7 +3292,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
     -- input checks
-    check_object_type(p_object_type => p_object_type);
+    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
     check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
     check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
     check_schema(p_schema => p_schema_source, p_network_link => p_network_link_source, p_description => 'Source schema');
@@ -3879,7 +3903,7 @@ $end
 
     -- input checks
     check_schema(p_schema => p_schema, p_network_link => null);
-    check_object_type(p_object_type => p_object_type);
+    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
     check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
     check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
     check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
@@ -5396,11 +5420,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     , p_base_object_name
     );
 
-    check_object_type(p_object_type => p_object_type);
+    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
     check_object_names(p_object_names => substr(p_object_names, 2, length(p_object_names)-2), p_object_names_include => p_object_names_include);
     check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
-    check_object_type(p_object_type => p_metadata_object_type);
-    check_object_type(p_object_type => p_metadata_base_object_type);
+    check_object_type(p_object_type => p_metadata_object_type, p_exclude_allowed => false);
+    check_object_type(p_object_type => p_metadata_base_object_type, p_exclude_allowed => false);
 $end    
 
     case
@@ -5464,7 +5488,7 @@ $end
   is
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-    check_object_type(p_object_type);
+    check_object_type(p_object_type => p_object_type, p_exclude_allowed => false);
 $end    
 
     return
@@ -5935,9 +5959,9 @@ $end
               , p_object_type => p_object_type
               , p_object_names => p_object_names
               , p_object_names_include => p_object_names_include
-              , p_ku$_ddl => l_ddl_tab(i_ku$ddls_idx)
               , p_constraint_lookup_tab => l_constraint_lookup_tab
               , p_object_lookup_tab => l_object_lookup_tab
+              , p_ku$_ddl => l_ddl_tab(i_ku$ddls_idx)
               , p_object_key => l_object_key
               );
 
@@ -5946,7 +5970,10 @@ $end
                 -- some checks
                 if not(l_object_lookup_tab.exists(l_object_key))
                 then
-                  raise program_error;
+                  raise_application_error
+                  ( oracle_tools.pkg_ddl_error.c_object_not_found
+                  , 'Can not find object with key "' || l_object_key || '"'
+                  );
                 end if;
 
                 if not(l_object_lookup_tab(l_object_key).ready)
@@ -5981,8 +6008,21 @@ $end
           , 'Duplicate objects to be retrieved: type: ' || r_params.object_type || '; schema: ' || r_params.object_schema || '; base schema: ' || r_params.base_object_schema
           );
 
-        when program_error
+        when oracle_tools.pkg_ddl_error.e_object_not_found
         then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          l_object_key := l_object_lookup_tab.first;
+          <<object_loop>>
+          while l_object_key is not null
+          loop
+            dbug.print
+            ( dbug."debug"
+            , 'Object key: %s'
+            , l_object_key
+            );
+            l_object_key := l_object_lookup_tab.next(l_object_key);
+          end loop object_loop;
+$end        
           raise;
 
         when others
@@ -6337,7 +6377,7 @@ $end
                 ) as ref_obj -- a named object
         from    all_constraints c
                 inner join all_objects tc
-                on tc.owner = c.owner and tc.object_name = c.table_name
+                on tc.owner = c.owner and tc.object_name = c.table_name and tc.object_type in ('TABLE', 'VIEW') /* GJP 2021-12-15 A table name can be the same as an index or materialized view name but the base object must be a table/view */
                 inner join all_indexes i
                 on i.owner = c.index_owner and i.index_name = c.index_name
         where   c.owner = p_schema

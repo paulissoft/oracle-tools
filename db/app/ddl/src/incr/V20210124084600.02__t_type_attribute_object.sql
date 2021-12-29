@@ -1,6 +1,6 @@
 begin
   execute immediate q'[
-create type t_type_attribute_object authid current_user under t_member_object
+create type oracle_tools.t_type_attribute_object authid current_user under oracle_tools.t_member_object
 ( /*
   From USER_TYPE_ATTRS:
 
@@ -16,8 +16,8 @@ create type t_type_attribute_object authid current_user under t_member_object
 , character_set_name$ varchar2(44 char)  -- Name of the character set: CHAR_CS or NCHAR_CS
 
 , constructor function t_type_attribute_object
-  ( self in out nocopy t_type_attribute_object
-  , p_base_object in t_named_object
+  ( self in out nocopy oracle_tools.t_type_attribute_object
+  , p_base_object in oracle_tools.t_named_object
   , p_member# in integer
   , p_member_name in varchar2
   , p_data_type_name in varchar2

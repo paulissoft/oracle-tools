@@ -10,14 +10,14 @@ is
   l_buffer varchar2(32767 char) := null;
   l_clob clob := null;
   " ADD " constant varchar2(5) := ' ADD ';
-  l_data_default oracle_tools.t_text_tab;
+  l_data_default t_text_tab;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
 $end
 
   self.obj := p_obj;
-  self.ddl_tab := oracle_tools.t_ddl_tab();
+  self.ddl_tab := t_ddl_tab();
 
   /* construct the ALTER TYPE ADD ATTRIBUTE here */ 
 
