@@ -46,7 +46,7 @@ begin
   -- to solve ORA-01722 in apex_lang.update_language_mapping()
   execute immediate q'[alter session set nls_numeric_characters = '.,']';
 
-  dbms_output.put_line('*** update language mapping ***');
+  dbms_output.put_line('*** ui_apex_synchronize.update_language_mapping ***');
 
   get_translations(p_application_id, l_translations_tab);
 
@@ -121,7 +121,7 @@ is
 
   l_translations_tab t_translations_tab;
 begin
-  dbms_output.put_line('*** pre_export ***');
+  dbms_output.put_line('*** ui_apex_synchronize.pre_export ***');
   dbms_output.put_line('workspace name: ' || p_workspace_name);
   dbms_output.put_line('application id: ' || p_application_id);
   
@@ -184,6 +184,9 @@ is
   e_apex_error exception;
   pragma exception_init(e_apex_error, -20987);
 begin
+  dbms_output.put_line('*** ui_apex_synchronize.pre_import ***');
+  dbms_output.put_line('application id: ' || p_application_id);
+  
   create_apex_session(p_application_id);
   
   apex_util.set_application_status
@@ -205,6 +208,11 @@ procedure prepare_import
 is
   l_workspace_id number;
 begin
+  dbms_output.put_line('*** ui_apex_synchronize.prepare_import ***');
+  dbms_output.put_line('workspace name: ' || p_workspace_name);
+  dbms_output.put_line('application id: ' || p_application_id);
+  dbms_output.put_line('user          : ' || p_user);
+  
   select  workspace_id
   into    l_workspace_id
   from    apex_workspaces
@@ -219,6 +227,8 @@ end prepare_import;
 procedure publish_application
 is
 begin
+  dbms_output.put_line('*** ui_apex_synchronize.publish_application ***');
+  
   -- to solve ORA-01722 in apex_lang.update_language_mapping()
   execute immediate q'[alter session set nls_numeric_characters = '.,']';
 
@@ -257,6 +267,9 @@ procedure post_import
 is
   l_application_status constant varchar2(100) := 'AVAILABLE_W_EDIT_LINK';
 begin
+  dbms_output.put_line('*** ui_apex_synchronize.post_import ***');
+  dbms_output.put_line('application id: ' || p_application_id);
+  
   create_apex_session(p_application_id);
 
   apex_util.set_application_status
