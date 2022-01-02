@@ -14,7 +14,7 @@ procedure pre_import
 procedure prepare_import
 ( p_workspace_name in apex_workspaces.workspace%type
 , p_application_id in apex_application_trans_map.primary_application_id%type
-, p_user in varchar2
+, p_user in varchar2 default user
 );
 
 procedure publish_application;

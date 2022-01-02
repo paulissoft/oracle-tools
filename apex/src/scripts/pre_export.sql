@@ -35,6 +35,13 @@ where   'X&4' = 'X';
 
 column seed_and_publish clear
 
-call ui_apex_synchronize.pre_export(upper('&&1'), to_number('&2'), to_number('&3') != 0, to_number('&4') != 0);
+prompt call ui_apex_synchronize.pre_export(upper('&&1'), to_number('&2'), to_number('&3') != 0, to_number('&4') != 0)
+
+begin
+  ui_apex_synchronize.pre_export(upper('&&1'), to_number('&2'), to_number('&3') != 0, to_number('&4') != 0);
+end;
+/
+
+prompt ...done
 
 undefine 1 2
