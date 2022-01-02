@@ -259,9 +259,17 @@ The following properties are only important during export:
                 <include name="jline.jar"/>
                 <include name="antlr-runtime.jar"/>
                 <!--include name="jansi.jar"/-->
-                <!-- version 20on Mac OS X -->
+                <!-- version 20 on Mac OS X -->
                 <include name="dbtools-data.jar"/>
                 <include name="guava.jar"/>
+                <!-- version 21 on Mac OS X -->
+                <include name="jline3.jar"/>
+                <include name="dbtools-datapump.jar"/>
+                <include name="xmlparserv2_sans_jaxp_services.jar"/>
+                <include name="httpcore5.jar"/>
+                <include name="jackson-jr-stree.jar"/>
+                <include name="guava-with-lf.jar"/>
+                <include name="xdb.jar"/>
               </fileset>
               
               <!-- Start of #Sql file locations (when embedded) -->
