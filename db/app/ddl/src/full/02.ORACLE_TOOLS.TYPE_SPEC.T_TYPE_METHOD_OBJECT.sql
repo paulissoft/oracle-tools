@@ -22,7 +22,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under orac
 , final$              varchar2(3 char)      -- Indicates whether the method is final (YES) or not (NO)
 , instantiable$       varchar2(3 char)      -- Indicates whether the method is instantiable (YES) or not (NO)
 , overriding$         varchar2(3 char)      -- Indicates whether the method is overriding a supertype method (YES) or not (NO)
-, arguments           t_argument_object_tab -- List of arguments, if any.
+, arguments           oracle_tools.t_argument_object_tab -- List of arguments, if any.
 
 , constructor function t_type_method_object
   ( self in out nocopy oracle_tools.t_type_method_object
@@ -35,7 +35,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under orac
   , p_final in varchar2
   , p_instantiable in varchar2
   , p_overriding in varchar2
-  , p_arguments in t_argument_object_tab default null
+  , p_arguments in oracle_tools.t_argument_object_tab default null
   )
   return self as result
 -- begin of getter(s)/setter(s)
