@@ -1255,7 +1255,7 @@ sub sql_statement_flush ($$$$$$) {
         #     # And use q'[]' since the type may containt methods with string parameters with a default
         #     $sql_statement = "/* To help Flyway */\nBEGIN\n  EXECUTE IMMEDIATE q'[\n" . $sql_statement . "\n]';\nEND;";
         } else {
-            # Only the first statement is relevant. Statement 2 and further are never create or replace statements
+            # Only the first statement is relevant. Statement 2 and further are never "create or replace" statements
 
             debug("\$ddl_no:", $ddl_no, "; \$object_type:", $object_type);
             debug("object type terminator:", (exists($object_type_info{$object_type}->{'terminator'}) ? $object_type_info{$object_type}->{'terminator'} : 'UNKNOWN'));
@@ -1287,7 +1287,9 @@ sub sql_statement_flush ($$$$$$) {
         $sql_statement .= ($last_ch eq ';' ? "\n/" : ";\n/");
     } elsif ($terminator eq '/') {
         # close PL/SQL block
-        $sql_statement .= "\n/";
+        # GJP 2022-01-18 Unless the last line already ends with a /
+        $sql_statement .= "\n/"
+            unless $r_sql_statement->[scalar(@$r_sql_statement)-1] =~ m!^/\s*$!;
     } elsif ($terminator eq ';') {
         # close SQL statement with a ;
         $last_line = $r_sql_statement->[$#$r_sql_statement];
