@@ -18,7 +18,7 @@ Types of changes:
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 
 
-## [1.3.0] - 2021-12-28
+## [1.3.1] - 2022-01-25
 
 ### Fixed
 
