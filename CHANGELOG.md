@@ -13,11 +13,18 @@ Types of changes:
 - **Fixed** for any bug fixes.
 - **Security** in case of vulnerabilities.
 
-## [1.3.0] - 2021-12-28
-
-### Added
+[Unreleased]
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
+
+
+## [1.3.0] - 2021-12-28
+
+### Fixed
+
+- [Import of APEX application (with translated app) is successful, but returns with error](https://github.com/paulissoft/oracle-tools/issues/24)
+
+## [1.3.0] - 2021-12-28
 
 ### Fixed
 
