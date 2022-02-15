@@ -590,7 +590,7 @@ is
         p_marker ||
         ' ' ||
         case
-          when p_convert_to_base64
+          when p_convert_to_base64 and p_line is not null
           then utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw(p_line)))
           else p_line
         end;
