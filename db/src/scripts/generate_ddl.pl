@@ -469,16 +469,15 @@ sub process () {
         $in = \*STDIN;
     }
 
-    # Only read $install_sequence_txt for version 5
-    if ($interface eq PKG_DDL_UTIL_V5) {
-        # read the old file and remove it
-        if ( read_object_seq($install_sequence_txt) ) {
-            unlink $install_sequence_txt || error("Could not remove file '$install_sequence_txt': $!");
-            $install_sequence_txt = File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT);
-        } else {
-            $install_sequence_txt = File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT);
-            read_object_seq($install_sequence_txt);
-        }
+    # Interface not known yet so just try to read the OLD_INSTALL_SEQUENCE_TXT or NEW_INSTALL_SEQUENCE_TXT.
+    
+    if ( read_object_seq($install_sequence_txt) ) {
+        # Just read the old file so remove it.
+        unlink $install_sequence_txt || error("Could not remove file '$install_sequence_txt': $!");
+        $install_sequence_txt = File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT);
+    } else {
+        $install_sequence_txt = File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT);
+        read_object_seq($install_sequence_txt);
     }
 
     # always make the output directory
