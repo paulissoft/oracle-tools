@@ -2353,168 +2353,6 @@ $end
            ;
   end get_object;
 
-  procedure compare_ddl
-  ( p_source_line_tab in dbms_sql.varchar2a
-  , p_target_line_tab in dbms_sql.varchar2a
-  , p_stop_after_first_diff in boolean default false
-  , p_show_equal_lines in boolean default true
-  , p_compare_line_tab out nocopy dbms_sql.varchar2a
-  )
-  is
-    type t_array_1_dim_tab is table of pls_integer index by binary_integer; /* simple_integer may not be null */
-    type t_array_2_dim_tab is table of t_array_1_dim_tab index by binary_integer;
-    l_opt_tab t_array_2_dim_tab;
-    l_stop boolean := false;
-
-    function eq(p_target_line in varchar2, p_source_line in varchar2)
-    return boolean
-    is
-    begin
-      return ( p_target_line is null and p_source_line is null ) or p_target_line = p_source_line;
-    end eq;
-
-    procedure add(p_line in varchar2, p_marker in varchar2, p_old in pls_integer, p_new in pls_integer)
-    is
-    begin
-      if p_marker <> '=' or p_show_equal_lines
-      then
-        p_compare_line_tab(p_compare_line_tab.count+1) := '[' || to_char(p_old) || '][' || to_char(p_new) || '] ' || p_marker || ' ' || p_line;
-      end if;
-      if p_marker <> '=' and p_stop_after_first_diff
-      then
-        l_stop := true;
-      end if;
-    end add;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.enter(g_package_prefix || 'COMPARE_DDL');
-    dbug.print
-    ( dbug."output"
-    , 'p_source_line_tab.count: %s; p_target_line_tab.count: %s; p_stop_after_first_diff: %s; p_show_equal_lines: %s'
-    , p_source_line_tab.count
-    , p_target_line_tab.count
-    , dbug.cast_to_varchar2(p_stop_after_first_diff)
-    , dbug.cast_to_varchar2(p_show_equal_lines)
-    );
-$end
-
-    -- Some checks to make life more easier.
-    if p_target_line_tab.count > 0 and (p_target_line_tab.first != 1 or (p_target_line_tab.last - p_target_line_tab.first) + 1 != p_target_line_tab.count)
-    then
-      raise program_error;
-    elsif p_source_line_tab.count > 0 and (p_source_line_tab.first != 1 or (p_source_line_tab.last - p_source_line_tab.first) + 1 != p_source_line_tab.count)
-    then
-      raise program_error;
-    end if;
-
-    /*
-       The code is taken from Diff.java (http://introcs.cs.princeton.edu/java/96optimization/Diff.java.html)
-
-       Variables:
-
-       Java example  Here
-       ------------  ----
-       x             p_target_line_tab
-       y             p_source_line_tab
-       M             p_target_line_tab.count
-       N             p_source_line_tab.count
-       opt           l_opt_tab
-    */
-
-    /*
-       In Java this creates a 2 dimensional array with all the indices filled and opt[i][j] = 0.
-
-       int[][] opt = new int[M+1][N+1];
-
-       Please note that in Java arrays start with index 0.
-
-       The collections here start with 1 (due to the checks at the start).
-    */
-
-    -- Create an empty array slice with one more element than
-    if p_source_line_tab.count > 0
-    then
-      for j in p_source_line_tab.first .. p_source_line_tab.last
-      loop
-        l_opt_tab(1)(j) := 0;
-      end loop;
-      l_opt_tab(1)(p_source_line_tab.count+1) := 0;
-    end if;
-
-    -- Use the empty array slice to fill the others.
-    for i in 2 .. p_target_line_tab.count+1
-    loop
-      l_opt_tab(i) := l_opt_tab(1);
-    end loop;
-
-    -- compute length of LCS and all subproblems via dynamic programming
-    if p_target_line_tab.count > 0
-    then
-      for i in reverse p_target_line_tab.first .. p_target_line_tab.last
-      loop
-        if p_source_line_tab.count > 0
-        then
-          for j in reverse p_source_line_tab.first .. p_source_line_tab.last
-          loop
-            if eq(p_target_line_tab(i), p_source_line_tab(j))
-            then
-              l_opt_tab(i)(j) := l_opt_tab(i+1)(j+1) + 1;
-            else
-              l_opt_tab(i)(j) := greatest(l_opt_tab(i+1)(j), l_opt_tab(i)(j+1));
-            end if;
-          end loop;
-        end if;
-      end loop;
-    end if;
-
-    declare
-      i pls_integer := nvl(p_target_line_tab.first, 1);
-      j pls_integer := nvl(p_source_line_tab.first, 1);
-    begin
-      -- recover LCS itself
-      while (i <= p_target_line_tab.count and j <= p_source_line_tab.count) and not(l_stop)
-      loop
-        if eq(p_target_line_tab(i), p_source_line_tab(j))
-        then
-          add(p_target_line_tab(i), '=', i, j);
-          i := i + 1;
-          j := j + 1;
-        elsif l_opt_tab(i+1)(j) >= l_opt_tab(i)(j+1)
-        then
-          add(p_target_line_tab(i), '-', i, j);
-          i := i + 1;
-        else
-          add(p_source_line_tab(j), '+', i, j);
-          j := j + 1;
-        end if;
-      end loop;
-
-      -- dump out one remainder of one collection if the other is exhausted
-      while (i <= p_target_line_tab.count or j <= p_source_line_tab.count) and not(l_stop)
-      loop
-        if i > p_target_line_tab.count
-        then
-          add(p_source_line_tab(j), '+', i, j);
-          j := j + 1;
-        elsif j > p_source_line_tab.count
-        then
-          add(p_target_line_tab(i), '-', i, j);
-          i := i + 1;
-        end if;
-      end loop;
-    end;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    dbug.print
-    ( dbug."output"
-    , 'p_compare_line_tab.count: %s'
-    , p_compare_line_tab.count
-    );
-    dbug.leave;
-$end
-
-  end compare_ddl;
-
   procedure add2text
   ( p_str in varchar2
   , p_text_tab in out nocopy oracle_tools.t_text_tab
@@ -6493,9 +6331,6 @@ $end
     l_source_text clob := null;
     l_target_text clob := null;
 
-    l_source_line_tab dbms_sql.varchar2a;
-    l_target_line_tab dbms_sql.varchar2a;
-
     procedure cleanup
     is
     begin
@@ -6509,19 +6344,10 @@ $end
     oracle_tools.pkg_str_util.text2clob(p_source.ddl_tab(1).text, l_source_text);
     oracle_tools.pkg_str_util.text2clob(p_target.ddl_tab(1).text, l_target_text);
 
-    oracle_tools.pkg_str_util.split
-    ( p_str => l_source_text
+    oracle_tools.pkg_str_util.compare
+    ( p_source => l_source_text
+    , p_target => l_target_text
     , p_delimiter => chr(10)
-    , p_str_tab => l_source_line_tab
-    );
-    oracle_tools.pkg_str_util.split
-    ( p_str => l_target_text
-    , p_delimiter => chr(10)
-    , p_str_tab => l_target_line_tab
-    );
-    compare_ddl
-    ( p_source_line_tab => l_source_line_tab
-    , p_target_line_tab => l_target_line_tab
     , p_compare_line_tab => l_line_tab
     );
 
