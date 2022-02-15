@@ -743,7 +743,6 @@ procedure compare
 is
   l_source_line_tab dbms_sql.varchar2a;
   l_target_line_tab dbms_sql.varchar2a;
-  l_compare_line_tab dbms_sql.varchar2a;
 begin
   oracle_tools.pkg_str_util.split
   ( p_str => p_source
@@ -761,7 +760,7 @@ begin
   , p_stop_after_first_diff => p_stop_after_first_diff
   , p_show_equal_lines => p_show_equal_lines
   , p_convert_to_base64 => p_convert_to_base64
-  , p_compare_line_tab => l_compare_line_tab
+  , p_compare_line_tab => p_compare_line_tab
   );
 end compare;
 
