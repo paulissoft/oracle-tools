@@ -17,6 +17,11 @@ Types of changes:
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 
+## [1.3.2] - 2022-02-23
+
+### Changed
+
+- [Generating DDL for the V5 interface should use the actual output files for the determination of a sequence number](https://github.com/paulissoft/oracle-tools/issues/25)
 
 ## [1.3.1] - 2022-01-25
 
