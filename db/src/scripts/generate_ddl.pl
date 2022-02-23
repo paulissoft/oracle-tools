@@ -396,8 +396,7 @@ sub remove_trailing_empty_lines ($);
 sub beautify_line ($$$$$$);
 sub split_single_output_file($);
 sub add_object_seq ($;$);
-sub read_object_seq ($);
-sub write_object_seq ($);
+sub read_object_seq ();
 sub error (@);
 sub warning (@);
 sub info (@);
@@ -459,7 +458,6 @@ sub process_command_line ()
 
 sub process () {
     my $install_sql = ($skip_install_sql ? undef : File::Spec->catfile($output_directory, 'install.sql'));
-    my $install_sequence_txt = File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT);
     my $in;
 
     if (defined($input_file)) {
@@ -469,17 +467,12 @@ sub process () {
         $in = \*STDIN;
     }
 
-    # Interface not known yet so just try to read the OLD_INSTALL_SEQUENCE_TXT or NEW_INSTALL_SEQUENCE_TXT.
-    
-    if ( read_object_seq($install_sequence_txt) ) {
-        # Just read the old file so remove it.
-        unlink $install_sequence_txt || error("Could not remove file '$install_sequence_txt': $!");
-        $install_sequence_txt = File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT);
-    } else {
-        $install_sequence_txt = File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT);
-        read_object_seq($install_sequence_txt);
-    }
+    read_object_seq();
 
+    # These files are not needed anymore since the directory contents are used to determine the object sequence for interface V5
+    unlink(File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT),
+           File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT));
+    
     # always make the output directory
     make_path($output_directory, { verbose => 0 });
 
@@ -614,11 +607,6 @@ sub process () {
         split_single_output_file($file);
     }
 
-    # Only write $install_sequence_txt for version 5
-    if ($interface eq PKG_DDL_UTIL_V5) {
-        write_object_seq($install_sequence_txt);
-    }
-
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
     if (!defined($single_output_file)) {
         # GJP 2021-08-21  Add SQL scripts that adhere to the naming convention
@@ -626,9 +614,7 @@ sub process () {
 
         # GJP 2021-08-27  Add install files too
         push(@obsolete_files,
-             File::Spec->catfile($output_directory, 'install.sql'),
-             File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT),
-             File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT));
+             File::Spec->catfile($output_directory, 'install.sql'));
 
         # When those files have not been created
         @obsolete_files = grep { -f $_ && !exists($file_modified{$_}) } @obsolete_files;
@@ -1484,42 +1470,22 @@ sub add_object_seq ($;$) {
     debug("\$object_seq{$object}:", $object_seq{$object});
 }
 
-sub read_object_seq ($) {
-    my $install_sequence_txt = shift @_;    
-    my $fh_seq = undef;
+sub read_object_seq () {
+    my %objects;
     
-    # read previous object sequence numbers first so we can recreate them even if the directory is removed after
-    if ( -e $install_sequence_txt ) {
-        open($fh_seq, '<', $install_sequence_txt)
-            or error("Can not open '$install_sequence_txt': $!");
-
-        while (<$fh_seq>) {
-            if (m/^(\d+)[:.](.+)[:.](.+)[:.](.+)$/) {
-                add_object_seq(join(':', $2, $3, $4), $1);
-            } elsif (m/^(.+)[:.](.+)[:.](.+)$/) {
-                add_object_seq(join(':', $1, $2, $3));
-            }
+    opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
+    while (my $file = readdir $dh) {
+        if ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
+            $objects{$2} = join(':', $3, $4, $5);
+        } elsif ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
+            $objects{$2} = join(':', '', $3, $4);
         }
-
-        close $fh_seq;
     }
-    return -e $install_sequence_txt;
-}
-
-sub write_object_seq ($) {
-    my $install_sequence_txt = shift @_;    
-    my $fh_seq = undef;
-    my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2/0 : 4); # should not come here for interface V4 so 2/0 will raise an exception
-
-    $fh_seq = smart_open($install_sequence_txt)
-        or error("Can not write '$install_sequence_txt': $!");
-
-    print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
-    print $fh_seq "-- YOU CAN ADD, MODIFY OR REMOVE LINES BELOW BUT KEEP THE FIRST COLUMN UNIQUE AND THE COMBINATION OF THE SECOND TILL FOURTH TOO\n";
-    foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
-        print $fh_seq sprintf("%0${nr_zeros}d:%s\n", $object_seq{$object}, $object);
+    # add the files in order
+    foreach my $object_seq (sort keys %objects) {
+        add_object_seq($objects{$object_seq}, $object_seq);
     }
-    smart_close($fh_seq);
+    closedir $dh;
 }
 
 sub error (@) {
