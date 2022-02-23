@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_STR_UTIL" IS
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_STR_UTIL" IS -- -*-coding: utf-8-*-
 /**
  * <h1>Functionality</h1>
  * <p>
@@ -129,6 +129,63 @@ procedure compare
 , p_str2_tab in t_clob_tab
 , p_first_line_not_equal out binary_integer
 , p_first_char_not_equal out binary_integer
+);
+
+/**
+ * Compare two line arrays and return diff like results.
+ *
+ * The idea is that the output shows you how to turn the source into the target, i.e. which lines have to be added or removed.
+ *
+ * The code is taken from Diff.java, Copyright © 2000–2017, Robert Sedgewick and Kevin Wayne.
+ * Originally found on http://introcs.cs.princeton.edu/java/96optimization/Diff.java.html
+ * but it seems now to reside on https://introcs.cs.princeton.edu/java/23recursion/Diff.java.html.
+ *
+ * The output format is:
+ *
+ *   [source line index][target line index][marker] line
+ *
+ * where marker is one of '=', '-' or '+'. 
+ * Line is the source line if marker is '-' (remove) and the target line if marker is '+' (add). 
+ * When marker is '=' both the source and target line are equal so it is one of those.
+ * The line displayed is converted to base64 when the parameter p_convert_to_base64 equals true.
+ *
+ * @param p_source_line_tab        The source lines
+ * @param p_target_line_tab        The target lines
+ * @param p_stop_after_first_diff  Stop after the first difference?
+ * @param p_show_equal_lines       Show equal lines?
+ * @param p_convert_to_base64      Convert a line to base64 (hex) while displaying differences?
+ * @param p_compare_line_tab       The comparison
+ */
+procedure compare
+( p_source_line_tab in dbms_sql.varchar2a
+, p_target_line_tab in dbms_sql.varchar2a
+, p_stop_after_first_diff in boolean default false
+, p_show_equal_lines in boolean default true
+, p_convert_to_base64 in boolean default false
+, p_compare_line_tab out nocopy dbms_sql.varchar2a
+);
+
+/**
+ * Compare two CLOBs, split them by a delimiter and return diff like results.
+ *
+ * See compare() above.
+ *
+ * @param p_source                 The source CLOB 
+ * @param p_target                 The target CLOB 
+ * @param p_delimiter              The delimiter to split by
+ * @param p_stop_after_first_diff  Stop after the first difference?
+ * @param p_show_equal_lines       Show equal lines?
+ * @param p_convert_to_base64      Convert a line to base64 (hex) while displaying differences?
+ * @param p_compare_line_tab       The comparison
+ */
+procedure compare
+( p_source in clob
+, p_target in clob
+, p_delimiter in varchar2 default chr(10)
+, p_stop_after_first_diff in boolean default false
+, p_show_equal_lines in boolean default true
+, p_convert_to_base64 in boolean default false
+, p_compare_line_tab out nocopy dbms_sql.varchar2a
 );
 
 /**

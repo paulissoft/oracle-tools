@@ -13,6 +13,7 @@
   <description>Core POM for Oracle Apex builds</description>
   
   <properties>
+    <db.schema>${oracle_tools_schema}</db.schema>
     <oracle-tools.apex.src.dir>${oracle-tools.dir}/apex/src</oracle-tools.apex.src.dir>
     <oracle-tools.apex.scripts.dir>${oracle-tools.apex.src.dir}/scripts</oracle-tools.apex.scripts.dir>
     <!-- generic apex src dir -->

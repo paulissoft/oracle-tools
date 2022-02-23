@@ -84,6 +84,8 @@
          line, i.e. more security.
     -->
     <db.password>${env.DB_PASSWORD}</db.password>
+    <!-- GJP 2021-09-06 For the time being display this only in debug mode-->
+    <ant.log.level>info</ant.log.level>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -155,7 +157,6 @@
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target if="maven.debug">
-                  <property name="ant.log.level" value="info" />
                   <!-- also dbUrl, dbUser, dbPass -->
                   <echoproperties prefix="java." />
                   <echoproperties prefix="maven." />
@@ -194,9 +195,6 @@
                        
                        This reduces the need for duplicate folders/files.
                   -->
-
-                  <!-- GJP 2021-09-06 For the time being display always the "Reading ... properties from file ..." -->
-                  <property name="ant.log.level" value="info" />
 
                   <property name="db.config.dir.env.properties" value="${db.config.dir}${file.separator}env.properties" />
                   

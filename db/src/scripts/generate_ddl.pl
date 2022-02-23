@@ -33,7 +33,7 @@ The owner will not be part of the file name if the strip source schema command l
 If the pkg_ddl_util interface version is 4 the sequence number is dependent on the type.
 
 If the pkg_ddl_util interface version is 5 the sequence number depends on the
-installation sequence order as specified in file install_sequence.txt which is
+installation sequence order as specified in file !README_BEFORE_ANY_CHANGE.txt which is
 initially created in object dependency order.
 
 =item GENERATE DDL SCRIPTS FOR AN INCREMENTAL INSTALLATION
@@ -264,6 +264,8 @@ use warnings;
 # CONSTANTS
 use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
+use constant OLD_INSTALL_SEQUENCE_TXT => 'install_sequence.txt';
+use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
@@ -356,6 +358,7 @@ my %object_type_info = (
     );
 
 my %object_seq = ();
+my $object_seq_max = 0; # the maximum $object_seq{$object} 
 
 # A list of modified files in output directory so we can remove non-modified files in non single output mode.
 # Key is file name created by this run in output directory. Value is 0 if file is unchanged, 1 otherwise.
@@ -392,9 +395,8 @@ sub remove_leading_empty_lines ($);
 sub remove_trailing_empty_lines ($);
 sub beautify_line ($$$$$$);
 sub split_single_output_file($);
-sub add_object_seq ($);
-sub read_object_seq ($);
-sub write_object_seq ($);
+sub add_object_seq ($;$);
+sub read_object_seq ();
 sub error (@);
 sub warning (@);
 sub info (@);
@@ -456,7 +458,6 @@ sub process_command_line ()
 
 sub process () {
     my $install_sql = ($skip_install_sql ? undef : File::Spec->catfile($output_directory, 'install.sql'));
-    my $install_sequence_txt = File::Spec->catfile($output_directory, 'install_sequence.txt');
     my $in;
 
     if (defined($input_file)) {
@@ -466,8 +467,12 @@ sub process () {
         $in = \*STDIN;
     }
 
-    read_object_seq($install_sequence_txt);
+    read_object_seq();
 
+    # These files are not needed anymore since the directory contents are used to determine the object sequence for interface V5
+    unlink(File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT),
+           File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT));
+    
     # always make the output directory
     make_path($output_directory, { verbose => 0 });
 
@@ -602,11 +607,6 @@ sub process () {
         split_single_output_file($file);
     }
 
-    # Only write $install_sequence_txt for version 5
-    if ($interface eq PKG_DDL_UTIL_V5) {
-        write_object_seq($install_sequence_txt);
-    }
-
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
     if (!defined($single_output_file)) {
         # GJP 2021-08-21  Add SQL scripts that adhere to the naming convention
@@ -614,8 +614,7 @@ sub process () {
 
         # GJP 2021-08-27  Add install files too
         push(@obsolete_files,
-             File::Spec->catfile($output_directory, 'install.sql'),
-             File::Spec->catfile($output_directory, 'install_sequence.txt'));
+             File::Spec->catfile($output_directory, 'install.sql'));
 
         # When those files have not been created
         @obsolete_files = grep { -f $_ && !exists($file_modified{$_}) } @obsolete_files;
@@ -1255,7 +1254,7 @@ sub sql_statement_flush ($$$$$$) {
         #     # And use q'[]' since the type may containt methods with string parameters with a default
         #     $sql_statement = "/* To help Flyway */\nBEGIN\n  EXECUTE IMMEDIATE q'[\n" . $sql_statement . "\n]';\nEND;";
         } else {
-            # Only the first statement is relevant. Statement 2 and further are never create or replace statements
+            # Only the first statement is relevant. Statement 2 and further are never "create or replace" statements
 
             debug("\$ddl_no:", $ddl_no, "; \$object_type:", $object_type);
             debug("object type terminator:", (exists($object_type_info{$object_type}->{'terminator'}) ? $object_type_info{$object_type}->{'terminator'} : 'UNKNOWN'));
@@ -1287,7 +1286,9 @@ sub sql_statement_flush ($$$$$$) {
         $sql_statement .= ($last_ch eq ';' ? "\n/" : ";\n/");
     } elsif ($terminator eq '/') {
         # close PL/SQL block
-        $sql_statement .= "\n/";
+        # GJP 2022-01-18 Unless the last line already ends with a /
+        $sql_statement .= "\n/"
+            unless $r_sql_statement->[scalar(@$r_sql_statement)-1] =~ m!^/\s*$!;
     } elsif ($terminator eq ';') {
         # close SQL statement with a ;
         $last_line = $r_sql_statement->[$#$r_sql_statement];
@@ -1443,51 +1444,48 @@ sub split_single_output_file ($) {
     unlink($input_file);
 }
 
-sub add_object_seq ($) {
-    my $key = shift @_;
+sub add_object_seq ($;$) {
+    my ($object, $object_seq) = @_;
     
-    error("Key '$key' should match 'SCHEMA:TYPE:NAME'")
-        unless $key =~ m/^.+:.+:.+$/;
+    error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
+        unless $object =~ m/^.+:.+:.+$/;
     
-    error("Object sequence for '$key' already exists.")
-        if exists($object_seq{$key});
-    
-    $object_seq{$key} = keys(%object_seq) + 1;
-    debug("\$object_seq{$key}:", $object_seq{$key});
-}
+    error("Object sequence for '$object' already exists.")
+        if exists($object_seq{$object});
 
-sub read_object_seq ($) {
-    my $install_sequence_txt = shift @_;    
-    my $fh_seq = undef;
-    
-    # read previous object sequence numbers first so we can recreate them even if the directory is removed after
-    if ( -e $install_sequence_txt ) {
-        open($fh_seq, '<', $install_sequence_txt)
-            or error("Can not open '$install_sequence_txt': $!");
-
-        while (<$fh_seq>) {
-            if (m/^(.+)[:.](.+)[:.](.+)$/) {
-                add_object_seq(join(':', $1, $2, $3));
-            }
+    if (defined($object_seq)) {
+        # strip leading zeros otherwise it will be treated as an octal number
+        $object_seq =~ m/^0*(\d+)$/;
+        $object_seq = int($1);
+        
+        if ($object_seq <= $object_seq_max) {
+            error("Object sequence ($object_seq) for object '$object' must be greater than the maximum thus far ($object_seq_max)");
         }
-
-        close $fh_seq;
+        $object_seq_max = $object_seq;
+    } else {
+        $object_seq = ++$object_seq_max;
     }
+
+    $object_seq{$object} = $object_seq;
+    debug("\$object_seq{$object}:", $object_seq{$object});
 }
 
-sub write_object_seq ($) {
-    my $install_sequence_txt = shift @_;    
-    my $fh_seq = undef;
-
-    $fh_seq = smart_open($install_sequence_txt)
-        or error("Can not write '$install_sequence_txt': $!");
-
-    print $fh_seq "-- This file is maintained by generate_ddl.pl\n";
-    print $fh_seq "-- DO NEVER REMOVE LINES BELOW BUT YOU MAY CHANGE THE ORDER OR ADD LINES (AT THE END)\n";
-    foreach my $object (sort { $object_seq{$a} <=> $object_seq{$b} } keys %object_seq) {
-        print $fh_seq "$object\n";
+sub read_object_seq () {
+    my %objects;
+    
+    opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
+    while (my $file = readdir $dh) {
+        if ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
+            $objects{$2} = join(':', $3, $4, $5);
+        } elsif ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
+            $objects{$2} = join(':', '', $3, $4);
+        }
     }
-    smart_close($fh_seq);
+    # add the files in order
+    foreach my $object_seq (sort keys %objects) {
+        add_object_seq($objects{$object_seq}, $object_seq);
+    }
+    closedir $dh;
 }
 
 sub error (@) {

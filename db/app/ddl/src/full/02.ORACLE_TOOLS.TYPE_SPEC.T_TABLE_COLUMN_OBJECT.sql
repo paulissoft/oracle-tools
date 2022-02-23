@@ -1,6 +1,6 @@
 CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under oracle_tools.t_type_attribute_object
 ( /*
-  From USER_TAB_COLUMNS (see also oracle_tools.t_type_attribute_object):
+  From USER_TAB_COLUMNS (see also T_TYPE_ATTRIBUTE_OBJECT):
 
   Column                Datatype              Description
   ------                --------              -----------

@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>71778820537478575
+,p_default_id_offset=>67978470344966559
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(49543189080366252)
+ p_id=>wwv_flow_api.id(18435281264600307)
 ,p_lov_name=>'DESKTOP THEME STYLES'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select s.name d,',
