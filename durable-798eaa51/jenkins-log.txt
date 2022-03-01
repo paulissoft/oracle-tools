@@ -1,4 +1,0 @@
-+ cd /var/jenkins_home/workspace/dev/add_tag@tmp
-+ git config user.name paulissoft
-+ git config user.email paulissoft@gmail.com
-+ git add .

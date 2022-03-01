@@ -29,40 +29,35 @@ pipeline {
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        dir(env.WORKSPACE_TMP) {
+                        dir('check-out') {
                             // Clean before build
                             cleanWs()                
 								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 
                             withMaven(maven: maven) {
                                 sh("""
-set -eux
-set
-ls -l
-cd ${WORKSPACE_TMP}/${env.db_dir}
+echo processing DB actions ${env.db_actions} in ${env.db_dir}
+cd ${env.db_dir}
 set ${env.db_actions}
-for profile; do echo mvn -Ddb.config.dir=${WORKSPACE_TMP}/${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
-cd ${WORKSPACE_TMP}/${env.apex_dir}
-set ${env.apex_actions}
-for profile; do echo mvn -Ddb.config.dir=${WORKSPACE_TMP}/${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
-                                """)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+for profile; do mvn -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+cd -
 
-        stage("check-in") {
-            steps {
-                sh("""
-cd ${WORKSPACE_TMP}
+echo processing APEX actions ${env.apex_actions} in ${env.apex_dir}
+cd ${env.apex_dir}
+set ${env.apex_actions}
+for profile; do mvn -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+cd -
+
 git config user.name ${env.scm_username}
 git config user.email ${env.scm_email}
 git add .
 git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
 git push --set-upstream origin ${env.scm_branch}
-                """)
+                                """)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
