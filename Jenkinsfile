@@ -4,8 +4,8 @@ def url = 'git@github.com:paulissoft/oracle-tools.git'
 def db = 'orcl'
 def db_username = 'oracle_tools'
 def db_password = 'oracle_tools'
-def pom_dir = 'db/app'
-def db_config_dir = '../../conf/src'
+def pom_dir = "${env.WORKSPACE}/db/app"
+def db_config_dir = "${env.WORKSPACE}/conf/src"
 
 pipeline {
     agent any
