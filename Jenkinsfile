@@ -37,16 +37,12 @@ pipeline {
                             withMaven(maven: maven) {
                                 sh("""
 echo processing DB actions ${env.db_actions} in ${env.db_dir}
-cd ${env.db_dir}
 set ${env.db_actions}
-for profile; do mvn -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
-cd -
+for profile; do mvn -f ${env.db_dir} -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
 
 echo processing APEX actions ${env.apex_actions} in ${env.apex_dir}
-cd ${env.apex_dir}
 set ${env.apex_actions}
-for profile; do mvn -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
-cd -
+for profile; do mvn -f ${env.apex_dir} -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
 
 git config user.name ${env.scm_username}
 git config user.email ${env.scm_email}
