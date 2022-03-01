@@ -5,7 +5,7 @@ def db = 'orcl'
 def db_username = 'oracle_tools'
 def db_password = 'oracle_tools'
 def pom_dir = 'db/app'
-def db_config_dir = 'conf/src'
+def db_config_dir = '../../conf/src'
 
 pipeline {
     agent any
