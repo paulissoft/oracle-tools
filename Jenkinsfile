@@ -5,6 +5,7 @@ def db = 'orcl'
 def db_username = 'oracle_tools'
 def db_password = 'oracle_tools'
 def pom_dir = 'db/app'
+def db_config_dir = 'conf/src'
 
 pipeline {
     agent any
@@ -21,14 +22,11 @@ pipeline {
             steps {
                 withMaven(maven: 'maven-3') {
                     sh("""
-                        cd ${pom_dir}
-                        pwd
-                        set -x
-                        mvn -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-info
-                        mvn -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-install
-                        mvn -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-code-test
-                        mvn -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-test
-                        mvn -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-generate-ddl-full
+cd ${pom_dir}
+pwd
+set -x
+set db-info db-install db-code-test db-test db-generate-ddl-full
+for profile; do mvn -Ddb.config.dir=${db_config_dir} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
             }
@@ -37,11 +35,11 @@ pipeline {
         stage("check-in") {
             steps {
                 sh("""
-                    git config user.name 'paulissoft'
-                    git config user.email 'paulissoft@gmail.com'
-                    git add .
-                    git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
-                    git push origin
+git config user.name 'paulissoft'
+git config user.email 'paulissoft@gmail.com'
+git add .
+git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
+git push origin
                 """)
             }
         }
