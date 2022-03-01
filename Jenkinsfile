@@ -7,22 +7,21 @@ def db_password = 'ORACLE_TOOLS'
 def pom_dir = "db/app/ddl"
 def db_config_dir = "conf/src"
 def db_host = 'host.docker.internal'
+def checkout_subdir = 'oracle-tools'
 
 pipeline {
     agent any
     options {
         skipDefaultCheckout(true)
-        checkoutToSubdirectory('oracle-tools')
     }
     stages {
         stage("check-out") {
             steps {
-                // dir('oracle-tools') {
-                // Clean before build
-                    sh 'pwd'
+                dir(checkout_subdir) {
+                    // Clean before build
                     cleanWs()                
 								    git branch: branch, credentialsId: credentialsId, url: url
-                // }
+                }
 						}
 				}
 
@@ -33,10 +32,10 @@ pipeline {
 set -eux
 pwd
 find .
-cd ${WORKSPACE}/oracle-tools/${pom_dir}
+cd ${WORKSPACE}/${checkout_subdir}/${pom_dir}
 # set db-info db-install db-code-check db-test db-generate-ddl-full
 set db-info db-install db-generate-ddl-full
-for profile; do mvn -Ddb.config.dir=${WORKSPACE}/oracle-tools/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
+for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${checkout_subdir}/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
             }
