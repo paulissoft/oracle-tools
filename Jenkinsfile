@@ -19,11 +19,15 @@ pipeline {
 
         stage("build") {
             steps {
-                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-info"
-                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-install"
-                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-code-test"
-                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-test"
-                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-generate-ddl-full"
+                withMaven {
+                    sh("""
+                        mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-info
+                        mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-install
+                        mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-code-test
+                        mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-test
+                        mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-generate-ddl-full
+                    """)
+                }
             }
         }
 
