@@ -10,12 +10,15 @@ def db_host = 'host.docker.internal'
 
 pipeline {
     agent any
+    options {
+        skipDefaultCheckout()
+    }
     stages {
         stage("check-out") {
             steps {
-                dir('oracle-tools') {
+                // dir('oracle-tools') {
 								    git branch: branch, credentialsId: credentialsId, url: url
-                }
+                // }
 						}
 				}
 
@@ -24,8 +27,10 @@ pipeline {
                 withMaven(maven: 'maven-3') {
                     sh("""
 set -eux
+find . -type d
 cd ${WORKSPACE}/oracle-tools/${pom_dir}
-set db-info db-install db-code-check db-test db-generate-ddl-full
+# set db-info db-install db-code-check db-test db-generate-ddl-full
+set db-info db-install db-generate-ddl-full
 for profile; do mvn -Ddb.config.dir=${WORKSPACE}/oracle-tools/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
