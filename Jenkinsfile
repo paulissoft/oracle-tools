@@ -4,7 +4,7 @@ def url = 'git@github.com:paulissoft/oracle-tools.git'
 def db = 'orcl'
 def db_username = 'oracle_tools'
 def db_password = 'ORACLE_TOOLS'
-def pom_dir = "db/app"
+def pom_dir = "db/app/ddl"
 def db_config_dir = "conf/src"
 def db_host = 'host.docker.internal'
 
