@@ -1,13 +1,13 @@
-pipeline {
-    def branch = 'development'
-    def credentialsId = 'fd87b3b8-8972-4889-be8d-86342abacb22'
-    def url = 'git@github.com:paulissoft/oracle-tools.git'
-    def db = 'orcl'
-    def db_username = 'oracle_tools'
-    def db_password = 'oracle_tools'
-    def profiles = ["db-info", "db-install", "db-code-test", "db-test", "db-generate-ddl-full"]
-    def pom_file = 'db/app/pom.xml'
+def branch = 'development'
+def credentialsId = 'fd87b3b8-8972-4889-be8d-86342abacb22'
+def url = 'git@github.com:paulissoft/oracle-tools.git'
+def db = 'orcl'
+def db_username = 'oracle_tools'
+def db_password = 'oracle_tools'
+def profiles = ["db-info", "db-install", "db-code-test", "db-test", "db-generate-ddl-full"]
+def pom_file = 'db/app/pom.xml'
 
+pipeline {
     agent any
     stages {
         stage("check-out") {
