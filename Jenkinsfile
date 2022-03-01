@@ -13,9 +13,9 @@ pipeline {
     stages {
         stage("check-out") {
             steps {
-								git branch: branch,
-    								credentialsId: credentialsId,
-    								url: url
+                dir('oracle-tools') {
+								    git branch: branch, credentialsId: credentialsId, url: url
+                }
 						}
 				}
 
