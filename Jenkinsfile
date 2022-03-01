@@ -44,6 +44,7 @@ for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${checkout_subdir}/${db_config_
         stage("check-in") {
             steps {
                 sh("""
+cd ${WORKSPACE}/${checkout_subdir}
 git config user.name 'paulissoft'
 git config user.email 'paulissoft@gmail.com'
 git add .
