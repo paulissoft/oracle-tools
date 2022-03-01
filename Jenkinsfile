@@ -38,10 +38,12 @@ pipeline {
                                 sh('''
 db_config_dir=`cd $conf_dir && pwd`
 echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
+set ""
 set $db_actions
 for profile; do mvn -f $db_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
 
 echo processing APEX actions $apex_actions in $apex_dir with configuration directory \$db_config_dir
+set ""
 set $apex_actions
 for profile; do mvn -f $apex_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
 
