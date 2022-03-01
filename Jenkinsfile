@@ -11,12 +11,14 @@ def db_host = 'host.docker.internal'
 pipeline {
     agent any
     options {
-        skipDefaultCheckout()
+        skipDefaultCheckout(true)
     }
     stages {
         stage("check-out") {
             steps {
                 // dir('oracle-tools') {
+                    // Clean before build
+                    cleanWs()                
 								    git branch: branch, credentialsId: credentialsId, url: url
                 // }
 						}
@@ -47,6 +49,17 @@ git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
 git push origin
                 """)
             }
+        }
+    }
+    post {
+        // Clean after build
+        always {
+            cleanWs(cleanWhenNotBuilt: false,
+                    deleteDirs: true,
+                    disableDeferredWipeout: true,
+                    notFailBuild: true,
+                    patterns: [[pattern: '.gitignore', type: 'INCLUDE'],
+                               [pattern: '.propsfile', type: 'EXCLUDE']])
         }
     }
 }
