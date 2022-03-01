@@ -26,7 +26,7 @@ cd ${WORKSPACE}/${pom_dir}
 pwd
 set -x
 set db-info db-install db-code-test db-test db-generate-ddl-full
-for profile; do echo mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
+for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
             }
