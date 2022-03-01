@@ -26,6 +26,8 @@ pipeline {
 set -eux
 pwd
 ls -lrt
+set
+find .
 cd ${WORKSPACE}/${pom_dir}
 pwd
 set db-info db-install db-code-test db-test db-generate-ddl-full
