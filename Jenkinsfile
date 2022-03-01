@@ -28,10 +28,10 @@ pwd
 ls -lrt
 set
 find .
-cd ${WORKSPACE}/${pom_dir}
+cd ${WORKSPACE}/oracle-tools/${pom_dir}
 pwd
 set db-info db-install db-code-test db-test db-generate-ddl-full
-for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
+for profile; do mvn -Ddb.config.dir=${WORKSPACE}/oracle-tools/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
             }
