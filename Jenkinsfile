@@ -18,8 +18,8 @@ pipeline {
 						}
 				}
 
-        for (profile in profiles) {
-            stage(profile) {
+        stage("build") {
+            for (profile in profiles) {
                 steps {
                     withMaven {
                         sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P${profile}"
