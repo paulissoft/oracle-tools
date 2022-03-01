@@ -12,12 +12,14 @@ pipeline {
     agent any
     options {
         skipDefaultCheckout(true)
+        checkoutToSubdirectory('oracle-tools')
     }
     stages {
         stage("check-out") {
             steps {
                 // dir('oracle-tools') {
-                    // Clean before build
+                // Clean before build
+                    sh 'pwd'
                     cleanWs()                
 								    git branch: branch, credentialsId: credentialsId, url: url
                 // }
@@ -29,7 +31,8 @@ pipeline {
                 withMaven(maven: 'maven-3') {
                     sh("""
 set -eux
-find . -type d
+pwd
+find .
 cd ${WORKSPACE}/oracle-tools/${pom_dir}
 # set db-info db-install db-code-check db-test db-generate-ddl-full
 set db-info db-install db-generate-ddl-full
