@@ -29,7 +29,7 @@ pipeline {
                     dir(checkout_subdir) {
                         // Clean before build
                         cleanWs()                
-								        git branch: $scm_branch, credentialsId: $scm_credentials, url: $scm_url
+								        git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 /*
                         withMaven(maven: 'maven-3') {
                             sh("""
