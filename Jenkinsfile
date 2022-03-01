@@ -17,6 +17,8 @@ pipeline {
                         env.scm_branch = props.scm_branch
                         env.scm_credentials = props.scm_credentials
                         env.scm_url = props.scm_url
+                        env.scm_username = props.scm_username
+                        env.scm_email = props.scm_email
                         env.conf_dir = props.conf_dir
                         env.db = props.db
                         env.db_credentials = props.db_credentials
@@ -50,20 +52,19 @@ for profile; do echo mvn -Ddb.config.dir=${WORKSPACE_TMP}/${env.conf_dir} -Ddb=$
                 }
             }
         }
-/*
+
         stage("check-in") {
             steps {
                 sh("""
 cd ${WORKSPACE_TMP}
-git config user.name 'paulissoft'
-git config user.email 'paulissoft@gmail.com'
+git config user.name ${env.scm_username}
+git config user.email ${env.scm_email}
 git add .
 git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
 git push --set-upstream origin ${env.scm_branch}
                 """)
             }
         }
-*/
     }
     post {
         // Clean after build
