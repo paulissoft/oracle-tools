@@ -3,9 +3,10 @@ def credentialsId = 'fd87b3b8-8972-4889-be8d-86342abacb22'
 def url = 'git@github.com:paulissoft/oracle-tools.git'
 def db = 'orcl'
 def db_username = 'oracle_tools'
-def db_password = 'oracle_tools'
+def db_password = 'ORACLE_TOOLS'
 def pom_dir = "db/app"
 def db_config_dir = "conf/src"
+def db_host = 'host.docker.internal'
 
 pipeline {
     agent any
@@ -26,7 +27,7 @@ cd ${WORKSPACE}/${pom_dir}
 pwd
 set -x
 set db-info db-install db-code-test db-test db-generate-ddl-full
-for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
+for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
             }
