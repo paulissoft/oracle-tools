@@ -18,7 +18,6 @@ pipeline {
                         #!/usr/bin/env bash
                         set +x
                         export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no paulissoft@gmail.com"
-                        eval "\$GIT_SSH_COMMAND uptime"
                         git push origin \$GIT_TAG
                      """)
                 }
