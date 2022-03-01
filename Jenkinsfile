@@ -4,7 +4,6 @@ def url = 'git@github.com:paulissoft/oracle-tools.git'
 def db = 'orcl'
 def db_username = 'oracle_tools'
 def db_password = 'oracle_tools'
-def profiles = ["db-info", "db-install", "db-code-test", "db-test", "db-generate-ddl-full"]
 def pom_file = 'db/app/pom.xml'
 
 pipeline {
@@ -20,11 +19,11 @@ pipeline {
 
         stage("build") {
             steps {
-                for (profile in profiles) {
-                    withMaven {
-                        sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P${profile}"
-                    }
-                }
+                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-info"
+                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-install"
+                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-code-test"
+                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-test"
+                sh "mvn -f ${pom_file} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -Pdb-generate-ddl-full"
             }
         }
 
