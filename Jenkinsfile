@@ -1,4 +1,6 @@
 def checkout_subdir = 'oracle-tools'
+def config_file = 'oracle-tools-config-development'
+def maven = 'maven-3'
 
 pipeline {
     agent any
@@ -9,40 +11,39 @@ pipeline {
         stage("process") {
             steps {
                 configFileProvider(
-                    [configFile(fileId: 'oracle-tools-config-development', variable: 'SETTINGS')]) {
+                    [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
-                        def props = readProperties file: env.SETTINGS
+                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin
+                        
                         env.scm_branch = props.scm_branch
                         env.scm_credentials = props.scm_credentials
                         env.scm_url = props.scm_url
-                        // env.conf_dir
-                        // env.db
-                        // env.db_credentials
-                        // env.db_dir
-                        // env.db_actions
-                        // env.apex_dir
-                        // env.apex_actions
+                        env.conf_dir = props.conf_dir
+                        env.db = props.db
+                        env.db_credentials = props.db_credentials
+                        env.db_dir = props.db_dir
+                        env.db_actions = props.db_actions
+                        env.apex_dir = props.apex_dir
+                        env.apex_actions = props.apex_actions
                     }
 
-                    // withCredentials([usernamePassword(credentialsId: env.scm_credentials, passwordVariable: 'password', usernameVariable: 'username')]) { // some block }
-                    
-                    dir(checkout_subdir) {
-                        // Clean before build
-                        cleanWs()                
-								        git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
-/*
-                        withMaven(maven: 'maven-3') {
-                            sh("""
+                    withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
+                        dir(checkout_subdir) {
+                            // Clean before build
+                            cleanWs()                
+								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
+
+                            withMaven(maven: maven) {
+                                sh("""
 set -eux
 set
 ls -l
-cd ${WORKSPACE}/${checkout_subdir}/${pom_dir}
-# set db-info db-install db-code-check db-test db-generate-ddl-full
-set db-info db-install db-generate-ddl-full
-for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${checkout_subdir}/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
-                            """)
+cd ${WORKSPACE}/${checkout_subdir}/${env.db_dir}
+set ${env.db_actions}
+for profile; do echo mvn -Ddb.config.dir=${WORKSPACE}/${checkout_subdir}/${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+                                """)
+                            }
                         }
-                         */
                     }
                 }
             }
@@ -56,7 +57,7 @@ git config user.name 'paulissoft'
 git config user.email 'paulissoft@gmail.com'
 git add .
 git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
-git push --set-upstream origin ${branch}
+git push --set-upstream origin ${env.scm_branch}
                 """)
             }
         }
