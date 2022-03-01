@@ -2,7 +2,6 @@ pipeline {
     agent any
     stages {
         stage("Tag and Push") {
-            when { branch 'development' }
             environment { 
                 GIT_TAG = "jenkins-$BUILD_NUMBER"
             }
