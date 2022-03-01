@@ -35,22 +35,22 @@ pipeline {
 								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 
                             withMaven(maven: maven) {
-                                sh("""
+                                sh('''
 db_config_dir=`cd $conf_dir && pwd`
-echo processing DB actions ${env.db_actions} in ${env.db_dir} with configuration directory \$db_config_dir
-set ${env.db_actions}
-for profile; do mvn -f ${env.db_dir} -Ddb.config.dir=\$db_config_dir -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
+set $db_actions
+for profile; do mvn -f $db_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
 
-echo processing APEX actions ${env.apex_actions} in ${env.apex_dir} with configuration directory \$db_config_dir
-set ${env.apex_actions}
-for profile; do mvn -f ${env.apex_dir} -Ddb.config.dir=\$db_config_dir -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+echo processing APEX actions $apex_actions in $apex_dir with configuration directory \$db_config_dir
+set $apex_actions
+for profile; do mvn -f $apex_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
 
-git config user.name ${env.scm_username}
-git config user.email ${env.scm_email}
+git config user.name $scm_username
+git config user.email $scm_email
 git add .
-git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
-git push --set-upstream origin ${env.scm_branch}
-                                """)
+git commit -m"Triggered Build: $BUILD_NUMBER"
+git push --set-upstream origin $scm_branch
+                                ''')
                             }
                         }
                     }
