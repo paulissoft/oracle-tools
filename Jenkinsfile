@@ -36,13 +36,14 @@ pipeline {
 
                             withMaven(maven: maven) {
                                 sh("""
-echo processing DB actions ${env.db_actions} in ${env.db_dir}
+db_config_dir=`cd $conf_dir && pwd`
+echo processing DB actions ${env.db_actions} in ${env.db_dir} with configuration directory $db_config_dir
 set ${env.db_actions}
-for profile; do mvn -f ${env.db_dir} -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+for profile; do mvn -f ${env.db_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
 
-echo processing APEX actions ${env.apex_actions} in ${env.apex_dir}
+echo processing APEX actions ${env.apex_actions} in ${env.apex_dir} with configuration directory $db_config_dir
 set ${env.apex_actions}
-for profile; do mvn -f ${env.apex_dir} -Ddb.config.dir=${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+for profile; do mvn -f ${env.apex_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
 
 git config user.name ${env.scm_username}
 git config user.email ${env.scm_email}
