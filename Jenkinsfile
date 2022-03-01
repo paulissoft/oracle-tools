@@ -1,4 +1,3 @@
-def checkout_subdir = 'oracle-tools'
 def config_file = 'oracle-tools-config-development'
 def maven = 'maven-3'
 
@@ -28,7 +27,7 @@ pipeline {
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        dir(checkout_subdir) {
+                        dir(env.WORKSPACE_TMP) {
                             // Clean before build
                             cleanWs()                
 								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
@@ -38,9 +37,12 @@ pipeline {
 set -eux
 set
 ls -l
-cd ${WORKSPACE}/${checkout_subdir}/${env.db_dir}
+cd ${WORKSPACE_TMP}/${env.db_dir}
 set ${env.db_actions}
-for profile; do echo mvn -Ddb.config.dir=${WORKSPACE}/${checkout_subdir}/${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+for profile; do echo mvn -Ddb.config.dir=${WORKSPACE_TMP}/${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
+cd ${WORKSPACE_TMP}/${env.apex_dir}
+set ${env.apex_actions}
+for profile; do echo mvn -Ddb.config.dir=${WORKSPACE_TMP}/${env.conf_dir} -Ddb=${env.db} -Ddb.username=${env.db_username} -Ddb.password=${env.db_password} -P\${profile}; done
                                 """)
                             }
                         }
@@ -52,7 +54,7 @@ for profile; do echo mvn -Ddb.config.dir=${WORKSPACE}/${checkout_subdir}/${env.c
         stage("check-in") {
             steps {
                 sh("""
-cd ${WORKSPACE}/${checkout_subdir}
+cd ${WORKSPACE_TMP}
 git config user.name 'paulissoft'
 git config user.email 'paulissoft@gmail.com'
 git add .
