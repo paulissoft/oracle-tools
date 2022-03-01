@@ -23,9 +23,11 @@ pipeline {
             steps {
                 withMaven(maven: 'maven-3') {
                     sh("""
+set -eux
+pwd
+ls -lrt
 cd ${WORKSPACE}/${pom_dir}
 pwd
-set -x
 set db-info db-install db-code-test db-test db-generate-ddl-full
 for profile; do mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.host=${db_host} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
