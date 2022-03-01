@@ -12,7 +12,7 @@ def checkout_subdir = 'oracle-tools'
 pipeline {
     agent any
     options {
-        skipDefaultCheckout(true)
+        skipDefaultCheckout()
     }
     stages {
         stage("check-out") {
@@ -30,8 +30,7 @@ pipeline {
                 withMaven(maven: 'maven-3') {
                     sh("""
 set -eux
-pwd
-find .
+ls -l
 cd ${WORKSPACE}/${checkout_subdir}/${pom_dir}
 # set db-info db-install db-code-check db-test db-generate-ddl-full
 set db-info db-install db-generate-ddl-full
@@ -49,7 +48,7 @@ git config user.name 'paulissoft'
 git config user.email 'paulissoft@gmail.com'
 git add .
 git commit -m'Triggered Build: ${env.BUILD_NUMBER}'
-git push origin
+git push --set-upstream origin ${branch}
                 """)
             }
         }
