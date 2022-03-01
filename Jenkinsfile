@@ -4,8 +4,8 @@ def url = 'git@github.com:paulissoft/oracle-tools.git'
 def db = 'orcl'
 def db_username = 'oracle_tools'
 def db_password = 'oracle_tools'
-def pom_dir = "${env.WORKSPACE}/db/app"
-def db_config_dir = "${env.WORKSPACE}/conf/src"
+def pom_dir = "db/app"
+def db_config_dir = "conf/src"
 
 pipeline {
     agent any
@@ -22,11 +22,11 @@ pipeline {
             steps {
                 withMaven(maven: 'maven-3') {
                     sh("""
-cd ${pom_dir}
+cd ${WORKSPACE}/${pom_dir}
 pwd
 set -x
 set db-info db-install db-code-test db-test db-generate-ddl-full
-for profile; do mvn -Ddb.config.dir=${db_config_dir} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
+for profile; do echo mvn -Ddb.config.dir=${WORKSPACE}/${db_config_dir} -Ddb=${db} -Ddb.username=${db_username} -Ddb.password=${db_password} -P\${profile}; done
                     """)
                 }
             }
