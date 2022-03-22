@@ -34,7 +34,7 @@ pwd
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        ws('check-out') {
+                        ws() {
 												    sh('''
 echo 2
 pwd
