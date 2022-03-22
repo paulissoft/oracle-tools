@@ -16,7 +16,7 @@ pipeline {
 set												
 echo 1														
 pwd
-git status
+for d in $WORKSPACE_TMP $WORKSPACE_TMP; do ( cd $d; git status || true ); done
 find .. -type d
                         ''')
 												
@@ -41,7 +41,7 @@ find .. -type d
 												    sh('''
 echo 2
 pwd
-git status
+git status || true
 find . -type d
 	                          ''')
 														
