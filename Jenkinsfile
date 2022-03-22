@@ -29,7 +29,7 @@ pipeline {
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        dir('check-out') {
+                        ws() {
                             // Clean before build
                             cleanWs()                
 								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
