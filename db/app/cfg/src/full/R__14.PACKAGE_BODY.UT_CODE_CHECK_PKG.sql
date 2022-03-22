@@ -1,4 +1,4 @@
-create or replace package body ut_code_check_pkg is
+CREATE OR REPLACE PACKAGE BODY "UT_CODE_CHECK_PKG" IS
 
 subtype t_var is varchar2(4 char);
 
@@ -83,7 +83,7 @@ begin
   end loop;
 
   declare
-    i_idx exception;
+    i_idx integer;
   begin
     null;
   end;
@@ -91,3 +91,4 @@ end;
 
 end ut_code_check_pkg;
 /
+

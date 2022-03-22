@@ -1,4 +1,4 @@
-create or replace package ut_code_check_pkg is
+CREATE OR REPLACE PACKAGE "UT_CODE_CHECK_PKG" IS
 
 "abcd" constant varchar2(4 char) := 'abcd';
 
@@ -11,3 +11,4 @@ procedure ut_reference(p_str in varchar2);
 
 end ut_code_check_pkg;
 /
+
