@@ -58,6 +58,7 @@ git push --set-upstream origin $scm_branch
             }
         }
     }
+		/*
     post {
         // Clean after build
         always {
@@ -69,4 +70,5 @@ git push --set-upstream origin $scm_branch
                                [pattern: '.propsfile', type: 'EXCLUDE']])
         }
     }
+		*/
 }
