@@ -2,6 +2,8 @@
 
 # Setup Jenkins via Docker on Linux/Mac, see https://www.jenkins.io/doc/book/installing/docker/#setup-wizard
 
+# Setup SSH between Jenkins and Github, see https://levelup.gitconnected.com/setup-ssh-between-jenkins-and-github-e4d7d226b271
+
 min_nr=${1:-0}
 max_nr=${2:-5}
 
@@ -55,7 +57,7 @@ EOF
   --volume jenkins-docker-certs:/certs/client:ro \
   myjenkins-blueocean:2.319.2-1
            ;;
-        4) docker container exec -it jenkins-blueocean ssh-keygen -t rsa -f /var/jenkins_home/.ssh/id_rsa -N ""
+        4) docker container exec -it jenkins-blueocean ssh-keygen -t rsa -f /var/jenkins_home/.ssh/id_rsa -N "" # generate SSH keys
            ;;
         5) open http://localhost:8080
            ;;

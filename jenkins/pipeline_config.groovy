@@ -15,7 +15,8 @@ application_environments{
         
         // Oracle tools info
         scm_branch=development
-        scm_credentials=fd87b3b8-8972-4889-be8d-86342abacb22
+        // scm_credentials=fd87b3b8-8972-4889-be8d-86342abacb22
+        scm_credentials=paulissoft
         scm_url=git@github.com:paulissoft/oracle-tools.git
         scm_username=paulissoft
         scm_email=paulissoft@gmail.com
