@@ -12,7 +12,9 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
-                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin                       
+                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin
+
+                        env.script_path = currentBuild.rawBuild.parent.definition.scriptPath
                         
                         env.scm_project = props.scm_project
                         assert env.scm_project != null
@@ -51,6 +53,7 @@ pipeline {
                             withMaven(maven: maven) {
                                 sh('''
 pwd
+echo script_path: $script_path
 db_config_dir=`cd $conf_dir && pwd`
 oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
 echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
