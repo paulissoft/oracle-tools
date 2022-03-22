@@ -16,6 +16,7 @@ pipeline {
 set												
 echo 1														
 pwd
+git status
 find .. -type d
                         ''')
 												
@@ -40,7 +41,8 @@ find .. -type d
 												    sh('''
 echo 2
 pwd
-find .. -type d
+git status
+find . -type d
 	                          ''')
 														
                             // Clean before build
