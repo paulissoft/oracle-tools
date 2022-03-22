@@ -12,16 +12,9 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
-										    sh('''
-set												
-echo 1														
-pwd
-for d in $WORKSPACE $WORKSPACE_TMP; do ( cd $d; git status || true ); done
-find .. -type d
-                        ''')
-												
                         def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin												
                         
+                        env.scm_project = props.scm_project
                         env.scm_branch = props.scm_branch
                         env.scm_credentials = props.scm_credentials
                         env.scm_url = props.scm_url
@@ -37,30 +30,23 @@ find .. -type d
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        ws('check-out') {
-												    sh('''
-echo 2
-pwd
-git status || true
-find . -type d
-	                          ''')
-														
+                        ws(env.scm_project) {
                             // Clean before build
                             cleanWs()                
 								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 
                             withMaven(maven: maven) {
                                 sh('''
-echo 3
 pwd
 db_config_dir=`cd $conf_dir && pwd`
+oracle_tools_dir=`ls -rt $WORKSPACE@script | grep -v -scm-key.txt | tail -1`
 echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
 set -- $db_actions
-for profile; do mvn -f $db_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
+for profile; do mvn -f $db_dir -Doracle-tools.dir=\$oracle_tools_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
 
 echo processing APEX actions $apex_actions in $apex_dir with configuration directory \$db_config_dir
 set -- $apex_actions
-for profile; do mvn -f $apex_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
+for profile; do mvn -f $apex_dir -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
 
 git config user.name $scm_username
 git config user.email $scm_email
