@@ -16,7 +16,7 @@ pipeline {
 set												
 echo 1														
 pwd
-find . -type d
+find .. -type d
                         ''')
 												
                         def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin												
@@ -40,7 +40,7 @@ find . -type d
 												    sh('''
 echo 2
 pwd
-find . -type d
+find .. -type d
 	                          ''')
 														
                             // Clean before build
