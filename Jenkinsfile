@@ -1,3 +1,4 @@
+// -*- mode: groovy; coding: utf-8 -*-
 def config_file = 'oracle-tools-config-development'
 def maven = 'maven-3'
 
@@ -14,8 +15,6 @@ pipeline {
                     script {
                         def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin
 
-                        env.scm_project = props.scm_project
-                        assert env.scm_project != null
                         env.scm_branch = props.scm_branch
                         assert env.scm_branch != null
                         env.scm_credentials = props.scm_credentials
@@ -43,31 +42,31 @@ pipeline {
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        dir(env.scm_project) {
-                            // Clean before build
-                            cleanWs()                
-                            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
+                        // Clean before build
+                        cleanWs()                
+                        git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 
-                            withMaven(maven: maven) {
-                                sh('''
+                        withMaven(maven: maven,
+														      options: [artifactsPublisher(disabled: true), 
+                                            findbugsPublisher(disabled: true), 
+                                            openTasksPublisher(disabled: true)]) {
+                            sh('''
 pwd
 db_config_dir=`cd $conf_dir && pwd`
 oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
-echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
+echo processing DB actions $db_actions in $db_dir with configuration directory $db_config_dir
 set -- $db_actions
-for profile; do mvn -f $db_dir -Doracle-tools.dir=\$oracle_tools_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
+for profile; do mvn -f $db_dir -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P$profile; done
 
-echo processing APEX actions $apex_actions in $apex_dir with configuration directory \$db_config_dir
+echo processing APEX actions $apex_actions in $apex_dir with configuration directory $db_config_dir
 set -- $apex_actions
-for profile; do mvn -f $apex_dir -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
+for profile; do mvn -f $apex_dir -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P$profile; done
 
 git config user.name $scm_username
 git config user.email $scm_email
 git add .
-git commit -m"Triggered Build: $BUILD_NUMBER"
-git push --set-upstream origin $scm_branch
-                                ''')
-                            }
+! git commit -m"Triggered Build: $BUILD_NUMBER" || git push --set-upstream origin $scm_branch
+                            ''')
                         }
                     }
                 }
