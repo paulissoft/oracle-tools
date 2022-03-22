@@ -13,7 +13,7 @@ pipeline {
                     [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
 										    sh('''
-echo #1														
+echo 1														
 pwd
                         ''')
 												
@@ -36,7 +36,7 @@ pwd
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
                         ws('check-out') {
 												    sh('''
-echo #2
+echo 2
 pwd
 	                          ''')
 														
@@ -46,7 +46,7 @@ pwd
 
                             withMaven(maven: maven) {
                                 sh('''
-echo #3
+echo 3
 pwd
 db_config_dir=`cd $conf_dir && pwd`
 echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
