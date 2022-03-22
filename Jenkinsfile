@@ -13,6 +13,7 @@ pipeline {
                     [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
 										    sh('''
+set												
 echo 1														
 pwd
                         ''')
@@ -34,7 +35,7 @@ pwd
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        ws {
+                        ws('check-out') {
 												    sh('''
 echo 2
 pwd
