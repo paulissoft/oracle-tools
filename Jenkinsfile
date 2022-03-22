@@ -52,7 +52,7 @@ pipeline {
                                 sh('''
 pwd
 db_config_dir=`cd $conf_dir && pwd`
-oracle_tools_dir=`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`
+oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
 echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
 set -- $db_actions
 for profile; do mvn -f $db_dir -Doracle-tools.dir=\$oracle_tools_dir -Ddb.config.dir=\$db_config_dir -Ddb=$db -Ddb.username=$db_username -Ddb.password=$db_password -P\$profile; done
