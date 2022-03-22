@@ -12,28 +12,41 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
-                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin												
+                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin                       
                         
                         env.scm_project = props.scm_project
+                        assert env.scm_project != null
                         env.scm_branch = props.scm_branch
+                        assert env.scm_branch != null
                         env.scm_credentials = props.scm_credentials
+                        assert env.scm_credentials != null
                         env.scm_url = props.scm_url
+                        assert env.scm_url != null
                         env.scm_username = props.scm_username
+                        assert env.scm_username != null
                         env.scm_email = props.scm_email
+                        assert env.scm_email != null
                         env.conf_dir = props.conf_dir
+                        assert env.conf_dir != null
                         env.db = props.db
+                        assert env.db != null
                         env.db_credentials = props.db_credentials
+                        assert env.db_credentials != null
                         env.db_dir = props.db_dir
+                        assert env.db_dir != null
                         env.db_actions = props.db_actions
+                        assert env.db_actions != null
                         env.apex_dir = props.apex_dir
+                        assert env.apex_dir != null
                         env.apex_actions = props.apex_actions
+                        assert env.apex_actions != null
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
                         dir(env.scm_project) {
                             // Clean before build
                             cleanWs()                
-								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
+                            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 
                             withMaven(maven: maven) {
                                 sh('''
