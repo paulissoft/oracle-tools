@@ -12,7 +12,12 @@ pipeline {
                 configFileProvider(
                     [configFile(fileId: config_file, variable: 'SETTINGS')]) {
                     script {
-                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin
+										    sh('''
+echo #1														
+pwd
+                        ''')
+												
+                        def props = readProperties file: env.SETTINGS // from Pipeline Utility Plugin												
                         
                         env.scm_branch = props.scm_branch
                         env.scm_credentials = props.scm_credentials
@@ -29,13 +34,20 @@ pipeline {
                     }
 
                     withCredentials([usernamePassword(credentialsId: env.db_credentials, passwordVariable: 'db_password', usernameVariable: 'db_username')]) {
-                        ws() {
+                        ws('check-out') {
+												    sh('''
+echo #2
+pwd
+	                          ''')
+														
                             // Clean before build
                             cleanWs()                
 								            git branch: env.scm_branch, credentialsId: env.scm_credentials, url: env.scm_url
 
                             withMaven(maven: maven) {
                                 sh('''
+echo #3
+pwd
 db_config_dir=`cd $conf_dir && pwd`
 echo processing DB actions $db_actions in $db_dir with configuration directory \$db_config_dir
 set -- $db_actions
