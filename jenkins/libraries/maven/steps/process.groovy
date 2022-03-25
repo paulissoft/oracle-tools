@@ -8,8 +8,8 @@ void call(app_env){
         stages {
             stage("process") {
                 steps {
-                    /*
                     script {
+                        env.maven = app_env.maven
                         assert app_env.maven != null
                         assert app_env.scm_branch != null
                         assert app_env.scm_credentials != null
@@ -24,7 +24,6 @@ void call(app_env){
                         assert app_env.apex_dir != null
                         assert app_env.apex_actions != null
                     }
-                     */
                     
                     withCredentials([usernamePassword(credentialsId: app_env.db_credentials, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
                         // Clean before build
