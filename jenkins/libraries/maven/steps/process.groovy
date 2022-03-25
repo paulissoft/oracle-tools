@@ -9,32 +9,32 @@ void call(app_env){
             stage("process") {
                 steps {
                     script {
-                        env.maven = app_env.maven
-                        assert env.maven != null
-                        env.scm_branch = app_env.scm_branch
+                        env.MAVEN = app_env.maven
+                        assert env.MAVEN != null
+                        env.SCM_BRANCH = app_env.scm_branch
                         assert env.scm_branch != null
-                        env.scm_credentials = app_env.scm_credentials
-                        assert env.scm_credentials != null
-                        env.scm_url = app_env.scm_url
-                        assert env.scm_url != null
-                        env.scm_username = app_env.scm_username
-                        assert env.scm_username != null
-                        env.scm_email = app_env.scm_email
-                        assert env.scm_email != null
-                        env.conf_dir = app_env.conf_dir
-                        assert env.conf_dir != null
-                        env.db = app_env.db
-                        assert env.db != null
-                        env.db_credentials = app_env.db_credentials
-                        assert env.db_credentials != null
-                        env.db_dir = app_env.db_dir
-                        assert env.db_dir != null
-                        env.db_actions = app_env.db_actions
-                        assert env.db_actions != null
-                        env.apex_dir = app_env.apex_dir
-                        assert env.apex_dir != null
-                        env.apex_actions = app_env.apex_actions
-                        assert env.apex_actions != null
+                        env.SCM_CREDENTIALS = app_env.scm_credentials
+                        assert env.SCM_CREDENTIALS != null
+                        env.SCM_URL = app_env.scm_url
+                        assert env.SCM_URL != null
+                        env.SCM_USERNAME = app_env.scm_username
+                        assert env.SCM_USERNAME != null
+                        env.SCM_EMAIL = app_env.scm_email
+                        assert env.SCM_EMAIL != null
+                        env.CONF_DIR = app_env.conf_dir
+                        assert env.CONF_DIR != null
+                        env.DB = app_env.db
+                        assert env.DB != null
+                        env.DB_CREDENTIALS = app_env.db_credentials
+                        assert env.DB_CREDENTIALS != null
+                        env.DB_DIR = app_env.db_dir
+                        assert env.DB_DIR != null
+                        env.DB_ACTIONS = app_env.db_actions
+                        assert env.DB_ACTIONS != null
+                        env.APEX_DIR = app_env.apex_dir
+                        assert env.APEX_DIR != null
+                        env.APEX_ACTIONS = app_env.apex_actions
+                        assert env.APEX_ACTIONS != null
                     }
                     
                     withCredentials([usernamePassword(credentialsId: app_env.db_credentials, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
@@ -49,23 +49,23 @@ void call(app_env){
                             sh('''
 set -x
 pwd
-DB_CONFIG_DIR=`cd ${conf_dir} && pwd`
+db_config_dir=`cd ${CONF_DIR} && pwd`
 # for Jenkins pipeline
-## ORACLE_TOOLS_DIR="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
+## oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
 # for Jenkins Templating Engine
-ORACLE_TOOLS_DIR=$WORKSPACE
-echo processing DB actions ${db_actions} in ${db_dir} with configuration directory $DB_CONFIG_DIR
-set -- ${db_actions}
-for PROFILE; do mvn -f ${db_dir} -Doracle-tools.dir=$ORACLE_TOOLS_DIR -Ddb.config.dir=$DB_CONFIG_DIR -Ddb=${db} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$PROFILE; done
+oracle_tools_dir=$WORKSPACE
+echo processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir
+set -- ${DB_ACTIONS}
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 
-echo processing APEX actions ${apex_actions} in ${apex_dir} with configuration directory $DB_CONFIG_DIR
-set -- ${apex_actions}
-for PROFILE; do mvn -f ${apex_dir} -Doracle-tools.dir=$ORACLE_TOOLS_DIR -Ddb.config.dir=$DB_CONFIG_DIR -Ddb=${db} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$PROFILE; done
+echo processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir
+set -- ${APEX_ACTIONS}
+for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 
-git config user.name ${scm_username}
-git config user.email ${scm_email}
+git config user.name ${SCM_USERNAME}
+git config user.email ${SCM_EMAIL}
 git add .
-! git commit -m"Triggered Build: $BUILD_NUMBER" || git push --set-upstream origin ${scm_branch}
+! git commit -m"Triggered Build: $BUILD_NUMBER" || git push --set-upstream origin ${SCM_BRANCH}
                             ''')
                         }
                     }
