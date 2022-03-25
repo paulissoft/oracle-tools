@@ -8,20 +8,24 @@ void call(app_env){
         stages {
             stage("process") {
                 steps {
-                    assert env.maven != null
-                    assert env.scm_branch != null
-                    assert env.scm_credentials != null
-                    assert env.scm_url != null
-                    assert env.scm_username != null
-                    assert env.scm_email != null
-                    assert env.conf_dir != null
-                    assert env.db != null
-                    assert env.db_credentials != null
-                    assert env.db_dir != null
-                    assert env.db_actions != null
-                    assert env.apex_dir != null
-                    assert env.apex_actions != null
-
+                    /*
+                    script {
+                        assert env.maven != null
+                        assert env.scm_branch != null
+                        assert env.scm_credentials != null
+                        assert env.scm_url != null
+                        assert env.scm_username != null
+                        assert env.scm_email != null
+                        assert env.conf_dir != null
+                        assert env.db != null
+                        assert env.db_credentials != null
+                        assert env.db_dir != null
+                        assert env.db_actions != null
+                        assert env.apex_dir != null
+                        assert env.apex_actions != null
+                    }
+                     */
+                    
                     withCredentials([usernamePassword(credentialsId: app_env.db_credentials, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
                         // Clean before build
                         cleanWs()                
