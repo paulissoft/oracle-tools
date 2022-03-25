@@ -10,19 +10,19 @@ void call(app_env){
                 steps {
                     /*
                     script {
-                        assert env.maven != null
-                        assert env.scm_branch != null
-                        assert env.scm_credentials != null
-                        assert env.scm_url != null
-                        assert env.scm_username != null
-                        assert env.scm_email != null
-                        assert env.conf_dir != null
-                        assert env.db != null
-                        assert env.db_credentials != null
-                        assert env.db_dir != null
-                        assert env.db_actions != null
-                        assert env.apex_dir != null
-                        assert env.apex_actions != null
+                        assert app_env.maven != null
+                        assert app_env.scm_branch != null
+                        assert app_env.scm_credentials != null
+                        assert app_env.scm_url != null
+                        assert app_env.scm_username != null
+                        assert app_env.scm_email != null
+                        assert app_env.conf_dir != null
+                        assert app_env.db != null
+                        assert app_env.db_credentials != null
+                        assert app_env.db_dir != null
+                        assert app_env.db_actions != null
+                        assert app_env.apex_dir != null
+                        assert app_env.apex_actions != null
                     }
                      */
                     
@@ -31,7 +31,7 @@ void call(app_env){
                         cleanWs()                
                         git branch: app_env.scm_branch, credentialsId: app_env.scm_credentials, url: app_env.scm_url
 
-                        withMaven(maven: maven,
+                        withMaven(maven: app_env.maven,
                                   options: [artifactsPublisher(disabled: true), 
                                             findbugsPublisher(disabled: true), 
                                             openTasksPublisher(disabled: true)]) {
