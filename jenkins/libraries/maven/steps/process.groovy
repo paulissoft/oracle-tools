@@ -48,8 +48,6 @@ void call(app_env){
                                             findbugsPublisher(disabled: true), 
                                             openTasksPublisher(disabled: true)]) {
                             sh('''
-set -x
-pwd
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 test -z "$SCM_BRANCH_PREV" || git merge "$SCM_BRANCH_PREV"
@@ -73,9 +71,10 @@ fi
 
 # Second DB run: verify that there are no changes after a second round (just install and generate DDL)
 DB_ACTIONS="db-install db-generate-ddl-full"
-echo checking that there are no changes after a second round of ${DB_ACTIONS}
+echo checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile 1>/dev/null; done
+echo "there should be no files to add for Git:"
 test -z "$(git status --porcelain)"
 
 echo processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir
