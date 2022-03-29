@@ -4,32 +4,38 @@
 
 # Setup SSH between Jenkins and Github, see https://levelup.gitconnected.com/setup-ssh-between-jenkins-and-github-e4d7d226b271
 
-min_nr=${1:-0}
-max_nr=${2:-5}
+test $# -gt 0 || set -- 1 2 3 4 5 6 7 8
 
-nr=$min_nr
+jenkins_network=jenkins
+dind_image='docker:dind'
+dind_name=jenkins-docker
+jenkins_image=myjenkins-blueocean
+jenkins_name=jenkins-blueocean
+ssh_agent_image=jenkins/ssh-agent:alpine
+ssh_agent_name=agent1
 
-while [ "$nr" -le $max_nr ]
+for nr
 do
     echo "step: $nr"
     case $nr in
-        0) docker network create jenkins;;
-        1) docker run \
-  --name jenkins-docker \
+        1) docker network ls | grep " $jenkins_network " || docker network create $jenkins_network
+           ;;
+        2) docker ps | grep " $dind_image " || docker run \
+  --name $dind_name \
   --rm \
   --detach \
   --privileged \
-  --network jenkins \
+  --network $jenkins_network \
   --network-alias docker \
   --env DOCKER_TLS_CERTDIR=/certs \
   --volume jenkins-docker-certs:/certs/client \
   --volume jenkins-data:/var/jenkins_home \
   --publish 2376:2376 \
-  docker:dind \
+  $dind_image \
   --storage-driver overlay2
            ;;
-        2) cat <<'EOF' | docker build -t myjenkins-blueocean:2.319.2-1 -f - .
-FROM jenkins/jenkins:2.319.2-jdk11
+        3) cat <<'EOF' | docker build -t $jenkins_image -f - .
+FROM jenkins/jenkins:latest-jdk11
 USER root
 RUN apt-get update && apt-get install -y lsb-release
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
@@ -40,14 +46,14 @@ RUN echo "deb [arch=$(dpkg --print-architecture) \
   $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
 RUN apt-get update && apt-get install -y docker-ce-cli
 USER jenkins
-RUN jenkins-plugin-cli --plugins "blueocean:1.25.2 docker-workflow:1.27"
+RUN jenkins-plugin-cli --plugins "blueocean:latest docker-workflow:latest"
 EOF
            ;;
-        3) docker run \
-  --name jenkins-blueocean \
+        4) docker ps | grep " $jenkins_image " || docker run \
+  --name $jenkins_name \
   --rm \
   --detach \
-  --network jenkins \
+  --network $jenkins_network \
   --env DOCKER_HOST=tcp://docker:2376 \
   --env DOCKER_CERT_PATH=/certs/client \
   --env DOCKER_TLS_VERIFY=1 \
@@ -55,12 +61,25 @@ EOF
   --publish 50000:50000 \
   --volume jenkins-data:/var/jenkins_home \
   --volume jenkins-docker-certs:/certs/client:ro \
-  myjenkins-blueocean:2.319.2-1
+  $jenkins_image
            ;;
-        4) docker container exec -it jenkins-blueocean ssh-keygen -t rsa -f /var/jenkins_home/.ssh/id_rsa -N "" # generate SSH keys
+        5) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/id_rsa || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/id_rsa' # generate SSH keys
            ;;
-        5) open http://localhost:8080
+        6) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/jenkins_agent_key' # generate SSH keys
+           ;;
+        7) if ! docker ps | grep " $ssh_agent_name"
+           then
+               jenkins_agent_public_key=$(docker container exec -it $jenkins_name cat /var/jenkins_home/.ssh/jenkins_agent_key.pub)
+               docker run -d --rm --name=$ssh_agent_name -p 22:22 \
+-e "JENKINS_AGENT_SSH_PUBKEY=$jenkins_agent_public_key" \
+                      $ssh_agent_image
+               VARS1="HOME=|USER=|MAIL=|LC_ALL=|LS_COLORS=|LANG="
+               VARS2="HOSTNAME=|PWD=|TERM=|SHLVL=|LANGUAGE=|_="
+               VARS="${VARS1}|${VARS2}"
+               docker exec $ssh_agent_name sh -c "env | egrep -v '^(${VARS})' >> /etc/environment"
+           fi
+           ;;           
+        8) open http://localhost:8080
            ;;
     esac
-    nr=$(expr $nr + 1)
 done
