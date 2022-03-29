@@ -80,7 +80,12 @@ test -z "$(git status --porcelain)"
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
 for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
-if [ -n "$(git status --porcelain)" ]
+# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version
+create_application=${APEX_DIR}/src/export/application/create_application.sql
+git update-index --assume-unchanged    $create_application
+workspace_changed=$(git status --porcelain)
+git update-index --no-assume-unchanged $create_application
+if [ -n "$workspace_changed" ]
 then
   git add .
   git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
