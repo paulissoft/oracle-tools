@@ -13,6 +13,7 @@ void call(app_env){
                         assert env.MAVEN != null
                         env.SCM_BRANCH = app_env.scm_branch
                         assert env.scm_branch != null
+                        env.SCM_BRANCH_PREV = ( app_env.previous != null ? app_env.previous.scm_branch : '' )
                         env.SCM_CREDENTIALS = app_env.scm_credentials
                         assert env.SCM_CREDENTIALS != null
                         env.SCM_URL = app_env.scm_url
@@ -49,23 +50,43 @@ void call(app_env){
                             sh('''
 set -x
 pwd
+git config user.name ${SCM_USERNAME}
+git config user.email ${SCM_EMAIL}
+test -z "$SCM_BRANCH_PREV" || git merge "$SCM_BRANCH_PREV"
+
 db_config_dir=`cd ${CONF_DIR} && pwd`
 # for Jenkins pipeline
 ## oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
 # for Jenkins Templating Engine
 oracle_tools_dir=$WORKSPACE
+
+# First DB run
 echo processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir
 set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+if [ -n "$(git status --porcelain)" ]
+then
+  git add .
+  git commit -m"Database changes. Triggered Build: $BUILD_NUMBER"
+  git push --set-upstream origin ${SCM_BRANCH}
+fi
+
+# Second DB run: verify that there are no changes after a second round (just install and generate DDL)
+DB_ACTIONS="db-install db-generate-ddl-full"
+echo checking that there are no changes after a second round of ${DB_ACTIONS}
+set -- ${DB_ACTIONS}
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+test -z "$(git status --porcelain)"
 
 echo processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir
 set -- ${APEX_ACTIONS}
 for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
-
-git config user.name ${SCM_USERNAME}
-git config user.email ${SCM_EMAIL}
-git add .
-! git commit -m"Triggered Build: $BUILD_NUMBER" || git push --set-upstream origin ${SCM_BRANCH}
+if [ -n "$(git status --porcelain)" ]
+then
+  git add .
+  git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
+  git push --set-upstream origin ${SCM_BRANCH}
+fi
                             ''')
                         }
                     }
