@@ -31,7 +31,7 @@ application_environments{
 
         apex_dir = 'apex/app'
         // no import or export actions for now since there is no sqlplus nor sql installed on the build agent(s)
-        apex_actions = 'apex-inquiry'
+        apex_actions = 'apex-export'
     }
 }
 
