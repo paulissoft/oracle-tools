@@ -42,7 +42,12 @@ void call(app_env){
             sh('''
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
-test -z "$SCM_BRANCH_PREV" || git merge "$SCM_BRANCH_PREV"
+if [ -n "$SCM_BRANCH_PREV" ]
+then
+  git checkout "$SCM_BRANCH_PREV"
+  git checkout "$SCM_BRANCH"
+  git merge "$SCM_BRANCH_PREV"
+fi
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
 # for Jenkins pipeline
