@@ -1,8 +1,10 @@
 // -*- mode: groovy; coding: utf-8 -*-
 void call(app_env){
     script {
-        env.MAVEN = app_env.maven
-        assert env.MAVEN != null
+        assert pipelineConfig.scm_branch_oracle_tools != null
+        assert pipelineConfig.scm_url_oracle_tools != null
+        assert pipelineConfig.maven != null
+        
         env.SCM_BRANCH = app_env.scm_branch
         assert env.scm_branch != null
         env.SCM_BRANCH_PREV = ( app_env.previous != null ? app_env.previous.scm_branch : '' )
@@ -35,15 +37,20 @@ void call(app_env){
         cleanWs()
 
         dir('oracle-tools') {
-            sh('''
-pwd
-            ''')
+            checkout([
+                $class: 'GitSCM', 
+                branches: [[name: '*/' + pipelineConfig.scm_branch_oracle_tools]], 
+                doGenerateSubmoduleConfigurations: false, 
+                extensions: [[$class: 'CleanCheckout']], 
+                submoduleCfg: [], 
+                userRemoteConfigs: [[url: pipelineConfig.scm_url_oracle_tools]]
+            ])
         }
         
-        dir('project') {
+        dir('myproject') {
             git branch: app_env.scm_branch, credentialsId: app_env.scm_credentials, url: app_env.scm_url
 
-            withMaven(maven: app_env.maven,
+            withMaven(maven: pipelineConfig.maven,
                       options: [artifactsPublisher(disabled: true), 
                                 findbugsPublisher(disabled: true), 
                                 openTasksPublisher(disabled: true)]) {
@@ -62,7 +69,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 # for Jenkins pipeline
 ## oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
 # for Jenkins Templating Engine
-oracle_tools_dir=$WORKSPACE
+oracle_tools_dir=$WORKSPACE/oracle-tools
 
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
