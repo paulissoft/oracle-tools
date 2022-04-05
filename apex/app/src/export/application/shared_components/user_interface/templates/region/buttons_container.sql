@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>80521331112734834
+,p_default_id_offset=>87221669669135900
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(24279341007253816)
+ p_id=>wwv_flow_api.id(56241990105481018)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-ButtonRegion t-Form--floatLeft #REGION_CSS_CLASSES#" id="#REGION_STATIC_ID#" #REGION_ATTRIBUTES#>',
@@ -40,19 +40,19 @@ wwv_flow_api.create_plug_template(
 ,p_template_comment=>'Red Theme'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(24279976319253816)
-,p_plug_template_id=>wwv_flow_api.id(24279341007253816)
-,p_name=>'Sub Regions'
-,p_placeholder=>'SUB_REGIONS'
+ p_id=>wwv_flow_api.id(56241678164481018)
+,p_plug_template_id=>wwv_flow_api.id(56241990105481018)
+,p_name=>'Region Body'
+,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(24279652948253816)
-,p_plug_template_id=>wwv_flow_api.id(24279341007253816)
-,p_name=>'Region Body'
-,p_placeholder=>'BODY'
+ p_id=>wwv_flow_api.id(56241354793481018)
+,p_plug_template_id=>wwv_flow_api.id(56241990105481018)
+,p_name=>'Sub Regions'
+,p_placeholder=>'SUB_REGIONS'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12
