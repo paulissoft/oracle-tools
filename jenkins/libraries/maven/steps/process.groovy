@@ -102,7 +102,7 @@ for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.con
 
 create_application=${APEX_DIR}/src/export/application/create_application.sql
 # Use a little bit of awk to check that the file and its changes are matched and that the total number of lines is just 2
-result=`git diff --compact-summary | awk "/create_application\\.sql/,/1 file changed, 1 insertion\\(+\\), 1 deletion\\(-\\)/ { ++m } { ++n } END { print \"total number of lines / lines matched: \", n, \"/\", m }"`
+result="`git diff --compact-summary | awk -f $oracle_tools_dir/jenkins/create_application.awk`"
 if [ "$result" = "total number of lines / lines matched: 2 / 2" ]
 then
   git update-index --assume-unchanged    $create_application
