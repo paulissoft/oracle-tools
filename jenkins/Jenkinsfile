@@ -6,7 +6,7 @@ pipeline {
     }
     stages {
         stage("dev") {
-            script {
+            steps {
                 process dev
             }
         }
