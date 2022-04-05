@@ -80,11 +80,24 @@ test -z "$(git status --porcelain)"
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
 for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
-# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version
+
+# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --compact-summary to verify it is just that file and that line
+# 
+# % git diff --compact-summary                                          
+#  apex/app/src/export/application/create_application.sql | 2 +-
+#  1 file changed, 1 insertion(+), 1 deletion(-)
+
 create_application=${APEX_DIR}/src/export/application/create_application.sql
-git update-index --assume-unchanged    $create_application
-workspace_changed=$(git status --porcelain)
-git update-index --no-assume-unchanged $create_application
+summary=$(git diff --compact-summary)
+if test $(echo $summary | wc -l) -eq 2 && echo $summary | head -1 | grep $create_application && echo $summary | tail -1 | grep '1 file changed, 1 insertion(+), 1 deletion(-)'
+then
+  git update-index --assume-unchanged    $create_application
+  workspace_changed=$(git status --porcelain)
+  git update-index --no-assume-unchanged $create_application
+else
+  workspace_changed=$(git status --porcelain)
+fi
+
 if [ -n "$workspace_changed" ]
 then
   git add .
