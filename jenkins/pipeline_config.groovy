@@ -1,17 +1,9 @@
-/*
-  specify which libraries to load: 
-    In the Governance Tier configuration file, 
-    these should be configurations common across 
-    all apps governed by this config. 
-*/
 libraries{
-//  merge = true 
   maven
 }
 
 application_environments{
     dev{
-        maven = 'maven-3'
         
         // Oracle tools info
         scm_branch = 'development'
@@ -33,3 +25,8 @@ application_environments{
     }
 }
 
+// accessible via pipelineConfig
+maven = 'maven-3'
+scm_branch_oracle_tools = 'development'
+// a clone without credentials
+scm_url_oracle_tools = 'https://github.com/paulissoft/oracle-tools.git'
