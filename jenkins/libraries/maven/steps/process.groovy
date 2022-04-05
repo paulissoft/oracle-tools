@@ -66,21 +66,18 @@ then
 fi
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
-# for Jenkins pipeline
-## oracle_tools_dir="$WORKSPACE@script/`ls -rt $WORKSPACE@script | grep -v 'scm-key.txt' | tail -1`"
-# for Jenkins Templating Engine
 oracle_tools_dir=$WORKSPACE/oracle-tools
 
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
-if [ -n "$(git status --porcelain)" ]
+if [ -n "`git status --porcelain`" ]
 then
   git add .
   git commit -m"Database changes. Triggered Build: $BUILD_NUMBER"
 fi
-if [ $(git diff --stat --cached origin/${SCM_BRANCH} | wc -l) -ne 0 ]
+if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
 then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
@@ -91,7 +88,7 @@ echo "checking that there are no changes after a second round of ${DB_ACTIONS} (
 set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile 1>/dev/null; done
 echo "there should be no files to add for Git:"
-test -z "$(git status --porcelain)"
+test -z "`git status --porcelain`"
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
@@ -104,14 +101,14 @@ for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.con
 #  1 file changed, 1 insertion(+), 1 deletion(-)
 
 create_application=${APEX_DIR}/src/export/application/create_application.sql
-summary=$(git diff --compact-summary)
-if test $(echo $summary | wc -l) -eq 2 && echo $summary | head -1 | grep $create_application && echo $summary | tail -1 | grep '1 file changed, 1 insertion(+), 1 deletion(-)'
+summary="`git diff --compact-summary`"
+if test "`echo $summary | wc -l`" -eq 2 && echo $summary | head -1 | grep $create_application && echo $summary | tail -1 | grep '1 file changed, 1 insertion(+), 1 deletion(-)'
 then
   git update-index --assume-unchanged    $create_application
-  workspace_changed=$(git status --porcelain)
+  workspace_changed="`git status --porcelain`"
   git update-index --no-assume-unchanged $create_application
 else
-  workspace_changed=$(git status --porcelain)
+  workspace_changed="`git status --porcelain`"
 fi
 
 if [ -n "$workspace_changed" ]
@@ -119,7 +116,7 @@ then
   git add .
   git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
 fi
-if [ $(git diff --stat --cached origin/${SCM_BRANCH} | wc -l) -ne 0 ]
+if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
 then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
