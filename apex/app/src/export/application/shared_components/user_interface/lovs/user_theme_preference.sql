@@ -8,17 +8,17 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>87221669669135900
+,p_default_id_offset=>94022060007722025
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(56142775387480843)
+ p_id=>wwv_flow_api.id(31078894281655057)
 ,p_lov_name=>'USER_THEME_PREFERENCE'
-,p_lov_query=>'.'||wwv_flow_api.id(56142775387480843)||'.'
+,p_lov_query=>'.'||wwv_flow_api.id(31078894281655057)||'.'
 ,p_location=>'STATIC'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(56142468729480843)
+ p_id=>wwv_flow_api.id(31079200939655057)
 ,p_lov_disp_sequence=>1
 ,p_lov_disp_value=>'Allow End Users to choose Theme Style'
 ,p_lov_return_value=>'Yes'
