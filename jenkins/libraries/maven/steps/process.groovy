@@ -32,14 +32,23 @@ void call(app_env){
     
     withCredentials([usernamePassword(credentialsId: app_env.db_credentials, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
         // Clean before build
-        cleanWs()                
-        git branch: app_env.scm_branch, credentialsId: app_env.scm_credentials, url: app_env.scm_url
+        cleanWs()
 
-        withMaven(maven: app_env.maven,
-                  options: [artifactsPublisher(disabled: true), 
-                            findbugsPublisher(disabled: true), 
-                            openTasksPublisher(disabled: true)]) {
+        dir('oracle-tools') {
             sh('''
+pwd
+            ''')
+        }
+        
+        dir('project') {
+            git branch: app_env.scm_branch, credentialsId: app_env.scm_credentials, url: app_env.scm_url
+
+            withMaven(maven: app_env.maven,
+                      options: [artifactsPublisher(disabled: true), 
+                                findbugsPublisher(disabled: true), 
+                                openTasksPublisher(disabled: true)]) {
+                sh('''
+pwd
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 if [ -n "$SCM_BRANCH_PREV" ]
@@ -107,7 +116,8 @@ if [ $(git diff --stat --cached origin/${SCM_BRANCH} | wc -l) -ne 0 ]
 then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
-            ''')
+                ''')
+            }
         }
     }
 }
