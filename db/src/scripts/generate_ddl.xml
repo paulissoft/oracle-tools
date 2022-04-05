@@ -138,6 +138,9 @@
          Windows -->
     <property name="env.USER" value="${env.USERNAME}"/>
 
+    <echo message="env.JAVA_HOME: ${env.JAVA_HOME}" />
+    <echo message="java.home: ${java.home}" />
+
     <!-- GPA 2016-12-09
          The Windows shell is invoked if fork is used so we must quote empty
          arguments on Windows.
@@ -149,10 +152,10 @@
     <property name="compile.classpath" refid="compile.classpath" />
     <property name="runtime.classpath" refid="runtime.classpath" />
 
-    <echo level="verbose" message="env.JAVA_HOME: ${env.JAVA_HOME}" />
-    <echo level="verbose" message="java.home: ${java.home}" />
     <echo level="verbose" message="compile.classpath: ${compile.classpath}" />
     <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
+
+    <property name="javac.verbose" value="false"/>
   </target>
 
   <target name="init-full" unless="target.db.name">
@@ -298,7 +301,7 @@ Z       Time zone               RFC 822 time zone   -0800
            destdir="${classes.dir}"
            classpathref="compile.classpath"
            debug="true"
-           verbose="true"
+           verbose="${javac.verbose}"
            includeantruntime="false">
       <compilerarg value="-Xlint:deprecation"/>
     </javac>
