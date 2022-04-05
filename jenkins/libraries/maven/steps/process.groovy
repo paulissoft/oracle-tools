@@ -1,47 +1,46 @@
 // -*- mode: groovy; coding: utf-8 -*-
 void call(app_env){
-    stage(app_env.short_name) {
-        steps {
-            script {
-                env.MAVEN = app_env.maven
-                assert env.MAVEN != null
-                env.SCM_BRANCH = app_env.scm_branch
-                assert env.scm_branch != null
-                env.SCM_BRANCH_PREV = ( app_env.previous != null ? app_env.previous.scm_branch : '' )
-                env.SCM_CREDENTIALS = app_env.scm_credentials
-                assert env.SCM_CREDENTIALS != null
-                env.SCM_URL = app_env.scm_url
-                assert env.SCM_URL != null
-                env.SCM_USERNAME = app_env.scm_username
-                assert env.SCM_USERNAME != null
-                env.SCM_EMAIL = app_env.scm_email
-                assert env.SCM_EMAIL != null
-                env.CONF_DIR = app_env.conf_dir
-                assert env.CONF_DIR != null
-                env.DB = app_env.db
-                assert env.DB != null
-                env.DB_CREDENTIALS = app_env.db_credentials
-                assert env.DB_CREDENTIALS != null
-                env.DB_DIR = app_env.db_dir
-                assert env.DB_DIR != null
-                env.DB_ACTIONS = app_env.db_actions
-                assert env.DB_ACTIONS != null
-                env.APEX_DIR = app_env.apex_dir
-                assert env.APEX_DIR != null
-                env.APEX_ACTIONS = app_env.apex_actions
-                assert env.APEX_ACTIONS != null
-            }
-                    
-            withCredentials([usernamePassword(credentialsId: app_env.db_credentials, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
-                // Clean before build
-                cleanWs()                
-                git branch: app_env.scm_branch, credentialsId: app_env.scm_credentials, url: app_env.scm_url
+    steps {
+        script {
+            env.MAVEN = app_env.maven
+            assert env.MAVEN != null
+            env.SCM_BRANCH = app_env.scm_branch
+            assert env.scm_branch != null
+            env.SCM_BRANCH_PREV = ( app_env.previous != null ? app_env.previous.scm_branch : '' )
+            env.SCM_CREDENTIALS = app_env.scm_credentials
+            assert env.SCM_CREDENTIALS != null
+            env.SCM_URL = app_env.scm_url
+            assert env.SCM_URL != null
+            env.SCM_USERNAME = app_env.scm_username
+            assert env.SCM_USERNAME != null
+            env.SCM_EMAIL = app_env.scm_email
+            assert env.SCM_EMAIL != null
+            env.CONF_DIR = app_env.conf_dir
+            assert env.CONF_DIR != null
+            env.DB = app_env.db
+            assert env.DB != null
+            env.DB_CREDENTIALS = app_env.db_credentials
+            assert env.DB_CREDENTIALS != null
+            env.DB_DIR = app_env.db_dir
+            assert env.DB_DIR != null
+            env.DB_ACTIONS = app_env.db_actions
+            assert env.DB_ACTIONS != null
+            env.APEX_DIR = app_env.apex_dir
+            assert env.APEX_DIR != null
+            env.APEX_ACTIONS = app_env.apex_actions
+            assert env.APEX_ACTIONS != null
+        }
+        
+        withCredentials([usernamePassword(credentialsId: app_env.db_credentials, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
+            // Clean before build
+            cleanWs()                
+            git branch: app_env.scm_branch, credentialsId: app_env.scm_credentials, url: app_env.scm_url
 
-                withMaven(maven: app_env.maven,
-                          options: [artifactsPublisher(disabled: true), 
-                                    findbugsPublisher(disabled: true), 
-                                    openTasksPublisher(disabled: true)]) {
-                    sh('''
+            withMaven(maven: app_env.maven,
+                      options: [artifactsPublisher(disabled: true), 
+                                findbugsPublisher(disabled: true), 
+                                openTasksPublisher(disabled: true)]) {
+                sh('''
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 test -z "$SCM_BRANCH_PREV" || git merge "$SCM_BRANCH_PREV"
@@ -85,8 +84,7 @@ then
   git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
   git push --set-upstream origin ${SCM_BRANCH}
 fi
-                    ''')
-                }
+                ''')
             }
         }
     }

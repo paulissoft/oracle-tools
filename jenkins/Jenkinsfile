@@ -1,2 +1,23 @@
 // -*- mode: groovy; coding: utf-8 -*-
-process dev
+pipeline {
+		agent any
+    options {
+        skipDefaultCheckout()
+    }
+    stages {
+        stage("dev") {
+            process dev
+        }
+    }
+    post {
+        // Clean after build
+        always {
+            cleanWs(cleanWhenNotBuilt: false,
+                    deleteDirs: true,
+                    disableDeferredWipeout: true,
+                    notFailBuild: true,
+                    patterns: [[pattern: '.gitignore', type: 'INCLUDE'],
+                               [pattern: '.propsfile', type: 'EXCLUDE']])
+        }
+    }
+}
