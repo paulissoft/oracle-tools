@@ -8,16 +8,16 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>80521331112734834
+,p_default_id_offset=>87221669669135900
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(26290069571183062)
+ p_id=>wwv_flow_api.id(54231261541551772)
 ,p_name=>'UT - Wizard Progress'
 ,p_list_status=>'PUBLIC'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(26290413202183062)
+ p_id=>wwv_flow_api.id(54230917910551772)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Step 1'
 ,p_list_item_link_target=>'#'
@@ -25,7 +25,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(26290787703183062)
+ p_id=>wwv_flow_api.id(54230543409551772)
 ,p_list_item_display_sequence=>15
 ,p_list_item_link_text=>'Step 2'
 ,p_list_item_link_target=>'#'
@@ -33,7 +33,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(26291173917183062)
+ p_id=>wwv_flow_api.id(54230157195551772)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Step 3'
 ,p_list_item_link_target=>'#'
@@ -42,7 +42,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_for_pages=>'1112'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(26291523060183062)
+ p_id=>wwv_flow_api.id(54229808052551772)
 ,p_list_item_display_sequence=>25
 ,p_list_item_link_text=>'Step 4'
 ,p_list_item_link_target=>'#'
