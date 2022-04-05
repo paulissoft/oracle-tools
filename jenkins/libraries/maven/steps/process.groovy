@@ -63,6 +63,9 @@ if [ -n "$(git status --porcelain)" ]
 then
   git add .
   git commit -m"Database changes. Triggered Build: $BUILD_NUMBER"
+fi
+if [ $(git diff --stat --cached origin/${SCM_BRANCH} | wc -l) -ne 0 ]
+then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
 
@@ -86,6 +89,9 @@ if [ -n "$workspace_changed" ]
 then
   git add .
   git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
+fi
+if [ $(git diff --stat --cached origin/${SCM_BRANCH} | wc -l) -ne 0 ]
+then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
             ''')
