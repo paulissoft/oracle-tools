@@ -8,17 +8,17 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>73921019511620241
+,p_default_id_offset=>80521331112734834
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(32174842435322651)
+ p_id=>wwv_flow_api.id(41746177076297590)
 ,p_lov_name=>'EMAIL_USERNAME_FORMAT'
-,p_lov_query=>'.'||wwv_flow_api.id(32174842435322651)||'.'
+,p_lov_query=>'.'||wwv_flow_api.id(41746177076297590)||'.'
 ,p_location=>'STATIC'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(32175133295322652)
+ p_id=>wwv_flow_api.id(41745886216297589)
 ,p_lov_disp_sequence=>1
 ,p_lov_disp_value=>'Email Addresses'
 ,p_lov_return_value=>'EMAIL'

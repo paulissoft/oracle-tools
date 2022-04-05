@@ -8,7 +8,7 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>73921019511620241
+,p_default_id_offset=>80521331112734834
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 null;
@@ -21,16 +21,16 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>73921019511620241
+,p_default_id_offset=>80521331112734834
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_message(
- p_id=>wwv_flow_api.id(33728540638413202)
+ p_id=>wwv_flow_api.id(40192478873207039)
 ,p_name=>'AAA'
 ,p_message_text=>'gfggf'
 );
 wwv_flow_api.create_message(
- p_id=>wwv_flow_api.id(33728697645415960)
+ p_id=>wwv_flow_api.id(40192321866204281)
 ,p_name=>'AAA'
 ,p_message_language=>'fr'
 ,p_message_text=>'gfggf'
@@ -44,30 +44,30 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>73921019511620241
+,p_default_id_offset=>80521331112734834
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_message(
- p_id=>wwv_flow_api.id(37434120602674652)
+ p_id=>wwv_flow_api.id(36486898908945589)
 ,p_name=>'ORACLE_TOOLS.FINISH_LOAD_FILE'
 ,p_message_text=>'This will load just one sheet (the first) from the spreadsheet file. The first row of that sheet must be the only header row. Do you want to continue?'
 ,p_is_js_message=>true
 );
 wwv_flow_api.create_message(
- p_id=>wwv_flow_api.id(37842263870545706)
+ p_id=>wwv_flow_api.id(36078755641074535)
 ,p_name=>'ORACLE_TOOLS.FINISH_LOAD_FILE'
 ,p_message_language=>'fr'
 ,p_message_text=>unistr('Cela ne chargera qu''une seule feuille (la premi\00E8re) \00E0 partir du fichier de feuille de calcul et la premi\00E8re ligne de cette feuille doit \00EAtre la seule ligne d''en-t\00EAte. Voulez-vous continuer?')
 ,p_is_js_message=>true
 );
 wwv_flow_api.create_message(
- p_id=>wwv_flow_api.id(37432595732615278)
+ p_id=>wwv_flow_api.id(36488423779004963)
 ,p_name=>'ORACLE_TOOLS.LOAD_FILE_WITHOUT_HISTORY'
 ,p_message_text=>'Are you sure you want to load this file without previous settings from region "Load file info history"? The first line has the best match.'
 ,p_is_js_message=>true
 );
 wwv_flow_api.create_message(
- p_id=>wwv_flow_api.id(37842172681545706)
+ p_id=>wwv_flow_api.id(36078846830074535)
 ,p_name=>'ORACLE_TOOLS.LOAD_FILE_WITHOUT_HISTORY'
 ,p_message_language=>'fr'
 ,p_message_text=>unistr('Voulez-vous vraiment charger ce fichier sans les param\00E8tres pr\00E9c\00E9dents de la r\00E9gion "Charger l''historique des informations sur le fichier"? La premi\00E8re ligne a le meilleur match.')

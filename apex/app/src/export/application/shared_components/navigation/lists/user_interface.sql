@@ -8,23 +8,23 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>73921019511620241
+,p_default_id_offset=>80521331112734834
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(49533309833366236)
+ p_id=>wwv_flow_api.id(24387709678254005)
 ,p_name=>'User Interface'
 ,p_list_status=>'PUBLIC'
-,p_required_patch=>wwv_flow_api.id(49555583758366314)
+,p_required_patch=>wwv_flow_api.id(24365435753253927)
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(49532961480366235)
+ p_id=>wwv_flow_api.id(24388058031254006)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Theme Style Selection'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10010:&SESSION.::&DEBUG.:10010:::'
 ,p_list_item_icon=>'fa-paint-brush'
 ,p_list_text_01=>'Set the default application look and feel'
-,p_required_patch=>wwv_flow_api.id(49555583758366314)
+,p_required_patch=>wwv_flow_api.id(24365435753253927)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.component_end;
