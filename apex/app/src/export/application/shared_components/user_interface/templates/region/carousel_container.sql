@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>94022060007722025
+,p_default_id_offset=>100828379776356525
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(30968697674654878)
+ p_id=>wwv_flow_api.id(63053362333067147)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-Region t-Region--carousel #REGION_CSS_CLASSES#" id="#REGION_STATIC_ID#" #REGION_ATTRIBUTES#>',
@@ -62,19 +62,19 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(30969339307654879)
-,p_plug_template_id=>wwv_flow_api.id(30968697674654878)
-,p_name=>'Slides'
-,p_placeholder=>'SUB_REGIONS'
+ p_id=>wwv_flow_api.id(63053012864067146)
+,p_plug_template_id=>wwv_flow_api.id(63053362333067147)
+,p_name=>'Region Body'
+,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(30969047143654879)
-,p_plug_template_id=>wwv_flow_api.id(30968697674654878)
-,p_name=>'Region Body'
-,p_placeholder=>'BODY'
+ p_id=>wwv_flow_api.id(63052720700067146)
+,p_plug_template_id=>wwv_flow_api.id(63053362333067147)
+,p_name=>'Slides'
+,p_placeholder=>'SUB_REGIONS'
 ,p_has_grid_support=>true
 ,p_glv_new_row=>true
 ,p_max_fixed_grid_columns=>12

@@ -19,6 +19,10 @@ export SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 export SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
 export JENKINS_PLUGINS="blueocean:latest docker-workflow:latest"
 
+# version: latest or lts (long term support)
+JENKINS_IMAGE_VERSION=latest
+export JENKINS_IMAGE=jenkins/jenkins:${JENKINS_IMAGE_VERSION}-jdk11
+
 for nr
 do
     echo "step: $nr"
@@ -39,8 +43,9 @@ do
   $dind_image \
   --storage-driver overlay2
            ;;
-        3) cat <<'EOF' | docker build --build-arg SQLCL_ZIP --build-arg SQLCL_URL --build-arg JENKINS_PLUGINS -t $jenkins_image -f - .
-FROM jenkins/jenkins:latest-jdk11
+        3) cat <<'EOF' | docker build --build-arg SQLCL_ZIP --build-arg SQLCL_URL --build-arg JENKINS_PLUGINS --build-arg JENKINS_IMAGE -t $jenkins_image -f - .
+ARG JENKINS_IMAGE
+FROM $JENKINS_IMAGE
 USER root
 RUN apt-get update && apt-get install -y lsb-release
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
