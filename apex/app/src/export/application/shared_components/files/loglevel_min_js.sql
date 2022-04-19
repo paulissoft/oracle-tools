@@ -8,7 +8,7 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>100828379776356525
+,p_default_id_offset=>107828709909037496
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.g_varchar2_table := wwv_flow_api.empty_varchar2_table;
@@ -42,7 +42,7 @@ wwv_flow_api.g_varchar2_table(27) := '726E20627C7C28623D6D5B615D3D6E657720672861
 wwv_flow_api.g_varchar2_table(28) := '7475726E206C2E6E6F436F6E666C6963743D66756E6374696F6E28297B72657475726E20747970656F662077696E646F77213D3D69262677696E646F772E6C6F673D3D3D6C26262877696E646F772E6C6F673D6E292C6C7D2C6C2E6765744C6F67676572';
 wwv_flow_api.g_varchar2_table(29) := '733D66756E6374696F6E28297B72657475726E206D7D2C6C7D293B';
 wwv_flow_api.create_app_static_file(
- p_id=>wwv_flow_api.id(51571348362853895)
+ p_id=>wwv_flow_api.id(49257031413502630)
 ,p_file_name=>'loglevel.min.js'
 ,p_mime_type=>'application/javascript'
 ,p_file_charset=>'utf-8'

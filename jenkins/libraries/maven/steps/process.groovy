@@ -54,8 +54,10 @@ void call(app_env){
                       options: [artifactsPublisher(disabled: true), 
                                 findbugsPublisher(disabled: true), 
                                 openTasksPublisher(disabled: true)]) {
-                sh('''
+                sshagent([app_env.scm_credentials]) {
+                    sh('''
 pwd
+export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 if [ -n "$SCM_BRANCH_PREV" ]
@@ -86,7 +88,7 @@ fi
 DB_ACTIONS="db-install db-generate-ddl-full"
 echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile 1>/dev/null; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; done
 echo "there should be no files to add for Git:"
 test -z "`git status --porcelain`"
 
@@ -121,7 +123,8 @@ if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
 then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
-                ''')
+                    ''')
+                }
             }
         }
     }
