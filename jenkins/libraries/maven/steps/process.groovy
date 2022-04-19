@@ -61,6 +61,7 @@ void call(app_env){
                 sshagent([app_env.scm_credentials]) {
                     sh('''
 pwd
+unset JAVA_HOME
 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
