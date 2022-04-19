@@ -54,8 +54,10 @@ void call(app_env){
                       options: [artifactsPublisher(disabled: true), 
                                 findbugsPublisher(disabled: true), 
                                 openTasksPublisher(disabled: true)]) {
-                sh('''
+                sshagent([app_env.scm_credentials]) {
+                    sh('''
 pwd
+export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 if [ -n "$SCM_BRANCH_PREV" ]
@@ -121,7 +123,8 @@ if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
 then
   git push --set-upstream origin ${SCM_BRANCH}
 fi
-                ''')
+                    ''')
+                }
             }
         }
     }
