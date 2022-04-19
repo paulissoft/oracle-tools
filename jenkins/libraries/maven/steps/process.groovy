@@ -16,8 +16,10 @@ void call(app_env){
         assert env.SCM_USERNAME != null
         env.SCM_EMAIL = app_env.scm_email
         assert env.SCM_EMAIL != null
+
         env.CONF_DIR = app_env.conf_dir
         assert env.CONF_DIR != null
+
         env.DB = app_env.db
         assert env.DB != null
         env.DB_CREDENTIALS = app_env.db_credentials
@@ -26,6 +28,8 @@ void call(app_env){
         assert env.DB_DIR != null
         env.DB_ACTIONS = app_env.db_actions
         assert env.DB_ACTIONS != null
+        env.DB_USERNAME_PROPERTY = ( app_env.db_username_property != null ? app_env.db_username_property : 'db.proxy.username' )        
+
         env.APEX_DIR = app_env.apex_dir
         assert env.APEX_DIR != null
         env.APEX_ACTIONS = app_env.apex_actions
@@ -73,7 +77,7 @@ oracle_tools_dir=$WORKSPACE/oracle-tools
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 if [ -n "`git status --porcelain`" ]
 then
   git add .
@@ -88,13 +92,13 @@ fi
 DB_ACTIONS="db-install db-generate-ddl-full"
 echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; done
 echo "there should be no files to add for Git:"
 test -z "`git status --porcelain`"
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
-for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -Ddb.username=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 
 # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --compact-summary to verify it is just that file and that line
 # 
