@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>94022060007722025
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_popup_lov_template(
- p_id=>wwv_flow_api.id(18399573693600180)
+ p_id=>wwv_flow_api.id(31042461416654928)
 ,p_page_name=>'winlov'
 ,p_page_title=>'Search Dialog'
 ,p_page_html_head=>wwv_flow_string.join(wwv_flow_t_varchar2(

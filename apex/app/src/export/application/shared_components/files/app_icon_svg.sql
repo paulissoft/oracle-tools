@@ -8,7 +8,7 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>94022060007722025
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.g_varchar2_table := wwv_flow_api.empty_varchar2_table;
@@ -29,7 +29,7 @@ wwv_flow_api.g_varchar2_table(14) := '3D22636C732D34222063783D2232312E3522206379
 wwv_flow_api.g_varchar2_table(15) := '32356C362E3836392D342E3930372E3538322E3831342D372E31333120352E303933682D362E3937356C2D362E383620352E3837397A222F3E3C2F673E3C7573652077696474683D22363422206865696768743D2236342220786C696E6B3A687265663D';
 wwv_flow_api.g_varchar2_table(16) := '2223616D6269656E742D6C69676874696E67222069643D226C69676874696E67222F3E3C2F7376673E';
 wwv_flow_api.create_app_static_file(
- p_id=>wwv_flow_api.id(18421616306600242)
+ p_id=>wwv_flow_api.id(31064504029654990)
 ,p_file_name=>'app-icon.svg'
 ,p_mime_type=>'image/svg+xml'
 ,p_file_charset=>'utf-8'

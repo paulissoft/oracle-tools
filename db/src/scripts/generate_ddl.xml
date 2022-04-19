@@ -138,6 +138,9 @@
          Windows -->
     <property name="env.USER" value="${env.USERNAME}"/>
 
+    <echo message="env.JAVA_HOME: ${env.JAVA_HOME}" />
+    <echo message="java.home: ${java.home}" />
+
     <!-- GPA 2016-12-09
          The Windows shell is invoked if fork is used so we must quote empty
          arguments on Windows.
@@ -151,6 +154,8 @@
 
     <echo level="verbose" message="compile.classpath: ${compile.classpath}" />
     <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
+
+    <property name="javac.verbose" value="false"/>
   </target>
 
   <target name="init-full" unless="target.db.name">
@@ -290,11 +295,13 @@ Z       Time zone               RFC 822 time zone   -0800
     <echo message="Compiling Java sources from ${src.dir} to ${classes.dir}" />
     <mkdir dir="${classes.dir}"/>
     <!-- #137252739 The JAVA_HOME is set incorrectly during the Maven build. -->
-    <property name="build.compiler" value="extJavac"/>
+    <!-- GJP 2022-04-05 Maybe not anymore -->
+    <!--property name="build.compiler" value="extJavac"/-->
     <javac srcdir="${src.dir}" 
            destdir="${classes.dir}"
            classpathref="compile.classpath"
            debug="true"
+           verbose="${javac.verbose}"
            includeantruntime="false">
       <compilerarg value="-Xlint:deprecation"/>
     </javac>

@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>94022060007722025
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_theme_style(
- p_id=>wwv_flow_api.id(18400578046600182)
+ p_id=>wwv_flow_api.id(31043465769654930)
 ,p_theme_id=>42
 ,p_name=>'Vita - Slate'
 ,p_is_current=>false
@@ -25,7 +25,7 @@ wwv_flow_api.create_theme_style(
 ,p_reference_id=>3291983347983194966
 );
 wwv_flow_api.create_theme_style(
- p_id=>wwv_flow_api.id(18400450372600182)
+ p_id=>wwv_flow_api.id(31043338095654930)
 ,p_theme_id=>42
 ,p_name=>'Vita - Red'
 ,p_is_current=>true
@@ -37,7 +37,7 @@ wwv_flow_api.create_theme_style(
 ,p_reference_id=>1938457712423918173
 );
 wwv_flow_api.create_theme_style(
- p_id=>wwv_flow_api.id(18400250004600182)
+ p_id=>wwv_flow_api.id(31043137727654930)
 ,p_theme_id=>42
 ,p_name=>'Vita - Dark'
 ,p_is_current=>false
@@ -49,7 +49,7 @@ wwv_flow_api.create_theme_style(
 ,p_reference_id=>3543348412015319650
 );
 wwv_flow_api.create_theme_style(
- p_id=>wwv_flow_api.id(18400055292600182)
+ p_id=>wwv_flow_api.id(31042943015654930)
 ,p_theme_id=>42
 ,p_name=>'Vita'
 ,p_is_current=>false
@@ -61,7 +61,7 @@ wwv_flow_api.create_theme_style(
 ,p_reference_id=>2719875314571594493
 );
 wwv_flow_api.create_theme_style(
- p_id=>wwv_flow_api.id(18399827761600182)
+ p_id=>wwv_flow_api.id(31042715484654930)
 ,p_theme_id=>42
 ,p_name=>'Vista'
 ,p_css_file_urls=>'#THEME_IMAGES#css/Vista#MIN#.css?v=#APEX_VERSION#'
