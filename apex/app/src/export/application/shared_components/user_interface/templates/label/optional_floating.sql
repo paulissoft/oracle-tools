@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>100828379776356525
+,p_default_id_offset=>107828709909037496
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_field_template(
- p_id=>wwv_flow_api.id(62981346464067106)
+ p_id=>wwv_flow_api.id(37847033312289419)
 ,p_template_name=>'Optional - Floating'
 ,p_internal_name=>'OPTIONAL_FLOATING'
 ,p_template_body1=>wwv_flow_string.join(wwv_flow_t_varchar2(

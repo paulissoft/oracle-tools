@@ -21,7 +21,6 @@ application_environments{
         conf_dir = 'conf/src'
 
         db = 'docker'
-        db_host = 'host.docker.internal'
         db_credentials = 'oracle-tools-development'
         db_dir = 'db/app'
         db_actions = 'db-info db-install db-generate-ddl-full'
@@ -40,7 +39,6 @@ application_environments{
         conf_dir = 'conf/src'
 
         db = 'docker'
-        db_host = 'host.docker.internal'
         db_credentials = 'oracle-tools-development'
         db_dir = 'db/app'
         db_actions = 'db-info db-install db-generate-ddl-full'

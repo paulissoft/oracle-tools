@@ -8,16 +8,16 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>100828379776356525
+,p_default_id_offset=>107828709909037496
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(62958975534067070)
+ p_id=>wwv_flow_api.id(37869404242289455)
 ,p_name=>'Desktop Navigation Bar'
 ,p_list_status=>'PUBLIC'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(62937832481066961)
+ p_id=>wwv_flow_api.id(37890547295289564)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Show Help'
 ,p_list_item_link_target=>'f?p=&APP_ID.:&APP_PAGE_ID.:&SESSION.::&DEBUG.::SHOW_HELP:1:'
@@ -25,11 +25,11 @@ wwv_flow_api.create_list_item(
 ,p_list_item_disp_cond_type=>'VAL_OF_ITEM_IN_COND_NOT_EQ_COND2'
 ,p_list_item_disp_condition=>'SHOW_HELP'
 ,p_list_item_disp_condition2=>'1'
-,p_required_patch=>wwv_flow_api.id(62956340134067032)
+,p_required_patch=>wwv_flow_api.id(37872039642289493)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(60850681657942123)
+ p_id=>wwv_flow_api.id(39977698118414402)
 ,p_list_item_display_sequence=>30
 ,p_list_item_link_text=>'Hide Help'
 ,p_list_item_link_target=>'f?p=&APP_ID.:&APP_PAGE_ID.:&SESSION.::&DEBUG.::SHOW_HELP:0:'
@@ -37,20 +37,20 @@ wwv_flow_api.create_list_item(
 ,p_list_item_disp_cond_type=>'VAL_OF_ITEM_IN_COND_NOT_EQ_COND2'
 ,p_list_item_disp_condition=>'SHOW_HELP'
 ,p_list_item_disp_condition2=>'0'
-,p_required_patch=>wwv_flow_api.id(62956340134067032)
+,p_required_patch=>wwv_flow_api.id(37872039642289493)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(62937077474066961)
+ p_id=>wwv_flow_api.id(37891302302289564)
 ,p_list_item_display_sequence=>40
 ,p_list_item_link_text=>'About Page'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10020:&SESSION.::&DEBUG.:10020:::'
 ,p_list_item_icon=>'fa-info-circle-o'
-,p_required_patch=>wwv_flow_api.id(62956340134067032)
+,p_required_patch=>wwv_flow_api.id(37872039642289493)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(62936723102066961)
+ p_id=>wwv_flow_api.id(37891656674289564)
 ,p_list_item_display_sequence=>50
 ,p_list_item_link_text=>'&APP_USER.'
 ,p_list_item_link_target=>'#'
@@ -59,24 +59,24 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(62936276298066961)
+ p_id=>wwv_flow_api.id(37892103478289564)
 ,p_list_item_display_sequence=>60
 ,p_list_item_link_text=>'---'
 ,p_list_item_link_target=>'separator'
-,p_parent_list_item_id=>wwv_flow_api.id(62936723102066961)
+,p_parent_list_item_id=>wwv_flow_api.id(37891656674289564)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(62935883401066961)
+ p_id=>wwv_flow_api.id(37892496375289564)
 ,p_list_item_display_sequence=>70
 ,p_list_item_link_text=>'Sign Out'
 ,p_list_item_link_target=>'&LOGOUT_URL.'
 ,p_list_item_icon=>'fa-sign-out'
-,p_parent_list_item_id=>wwv_flow_api.id(62936723102066961)
+,p_parent_list_item_id=>wwv_flow_api.id(37891656674289564)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(51005165984016148)
+ p_id=>wwv_flow_api.id(49823213792340377)
 ,p_list_item_display_sequence=>80
 ,p_list_item_link_text=>'Language'
 ,p_list_item_link_target=>'#'
@@ -84,19 +84,19 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(51006262023025897)
+ p_id=>wwv_flow_api.id(49822117753330628)
 ,p_list_item_display_sequence=>90
 ,p_list_item_link_text=>'English'
 ,p_list_item_link_target=>'javascript:apex.submit(''en'')'
-,p_parent_list_item_id=>wwv_flow_api.id(51005165984016148)
+,p_parent_list_item_id=>wwv_flow_api.id(49823213792340377)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(51006613369027967)
+ p_id=>wwv_flow_api.id(49821766407328558)
 ,p_list_item_display_sequence=>100
 ,p_list_item_link_text=>unistr('Fran\00E7ais')
 ,p_list_item_link_target=>'javascript:apex.submit(''fr'')'
-,p_parent_list_item_id=>wwv_flow_api.id(51005165984016148)
+,p_parent_list_item_id=>wwv_flow_api.id(49823213792340377)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.component_end;
