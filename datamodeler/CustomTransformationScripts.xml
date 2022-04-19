@@ -1,0 +1,614 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- File contains Custom Transformation scripts -->
+<custom_transformation_scripts>
+	<scr id="0BAA564F-AB5F-D776-2E4F-31FDB3047F69" name="Tables to lower case - Rhino" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables = model.getTableSet().toArray();
+for (var t = 0; t<tables.length;t++){
+ table = tables[t];
+ name = table.getName().toLowerCase();
+ table.setName(name);
+ columns = table.getElements();
+ size = table.getElementsCollection().size();
+ for (var i = 0; i < size; i++) {
+	column = columns[i];
+	cname = column.getName().toLowerCase();
+	column.setName(cname);
+ }
+ table.setDirty(true);
+ keys = table.getKeys();
+ for (var i = 0; i < keys.length; i++) {
+  key = keys[i];
+    if(!key.isFK()){
+     kname = key.getName().toLowerCase();
+     key.setName(kname);
+   }else{
+     kname = key.getFKAssociation().getName().toLowerCase();
+     key.getFKAssociation().setName(kname);
+     key.getFKAssociation().setDirty(true);
+   }
+ }
+}]]>
+		</script>
+	</scr>
+	<scr id="B673F271-4836-DD48-15AC-487DDECCAF49" name="Tables to upper case - JRuby" object="relational" engine="JSR 223 JRuby Engine" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables =$model.getTableSet().toArray()
+for t in 0..tables.length-1
+ table = tables[t]
+ name = table.getName().upcase
+ table.setName(name)
+ columns = table.getElements()
+ size = table.getElementsCollection().size()-1
+ for i in 0..size
+	column = columns[i]
+	cname = column.getName().upcase
+	column.setName(cname)
+ end
+ keys = table.getKeys()
+ for i in 0..keys.length-1
+  key = keys[i]
+  kname = key.getName().upcase
+  key.setName(kname)
+ end
+end]]>
+		</script>
+	</scr>
+	<scr id="3E7C4F9E-9FCB-56C7-086F-F976F9A66384" name="Tables to upper case - JRuby - library usage" object="relational" engine="JSR 223 JRuby Engine" var="model" library="Jruby lib" method="tables_up" purpose="transformation" >
+		<script>
+			<![CDATA[def tables_up(model)
+tables = model.getTableSet().toArray()
+for t in 0..tables.length-1
+ table = tables[t]
+ name = table.getName().upcase
+ table.setName(name)
+ columns = table.getElements()
+ size = table.getElementsCollection().size()-1
+ for i in 0..size
+	column = columns[i]
+	cname = column.getName().upcase
+	column.setName(cname)
+ end
+ keys = table.getKeys()
+ for i in 0..keys.length-1
+  key = keys[i]
+  kname = key.getName().upcase
+  key.setName(kname)
+ end
+end
+return true
+end]]>
+		</script>
+	</scr>
+	<scr id="E60A5A28-BB9B-3787-10E7-259DF900B9E6" name="Table abbreviation to column" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables = model.getTableSet().toArray();
+for (var t = 0; t<tables.length;t++){
+ table = tables[t];
+ abbr = table.getAbbreviation()+"_";
+ if(!"_".equals(abbr)){
+     columns = table.getElements();
+     for (var i = 0; i < columns.length; i++) {
+        column = columns[i];
+        cname = column.getName();
+        if(!cname.startsWith(abbr)){
+         column.setName(abbr+cname);
+        }
+     }
+ }
+}]]>
+		</script>
+	</scr>
+	<scr id="9BE4E26C-36D8-A92C-ADEA-F183327DC239" name="Remove Table abbr from column" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables = model.getTableSet().toArray();
+for (var t = 0; t<tables.length;t++){
+ table = tables[t];
+ abbr = table.getAbbreviation()+"_";
+ count = table.getAbbreviation().length()+1;
+ if(!"_".equals(abbr)){
+     columns = table.getElements();
+     for (var i = 0; i < columns.length; i++) {
+        column = columns[i];
+        cname = column.getName();
+        if(cname.startsWith(abbr)){
+         column.setName(cname.substring(count));
+         table.setDirty(true);
+        }
+     }
+ }
+}]]>
+		</script>
+	</scr>
+	<scr id="5A8A151A-13FD-4B0A-E233-E3C5126BA02C" name="Tables to upper case - Rhino" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables = model.getTableSet().toArray();
+for (var t = 0; t<tables.length;t++){
+ table = tables[t];
+ name = table.getName().toUpperCase();
+ table.setName(name);
+ columns = table.getElements();
+ size = table.getElementsCollection().size();
+ for (var i = 0; i < size; i++) {
+	column = columns[i];
+	cname = column.getName().toUpperCase();
+	column.setName(cname);
+ }
+ table.setDirty(true);
+ keys = table.getKeys();
+ for (var i = 0; i < keys.length; i++) {
+  key = keys[i];
+    if(!key.isFK()){
+     kname = key.getName().toUpperCase();
+     key.setName(kname);
+   }else{
+     kname = key.getFKAssociation().getName().toUpperCase();
+     key.getFKAssociation().setName(kname);
+     key.getFKAssociation().setDirty(true);
+   }
+ }
+}]]>
+		</script>
+	</scr>
+	<scr id="0528C35C-F29B-E7BB-57AC-37BA2780A98D" name="Table template - uses column name" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[// columns are found by column name
+// allowing reuse of already existing columns
+// dynamic property ctemplateID is set afterwards - will keep connection to template
+// column even if the name of column is changed
+var t_name = "table_template";
+var p_name = "ctemplateID";
+template = model.getTableSet().getByName(t_name);
+if(template!=null){
+    tcolumns = template.getElements();
+    tables = model.getTableSet().toArray();
+    for (var t = 0; t<tables.length;t++){
+     table = tables[t];
+    // compare name ignoring the case
+     if(!table.getName().equalsIgnoreCase(t_name)){
+         for (var i = 0; i < tcolumns.length; i++) {
+            column = tcolumns[i];
+            col = table.getElementByName(column.getName());
+            if(col==null){
+             col = table.getColumnByProperty(p_name,column.getObjectID());
+            }
+            if(col==null){
+             col = table.createColumn();
+            }
+            column.copy(col);
+            //set property after copy otherwise it'll be cleared by copy
+            col.setProperty(p_name,column.getObjectID());
+            table.setDirty(true);
+         }
+     }
+    }
+}]]>
+		</script>
+	</scr>
+	<scr id="6279C414-90DD-A52B-4CEB-8D49AB31DC10" name="Copy Comments to Comments in RDBMS" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[max_length = 4000;
+function copyComments(object){
+ if(object.getCommentInRDBMS().equals("")){
+   if(!object.getComment().equals("")){
+     if(object.getComment().length()>max_length){
+       object.setCommentInRDBMS(object.getComment().substring(0, max_length));
+     }else{
+       object.setCommentInRDBMS(object.getComment());
+     }
+     object.setDirty(true);
+   }
+ }
+}
+
+tables = model.getTableSet().toArray();
+for (var t = 0; t<tables.length;t++){
+ table = tables[t]
+ copyComments(table);
+ columns = table.getElements();
+ size = table.getElementsCollection().size();
+ for (var i = 0; i < columns.length; i++) {
+	column = columns[i];
+	copyComments(column);
+ }
+ keys = table.getKeys();
+ for (var i = 0; i < keys.length; i++) {
+   key = keys[i];
+   if(!key.isFK()){
+     copyComments(key);
+   }else{
+     copyComments(key.getFKAssociation());
+   }
+ }
+}]]>
+		</script>
+	</scr>
+	<scr id="7C4EDFC0-26EA-859C-DBD9-AC9345DEAF98" name="Create index on FK" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[function getIndex(tab,cols){
+ keys = tab.getKeys();
+ for (var i = 0; i < keys.length; i++) {
+  index = keys[i];
+  if(!(index.isPK() || index.isUnique()) && !index.isFK() && index.isIndexForColumns(cols)){
+     return index
+   }
+ }
+ return null;
+}
+
+tables = model.getTableSet().toArray();
+for (var t = 0; t<tables.length;t++){
+ table = tables[t];
+ indexes = table.getKeys();
+ for (var i = 0; i < indexes.length; i++) {
+    index = indexes[i];
+    if(index.isFK()){
+     columns = index.getColumns();
+     if(columns.length>0){
+       newIndex = getIndex(table,columns);
+       if(newIndex==null){
+         newIndex = table.createIndex()
+         table.setDirty(true);
+         for (var k = 0; k < columns.length; k++){
+           newIndex.add(columns[k]);
+         }
+       }
+     }
+   }
+ }
+}]]>
+		</script>
+	</scr>
+	<scr id="1726EC74-A64B-0C0F-83DB-2A4BEF0D3DCA" name="Columns order" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[// sorts table columns as asked here https://forums.oracle.com/forums/thread.jspa?threadID=2508315&tstart=0
+// "...first the pks columns, after them fk columns and after the not null columns"
+function addPKcolumns(list,table){
+	pk = table.getPK();
+	if(pk!=null){
+		pcols = pk.getColumns();
+		for(var i = 0;i<pcols.length;i++){
+			col = pcols[i];
+			//in fact don't need this check, because PK columns are processed first
+			if(!list.contains(col)){
+				list.add(col);
+			}
+		}
+	}
+}
+
+function addFKcolumns(list,fkeys){
+	for(var k=0;k<fkeys.length;k++){
+		fcols = fkeys[k].getColumns();
+		for(var i = 0;i<fcols.length;i++){
+		  col = fcols[i];
+		  if(!list.contains(col)){
+			list.add(col);
+		  }
+		}
+	}
+}
+//adds mandatory or oprional columns to list depending on mand parameter
+function addMandatoryOptColumns(list,cols, mand){
+	for(var i = 0;i<cols.length;i++){
+		col = cols[i];
+		if(col.isMandatory() == mand && !list.contains(col)){
+			list.add(col);
+		}
+	}
+}
+
+tables = model.getTableSet().toArray();
+list = new java.util.ArrayList();
+for (var t = 0; t<tables.length;t++){
+	list.clear();
+	table = tables[t];
+	cols = table.getElements();
+	// add PK columns to list
+	addPKcolumns(list,table);
+	// add FK columns to list
+	addFKcolumns(list,table.getFKAssociations());
+	//add mandatory columns
+	addMandatoryOptColumns(list,cols,true);
+	//add optional columns
+	addMandatoryOptColumns(list,cols,false);
+	//use list to reorder columns
+	ord_cols = list.toArray();
+	for(var n = 0;n<ord_cols.length;n++){
+		table.moveToIndex(ord_cols[n],n);
+	}
+	//prevent reordering from enginnering, can be changed with UI
+	table.setAllowColumnReorder(false);
+	table.setDirty(true);
+}]]>
+		</script>
+	</scr>
+	<scr id="F54B1A9C-F951-EB88-E905-5599533569B1" name="Create subview from tables in search result " object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[objs = model.getLastSearchResult().toArray();
+var dp;
+var sv;
+//create subview and add tables to it
+for(var i = 0;i<objs.length;i++){
+	obj = objs[i];
+	// use "Entity" for entities and logical model
+	if(obj.getObjectTypeName().equals("Table")){
+		if(dp==null){
+			dp = obj.getDesignPart();
+			sv = dp.createDesignPartSubView();
+			// uncomment next line if want to set name
+		     //sv.setName("Name");
+		     sv.getPlaceHolder().setVisible(true);
+		}
+		sv.addViewFor(obj);
+	}
+}
+if(dp!=null){
+ //add foreign keys if you want to
+ for(var i = 0;i<objs.length;i++){
+	obj = objs[i];
+	// use "Entity" for entities and logical model
+	if(obj.getObjectTypeName().equals("Table")){
+		tv = obj.getFirstViewForDPV(sv);
+		if(tv!=null){
+			//for entities and logical model use 
+			//tv.addTVRelations(); 
+			tv.addTVFKRelations();
+		}
+	}
+ }
+ //add Arcs if you want to
+ for(var i = 0;i<objs.length;i++){
+	obj = objs[i];
+	if(obj.getObjectTypeName().equals("Table")){
+		tv = obj.getFirstViewForDPV(sv);
+		if(tv!=null){
+			tv.addArcs();
+		}
+	}
+ }
+ //arrange diagram
+ sv.rearrangeNewDiagram();
+}]]>
+		</script>
+	</scr>
+	<scr id="EF64BEDD-B648-C41B-60C7-B9EA938E0A3C" name="Remove template columns and related attributes" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[/* removes the columns created with "Table template..." script, also removes related attributes
+*  from logical model
+*  more details here http://www.thatjeffsmith.com/archive/2015/03/adding-common-columns-to-tables-via-templates-and-transformation-scripts/
+*/
+var t_name = "table_template";
+var p_name = "ctemplateID";
+template = model.getTableSet().getByName(t_name);
+if(template!=null){
+    tcolumns = template.getElements();
+    tables = model.getTableSet().toArray();
+    for (var t = 0; t<tables.length;t++){
+     table = tables[t];
+    // compare name ignoring the case
+     if(!table.getName().equalsIgnoreCase(t_name)){
+         for (var i = 0; i < tcolumns.length; i++) {
+            column = tcolumns[i];
+            col = table.getColumnByProperty(p_name,column.getObjectID());
+            if(col!=null){
+            	attr = col.getEngAttribute();
+            	if(attr!=null){
+            		ent = attr.getEntity();
+            		attr.remove();
+            		if(ent!=null){
+            			ent.setDirty(true);
+            		}
+            	}
+             col.remove();
+             table.setDirty(true);
+            }
+         }
+     }
+    }
+}]]>
+		</script>
+	</scr>
+	<scr id="AE217CF6-B69C-3C63-7F31-DDA55B2EFEA0" name="Copy Comments in RDBMS to Comments (logical) - custom" object="logical" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[max_length = 4000;
+
+function copyCommentsInRDBMS(object) {
+    if (object.getComment().equals("")) {
+        if (!object.getCommentInRDBMS().equals("")) {
+            if (object.getCommentInRDBMS().length() > max_length) {
+                object.setComment(object.getCommentInRDBMS().substring(0, max_length));
+            } else {
+                object.setComment(object.getCommentInRDBMS());
+            }
+            object.setDirty(true);
+        }
+    }
+}
+
+entities = model.getEntitySet().toArray();
+for (var e = 0; e < entities.length; e++) {
+    var entity = entities[e]; copyCommentsInRDBMS(entity);
+    var attributes = entity.getElements();
+    var size = entity.getElementsCollection().size();
+    for (var i = 0; i < attributes.length; i++) {
+        copyCommentsInRDBMS(attributes[i]);
+    }
+    var keys = entity.getKeys();
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (!key.isFK()) {
+            copyCommentsInRDBMS(key);
+        } else {
+            copyCommentsInRDBMS(key.getFKAssociation());
+        }
+    }
+}
+]]>
+		</script>
+	</scr>
+	<scr id="BB4A8D82-E1C4-4D8B-53D1-E075B1FF26AB" name="Copy Preferred Abbreviation to Short Name - custom" object="logical" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[function copyPreferredAbbreviation(object) {
+    if (object.getShortName().equals("")) {
+        var preferredAbbreviation = object.getPreferredAbbreviation();
+        if (!preferredAbbreviation.equals("")) {
+            object.setShortName(preferredAbbreviation);
+            object.setDirty(true);
+        }
+    }
+}
+
+entities = model.getEntitySet().toArray();
+for (var e = 0; e < entities.length; e++) {
+    copyPreferredAbbreviation(entities[e]);
+}
+]]>
+		</script>
+	</scr>
+	<scr id="4E709409-3C85-7F34-DFFF-2047EE229EDA" name="Set Relation Name - custom" object="logical" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[function setRelationName(object, name) {
+    if (!object.getName().equals(name)) {
+        object.setName(name);
+        object.setDirty(true);
+    }
+}
+
+relations = model.getRelationSet().toArray();
+for (var r = 0; r < relations.length; r++) {
+    setRelationName(relations[r], relations[r].getSourceEntity().getPreferredAbbreviation() + '_' + relations[r].getTargetEntity().getPreferredAbbreviation());
+}
+]]>
+		</script>
+	</scr>
+	<scr id="96422D7C-70EB-F471-5D92-C8308B44B0F9" name="Copy Comments in RDBMS to Comments (relational) - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[max_length = 4000;
+
+function copyCommentsInRDBMS(object) {
+    if (object.getComment().equals("")) {
+        if (!object.getCommentInRDBMS().equals("")) {
+            if (object.getCommentInRDBMS().length() > max_length) {
+                object.setComment(object.getCommentInRDBMS().substring(0, max_length));
+            } else {
+                object.setComment(object.getCommentInRDBMS()); }
+            object.setDirty(true);
+        }
+    }
+}
+
+tables = model.getTableSet().toArray();
+for (var t = 0; t < tables.length; t++) {
+    var table = tables[t]; copyCommentsInRDBMS(table);
+    var columns = table.getElements();
+    var size = table.getElementsCollection().size();
+    for (var i = 0; i < columns.length; i++) {
+        copyCommentsInRDBMS(columns[i]);
+    }
+    var keys = table.getKeys();
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (!key.isFK()) {
+            copyCommentsInRDBMS(key);
+        } else {
+            copyCommentsInRDBMS(key.getFKAssociation());
+        }
+    }
+}
+]]>
+		</script>
+	</scr>
+	<scr id="8009F019-4519-4EC8-66B9-4604D766549F" name="Set security options - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables = model.getTableSet().toArray();
+for (var t = 0; t < tables.length; t++) {
+    table = tables[t];
+    cols = table.getElements();
+    for (var c = 0; c < cols.length; c++) {
+        if (cols[c].isContainsPII() != true) {
+            cols[c].setContainsPII(false);
+        }
+        if (cols[c].isContainsSensitiveInformation() != true) {
+            cols[c].setContainsSensitiveInformation(false); }
+    }
+    table.setDirty(true);
+}
+]]>
+		</script>
+	</scr>
+	<scr id="358AEBAC-D32B-E06D-2D12-8C8A48DEFD8C" name="Table names plural - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[var tables = model.getTableSet().toArray();
+for (var t = 0; t < tables.length; t++) {
+    var table = tables[t];
+    var tableName = table.getName();
+    if (tableName.endsWith("Y")) {
+        // Y -> IES
+        table.setName(tableName.slice(0, -1) + "IES");
+        table.setDirty(true);
+    } else if (tableName.endsWith("X")) {
+        // X -> CES
+        table.setName(tableName.slice(0, -1) + "CES");
+        table.setDirty(true);
+    } else if (!tableName.endsWith("S")) {
+        // . -> .S
+        table.setName(tableName + "S"); table.setDirty(true);
+    }
+}
+]]>
+		</script>
+	</scr>
+	<scr id="BF61242D-73E3-0133-F1EC-9897745CC516" name="Set Use Domain Constraints - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[tables = model.getTableSet().toArray();
+for (var t = 0; t < tables.length; t++) {
+    table = tables[t];
+    cols = table.getElements();
+    for(var c = 0; c < cols.length; c++) {
+        if (cols[c].getDomain() != null && cols[c].getDomain().getName() != "Unknown" && cols[c].getUseDomainConstraints() != true) {
+            cols[c].setUseDomainConstraints(true);
+            table.setDirty(true);
+        }
+    }
+}]]>
+		</script>
+	</scr>
+	<scr id="20D483AD-1401-F279-1B29-4E2FD388E9E9" name="Define IDENTITY clause for ID columns - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+		<script>
+			<![CDATA[// Set ID columns to IDENTITY clause
+
+// Get a handle on the application so we can output to the log window
+// var ApplicationView = Java.type('oracle.dbtools.crest.swingui.ApplicationView');
+
+var tables = model.getTableSet().toArray();
+for (var t = 0; t < tables.length; t++) {
+    table = tables[t];
+    cols = table.getElements();
+    for (var c = 0; c < cols.length; c++) {
+        if (cols[c].getName().equals("ID")) {
+            cols[c].setAutoIncrementColumn(true);
+            cols[c].setIdentityColumn(true);
+            cols[c].setAutoIncrementGenerateTrigger(false);
+            cols[c].setDirty(true);
+            // ApplicationView.log("Changed auto increment properties for column " + table.getName() + "." + cols[c].getName());
+        }
+    }
+}
+
+var clause = "IDENTITY_CLAUSE"; // not conform the SQL Data Modeler 18 documentation (!)
+var tables = model.getStorageDesign().getTableProxySet().toArray();
+for (var t = 0; t < tables.length; t++) {
+    var table = tables[t];
+    var cols = table.getColumns().toArray();
+    for (var c = 0; c < cols.length; c++) {
+        if (cols[c].getName().equals("ID")) {
+            cols[c].setAutoIncrementDDL(clause);
+            cols[c].setDirty(true);
+            // ApplicationView.log("Changed auto increment properties for column proxy " + table.getName() + "." + cols[c].getName());
+        }
+    }
+}]]>
+		</script>
+	</scr>
+</custom_transformation_scripts>
