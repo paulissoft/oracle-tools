@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>94022060007722025
+,p_default_id_offset=>100828379776356525
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_acl_role(
- p_id=>wwv_flow_api.id(48468785174698766)
+ p_id=>wwv_flow_api.id(45553274833023259)
 ,p_static_id=>'CONTRIBUTOR'
 ,p_name=>'Contributor'
 ,p_description=>'Role assigned to application contributors.'
