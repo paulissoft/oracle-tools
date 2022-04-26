@@ -1,5 +1,24 @@
 #!/bin/sh -eu
 
+process_git()
+{
+    description=$1
+
+    workspace_changes="`git status --porcelain`" 
+
+    echo "workspace changes: ${workspace_changes}"
+    
+    if [ -n "$workspace_changes" ]
+    then
+        git add --all .
+        git commit -m"${description}. Triggered Build: $BUILD_NUMBER"
+    fi
+    if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
+    then
+        git push --set-upstream origin ${SCM_BRANCH}
+    fi
+}
+
 # Script to be invoked from a Jenkins build.
 # Environment variables must be set otherwise an error occurs (-eu above).
 
@@ -25,15 +44,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
-if [ -n "`git status --porcelain`" ]
-then
-  git add --all .
-  git commit -m"Database changes. Triggered Build: $BUILD_NUMBER"
-fi
-if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
-then
-  git push --set-upstream origin ${SCM_BRANCH}
-fi
+process_git "Database changes"
 
 # Second DB run: verify that there are no changes after a second round (just install and generate DDL)
 DB_ACTIONS="db-install db-generate-ddl-full"
@@ -58,19 +69,7 @@ create_application=${APEX_DIR}/src/export/application/create_application.sql
 result="`git diff --compact-summary | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
 if [ "$result" = "YES" ]
 then
-  git update-index --assume-unchanged    $create_application
-  workspace_changed="`git status --porcelain`"
-  git update-index --no-assume-unchanged $create_application
-else
-  workspace_changed="`git status --porcelain`"
-fi
+  git checkout -- $create_application
+fi  
 
-if [ -n "$workspace_changed" ]
-then
-  git add --all .
-  git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
-fi
-if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
-then
-  git push --set-upstream origin ${SCM_BRANCH}
-fi
+process_git "APEX changes"
