@@ -24,8 +24,12 @@ process_git()
 
 oracle_tools_dir="`dirname $0`/.."
 
+# checking environment
 pwd
 git --version
+# this command should succeed
+git diff --compact-summary || { echo "Git must be at least 2.17 (git diff --compact-summary)" && exit 1 }
+
 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
