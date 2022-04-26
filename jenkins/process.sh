@@ -25,6 +25,7 @@ process_git()
 oracle_tools_dir="`dirname $0`/.."
 
 pwd
+git --version
 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
