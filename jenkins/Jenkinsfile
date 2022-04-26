@@ -4,6 +4,10 @@ pipeline {
     options {
         skipDefaultCheckout()
     }
+    tools {
+        maven pipelineConfig.maven
+        jdk pipelineConfig.jdk
+    }
     stages {
         stage("dev") {
             steps {

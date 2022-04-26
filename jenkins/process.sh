@@ -24,7 +24,7 @@ set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 if [ -n "`git status --porcelain`" ]
 then
-  git add .
+  git add --all .
   git commit -m"Database changes. Triggered Build: $BUILD_NUMBER"
 fi
 if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
@@ -64,7 +64,7 @@ fi
 
 if [ -n "$workspace_changed" ]
 then
-  git add .
+  git add --all .
   git commit -m"APEX changes. Triggered Build: $BUILD_NUMBER"
 fi
 if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
