@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/bin/sh -xeu
 
 process_git()
 {
@@ -44,7 +44,7 @@ fi
 test -n "$DB_ACTIONS" || export DB_ACTIONS=""
 test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
 
-set -eu
+set -xeu
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
 
