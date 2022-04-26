@@ -272,7 +272,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2021-08-27";
+my $VERSION = "2022-04-26";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
