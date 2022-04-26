@@ -29,13 +29,18 @@ export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 
-set +u # SCM_BRANCH_PREV may be unset
+set +u # come variables may be unset
+
 if [ -n "$SCM_BRANCH_PREV" ]
 then
   git checkout "$SCM_BRANCH_PREV"
   git checkout "$SCM_BRANCH"
   git merge "$SCM_BRANCH_PREV"
 fi
+
+test -n "$DB_ACTIONS" || export DB_ACTIONS=""
+test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
+
 set -u
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
