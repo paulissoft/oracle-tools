@@ -400,6 +400,7 @@ sub error (@);
 sub warning (@);
 sub info (@);
 sub debug (@);
+sub trace (@);
                                                 
 # MAIN
 
@@ -408,6 +409,8 @@ main();
 # SUBROUTINES
 
 sub main () {
+    trace((caller(0))[3]);
+    
     eval "use Data::Dumper; 1" or warn("Could not load Data::Dumper");
 
     info("\@ARGV: @ARGV");
@@ -417,8 +420,9 @@ sub main () {
     process();
 }
 
-sub process_command_line ()
-{
+sub process_command_line () {
+    trace((caller(0))[3]);
+
     # Windows FTYPE and ASSOC cause the command 'generate_ddl -h -c file'
     # to have ARGV[0] == ' -h -c file' and number of arguments 1.
     # Hence strip the spaces from $ARGV[0] and recreate @ARGV.
@@ -458,6 +462,8 @@ sub process_command_line ()
 }
 
 sub process () {
+    trace((caller(0))[3]);
+
     my $install_sql = ($skip_install_sql ? undef : File::Spec->catfile($output_directory, 'install.sql'));
     my $in;
 
@@ -473,9 +479,9 @@ sub process () {
     # These files are not needed anymore since the directory contents are used to determine the object sequence for interface V5
     unlink(File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT),
            File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT));
-    
+
     # always make the output directory
-    make_path($output_directory, { verbose => 0 });
+    make_path($output_directory, { verbose => $verbose > 0 });
 
     # turn autoflush on for both STDOUT and STDERR
     select(STDERR);
@@ -517,7 +523,7 @@ sub process () {
         # read interface (first line with '-- ')
         #
         my $interface_expr = '^-- (' . PKG_DDL_UTIL_V4 . '|' . PKG_DDL_UTIL_V5 . ')$';
-        
+
       INTERFACE:
         while (defined(my $line = <$in>)) {
             print $fh $line
@@ -534,7 +540,7 @@ sub process () {
         }
 
         $interface = '' unless defined($interface);
-        
+
         error("Unknown interface: $interface")
             unless ( $interface eq PKG_DDL_UTIL_V4 ||
                      $interface eq PKG_DDL_UTIL_V5 );
@@ -632,6 +638,8 @@ sub process () {
 } # process
 
 sub process_object_type ($$$$) {
+    trace((caller(0))[3]);
+
     my ($object_type, $r_object_type_lines, $r_ddl_no, $r_sql_statements) = @_;
 
     debug("Process object type $object_type with $#$r_object_type_lines lines") if (defined($object_type));
@@ -705,6 +713,8 @@ sub process_object_type ($$$$) {
 }
 
 sub get_object_type_line ($$) {
+    trace((caller(0))[3]);
+    
     my ($object_type, $r_object_type_lines) = @_;
 
     # Remove a block like this:
@@ -734,6 +744,8 @@ sub get_object_type_line ($$) {
 }
     
 sub parse_object($) {
+    trace((caller(0))[3]);
+    
     my ($owner, $name) = ($source_schema, @_);
 
     if ($name =~ qr/(?<owner>$id_expr)\s*\.\s*(?<name>$id_expr)/) {
@@ -751,6 +763,8 @@ sub parse_object($) {
 }
 
 sub get_object ($$$;$$$) {
+    trace((caller(0))[3]);
+    
     my ($object_schema, $object_type, $object_name, $base_object_schema, $base_object_type, $base_object_name) = @_;
 
     my $sep = ':';
@@ -784,6 +798,8 @@ sub get_object ($$$;$$$) {
 }
 
 sub object_file_name ($$$) {
+    trace((caller(0))[3]);
+    
     my ($object_schema, $object_type, $object_name) = @_;
 
     if (length($source_schema) > 0 && $object_schema !~ m/^(PUBLIC|$source_schema)$/) {
@@ -820,6 +836,8 @@ sub object_file_name ($$$) {
 }
 
 sub open_file ($$$$) {
+    trace((caller(0))[3]);
+    
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists) = @_;
 
     if (defined $fh_install_sql && !$install_sql_preamble_printed) {
@@ -848,6 +866,8 @@ sub open_file ($$$$) {
 }
 
 sub close_file ($$) {
+    trace((caller(0))[3]);
+    
     my ($file, $r_fh) = @_;
 
     # close before comparing/copying/removing
@@ -861,6 +881,8 @@ sub close_file ($$) {
 
 # open file for writing
 sub smart_open ($;$) {
+    trace((caller(0))[3]);
+
     my ($file, $append) = @_;
     my $basename = basename($file);
     my ($tmpfile, $fh) = (File::Spec->catfile($TMPDIR, $basename));
@@ -875,6 +897,8 @@ sub smart_open ($;$) {
 }
 
 sub smart_close ($) {
+    trace((caller(0))[3]);
+
     my $fh = shift @_;
 
     error("File handle unknown")
@@ -904,6 +928,8 @@ sub smart_close ($) {
 }
 
 sub add_sql_statement ($$$$;$) {
+    trace((caller(0))[3]);
+
     my ($r_sql_line, $r_sql_statements, $object, $ddl_no, $ddl_info) = @_;
 
     debug("Adding '$$r_sql_line' for object $object and statement $ddl_no");
@@ -932,6 +958,8 @@ sub add_sql_statement ($$$$;$) {
 }
 
 sub sort_sql_statements ($$$) {
+    trace((caller(0))[3]);
+
     my ($r_sql_statements, $a, $b) = @_;
     my $result;
 
@@ -947,6 +975,8 @@ sub sort_sql_statements ($$$) {
 }
 
 sub sort_dependent_objects ($$$) {
+    trace((caller(0))[3]);
+
     my ($object_type, $a, $b) = @_;
 
     if ($object_type eq 'OBJECT_GRANT') {
@@ -962,6 +992,8 @@ sub sort_dependent_objects ($$$) {
 }
 
 sub all_sql_statements_flush ($$$$) {
+    trace((caller(0))[3]);
+
     my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements) = @_;
 
     debug("Flushing all objects");
@@ -979,6 +1011,8 @@ sub all_sql_statements_flush ($$$$) {
 }
 
 sub object_sql_statements_flush ($$$$$) {
+    trace((caller(0))[3]);
+
     my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements, $object) = @_;
 
     my $ignore_warning_when_file_exists = 0;
@@ -1087,6 +1121,8 @@ sub object_sql_statements_flush ($$$$$) {
 } # object_sql_statements_flush
 
 sub sql_statement_flush ($$$$$$) {
+    trace((caller(0))[3]);
+
     my ($fh, $r_nr_sql_statements, $r_sql_statement, $object, $ddl_no, $ddl_info) = @_;
 
     debug("Flushing statement for $object with ", scalar(@$r_sql_statement), " line(s)");
@@ -1311,6 +1347,8 @@ sub sql_statement_flush ($$$$$$) {
 }
 
 sub print_run_info ($$) {
+    trace((caller(0))[3]);
+
     my ($fh, $install) = @_;
 
     error("File handle must be defined") unless defined($fh);
@@ -1327,12 +1365,16 @@ sub print_run_info ($$) {
 }
 
 sub remove_cr_lf ($) {
+    trace((caller(0))[3]);
+
     my $r_line = $_[0];
     
     $$r_line =~ s/\r?\n//mg;
 }
 
 sub remove_leading_empty_lines ($) {
+    trace((caller(0))[3]);
+
     my $r_lines = $_[0];
     
   REMOVE_LEADING_EMPTY_LINES: {
@@ -1349,6 +1391,8 @@ sub remove_leading_empty_lines ($) {
 }
 
 sub remove_trailing_empty_lines ($) {
+    trace((caller(0))[3]);
+
     my $r_lines = $_[0];
     
   REMOVE_TRAILING_EMPTY_LINES: {
@@ -1365,6 +1409,8 @@ sub remove_trailing_empty_lines ($) {
 }
 
 sub beautify_line ($$$$$$) {
+    trace((caller(0))[3]);
+
     my ($matched_object, $object_schema, $object_name, $object_type, $line_no, $r_line) = @_;
 
     return
@@ -1414,6 +1460,8 @@ sub beautify_line ($$$$$$) {
 }
 
 sub split_single_output_file ($) {
+    trace((caller(0))[3]);
+
     my $input_file = shift @_;
     
     # only one SQL statement allowed
@@ -1448,6 +1496,8 @@ sub split_single_output_file ($) {
 }
 
 sub add_object_seq ($;$) {
+    trace((caller(0))[3]);
+
     my ($object, $object_seq) = @_;
     
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
@@ -1474,6 +1524,8 @@ sub add_object_seq ($;$) {
 }
 
 sub read_object_seq () {
+    trace((caller(0))[3]);
+
     my %objects;
     
     opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
@@ -1507,4 +1559,9 @@ sub info (@) {
 sub debug (@) {
     print STDERR "DEBUG: @_\n"
         if ($verbose >= 2);
+}
+
+sub trace (@) {
+    carp "TRACE: @_\n"
+        if ($verbose >= 3);
 }
