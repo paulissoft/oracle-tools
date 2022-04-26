@@ -27,8 +27,6 @@ oracle_tools_dir="`dirname $0`/.."
 # checking environment
 pwd
 git --version
-# this command should succeed
-git diff --compact-summary || { echo "Git must be at least 2.17 (git diff --compact-summary)" && exit 1 }
 
 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
@@ -81,7 +79,7 @@ for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.con
 
 create_application=${APEX_DIR}/src/export/application/create_application.sql
 # Use a little bit of awk to check that the file and its changes are matched and that the total number of lines is just 2
-result="`git diff --compact-summary | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+result="`(git diff --compact-summary 2>/dev/null || git diff --stat) | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
 if [ "$result" = "YES" ]
 then
   git checkout -- $create_application
