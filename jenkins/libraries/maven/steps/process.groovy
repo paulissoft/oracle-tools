@@ -67,7 +67,7 @@ void call(app_env){
                                 findbugsPublisher(disabled: true), 
                                 openTasksPublisher(disabled: true)]) {
                 sshagent([env.SCM_CREDENTIALS]) {
-                    sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                    sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh && $WORKSPACE/oracle-tools/jenkins/process.sh')
                 }
             }
         }
