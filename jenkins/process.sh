@@ -32,7 +32,7 @@ export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
 git config user.name ${SCM_USERNAME}
 git config user.email ${SCM_EMAIL}
 
-set +u # come variables may be unset
+set +eu # come variables may be unset
 
 if [ -n "$SCM_BRANCH_PREV" ]
 then
@@ -44,7 +44,7 @@ fi
 test -n "$DB_ACTIONS" || export DB_ACTIONS=""
 test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
 
-set -u
+set -eu
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
 
@@ -71,15 +71,15 @@ echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration 
 set -- ${APEX_ACTIONS}
 for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 
-# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --compact-summary to verify it is just that file and that line
+# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat to verify it is just that file and that line
 # 
-# % git diff --compact-summary                                          
+# % git diff --stat
 #  apex/app/src/export/application/create_application.sql | 2 +-
 #  1 file changed, 1 insertion(+), 1 deletion(-)
 
 create_application=${APEX_DIR}/src/export/application/create_application.sql
 # Use a little bit of awk to check that the file and its changes are matched and that the total number of lines is just 2
-result="`(git diff --compact-summary 2>/dev/null || git diff --stat) | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+result="`git diff --stat | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
 if [ "$result" = "YES" ]
 then
   git checkout -- $create_application
