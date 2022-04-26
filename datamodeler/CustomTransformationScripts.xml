@@ -31,55 +31,6 @@ for (var t = 0; t<tables.length;t++){
 }]]>
 		</script>
 	</scr>
-	<scr id="B673F271-4836-DD48-15AC-487DDECCAF49" name="Tables to upper case - JRuby" object="relational" engine="JSR 223 JRuby Engine" var="model" library="" method="" purpose="transformation" >
-		<script>
-			<![CDATA[tables =$model.getTableSet().toArray()
-for t in 0..tables.length-1
- table = tables[t]
- name = table.getName().upcase
- table.setName(name)
- columns = table.getElements()
- size = table.getElementsCollection().size()-1
- for i in 0..size
-	column = columns[i]
-	cname = column.getName().upcase
-	column.setName(cname)
- end
- keys = table.getKeys()
- for i in 0..keys.length-1
-  key = keys[i]
-  kname = key.getName().upcase
-  key.setName(kname)
- end
-end]]>
-		</script>
-	</scr>
-	<scr id="3E7C4F9E-9FCB-56C7-086F-F976F9A66384" name="Tables to upper case - JRuby - library usage" object="relational" engine="JSR 223 JRuby Engine" var="model" library="Jruby lib" method="tables_up" purpose="transformation" >
-		<script>
-			<![CDATA[def tables_up(model)
-tables = model.getTableSet().toArray()
-for t in 0..tables.length-1
- table = tables[t]
- name = table.getName().upcase
- table.setName(name)
- columns = table.getElements()
- size = table.getElementsCollection().size()-1
- for i in 0..size
-	column = columns[i]
-	cname = column.getName().upcase
-	column.setName(cname)
- end
- keys = table.getKeys()
- for i in 0..keys.length-1
-  key = keys[i]
-  kname = key.getName().upcase
-  key.setName(kname)
- end
-end
-return true
-end]]>
-		</script>
-	</scr>
 	<scr id="E60A5A28-BB9B-3787-10E7-259DF900B9E6" name="Table abbreviation to column" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
 		<script>
 			<![CDATA[tables = model.getTableSet().toArray();
@@ -426,6 +377,7 @@ function copyCommentsInRDBMS(object) {
     }
 }
 
+model.getAppView().logMessage("Some message...");
 entities = model.getEntitySet().toArray();
 for (var e = 0; e < entities.length; e++) {
     var entity = entities[e]; copyCommentsInRDBMS(entity);
@@ -443,8 +395,7 @@ for (var e = 0; e < entities.length; e++) {
             copyCommentsInRDBMS(key.getFKAssociation());
         }
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="BB4A8D82-E1C4-4D8B-53D1-E075B1FF26AB" name="Copy Preferred Abbreviation to Short Name - custom" object="logical" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
@@ -462,14 +413,17 @@ for (var e = 0; e < entities.length; e++) {
 entities = model.getEntitySet().toArray();
 for (var e = 0; e < entities.length; e++) {
     copyPreferredAbbreviation(entities[e]);
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="4E709409-3C85-7F34-DFFF-2047EE229EDA" name="Set Relation Name - custom" object="logical" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
 		<script>
-			<![CDATA[function setRelationName(object, name) {
-    if (!object.getName().equals(name)) {
+			<![CDATA[function setRelationName(object, sourceShortName, sourceAbbreviation, targetShortName, targetAbbreviation) {
+    var sourceName = (sourceAbbreviation.equals('') ? sourceShortName : sourceAbbreviation);
+    var targetName = (targetAbbreviation.equals('') ? targetShortName : targetAbbreviation);
+    var name = (sourceName.equals('') || targetName.equals('') ? '' : sourceName + '_' + targetName);
+
+    if (!name.equals('') && !object.getName().equals(name)) {
         object.setName(name);
         object.setDirty(true);
     }
@@ -477,9 +431,8 @@ for (var e = 0; e < entities.length; e++) {
 
 relations = model.getRelationSet().toArray();
 for (var r = 0; r < relations.length; r++) {
-    setRelationName(relations[r], relations[r].getSourceEntity().getPreferredAbbreviation() + '_' + relations[r].getTargetEntity().getPreferredAbbreviation());
-}
-]]>
+    setRelationName(relations[r], relations[r].getSourceEntity().getShortName(), relations[r].getSourceEntity().getPreferredAbbreviation(), relations[r].getTargetEntity().getShortName(), relations[r].getTargetEntity().getPreferredAbbreviation());
+}]]>
 		</script>
 	</scr>
 	<scr id="96422D7C-70EB-F471-5D92-C8308B44B0F9" name="Copy Comments in RDBMS to Comments (relational) - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
@@ -515,8 +468,7 @@ for (var t = 0; t < tables.length; t++) {
             copyCommentsInRDBMS(key.getFKAssociation());
         }
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="8009F019-4519-4EC8-66B9-4604D766549F" name="Set security options - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
@@ -533,8 +485,7 @@ for (var t = 0; t < tables.length; t++) {
             cols[c].setContainsSensitiveInformation(false); }
     }
     table.setDirty(true);
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="358AEBAC-D32B-E06D-2D12-8C8A48DEFD8C" name="Table names plural - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
@@ -555,8 +506,7 @@ for (var t = 0; t < tables.length; t++) {
         // . -> .S
         table.setName(tableName + "S"); table.setDirty(true);
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="BF61242D-73E3-0133-F1EC-9897745CC516" name="Set Use Domain Constraints - custom" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
