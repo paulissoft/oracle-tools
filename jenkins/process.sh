@@ -46,13 +46,18 @@ set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
 process_git "Database changes"
 
-# Second DB run: verify that there are no changes after a second round (just install and generate DDL)
-DB_ACTIONS="db-install db-generate-ddl-full"
-echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
-set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; rm mvn-${profile}.log; done
-echo "there should be no files to add for Git:"
-test -z "`git status --porcelain`"
+# Both db-install and db-generate-ddl-full part of DB_ACTIONS?
+# If so, a second run should change nothing
+if echo $DB_ACTIONS | grep db-install && echo $DB_ACTIONS | grep db-generate-ddl-full
+then
+    # Second DB run: verify that there are no changes after a second round (just install and generate DDL)
+    DB_ACTIONS="db-install db-generate-ddl-full"
+    echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
+    set -- ${DB_ACTIONS}
+    for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; rm mvn-${profile}.log; done
+    echo "there should be no files to add for Git:"
+    test -z "`git status --porcelain`"
+fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
