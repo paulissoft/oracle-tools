@@ -247,7 +247,6 @@ First version.
 use 5.016003; # Strawberry perl: 5.18.2, Jenkins server: 5.16.3
 
 use Carp;
-use Data::Dumper;
 use English;
 use File::Basename;
 use File::Compare;
@@ -409,6 +408,8 @@ main();
 # SUBROUTINES
 
 sub main () {
+    eval "use Data::Dumper; 1" or warn("Could not load Data::Dumper");
+
     info("\@ARGV: @ARGV");
     process_command_line();
     print_run_info(\*STDERR, 0);
@@ -589,7 +590,9 @@ sub process () {
         }
     }
 
-    debug(Data::Dumper->Dump([%sql_statements], [qw(sql_statements)]));
+    eval {
+        debug(Data::Dumper->Dump([%sql_statements], [qw(sql_statements)]));
+    };
 
     all_sql_statements_flush($fh_install_sql, \$fh, \$nr_sql_statements, \%sql_statements);
     smart_close($fh)
