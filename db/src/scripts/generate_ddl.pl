@@ -394,6 +394,7 @@ sub remove_leading_empty_lines ($);
 sub remove_trailing_empty_lines ($);
 sub beautify_line ($$$$$$);
 sub split_single_output_file($);
+sub get_object_seq ($);
 sub add_object_seq ($;$);
 sub read_object_seq ();
 sub error (@);
@@ -821,13 +822,13 @@ sub object_file_name ($$$) {
     my $object_file_name;
     my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
-    if (!exists($object_seq{$object_seq_key})) {
+    if (!defined(get_object_seq($object_seq_key))) {
         add_object_seq($object_seq_key);
     }
     $object_file_name = 
         uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
                    ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                   ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : $object_seq{$object_seq_key}),
+                   ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : get_object_seq($object_seq_key)),
                    (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
                    $object_type,
                    $object_name)) . '.sql';
@@ -968,7 +969,8 @@ sub sort_sql_statements ($$$) {
         $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
     } else {
         # $object_seq{$a} and $object_seq{$b} will exists do to call to add_object_seq() in add_sql_statement()
-        $result = ($object_seq{$a} <=> $object_seq{$b});
+        debug(sprintf("get_object_seq('%s'); '%s'; get_object_seq('%s'): '%s'", $a, get_object_seq($a), $b, get_object_seq($b)));
+        $result = (get_object_seq($a) <=> get_object_seq($b));
     }
 
     return $result;
@@ -1495,16 +1497,34 @@ sub split_single_output_file ($) {
     unlink($input_file);
 }
 
+sub get_object_seq ($) {
+    trace((caller(0))[3]);
+
+    my ($object, $object_seq) = @_;
+
+    $object = uc($object);
+
+    error("Object '$object' must be in upper case")
+        unless $object eq uc($object);
+
+    return exists($object_seq{$object}) ? $object_seq{$object} : undef;
+}
+    
 sub add_object_seq ($;$) {
     trace((caller(0))[3]);
 
     my ($object, $object_seq) = @_;
-    
+
+    $object = uc($object);
+
+    error("Object '$object' must be in upper case")
+        unless $object eq uc($object);
+
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+:.+:.+$/;
-    
+
     error("Object sequence for '$object' already exists.")
-        if exists($object_seq{$object});
+        if defined(get_object_seq($object));
 
     if (defined($object_seq)) {
         # strip leading zeros otherwise it will be treated as an octal number
