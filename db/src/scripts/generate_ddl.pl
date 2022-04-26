@@ -165,6 +165,10 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2022-04-26
+
+Solved bug for objects named like "name" where name is not totally upper case.
+
 =item 2021-08-27
 
 Create the file in the output directory only when it is different from the
