@@ -36,7 +36,7 @@ fi
 DB_ACTIONS="db-install db-generate-ddl-full"
 echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; rm mvn-${profile}.log; done
 echo "there should be no files to add for Git:"
 test -z "`git status --porcelain`"
 
