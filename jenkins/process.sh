@@ -77,12 +77,17 @@ for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.con
 #  apex/app/src/export/application/create_application.sql | 2 +-
 #  1 file changed, 1 insertion(+), 1 deletion(-)
 
-# 1) Retrieve all create_application.sql files that have changed only in two places (one insertion, one deletion) 
-# 2) Restore them since the change is due to the version date change
-# 3) This prohibits a git commit when the APEX export has not changed really
-for create_application in "`git diff --stat -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
-do    
-    git checkout -- $create_application
-done
+# Check if only create_application.sql files have changed their p_flow_version.
+result="`git diff --stat -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+if [ "$result" = "YES" ]
+then
+    # 1) Retrieve all create_application.sql files that have changed only in two places (one insertion, one deletion) 
+    # 2) Restore them since the change is due to the version date change
+    # 3) This prohibits a git commit when the APEX export has not changed really
+    for create_application in "`git diff --stat -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
+    do    
+        git checkout -- $create_application
+    done
+fi
 
 process_git "APEX changes"
