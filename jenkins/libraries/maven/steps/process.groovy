@@ -12,7 +12,7 @@ void call(app_env){
         assert pipelineConfig.conf_dir != null
         assert pipelineConfig.db_dir != null
         assert pipelineConfig.apex_dir != null
-        
+
         env.SCM_BRANCH = app_env.scm_branch
         assert env.SCM_BRANCH != null
         env.SCM_BRANCH_PREV = ( app_env.scm_branch_prev != null ? app_env.scm_branch_prev : ( app_env.previous != null ? app_env.previous.scm_branch : '' ) )
@@ -57,6 +57,21 @@ void call(app_env){
                 submoduleCfg: [], 
                 userRemoteConfigs: [[url: pipelineConfig.scm_url_oracle_tools]]
             ])
+        }
+
+        script {
+            if (pipelineConfig.scm_url_config != null && pipelineConfig.scm_branch_config != null) {
+                dir('config') {
+                    checkout([
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/' + pipelineConfig.scm_branch_config]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'CleanCheckout']], 
+                        submoduleCfg: [], 
+                        userRemoteConfigs: [[url: pipelineConfig.scm_url_config]]
+                    ])
+                }
+            }
         }
         
         dir('myproject') {
