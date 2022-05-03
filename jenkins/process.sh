@@ -34,7 +34,7 @@ git config user.email ${SCM_EMAIL}
 
 set +eu # come variables may be unset
 
-if [ -n "$SCM_BRANCH_PREV" ]
+if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
 then
   git checkout "$SCM_BRANCH_PREV"
   git checkout "$SCM_BRANCH"
@@ -77,12 +77,12 @@ for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.con
 #  apex/app/src/export/application/create_application.sql | 2 +-
 #  1 file changed, 1 insertion(+), 1 deletion(-)
 
-create_application=${APEX_DIR}/src/export/application/create_application.sql
-# Use a little bit of awk to check that the file and its changes are matched and that the total number of lines is just 2
-result="`git diff --stat | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
-if [ "$result" = "YES" ]
-then
-  git checkout -- $create_application
-fi  
+# 1) Retrieve all create_application.sql files that have changed only in two places (one insertion, one deletion) 
+# 2) Restore them since the change is due to the version date change
+# 3) This prohibits a git commit when the APEX export has not changed really
+for create_application in "`git diff --stat -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
+do    
+    git checkout -- $create_application
+done
 
 process_git "APEX changes"
