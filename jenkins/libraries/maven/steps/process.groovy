@@ -42,6 +42,8 @@ void call(app_env){
         assert env.APEX_DIR != null
         env.APEX_ACTIONS = app_env.apex_actions
         assert env.APEX_ACTIONS != null
+
+        env.LOG_DIR = ( app_env.log_dir != null ? app_env.log_dir : ( pipelineConfig.log_dir != null ? pipelineConfig.log_dir : '' ) )
     }
     
     withCredentials([usernamePassword(credentialsId: env.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
