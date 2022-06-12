@@ -83,7 +83,13 @@ EOF
            ;;
         5) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/id_rsa || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/id_rsa' # generate SSH keys
            ;;
-        6) nohup open http://localhost:8080 1>/dev/null 2>&1 &
+        6) url='http://localhost:8080'
+           if which open 1>/dev/null
+           then
+               nohup open $url 1>/dev/null 2>&1 &
+           else
+               echo "Please open $url in your browser."
+           fi
            ;;
         # TBD: setting up SSH agent later
         7) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/jenkins_agent_key' # generate SSH keys
