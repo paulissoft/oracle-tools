@@ -130,7 +130,6 @@
     <property name="main-class" value="GenerateDDL"/>
     <property name="log.dir" location="target"/> <!-- Use maven target directory -->
     <mkdir dir="${log.dir}"/>
-    <tempfile property="temp.file" destDir="${log.dir}" suffix=".sql" prefix="temp"/>
     
     <property environment="env"/>
     <!-- trick to set env.USER on Windows. On Unix it is already set (because
@@ -328,16 +327,19 @@ Z       Time zone               RFC 822 time zone   -0800
     <attribute name="transform.params"/>
     <attribute name="owner"/>   
     <attribute name="id"/> <!-- unique id -->
+    <attribute name="temp.file"/>
     <!-- Perl -->
     <element name="perl-arguments"/>
     <sequential>
       <echo message="Invoke generate schema (@{id})" />
+      <echo message="Temporary file: @{temp.file}" />
+
       <!-- generate the input for the Perl script -->
       <java fork="true" 
             classname="${main-class}" 
             failonerror="true"
             logError="true">
-        <redirector output="${temp.file}"/>
+        <redirector output="@{temp.file}"/>
         <classpath>
           <path refid="runtime.classpath"/>
           <path location="${jar.dir}/${ant.project.name}.jar"/>
@@ -360,20 +362,19 @@ Z       Time zone               RFC 822 time zone   -0800
 
       <!-- Create scripts -->
       <exec executable="perl" failonerror="false" resultproperty="result.@{id}">
-        <redirector input="${temp.file}"/>
+        <redirector input="@{temp.file}"/>
         <arg value="${generate_ddl.pl}"/>
         <perl-arguments/>
         <arg value="--verbose"/>
       </exec>
       <!-- Keep the temporary file in case of errors -->
-      <fail message="Error while parsing file ${temp.file}">
+      <fail message="Error while parsing file @{temp.file}">
         <condition>
           <not>
             <equals arg1="${result.@{id}}" arg2="0"/>
           </not>
         </condition>
       </fail>
-      <delete file="${temp.file}"/>
     </sequential>
   </macrodef>
   
@@ -395,12 +396,14 @@ Z       Time zone               RFC 822 time zone   -0800
     </fail>
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <!-- generate the input for the Perl script -->
+    <tempfile property="temp.install.file" destDir="${log.dir}" suffix=".sql" prefix="install"/>
     <generate-ddl source.schema="${schema}"
                   source.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
                   owner="${owner}"
-                  id="generate-ddl-full-scripts">
+                  id="generate-ddl-full-scripts"
+                  temp.file="${temp.install.file}">
       <perl-arguments>
         <arg value="--${perl.full.force.view}force-view"/>
         <arg value="--output-directory=${full.output.directory}"/>
@@ -417,12 +420,14 @@ Z       Time zone               RFC 822 time zone   -0800
           description="Run: perl ${generate_ddl.pl}"
           unless="${full.skip.uninstall.sql}">
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
+    <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
     <generate-ddl target.schema="${schema}"
                   target.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
                   owner="${owner}"
-                  id="generate-ddl-full-uninstall">
+                  id="generate-ddl-full-uninstall"
+                  temp.file="${temp.uninstall.file}">
       <perl-arguments>
         <arg value="--output-directory=${full.output.directory}"/>
         <arg value="--single-output-file=uninstall.sql"/>
@@ -471,15 +476,17 @@ Z       Time zone               RFC 822 time zone   -0800
         <equals arg1="${perl.incr.skip.repeatables}" arg2="no"/>
       </not>
     </condition>
+    <tempfile property="temp.incr.file" destDir="${log.dir}" suffix=".sql" prefix="incr"/>
     <generate-ddl source.schema="${schema}"
-                     source.db.name="${source.db.name}"
-                     target.schema="${schema}"
-                     target.db.name="${target.db.name}"
-                     skip.repeatables="${skip.repeatables}"
-                     interface="${incr.interface}"
-                     transform.params="${incr.transform.params}"
-                     owner="${owner}"
-                     id="generate-ddl-incr">
+                  source.db.name="${source.db.name}"
+                  target.schema="${schema}"
+                  target.db.name="${target.db.name}"
+                  skip.repeatables="${skip.repeatables}"
+                  interface="${incr.interface}"
+                  transform.params="${incr.transform.params}"
+                  owner="${owner}"
+                  id="generate-ddl-incr"                  
+                  temp.file="${temp.incr.file}">
       <perl-arguments>   
         <arg value="--${perl.incr.dynamic.sql}dynamic-sql"/>
         <arg value="--output-directory=${incr.output.directory}"/>
