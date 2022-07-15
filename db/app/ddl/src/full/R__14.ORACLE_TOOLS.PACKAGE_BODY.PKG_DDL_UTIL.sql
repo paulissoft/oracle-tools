@@ -800,14 +800,16 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
       l_column_names varchar2(32767 char);
+      l_ref_column_names varchar2(32767 char);
       l_search_condition varchar2(32767 char);
 
       l_base_object oracle_tools.t_named_object;
-      l_ref_object oracle_tools.t_named_object;
+      l_ref_object oracle_tools.t_named_object := null;
       l_constraint_object oracle_tools.t_constraint_object := null;
-      l_ref_object_schema t_schema;
-      l_ref_object_type t_metadata_object_type;
-      l_ref_object_name t_object;
+      l_ref_base_object oracle_tools.t_named_object := null;
+      l_ref_base_object_schema t_schema;
+      l_ref_base_object_type t_metadata_object_type;
+      l_ref_base_object_name t_object;
 
       cursor c_con(b_schema in t_schema_nn, b_table_name in varchar2) is
         select  c.constraint_name
@@ -951,29 +953,77 @@ $end
                                           );
               when l_constraint like l_constraint_expr_tab(4) -- foreign key
               then
-                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("SEQ")
+                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("<ref_column_name1>"[,"<ref_column_nameX>"])
 
                 -- get the reference object schema, since l_pos2 is the position of the first ')'
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
                 l_pos2 := instr(l_constraint, '"', l_pos1+1);
-                l_ref_object_schema := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
+                l_ref_base_object_schema := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
 
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
                 l_pos2 := instr(l_constraint, '"', l_pos1+1);
-                l_ref_object_name := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
+                l_ref_base_object_name := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
 
                 select  min(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type)) -- always return one value
-                into    l_ref_object_type
+                into    l_ref_base_object_type
                 from    all_objects obj
-                where   obj.owner = l_ref_object_schema
-                and     obj.object_name = l_ref_object_name;
+                where   obj.owner = l_ref_base_object_schema
+                and     obj.object_name = l_ref_base_object_name;
 
-                l_ref_object :=
-                  oracle_tools.t_named_object.create_named_object
-                  ( p_object_schema => l_ref_object_schema
-                  , p_object_type => l_ref_object_type
-                  , p_object_name => l_ref_object_name
+                -- GJP 2022-07-15 We now have the reference base object but not yet the reference object (the constraint)
+                l_pos1 := instr(l_constraint, '(', l_pos2+1); -- l_pos2 points to last '"' before '('
+                l_pos2 := instr(l_constraint, ')', l_pos1+1); -- l_pos1 points to last '('
+                if l_pos1 > 0 and l_pos2 > l_pos1
+                then
+                  l_ref_column_names := replace(substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1)), ' '); -- assumes a column name does not have a space inside
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+                  dbug.print
+                  ( dbug."info"
+                  , 'l_pos1: %s; l_pos2: %s; l_ref_column_names: %s'
+                  , l_pos1
+                  , l_pos2
+                  , l_ref_column_names
                   );
+$end
+
+                  -- GJP 2022-07-15
+                  -- We now loop through the primary/unique constraints to see whether their column name list matches the one found.
+                  -- If so, we have found the reference constraint
+                  <<ref_column_names_loop>>
+                  for r in
+                  ( select  con.constraint_name
+                    ,       con.constraint_type
+                    from    all_constraints con
+                    where   con.owner = l_ref_base_object_schema
+                    and     con.table_name = l_ref_base_object_name
+                    and     con.constraint_type in ('P', 'U') -- primary / unique key
+                  )
+                  loop
+                    if oracle_tools.t_constraint_object.get_column_names
+                       ( p_object_schema => l_ref_base_object_schema
+                       , p_object_name => r.constraint_name
+                       , p_table_name => l_ref_base_object_name
+                       ) = l_ref_column_names
+                    then
+                      l_ref_base_object := oracle_tools.t_named_object.create_named_object
+                                           ( p_object_schema => l_ref_base_object_schema
+                                           , p_object_type => l_ref_base_object_type
+                                           , p_object_name => l_ref_base_object_name
+                                           );
+                      l_ref_object := oracle_tools.t_constraint_object
+                                      ( p_base_object => l_ref_base_object
+                                      , p_object_schema => l_ref_base_object_schema
+                                      , p_object_name => r.constraint_name
+                                      , p_constraint_type => r.constraint_type
+                                      , p_column_names => l_ref_column_names
+                                      , p_search_condition => null
+                                      );
+
+                      exit ref_column_names_loop;
+                    end if;
+                  end loop ref_column_names_loop;
+                end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 l_ref_object.print();

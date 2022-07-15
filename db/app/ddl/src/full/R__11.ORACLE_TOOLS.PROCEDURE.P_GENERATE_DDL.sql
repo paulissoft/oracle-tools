@@ -95,12 +95,12 @@ $end
                     t.obj.grantee() || ';' ||
                     t.obj.privilege() || ';' ||
                     t.obj.grantable() || ';' ||
-                    /*case
+                    case
                       when t.obj is of (oracle_tools.t_ref_constraint_object)
                       then treat(t.obj as oracle_tools.t_ref_constraint_object).ref_object_schema() || ';' ||
                            treat(t.obj as oracle_tools.t_ref_constraint_object).ref_object_type() || ';' ||
                            treat(t.obj as oracle_tools.t_ref_constraint_object).ref_object_name() || ';'
-                    end ||*/
+                    end ||
                     u.ddl#() || chr(10) as ddl_info
             ,       u.text
             from    table
@@ -133,12 +133,12 @@ $end
                     t.obj.grantee() || ';' ||
                     t.obj.privilege() || ';' ||
                     t.obj.grantable() || ';' ||
-                    /*case
+                    case
                       when t.obj is of (oracle_tools.t_ref_constraint_object)
                       then treat(t.obj as oracle_tools.t_ref_constraint_object).ref_object_schema() || ';' ||
                            treat(t.obj as oracle_tools.t_ref_constraint_object).ref_object_type() || ';' ||
                            treat(t.obj as oracle_tools.t_ref_constraint_object).ref_object_name() || ';'
-                    end ||*/
+                    end ||
                     u.ddl#() || chr(10) as ddl_info
             ,       u.text
             from    table
