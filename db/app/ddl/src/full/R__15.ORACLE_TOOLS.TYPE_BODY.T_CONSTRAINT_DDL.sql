@@ -51,7 +51,7 @@ overriding member procedure uninstall
 , p_target in oracle_tools.t_schema_ddl
 )
 is
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   l_constraint_object oracle_tools.t_constraint_object := treat(p_target.obj as oracle_tools.t_constraint_object);
 $end  
 begin
@@ -65,7 +65,7 @@ begin
               '"."' ||
               p_target.obj.base_object_name() ||
               '"' ||
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
               -- When a primary/unique constraint is dropped, the associated index may be dropped too.
               -- In that case the DROP INDEX may fail.
               --
@@ -93,7 +93,7 @@ overriding member procedure add_ddl
 , p_add_sqlterminator in integer
 )
 is
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   l_ddl_text clob;
 $end  
 begin
@@ -104,7 +104,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
 $end
 
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then
+$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
 
   -- Primary/unique constraints with USING INDEX syntax may fail.
   --
