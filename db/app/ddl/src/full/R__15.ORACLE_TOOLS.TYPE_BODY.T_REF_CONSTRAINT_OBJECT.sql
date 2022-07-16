@@ -44,9 +44,44 @@ $end
               )
             )
           , null -- search condition
-          , p_constraint_type
+          , nvl(p_constraint_type, 'R')
           , p_ref_object
           );
+
+  if self.ref_object$ is null
+  then
+    -- find referenced primary / unique key and its base table / view
+    <<find_loop>>
+    for r in
+    ( select  r.owner as r_owner
+      ,       r.constraint_name as r_constraint_name
+      ,       r.table_name as r_table_name
+      ,       r.constraint_type as r_constraint_type
+      ,       ( select o.object_type from all_objects o where o.owner = r.owner and o.object_name = r.table_name ) as r_object_type
+      from    all_constraints t -- this object (constraint)
+              inner join all_constraints r -- remote object (constraint)
+              on r.owner = t.r_owner and r.constraint_name = t.r_constraint_name              
+      where   t.owner = self.object_schema$
+      and     t.constraint_name = self.object_name$
+      and     t.constraint_type = self.constraint_type$
+      and     r.constraint_type in ('P', 'U')
+    )
+    loop
+      self.ref_object$ :=
+        oracle_tools.t_constraint_object
+        ( p_base_object => oracle_tools.t_named_object.create_named_object
+                           ( p_object_schema => r.r_owner
+                           , p_object_type => r.r_object_type
+                           , p_object_name => r.r_table_name
+                           )
+        , p_object_schema => r.r_owner
+        , p_object_name => r.r_constraint_name
+        , p_constraint_type => r.r_constraint_type
+        , p_search_condition => null
+        );
+      exit find_loop;
+    end loop find_loop;
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -194,6 +229,17 @@ is
   l_ref_base_object oracle_tools.t_named_object := null;
   l_ref_object oracle_tools.t_constraint_object := null;
 begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
+  dbug.print
+  ( dbug."input"
+  , 'p_ref_base_object_schema: %s; p_ref_base_object_name: %s; p_ref_column_names: %s'
+  , p_ref_base_object_schema
+  , p_ref_base_object_name
+  , p_ref_column_names
+  );
+$end
+
   -- GJP 2022-07-15
   -- We now loop through the primary/unique constraints to see whether their column name list matches the one found.
   -- If so, we have found the reference constraint
@@ -207,6 +253,14 @@ begin
     and     con.constraint_type in ('P', 'U') -- primary / unique key
   )
   loop
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+    dbug.print
+    ( dbug."info"
+    , 'r.constraint_name: %s; r.constraint_type: %s'
+    , r.constraint_name
+    , r.constraint_type
+    );
+$end
     if oracle_tools.t_constraint_object.get_column_names
        ( p_object_schema => p_ref_base_object_schema
        , p_object_name => r.constraint_name
@@ -222,6 +276,9 @@ begin
         where   t.owner = p_ref_base_object_schema
         and     t.table_name = p_ref_base_object_name
         ;
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+        dbug.print(dbug."debug", 'l_tablespace_name: %s', l_tablespace_name);
+$end
         l_ref_base_object := oracle_tools.t_table_object
                              ( p_object_schema => p_ref_base_object_schema
                              , p_object_name => p_ref_base_object_name
@@ -255,6 +312,14 @@ begin
       exit ref_column_names_loop; -- found so done
     end if;
   end loop ref_column_names_loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  if l_ref_object is not null
+  then
+    l_ref_object.print();
+  end if;
+  dbug.leave;
+$end
 
   return l_ref_object;
 end get_ref_constraint;
