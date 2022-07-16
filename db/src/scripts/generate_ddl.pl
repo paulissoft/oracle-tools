@@ -784,10 +784,17 @@ sub get_object ($$$;$$$) {
             $object_schema eq $base_object_schema &&
             exists($object_type_info{$object_type}->{use_base_object_name}) &&
             $object_type_info{$object_type}->{use_base_object_name} ) {
+        my $name = $base_object_name;
+        
+        # For constraints the name part is either <base_name>-<constraint_name> (<constraint_name> not empty) or <base_name> (else)
+        if ($object_type =~ m/^(REF_)?CONSTRAINT$/ && defined($object_name) && length($object_name) > 0) {
+            $name .= '-' . $object_name;
+        }
+        
         return sprintf("%s$sep%s$sep%s", 
                        $object_schema,
                        $object_type,
-                       $base_object_name);
+                       $name);
     } else {
         error("Both \$object_schema and \$base_object_schema undefined")
             unless (defined($object_schema) or defined($base_object_schema));
