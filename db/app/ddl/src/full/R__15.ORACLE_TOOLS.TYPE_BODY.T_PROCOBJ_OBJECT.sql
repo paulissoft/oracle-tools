@@ -35,7 +35,7 @@ $end
   return;
 end;
 
-overriding member function dict_object_type 
+overriding member function dict_object_type
 return varchar2
 deterministic
 is

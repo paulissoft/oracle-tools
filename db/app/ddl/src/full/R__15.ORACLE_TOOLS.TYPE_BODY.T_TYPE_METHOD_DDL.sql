@@ -18,7 +18,7 @@ $end
   self.obj := p_obj;
   self.ddl_tab := t_ddl_tab();
 
-  /* construct the ALTER TYPE ADD METHOD here */ 
+  /* construct the ALTER TYPE ADD METHOD here */
   oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TYPE "' || l_type_method_object.base_object_schema() || '"."' || l_type_method_object.base_object_name() || '"' || " ADD  " || chr(10)
   , pio_buffer => l_buffer

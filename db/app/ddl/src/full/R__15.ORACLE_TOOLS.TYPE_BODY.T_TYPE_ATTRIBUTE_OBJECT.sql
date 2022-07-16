@@ -51,7 +51,7 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
-$end  
+$end
 
   return;
 end;
@@ -112,7 +112,7 @@ begin
   return character_set_name$;
 end character_set_name;
 
-member function char_length 
+member function char_length
 return number
 deterministic
 is
@@ -120,8 +120,8 @@ begin
   return data_length();
 end char_length;
 
-member function char_used 
-return varchar2 
+member function char_used
+return varchar2
 deterministic
 is
 begin
@@ -138,7 +138,7 @@ begin
   return case
            -- data_type_mod() may be REF or empty
            when self.data_type_mod() is not null
-           then self.data_type_mod() || ' ' 
+           then self.data_type_mod() || ' '
          end ||
          case
            when self.data_type_owner() is not null

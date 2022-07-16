@@ -49,7 +49,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
-$end      
+$end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
       , t_ddl_tab()
@@ -61,7 +61,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
-$end      
+$end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
       , t_ddl_tab()
@@ -75,7 +75,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       r.source_schema_ddl.print();
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
-$end      
+$end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
       , t_ddl_tab()

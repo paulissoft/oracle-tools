@@ -43,7 +43,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return;
-end;  
+end;
 
 -- begin of getter(s)/setter(s)
 
@@ -53,7 +53,7 @@ deterministic
 is
 begin
   return 'TYPE_METHOD';
-end object_type;  
+end object_type;
 
 member function method_type
 return varchar2
@@ -173,7 +173,7 @@ $end
   add(' ' || self.member_name());
 
   -- first the arguments and later the return value
-  if cardinality(self.arguments) > self.results() 
+  if cardinality(self.arguments) > self.results()
   then
     add(chr(10) || '( ');
 

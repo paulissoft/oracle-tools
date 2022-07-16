@@ -20,7 +20,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   (self as oracle_tools.t_schema_ddl).add_ddl
-  ( p_verb => p_verb 
+  ( p_verb => p_verb
   , p_text => regexp_replace(p_text, l_find_expr, l_repl_expr, 1, 1, 'im') -- case insensitive multi-line search/replace
   , p_add_sqlterminator => p_add_sqlterminator
   );

@@ -19,7 +19,7 @@ begin
   self.type_owner$ := p_type_owner;
   self.type_name$ := p_type_name;
   return;
-end;  
+end;
 
 -- begin of getter(s)/setter(s)
 
@@ -86,7 +86,7 @@ begin
       then '"' || type_owner() || '"."' || type_name() || '"'
       else data_type_name()
     end;
-end;    
+end;
 
 end;
 /

@@ -49,7 +49,7 @@ $end
       , offset => l_offset
       , amount => l_amount
       );
-    
+
     l_chunk_length := nvl(length(l_chunk), 0);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
@@ -985,24 +985,24 @@ procedure split
 );
 */
   split("null", "null", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 1.2').to_be_null();
-  
+
   split("null", "lf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 2.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 2.2').to_be_null();
-  
+
   split("lf" || 'abcd' || "lf" || 'efgh', "lf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 3.1').to_equal(3);
   ut.expect(l_str_tab(1), 'test 3.2').to_be_null();
   ut.expect(l_str_tab(2), 'test 3.2').to_equal('abcd');
   ut.expect(l_str_tab(3), 'test 3.2').to_equal('efgh');
-  
+
   split("crlf" || 'abcd' || "crlf" || 'efgh' || "crlf", "crlf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 4.1').to_equal(4);
   ut.expect(l_str_tab(1), 'test 4.2').to_be_null();
   ut.expect(l_str_tab(2), 'test 4.3').to_equal('abcd');
@@ -1010,7 +1010,7 @@ procedure split
   ut.expect(l_str_tab(4), 'test 4.5').to_be_null();
 
   split('abcd' || "crlf" || 'efgh', "crlf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 5.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 5.2').to_equal('abcd');
   ut.expect(l_str_tab(2), 'test 5.3').to_equal('efgh');
@@ -1029,26 +1029,26 @@ procedure split
 );
 */
   dbms_lob.trim(g_clob, 0);
-  
+
   split("null clob", null, l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 1.2').to_be_null();
-  
+
   split(g_clob, "lf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 2.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 2.2').to_be_null();
-  
+
   split(to_clob("lf" || 'abcd' || "lf" || 'efgh'), "lf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 3.1').to_equal(3);
   ut.expect(l_str_tab(1), 'test 3.2').to_be_null();
   ut.expect(l_str_tab(2), 'test 3.2').to_equal('abcd');
   ut.expect(l_str_tab(3), 'test 3.2').to_equal('efgh');
-  
+
   split(to_clob("crlf" || 'abcd' || "crlf" || 'efgh' || "crlf"), "crlf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 4.1').to_equal(4);
   ut.expect(l_str_tab(1), 'test 4.2').to_be_null();
   ut.expect(l_str_tab(2), 'test 4.3').to_equal('abcd');
@@ -1056,7 +1056,7 @@ procedure split
   ut.expect(l_str_tab(4), 'test 4.5').to_be_null();
 
   split(to_clob('abcd' || "crlf" || 'efgh'), "crlf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 5.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 5.2').to_equal('abcd');
   ut.expect(l_str_tab(2), 'test 5.3').to_equal('efgh');
@@ -1067,7 +1067,7 @@ procedure split
   dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('b', 32767, 'b')));
 
   split(g_clob, "crlf", l_str_tab);
-        
+
   ut.expect(dbms_lob.getlength(g_clob), 'test 6.0').to_equal(32767 * 2 + 2);
   ut.expect(l_str_tab.count, 'test 6.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 6.2').to_equal(rpad('a', 32767, 'a'));
@@ -1098,26 +1098,26 @@ procedure split
 );
 */
   dbms_lob.trim(g_clob, 0);
-  
+
   split("null clob", null, l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
   ut.expect(dbms_lob.getlength(l_str_tab(1)), 'test 1.2').to_be_null();
-  
+
   split(g_clob, "lf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 2.1').to_equal(1);
   ut.expect(dbms_lob.getlength(l_str_tab(1)), 'test 2.2').to_be_null();
-  
+
   split(to_clob("lf" || 'abcd' || "lf" || 'efgh'), "lf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 3.1').to_equal(3);
   ut.expect(dbms_lob.getlength(l_str_tab(1)), 'test 3.2').to_be_null();
   ut.expect(l_str_tab(2), 'test 3.2').to_equal(to_clob('abcd'));
   ut.expect(l_str_tab(3), 'test 3.2').to_equal(to_clob('efgh'));
-  
+
   split(to_clob("crlf" || 'abcd' || "crlf" || 'efgh' || "crlf"), "crlf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 4.1').to_equal(4);
   ut.expect(dbms_lob.getlength(l_str_tab(1)), 'test 4.2').to_be_null();
   ut.expect(l_str_tab(2), 'test 4.3').to_equal(to_clob('abcd'));
@@ -1125,7 +1125,7 @@ procedure split
   ut.expect(dbms_lob.getlength(l_str_tab(4)), 'test 4.5').to_be_null();
 
   split(to_clob('abcd' || "crlf" || 'efgh'), "crlf", l_str_tab);
-        
+
   ut.expect(l_str_tab.count, 'test 5.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 5.2').to_equal(to_clob('abcd'));
   ut.expect(l_str_tab(2), 'test 5.3').to_equal(to_clob('efgh'));
@@ -1136,7 +1136,7 @@ procedure split
   dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('b', 32767, 'b')));
 
   split(g_clob, "crlf", l_str_tab);
-        
+
   ut.expect(dbms_lob.getlength(g_clob), 'test 6.0').to_equal(32767 * 2 + 2);
   ut.expect(l_str_tab.count, 'test 6.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 6.2').to_equal(to_clob(rpad('a', 32767, 'a')));

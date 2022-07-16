@@ -36,8 +36,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- Constraints with different indexes fail because the index is already there:
   --
   -- ALTER TABLE "<owner>"."WORKORDERTYPE" ADD CONSTRAINT "WORKORDERTYPE_PK" PRIMARY KEY ("SEQ")
-  -- USING INDEX (CREATE UNIQUE INDEX "<owner>"."WORKORDERTYPE1_PK" ON "<owner>"."WORKORDERTYPE" ("SEQ") 
-  -- PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  -- USING INDEX (CREATE UNIQUE INDEX "<owner>"."WORKORDERTYPE1_PK" ON "<owner>"."WORKORDERTYPE" ("SEQ")
+  -- PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS
   -- TABLESPACE "YSSINDEX" )  ENABLE;
   --
   c_#138707615_2 constant boolean := true;
@@ -59,11 +59,11 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_get_library_ddl constant boolean := false;
   c_get_operator_ddl constant boolean := false;
   c_get_xmlschema_ddl constant boolean := false;
-  
+
   c_transform_param_list constant varchar2(4000 char) := 'SEGMENT_ATTRIBUTES,TABLESPACE';
 
   /* TYPES */
-  subtype t_dict_object_type is all_objects.object_type%type; 
+  subtype t_dict_object_type is all_objects.object_type%type;
   subtype t_dict_object_type_nn is t_dict_object_type not null;
 
   subtype t_metadata_object_type is varchar2(30 char);
@@ -135,7 +135,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
-  , p_transform_param_list in varchar2 default c_transform_param_list 
+  , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -449,7 +449,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%beforeall
   procedure ut_setup;
-  
+
   --%afterall
   procedure ut_teardown;
 
