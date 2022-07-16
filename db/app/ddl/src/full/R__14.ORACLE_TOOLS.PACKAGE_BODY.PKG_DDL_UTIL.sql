@@ -6159,7 +6159,7 @@ $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then -- GJP 2022-07-16 FALSE
         where   t1.owner = p_schema
         and     t1.owner = t2.owner /* same schema */
         and     t1.constraint_type = 'R'
-$else
+$else -- GJP 2022-07-16 TRUE
         -- more simple: just the constraints
         select  oracle_tools.t_schema_object.create_schema_object
                 ( c.owner
@@ -6253,6 +6253,8 @@ $end
 
     l_object_by_dep_tab dbms_sql.varchar2_table;
 
+    l_dependent_or_granted_object oracle_tools.t_dependent_or_granted_object;
+
     l_schema_object oracle_tools.t_schema_object;
     
     l_program constant t_module := 'SORT_OBJECTS_BY_DEPS';
@@ -6279,7 +6281,34 @@ $end
     for r in c_dependencies
     loop
       -- object depends on object dependency so the latter must be there first
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'object %s depends on object %s', r.obj.id, r.ref_obj.id);
+$end
+
       l_object_dependency_tab(r.ref_obj.id)(r.obj.id) := null;
+      
+      -- but the object also depends on its own base object
+      if r.obj is of (oracle_tools.t_dependent_or_granted_object)
+      then
+        l_dependent_or_granted_object := treat(r.obj as oracle_tools.t_dependent_or_granted_object);
+
+        if l_dependent_or_granted_object is not null and
+           l_dependent_or_granted_object.base_object$ is not null and
+           l_dependent_or_granted_object.base_object$.id != r.ref_obj.id
+        then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print
+          ( dbug."info"
+          , 'object %s depends on its base object %s'
+          , l_dependent_or_granted_object.id
+          , l_dependent_or_granted_object.base_object$.id
+          );
+$end
+
+          l_object_dependency_tab(l_dependent_or_granted_object.base_object$.id)(l_dependent_or_granted_object.id) := null;
+        end if;  
+      end if;
     end loop;
 
     dsort(l_object_dependency_tab, l_object_by_dep_tab);
@@ -6289,7 +6318,11 @@ $end
       for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
       loop
         l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
-        
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."debug", 'l_schema_object.id: %s', l_schema_object.id);
+$end
+
         pipe row(l_schema_object);
 
         longops_show(l_longops_rec);
