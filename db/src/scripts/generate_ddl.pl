@@ -165,7 +165,13 @@ Gert-Jan Paulissen
 
 =over 4
 
-=item 2022-07-17
+=item 2022-07-17 (2)
+
+ENHANCEMENT: The generated DDL install.sql should use show errors after every stored procedure.
+
+See also L<https://github.com/paulissoft/oracle-tools/issues/37>.
+
+=item 2022-07-17 (1)
 
 BUG: the referential constraints are not created in the correct order in the install.sql file.
 
@@ -335,34 +341,40 @@ my $comment_expr = qr/COMMENT\s+ON\s+(COLUMN|TABLE|MATERIALIZED\s+VIEW)\s+(?<obj
 # my $object_grant_expr = qr/(GRANT\s+.+\s+ON\s+(?<object>$object_expr)\s+TO\s+$object_expr|REVOKE\s+.+\s+ON\s+(?<object>$object_expr)\s+FROM\s+$object_expr)/i;
 my $object_grant_expr = qr/GRANT\s+.+\s+ON\s+(?<object>$object_expr)\s+TO\s+$object_expr/i;
 
+# GJP 2022-07-17 The generated DDL install.sql should use show errors after every stored procedure.
+#
+# SQL*Plus documentation:
+# SHOW ERR[ORS] [{FUNCTION | PROCEDURE | PACKAGE | PACKAGE BODY | TRIGGER | VIEW | TYPE | TYPE BODY | DIMENSION | JAVA CLASS} [schema.]name]
+
 my %object_type_info = (
     # all object types are from pkg_ddl_util.object_type_order:
     'SEQUENCE' => { expr => [ $sequence_expr ], seq => 1, repeatable => 0, plsql => 0 },
-    'TYPE_SPEC' => { expr => [ $type_spec_expr ], seq => 2, repeatable => 0, plsql => 1, terminator => ';/' }, # create or replace type may fail when it already exists due to dependent objects (e.g. collection of other types)
+    # create or replace type may fail when it already exists due to dependent objects (e.g. collection of other types)
+    'TYPE_SPEC' => { expr => [ $type_spec_expr ], seq => 2, repeatable => 0, plsql => 1, terminator => ';/', show_errors => 1 }, 
     'CLUSTER' => { expr => [ $cluster_expr ], seq => 3, repeatable => 0, plsql => 0 },
     # 'AQ_QUEUE_TABLE' => { seq => 4, repeatable => 0 },
     # 'AQ_QUEUE' => { seq => 5, repeatable => 0 },
     'TABLE' => { expr => [ $table_expr ], seq => 6, repeatable => 0, plsql => 0 },
     # 'DB_LINK' => { seq => 7, repeatable => 0, plsql => 0 },
-    'FUNCTION' => { expr => [ $function_expr ], seq => 8, repeatable => 1, plsql => 1 },
-    'PACKAGE_SPEC' => { expr => [ $package_spec_expr ], seq => 9, repeatable => 1, plsql => 1 },
-    'VIEW' => { expr => [ $view_expr ], seq => 10, repeatable => 1, plsql => 0 },
-    'PROCEDURE' => { expr => [ $procedure_expr ], seq => 11, repeatable => 1, plsql => 1 },
+    'FUNCTION' => { expr => [ $function_expr ], seq => 8, repeatable => 1, plsql => 1, show_errors => 1 },
+    'PACKAGE_SPEC' => { expr => [ $package_spec_expr ], seq => 9, repeatable => 1, plsql => 1, show_errors => 1 },
+    'VIEW' => { expr => [ $view_expr ], seq => 10, repeatable => 1, plsql => 0, show_errors => 1 },
+    'PROCEDURE' => { expr => [ $procedure_expr ], seq => 11, repeatable => 1, plsql => 1, show_errors => 1 },
     'MATERIALIZED_VIEW' => { expr => [ $materialized_view_expr ], seq => 12, repeatable => 0, plsql => 0 },
     'MATERIALIZED_VIEW_LOG' => { expr => [ $materialized_view_log_expr ], seq => 13, repeatable => 0, plsql => 0 },
-    'PACKAGE_BODY' => { expr => [ $package_body_expr ], seq => 14, repeatable => 1, plsql => 1 },
-    'TYPE_BODY' => { expr => [ $type_body_expr ], seq => 15, repeatable => 1, plsql => 1 },
+    'PACKAGE_BODY' => { expr => [ $package_body_expr ], seq => 14, repeatable => 1, plsql => 1, show_errors => 1 },
+    'TYPE_BODY' => { expr => [ $type_body_expr ], seq => 15, repeatable => 1, plsql => 1, show_errors => 1 },
     'INDEX' => { expr => [ $index_expr ], seq => 16, repeatable => 0, plsql => 0, use_base_object_name => 1 },
-    'TRIGGER' => { expr => [ $trigger_expr ], seq => 17, repeatable => 1, plsql => 1, use_base_object_name => 0 }, # do not put them in one file because of instead trigger moves
+    'TRIGGER' => { expr => [ $trigger_expr ], seq => 17, repeatable => 1, plsql => 1, use_base_object_name => 0, show_errors => 1 }, # do not put them in one file because of instead trigger moves
     'OBJECT_GRANT' => { expr => [ $object_grant_expr ], seq => 18, repeatable => 1, plsql => 0, use_base_object_name => 1 },
     'CONSTRAINT' => { expr => [ $constraint_expr ], seq => 19, repeatable => 0, plsql => 0, use_base_object_name => 1 },
     'REF_CONSTRAINT' => { expr => [ $ref_constraint_expr ], seq => 20, repeatable => 0, plsql => 0, use_base_object_name => 1 },
     'SYNONYM' => { expr => [ $synonym_expr ], seq => 21, repeatable => 1, plsql => 0 },
     # Must be created after the TABLE/VIEW
     'COMMENT' => { expr => [ $comment_expr ], seq => 22, repeatable => 1, plsql => 0, use_base_object_name => 1 },
-    # 'DIMENSION' => { seq => 23, repeatable => 0, plsql => 0 },
+    # 'DIMENSION' => { seq => 23, repeatable => 0, plsql => 0, show_errors => 1 },
     # 'INDEXTYPE' => { seq => 24, repeatable => 1, plsql => 0 },
-    'JAVA_SOURCE' => { seq => 25, repeatable => 1, plsql => 0, terminator => '/' },
+    'JAVA_SOURCE' => { seq => 25, repeatable => 1, plsql => 0, terminator => '/', show_errors => 1 },
     # 'LIBRARY' => { seq => 26, repeatable => 1, plsql => 0 },
     # 'OPERATOR' => { seq => 27, repeatable => 1, plsql => 0 },
     'REFRESH_GROUP' => { expr => \@refresh_group_expr, seq => 28, repeatable => 0, plsql => 1 },
@@ -392,7 +404,7 @@ sub get_object_type_line ($$);
 sub parse_object ($);
 sub get_object ($$$;$$$);
 sub object_file_name ($$$);                  
-sub open_file ($$$$);
+sub open_file ($$$$$);
 sub close_file ($$);
 sub smart_open ($;$);
 sub smart_close ($);
@@ -861,18 +873,24 @@ sub object_file_name ($$$) {
     return $object_file_name;
 }
 
-sub open_file ($$$$) {
+sub open_file ($$$$$) {
     trace((caller(0))[3]);
     
-    my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists) = @_;
+    my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists, $object_type) = @_;
 
     if (defined $fh_install_sql && !$install_sql_preamble_printed) {
         print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
         $install_sql_preamble_printed = 1;
     }
     
-    print $fh_install_sql "prompt \@\@$file\n\@\@$file\n"
-        if (defined $fh_install_sql);
+    if (defined $fh_install_sql) {
+        print $fh_install_sql "prompt \@\@$file\n\@\@$file\n";
+        print $fh_install_sql "show errors\n"
+            if (defined($object_type) &&
+                exists($object_type_info{$object_type}) &&
+                exists($object_type_info{$object_type}->{'show_errors'}) &&
+                $object_type_info{$object_type}->{'show_errors'});
+    }
 
     # GJP 2021-08-27 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
 
@@ -1123,7 +1141,7 @@ sub object_sql_statements_flush ($$$$$) {
                 $ignore_warning_when_file_exists = 1;
             }
         }
-        open_file($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists);
+        open_file($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists, $object_type);
         if ($object_type eq 'OBJECT_GRANT') {
             error("File handle must be defined") unless defined($$r_fh);
             
