@@ -7,7 +7,14 @@ constructor function t_ref_constraint_object
 , p_object_name in varchar2
 , p_constraint_type in varchar2 default null
 , p_column_names in varchar2 default null
-, p_ref_object in oracle_tools.t_constraint_object default null
+  /*
+   * GJP 2022-07-17
+   *
+   * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
+   *
+   * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+   */ 
+, p_ref_object in oracle_tools.t_constraint_object default null 
 )
 return self as result
 is

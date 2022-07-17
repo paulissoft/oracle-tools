@@ -800,14 +800,21 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
       l_column_names varchar2(32767 char);
-      l_ref_column_names varchar2(32767 char);
       l_search_condition varchar2(32767 char);
 
+      /*
+       * GJP 2022-07-17
+       * 
+       * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
+       *
+       * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+       */ 
       l_base_object oracle_tools.t_named_object;
+      l_ref_column_names varchar2(32767 char);
       l_ref_object oracle_tools.t_constraint_object := null;
-      l_constraint_object oracle_tools.t_constraint_object := null;
       l_ref_base_object_schema t_schema;
       l_ref_base_object_name t_object;
+      l_constraint_object oracle_tools.t_constraint_object := null;
 
       cursor c_con(b_schema in t_schema_nn, b_table_name in varchar2) is
         select  c.constraint_name
@@ -951,7 +958,7 @@ $end
                                           );
               when l_constraint like l_constraint_expr_tab(4) -- foreign key
               then
-                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("<ref_column_name1>"[,"<ref_column_nameX>"])
+                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("<ref_column_name1>"[,"<ref_column_nameN>"])
 
                 -- get the reference object schema, since l_pos2 is the position of the first ')'
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
@@ -6287,7 +6294,15 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
       l_object_dependency_tab(r.ref_obj.id)(r.obj.id) := null;
-      
+
+      /*
+       * GJP 2022-07-17
+       *
+       * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
+       *
+       * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+       */ 
+
       -- but the object also depends on its own base object
       if r.obj is of (oracle_tools.t_dependent_or_granted_object)
       then
@@ -6295,7 +6310,7 @@ $end
 
         if l_dependent_or_granted_object is not null and
            l_dependent_or_granted_object.base_object$ is not null and
-           l_dependent_or_granted_object.base_object$.id != r.ref_obj.id
+           l_dependent_or_granted_object.base_object$.id != r.ref_obj.id /* no need to add the same entry twice */
         then
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print
