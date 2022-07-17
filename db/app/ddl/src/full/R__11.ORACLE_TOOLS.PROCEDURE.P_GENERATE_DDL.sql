@@ -210,13 +210,13 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
-$end  
+$end
 exception
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
-$end    
+$end
     raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, dbms_utility.format_error_backtrace, true);
 end p_generate_ddl;
 /

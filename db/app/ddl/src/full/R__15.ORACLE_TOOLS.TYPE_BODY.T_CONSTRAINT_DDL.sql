@@ -15,7 +15,7 @@ begin
   );
 
   -- check if constraint names are equal
-  if self.obj.object_name() != p_target.obj.object_name() 
+  if self.obj.object_name() != p_target.obj.object_name()
   then
     self.add_ddl
     ( p_verb => 'ALTER'
@@ -27,7 +27,7 @@ declare
   e_constraint_name_already_used exception;
   pragma exception_init(e_constraint_name_already_used, -02264);
 begin
-  execute immediate ']' || 
+  execute immediate ']' ||
                 'ALTER TABLE "' ||
                 self.obj.base_object_schema() ||
                 '"."' ||
@@ -53,7 +53,7 @@ overriding member procedure uninstall
 is
 $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   l_constraint_object oracle_tools.t_constraint_object := treat(p_target.obj as oracle_tools.t_constraint_object);
-$end  
+$end
 begin
   -- ALTER TABLE cust_table DROP CONSTRAINT fk_cust_table_ref;
   self.add_ddl
@@ -95,7 +95,7 @@ overriding member procedure add_ddl
 is
 $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   l_ddl_text clob;
-$end  
+$end
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
@@ -111,8 +111,8 @@ $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   -- a) This may fail when the index is already there:
   --
   -- ALTER TABLE "<owner>"."WORKORDERTYPE" ADD CONSTRAINT "WORKORDERTYPE_PK" PRIMARY KEY ("SEQ")
-  -- USING INDEX (CREATE UNIQUE INDEX "<owner>"."WORKORDERTYPE1_PK" ON "<owner>"."WORKORDERTYPE" ("SEQ") 
-  -- PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  -- USING INDEX (CREATE UNIQUE INDEX "<owner>"."WORKORDERTYPE1_PK" ON "<owner>"."WORKORDERTYPE" ("SEQ")
+  -- PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS
   -- TABLESPACE "YSSINDEX" )  ENABLE;
   --
   -- b) This may fail when the index is not there:
@@ -173,7 +173,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
-end execute_ddl;  
+end execute_ddl;
 
 end;
 /
