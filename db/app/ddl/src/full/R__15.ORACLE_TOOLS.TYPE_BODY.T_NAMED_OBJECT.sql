@@ -6,7 +6,7 @@ deterministic
 is
 begin
   return self.object_name$;
-end object_name;  
+end object_name;
 
 final static procedure create_named_object
 ( p_object_type in varchar2
@@ -68,7 +68,7 @@ exception
   then
     dbug.leave_on_error;
     raise;
-$end  
+$end
 end create_named_object;
 
 final static function create_named_object
@@ -121,7 +121,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
-end chk;  
+end chk;
 
 end;
 /

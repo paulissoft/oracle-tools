@@ -17,6 +17,20 @@ Types of changes:
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 
+## [1.4.0] - 2022-07-17
+
+### Added
+
+- [The generated DDL install.sql should use show errors after every stored procedure.](https://github.com/paulissoft/oracle-tools/issues/37)
+
+### Changed
+
+- [When generating DDL the temporary file should be kept.](https://github.com/paulissoft/oracle-tools/issues/36)
+
+### Fixed
+
+- [The referential constraints are not created in the correct order in the install.sql file.](https://github.com/paulissoft/oracle-tools/issues/35)
+
 ## [1.3.2] - 2022-02-23
 
 ### Changed

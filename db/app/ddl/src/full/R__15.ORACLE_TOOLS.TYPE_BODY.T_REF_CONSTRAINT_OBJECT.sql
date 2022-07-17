@@ -7,28 +7,17 @@ constructor function t_ref_constraint_object
 , p_object_name in varchar2
 , p_constraint_type in varchar2 default null
 , p_column_names in varchar2 default null
-, p_ref_object in oracle_tools.t_named_object default null
+  /*
+   * GJP 2022-07-17
+   *
+   * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
+   *
+   * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+   */
+, p_ref_object in oracle_tools.t_constraint_object default null
 )
 return self as result
 is
-  l_owner all_objects.owner%type;
-  l_table_name all_objects.object_name%type;
-  l_tablespace_name all_tables.tablespace_name%type;
-
-  cursor c_con(b_owner in varchar2, b_constraint_name in varchar2, b_table_name in varchar2)
-  is
-    select  con.owner
-    ,       con.constraint_type
-    ,       con.table_name
-    ,       con.r_owner
-    ,       con.r_constraint_name
-    from    all_constraints con
-    where   con.owner = b_owner
-    and     con.constraint_name = b_constraint_name
-    and     (b_table_name is null or con.table_name = b_table_name)
-    ;
-
-  r_con c_con%rowtype;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
@@ -53,78 +42,52 @@ $end
           , p_object_schema
           , p_base_object
           , p_object_name
-          , nvl(p_column_names, oracle_tools.t_constraint_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name, p_table_name => p_base_object.object_name()))
+          , nvl
+            ( p_column_names
+            , oracle_tools.t_constraint_object.get_column_names
+              ( p_object_schema => p_object_schema
+              , p_object_name => p_object_name
+              , p_table_name => p_base_object.object_name()
+              )
+            )
           , null -- search condition
-          , p_constraint_type
+          , nvl(p_constraint_type, 'R')
           , p_ref_object
           );
 
-  -- GPA 2017-01-18
-  -- one combined query (twice all_constraints and once all_objects) was too slow.
-  if p_constraint_type is not null and p_ref_object is not null
+  if self.ref_object$ is null
   then
-    null;
-  else
-    begin
-      self.constraint_type$ := null; -- to begin with
-
-      open c_con(p_object_schema, p_object_name, p_base_object.object_name());
-      fetch c_con into r_con;
-      if c_con%found
-      then
-        close c_con; -- closed cursor indicates success
-
-        self.constraint_type$ := r_con.constraint_type;
-
-        -- get the referenced table/view
-        open c_con(r_con.r_owner, r_con.r_constraint_name, null);
-        fetch c_con into r_con;
-        if c_con%found
-        then
-          close c_con; -- closed cursor indicates success
-
-          begin
-            select  t.owner
-            ,       t.table_name as table_name
-            ,       t.tablespace_name as tablespace_name
-            into    l_owner
-            ,       l_table_name
-            ,       l_tablespace_name
-            from    all_tables t
-            where   t.owner = r_con.owner
-            and     t.table_name = r_con.table_name
-            ;
-            self.ref_object$ := oracle_tools.t_table_object(p_object_schema => l_owner, p_object_name => l_table_name, p_tablespace_name => l_tablespace_name);
-          exception
-            when no_data_found
-            then
-              -- reference constraints to views are possible too...
-              select  v.owner
-              ,       v.view_name as table_name
-              into    l_owner
-              ,       l_table_name
-              from    all_views v
-              where   v.owner = r_con.owner
-              and     v.view_name = r_con.table_name
-              ;
-              self.ref_object$ := oracle_tools.t_view_object(l_owner, l_table_name);
-          end;
-        end if;
-      end if;
-
-      -- closed cursor indicates success
-      if c_con%isopen
-      then
-        close c_con;
-        raise no_data_found;
-      end if;
-
-    exception
-      when others
-      then
-        self.ref_object$ := null;
-        -- chk() will signal this later on
-    end;
+    -- find referenced primary / unique key and its base table / view
+    <<find_loop>>
+    for r in
+    ( select  r.owner as r_owner
+      ,       r.constraint_name as r_constraint_name
+      ,       r.table_name as r_table_name
+      ,       r.constraint_type as r_constraint_type
+      ,       ( select o.object_type from all_objects o where o.owner = r.owner and o.object_name = r.table_name ) as r_object_type
+      from    all_constraints t -- this object (constraint)
+              inner join all_constraints r -- remote object (constraint)
+              on r.owner = t.r_owner and r.constraint_name = t.r_constraint_name
+      where   t.owner = self.object_schema$
+      and     t.constraint_name = self.object_name$
+      and     t.constraint_type = self.constraint_type$
+      and     r.constraint_type in ('P', 'U')
+    )
+    loop
+      self.ref_object$ :=
+        oracle_tools.t_constraint_object
+        ( p_base_object => oracle_tools.t_named_object.create_named_object
+                           ( p_object_schema => r.r_owner
+                           , p_object_type => r.r_object_type
+                           , p_object_name => r.r_table_name
+                           )
+        , p_object_schema => r.r_owner
+        , p_object_name => r.r_constraint_name
+        , p_constraint_type => r.r_constraint_type
+        , p_search_condition => null
+        );
+      exit find_loop;
+    end loop find_loop;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
@@ -150,15 +113,6 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.object_schema() end;
-end ref_object_schema;  
-
-final member procedure ref_object_schema
-( self in out nocopy oracle_tools.t_ref_constraint_object
-, p_ref_object_schema in varchar2
-)
-is
-begin
-  self.ref_object$.object_schema(p_ref_object_schema);
 end ref_object_schema;
 
 member function ref_object_type
@@ -167,7 +121,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.object_type() end;
-end ref_object_type;  
+end ref_object_type;
 
 member function ref_object_name
 return varchar2
@@ -175,7 +129,31 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.object_name() end;
-end ref_object_name;  
+end ref_object_name;
+
+member function ref_base_object_schema
+return varchar2
+deterministic
+is
+begin
+  return case when self.ref_object$ is not null then self.ref_object$.base_object_schema() end;
+end ref_base_object_schema;
+
+member function ref_base_object_type
+return varchar2
+deterministic
+is
+begin
+  return case when self.ref_object$ is not null then self.ref_object$.base_object_type() end;
+end ref_base_object_type;
+
+member function ref_base_object_name
+return varchar2
+deterministic
+is
+begin
+  return case when self.ref_object$ is not null then self.ref_object$.base_object_name() end;
+end ref_base_object_name;
 
 -- end of getter(s)
 
@@ -189,7 +167,7 @@ begin
          self.object_type ||
          ':' ||
          null || -- constraints may be equal between (remote) schemas even though the name is different
-         ':' || 
+         ':' ||
          self.base_object_schema ||
          ':' ||
          self.base_object_type ||
@@ -219,6 +197,11 @@ $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_constraint_object => self, p_schema => p_schema);
 
+  if self.constraint_type$ is null
+  then
+    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
+  end if;
+
   if self.ref_object$ is null
   then
     raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Reference object should not be empty.');
@@ -228,6 +211,125 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+final member procedure ref_object_schema
+( self in out nocopy oracle_tools.t_ref_constraint_object
+, p_ref_object_schema in varchar2
+)
+is
+begin
+  -- the constraint changes from schema name
+  self.ref_object$.object_schema(p_ref_object_schema);
+  -- the constraint base object changes from schema name too (must be in the same schema)
+  self.ref_object$.base_object$.object_schema(p_ref_object_schema);
+end ref_object_schema;
+
+static function get_ref_constraint -- get referenced primary / unique key constraint whose base object is the referencing table / view with those columns
+( p_ref_base_object_schema in varchar2
+, p_ref_base_object_name in varchar2
+, p_ref_column_names in varchar2
+)
+return oracle_tools.t_constraint_object
+is
+  l_tablespace_name all_tables.tablespace_name%type := null;
+  l_ref_base_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
+  l_ref_base_object oracle_tools.t_named_object := null;
+  l_ref_object oracle_tools.t_constraint_object := null;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
+  dbug.print
+  ( dbug."input"
+  , 'p_ref_base_object_schema: %s; p_ref_base_object_name: %s; p_ref_column_names: %s'
+  , p_ref_base_object_schema
+  , p_ref_base_object_name
+  , p_ref_column_names
+  );
+$end
+
+  -- GJP 2022-07-15
+  -- We now loop through the primary/unique constraints to see whether their column name list matches the one found.
+  -- If so, we have found the reference constraint
+  <<ref_column_names_loop>>
+  for r in
+  ( select  con.constraint_name
+    ,       con.constraint_type
+    from    all_constraints con
+    where   con.owner = p_ref_base_object_schema
+    and     con.table_name = p_ref_base_object_name
+    and     con.constraint_type in ('P', 'U') -- primary / unique key
+  )
+  loop
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+    dbug.print
+    ( dbug."info"
+    , 'r.constraint_name: %s; r.constraint_type: %s'
+    , r.constraint_name
+    , r.constraint_type
+    );
+$end
+    if oracle_tools.t_constraint_object.get_column_names
+       ( p_object_schema => p_ref_base_object_schema
+       , p_object_name => r.constraint_name
+       , p_table_name => p_ref_base_object_name
+       ) = p_ref_column_names
+    then
+      begin
+        select  t.tablespace_name as tablespace_name
+        ,       'TABLE' as object_type -- already meta
+        into    l_tablespace_name
+        ,       l_ref_base_object_type
+        from    all_tables t
+        where   t.owner = p_ref_base_object_schema
+        and     t.table_name = p_ref_base_object_name
+        ;
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+        dbug.print(dbug."debug", 'l_tablespace_name: %s', l_tablespace_name);
+$end
+        l_ref_base_object := oracle_tools.t_table_object
+                             ( p_object_schema => p_ref_base_object_schema
+                             , p_object_name => p_ref_base_object_name
+                             , p_tablespace_name => l_tablespace_name
+                             );
+      exception
+        when no_data_found
+        then
+          -- reference constraints to views are possible too...
+          select  'VIEW' as object_type -- already meta
+          into    l_ref_base_object_type
+          from    all_views v
+          where   v.owner = p_ref_base_object_schema
+          and     v.view_name = p_ref_base_object_name
+          ;
+          l_ref_base_object := oracle_tools.t_view_object
+                               ( p_object_schema => p_ref_base_object_schema
+                               , p_object_name => p_ref_base_object_name
+                               );
+      end;
+
+      l_ref_object := oracle_tools.t_constraint_object
+                      ( p_base_object => l_ref_base_object
+                      , p_object_schema => p_ref_base_object_schema
+                      , p_object_name => r.constraint_name
+                      , p_constraint_type => r.constraint_type
+                      , p_column_names => p_ref_column_names
+                      , p_search_condition => null
+                      );
+
+      exit ref_column_names_loop; -- found so done
+    end if;
+  end loop ref_column_names_loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  if l_ref_object is not null
+  then
+    l_ref_object.print();
+  end if;
+  dbug.leave;
+$end
+
+  return l_ref_object;
+end get_ref_constraint;
 
 end;
 /

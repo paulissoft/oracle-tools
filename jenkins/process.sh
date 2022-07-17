@@ -43,6 +43,8 @@ fi
 
 test -n "$DB_ACTIONS" || export DB_ACTIONS=""
 test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
+# ensure that -l $LOG_DIR by default does not exist so Maven will log to stdout
+test -n "$LOG_DIR" || export LOG_DIR=/directory-does-not-exist
 
 set -xeu
 
@@ -51,7 +53,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log; done
 process_git "Database changes"
 
 # Both db-install and db-generate-ddl-full part of DB_ACTIONS?
@@ -69,7 +71,7 @@ fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
-for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile; done
+for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log; done
 
 # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat to verify it is just that file and that line
 # 

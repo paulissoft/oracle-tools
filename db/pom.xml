@@ -322,7 +322,7 @@
     <plugins>
       <!-- Configuration won't be propagated to children --> 
       <!-- do not use parent configuration -->
-      <!--
+      <!-- GJP 2022-06-20 Do not know why this has been commented out. Activate it again. -->
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>${maven-assembly-plugin.version}</version>
@@ -333,7 +333,6 @@
           </descriptorRefs>
         </configuration>
       </plugin>
-      -->
     </plugins>
   </build>
 

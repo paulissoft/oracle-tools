@@ -479,7 +479,7 @@ $end
         and     ( l_base_object_name is null or i.table_name = l_base_object_name )
         ;
       end if;
-      
+
       p_schema_object :=
         oracle_tools.t_index_object
         ( p_base_object =>
@@ -509,7 +509,7 @@ $end
         and     ( l_base_object_name is null or t.table_name = l_base_object_name )
         ;
       end if;
-      
+
       p_schema_object :=
         oracle_tools.t_trigger_object
         ( p_base_object =>
@@ -582,7 +582,7 @@ $end
         and     ( l_base_object_name is null or s.table_name = l_base_object_name )
         ;
       end if;
-      
+
       p_schema_object :=
         oracle_tools.t_synonym_object
         ( p_base_object =>

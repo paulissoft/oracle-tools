@@ -22,7 +22,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return;
-end;  
+end;
 
 member function verb
 return varchar2
@@ -47,7 +47,7 @@ is
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   l_clob clob := null;
   l_lines_tab dbms_sql.varchar2a;
-$end  
+$end
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
@@ -77,14 +77,14 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     end loop;
     dbms_lob.freetemporary(l_clob);
   end if;
---$end  
+--$end
   dbug.leave;
 $else
   null;
 $end
 end print;
 
-order member function match( p_ddl in oracle_tools.t_ddl ) 
+order member function match( p_ddl in oracle_tools.t_ddl )
 return integer
 deterministic
 is
@@ -140,9 +140,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         end if;
       end loop;
       return 0;
-    end if;    
+    end if;
   end pos_not_equal;
-$end  
+$end
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'COMPARE');

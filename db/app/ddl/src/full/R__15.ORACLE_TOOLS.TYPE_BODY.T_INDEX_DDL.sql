@@ -17,7 +17,7 @@ begin
   );
 
   -- check if tablespace names are equal
-  if l_source_index_object.tablespace_name() != l_target_index_object.tablespace_name() 
+  if l_source_index_object.tablespace_name() != l_target_index_object.tablespace_name()
   then
     self.add_ddl
     ( p_verb => 'ALTER'
@@ -41,7 +41,7 @@ begin
   */
 
   -- check if index names are equal
-  if l_source_index_object.object_name() != l_target_index_object.object_name() 
+  if l_source_index_object.object_name() != l_target_index_object.object_name()
   then
     self.add_ddl
     ( p_verb => 'ALTER'
@@ -53,7 +53,7 @@ declare
   e_name_already_used exception;
   pragma exception_init(e_name_already_used, -955);
 begin
-  execute immediate ']' || 
+  execute immediate ']' ||
                 'ALTER INDEX "' ||
                 l_target_index_object.object_schema() ||
                 '"."' ||
@@ -96,7 +96,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.leave;
 $end
     null;
-end execute_ddl;  
+end execute_ddl;
 
 end;
 /

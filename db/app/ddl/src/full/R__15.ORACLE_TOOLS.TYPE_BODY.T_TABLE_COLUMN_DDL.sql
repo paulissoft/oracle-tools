@@ -19,7 +19,7 @@ $end
   self.obj := p_obj;
   self.ddl_tab := t_ddl_tab();
 
-  /* construct the ALTER TABLE ADD COLUMN here */ 
+  /* construct the ALTER TABLE ADD COLUMN here */
 
   oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TABLE "' || l_table_column_object.base_object_schema() || '"."' || l_table_column_object.base_object_name() || '"' ||
@@ -169,7 +169,7 @@ $end
 
       when 3
       then
-        if l_source_table_column_object.nullable() != l_target_table_column_object.nullable() 
+        if l_source_table_column_object.nullable() != l_target_table_column_object.nullable()
         then
           oracle_tools.pkg_str_util.append_text
           ( pi_text => case l_source_table_column_object.nullable() when 'N' then 'NOT NULL' else 'NULL' end
@@ -229,7 +229,7 @@ $end
               ' DROP COLUMN "' ||
               treat(p_target.obj as oracle_tools.t_table_column_object).member_name() ||
               '"'
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then

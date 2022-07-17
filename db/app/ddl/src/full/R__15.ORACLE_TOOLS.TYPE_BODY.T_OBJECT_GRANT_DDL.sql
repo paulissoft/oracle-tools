@@ -76,9 +76,9 @@ $end
                 then substr(p_text, 1, l_pos1)
                 else /*q'[
 begin
-  execute immediate ']' || 
-                     */ substr(p_text, 1, l_pos1) /*|| 
-                     q'['; 
+  execute immediate ']' ||
+                     */ substr(p_text, 1, l_pos1) /*||
+                     q'[';
 exception
   when others
   then null;
@@ -107,7 +107,7 @@ is
   pragma exception_init(e_ora_02204, -2204);
   -- ORA-02224: EXECUTE privilege not allowed for tables
   e_ora_02224 exception;
-  pragma exception_init(e_ora_02224, -2224);    
+  pragma exception_init(e_ora_02224, -2224);
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
@@ -134,7 +134,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.leave_on_error;
     raise;
 $end
-end execute_ddl;  
+end execute_ddl;
 
 end;
 /

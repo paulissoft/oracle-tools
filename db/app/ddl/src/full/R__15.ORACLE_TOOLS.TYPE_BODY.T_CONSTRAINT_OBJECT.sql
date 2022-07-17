@@ -40,7 +40,7 @@ $end
     ;
   end if;
 
-  case 
+  case
     when self.constraint_type$ in ('P', 'U')
     then
       if self.column_names$ is null
@@ -118,7 +118,7 @@ begin
   return self.search_condition$;
 end search_condition;
 
-final member function constraint_type 
+final member function constraint_type
 return varchar2
 deterministic
 is
@@ -138,7 +138,7 @@ begin
          self.object_type ||
          ':' ||
          null || -- constraints may be equal between (remote) schemas even though the name is different
-         ':' || 
+         ':' ||
          self.base_object_schema ||
          ':' ||
          self.base_object_type ||
@@ -194,7 +194,7 @@ exception
   then
     dbug.leave_on_error;
     raise;
-$end    
+$end
 end get_column_names;
 
 overriding member procedure chk

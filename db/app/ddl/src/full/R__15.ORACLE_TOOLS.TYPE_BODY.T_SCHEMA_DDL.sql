@@ -143,13 +143,13 @@ $end
     , p_text => l_text_tab
     );
   end if;
-  
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
 
-order member function match( p_schema_ddl in oracle_tools.t_schema_ddl ) 
+order member function match( p_schema_ddl in oracle_tools.t_schema_ddl )
 return integer
 deterministic
 is
@@ -231,7 +231,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
-end install;    
+end install;
 
 static procedure migrate
 ( p_source in oracle_tools.t_schema_ddl
@@ -288,7 +288,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
-end uninstall;  
+end uninstall;
 
 member procedure chk
 ( self in oracle_tools.t_schema_ddl
@@ -354,7 +354,7 @@ $end
                )
     , p_ddl_tab => oracle_tools.t_ddl_tab(oracle_tools.t_ddl(p_ddl# => 1, p_verb => l_verb_tab(l_verb_tab.first+0), p_text => oracle_tools.t_text_tab(p_text)))
     );
-  l_schema_ddl.execute_ddl();  
+  l_schema_ddl.execute_ddl();
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
