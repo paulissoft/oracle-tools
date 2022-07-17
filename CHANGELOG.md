@@ -19,6 +19,10 @@ Types of changes:
 
 ## [1.3.3] - 2022-07-17
 
+### Added
+
+- [The generated DDL install.sql should use show errors after every stored procedure.](https://github.com/paulissoft/oracle-tools/issues/37)
+
 ### Changed
 
 - [When generating DDL the temporary file should be kept.](https://github.com/paulissoft/oracle-tools/issues/36)
