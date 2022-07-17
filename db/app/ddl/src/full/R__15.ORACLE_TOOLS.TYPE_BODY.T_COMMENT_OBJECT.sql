@@ -30,7 +30,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return;
-end;  
+end;
 
 -- begin of getter(s)
 
@@ -75,7 +75,7 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
-$end  
+$end
 end chk;
 
 end;

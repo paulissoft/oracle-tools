@@ -73,7 +73,7 @@ $end
   return;
 end;
 
-member function tablespace_name 
+member function tablespace_name
 return varchar2
 deterministic
 is

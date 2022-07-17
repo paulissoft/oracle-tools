@@ -165,6 +165,16 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2022-07-17
+
+BUG: the referential constraints are not created in the correct order in the install.sql file.
+
+This is the case when the interface is version 5 and there are two referential constraints T1-R1 and T1-R2 for table T1, where T1-R2 depends on a primary key constraint T2-C1. The old behaviour was to combine (referential) contraints per table in a file, meaning files like *.REF_CONSTRAINT.T1.sql and *.CONSTRAINT.T2.sql. Hence the referential constraint T1-R2 would be created in the install.sql before the primary key T2-C1 since T1-R1 is mentioned earlier than T2-C1 in the DDL info file (order is T1-R1, T2-C1, T1-R2) and T1-R2 is added to its referental constraint file.
+
+The solution is to have a single file for each (referental) constraint and not to combine them. The file name part <name> will be a combination of the table, a dash and the name of the constraint.
+
+See also L<https://github.com/paulissoft/oracle-tools/issues/35>.
+
 =item 2022-04-26
 
 Solved bug for objects named like "name" where name is not totally upper case.
@@ -784,10 +794,21 @@ sub get_object ($$$;$$$) {
             $object_schema eq $base_object_schema &&
             exists($object_type_info{$object_type}->{use_base_object_name}) &&
             $object_type_info{$object_type}->{use_base_object_name} ) {
+        my $name = $base_object_name;
+        
+        # For constraints the name part is either <base_name>-<constraint_name> (<constraint_name> not empty) or <base_name> (else)
+        if (defined($interface) &&
+            $interface ne PKG_DDL_UTIL_V4 &&
+            $object_type =~ m/^(REF_)?CONSTRAINT$/ &&
+            defined($object_name) &&
+            length($object_name) > 0) {
+            $name .= '-' . $object_name;
+        }
+        
         return sprintf("%s$sep%s$sep%s", 
                        $object_schema,
                        $object_type,
-                       $base_object_name);
+                       $name);
     } else {
         error("Both \$object_schema and \$base_object_schema undefined")
             unless (defined($object_schema) or defined($base_object_schema));

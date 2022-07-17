@@ -19,7 +19,7 @@ $end
   self.obj := p_obj;
   self.ddl_tab := t_ddl_tab();
 
-  /* construct the ALTER TYPE ADD ATTRIBUTE here */ 
+  /* construct the ALTER TYPE ADD ATTRIBUTE here */
 
   oracle_tools.pkg_str_util.append_text
   ( pi_text => 'ALTER TYPE "' || l_type_attribute_object.base_object_schema() || '"."' || l_type_attribute_object.base_object_name() || '"' ||
@@ -140,7 +140,7 @@ $end
               ' DROP ATTRIBUTE "' ||
               treat(p_target.obj as oracle_tools.t_type_attribute_object).member_name() ||
               '"'
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end          
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
   );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then

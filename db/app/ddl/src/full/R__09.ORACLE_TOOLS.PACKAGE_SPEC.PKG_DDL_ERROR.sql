@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_ERROR" IS
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_ERROR" AUTHID DEFINER IS
 
 -- The error_code is an integer in the range -20000..-20999 and the message is a character string of at most 2048 bytes.
 

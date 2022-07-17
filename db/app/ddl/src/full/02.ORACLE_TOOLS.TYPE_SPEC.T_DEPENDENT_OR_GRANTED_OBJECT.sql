@@ -10,7 +10,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_DEPENDENT_OR_GRANTED_OBJECT" authid current_user u
 , overriding member procedure chk
   ( self in oracle_tools.t_dependent_or_granted_object
   , p_schema in varchar2
-  )  
+  )
 , overriding member function base_dict_object_type return varchar2 deterministic
 )
 not instantiable

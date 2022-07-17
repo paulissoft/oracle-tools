@@ -72,13 +72,13 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
-$end  
+$end
 
   return;
 end;
 
 -- begin of getter(s)
-member function tablespace_name 
+member function tablespace_name
 return varchar2
 deterministic
 is
@@ -177,7 +177,7 @@ $end
 $if oracle_tools.pkg_ddl_util.c_#138550749 $then
             left join all_ind_expressions ie
             on ie.index_owner = ic.index_owner and ie.index_name = ic.index_name and ie.column_position = ic.column_position
-$end    
+$end
     where   ic.index_owner = p_object_schema
     and     ic.index_name = p_object_name
     order by

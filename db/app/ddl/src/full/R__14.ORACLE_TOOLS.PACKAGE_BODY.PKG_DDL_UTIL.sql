@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS -- -*-coding: utf-8-*-
+CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: utf-8-*- */
 
   /* TYPES */
 
@@ -802,12 +802,19 @@ $end
       l_column_names varchar2(32767 char);
       l_search_condition varchar2(32767 char);
 
+      /*
+       * GJP 2022-07-17
+       * 
+       * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
+       *
+       * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+       */ 
       l_base_object oracle_tools.t_named_object;
-      l_ref_object oracle_tools.t_named_object;
+      l_ref_column_names varchar2(32767 char);
+      l_ref_object oracle_tools.t_constraint_object := null;
+      l_ref_base_object_schema t_schema;
+      l_ref_base_object_name t_object;
       l_constraint_object oracle_tools.t_constraint_object := null;
-      l_ref_object_schema t_schema;
-      l_ref_object_type t_metadata_object_type;
-      l_ref_object_name t_object;
 
       cursor c_con(b_schema in t_schema_nn, b_table_name in varchar2) is
         select  c.constraint_name
@@ -951,29 +958,40 @@ $end
                                           );
               when l_constraint like l_constraint_expr_tab(4) -- foreign key
               then
-                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("SEQ")
+                -- ALTER TABLE "<owner>"."<table>" ADD FOREIGN KEY ("CMMSEQ") REFERENCES "<owner>"."<rtable>" ("<ref_column_name1>"[,"<ref_column_nameN>"])
 
                 -- get the reference object schema, since l_pos2 is the position of the first ')'
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
                 l_pos2 := instr(l_constraint, '"', l_pos1+1);
-                l_ref_object_schema := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
+                l_ref_base_object_schema := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
 
                 l_pos1 := instr(l_constraint, '"', l_pos2+1);
                 l_pos2 := instr(l_constraint, '"', l_pos1+1);
-                l_ref_object_name := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
+                l_ref_base_object_name := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
 
-                select  min(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type)) -- always return one value
-                into    l_ref_object_type
-                from    all_objects obj
-                where   obj.owner = l_ref_object_schema
-                and     obj.object_name = l_ref_object_name;
+                -- GJP 2022-07-15 We now have the reference base object but not yet the reference object (the constraint)
+                l_pos1 := instr(l_constraint, '(', l_pos2+1); -- l_pos2 points to last '"' before '('
+                l_pos2 := instr(l_constraint, ')', l_pos1+1); -- l_pos1 points to last '('
+                if l_pos1 > 0 and l_pos2 > l_pos1
+                then
+                  l_ref_column_names := replace(substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1)), ' '); -- assumes a column name does not have a space inside
 
-                l_ref_object :=
-                  oracle_tools.t_named_object.create_named_object
-                  ( p_object_schema => l_ref_object_schema
-                  , p_object_type => l_ref_object_type
-                  , p_object_name => l_ref_object_name
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+                  dbug.print
+                  ( dbug."info"
+                  , 'l_pos1: %s; l_pos2: %s; l_ref_column_names: %s'
+                  , l_pos1
+                  , l_pos2
+                  , l_ref_column_names
                   );
+$end
+
+                  l_ref_object := oracle_tools.t_ref_constraint_object.get_ref_constraint
+                                  ( p_ref_base_object_schema => l_ref_base_object_schema
+                                  , p_ref_base_object_name => l_ref_base_object_name
+                                  , p_ref_column_names => l_ref_column_names
+                                  );
+                end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 l_ref_object.print();
@@ -6130,7 +6148,7 @@ $end
         and     oracle_tools.t_schema_object.dict2metadata_object_type(d.type) in ( select t.type from allowed_types t )
         and     oracle_tools.t_schema_object.dict2metadata_object_type(d.referenced_type) in ( select t.type from allowed_types t )
         union all
-$if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then
+$if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then -- GJP 2022-07-16 FALSE
         -- dependencies based on foreign key constraints
         select  oracle_tools.t_schema_object.create_schema_object
                 ( t1.owner
@@ -6148,7 +6166,7 @@ $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then
         where   t1.owner = p_schema
         and     t1.owner = t2.owner /* same schema */
         and     t1.constraint_type = 'R'
-$else
+$else -- GJP 2022-07-16 TRUE
         -- more simple: just the constraints
         select  oracle_tools.t_schema_object.create_schema_object
                 ( c.owner
@@ -6242,6 +6260,8 @@ $end
 
     l_object_by_dep_tab dbms_sql.varchar2_table;
 
+    l_dependent_or_granted_object oracle_tools.t_dependent_or_granted_object;
+
     l_schema_object oracle_tools.t_schema_object;
     
     l_program constant t_module := 'SORT_OBJECTS_BY_DEPS';
@@ -6268,7 +6288,42 @@ $end
     for r in c_dependencies
     loop
       -- object depends on object dependency so the latter must be there first
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'object %s depends on object %s', r.obj.id, r.ref_obj.id);
+$end
+
       l_object_dependency_tab(r.ref_obj.id)(r.obj.id) := null;
+
+      /*
+       * GJP 2022-07-17
+       *
+       * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
+       *
+       * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+       */ 
+
+      -- but the object also depends on its own base object
+      if r.obj is of (oracle_tools.t_dependent_or_granted_object)
+      then
+        l_dependent_or_granted_object := treat(r.obj as oracle_tools.t_dependent_or_granted_object);
+
+        if l_dependent_or_granted_object is not null and
+           l_dependent_or_granted_object.base_object$ is not null and
+           l_dependent_or_granted_object.base_object$.id != r.ref_obj.id /* no need to add the same entry twice */
+        then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print
+          ( dbug."info"
+          , 'object %s depends on its base object %s'
+          , l_dependent_or_granted_object.id
+          , l_dependent_or_granted_object.base_object$.id
+          );
+$end
+
+          l_object_dependency_tab(l_dependent_or_granted_object.base_object$.id)(l_dependent_or_granted_object.id) := null;
+        end if;  
+      end if;
     end loop;
 
     dsort(l_object_dependency_tab, l_object_by_dep_tab);
@@ -6278,7 +6333,11 @@ $end
       for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
       loop
         l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
-        
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."debug", 'l_schema_object.id: %s', l_schema_object.id);
+$end
+
         pipe row(l_schema_object);
 
         longops_show(l_longops_rec);

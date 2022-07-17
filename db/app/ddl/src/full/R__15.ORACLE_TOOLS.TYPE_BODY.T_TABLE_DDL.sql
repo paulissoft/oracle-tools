@@ -34,7 +34,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- check if tablespace names are equal
-  if l_source_table_object.tablespace_name() != l_target_table_object.tablespace_name() 
+  if l_source_table_object.tablespace_name() != l_target_table_object.tablespace_name()
   then
     self.add_ddl
     ( p_verb => 'ALTER'
@@ -61,7 +61,7 @@ BEGIN
     WHERE   A.TABLE_OWNER = ']' || l_target_table_object.object_schema() || q'['
     AND     A.TABLE_NAME = ']' || l_target_table_object.object_name() || q'['
     AND     A.STATUS = 'UNUSABLE'
-    ORDER BY 
+    ORDER BY
            CMD
   )
   LOOP
@@ -97,7 +97,7 @@ END;]'
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
-$end      
+$end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
       , t_ddl_tab()
@@ -109,7 +109,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
-$end      
+$end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
       , t_ddl_tab()
@@ -123,7 +123,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       r.source_schema_ddl.print();
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
-$end      
+$end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
       , t_ddl_tab()
@@ -178,7 +178,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
-end uninstall;  
+end uninstall;
 
 overriding member procedure add_ddl
 ( self in out nocopy oracle_tools.t_table_ddl

@@ -63,6 +63,9 @@
     - incr.transform.params
     A list of DBMS_METADATA transformation parameters.
 
+    Change history:
+    - 2022-07-17  https://github.com/paulissoft/oracle-tools/issues/36  When generating DDL the temporary file should be kept.
+
   </description>
 
   <macrodef name="define-perl-property" description="Define perl property">
@@ -327,6 +330,7 @@ Z       Time zone               RFC 822 time zone   -0800
     <attribute name="transform.params"/>
     <attribute name="owner"/>   
     <attribute name="id"/> <!-- unique id -->
+    <!-- GJP When generating DDL the temporary file should be kept. -->
     <attribute name="temp.file"/>
     <!-- Perl -->
     <element name="perl-arguments"/>
@@ -396,6 +400,7 @@ Z       Time zone               RFC 822 time zone   -0800
     </fail>
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <!-- generate the input for the Perl script -->
+    <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.install.file" destDir="${log.dir}" suffix=".sql" prefix="install"/>
     <generate-ddl source.schema="${schema}"
                   source.db.name="${source.db.name}"
@@ -420,6 +425,7 @@ Z       Time zone               RFC 822 time zone   -0800
           description="Run: perl ${generate_ddl.pl}"
           unless="${full.skip.uninstall.sql}">
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
+    <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
     <generate-ddl target.schema="${schema}"
                   target.db.name="${source.db.name}"
@@ -476,6 +482,7 @@ Z       Time zone               RFC 822 time zone   -0800
         <equals arg1="${perl.incr.skip.repeatables}" arg2="no"/>
       </not>
     </condition>
+    <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.incr.file" destDir="${log.dir}" suffix=".sql" prefix="incr"/>
     <generate-ddl source.schema="${schema}"
                   source.db.name="${source.db.name}"

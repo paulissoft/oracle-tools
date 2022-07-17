@@ -46,7 +46,7 @@ deterministic
 is
 begin
   return 'OBJECT_GRANT';
-end object_type;  
+end object_type;
 
 overriding member function grantee
 return varchar2
@@ -84,7 +84,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
   l_statement varchar2(4000 char) := null;
-$end  
+$end
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
@@ -141,7 +141,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
 $if dbms_db_version.version < 12 $then
               inner join all_objects obj
               on obj.owner = grt.table_schema and obj.object_name = grt.table_name
-$end              
+$end
       where   grt.table_schema = self.base_object_schema()
 $if dbms_db_version.version < 12 $then
       and     obj.object_type = self.base_dict_object_type()
@@ -162,7 +162,7 @@ $end
       when no_data_found
       then
         null;
-    end;  
+    end;
   end if;
 
 $end

@@ -11,7 +11,7 @@ is
     , p_object_type => p_target.obj.base_object_type
     , p_object_name => p_target.obj.base_object_name
     );
-  
+
   function delete_comment
   ( p_column_name in varchar2
   , p_dict_object_type in varchar2
@@ -30,7 +30,7 @@ is
         then 'TABLE'
         else p_dict_object_type
       end ||
-      ' ' || 
+      ' ' ||
       p_fq_object_name ||
       case
         when p_column_name is not null
@@ -59,7 +59,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
   -- replace by an empty comment
 
-  -- GPA 2017-06-28 To avoid COMMENT ON . IS '' 
+  -- GPA 2017-06-28 To avoid COMMENT ON . IS ''
   if delete_comment
      ( p_column_name => p_target.obj.column_name()
      , p_dict_object_type => l_base_object.dict_object_type()

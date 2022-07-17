@@ -1,4 +1,5 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_STR_UTIL" IS -- -*-coding: utf-8-*-
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_STR_UTIL" AUTHID DEFINER IS /* -*-coding: utf-8-*- */
+
 /**
  * <h1>Functionality</h1>
  * <p>
