@@ -13,8 +13,8 @@ constructor function t_ref_constraint_object
    * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
    *
    * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
-   */ 
-, p_ref_object in oracle_tools.t_constraint_object default null 
+   */
+, p_ref_object in oracle_tools.t_constraint_object default null
 )
 return self as result
 is
@@ -67,7 +67,7 @@ $end
       ,       ( select o.object_type from all_objects o where o.owner = r.owner and o.object_name = r.table_name ) as r_object_type
       from    all_constraints t -- this object (constraint)
               inner join all_constraints r -- remote object (constraint)
-              on r.owner = t.r_owner and r.constraint_name = t.r_constraint_name              
+              on r.owner = t.r_owner and r.constraint_name = t.r_constraint_name
       where   t.owner = self.object_schema$
       and     t.constraint_name = self.object_name$
       and     t.constraint_type = self.constraint_type$
@@ -113,7 +113,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.object_schema() end;
-end ref_object_schema;  
+end ref_object_schema;
 
 member function ref_object_type
 return varchar2
@@ -121,7 +121,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.object_type() end;
-end ref_object_type;  
+end ref_object_type;
 
 member function ref_object_name
 return varchar2
@@ -129,7 +129,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.object_name() end;
-end ref_object_name;  
+end ref_object_name;
 
 member function ref_base_object_schema
 return varchar2
@@ -137,7 +137,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.base_object_schema() end;
-end ref_base_object_schema;  
+end ref_base_object_schema;
 
 member function ref_base_object_type
 return varchar2
@@ -145,7 +145,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.base_object_type() end;
-end ref_base_object_type;  
+end ref_base_object_type;
 
 member function ref_base_object_name
 return varchar2
@@ -153,7 +153,7 @@ deterministic
 is
 begin
   return case when self.ref_object$ is not null then self.ref_object$.base_object_name() end;
-end ref_base_object_name;  
+end ref_base_object_name;
 
 -- end of getter(s)
 
@@ -167,7 +167,7 @@ begin
          self.object_type ||
          ':' ||
          null || -- constraints may be equal between (remote) schemas even though the name is different
-         ':' || 
+         ':' ||
          self.base_object_schema ||
          ':' ||
          self.base_object_type ||
