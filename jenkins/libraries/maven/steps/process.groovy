@@ -62,9 +62,13 @@ void call(app_env){
         }
 
         script {
-            if (pipelineConfig.scm_url_config != null && pipelineConfig.scm_branch_config != null && pipelineConfig.scm_credentials_config != null) {
+            if (pipelineConfig.scm_url_config != null && pipelineConfig.scm_branch_config != null) {
                 dir('config') {
-                    git url: pipelineConfig.scm_url_config, branch: pipelineConfig.scm_branch_config, credentialsId: pipelineConfig.scm_credentials_config
+                    if (pipelineConfig.scm_credentials_config != null) {
+                        git url: pipelineConfig.scm_url_config, branch: pipelineConfig.scm_branch_config, credentialsId: pipelineConfig.scm_credentials_config
+                    } else {
+                        git url: pipelineConfig.scm_url_config, branch: pipelineConfig.scm_branch_config
+                    }
                 }
             }
         }
