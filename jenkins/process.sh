@@ -43,23 +43,19 @@ fi
 
 test -n "$DB_ACTIONS" || export DB_ACTIONS=""
 test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
+# equivalent of Maven 4 MAVEN_ARGS
+test -n "$MVN_ARGS" || export MVN_ARGS=""
 
-# Starting with Maven 4, MAVEN_ARGS contains arguments passed to Maven before CLI arguments. E.g., options and goals could be defined with the value -B -V checkstyle:checkstyle.
-# To use this variable for Maven 3 as well we have to copy it to maven_args and unset MAVEN_ARGS. Then use it in every mvn invocation.
-maven_args="$MAVEN_ARGS"
-unset MAVEN_ARGS
-
-# ensure that -l $LOG_DIR by default does not exist so Maven will log to stdout
-if [ -n "$LOG_DIR" -a -d "$LOG_DIR" ]
+# ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
+if [ -n "$MVN_LOG_DIR" -a -d "$MVN_LOG_DIR" ]
 then
-    # let log_dir point to an absolute file path
-    log_dir=`cd ${LOG_DIR} && pwd`
+    # let MVN_LOG_DIR point to an absolute file path
+    MVN_LOG_DIR=`cd ${MVN_LOG_DIR} && pwd`
 else
-    # let log_dir point to a non existing directory so mvn will not create the log file
-    log_dir=/directory-does-not-exist
+    # let MVN_LOG_DIR point to a non existing directory so mvn will not create the log file
+    MVN_LOG_DIR=/directory-does-not-exist
 fi
-
-echo "log_dir: ${log_dir}"
+export MVN_LOG_DIR
 
 set -xeu
 
@@ -68,7 +64,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $log_dir/mvn-${profile}.log ${maven_args}; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
 process_git "Database changes"
 
 # Both db-install and db-generate-ddl-full part of DB_ACTIONS?
@@ -79,14 +75,14 @@ then
     DB_ACTIONS="db-install db-generate-ddl-full"
     echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
     set -- ${DB_ACTIONS}
-    for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log ${maven_args}; rm mvn-${profile}.log; done
+    for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log ${MVN_ARGS}; rm mvn-${profile}.log; done
     echo "there should be no files to add for Git:"
     test -z "`git status --porcelain`"
 fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
-for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $log_dir/mvn-${profile}.log ${maven_args}; done
+for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
 
 # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat to verify it is just that file and that line
 # 
