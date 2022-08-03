@@ -45,7 +45,16 @@ test -n "$DB_ACTIONS" || export DB_ACTIONS=""
 test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
 test -n "$EXTRA_MAVEN_COMMAND_LINE_OPTIONS" || export EXTRA_MAVEN_COMMAND_LINE_OPTIONS=""
 # ensure that -l $LOG_DIR by default does not exist so Maven will log to stdout
-test -n "$LOG_DIR" || export LOG_DIR=/directory-does-not-exist
+if [ -n "$LOG_DIR" -a -d "$LOG_DIR" ]
+then
+    # let log_dir point to an absolute file path
+    log_dir=`cd ${LOG_DIR} && pwd`
+else
+    # let log_dir point to a non existing directory so mvn will not create the log file
+    log_dir=/directory-does-not-exist
+fi
+
+echo "log_dir: ${log_dir}"
 
 set -xeu
 
@@ -54,7 +63,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $log_dir/mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; done
 process_git "Database changes"
 
 # Both db-install and db-generate-ddl-full part of DB_ACTIONS?
@@ -72,7 +81,7 @@ fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
-for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; done
+for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $log_dir/mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; done
 
 # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat to verify it is just that file and that line
 # 
