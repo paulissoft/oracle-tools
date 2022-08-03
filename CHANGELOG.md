@@ -17,6 +17,12 @@ Types of changes:
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 
+## [1.5.0] - 2022-08-03
+
+### Added
+
+- [Set up Continuous Integration / Delivery / Deployment.](https://github.com/paulissoft/oracle-tools/issues/27)
+
 ## [1.4.0] - 2022-07-17
 
 ### Added

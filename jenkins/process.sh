@@ -43,6 +43,7 @@ fi
 
 test -n "$DB_ACTIONS" || export DB_ACTIONS=""
 test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
+test -n "$EXTRA_MAVEN_COMMAND_LINE_OPTIONS" || export EXTRA_MAVEN_COMMAND_LINE_OPTIONS=""
 # ensure that -l $LOG_DIR by default does not exist so Maven will log to stdout
 test -n "$LOG_DIR" || export LOG_DIR=/directory-does-not-exist
 
@@ -53,7 +54,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log; done
+for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; done
 process_git "Database changes"
 
 # Both db-install and db-generate-ddl-full part of DB_ACTIONS?
@@ -64,14 +65,14 @@ then
     DB_ACTIONS="db-install db-generate-ddl-full"
     echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
     set -- ${DB_ACTIONS}
-    for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log; rm mvn-${profile}.log; done
+    for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; rm mvn-${profile}.log; done
     echo "there should be no files to add for Git:"
     test -z "`git status --porcelain`"
 fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
-for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log; done
+for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $LOG_DIR/mvn-${profile}.log ${EXTRA_MAVEN_COMMAND_LINE_OPTIONS}; done
 
 # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat to verify it is just that file and that line
 # 
