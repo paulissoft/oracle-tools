@@ -774,6 +774,23 @@ $end
   , p_grantable out nocopy varchar2
   )
   is
+    procedure nullify_output_parameters
+    is
+    begin
+      -- nullify all output parameters
+      p_verb := null;
+      p_object_name := null;
+      p_object_type := null;
+      p_object_schema := null;
+      p_base_object_name := null;
+      p_base_object_type := null;
+      p_base_object_schema := null;
+      p_column_name := null;
+      p_grantee := null;
+      p_privilege := null;
+      p_grantable := null;
+    end nullify_output_parameters;
+
     procedure parse_alter
     is
       l_constraint varchar2(32767 char) := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 32767);
@@ -1198,7 +1215,8 @@ $end
           then
             p_base_object_type := 'MATERIALIZED_VIEW';
 
-          else -- column
+          when l_comment like '% ON COLUMN %'
+          then
             select  min(obj.object_type)
             into    p_base_object_type
             from    all_objects obj
@@ -1208,6 +1226,8 @@ $end
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
             ;
 
+          else
+            raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_comment || '"');
         end case;
       end if;
     exception
@@ -1233,6 +1253,8 @@ $end
         l_pos1 := instr(l_plsql_block, '"', 1, 1);
         l_pos2 := instr(l_plsql_block, '"', 1, 2);
         p_object_name := substr(l_plsql_block, l_pos1+1, l_pos2 - (l_pos1+1));
+      else
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_plsql_block || '"');
       end if;
     end parse_procobj;
 
@@ -1242,18 +1264,23 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-      -- CREATE INDEX "<owner>"."schema_version_s_idx" ON "<owner>"."schema_version"
-      if p_base_object_schema is null
+      if l_index like 'CREATE INDEX %'
       then
-        l_pos1 := instr(l_index, '"', 1, 5);
-        l_pos2 := instr(l_index, '"', 1, 6);
-        p_base_object_schema := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
-      end if;
-      if p_base_object_name is null
-      then
-        l_pos1 := instr(l_index, '"', 1, 7);
-        l_pos2 := instr(l_index, '"', 1, 8);
-        p_base_object_name := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
+        -- CREATE INDEX "<owner>"."schema_version_s_idx" ON "<owner>"."schema_version"
+        if p_base_object_schema is null
+        then
+          l_pos1 := instr(l_index, '"', 1, 5);
+          l_pos2 := instr(l_index, '"', 1, 6);
+          p_base_object_schema := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
+        end if;
+        if p_base_object_name is null
+        then
+          l_pos1 := instr(l_index, '"', 1, 7);
+          l_pos2 := instr(l_index, '"', 1, 8);
+          p_base_object_name := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
+        end if;
+      else
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_index || '"');
       end if;
     end parse_index;
 
@@ -1263,13 +1290,18 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-      -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>";
-      -- or
-      -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>" WITH GRANT OPTION;
-      p_grantable := case when l_object_grant like '% WITH GRANT OPTION%' then 'YES' else 'NO' end;
-      l_pos1 := instr(l_object_grant, 'GRANT ') + length('GRANT ');
-      l_pos2 := instr(l_object_grant, ' ON "');
-      p_privilege := substr(l_object_grant, l_pos1, l_pos2 - l_pos1);
+      if l_object_grant like 'GRANT %'
+      then
+        -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>";
+        -- or
+        -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>" WITH GRANT OPTION;
+        p_grantable := case when l_object_grant like '% WITH GRANT OPTION%' then 'YES' else 'NO' end;
+        l_pos1 := instr(l_object_grant, 'GRANT ') + length('GRANT ');
+        l_pos2 := instr(l_object_grant, ' ON "');
+        p_privilege := substr(l_object_grant, l_pos1, l_pos2 - l_pos1);
+      else
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_object_grant || '"');
+      end if;
     end parse_object_grant;
 
   begin
@@ -2140,109 +2172,112 @@ $end
     , l_grantable
     );
 
-    l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
-    l_base_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_base_object_type);
+    if l_verb is not null
+    then
+      l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
+      l_base_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_base_object_type);
 
-    l_schema_object :=
-      oracle_tools.t_schema_object.create_schema_object
-      ( p_object_schema => l_object_schema
-      , p_object_type => l_object_type
-      , p_object_name => l_object_name
-      , p_base_object_schema => l_base_object_schema
-      , p_base_object_type => l_base_object_type
-      , p_base_object_name => l_base_object_name
-      , p_column_name => l_column_name
-      , p_grantee => l_grantee
-      , p_privilege => l_privilege
-      , p_grantable => l_grantable
-      );
-
-    -- check the object type (base object set if necessary and so on)
-    l_schema_object.chk(p_schema);
-
-    p_object_key := l_schema_object.id();
-
-    begin
-      if not(p_object_lookup_tab(p_object_key).ready)
-      then
-        p_object_lookup_tab(p_object_key).schema_ddl.add_ddl
-        ( p_verb => l_verb
-        , p_text => p_ku$_ddl.ddlText
+      l_schema_object :=
+        oracle_tools.t_schema_object.create_schema_object
+        ( p_object_schema => l_object_schema
+        , p_object_type => l_object_type
+        , p_object_name => l_object_name
+        , p_base_object_schema => l_base_object_schema
+        , p_base_object_type => l_base_object_type
+        , p_base_object_name => l_base_object_name
+        , p_column_name => l_column_name
+        , p_grantee => l_grantee
+        , p_privilege => l_privilege
+        , p_grantable => l_grantable
         );
 
-        begin
-          p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema);
-        exception
-          when others
-          then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-            p_object_lookup_tab(p_object_key).schema_ddl.print();
-$end            
-            raise_application_error(oracle_tools.pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
-        end;
+      -- check the object type (base object set if necessary and so on)
+      l_schema_object.chk(p_schema);
 
-        -- the normal stuff
-        p_object_lookup_tab(p_object_key).count := p_object_lookup_tab(p_object_key).count + 1;
-      end if; -- if not(p_object_lookup_tab(p_object_key).ready)
-    exception
-      when no_data_found
-      then
-        case
-          when schema_object_matches_filter
-               ( -- filter values
-                 p_object_type => p_object_type
-               , p_object_names => p_object_names
-               , p_object_names_include => p_object_names_include
-               , p_object_types_to_check => null
-                 -- database values
-               , p_metadata_object_type => l_object_type
-               , p_object_name => l_object_name
-               , p_metadata_base_object_type => l_base_object_type
-               , p_base_object_name => l_base_object_name
-               ) = 0 -- object not but on purpose
-          then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-            dbug.print
-            ( dbug."info"
-            , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name'
-            , l_object_type
-            , l_object_name
-            , l_base_object_type
-            , l_base_object_name
-            );
-$end
-            p_object_key := null;
+      p_object_key := l_schema_object.id();
 
-          when l_object_type = 'PROCACT_SCHEMA' or
-               l_object_type = 'PROCACT_SYSTEM' or
-               l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT')
-          then
-            p_object_key := null;
+      begin
+        if not(p_object_lookup_tab(p_object_key).ready)
+        then
+          p_object_lookup_tab(p_object_key).schema_ddl.add_ddl
+          ( p_verb => l_verb
+          , p_text => p_ku$_ddl.ddlText
+          );
 
-          -- GPA 2017-02-05 Ignore the old job package DBMS_JOB
-          when l_object_type = 'PROCOBJ' and l_verb = 'DBMS_JOB.SUBMIT'
-          then
-            p_object_key := null;
-
-          else
-            -- GJP 2021-08-27 Ignore this only when the DDL is whitespace only.
-            if p_ku$_ddl.ddlText is not null
+          begin
+            p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema);
+          exception
+            when others
             then
-              l_ddl_text := trim(replace(replace(oracle_tools.pkg_str_util.dbms_lob_substr(p_ku$_ddl.ddlText, 32767), chr(10), ' '), chr(13), ' '));
-              if l_ddl_text is not null
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+              p_object_lookup_tab(p_object_key).schema_ddl.print();
+$end            
+              raise_application_error(oracle_tools.pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
+          end;
+
+          -- the normal stuff
+          p_object_lookup_tab(p_object_key).count := p_object_lookup_tab(p_object_key).count + 1;
+        end if; -- if not(p_object_lookup_tab(p_object_key).ready)
+      exception
+        when no_data_found
+        then
+          case
+            when schema_object_matches_filter
+                 ( -- filter values
+                   p_object_type => p_object_type
+                 , p_object_names => p_object_names
+                 , p_object_names_include => p_object_names_include
+                 , p_object_types_to_check => null
+                   -- database values
+                 , p_metadata_object_type => l_object_type
+                 , p_object_name => l_object_name
+                 , p_metadata_base_object_type => l_base_object_type
+                 , p_base_object_name => l_base_object_name
+                 ) = 0 -- object not but on purpose
+            then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+              dbug.print
+              ( dbug."info"
+              , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name'
+              , l_object_type
+              , l_object_name
+              , l_base_object_type
+              , l_base_object_name
+              );
+$end
+              p_object_key := null;
+
+            when l_object_type = 'PROCACT_SCHEMA' or
+                 l_object_type = 'PROCACT_SYSTEM' or
+                 l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT')
+            then
+              p_object_key := null;
+
+            -- GPA 2017-02-05 Ignore the old job package DBMS_JOB
+            when l_object_type = 'PROCOBJ' and l_verb = 'DBMS_JOB.SUBMIT'
+            then
+              p_object_key := null;
+
+            else
+              -- GJP 2021-08-27 Ignore this only when the DDL is whitespace only.
+              if p_ku$_ddl.ddlText is not null
               then
-                raise_application_error
-                ( oracle_tools.pkg_ddl_error.c_object_not_found
-                , utl_lms.format_message
-                  ( 'object "%s" not found in allowed objects; ddl: "%s"'
-                  , p_object_key
-                  , substr(l_ddl_text, 1, 2000)
-                  )
-                );
+                l_ddl_text := trim(replace(replace(oracle_tools.pkg_str_util.dbms_lob_substr(p_ku$_ddl.ddlText, 32767), chr(10), ' '), chr(13), ' '));
+                if l_ddl_text is not null
+                then
+                  raise_application_error
+                  ( oracle_tools.pkg_ddl_error.c_object_not_found
+                  , utl_lms.format_message
+                    ( 'object "%s" not found in allowed objects; ddl: "%s"'
+                    , p_object_key
+                    , substr(l_ddl_text, 1, 2000)
+                    )
+                  );
+                end if;
               end if;
-            end if;
-        end case;
-    end;
+          end case;
+      end;
+    end if; -- if l_verb is not null
 
     cleanup;
 
