@@ -1160,8 +1160,13 @@ $end
         -- <owner>:REF_CONSTRAINT:UN_DG_LIST_UN_DG_CLASSIFI_FK1::::
 
         p_object_type := case when instr(l_constraint, ' FOREIGN KEY ') > 0 then 'REF_CONSTRAINT' else 'CONSTRAINT' end;
-      elsif l_constraint not like l_constraint_expr_tab(7)
+      elsif l_constraint like l_constraint_expr_tab(7)
       then
+        null;
+      elsif trim(replace(replace(l_constraint, chr(13)), chr(10))) is null
+      then
+        nullify_output_parameters;
+      else        
         raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_constraint || '"');
       end if;
     end parse_alter;
@@ -1226,6 +1231,10 @@ $end
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
             ;
 
+          when trim(replace(replace(l_comment, chr(13)), chr(10))) is null
+          then
+            nullify_output_parameters;
+
           else
             raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_comment || '"');
         end case;
@@ -1253,6 +1262,9 @@ $end
         l_pos1 := instr(l_plsql_block, '"', 1, 1);
         l_pos2 := instr(l_plsql_block, '"', 1, 2);
         p_object_name := substr(l_plsql_block, l_pos1+1, l_pos2 - (l_pos1+1));
+      elsif trim(replace(replace(l_plsql_block, chr(13)), chr(10))) is null
+      then
+        nullify_output_parameters;
       else
         raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_plsql_block || '"');
       end if;
@@ -1281,6 +1293,9 @@ $end
           l_pos2 := instr(l_index, '"', 1, 8);
           p_base_object_name := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
         end if;
+      elsif trim(replace(replace(l_index, chr(13)), chr(10))) is null
+      then
+        nullify_output_parameters;
       else
         raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_index || '"');
       end if;
@@ -1301,6 +1316,9 @@ $end
         l_pos1 := instr(l_object_grant, 'GRANT ') + length('GRANT ');
         l_pos2 := instr(l_object_grant, ' ON "');
         p_privilege := substr(l_object_grant, l_pos1, l_pos2 - l_pos1);
+      elsif trim(replace(replace(l_object_grant, chr(13)), chr(10))) is null
+      then
+        nullify_output_parameters;
       else
         raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_object_grant || '"');
       end if;
