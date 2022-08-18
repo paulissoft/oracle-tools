@@ -1264,7 +1264,9 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-      if l_index like 'CREATE INDEX %'
+      if l_index like 'CREATE INDEX %' or
+         l_index like 'CREATE UNIQUE INDEX %' or
+         l_index like 'CREATE BITMAP INDEX %'
       then
         -- CREATE INDEX "<owner>"."schema_version_s_idx" ON "<owner>"."schema_version"
         if p_base_object_schema is null
