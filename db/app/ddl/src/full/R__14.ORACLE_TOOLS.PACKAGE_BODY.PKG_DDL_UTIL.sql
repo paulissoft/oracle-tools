@@ -860,7 +860,7 @@ $end
       end loop;
       l_constraint := substr(l_constraint, l_pos1);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print(dbug."info", 'l_constraint: "%s"', l_constraint);
 $end
       if l_constraint like l_constraint_expr_tab(1)
@@ -1181,6 +1181,10 @@ $end
       l_pos2 pls_integer;
       l_comment constant all_tab_comments.comments%type := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => case when l_pos1 > 0 then l_pos1 else 2000 end);
     begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+      dbug.print(dbug."info", 'l_comment: "%s"', l_comment);
+$end
+
       if p_base_object_schema is null
       then
         l_pos1 := instr(l_comment, '"', 1, 1);
@@ -1257,6 +1261,9 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+      dbug.print(dbug."info", 'l_plsql_block: "%s"', l_plsql_block);
+$end
       if upper(l_plsql_block) like q'[%DBMS_SCHEDULER.CREATE_%('"%"'%]'
       then
         l_pos1 := instr(l_plsql_block, '"', 1, 1);
@@ -1276,6 +1283,9 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+      dbug.print(dbug."info", 'l_index: "%s"', l_index);
+$end
       if l_index like 'CREATE INDEX %' or
          l_index like 'CREATE UNIQUE INDEX %' or
          l_index like 'CREATE BITMAP INDEX %'
@@ -1283,15 +1293,19 @@ $end
         -- CREATE INDEX "<owner>"."schema_version_s_idx" ON "<owner>"."schema_version"
         if p_base_object_schema is null
         then
-          l_pos1 := instr(l_index, '"', 1, 5);
-          l_pos2 := instr(l_index, '"', 1, 6);
-          p_base_object_schema := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
-        end if;
-        if p_base_object_name is null
-        then
-          l_pos1 := instr(l_index, '"', 1, 7);
-          l_pos2 := instr(l_index, '"', 1, 8);
-          p_base_object_name := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
+          -- CREATE INDEX "<owner>"."schema_version_s_idx" ON "<owner>"."schema_version"
+          if p_base_object_schema is null
+          then
+            l_pos1 := instr(l_index, '"', 1, 5);
+            l_pos2 := instr(l_index, '"', 1, 6);
+            p_base_object_schema := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
+          end if;
+          if p_base_object_name is null
+          then
+            l_pos1 := instr(l_index, '"', 1, 7);
+            l_pos2 := instr(l_index, '"', 1, 8);
+            p_base_object_name := substr(l_index, l_pos1+1, l_pos2 - (l_pos1+1));
+          end if;
         end if;
       elsif trim(replace(replace(l_index, chr(13)), chr(10))) is null
       then
@@ -1307,6 +1321,9 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+      dbug.print(dbug."info", 'l_object_grant: "%s"', l_object_grant);
+$end
       if l_object_grant like 'GRANT %'
       then
         -- GRANT SELECT ON "<owner>"."<table>" TO "<owner>";
@@ -1325,14 +1342,9 @@ $end
     end parse_object_grant;
 
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_DDL');
-    dbug.print
-    ( dbug."input"
-    , 'p_schema: %s; p_ddl.ddlText: %s'
-    , p_schema
-    , oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 200)
-    );
+    dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
     if p_ddl.parseditems is not null and
@@ -1386,10 +1398,13 @@ $end
       elsif p_object_type = 'OBJECT_GRANT' -- GPA 2016-11-28 #135018217
       then
         parse_object_grant;
+      elsif p_object_type = 'PROCACT_SYSTEM'
+      then
+        nullify_output_parameters;        
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.print
     ( dbug."output"
     , 'p_verb: %s; p_object_name; %s; p_object_type: %s; p_object_schema: %s'
@@ -2053,7 +2068,13 @@ $end
         loop
           l_statement := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl_tab(i_ku$ddls_idx).ddlText, p_offset => 1, p_amount => 4000);
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-          dbug.print(dbug."info", 'i_ku$ddls_idx: %s; ltrim(l_statement): %s', i_ku$ddls_idx, ltrim(l_statement));
+          dbug.print
+          ( dbug."info"
+          , 'i_ku$ddls_idx: %s; length(ltrim(l_statement)): %s; ltrim(l_statement): %s'
+          , i_ku$ddls_idx
+          , length(ltrim(l_statement))
+          , ltrim(l_statement)
+          );
 $end
           if p_split_grant_statement and ltrim(l_statement) like 'GRANT %, % ON "%'
           then
@@ -2079,7 +2100,12 @@ $end
               for i_idx in l_line_tab.first .. l_line_tab.last
               loop
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-                dbug.print(dbug."info", 'replace(l_statement, l_privileges, l_line_tab(%s)): %s', i_idx, replace(l_statement, l_privileges, l_line_tab(i_idx)));
+                dbug.print
+                ( dbug."info"
+                , 'replace(l_statement, l_privileges, l_line_tab(%s)): %s'
+                , i_idx
+                , replace(l_statement, l_privileges, l_line_tab(i_idx))
+                );
 $end
                 if i_idx = l_line_tab.first
                 then
@@ -2193,8 +2219,12 @@ $end
     , l_grantable
     );
 
-    if l_verb is not null
+    if l_verb is null and
+       ( l_object_name is null and l_object_type is null and l_object_schema is null ) and
+       ( l_base_object_name is null and l_base_object_type is null and l_base_object_schema is null )
     then
+      cleanup;
+    else
       l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
       l_base_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_base_object_type);
 
@@ -2308,7 +2338,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
   exception
     -- GJP 2021-08-30 Ignore this always.
-    when oracle_tools.pkg_ddl_error.e_object_not_found
+    when oracle_tools.pkg_ddl_error.e_object_not_found or oracle_tools.pkg_ddl_error.e_could_not_parse
     then
       p_object_key := null;
       cleanup;
@@ -4373,6 +4403,10 @@ $end
       where   i.owner = p_schema
               -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
       and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
+              -- GJP 2022-08-22
+              -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
+              -- so it will not be listed as a separated DDL statement.
+      and     not(i.constraint_index = 'YES')
       and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
                 p_object_type => p_object_type
@@ -6508,15 +6542,30 @@ $end
     then
       for i_idx in l_object_by_dep_tab.first .. l_object_by_dep_tab.last
       loop
-        l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
+        /* GJP 2022-08-11 
+           When DDL is generated with the 'sort objects by dependencies' flag, an error is raised for unknown dependencies.
+           See also https://github.com/paulissoft/oracle-tools/issues/47
+        */
+        begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print(dbug."debug", 'l_object_by_dep_tab(%s): %s', i_idx, l_object_by_dep_tab(i_idx));
+$end
+          l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print(dbug."debug", 'l_schema_object.id: %s', l_schema_object.id);
+          dbug.print(dbug."debug", 'l_schema_object.id: %s', l_schema_object.id);
 $end
 
-        pipe row(l_schema_object);
+          pipe row(l_schema_object);
 
-        longops_show(l_longops_rec);
+          longops_show(l_longops_rec);
+        exception
+          when no_data_found
+          then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            dbug.on_error;
+$end
+        end;
       end loop;
     end if;
 
