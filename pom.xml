@@ -47,7 +47,8 @@
     <!--flyway.version>4.2.0</flyway.version-->
     <!--flyway.version>5.0.0</flyway.version-->
     <!-- flyway.version>5.1.4</flyway.version--> <!-- last one to support Oracle 12.1 -->
-    <flyway.version>7.4.0</flyway.version> <!-- latest and greatest at 2021-01-08 -->
+    <!-- flyway.version>7.4.0</flyway.version--> <!-- does not support Oracle 19.1 -->
+    <flyway.version>9.1.6</flyway.version> <!-- latest and greatest at 2022-08-22 -->
     <ojdbc8.version>19.3.0.0</ojdbc8.version>
     <utplsql-maven-plugin.version>3.1.4</utplsql-maven-plugin.version>
     <revision>${project.version}</revision>

@@ -36,14 +36,18 @@ void call(app_env){
         assert env.DB_DIR != null
         env.DB_ACTIONS = app_env.db_actions
         assert env.DB_ACTIONS != null
-        env.DB_USERNAME_PROPERTY = ( app_env.db_username_property != null ? app_env.db_username_property : 'db.proxy.username' )        
-
+        if ( app_env.db_username_property != null ) {
+            env.DB_USERNAME_PROPERTY = app_env.db_username_property
+        } else if ( pipelineConfig.db_username_property != null ) {
+            env.DB_USERNAME_PROPERTY = pipelineConfig.db_username_property
+        } else {
+            env.DB_USERNAME_PROPERTY = 'db.proxy.username'
+        }
+        assert env.DB_USERNAME_PROPERTY != null
         env.APEX_DIR = ( app_env.apex_dir != null ? app_env.apex_dir : pipelineConfig.apex_dir )
         assert env.APEX_DIR != null
         env.APEX_ACTIONS = app_env.apex_actions
         assert env.APEX_ACTIONS != null
-
-        env.LOG_DIR = ( app_env.log_dir != null ? app_env.log_dir : ( pipelineConfig.log_dir != null ? pipelineConfig.log_dir : '' ) )
     }
     
     withCredentials([usernamePassword(credentialsId: env.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
