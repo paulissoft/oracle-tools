@@ -13,7 +13,7 @@ function _getSelectedObjects(model, objectType) {
     _msg("Window: " + dpv);
     // check there is a diagram selected and it belongs to the same model
     if (dpv !== null && dpv.getDesignPart() === model) {
-        dpv.getSelectedTopViews().forEach(function (item, index) {
+        dpv.getSelectedTopViews().toArray().forEach(function (item, index) {
             var obj = item.getModel();
 
             _msg("Object type: " + obj.getObjectTypeName());
@@ -49,7 +49,7 @@ function showSelectedEntities(model) {
     _getSelectedObjects(model, "Entity").forEach(_showObject);
 }
 
-function _copyCommentInRDBMS(object) {
+function _copyCommentsInRDBMS(object) {
     _showObject(object);
     if (object.getComment().equals("")) {
         if (!object.getCommentInRDBMS().equals("")) {
@@ -71,17 +71,17 @@ function copyCommentsInRDBMS_logical(model) {
     var entities = model.getEntitySet().toArray();
 
     entities.forEach(function (entity, index) {
-        _copyCommentInRDBMS(entity);
+        _copyCommentsInRDBMS(entity);
 
         entity.getElements().forEach(function (attribute) {
-            _copyCommentInRDBMS(attribute);
+            _copyCommentsInRDBMS(attribute);
         });
 
         entity.getKeys().forEach(function (key) {
             if (!key.isFK()) {
-                _copyCommentInRDBMS(key);
+                _copyCommentsInRDBMS(key);
             } else {
-                _copyCommentInRDBMS(key.getFKAssociation());
+                _copyCommentsInRDBMS(key.getFKAssociation());
             }
         });
     });
@@ -147,17 +147,17 @@ function setRelationName(model) {
 // Copy Comments in RDBMS to Comments (relational) - custom | relational
 function copyCommentsInRDBMS_relational(model) {
     model.getTableSet().toArray().forEach(function (table) {
-        _copyCommentInRDBMS(table);
+        _copyCommentsInRDBMS(table);
 
         table.getElements().forEach(function (column) {
-            _copyCommentInRDBMS(column);
+            _copyCommentsInRDBMS(column);
         });
 
         table.getKeys().forEach(function (key) {
             if (!key.isFK()) {
-                _copyCommentInRDBMS(key);
+                _copyCommentsInRDBMS(key);
             } else {
-                _copyCommentInRDBMS(key.getFKAssociation());
+                _copyCommentsInRDBMS(key.getFKAssociation());
             }
         });
     });
@@ -269,7 +269,7 @@ function _setIdentityColumn_physical(table) {
     });
 }
 
-function _setIdentityColumn(relationalTable, physicalTables, tableNames) {
+function _setIdentityColumn(relationalTable, physicalTables) {
     var stop = false;
 
     _setIdentityColumn_relational(relationalTable);
@@ -284,10 +284,8 @@ function _setIdentityColumn(relationalTable, physicalTables, tableNames) {
 }
 
 function _setIdentityColumns(relationalTables, physicalTables) {
-    var tableNames = [];
-
     relationalTables.forEach(function (relationalTable) {
-        _setIdentityColumn(relationalTable, physicalTables, tableNames);
+        _setIdentityColumn(relationalTable, physicalTables);
     });
 }
 
@@ -422,7 +420,7 @@ function setTablesToUpperCase(model) {
     });
 }
 
-function _copyComments(object){
+function _copyComments(object) {
     _showObject(object);
     if (object.getCommentInRDBMS().equals("")) {
         if (!object.getComment().equals("")) {
@@ -575,12 +573,21 @@ function setColumnsOrder(model) {
 // Custom Transformation Script:
 // Apply standards for selected tables
 function applyStandardsForSelectedTables(model) {
+    var physicalTables = model.getStorageDesign().getTableProxySet().toArray();
+
     _getSelectedObjects(model, "Table").forEach(function (table) {
-        _copyCommentInRDBMS(table);
+        _copyCommentsInRDBMS(table);
+        _copyComments(table);
         _copyPreferredAbbreviation(table);
         _setSecurityOptions(table);
+        _setTableToUpperCase(table);
         _setTableNamePlural(table);
         _setUseDomainConstraints(table);
-        _setIdentityColumn(table);
+        _setIdentityColumn(table, physicalTables);
+        // _setTableToLowerCase(table);
+        // _setTableAbbreviationToColumn(table);
+        // _setRemoveTableAbbrFromColumn(table);
+        _createIndexOnFK(table);
+        _setColumnsOrder(table);
     });
 }
