@@ -8,13 +8,18 @@ function _msg(msg) {
 function _getSelectedObjects(model, objectType) {
     var appv = model.getAppView();
     var dpv = appv.getCurrentDPV();
+    var tvs;
+    var i = 0;
+    var obj;
     var objects = [];
 
     _msg("Window: " + dpv);
     // check there is a diagram selected and it belongs to the same model
     if (dpv !== null && dpv.getDesignPart() === model) {
-        dpv.getSelectedTopViews().toArray().forEach(function (item, index) {
-            var obj = item.getModel();
+        tvs = dpv.getSelectedTopViews();
+
+        while (i < tvs.length) {
+            obj = tvs[i].getModel();
 
             _msg("Object type: " + obj.getObjectTypeName());
 
@@ -22,7 +27,9 @@ function _getSelectedObjects(model, objectType) {
             if (objectType.equals(obj.getObjectTypeName())) {
                 objects.push(obj);
             }
-        });
+
+            i += 1;
+        }
     }
     _msg("# Objects of type " + objectType + ": " + objects.length);
 
@@ -30,9 +37,7 @@ function _getSelectedObjects(model, objectType) {
 }
 
 function _showObject(obj) {
-    _msg(arguments.callee.name +
-         ": " +
-         obj.getObjectTypeName() +
+    _msg(obj.getObjectTypeName() +
          " " +
          obj.getName());
 }
@@ -50,7 +55,7 @@ function showSelectedEntities(model) {
 }
 
 function _copyCommentsInRDBMS(object) {
-    _showObject(object);
+    _msg(arguments.callee.name);
     if (object.getComment().equals("")) {
         if (!object.getCommentInRDBMS().equals("")) {
             if (object.getCommentInRDBMS().length() > maxLength) {
@@ -90,7 +95,8 @@ function copyCommentsInRDBMS_logical(model) {
 function _copyPreferredAbbreviation(object) {
     var preferredAbbreviation = object.getPreferredAbbreviation();
 
-    _showObject(object);
+    _msg(arguments.callee.name);
+
     if (object.getShortName().equals("")) {
 
         if (!preferredAbbreviation.equals("")) {
@@ -122,8 +128,6 @@ function _setRelationName(object,
     var name = ((sourceName.equals("") || targetName.equals("")) ?
                 "" :
                 sourceName + "_" + targetName);
-
-    _showObject(object);
 
     if (!name.equals("") && !object.getName().equals(name)) {
         object.setName(name);
@@ -164,8 +168,7 @@ function copyCommentsInRDBMS_relational(model) {
 }
 
 function _setSecurityOptions(table) {
-    _showObject(table);
-
+    _msg(arguments.callee.name);
     table.getElements().forEach(function (column) {
         if (column.isContainsPII() !== true) {
             column.setContainsPII(false);
@@ -196,7 +199,7 @@ function setSelectedSecurityOptions(model) {
 function _setTableNamePlural(table) {
     var tableName = table.getName();
 
-    _showObject(table);
+    _msg(arguments.callee.name);
 
     if (tableName.endsWith("Y")) {
         // Y -> IES
@@ -222,8 +225,7 @@ function setTableNamesPlural(model) {
 }
 
 function _setUseDomainConstraints(table) {
-    _showObject(table);
-
+    _msg(arguments.callee.name);
     table.getElements().forEach(function (column) {
         if (column.getDomain() !== null &&
             column.getDomain().getName() !== "Unknown" &&
@@ -243,8 +245,7 @@ function setUseDomainConstraints(model) {
 }
 
 function _setIdentityColumn_relational(table) {
-    _showObject(table);
-
+    _msg(arguments.callee.name);
     table.getElements().forEach(function (column) {
         if (column.getName().equals("ID")) {
             column.setAutoIncrementColumn(true);
@@ -259,7 +260,7 @@ function _setIdentityColumn_physical(table) {
     // not conform the SQL Data Modeler 18 documentation (!)
     var clause = "IDENTITY_CLAUSE";
 
-    _showObject(table);
+    _msg(arguments.callee.name);
 
     table.getColumns().toArray().forEach(function (column) {
         if (column.getName().equals("ID")) {
@@ -271,6 +272,8 @@ function _setIdentityColumn_physical(table) {
 
 function _setIdentityColumn(relationalTable, physicalTables) {
     var stop = false;
+
+    _msg(arguments.callee.name);
 
     _setIdentityColumn_relational(relationalTable);
 
@@ -284,6 +287,7 @@ function _setIdentityColumn(relationalTable, physicalTables) {
 }
 
 function _setIdentityColumns(relationalTables, physicalTables) {
+    _msg(arguments.callee.name);
     relationalTables.forEach(function (relationalTable) {
         _setIdentityColumn(relationalTable, physicalTables);
     });
@@ -306,7 +310,7 @@ function setSelectedIdentityColumns(model) {
 function _setTableToLowerCase(table) {
     var name = table.getName().toLowerCase();
 
-    _showObject(table);
+    _msg(arguments.callee.name);
 
     table.setName(name);
 
@@ -341,7 +345,7 @@ function setTablesToLowerCase(model) {
 function _setTableAbbreviationToColumn(table) {
     var abbr = table.getAbbreviation()+"_";
 
-    _showObject(table);
+    _msg(arguments.callee.name);
 
     if(abbr.length !== 1){
         table.getElements().forEach(function (column) {
@@ -365,7 +369,7 @@ function _setRemoveTableAbbrFromColumn(table) {
     var abbr = table.getAbbreviation()+"_";
     var count = table.getAbbreviation().length()+1;
 
-    _showObject(table);
+    _msg(arguments.callee.name);
 
     if (count !== 1) {
         table.getElements().forEach(function (column) {
@@ -389,7 +393,7 @@ function setRemoveTableAbbrFromColumn(model) {
 function _setTableToUpperCase(table) {
     var name = table.getName().toUpperCase();
 
-    _showObject(table);
+    _msg(arguments.callee.name);
 
     table.setName(name);
 
@@ -421,7 +425,7 @@ function setTablesToUpperCase(model) {
 }
 
 function _copyComments(object) {
-    _showObject(object);
+    _msg(arguments.callee.name);
     if (object.getCommentInRDBMS().equals("")) {
         if (!object.getComment().equals("")) {
             if (object.getComment().length() > maxLength) {
@@ -473,7 +477,7 @@ function _createIndexOnFK(table) {
     var columns;
     var newIndex;
 
-    _copyComments(table);
+    _msg(arguments.callee.name);
 
     table.getKeys().forEach(function (index) {
         if (index.isFK()) {
@@ -542,7 +546,7 @@ function _setColumnsOrder(table) {
     var list = new java.util.ArrayList();
     var cols = table.getElements();
 
-    _copyComments(table);
+    _msg(arguments.callee.name);
 
     // add PK columns to list
     _addPKcolumns(list, table);
@@ -576,9 +580,10 @@ function applyStandardsForSelectedTables(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet().toArray();
 
     _getSelectedObjects(model, "Table").forEach(function (table) {
+        _showObject(table);
+
         _copyCommentsInRDBMS(table);
         _copyComments(table);
-        _copyPreferredAbbreviation(table);
         _setSecurityOptions(table);
         _setTableToUpperCase(table);
         _setTableNamePlural(table);
