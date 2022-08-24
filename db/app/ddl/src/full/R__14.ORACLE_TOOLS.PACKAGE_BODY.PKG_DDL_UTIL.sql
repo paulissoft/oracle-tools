@@ -5561,7 +5561,7 @@ $end
                   ,       null as grantable -- to get the count right
                   from    dual
                   where   c_use_schema_export * p_use_schema_export = 1
-                  union
+                  union all
                   select  t.object_type()
                   ,       case
                             when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
@@ -5592,6 +5592,7 @@ $end
                   ,       t.privilege()
                   ,       t.grantable()
                   from    table(p_schema_object_tab) t
+                  where   nvl(c_use_schema_export * p_use_schema_export, 0) != 1
                 )
                 select  t.object_type
                 ,       t.object_schema
@@ -5665,40 +5666,6 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         raise;
 $end
     end init;
-
-    procedure find_next_params
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.enter(g_package_prefix || l_program || '.FIND_NEXT_PARAMS');
-$end
-
-      -- now we are going to find an object type which has at least one object not ready
-      <<find_next_params_loop>>
-      loop
-        l_params_idx := l_params_tab.next(l_params_idx);
-
-        exit find_next_params_loop when l_params_idx is null or l_params_tab(l_params_idx).object_type = 'SCHEMA_EXPORT';
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print
-        ( dbug."info"
-        , 'All objects found for schema %s and type %s'
-        , l_params_tab(l_params_idx).object_schema
-        , l_params_tab(l_params_idx).object_type
-        );
-$end
-      end loop find_next_params_loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;
-    exception
-      when others
-      then
-        dbug.leave_on_error;
-        raise;
-$end
-    end find_next_params;
 
     procedure cleanup
     is
@@ -5821,7 +5788,7 @@ $end
           end if;
       end;
 
-      find_next_params;
+      l_params_idx := l_params_tab.next(l_params_idx);
     end loop open_handle_loop;
 
     -- show 100%
