@@ -388,7 +388,7 @@ function _tableToLowerCase(table) {
     });
 
     _toStream(table.getKeys()).forEach(function (key) {
-        if (!key.isFK()){
+        if (!key.isFK()) {
             name = key.getName().toLowerCase();
             if (!name.equals(key.getName())) {
                 key.setName(name);
@@ -418,10 +418,10 @@ function _tableAbbreviationToColumn(table) {
 
     _trace(where, table);
 
-    if(abbr.length !== 1){
+    if (abbr.length !== 1) {
         _toStream(table.getElements()).forEach(function (column) {
             var cname = column.getName();
-            if(!cname.startsWith(abbr)){
+            if (!cname.startsWith(abbr)) {
                 column.setName(abbr + cname);
             }
         });
@@ -599,7 +599,7 @@ function createIndexOnFK(model) {
 // 1) first the pks columns,
 // 2) after them fk columns
 // 3) and after the; the not null columns"
-function _addPKcolumns(list, table){
+function _addPKcolumns(list, table) {
     var pk = table.getPK();
 
     if (pk !== null) {
@@ -614,7 +614,20 @@ function _addPKcolumns(list, table){
     }
 }
 
-function _addFKcolumns(list, fkeys){
+function _addUKcolumns(list, table) {
+    _toStream(table.getKeys())
+        .filter(function (key) { return !key.isPK() && key.isUnique(); })
+        .forEach(function (key) {
+            _toStream(key.getColumns())
+                .filter(function (col) { return !list.contains(col); })
+                .forEach(function (col) {
+                    _msg("adding UK column " + col);
+                    list.add(col);
+                });
+        });
+}
+
+function _addFKcolumns(list, fkeys) {
     _toStream(fkeys).forEach(function (fkey) {
         _toStream(fkey.getColumns())
             .filter(function (col) { return !list.contains(col); })
@@ -626,7 +639,7 @@ function _addFKcolumns(list, fkeys){
 }
 
 //adds mandatory or optional columns to list depending on mandatory parameter
-function _addMandatoryOptColumns(list, cols, mand){
+function _addMandatoryOptColumns(list, cols, mand) {
     _toStream(cols)
         .filter(function (col) {
             return col.isMandatory() === mand && !list.contains(col);
@@ -650,6 +663,8 @@ function _setColumnsOrder(table) {
 
     // add PK columns to list
     _addPKcolumns(list, table);
+    // add UK columns to list
+    _addUKcolumns(list, table);
     // add FK columns to list
     _addFKcolumns(list, table.getFKAssociations());
     // add mandatory columns
@@ -684,7 +699,7 @@ function _copyTablePrefixToIndexesAndKeys(table) {
 
     if (prefix) {
         _toStream(table.getKeys()).forEach(function (key) {
-            if (!key.isFK()){
+            if (!key.isFK()) {
                 name = key.getName();
                 if (!name.startsWith(prefix)) {
                     key.setName(prefix + name);
