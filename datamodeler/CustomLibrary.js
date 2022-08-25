@@ -1,5 +1,28 @@
+// -----------------------------------------------------------------------------
+// file  : CustomLibrary.js
+// goal  : Custom library for Oracle Data Modeler (ODM)
+// author: Gert-Jan Paulissen (Paulissoft)
+// date  : 2022-08-25
+// usage : - Copy the contents of this file and paste them into a custom library
+//           (for instance CustomLibrary) in ODM. Add each function
+//           without underscore below as function / method to the ODM library.
+//           ODM Menu: Tools | Design Rules And transformations | Libraries
+//         - Export this library to file CustomLibrary.xml.
+//         - Next add or change custom transformation scripts and use
+//           the description after each 'Custom Transformation Script:' below
+//           for the name. Set library and method in ODM as well.
+//           Menu: Tools | Design Rules And transformations | Transformations
+//         - Export these methods to file CustomTransformationScripts.xml.
+// note  : The function applyStandardsForSelectedTables is the most important
+//         function and can be used to apply standards fo selected tables.
+//         If the dynamic property canApplyStandards is set to 0,
+//         no standards will be applied.
+//         The property canApplyStandards will be set to 1 if missing.
+// -----------------------------------------------------------------------------
+
 var appView = Java.type("oracle.dbtools.crest.swingui.ApplicationView");
 var maxLength = 4000;
+var trace = false;
 
 function _msg(msg) {
     appView.log(msg);
@@ -7,8 +30,6 @@ function _msg(msg) {
 
 function _toStream(array) {
     var dummy;
-
-    _msg("array: " + array.toString() + "; type: " + (typeof array));
 
     try {
         dummy = array[0];
@@ -50,11 +71,23 @@ function _showObject(obj) {
 }
 
 function _trace(where, obj) {
-    _msg(where +
-         ": " +
+    if (trace) {
+        _msg(where +
+             ": " +
+             obj.getObjectTypeName() +
+             " " +
+             obj.getName());
+    }
+}
+
+function _setDirty(where, obj) {
+    _msg("Changing " +
          obj.getObjectTypeName() +
          " " +
-         obj.getName());
+         obj.getName() +
+         " - " +
+         where);
+    obj.setDirty(true);
 }
 
 // Custom Transformation Script:
@@ -70,8 +103,10 @@ function showSelectedEntities(model) {
 }
 
 function _copyCommentsInRDBMS(object) {
-    _trace("Copy Comments in RDBMS to Comments (logical) - custom | logical",
-           object);
+    var where =
+        "Copy Comments in RDBMS to Comments (logical) - custom | logical";
+
+    _trace(where, object);
     if (object.getComment().equals("")) {
         if (!object.getCommentInRDBMS().equals("")) {
             if (object.getCommentInRDBMS().length() > maxLength) {
@@ -81,7 +116,7 @@ function _copyCommentsInRDBMS(object) {
             } else {
                 object.setComment(object.getCommentInRDBMS());
             }
-            object.setDirty(true);
+            _setDirty(where, object);
         }
     }
 }
@@ -107,15 +142,15 @@ function copyCommentsInRDBMS_logical(model) {
 }
 
 function _copyPreferredAbbreviation(object) {
+    var where = "copyPreferredAbbreviation";
     var preferredAbbreviation = object.getPreferredAbbreviation();
 
-    _trace("copyPreferredAbbreviation", object);
+    _trace(where, object);
 
     if (object.getShortName().equals("")) {
-
         if (!preferredAbbreviation.equals("")) {
             object.setShortName(preferredAbbreviation);
-            object.setDirty(true);
+            _setDirty(where, object);
         }
     }
 }
@@ -133,6 +168,7 @@ function _setRelationName(object,
                           sourceAbbreviation,
                           targetShortName,
                           targetAbbreviation) {
+    var where = "setRelationName";
     var sourceName = (sourceAbbreviation.equals("") ?
                       sourceShortName :
                       sourceAbbreviation);
@@ -145,7 +181,7 @@ function _setRelationName(object,
 
     if (!name.equals("") && !object.getName().equals(name)) {
         object.setName(name);
-        object.setDirty(true);
+        _setDirty(where, object);
     }
 }
 
@@ -182,16 +218,19 @@ function copyCommentsInRDBMS_relational(model) {
 }
 
 function _setSecurityOptions(table) {
-    _trace("setSecurityOptions", table);
+    var where = "setSecurityOptions";
+
+    _trace(where, table);
     _toStream(table.getElements()).forEach(function (column) {
-        if (column.isContainsPII() !== true) {
+        if (column.isContainsPII() !== false) {
             column.setContainsPII(false);
+            _setDirty(where, column);
         }
-        if (column.isContainsSensitiveInformation() !== true) {
+        if (column.isContainsSensitiveInformation() !== false) {
             column.setContainsSensitiveInformation(false);
+            _setDirty(where, column);
         }
     });
-    table.setDirty(true);
 }
 
 // Custom Transformation Script:
@@ -210,42 +249,48 @@ function setSelectedSecurityOptions(model) {
     });
 }
 
-function _setTableNamePlural(table) {
+function _tableNamePlural(table) {
+    var where = "tableNamePlural";
     var tableName = table.getName();
+    var dirty = true;
 
-    _trace("setTableNamePlural", table);
+    _trace(where, table);
 
     if (tableName.endsWith("Y")) {
         // Y -> IES
         table.setName(tableName.slice(0, -1) + "IES");
-        table.setDirty(true);
     } else if (tableName.endsWith("X")) {
         // X -> CES
         table.setName(tableName.slice(0, -1) + "CES");
-        table.setDirty(true);
     } else if (!tableName.endsWith("S")) {
         // . -> .S
         table.setName(tableName + "S");
-        table.setDirty(true);
+    } else {
+        dirty = false;
+    }
+    if (dirty) {
+        _setDirty(where, table);
     }
 }
 
 // Custom Transformation Script:
 // Table names plural - custom | relational
-function setTableNamesPlural(model) {
+function tableNamesPlural(model) {
     _toStream(model.getTableSet()).forEach(function (table) {
-        _setTableNamePlural(table);
+        _tableNamePlural(table);
     });
 }
 
 function _setUseDomainConstraints(table) {
-    _trace("setUseDomainConstraints", table);
+    var where = "setUseDomainConstraints";
+
+    _trace(where, table);
     _toStream(table.getElements()).forEach(function (column) {
         if (column.getDomain() !== null &&
             column.getDomain().getName() !== "Unknown" &&
             column.getUseDomainConstraints() !== true) {
             column.setUseDomainConstraints(true);
-            table.setDirty(true);
+            _setDirty(where, table);
         }
     });
 }
@@ -259,33 +304,38 @@ function setUseDomainConstraints(model) {
 }
 
 function _setIdentityColumn_relational(table) {
-    _trace("setIdentityColumn_relational", table);
+    var where = "setIdentityColumn_relational";
+
+    _trace(where, table);
     _toStream(table.getElements())
         .filter(function (column) { return column.getName().equals("ID"); })
         .forEach(function (column) {
             column.setAutoIncrementColumn(true);
             column.setIdentityColumn(true);
             column.setAutoIncrementGenerateTrigger(false);
-            column.setDirty(true);
+            _setDirty(where, column);
         });
 }
 
 function _setIdentityColumn_physical(table) {
+    var where = "setIdentityColumn_physical";
     // not conform the SQL Data Modeler 18 documentation (!)
     var clause = "IDENTITY_CLAUSE";
 
-    _trace("setIdentityColumn_physical", table);
+    _trace(where, table);
 
     _toStream(table.getColumns())
         .filter(function (column) { return column.getName().equals("ID"); })
         .forEach(function (column) {
             column.setAutoIncrementDDL(clause);
-            column.setDirty(true);
+            _setDirty(where, column);
         });
 }
 
 function _setIdentityColumn(relationalTable, physicalTables) {
-    _trace("setIdentityColumn", relationalTable);
+    var where = "setIdentityColumn";
+
+    _trace(where, relationalTable);
 
     _setIdentityColumn_relational(relationalTable);
 
@@ -318,45 +368,55 @@ function setSelectedIdentityColumns(model) {
                         model.getStorageDesign().getTableProxySet());
 }
 
-function _setTableToLowerCase(table) {
+function _tableToLowerCase(table) {
+    var where = "tableToLowerCase";
     var name = table.getName().toLowerCase();
 
-    _trace("setTableToLowerCase", table);
+    _trace(where, table);
 
-    table.setName(name);
+    if (!name.equals(table.getName())) {
+        table.setName(name);
+        _setDirty(where, table);
+    }
 
     _toStream(table.getElements()).forEach(function (column) {
         name = column.getName().toLowerCase();
-
-        column.setName(name);
+        if (!name.equals(column.getName())) {
+            column.setName(name);
+            _setDirty(where, column);
+        }
     });
 
     _toStream(table.getKeys()).forEach(function (key) {
         if (!key.isFK()){
             name = key.getName().toLowerCase();
-            key.setName(name);
+            if (!name.equals(key.getName())) {
+                key.setName(name);
+                _setDirty(where, key);
+            }
         } else {
             name = key.getFKAssociation().getName().toLowerCase();
-            key.getFKAssociation().setName(name);
-            key.getFKAssociation().setDirty(true);
+            if (!name.equals(key.getFKAssociation().getName())) {
+                key.getFKAssociation().setName(name);
+                _setDirty(where, key.getFKAssociation());
+            }
         }
     });
-
-    table.setDirty(true);
 }
 
 // Custom Transformation Script:
 // Tables to lower case - Rhino
-function setTablesToLowerCase(model) {
+function tablesToLowerCase(model) {
     _toStream(model.getTableSet()).forEach(function (table) {
-        _setTableToLowerCase(table);
+        _tableToLowerCase(table);
     });
 }
 
-function _setTableAbbreviationToColumn(table) {
+function _tableAbbreviationToColumn(table) {
+    var where = "tableAbbreviationToColumn";
     var abbr = table.getAbbreviation()+"_";
 
-    _trace("setTableAbbreviationToColumn", table);
+    _trace(where, table);
 
     if(abbr.length !== 1){
         _toStream(table.getElements()).forEach(function (column) {
@@ -370,24 +430,25 @@ function _setTableAbbreviationToColumn(table) {
 
 // Custom Transformation Script:
 // Table abbreviation to column
-function setTableAbbreviationToColumn(model) {
+function tableAbbreviationToColumn(model) {
     _toStream(model.getTableSet()).forEach()(function (table) {
-        _setTableAbbreviationToColumn(table);
+        _tableAbbreviationToColumn(table);
     });
 }
 
-function _setRemoveTableAbbrFromColumn(table) {
+function _removeTableAbbrFromColumn(table) {
+    var where = "removeTableAbbrFromColumn";
     var abbr = table.getAbbreviation()+"_";
     var count = table.getAbbreviation().length()+1;
 
-    _trace("setRemoveTableAbbrFromColumn", table);
+    _trace(where, table);
 
     if (count !== 1) {
         _toStream(table.getElements()).forEach(function (column) {
             var cname = column.getName();
             if (cname.startsWith(abbr)) {
                 column.setName(cname.substring(count));
-                table.setDirty(true);
+                _setDirty(where, column);
             }
         });
     }
@@ -395,44 +456,54 @@ function _setRemoveTableAbbrFromColumn(table) {
 
 // Custom Transformation Script:
 // Remove Table abbr from column
-function setRemoveTableAbbrFromColumn(model) {
+function removeTableAbbrFromColumn(model) {
     _toStream(model.getTableSet()).forEach(function (table) {
-        setRemoveTableAbbrFromColumn(table);
+        _removeTableAbbrFromColumn(table);
     });
 }
 
-function _setTableToUpperCase(table) {
+function _tableToUpperCase(table) {
+    var where = "tableToUpperCase";
     var name = table.getName().toUpperCase();
 
-    _trace("setTableToUpperCase", table);
+    _trace(where, table);
 
-    table.setName(name);
+    if (!name.equals(table.getName())) {
+        table.setName(name);
+        _setDirty(where, table);
+    }
 
     _toStream(table.getElements()).forEach(function (column) {
         name = column.getName().toUpperCase();
-        column.setName(name);
+        if (!name.equals(column.getName())) {
+            column.setName(name);
+            _setDirty(where, column);
+        }
     });
-
-    table.setDirty(true);
 
     _toStream(table.getKeys()).forEach(function (key) {
         if (!key.isFK()) {
             name = key.getName().toUpperCase();
-            key.setName(name);
+            if (!name.equals(key.getName())) {
+                key.setName(name);
+                _setDirty(where, key);
+            }
         } else {
             name = key.getFKAssociation().getName().toUpperCase();
-            key.getFKAssociation().setName(name);
-            key.getFKAssociation().setDirty(true);
+            if (!name.equals(key.getFKAssociation().getName())) {
+                key.getFKAssociation().setName(name);
+                _setDirty(where, key.getFKAssociation());
+            }
         }
     });
 }
 
 // Custom Transformation Script:
 // Tables to upper case - Rhino
-function setTablesToUpperCase(model) {
+function tablesToUpperCase(model) {
     try {
         _toStream(model.getTableSet()).forEach(function (table) {
-            _setTableToUpperCase(table);
+            _tableToUpperCase(table);
         });
     } catch (e) {
         _msg(e.stack);
@@ -441,7 +512,9 @@ function setTablesToUpperCase(model) {
 }
 
 function _copyComments(object) {
-    _trace("copyComments", object);
+    var where = "copyComments";
+
+    _trace(where, object);
     if (object.getCommentInRDBMS().equals("")) {
         if (!object.getComment().equals("")) {
             if (object.getComment().length() > maxLength) {
@@ -451,7 +524,7 @@ function _copyComments(object) {
             } else {
                 object.setCommentInRDBMS(object.getComment());
             }
-            object.setDirty(true);
+            _setDirty(where, object);
         }
     }
 }
@@ -490,10 +563,11 @@ function _getIndex(tab, cols) {
 }
 
 function _createIndexOnFK(table) {
+    var where = "createIndexOnFK";
     var columns;
     var newIndex;
 
-    _trace("createIndexOnFK", table);
+    _trace(where, table);
 
     _toStream(table.getKeys())
         .filter(function (index) { return index.isFK(); })
@@ -503,7 +577,7 @@ function _createIndexOnFK(table) {
                 newIndex = _getIndex(table, columns);
                 if (newIndex === null) {
                     newIndex = table.createIndex();
-                    table.setDirty(true);
+                    _setDirty(where, table);
                     _toStream(columns).forEach(function (column) {
                         newIndex.add(column);
                     });
@@ -557,10 +631,11 @@ function _addMandatoryOptColumns(list, cols, mand){
 }
 
 function _setColumnsOrder(table) {
+    var where = "setColumnsOrder";
     var list = new java.util.ArrayList();
     var cols = table.getElements();
 
-    _trace("setColumnsOrder", table);
+    _trace(where, table);
 
     // add PK columns to list
     _addPKcolumns(list, table);
@@ -577,7 +652,7 @@ function _setColumnsOrder(table) {
 
     // prevent reordering from engineering, can be changed with UI
     table.setAllowColumnReorder(false);
-    table.setDirty(true);
+    _setDirty(where, table);
 }
 
 // Custom Transformation Script:
@@ -588,25 +663,49 @@ function setColumnsOrder(model) {
     });
 }
 
+function _canApplyStandards(where, object) {
+    var canApplyStandards = object.getProperty("canApplyStandards");
+
+    if (canApplyStandards === null || canApplyStandards.equals("")) {
+        canApplyStandards = "1";
+        object.setProperty("canApplyStandards", canApplyStandards);
+        _setDirty(where, object);
+    }
+
+    try {
+        canApplyStandards = Java.lang.Integer.parseInt(canApplyStandards);
+    } catch (e) {
+        canApplyStandards = 0;
+    }
+
+    return canApplyStandards !== 0;
+}
+
 // Custom Transformation Script:
 // Apply standards for selected tables
 function applyStandardsForSelectedTables(model) {
+    var where = "applyStandardsForSelectedTables";
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     _getSelectedObjects(model, "Table").forEach(function (table) {
         _showObject(table);
 
-        _copyCommentsInRDBMS(table);
-        _copyComments(table);
-        _setSecurityOptions(table);
-        _setTableToUpperCase(table);
-        _setTableNamePlural(table);
-        _setUseDomainConstraints(table);
-        _setIdentityColumn(table, physicalTables);
-        // _setTableToLowerCase(table);
-        // _setTableAbbreviationToColumn(table);
-        // _setRemoveTableAbbrFromColumn(table);
-        _createIndexOnFK(table);
-        _setColumnsOrder(table);
+        if (_canApplyStandards(where, table)) {
+            _copyCommentsInRDBMS(table);
+            _copyComments(table);
+            _setSecurityOptions(table);
+            _tableToUpperCase(table);
+            _tableNamePlural(table);
+            _setUseDomainConstraints(table);
+            _setIdentityColumn(table, physicalTables);
+            // _tableToLowerCase(table);
+            // _tableAbbreviationToColumn(table);
+            // _removeTableAbbrFromColumn(table);
+            _createIndexOnFK(table);
+            _setColumnsOrder(table);
+        } else {
+            _msg("Can not transform this table " +
+                 "since the dynamic property canApplyStandards is 0 (false).");
+        }
     });
 }
