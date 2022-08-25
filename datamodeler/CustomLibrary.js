@@ -608,6 +608,7 @@ function _addPKcolumns(list, table){
             .forEach(function (col) {
                 // in fact don't need this check,
                 // because PK columns are processed first
+                _msg("adding PK column " + col);
                 list.add(col);
             });
     }
@@ -617,7 +618,10 @@ function _addFKcolumns(list, fkeys){
     _toStream(fkeys).forEach(function (fkey) {
         _toStream(fkey.getColumns())
             .filter(function (col) { return !list.contains(col); })
-            .forEach(function (col) { list.add(col); });
+            .forEach(function (col) {
+                _msg("adding FK column " + col);
+                list.add(col);
+            });
     });
 }
 
@@ -627,13 +631,20 @@ function _addMandatoryOptColumns(list, cols, mand){
         .filter(function (col) {
             return col.isMandatory() === mand && !list.contains(col);
         })
-        .forEach(function (col) { list.add(col); });
+        .forEach(function (col) {
+            _msg("adding " +
+                 (mand ? "mandatory" : "optional") +
+                 " column " +
+                 col);
+            list.add(col);
+        });
 }
 
 function _setColumnsOrder(table) {
     var where = "setColumnsOrder";
     var list = new java.util.ArrayList();
     var cols = table.getElements();
+    var index = 0;
 
     _trace(where, table);
 
@@ -646,8 +657,10 @@ function _setColumnsOrder(table) {
     // add optional columns
     _addMandatoryOptColumns(list, cols, false);
     //use list to reorder columns
-    list.forEach(function (col, n) {
-        table.moveToIndex(col, n);
+    list.forEach(function (col) {
+        _msg("move column " + col + " to index " + index);
+        table.moveToIndex(col, index);
+        index += 1;
     });
 
     // prevent reordering from engineering, can be changed with UI
@@ -661,6 +674,38 @@ function setColumnsOrder(model) {
     _toStream(model.getTableSet()).forEach(function (table) {
         _setColumnsOrder(table);
     });
+}
+
+function _copyTablePrefixToIndexesAndKeys(table) {
+    var where = "copyTablePrefixToIndexesAndKeys";
+    var pos = table.getName().indexOf("_");
+    var prefix = (pos < 0 ? null : table.getName().substring(0, pos+1));
+    var name = null;
+
+    if (prefix) {
+        _toStream(table.getKeys()).forEach(function (key) {
+            if (!key.isFK()){
+                name = key.getName();
+                if (!name.startsWith(prefix)) {
+                    key.setName(prefix + name);
+                    _setDirty(where, key);
+                }
+            } else {
+                name = key.getFKAssociation().getName();
+                if (!name.startsWith(prefix)) {
+                    key.getFKAssociation().setName(prefix + name);
+                    _setDirty(where, key.getFKAssociation());
+                }
+            }
+        });
+        _toStream(table.getIndexes()).forEach(function (index) {
+            name = index.getName();
+            if (!name.startsWith(prefix)) {
+                index.setName(prefix + name);
+                _setDirty(where, index);
+            }
+        });
+    }
 }
 
 function _canApplyStandards(where, object) {
@@ -704,6 +749,7 @@ function applyStandardsForSelectedTables(model) {
             // _removeTableAbbrFromColumn(table);
             _createIndexOnFK(table);
             _setColumnsOrder(table);
+            _copyTablePrefixToIndexesAndKeys(table);
         } else {
             _msg("Can not transform this table " +
                  "since the dynamic property canApplyStandards is 0 (false).");
