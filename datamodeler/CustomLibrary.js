@@ -673,8 +673,9 @@ function _canApplyStandards(where, object) {
     }
 
     try {
-        canApplyStandards = Java.lang.Integer.parseInt(canApplyStandards);
+        canApplyStandards = Number(canApplyStandards);
     } catch (e) {
+        _msg(e);
         canApplyStandards = 0;
     }
 
