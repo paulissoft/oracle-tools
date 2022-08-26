@@ -162,10 +162,6 @@ function _getSelectedObjects(model, objectType) {
     if (dpv !== null && dpv.getDesignPart() === model) {
         _toStream(dpv.getSelectedTopViews()).forEach(function (tv) {
             obj = tv.getModel();
-
-            _msg("Object type: " + obj.getObjectTypeName());
-
-            //if table then put its name in the log window
             if (objectType.equals(obj.getObjectTypeName())) {
                 objects.add(obj);
             }
