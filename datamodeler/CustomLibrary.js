@@ -23,9 +23,71 @@
 var appView = Java.type("oracle.dbtools.crest.swingui.ApplicationView");
 var maxLength = 4000;
 var trace = false;
+var debug = false;
 
 function _msg(msg) {
     appView.log(msg);
+}
+
+function _debug(msg) {
+    if (debug) {
+        _msg(msg);
+    }
+}
+
+function _showObject(obj) {
+    _msg(obj.getObjectTypeName() +
+         " " +
+         obj.getName());
+}
+
+function _trace(where, obj) {
+    if (trace) {
+        _msg(where +
+             ": " +
+             obj.getObjectTypeName() +
+             " " +
+             obj.getName());
+    }
+}
+
+function _setDirty(where, obj) {
+    _msg("Changing " +
+         obj.getObjectTypeName() +
+         " " +
+         obj.getName() +
+         " - " +
+         where);
+    obj.setDirty(true);
+}
+
+function _canProcess(where, object) {
+    var canProcess = object.getProperty(where);
+
+    if (canProcess === null || canProcess.equals("")) {
+        canProcess = "1";
+        object.setProperty(where, canProcess);
+        _setDirty(where, object);
+    }
+
+    try {
+        canProcess = Number(canProcess);
+    } catch (e) {
+        _msg(e);
+        canProcess = 0;
+    }
+
+    if (canProcess !== 0) {
+        return true;
+    } else {
+        _msg("Can not process " +
+             object.getObjectTypeName() +
+             " " +
+             object.getName() +
+             " since the dynamic property " + where + " is 0 (false).");
+
+        return false;
+    }
 }
 
 function _toStream(array) {
@@ -64,32 +126,6 @@ function _getSelectedObjects(model, objectType) {
     return objects;
 }
 
-function _showObject(obj) {
-    _msg(obj.getObjectTypeName() +
-         " " +
-         obj.getName());
-}
-
-function _trace(where, obj) {
-    if (trace) {
-        _msg(where +
-             ": " +
-             obj.getObjectTypeName() +
-             " " +
-             obj.getName());
-    }
-}
-
-function _setDirty(where, obj) {
-    _msg("Changing " +
-         obj.getObjectTypeName() +
-         " " +
-         obj.getName() +
-         " - " +
-         where);
-    obj.setDirty(true);
-}
-
 // Custom Transformation Script:
 // Show selected tables - custom
 function showSelectedTables(model) {
@@ -103,8 +139,7 @@ function showSelectedEntities(model) {
 }
 
 function _copyCommentsInRDBMS(object) {
-    var where =
-        "Copy Comments in RDBMS to Comments (logical) - custom | logical";
+    var where = "copyCommentsInRDBMS";
 
     _trace(where, object);
     if (object.getComment().equals("")) {
@@ -335,6 +370,10 @@ function _setIdentityColumn_physical(table) {
 function _setIdentityColumn(relationalTable, physicalTables) {
     var where = "setIdentityColumn";
 
+    if (!_canProcess(where, relationalTable)) {
+        return;
+    }
+
     _trace(where, relationalTable);
 
     _setIdentityColumn_relational(relationalTable);
@@ -371,6 +410,10 @@ function setSelectedIdentityColumns(model) {
 function _tableToLowerCase(table) {
     var where = "tableToLowerCase";
     var name = table.getName().toLowerCase();
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
 
     _trace(where, table);
 
@@ -416,6 +459,10 @@ function _tableAbbreviationToColumn(table) {
     var where = "tableAbbreviationToColumn";
     var abbr = table.getAbbreviation()+"_";
 
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     _trace(where, table);
 
     if (abbr.length !== 1) {
@@ -441,6 +488,10 @@ function _removeTableAbbrFromColumn(table) {
     var abbr = table.getAbbreviation()+"_";
     var count = table.getAbbreviation().length()+1;
 
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     _trace(where, table);
 
     if (count !== 1) {
@@ -465,6 +516,10 @@ function removeTableAbbrFromColumn(model) {
 function _tableToUpperCase(table) {
     var where = "tableToUpperCase";
     var name = table.getName().toUpperCase();
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
 
     _trace(where, table);
 
@@ -513,6 +568,10 @@ function tablesToUpperCase(model) {
 
 function _copyComments(object) {
     var where = "copyComments";
+
+    if (!_canProcess(where, object)) {
+        return;
+    }
 
     _trace(where, object);
     if (object.getCommentInRDBMS().equals("")) {
@@ -567,6 +626,10 @@ function _createIndexOnFK(table) {
     var columns;
     var newIndex;
 
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     _trace(where, table);
 
     _toStream(table.getKeys())
@@ -608,7 +671,7 @@ function _addPKcolumns(list, table) {
             .forEach(function (col) {
                 // in fact don't need this check,
                 // because PK columns are processed first
-                _msg("adding PK column " + col);
+                _debug("adding PK column " + col);
                 list.add(col);
             });
     }
@@ -621,7 +684,7 @@ function _addUKcolumns(list, table) {
             _toStream(key.getColumns())
                 .filter(function (col) { return !list.contains(col); })
                 .forEach(function (col) {
-                    _msg("adding UK column " + col);
+                    _debug("adding UK column " + col);
                     list.add(col);
                 });
         });
@@ -632,7 +695,7 @@ function _addFKcolumns(list, fkeys) {
         _toStream(fkey.getColumns())
             .filter(function (col) { return !list.contains(col); })
             .forEach(function (col) {
-                _msg("adding FK column " + col);
+                _debug("adding FK column " + col);
                 list.add(col);
             });
     });
@@ -645,10 +708,10 @@ function _addMandatoryOptColumns(list, cols, mand) {
             return col.isMandatory() === mand && !list.contains(col);
         })
         .forEach(function (col) {
-            _msg("adding " +
-                 (mand ? "mandatory" : "optional") +
-                 " column " +
-                 col);
+            _debug("adding " +
+                   (mand ? "mandatory" : "optional") +
+                   " column " +
+                   col);
             list.add(col);
         });
 }
@@ -658,6 +721,10 @@ function _setColumnsOrder(table) {
     var list = new java.util.ArrayList();
     var cols = table.getElements();
     var index = 0;
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
 
     _trace(where, table);
 
@@ -673,7 +740,7 @@ function _setColumnsOrder(table) {
     _addMandatoryOptColumns(list, cols, false);
     //use list to reorder columns
     list.forEach(function (col) {
-        _msg("move column " + col + " to index " + index);
+        _debug("move column " + col + " to index " + index);
         table.moveToIndex(col, index);
         index += 1;
     });
@@ -696,6 +763,10 @@ function _copyTablePrefixToIndexesAndKeys(table) {
     var pos = table.getName().indexOf("_");
     var prefix = (pos < 0 ? null : table.getName().substring(0, pos+1));
     var name = null;
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
 
     if (prefix) {
         _toStream(table.getKeys()).forEach(function (key) {
@@ -723,51 +794,39 @@ function _copyTablePrefixToIndexesAndKeys(table) {
     }
 }
 
-function _canApplyStandards(where, object) {
-    var canApplyStandards = object.getProperty("canApplyStandards");
+function _applyStandards(table, physicalTables) {
+    var where = "applyStandards";
 
-    if (canApplyStandards === null || canApplyStandards.equals("")) {
-        canApplyStandards = "1";
-        object.setProperty("canApplyStandards", canApplyStandards);
-        _setDirty(where, object);
+    _showObject(table);
+
+    if (_canProcess(where, table)) {
+        _copyCommentsInRDBMS(table);
+        _copyComments(table);
+        _setSecurityOptions(table);
+        _tableToUpperCase(table);
+        _tableNamePlural(table);
+        _setUseDomainConstraints(table);
+        _setIdentityColumn(table, physicalTables);
+        // _tableToLowerCase(table);
+        // _tableAbbreviationToColumn(table);
+        // _removeTableAbbrFromColumn(table);
+        _createIndexOnFK(table);
+        _setColumnsOrder(table);
+        _copyTablePrefixToIndexesAndKeys(table);
     }
-
-    try {
-        canApplyStandards = Number(canApplyStandards);
-    } catch (e) {
-        _msg(e);
-        canApplyStandards = 0;
-    }
-
-    return canApplyStandards !== 0;
 }
 
 // Custom Transformation Script:
 // Apply standards for selected tables
 function applyStandardsForSelectedTables(model) {
-    var where = "applyStandardsForSelectedTables";
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
-    _getSelectedObjects(model, "Table").forEach(function (table) {
-        _showObject(table);
-
-        if (_canApplyStandards(where, table)) {
-            _copyCommentsInRDBMS(table);
-            _copyComments(table);
-            _setSecurityOptions(table);
-            _tableToUpperCase(table);
-            _tableNamePlural(table);
-            _setUseDomainConstraints(table);
-            _setIdentityColumn(table, physicalTables);
-            // _tableToLowerCase(table);
-            // _tableAbbreviationToColumn(table);
-            // _removeTableAbbrFromColumn(table);
-            _createIndexOnFK(table);
-            _setColumnsOrder(table);
-            _copyTablePrefixToIndexesAndKeys(table);
-        } else {
-            _msg("Can not transform this table " +
-                 "since the dynamic property canApplyStandards is 0 (false).");
-        }
-    });
+    try {
+        _getSelectedObjects(model, "Table").forEach(function (table) {
+            _applyStandards(table, physicalTables);
+        });
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
 }
