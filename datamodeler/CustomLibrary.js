@@ -340,15 +340,28 @@ function setUseDomainConstraints(model) {
 
 function _setIdentityColumn_relational(table) {
     var where = "setIdentityColumn_relational";
+    var dirty = null;
 
     _trace(where, table);
     _toStream(table.getElements())
         .filter(function (column) { return column.getName().equals("ID"); })
         .forEach(function (column) {
-            column.setAutoIncrementColumn(true);
-            column.setIdentityColumn(true);
-            column.setAutoIncrementGenerateTrigger(false);
-            _setDirty(where, column);
+            dirty = false;
+            if (!column.isAutoIncrementColumn()) {
+                column.setAutoIncrementColumn(true);
+                dirty = true;
+            }
+            if (!column.isIdentityColumn()) {
+                column.setIdentityColumn(true);
+                dirty = true;
+            }
+            if (column.isAutoIncrementGenerateTrigger()) {
+                column.setAutoIncrementGenerateTrigger(false);
+                dirty = true;
+            }
+            if (dirty) {
+                _setDirty(where, column);
+            }
         });
 }
 
@@ -360,7 +373,11 @@ function _setIdentityColumn_physical(table) {
     _trace(where, table);
 
     _toStream(table.getColumns())
-        .filter(function (column) { return column.getName().equals("ID"); })
+        .filter(function (column) {
+            return column.getName().equals("ID") &&
+                   ( column.getAutoIncrementDDL() === null ||
+                     !clause.equals(column.getAutoIncrementDDL()) );
+        })
         .forEach(function (column) {
             column.setAutoIncrementDDL(clause);
             _setDirty(where, column);
@@ -718,7 +735,8 @@ function _addMandatoryOptColumns(list, cols, mand) {
 
 function _setColumnsOrder(table) {
     var where = "setColumnsOrder";
-    var list = new java.util.ArrayList();
+    var oldColumnList = new java.util.ArrayList();
+    var newColumnList = new java.util.ArrayList();
     var cols = table.getElements();
     var index = 0;
 
@@ -728,26 +746,34 @@ function _setColumnsOrder(table) {
 
     _trace(where, table);
 
-    // add PK columns to list
-    _addPKcolumns(list, table);
-    // add UK columns to list
-    _addUKcolumns(list, table);
-    // add FK columns to list
-    _addFKcolumns(list, table.getFKAssociations());
-    // add mandatory columns
-    _addMandatoryOptColumns(list, cols, true);
-    // add optional columns
-    _addMandatoryOptColumns(list, cols, false);
-    //use list to reorder columns
-    list.forEach(function (col) {
-        _debug("move column " + col + " to index " + index);
-        table.moveToIndex(col, index);
-        index += 1;
-    });
+    _toStream(cols)
+        .forEach(function (column) {
+            oldColumnList.add(column);
+        });
 
-    // prevent reordering from engineering, can be changed with UI
-    table.setAllowColumnReorder(false);
-    _setDirty(where, table);
+    // add PK columns to newColumnList
+    _addPKcolumns(newColumnList, table);
+    // add UK columns to newColumnList
+    _addUKcolumns(newColumnList, table);
+    // add FK columns to newColumnList
+    _addFKcolumns(newColumnList, table.getFKAssociations());
+    // add mandatory columns
+    _addMandatoryOptColumns(newColumnList, cols, true);
+    // add optional columns
+    _addMandatoryOptColumns(newColumnList, cols, false);
+    // do we need to change?
+    if (!oldColumnList.equals(newColumnList)) {
+        // use newColumnList to reorder columns
+        newColumnList.forEach(function (col) {
+            _debug("move column " + col + " to index " + index);
+            table.moveToIndex(col, index);
+            index += 1;
+        });
+
+        // prevent reordering from engineering, can be changed with UI
+        table.setAllowColumnReorder(false);
+        _setDirty(where, table);
+    }
 }
 
 // Custom Transformation Script:
