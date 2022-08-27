@@ -122,18 +122,6 @@ function _getSelectedObjects(model, objectType) {
     return objects;
 }
 
-// Custom Transformation Script:
-// Show selected tables - custom
-function showSelectedTables(model) {
-    _getSelectedObjects(model, "Table").forEach(_showObject);
-}
-
-// Custom Transformation Script:
-// Show selected entities - custom
-function showSelectedEntities(model) {
-    _getSelectedObjects(model, "Entity").forEach(_showObject);
-}
-
 function _copyCommentsInRDBMS(object) {
     var where = "copyCommentsInRDBMS";
 
@@ -152,23 +140,19 @@ function _copyCommentsInRDBMS(object) {
     }
 }
 
-// Custom Transformation Script:
-// Copy Comments in RDBMS to Comments (logical) - custom | logical
-function copyCommentsInRDBMS_logical(model) {
-    _toStream(model.getEntitySet()).forEach(function (entity, index) {
-        _copyCommentsInRDBMS(entity);
+function _copyCommentsInRDBMS_container(object) {
+    _copyCommentsInRDBMS(object);
 
-        _toStream(entity.getElements()).forEach(function (attribute) {
-            _copyCommentsInRDBMS(attribute);
-        });
+    _toStream(object.getElements()).forEach(function (element) {
+        _copyCommentsInRDBMS(element);
+    });
 
-        _toStream(entity.getKeys()).forEach(function (key) {
-            if (!key.isFK()) {
-                _copyCommentsInRDBMS(key);
-            } else {
-                _copyCommentsInRDBMS(key.getFKAssociation());
-            }
-        });
+    _toStream(object.getKeys()).forEach(function (key) {
+        if (!key.isFK()) {
+            _copyCommentsInRDBMS(key);
+        } else {
+            _copyCommentsInRDBMS(key.getFKAssociation());
+        }
     });
 }
 
@@ -184,14 +168,6 @@ function _copyPreferredAbbreviation(object) {
             _setDirty(where, object);
         }
     }
-}
-
-// Custom Transformation Script:
-// Copy Preferred Abbreviation to Short Name - custom | logical
-function copyPreferredAbbreviation(model) {
-    _toStream(model.getEntitySet()).forEach(function (entity) {
-        _copyPreferredAbbreviation(entity);
-    });
 }
 
 function _setRelationName(object,
@@ -210,42 +186,12 @@ function _setRelationName(object,
                 "" :
                 sourceName + "_" + targetName);
 
+    _showObject(object);
+
     if (!name.equals("") && !object.getName().equals(name)) {
         object.setName(name);
         _setDirty(where, object);
     }
-}
-
-// Custom Transformation Script:
-// Set Relation Name - custom | logical
-function setRelationName(model) {
-    _toStream(model.getRelationSet()).forEach(function (relation) {
-        _setRelationName(relation,
-                         relation.getSourceEntity().getShortName(),
-                         relation.getSourceEntity().getPreferredAbbreviation(),
-                         relation.getTargetEntity().getShortName(),
-                         relation.getTargetEntity().getPreferredAbbreviation());
-    });
-}
-
-// Custom Transformation Script:
-// Copy Comments in RDBMS to Comments (relational) - custom | relational
-function copyCommentsInRDBMS_relational(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _copyCommentsInRDBMS(table);
-
-        _toStream(table.getElements()).forEach(function (column) {
-            _copyCommentsInRDBMS(column);
-        });
-
-        _toStream(table.getKeys()).forEach(function (key) {
-            if (!key.isFK()) {
-                _copyCommentsInRDBMS(key);
-            } else {
-                _copyCommentsInRDBMS(key.getFKAssociation());
-            }
-        });
-    });
 }
 
 function _setSecurityOptions(table) {
@@ -261,22 +207,6 @@ function _setSecurityOptions(table) {
             column.setContainsSensitiveInformation(false);
             _setDirty(where, column);
         }
-    });
-}
-
-// Custom Transformation Script:
-// Set security options - custom | relational
-function setSecurityOptions(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _setSecurityOptions(table);
-    });
-}
-
-// Custom Transformation Script:
-// Set selected security options - custom | relational
-function setSelectedSecurityOptions(model) {
-    _getSelectedObjects(model, "Table").forEach(function (table) {
-        _setSecurityOptions(table);
     });
 }
 
@@ -304,14 +234,6 @@ function _tableNamePlural(table) {
     }
 }
 
-// Custom Transformation Script:
-// Table names plural - custom | relational
-function tableNamesPlural(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _tableNamePlural(table);
-    });
-}
-
 function _setUseDomainConstraints(table) {
     var where = "setUseDomainConstraints";
 
@@ -323,14 +245,6 @@ function _setUseDomainConstraints(table) {
             column.setUseDomainConstraints(true);
             _setDirty(where, table);
         }
-    });
-}
-
-// Custom Transformation Script:
-// Set Use Domain Constraints - custom | relational
-function setUseDomainConstraints(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _setUseDomainConstraints(table);
     });
 }
 
@@ -406,20 +320,6 @@ function _setIdentityColumns(relationalTables, physicalTables) {
     });
 }
 
-// Custom Transformation Script:
-// Define IDENTITY clause for ID columns - custom | relational
-function setIdentityColumns(model) {
-    _setIdentityColumns(model.getTableSet(),
-                        model.getStorageDesign().getTableProxySet());
-}
-
-// Custom Transformation Script:
-// Define IDENTITY clause for selected ID columns - custom | relational
-function setSelectedIdentityColumns(model) {
-    _setIdentityColumns(_getSelectedObjects(model, "Table"),
-                        model.getStorageDesign().getTableProxySet());
-}
-
 function _tableToLowerCase(table) {
     var where = "tableToLowerCase";
     var name = table.getName().toLowerCase();
@@ -460,14 +360,6 @@ function _tableToLowerCase(table) {
     });
 }
 
-// Custom Transformation Script:
-// Tables to lower case - Rhino
-function tablesToLowerCase(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _tableToLowerCase(table);
-    });
-}
-
 function _tableAbbreviationToColumn(table) {
     var where = "tableAbbreviationToColumn";
     var abbr = table.getAbbreviation()+"_";
@@ -489,7 +381,7 @@ function _tableAbbreviationToColumn(table) {
 }
 
 // Custom Transformation Script:
-// Table abbreviation to column
+// Table abbreviation to column | relational
 function tableAbbreviationToColumn(model) {
     _toStream(model.getTableSet()).forEach()(function (table) {
         _tableAbbreviationToColumn(table);
@@ -519,7 +411,7 @@ function _removeTableAbbrFromColumn(table) {
 }
 
 // Custom Transformation Script:
-// Remove Table abbr from column
+// Remove Table abbr from column | relational
 function removeTableAbbrFromColumn(model) {
     _toStream(model.getTableSet()).forEach(function (table) {
         _removeTableAbbrFromColumn(table);
@@ -566,19 +458,6 @@ function _tableToUpperCase(table) {
     });
 }
 
-// Custom Transformation Script:
-// Tables to upper case - Rhino
-function tablesToUpperCase(model) {
-    try {
-        _toStream(model.getTableSet()).forEach(function (table) {
-            _tableToUpperCase(table);
-        });
-    } catch (e) {
-        _msg(e.stack);
-        throw(e);
-    }
-}
-
 function _copyComments(object) {
     var where = "copyComments";
 
@@ -601,21 +480,17 @@ function _copyComments(object) {
     }
 }
 
-// Custom Transformation Script:
-// Copy Comments to Comments in RDBMS
-function copyComments(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _copyComments(table);
-        _toStream(table.getElements()).forEach(function (column) {
-            _copyComments(column);
-        });
-        _toStream(table.getKeys()).forEach(function (key) {
-            if (!key.isFK()) {
-                _copyComments(key);
-            } else {
-                _copyComments(key.getFKAssociation());
-            }
-        });
+function _copyComments_container(object) {
+    _copyComments(object);
+    _toStream(object.getElements()).forEach(function (element) {
+        _copyComments(element);
+    });
+    _toStream(object.getKeys()).forEach(function (key) {
+        if (!key.isFK()) {
+            _copyComments(key);
+        } else {
+            _copyComments(key.getFKAssociation());
+        }
     });
 }
 
@@ -660,14 +535,6 @@ function _createIndexOnFK(table) {
                 }
             }
         });
-}
-
-// Custom Transformation Script:
-// Create index on FK
-function createIndexOnFK(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _createIndexOnFK(table);
-    });
 }
 
 // sorts table columns as asked here
@@ -772,14 +639,6 @@ function _setColumnsOrder(table) {
     }
 }
 
-// Custom Transformation Script:
-// Columns order
-function setColumnsOrder(model) {
-    _toStream(model.getTableSet()).forEach(function (table) {
-        _setColumnsOrder(table);
-    });
-}
-
 function _copyTablePrefixToIndexesAndKeys(table) {
     var where = "copyTablePrefixToIndexesAndKeys";
     var pos = table.getName().indexOf("_");
@@ -816,14 +675,14 @@ function _copyTablePrefixToIndexesAndKeys(table) {
     }
 }
 
-function _applyStandards(table, physicalTables) {
+function _applyStandardsTable(table, physicalTables) {
     var where = "applyStandards";
 
     _showObject(table);
 
     if (_canProcess(where, table)) {
-        _copyCommentsInRDBMS(table);
-        _copyComments(table);
+        _copyComments_container(table);
+        _copyCommentsInRDBMS_container(table);
         _setSecurityOptions(table);
         _tableToUpperCase(table);
         _tableNamePlural(table);
@@ -839,13 +698,45 @@ function _applyStandards(table, physicalTables) {
 }
 
 // Custom Transformation Script:
-// Apply standards for selected tables
+// Apply standards for selected tables | relational
 function applyStandardsForSelectedTables(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
         _getSelectedObjects(model, "Table").forEach(function (table) {
-            _applyStandards(table, physicalTables);
+            _applyStandardsTable(table, physicalTables);
+        });
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
+function _applyStandardsEntity(entity) {
+    var where = "applyStandards";
+
+    _showObject(entity);
+
+    if (_canProcess(where, entity)) {
+        _copyPreferredAbbreviation(entity);
+        _copyComments_container(entity);
+        _copyCommentsInRDBMS_container(entity);
+    }
+}
+
+// Custom Transformation Script:
+// Apply standards for selected entities | logical
+function applyStandardsForSelectedEntities(model) {
+    try {
+        _getSelectedObjects(model, "Entity").forEach(function (entity) {
+            _applyStandardsEntity(entity);
+        });
+        _getSelectedObjects(model, "Relation").forEach(function (rel) {
+            _setRelationName(rel,
+                             rel.getSourceEntity().getShortName(),
+                             rel.getSourceEntity().getPreferredAbbreviation(),
+                             rel.getTargetEntity().getShortName(),
+                             rel.getTargetEntity().getPreferredAbbreviation());
         });
     } catch (e) {
         _msg(e.stack);
