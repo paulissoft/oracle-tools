@@ -698,7 +698,7 @@ function _applyStandardsTable(table, physicalTables) {
         // _removeTableAbbrFromColumn(table);
         _createIndexOnFK(table);
         _setColumnsOrder(table);
-        _copyTablePrefixToIndexesAndKeys(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
     }
 }
 
@@ -747,8 +747,7 @@ function applyStandardsForSelectedEntities(model) {
         _msg(e.stack);
         throw(e);
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="9BE4E26C-36D8-A92C-ADEA-F183327DC239" name="Remove Table abbr from column" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="removeTableAbbrFromColumn" purpose="transformation" >
@@ -1448,7 +1447,7 @@ function _applyStandardsTable(table, physicalTables) {
         // _removeTableAbbrFromColumn(table);
         _createIndexOnFK(table);
         _setColumnsOrder(table);
-        _copyTablePrefixToIndexesAndKeys(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
     }
 }
 
@@ -1497,8 +1496,7 @@ function applyStandardsForSelectedEntities(model) {
         _msg(e.stack);
         throw(e);
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="0528C35C-F29B-E7BB-57AC-37BA2780A98D" name="Table template - uses column name" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
@@ -2319,7 +2317,7 @@ function _applyStandardsTable(table, physicalTables) {
         // _removeTableAbbrFromColumn(table);
         _createIndexOnFK(table);
         _setColumnsOrder(table);
-        _copyTablePrefixToIndexesAndKeys(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
     }
 }
 
@@ -2368,8 +2366,7 @@ function applyStandardsForSelectedEntities(model) {
         _msg(e.stack);
         throw(e);
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 	<scr id="03AED6CE-F6F2-BA86-90B4-1FE2BB2C8ACC" name="Apply standards for selected entities" object="logical" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="applyStandardsForSelectedEntities" purpose="transformation" >
@@ -3069,7 +3066,7 @@ function _applyStandardsTable(table, physicalTables) {
         // _removeTableAbbrFromColumn(table);
         _createIndexOnFK(table);
         _setColumnsOrder(table);
-        _copyTablePrefixToIndexesAndKeys(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
     }
 }
 
@@ -3118,8 +3115,7 @@ function applyStandardsForSelectedEntities(model) {
         _msg(e.stack);
         throw(e);
     }
-}
-]]>
+}]]>
 		</script>
 	</scr>
 </custom_transformation_scripts>

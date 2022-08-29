@@ -743,7 +743,7 @@ function _applyStandardsTable(table, physicalTables) {
         // _removeTableAbbrFromColumn(table);
         _createIndexOnFK(table);
         _setColumnsOrder(table);
-        _copyTablePrefixToIndexesAndKeys(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
     }
 }
 
@@ -792,8 +792,7 @@ function applyStandardsForSelectedEntities(model) {
         _msg(e.stack);
         throw(e);
     }
-}
-]]>
+}]]>
 		</script>
 	</lib>
 </custom_libraries>

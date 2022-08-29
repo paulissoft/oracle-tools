@@ -693,7 +693,7 @@ function _applyStandardsTable(table, physicalTables) {
         // _removeTableAbbrFromColumn(table);
         _createIndexOnFK(table);
         _setColumnsOrder(table);
-        _copyTablePrefixToIndexesAndKeys(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
     }
 }
 
