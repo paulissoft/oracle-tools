@@ -12,7 +12,7 @@ dind_image='docker:dind'
 dind_name=jenkins-docker
 jenkins_image=myjenkins-blueocean
 jenkins_name=jenkins-blueocean
-ssh_agent_image=jenkins/ssh-agent:alpine
+ssh_agent_image=jenkins/ssh-agent:latest
 ssh_agent_name=agent1
 
 export SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
@@ -29,7 +29,9 @@ do
     case $nr in
         1) docker network ls | grep " $jenkins_network " || docker network create $jenkins_network
            ;;
-        2) docker ps | grep " $dind_image " || docker run \
+        2) if ! docker ps | grep " $dind_image "
+           then
+               docker run \
   --name $dind_name \
   --rm \
   --detach \
@@ -42,6 +44,7 @@ do
   --publish 2376:2376 \
   $dind_image \
   --storage-driver overlay2
+           fi          
            ;;
         3) cat <<'EOF' | docker build --build-arg SQLCL_ZIP --build-arg SQLCL_URL --build-arg JENKINS_PLUGINS --build-arg JENKINS_IMAGE -t $jenkins_image -f - .
 ARG JENKINS_IMAGE
@@ -54,7 +57,7 @@ RUN echo "deb [arch=$(dpkg --print-architecture) \
   signed-by=/usr/share/keyrings/docker-archive-keyring.asc] \
   https://download.docker.com/linux/debian \
   $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-RUN apt-get update && apt-get install -y docker-ce-cli
+RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
 ARG SQLCL_ZIP
 ARG SQLCL_URL
 RUN curl -o /tmp/$SQLCL_ZIP $SQLCL_URL
@@ -72,6 +75,7 @@ EOF
   --rm \
   --detach \
   --network $jenkins_network \
+  --network-alias jenkins-controller \
   --env DOCKER_HOST=tcp://docker:2376 \
   --env DOCKER_CERT_PATH=/certs/client \
   --env DOCKER_TLS_VERIFY=1 \
@@ -81,7 +85,7 @@ EOF
   --volume jenkins-docker-certs:/certs/client:ro \
   $jenkins_image
            ;;
-        5) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/id_rsa || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/id_rsa' # generate SSH keys
+        5) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/jenkins_agent_key'
            ;;
         6) url='http://localhost:8080'
            if which open 1>/dev/null
@@ -92,19 +96,26 @@ EOF
            fi
            ;;
         # TBD: setting up SSH agent later
-        7) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/jenkins_agent_key' # generate SSH keys
-           ;;
-        8) if ! docker ps | grep " $ssh_agent_name"
+        7) if ! docker ps | grep " $ssh_agent_name"
            then
                jenkins_agent_public_key=$(docker container exec -it $jenkins_name cat /var/jenkins_home/.ssh/jenkins_agent_key.pub)
-               docker run -d --rm --name=$ssh_agent_name -p 22:22 \
--e "JENKINS_AGENT_SSH_PUBKEY=$jenkins_agent_public_key" \
+               docker run \
+                      --network $jenkins_network \
+                      --network-alias jenkins-agent \
+                      --detach \
+                      --rm \
+                      --name=$ssh_agent_name \
+                      --publish 22:22 \
+                      --env "JENKINS_AGENT_SSH_PUBKEY=$jenkins_agent_public_key" \
                       $ssh_agent_image
                VARS1="HOME=|USER=|MAIL=|LC_ALL=|LS_COLORS=|LANG="
                VARS2="HOSTNAME=|PWD=|TERM=|SHLVL=|LANGUAGE=|_="
                VARS="${VARS1}|${VARS2}"
-               docker exec $ssh_agent_name sh -c "env | egrep -v '^(${VARS})' >> /etc/environment"
+               docker exec $ssh_agent_name /bin/sh -c "env | egrep -v '^(${VARS})' >> /etc/environment"
            fi
-           ;;           
+           ;;
+        8) docker exec -u jenkins $ssh_agent_name /bin/sh -c 'test -f /home/jenkins/.ssh/id_rsa || ssh-keygen -t rsa -f /home/jenkins/.ssh/id_rsa'
+           docker exec -u jenkins $ssh_agent_name /bin/sh -c "ssh-keygen -R github.com; ssh-keyscan -t rsa github.com >> /home/jenkins/.ssh/known_hosts"
+           ;;
     esac
 done
