@@ -88,6 +88,12 @@ EOF
         5) docker container exec -it $jenkins_name /bin/sh -c 'test -f /var/jenkins_home/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f /var/jenkins_home/.ssh/jenkins_agent_key'
            ;;
         6) url='http://localhost:8080'
+           msg='Jenkins is fully up and running'
+           while ! docker logs $jenkins_name 2>&1 | grep "$msg"
+           do
+               echo "Sleeping till $msg"
+               sleep 5
+           done
            if which open 1>/dev/null
            then
                nohup open $url 1>/dev/null 2>&1 &
