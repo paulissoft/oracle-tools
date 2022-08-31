@@ -13,7 +13,8 @@ dind_name=jenkins-docker
 jenkins_image=myjenkins-blueocean
 jenkins_name=jenkins-blueocean
 ssh_agent_image=jenkins/ssh-agent:latest
-ssh_agent_name=agent1
+ssh_agent_name1=agent1
+ssh_agent_name2=agent2
 
 export SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 export SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
@@ -102,7 +103,7 @@ EOF
            fi
            ;;
         # TBD: setting up SSH agent later
-        7) if ! docker ps | grep " $ssh_agent_name"
+        7) if ! docker ps | grep " $ssh_agent_name1"
            then
                jenkins_agent_public_key=$(docker container exec -it $jenkins_name cat /var/jenkins_home/.ssh/jenkins_agent_key.pub)
                docker run \
@@ -110,18 +111,33 @@ EOF
                       --network-alias jenkins-agent \
                       --detach \
                       --rm \
-                      --name=$ssh_agent_name \
+                      --name=$ssh_agent_name1 \
                       --publish 22:22 \
                       --env "JENKINS_AGENT_SSH_PUBKEY=$jenkins_agent_public_key" \
                       $ssh_agent_image
                VARS1="HOME=|USER=|MAIL=|LC_ALL=|LS_COLORS=|LANG="
                VARS2="HOSTNAME=|PWD=|TERM=|SHLVL=|LANGUAGE=|_="
                VARS="${VARS1}|${VARS2}"
-               docker exec $ssh_agent_name /bin/sh -c "env | egrep -v '^(${VARS})' >> /etc/environment"
+               docker exec $ssh_agent_name1 /bin/sh -c "env | egrep -v '^(${VARS})' >> /etc/environment"
            fi
            ;;
-        8) docker exec -u jenkins $ssh_agent_name /bin/sh -c 'test -f /home/jenkins/.ssh/id_rsa || ssh-keygen -t rsa -f /home/jenkins/.ssh/id_rsa'
-           docker exec -u jenkins $ssh_agent_name /bin/sh -c "ssh-keygen -R github.com; ssh-keyscan -t rsa github.com >> /home/jenkins/.ssh/known_hosts"
+        8) docker exec -u jenkins $ssh_agent_name1 /bin/sh -c 'test -f /home/jenkins/.ssh/id_rsa || ssh-keygen -t rsa -f /home/jenkins/.ssh/id_rsa'
+           docker exec -u jenkins $ssh_agent_name1 /bin/sh -c "ssh-keygen -R github.com; ssh-keyscan -t rsa github.com >> /home/jenkins/.ssh/known_hosts"
+           ;;
+        9) if ! docker ps | grep " $ssh_agent_name2"
+           then
+               docker run \
+                      --detach \
+                      --rm \
+                      --name=$ssh_agent_name2 \
+                      --publish 22:22 \
+                      --volume ~/.ssh:/home/jenkins/.ssh:ro \
+                      $ssh_agent_image
+               VARS1="HOME=|USER=|MAIL=|LC_ALL=|LS_COLORS=|LANG="
+               VARS2="HOSTNAME=|PWD=|TERM=|SHLVL=|LANGUAGE=|_="
+               VARS="${VARS1}|${VARS2}"
+               docker exec $ssh_agent_name2 /bin/sh -c "env | egrep -v '^(${VARS})' >> /etc/environment"
+           fi
            ;;
     esac
 done
