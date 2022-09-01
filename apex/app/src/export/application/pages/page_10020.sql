@@ -8,29 +8,29 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>127029477646494312
+,p_default_id_offset=>139229780191799327
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_page(
  p_id=>10020
-,p_user_interface_id=>wwv_flow_api.id(44970137555156236)
+,p_user_interface_id=>wwv_flow_api.id(82059340091338076)
 ,p_name=>'About'
 ,p_alias=>'HELP'
 ,p_step_title=>'About'
 ,p_first_item=>'AUTO_FIRST_ITEM'
 ,p_autocomplete_on_off=>'OFF'
-,p_group_id=>wwv_flow_api.id(44973768426156277)
-,p_required_patch=>wwv_flow_api.id(44972422349156272)
+,p_group_id=>wwv_flow_api.id(82055709220338035)
+,p_required_patch=>wwv_flow_api.id(82057055297338040)
 ,p_help_text=>'All application help text can be accessed from this page. The links in the "Documentation" region give a much more in-depth explanation of the application''s features and functionality.'
 ,p_last_updated_by=>'ADMIN'
 ,p_last_upd_yyyymmddhh24miss=>'20200416080203'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(44988816152156341)
+ p_id=>wwv_flow_api.id(82040661494337971)
 ,p_plug_name=>'About Page'
 ,p_region_template_options=>'#DEFAULT#:t-ContentBlock--padded:t-ContentBlock--h1:t-ContentBlock--lightBG'
 ,p_escape_on_http_output=>'Y'
-,p_plug_template=>wwv_flow_api.id(44893041746156165)
+,p_plug_template=>wwv_flow_api.id(82136435900338147)
 ,p_plug_display_sequence=>20
 ,p_plug_display_point=>'BODY'
 ,p_query_type=>'SQL'

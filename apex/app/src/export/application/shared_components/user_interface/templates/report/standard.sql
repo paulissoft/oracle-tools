@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>127029477646494312
+,p_default_id_offset=>139229780191799327
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_row_template(
- p_id=>wwv_flow_api.id(44918404649156183)
+ p_id=>wwv_flow_api.id(82111072997338129)
 ,p_row_template_name=>'Standard'
 ,p_internal_name=>'STANDARD'
 ,p_row_template1=>'<td class="t-Report-cell" #ALIGNMENT# headers="#COLUMN_HEADER_NAME#">#COLUMN_VALUE#</td>'
@@ -65,7 +65,7 @@ wwv_flow_api.create_row_template(
 );
 begin
 wwv_flow_api.create_row_template_patch(
- p_id=>wwv_flow_api.id(44918404649156183)
+ p_id=>wwv_flow_api.id(82111072997338129)
 ,p_row_template_before_first=>'<tr>'
 ,p_row_template_after_last=>'</tr>'
 );

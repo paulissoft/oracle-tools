@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>127029477646494312
+,p_default_id_offset=>139229780191799327
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_user_interface(
- p_id=>wwv_flow_api.id(44970137555156236)
+ p_id=>wwv_flow_api.id(82059340091338076)
 ,p_ui_type_name=>'DESKTOP'
 ,p_display_name=>'Desktop'
 ,p_display_seq=>10
@@ -24,9 +24,9 @@ wwv_flow_api.create_user_interface(
 ,p_theme_style_by_user_pref=>false
 ,p_built_with_love=>false
 ,p_global_page_id=>0
-,p_navigation_list_id=>wwv_flow_api.id(44849770599156124)
+,p_navigation_list_id=>wwv_flow_api.id(82179707047338188)
 ,p_navigation_list_position=>'SIDE'
-,p_navigation_list_template_id=>wwv_flow_api.id(44937188961156192)
+,p_navigation_list_template_id=>wwv_flow_api.id(82092288685338120)
 ,p_nav_list_template_options=>'#DEFAULT#'
 ,p_css_file_urls=>'#APP_IMAGES#app-icon.css?version=#APP_VERSION#'
 ,p_javascript_file_urls=>wwv_flow_string.join(wwv_flow_t_varchar2(
@@ -34,8 +34,8 @@ wwv_flow_api.create_user_interface(
 '#APP_IMAGES#loglevel-plugin-prefix.min.js',
 '#APP_IMAGES#oracleTools.js'))
 ,p_nav_bar_type=>'LIST'
-,p_nav_bar_list_id=>wwv_flow_api.id(44969786949156234)
-,p_nav_bar_list_template_id=>wwv_flow_api.id(44938641476156194)
+,p_nav_bar_list_id=>wwv_flow_api.id(82059690697338078)
+,p_nav_bar_list_template_id=>wwv_flow_api.id(82090836170338118)
 ,p_nav_bar_template_options=>'#DEFAULT#'
 );
 wwv_flow_api.component_end;
