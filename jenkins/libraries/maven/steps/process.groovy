@@ -1,8 +1,6 @@
 // -*- mode: groovy; coding: utf-8 -*-
 void call(app_env){
     script {
-        assert pipelineConfig.maven != null
-        assert pipelineConfig.jdk != null
         assert pipelineConfig.scm_url_oracle_tools != null
         assert pipelineConfig.scm_branch_oracle_tools != null
         assert pipelineConfig.scm_url != null
