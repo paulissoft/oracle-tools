@@ -19,6 +19,7 @@ Types of changes:
 - [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
 - [Add SQL Datamodeler custom library and transformations scripts.](https://github.com/paulissoft/oracle-tools/issues/46)
 - [Something goes in Jenkins wrong when an APEX export has only changes in the create_application.sql scripts.](https://github.com/paulissoft/oracle-tools/issues/49)
+- [The Jenkins handling of (proxy) username should be more user friendly.](https://github.com/paulissoft/oracle-tools/issues/50)
 
 ## [1.5.0] - 2022-08-22
 
