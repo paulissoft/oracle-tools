@@ -1,3 +1,6 @@
+ARG SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
+ARG SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
+
 FROM jenkins/ssh-agent:latest
 
 # Install Maven, JDK and Docker
@@ -13,6 +16,8 @@ RUN echo "deb [arch=$(dpkg --print-architecture) \
 RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
 
 # Install SQLcl
+
+# must redeclare an ARG after FROM (https://benkyriakou.com/posts/docker-args-empty)
 ARG SQLCL_ZIP
 ARG SQLCL_URL
 RUN curl -o /tmp/$SQLCL_ZIP $SQLCL_URL

@@ -1,6 +1,4 @@
 // accessible via JTEs pipelineConfig
-maven = 'maven-3'
-jdk = 'jdk-9'
 
 // a clone without credentials
 scm_url_oracle_tools = 'http://github.com/paulissoft/oracle-tools.git'
