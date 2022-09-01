@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- File contains Custom Transformation scripts -->
 <custom_transformation_scripts>
-	<scr id="0528C35C-F29B-E7BB-57AC-37BA2780A98D" name="Table template - uses column name" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
-		<script>
-			<![CDATA[// columns are found by column name
+  <scr id="0528C35C-F29B-E7BB-57AC-37BA2780A98D" name="Table template - uses column name" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+    <script>
+      <![CDATA[// columns are found by column name
 // allowing reuse of already existing columns
 // dynamic property ctemplateID is set afterwards - will keep connection to template
 // column even if the name of column is changed
@@ -34,60 +34,60 @@ if(template!=null){
      }
     }
 }]]>
-		</script>
-	</scr>
-	<scr id="F54B1A9C-F951-EB88-E905-5599533569B1" name="Create subview from tables in search result " object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
-		<script>
-			<![CDATA[objs = model.getLastSearchResult().toArray();
+    </script>
+  </scr>
+  <scr id="F54B1A9C-F951-EB88-E905-5599533569B1" name="Create subview from tables in search result " object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+    <script>
+      <![CDATA[objs = model.getLastSearchResult().toArray();
 var dp;
 var sv;
 //create subview and add tables to it
 for(var i = 0;i<objs.length;i++){
-	obj = objs[i];
-	// use "Entity" for entities and logical model
-	if(obj.getObjectTypeName().equals("Table")){
-		if(dp==null){
-			dp = obj.getDesignPart();
-			sv = dp.createDesignPartSubView();
-			// uncomment next line if want to set name
-		     //sv.setName("Name");
-		     sv.getPlaceHolder().setVisible(true);
-		}
-		sv.addViewFor(obj);
-	}
+  obj = objs[i];
+  // use "Entity" for entities and logical model
+  if(obj.getObjectTypeName().equals("Table")){
+    if(dp==null){
+      dp = obj.getDesignPart();
+      sv = dp.createDesignPartSubView();
+      // uncomment next line if want to set name
+         //sv.setName("Name");
+         sv.getPlaceHolder().setVisible(true);
+    }
+    sv.addViewFor(obj);
+  }
 }
 if(dp!=null){
  //add foreign keys if you want to
  for(var i = 0;i<objs.length;i++){
-	obj = objs[i];
-	// use "Entity" for entities and logical model
-	if(obj.getObjectTypeName().equals("Table")){
-		tv = obj.getFirstViewForDPV(sv);
-		if(tv!=null){
-			//for entities and logical model use 
-			//tv.addTVRelations(); 
-			tv.addTVFKRelations();
-		}
-	}
+  obj = objs[i];
+  // use "Entity" for entities and logical model
+  if(obj.getObjectTypeName().equals("Table")){
+    tv = obj.getFirstViewForDPV(sv);
+    if(tv!=null){
+      //for entities and logical model use 
+      //tv.addTVRelations(); 
+      tv.addTVFKRelations();
+    }
+  }
  }
  //add Arcs if you want to
  for(var i = 0;i<objs.length;i++){
-	obj = objs[i];
-	if(obj.getObjectTypeName().equals("Table")){
-		tv = obj.getFirstViewForDPV(sv);
-		if(tv!=null){
-			tv.addArcs();
-		}
-	}
+  obj = objs[i];
+  if(obj.getObjectTypeName().equals("Table")){
+    tv = obj.getFirstViewForDPV(sv);
+    if(tv!=null){
+      tv.addArcs();
+    }
+  }
  }
  //arrange diagram
  sv.rearrangeNewDiagram();
 }]]>
-		</script>
-	</scr>
-	<scr id="EF64BEDD-B648-C41B-60C7-B9EA938E0A3C" name="Remove template columns and related attributes" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
-		<script>
-			<![CDATA[/* removes the columns created with "Table template..." script, also removes related attributes
+    </script>
+  </scr>
+  <scr id="EF64BEDD-B648-C41B-60C7-B9EA938E0A3C" name="Remove template columns and related attributes" object="relational" engine="Oracle Nashorn" var="model" library="" method="" purpose="transformation" >
+    <script>
+      <![CDATA[/* removes the columns created with "Table template..." script, also removes related attributes
 *  from logical model
 *  more details here http://www.thatjeffsmith.com/archive/2015/03/adding-common-columns-to-tables-via-templates-and-transformation-scripts/
 */
@@ -105,14 +105,14 @@ if(template!=null){
             column = tcolumns[i];
             col = table.getColumnByProperty(p_name,column.getObjectID());
             if(col!=null){
-            	attr = col.getEngAttribute();
-            	if(attr!=null){
-            		ent = attr.getEntity();
-            		attr.remove();
-            		if(ent!=null){
-            			ent.setDirty(true);
-            		}
-            	}
+              attr = col.getEngAttribute();
+              if(attr!=null){
+                ent = attr.getEntity();
+                attr.remove();
+                if(ent!=null){
+                  ent.setDirty(true);
+                }
+              }
              col.remove();
              table.setDirty(true);
             }
@@ -120,11 +120,11 @@ if(template!=null){
      }
     }
 }]]>
-		</script>
-	</scr>
-	<scr id="E60A5A28-BB9B-3787-10E7-259DF900B9E6" name="Table abbreviation to column" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="tableAbbreviationToColumn" purpose="transformation" >
-		<script>
-			<![CDATA[// -----------------------------------------------------------------------------
+    </script>
+  </scr>
+  <scr id="E60A5A28-BB9B-3787-10E7-259DF900B9E6" name="Table abbreviation to column" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="tableAbbreviationToColumn" purpose="transformation" >
+    <script>
+      <![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
@@ -828,7 +828,7 @@ function _applyStandardsTable(table, physicalTables) {
 
 // Custom Transformation Script:
 // Apply standards for selected relational items | relational
-function applyStandardsForSelectedItems_relational(model) {
+function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -869,7 +869,7 @@ function _applyStandardsRelation(rel) {
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
-function applyStandardsForSelectedItems_logical(model) {
+function applyStandardsForSelectedLogicalItems(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
@@ -883,11 +883,11 @@ function applyStandardsForSelectedItems_logical(model) {
     }
 }
 ]]>
-		</script>
-	</scr>
-	<scr id="9BE4E26C-36D8-A92C-ADEA-F183327DC239" name="Remove Table abbr from column" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="removeTableAbbrFromColumn" purpose="transformation" >
-		<script>
-			<![CDATA[// -----------------------------------------------------------------------------
+    </script>
+  </scr>
+  <scr id="9BE4E26C-36D8-A92C-ADEA-F183327DC239" name="Remove Table abbr from column" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="removeTableAbbrFromColumn" purpose="transformation" >
+    <script>
+      <![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
@@ -1591,7 +1591,7 @@ function _applyStandardsTable(table, physicalTables) {
 
 // Custom Transformation Script:
 // Apply standards for selected relational items | relational
-function applyStandardsForSelectedItems_relational(model) {
+function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -1632,7 +1632,7 @@ function _applyStandardsRelation(rel) {
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
-function applyStandardsForSelectedItems_logical(model) {
+function applyStandardsForSelectedLogicalItems(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
@@ -1646,11 +1646,11 @@ function applyStandardsForSelectedItems_logical(model) {
     }
 }
 ]]>
-		</script>
-	</scr>
-	<scr id="2DC09025-B7F9-7F92-70FC-D663D57AF092" name="Apply standards for selected relational items" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="applyStandardsForSelectedItems_relational" purpose="transformation" >
-		<script>
-			<![CDATA[// -----------------------------------------------------------------------------
+    </script>
+  </scr>
+  <scr id="2DC09025-B7F9-7F92-70FC-D663D57AF092" name="Apply standards for selected relational items" object="relational" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="applyStandardsForSelectedRelationalItems" purpose="transformation" >
+    <script>
+      <![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
@@ -2354,7 +2354,7 @@ function _applyStandardsTable(table, physicalTables) {
 
 // Custom Transformation Script:
 // Apply standards for selected relational items | relational
-function applyStandardsForSelectedItems_relational(model) {
+function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -2395,7 +2395,7 @@ function _applyStandardsRelation(rel) {
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
-function applyStandardsForSelectedItems_logical(model) {
+function applyStandardsForSelectedLogicalItems(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
@@ -2409,11 +2409,11 @@ function applyStandardsForSelectedItems_logical(model) {
     }
 }
 ]]>
-		</script>
-	</scr>
-	<scr id="03AED6CE-F6F2-BA86-90B4-1FE2BB2C8ACC" name="Apply standards for selected logical items" object="logical" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="applyStandardsForSelectedItems_logical" purpose="transformation" >
-		<script>
-			<![CDATA[// -----------------------------------------------------------------------------
+    </script>
+  </scr>
+  <scr id="03AED6CE-F6F2-BA86-90B4-1FE2BB2C8ACC" name="Apply standards for selected logical items" object="logical" engine="Oracle Nashorn" var="model" library="CustomLibrary" method="applyStandardsForSelectedLogicalItems" purpose="transformation" >
+    <script>
+      <![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
@@ -3117,7 +3117,7 @@ function _applyStandardsTable(table, physicalTables) {
 
 // Custom Transformation Script:
 // Apply standards for selected relational items | relational
-function applyStandardsForSelectedItems_relational(model) {
+function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -3158,7 +3158,7 @@ function _applyStandardsRelation(rel) {
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
-function applyStandardsForSelectedItems_logical(model) {
+function applyStandardsForSelectedLogicalItems(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
@@ -3172,6 +3172,6 @@ function applyStandardsForSelectedItems_logical(model) {
     }
 }
 ]]>
-		</script>
-	</scr>
+    </script>
+  </scr>
 </custom_transformation_scripts>

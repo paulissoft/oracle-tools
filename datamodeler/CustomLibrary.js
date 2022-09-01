@@ -702,7 +702,7 @@ function _applyStandardsTable(table, physicalTables) {
 
 // Custom Transformation Script:
 // Apply standards for selected relational items | relational
-function applyStandardsForSelectedItems_relational(model) {
+function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -743,7 +743,7 @@ function _applyStandardsRelation(rel) {
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
-function applyStandardsForSelectedItems_logical(model) {
+function applyStandardsForSelectedLogicalItems(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);

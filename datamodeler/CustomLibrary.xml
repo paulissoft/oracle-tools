@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- File contains Custom Libraries Scripts -->
 <custom_libraries>
-	<lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
-		<script>
-			<![CDATA[// variable used to return custom message
+  <lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
+    <script>
+      <![CDATA[// variable used to return custom message
 var ruleMessage;
 // variable used to return the type of the rule Error
 // or Warning and red/blue color will be used for result
@@ -37,18 +37,18 @@ function NotNullConstr_Name_Length(column){
  name = column.getNotNullConstraintName();
  result = true;
  if(name!=null && !"".equals(name)){
-	holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
-	if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
-		result = false;
-	}
+  holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
+  if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
+    result = false;
+  }
  }
  return result
 }]]>
-		</script>
-	</lib>
-	<lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedItems_logical,applyStandardsForSelectedItems_relational" >
-		<script>
-			<![CDATA[// -----------------------------------------------------------------------------
+    </script>
+  </lib>
+  <lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedLogicalItems,applyStandardsForSelectedRelationalItems" >
+    <script>
+      <![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
@@ -752,7 +752,7 @@ function _applyStandardsTable(table, physicalTables) {
 
 // Custom Transformation Script:
 // Apply standards for selected relational items | relational
-function applyStandardsForSelectedItems_relational(model) {
+function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -793,7 +793,7 @@ function _applyStandardsRelation(rel) {
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
-function applyStandardsForSelectedItems_logical(model) {
+function applyStandardsForSelectedLogicalItems(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
@@ -807,6 +807,6 @@ function applyStandardsForSelectedItems_logical(model) {
     }
 }
 ]]>
-		</script>
-	</lib>
+    </script>
+  </lib>
 </custom_libraries>
