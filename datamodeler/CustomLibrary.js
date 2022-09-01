@@ -13,8 +13,9 @@
 //           for the name. Set library and method in ODM as well.
 //           Menu: Tools | Design Rules And transformations | Transformations
 //         - Export these methods to file CustomTransformationScripts.xml.
-// note  : The function applyStandardsForSelectedTables is the most important
-//         function and can be used to apply standards fo selected tables.
+// note  : The functions applyStandardsForSelectedItems_(logical|relatonal) are
+//         the most important functiond and can be used to apply standards of
+//         selected logical or relational items.
 //         If the dynamic property canApplyStandards is set to 0,
 //         no standards will be applied.
 //         The property canApplyStandards will be set to 1 if missing.
@@ -186,7 +187,9 @@ function _setRelationName(object,
                 "" :
                 sourceName + "_" + targetName);
 
-    _showObject(object);
+    if (!_canProcess(where, object)) {
+        return;
+    }
 
     if (!name.equals("") && !object.getName().equals(name)) {
         object.setName(name);
@@ -698,8 +701,8 @@ function _applyStandardsTable(table, physicalTables) {
 }
 
 // Custom Transformation Script:
-// Apply standards for selected tables | relational
-function applyStandardsForSelectedTables(model) {
+// Apply standards for selected relational items | relational
+function applyStandardsForSelectedItems_relational(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
@@ -724,19 +727,29 @@ function _applyStandardsEntity(entity) {
     }
 }
 
+function _applyStandardsRelation(rel) {
+    var where = "applyStandards";
+
+    _showObject(rel);
+
+    if (_canProcess(where, rel)) {
+        _setRelationName(rel,
+                         rel.getSourceEntity().getShortName(),
+                         rel.getSourceEntity().getPreferredAbbreviation(),
+                         rel.getTargetEntity().getShortName(),
+                         rel.getTargetEntity().getPreferredAbbreviation());
+    }
+}
+
 // Custom Transformation Script:
-// Apply standards for selected entities | logical
-function applyStandardsForSelectedEntities(model) {
+// Apply standards for selected logical items | logical
+function applyStandardsForSelectedItems_logical(model) {
     try {
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
         });
         _getSelectedObjects(model, "Relation").forEach(function (rel) {
-            _setRelationName(rel,
-                             rel.getSourceEntity().getShortName(),
-                             rel.getSourceEntity().getPreferredAbbreviation(),
-                             rel.getTargetEntity().getShortName(),
-                             rel.getTargetEntity().getPreferredAbbreviation());
+            _applyStandardsRelation(rel);
         });
     } catch (e) {
         _msg(e.stack);
