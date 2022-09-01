@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash -eux
 
 # Setup Jenkins via Docker on Linux/Mac, see https://www.jenkins.io/doc/book/installing/docker/#setup-wizard
 
@@ -11,18 +11,29 @@ jenkins_network=jenkins
 dind_image='docker:dind'
 dind_name=jenkins-docker
 jenkins_image=myjenkins-blueocean
-jenkins_name=jenkins-blueocean
+jenkins_name=jenkins-controller
 ssh_agent_image=jenkins/ssh-agent:latest
 ssh_agent_name1=agent1
 ssh_agent_name2=agent2
 
+test -d ~/.ssh || mkdir -m 700 ~/.ssh
+test -f ~/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f ~/.ssh/jenkins_agent_key
+
 export SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 export SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
 export JENKINS_PLUGINS="blueocean:latest docker-workflow:latest"
+export JENKINS_AGENT_SSH_PUBKEY=$(cat ~/.ssh/jenkins_agent_key.pub)
 
 # version: latest or lts (long term support)
 JENKINS_IMAGE_VERSION=latest
 export JENKINS_IMAGE=jenkins/jenkins:${JENKINS_IMAGE_VERSION}-jdk11
+
+docker network ls | grep " $jenkins_network " || docker network create $jenkins_network
+! docker compose ls jenkins | grep running || docker-compose down
+docker-compose build --build-arg SQLCL_ZIP --build-arg SQLCL_URL --build-arg JENKINS_PLUGINS --build-arg JENKINS_IMAGE
+docker-compose up -d
+
+exit $?
 
 for nr
 do
