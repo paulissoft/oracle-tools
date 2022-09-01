@@ -34,7 +34,7 @@ process_git()
         git add --all .
         git commit -m"${description}. Triggered Build: $BUILD_NUMBER"
     fi
-    if [ "`git diff --stat --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
+    if [ "`git diff --stat=1000 --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
     then
         git push --set-upstream origin ${SCM_BRANCH}
     fi
@@ -105,20 +105,21 @@ echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration 
 set -- ${APEX_ACTIONS}
 for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -D$DB_USERNAME_PROPERTY=$DB_USERNAME -Ddb.password=$DB_PASSWORD -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
 
-# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat to verify it is just that file and that line
+# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat=1000 to verify it is just that file and that line
 # 
-# % git diff --stat
+# % git diff --stat=1000
 #  apex/app/src/export/application/create_application.sql | 2 +-
 #  1 file changed, 1 insertion(+), 1 deletion(-)
 
 # Check if only create_application.sql files have changed their p_flow_version.
-result="`git diff --stat -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+# Be aware of a default output width of 80, so use --stat=1000
+result="`git diff --stat=1000 -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
 if [ "$result" = "YES" ]
 then
     # 1) Retrieve all create_application.sql files that have changed only in two places (one insertion, one deletion) 
     # 2) Restore them since the change is due to the version date change
     # 3) This prohibits a git commit when the APEX export has not changed really
-    for create_application in "`git diff --stat -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
+    for create_application in "`git diff --stat=1000 -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
     do    
         git checkout -- $create_application
     done

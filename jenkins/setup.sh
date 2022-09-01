@@ -13,14 +13,9 @@ jenkins_network=jenkins
 test -d ~/.ssh || mkdir -m 700 ~/.ssh
 test -f ~/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f ~/.ssh/jenkins_agent_key
 
-export JENKINS_PLUGINS="blueocean:latest docker-workflow:latest"
 export JENKINS_AGENT_SSH_PUBKEY=$(cat ~/.ssh/jenkins_agent_key.pub)
-
-# version: latest or lts (long term support)
-JENKINS_IMAGE_VERSION=latest
-export JENKINS_IMAGE=jenkins/jenkins:${JENKINS_IMAGE_VERSION}-jdk11
 
 docker network ls | grep " $jenkins_network " || docker network create $jenkins_network
 ! docker compose ls jenkins | grep running || docker-compose down
-docker-compose build --build-arg JENKINS_PLUGINS --build-arg JENKINS_IMAGE
+docker-compose build
 docker-compose up -d

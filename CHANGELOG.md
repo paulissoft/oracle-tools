@@ -17,6 +17,7 @@ Types of changes:
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [Add SQL Datamodeler custom library and transformations scripts.](https://github.com/paulissoft/oracle-tools/issues/46)
+- [Something goes in Jenkins wrong when an APEX export has only changes in the create_application.sql scripts.](https://github.com/paulissoft/oracle-tools/issues/49)
 
 ## [1.5.0] - 2022-08-22
 

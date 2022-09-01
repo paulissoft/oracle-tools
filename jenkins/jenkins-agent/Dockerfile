@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
 
 # Install SQLcl
 
-# must redeclare an ARG after FROM (https://benkyriakou.com/posts/docker-args-empty)
+# must redeclare an ARG after FROM (see also https://benkyriakou.com/posts/docker-args-empty)
 ARG SQLCL_ZIP
 ARG SQLCL_URL
 RUN curl -o /tmp/$SQLCL_ZIP $SQLCL_URL
