@@ -8,12 +8,12 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>127029477646494312
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_page(
  p_id=>0
-,p_user_interface_id=>wwv_flow_api.id(69958955060748039)
+,p_user_interface_id=>wwv_flow_api.id(44970137555156236)
 ,p_name=>'Global Page - Desktop'
 ,p_step_title=>'Global Page - Desktop'
 ,p_autocomplete_on_off=>'OFF'
@@ -23,11 +23,11 @@ wwv_flow_api.create_page(
 ,p_last_upd_yyyymmddhh24miss=>'20200424074239'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(67994168400699691)
+ p_id=>wwv_flow_api.id(46934924215204584)
 ,p_plug_name=>'Help'
 ,p_region_template_options=>'#DEFAULT#:is-collapsed:t-Region--scrollBody'
 ,p_component_template_options=>'#DEFAULT#'
-,p_plug_template=>wwv_flow_api.id(70040665567748113)
+,p_plug_template=>wwv_flow_api.id(44888427048156162)
 ,p_plug_display_sequence=>0
 ,p_include_in_reg_disp_sel_yn=>'Y'
 ,p_plug_display_point=>'BODY'

@@ -8,17 +8,17 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>127029477646494312
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(69953281978747970)
+ p_id=>wwv_flow_api.id(44975810637156305)
 ,p_lov_name=>'LOGIN_REMEMBER_USERNAME'
-,p_lov_query=>'.'||wwv_flow_api.id(69953281978747970)||'.'
+,p_lov_query=>'.'||wwv_flow_api.id(44975810637156305)||'.'
 ,p_location=>'STATIC'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(69952877566747969)
+ p_id=>wwv_flow_api.id(44976215049156306)
 ,p_lov_disp_sequence=>10
 ,p_lov_disp_value=>'Remember username'
 ,p_lov_return_value=>'Y'

@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>127029477646494312
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_install(
- p_id=>wwv_flow_api.id(67962434839472566)
+ p_id=>wwv_flow_api.id(46966657776431709)
 ,p_welcome_message=>'This application installer will guide you through the process of creating your database objects and seed data.'
 ,p_configuration_message=>'You can configure the following attributes of your application.'
 ,p_build_options_message=>'You can choose to include the following build options.'

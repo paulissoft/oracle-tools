@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>127029477646494312
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_flow_item(
- p_id=>wwv_flow_api.id(58003965532678707)
+ p_id=>wwv_flow_api.id(56925127083225568)
 ,p_name=>'FSP_LANGUAGE_PREFERENCE'
 ,p_scope=>'GLOBAL'
 ,p_protection_level=>'S'
