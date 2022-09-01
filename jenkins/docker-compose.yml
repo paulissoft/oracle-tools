@@ -7,7 +7,13 @@ volumes:
   jenkins-data:
     name: jenkins-data
     external: true
-
+  maven-cache:
+    name: maven-cache
+  oracle-tns-admin:
+    name: oracle-tns-admin
+  oracle-wallet:
+    name: oracle-wallet
+  
 networks:
   jenkins:
     name: jenkins
@@ -31,31 +37,36 @@ services:
   jenkins-controller:
     container_name: jenkins_controller
     build: jenkins-controller
+    ports:
+      - 50000:50000
+      - 8080:8080
     networks:
       - jenkins
     environment:
       - DOCKER_HOST=tcp://docker:2376
       - DOCKER_CERT_PATH=/certs/client
       - DOCKER_TLS_VERIFY=1
-    ports:
-      - 8080:8080
-      - 50000:50000
     volumes:
       - jenkins-data:/var/jenkins_home
-      - jenkins-docker-certs:/certs/client:ro
     links:
       - jenkins-docker
   jenkins-agent:
     container_name: jenkins_agent
     build: jenkins-agent
-    networks:
-      - jenkins
     ports:
       - 22:22
+    networks:
+      - jenkins
     environment:
       - JENKINS_AGENT_SSH_PUBKEY=$JENKINS_AGENT_SSH_PUBKEY
       - DOCKER_HOST=tcp://docker:2376
       - DOCKER_CERT_PATH=/certs/client
       - DOCKER_TLS_VERIFY=1
+      - TNS_ADMIN=/opt/oracle/network/admin
+    volumes:
+      - maven-cache:/var/jenkins_home/.m2
+      - oracle-tns-admin:/opt/oracle/network/admin
+      - oracle-wallet:/opt/oracle/wallet
+      - jenkins-docker-certs:/certs/client:ro
     links:
       - jenkins-docker
