@@ -1,5 +1,26 @@
 #!/bin/sh -xeu
 
+# The following variables need to be set:
+# - SCM_BRANCH      
+# - SCM_CREDENTIALS 
+# - SCM_URL         
+# - SCM_USERNAME    
+# - SCM_EMAIL       
+# - CONF_DIR
+# - DB
+# - DB_USERNAME
+# - DB_PASSWORD
+# - DB_DIR
+# - DB_ACTIONS
+# - DB_USERNAME_PROPERTY
+# - APEX_DIR
+# - APEX_ACTIONS
+# 
+# The following variables may be set:
+# - SCM_BRANCH_PREV
+#
+# See also libraries/maven/steps/process.groovy.
+        
 process_git()
 {
     description=$1
