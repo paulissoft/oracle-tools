@@ -10,21 +10,6 @@ pipeline {
                 process dev
             }
         }
-        stage("test") {
-            steps {
-                process test
-            }
-        }
-        stage("acc") {
-            steps {
-                process acc
-            }
-        }
-        stage("prod") {
-            steps {
-                process prod
-            }
-        }
     }
     post {
         // Clean after build
