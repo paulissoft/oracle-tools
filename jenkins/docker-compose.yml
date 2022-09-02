@@ -3,10 +3,8 @@ version: '3'
 volumes:
   jenkins-docker-certs:
     name: jenkins-docker-certs
-    external: true
   jenkins-data:
     name: jenkins-data
-    external: true
   maven-cache:
     name: maven-cache
   oracle-tns-admin:
@@ -48,7 +46,7 @@ services:
       - DOCKER_TLS_VERIFY=1
     volumes:
       - jenkins-data:/var/jenkins_home
-    links:
+    depends_on:
       - jenkins-docker
   jenkins-agent:
     container_name: jenkins_agent
@@ -68,5 +66,5 @@ services:
       - oracle-tns-admin:/opt/oracle/network/admin
       - oracle-wallet:/opt/oracle/wallet
       - jenkins-docker-certs:/certs/client:ro
-    links:
+    depends_on:
       - jenkins-docker
