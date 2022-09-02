@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>139229780191799327
+,p_default_id_offset=>151530112565241691
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_row_template(
- p_id=>wwv_flow_api.id(82114664066338130)
+ p_id=>wwv_flow_api.id(57115116125461197)
 ,p_row_template_name=>'Badge List'
 ,p_internal_name=>'BADGE_LIST'
 ,p_row_template1=>wwv_flow_string.join(wwv_flow_t_varchar2(
