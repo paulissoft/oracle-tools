@@ -11,5 +11,5 @@ COPY jenkins.yaml /var/jenkins_home/jenkins.yaml
 RUN jenkins-plugin-cli --plugin-file  /usr/share/jenkins/ref/plugins.txt
 
 # No banner to install additional plugins
-RUN echo 2.0 > /usr/share/jenkins/ref/jenkins.install.UpgradeWizard.state
+# RUN echo 2.0 > /usr/share/jenkins/ref/jenkins.install.UpgradeWizard.state
 
