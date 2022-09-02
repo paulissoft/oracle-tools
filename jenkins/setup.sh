@@ -19,3 +19,5 @@ docker network ls | grep " $jenkins_network " || docker network create $jenkins_
 ! docker compose ls jenkins | grep running || docker-compose down
 docker-compose build
 docker-compose up -d
+# Add jenkins-agent to known hosts
+docker exec jenkins_controller sh -c 'cd; test -d .ssh || mkdir .ssh; touch .ssh/known_hosts; ssh-keygen -R jenkins-agent; ssh-keyscan jenkins-agent >> .ssh/known_hosts'

@@ -39,4 +39,24 @@ application_environments{
 
         apex_actions = 'apex-import'
     }
+    acc{
+        // Oracle tools info
+        scm_branch = 'acc'
+
+        db = 'docker'
+        db_credentials = 'oracle-tools-development'
+        db_actions = 'db-info db-install db-generate-ddl-full'
+
+        apex_actions = 'apex-import'
+    }
+    prod{
+        // Oracle tools info
+        scm_branch = 'prod'
+
+        db = 'docker'
+        db_credentials = 'oracle-tools-development'
+        db_actions = 'db-info db-install db-generate-ddl-full'
+
+        apex_actions = 'apex-import'
+    }
 }
