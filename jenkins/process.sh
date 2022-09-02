@@ -23,9 +23,7 @@
 check_username()
 {
     dir=$1
-
-    return 0
-
+    
     username=$(mvn -f ${dir} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -N help:all-profiles -Pconf-inquiry compile || grep -E '\[echoproperties\] db(.proxy)?.username=' | cut -d '=' -f 2)
     if [ "$DB_USERNAME" != "$username" ]
     then
@@ -110,7 +108,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
-test -z "$DB_ACTIONS" || check_username "$DB_DIR"
+# test -z "$DB_ACTIONS" || check_username "$DB_DIR"
 set -- ${DB_ACTIONS}
 for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
 process_git "Database changes"
@@ -129,7 +127,7 @@ then
 fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
-test -z "$APEX_ACTIONS" || check_username "$APEX_DIR"
+# test -z "$APEX_ACTIONS" || check_username "$APEX_DIR"
 set -- ${APEX_ACTIONS}
 for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
 
