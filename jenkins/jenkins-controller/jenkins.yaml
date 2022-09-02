@@ -6,6 +6,7 @@ credentials:
           description: "Access to Jenkins agent"
           id: "jenkins-agent"
           privateKeySource:
+            directEntry:
           scope: SYSTEM
           username: "jenkins"
 jenkins:
@@ -93,6 +94,7 @@ unclassified:
       $PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:
 
       Check console output at $BUILD_URL to view the results.
+    defaultContentType: "text/plain"
     defaultSubject: "$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS!"
     defaultTriggerIds:
     - "hudson.plugins.emailext.plugins.trigger.FailureTrigger"
@@ -130,6 +132,20 @@ unclassified:
     useTls: false
   pollSCM:
     pollingThreadCount: 10
+  templateGlobalConfig:
+    tier:
+      configurationProvider: "null"
+      librarySources:
+      - libraryProvider:
+          scm:
+            baseDir: "jenkins/libraries"
+            scm:
+              git:
+                branches:
+                - name: "*/master"
+                buildChooser: "default"
+                userRemoteConfigs:
+                - url: "http://github.com/paulissoft/oracle-tools.git"
   timestamper:
     allPipelines: false
     elapsedTimeFormat: "'<b>'HH:mm:ss.S'</b> '"
