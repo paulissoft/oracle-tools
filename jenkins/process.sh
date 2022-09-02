@@ -79,10 +79,16 @@ test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
 test -n "$MVN_ARGS" || export MVN_ARGS=""
 
 # ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
-if [ -n "$MVN_LOG_DIR" -a -d "$MVN_LOG_DIR" ]
+if [ -n "$MVN_LOG_DIR" ]
 then
-    # let MVN_LOG_DIR point to an absolute file path
-    MVN_LOG_DIR=`cd ${MVN_LOG_DIR} && pwd`
+    if [ -d "$MVN_LOG_DIR" ]
+    then
+        # let MVN_LOG_DIR point to an absolute file path
+        MVN_LOG_DIR=`cd ${MVN_LOG_DIR} && pwd`
+    else
+        echo "Maven log directory '$MVN_LOG_DIR' is not a directory." 1>&2
+        exit 1
+    fi
 else
     # let MVN_LOG_DIR point to a non existing directory so mvn will not create the log file
     MVN_LOG_DIR=/directory-does-not-exist
