@@ -8,23 +8,23 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>139229780191799327
+,p_default_id_offset=>151530112565241691
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(76125634890324212)
+ p_id=>wwv_flow_api.id(63104145301475115)
 ,p_lov_name=>'LOV_BOOLEAN'
-,p_lov_query=>'.'||wwv_flow_api.id(76125634890324212)||'.'
+,p_lov_query=>'.'||wwv_flow_api.id(63104145301475115)||'.'
 ,p_location=>'STATIC'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(76125401546324192)
+ p_id=>wwv_flow_api.id(63104378645475135)
 ,p_lov_disp_sequence=>1
 ,p_lov_disp_value=>'No'
 ,p_lov_return_value=>'0'
 );
 wwv_flow_api.create_static_lov_data(
- p_id=>wwv_flow_api.id(76124986770324191)
+ p_id=>wwv_flow_api.id(63104793421475136)
 ,p_lov_disp_sequence=>2
 ,p_lov_disp_value=>'Yes'
 ,p_lov_return_value=>'1'

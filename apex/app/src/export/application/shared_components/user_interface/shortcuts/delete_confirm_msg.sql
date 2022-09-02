@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>139229780191799327
+,p_default_id_offset=>151530112565241691
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_shortcut(
- p_id=>wwv_flow_api.id(82055886380338035)
+ p_id=>wwv_flow_api.id(57173893811461292)
 ,p_shortcut_name=>'DELETE_CONFIRM_MSG'
 ,p_shortcut_type=>'TEXT_ESCAPE_JS'
 ,p_shortcut=>'Would you like to perform this delete action?'
