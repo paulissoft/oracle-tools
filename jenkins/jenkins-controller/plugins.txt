@@ -3,7 +3,6 @@ ant
 antisamy-markup-formatter
 apache-httpcomponents-client-4-api
 authentication-tokens
-blueocean
 blueocean-autofavorite
 blueocean-bitbucket-pipeline
 blueocean-commons
@@ -20,9 +19,10 @@ blueocean-personalization
 blueocean-pipeline-api-impl
 blueocean-pipeline-editor
 blueocean-pipeline-scm-api
-blueocean-rest
 blueocean-rest-impl
+blueocean-rest
 blueocean-web
+blueocean
 bootstrap5-api
 bouncycastle-api
 branch-api
@@ -33,8 +33,9 @@ cloudbees-bitbucket-branch-source
 cloudbees-folder
 command-launcher
 config-file-provider
-credentials
+configuration-as-code
 credentials-binding
+credentials
 display-url-api
 docker-commons
 docker-workflow
@@ -43,11 +44,11 @@ echarts-api
 email-ext
 favorite
 font-awesome-api
-git
 git-client
-github
+git
 github-api
 github-branch-source
+github
 gradle
 h2-api
 handlebars
