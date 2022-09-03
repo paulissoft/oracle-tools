@@ -95,6 +95,7 @@ plain-credentials
 plugin-util-api
 popper2-api
 pubsub-light
+purge-job-history
 rebuild
 resource-disposer
 scm-api
