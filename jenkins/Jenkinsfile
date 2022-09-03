@@ -1,28 +1,18 @@
 // -*- mode: groovy; coding: utf-8 -*-
 pipeline {
-		agent any
+    agent any
     options {
         skipDefaultCheckout()
     }
     stages {
-        stage("dev") {
+        stage("pipeline") {
             steps {
-                process dev
-            }
-        }
-        stage("test") {
-            steps {
-                process test
-            }
-        }
-        stage("acc") {
-            steps {
-                process acc
-            }
-        }
-        stage("prod") {
-            steps {
-                process prod
+                script {
+                    pipelineConfig.application_environments.each{ env ->
+                        println "environment: ${env}"
+                        process env.getValue()
+                    }
+                }
             }
         }
     }

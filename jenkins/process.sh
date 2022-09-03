@@ -20,6 +20,13 @@
 #
 # See also libraries/maven/steps/process.groovy.
 
+# Functions
+
+invoke_mvn()
+{
+    mvn -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} -l $MVN_LOG_DIR/mvn-${2}.log ${MVN_ARGS}
+}
+
 process_git()
 {
     description=$1
@@ -97,7 +104,7 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}
-for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
+for profile; do invoke_mvn ${DB_DIR} $profile; done
 process_git "Database changes"
 
 # Both db-install and db-generate-ddl-full part of DB_ACTIONS?
@@ -108,14 +115,14 @@ then
     DB_ACTIONS="db-install db-generate-ddl-full"
     echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
     set -- ${DB_ACTIONS}
-    for profile; do mvn -f ${DB_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -P$profile -l mvn-${profile}.log ${MVN_ARGS}; rm mvn-${profile}.log; done
+    for profile; do invoke_mvn ${DB_DIR} $profile; done
     echo "there should be no files to add for Git:"
     test -z "`git status --porcelain`"
 fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
-for profile; do mvn -f ${APEX_DIR} -Doracle-tools.dir=$oracle_tools_dir -Ddb.config.dir=$db_config_dir -Ddb=${DB} -P$profile -l $MVN_LOG_DIR/mvn-${profile}.log ${MVN_ARGS}; done
+for profile; do invoke_mvn ${APEX_DIR} $profile; done
 
 # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat=1000 to verify it is just that file and that line
 # 
