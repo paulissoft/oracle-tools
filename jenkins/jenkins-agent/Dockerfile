@@ -20,10 +20,11 @@ RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
 # must redeclare an ARG after FROM (see also https://benkyriakou.com/posts/docker-args-empty)
 ARG SQLCL_ZIP
 ARG SQLCL_URL
-RUN curl -o /tmp/$SQLCL_ZIP $SQLCL_URL
 RUN mkdir -p /opt/oracle && \
-    cd       /opt/oracle && \
-    unzip    /tmp/$SQLCL_ZIP && \
+    cd /opt/oracle && \
+    curl -o $SQLCL_ZIP $SQLCL_URL && \
+    ls -l $SQLCL_ZIP && \
+    unzip $SQLCL_ZIP && \
     cd -
 ENV SQL_HOME /opt/oracle/sqlcl
 
