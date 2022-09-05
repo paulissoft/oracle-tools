@@ -429,6 +429,49 @@ static procedure create_schema_object
 is
   l_base_object_schema all_objects.owner%type := p_base_object_schema;
   l_base_object_name all_objects.object_name%type := p_base_object_name;
+  
+  function create_base_object
+  ( p_base_object_schema in varchar2
+  , p_base_object_type in varchar2
+  , p_base_object_name in varchar2
+  )
+  return oracle_tools.t_named_object
+  is
+    l_base_object oracle_tools.t_named_object;
+  begin
+    l_base_object :=
+      oracle_tools.t_named_object.create_named_object
+      ( p_object_schema => p_base_object_schema
+      , p_object_type => p_base_object_type
+      , p_object_name => p_base_object_name
+      );
+    return l_base_object;
+  exception
+    when no_data_found
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_object_not_correct
+      , utl_lms.format_message
+        ( 'error creating base object "%s.%s" of type "%s" for object with id "%s"'
+        , p_base_object_schema
+        , p_base_object_name
+        , p_base_object_type
+        , oracle_tools.t_schema_object.id
+          ( p_object_schema 
+          , p_object_type
+          , p_object_name
+          , p_base_object_schema
+          , p_base_object_type
+          , p_base_object_name
+          , p_column_name
+          , p_grantee
+          , p_privilege
+          , p_grantable
+          )
+        )
+      , true -- reraise
+      );
+  end create_base_object;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_OBJECT (1)');
@@ -483,10 +526,10 @@ $end
       p_schema_object :=
         oracle_tools.t_index_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => l_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => l_base_object_name
+            create_base_object
+            ( p_base_object_schema => l_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => l_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -513,10 +556,10 @@ $end
       p_schema_object :=
         oracle_tools.t_trigger_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => l_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => l_base_object_name
+            create_base_object
+            ( p_base_object_schema => l_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => l_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -527,10 +570,10 @@ $end
       p_schema_object :=
         oracle_tools.t_object_grant_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_grantee => p_grantee
@@ -543,10 +586,10 @@ $end
       p_schema_object :=
         oracle_tools.t_constraint_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -557,10 +600,10 @@ $end
       p_schema_object :=
         oracle_tools.t_ref_constraint_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -586,10 +629,10 @@ $end
       p_schema_object :=
         oracle_tools.t_synonym_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => l_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => l_base_object_name
+            create_base_object
+            ( p_base_object_schema => l_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => l_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_object_name => p_object_name
@@ -600,10 +643,10 @@ $end
       p_schema_object :=
         oracle_tools.t_comment_object
         ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => p_base_object_schema
-            , p_object_type => p_base_object_type
-            , p_object_name => p_base_object_name
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
             )
         , p_object_schema => p_object_schema
         , p_column_name => p_column_name

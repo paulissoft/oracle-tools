@@ -85,8 +85,11 @@ $end -- $if oracle_tools.cfg_pkg.c_testing $then
   /* EXCEPTIONS */
 
   -- ORA-31603: object ... of type MATERIALIZED_VIEW not found in schema ...
-  e_object_not_found exception;
-  pragma exception_init(e_object_not_found, -31603);
+  -- GJP 2022-09-05 Not used here anymore
+  /*
+  -- e_object_not_found exception;
+  -- pragma exception_init(e_object_not_found, -31603);
+  */
 
   -- ORA-31623: a job is not attached to this session via the specified handle
   e_job_is_not_attached exception;

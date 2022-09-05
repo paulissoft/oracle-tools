@@ -20,6 +20,7 @@ Types of changes:
 - [Add SQL Datamodeler custom library and transformations scripts.](https://github.com/paulissoft/oracle-tools/issues/46)
 - [Something goes in Jenkins wrong when an APEX export has only changes in the create_application.sql scripts.](https://github.com/paulissoft/oracle-tools/issues/49)
 - [The Jenkins handling of (proxy) username should be more user friendly.](https://github.com/paulissoft/oracle-tools/issues/50)
+- [When a synonym points to an object that is not accessible, an error (no data found) is returned.](https://github.com/paulissoft/oracle-tools/issues/51)
 
 ## [1.5.0] - 2022-08-22
 

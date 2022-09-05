@@ -1,11 +1,10 @@
 #!/bin/bash -eux
 
-# Setup Jenkins via Docker on Linux/Mac, see https://www.jenkins.io/doc/book/installing/docker/#setup-wizard
+# Setup Jenkins via Docker on Linux/Mac,
+# see https://www.jenkins.io/doc/book/installing/docker/#setup-wizard
 
-# Setup SSH between Jenkins and Github, see https://levelup.gitconnected.com/setup-ssh-between-jenkins-and-github-e4d7d226b271
-
-# TBD: setting up SSH agent later
-test $# -gt 0 || set -- 1 2 3 4 5 6
+# Setup SSH between Jenkins and Github,
+# see https://levelup.gitconnected.com/setup-ssh-between-jenkins-and-github-e4d7d226b271
 
 jenkins_network=jenkins
 
