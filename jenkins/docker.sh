@@ -4,6 +4,7 @@
 # - https://davelms.medium.com/run-jenkins-in-a-docker-container-part-1-docker-in-docker-7ca75262619d
 # - https://stackoverflow.com/questions/51119922/how-to-connect-to-docker-via-tcp-on-macos
 # - https://davelms.medium.com/run-jenkins-in-a-docker-container-part-2-socat-d5f18820fe1d
+# - https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/
 
 # docker network create jenkins || true
 # 
