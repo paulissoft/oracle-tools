@@ -1,5 +1,9 @@
 ARG JENKINS_IMAGE=jenkins/jenkins:latest
 FROM $JENKINS_IMAGE
+
+USER root
+RUN apt-get update && apt-get install -y iputils-ping
+
 USER jenkins
 
 # see also https://github.com/jenkinsci/docker

@@ -15,7 +15,7 @@ test -f ~/.ssh/jenkins_agent_key || ssh-keygen -t rsa -f ~/.ssh/jenkins_agent_ke
 export JENKINS_AGENT_SSH_PUBKEY=$(cat ~/.ssh/jenkins_agent_key.pub)
 
 docker network ls | grep " $jenkins_network " || docker network create $jenkins_network
-! docker compose ls jenkins | grep running || docker-compose down
+! docker compose ls jenkins | grep running || docker-compose down --remove-orphans
 docker-compose build
 docker-compose up -d
 # Add jenkins-agent to known hosts
