@@ -1,73 +1,128 @@
-version: '3'
+version: '3.8'
+
+networks:
+  jenkins-network:
+    name: jenkins
 
 volumes:
-  jenkins-docker-certs:
-    name: jenkins-docker-certs
   jenkins-data:
     name: jenkins-data
-  maven-cache:
-    name: maven-cache
-  oracle-tns-admin:
-    name: oracle-tns-admin
-  oracle-wallet:
-    name: oracle-wallet
-  
-networks:
-  jenkins:
-    name: jenkins
-    external: true
 
 services:
-  jenkins-docker:
-    container_name: jenkins_docker
-    image: docker:dind
-    privileged: true
-    ports:
-     - 2376:2376
+  socat:
+    container_name: jenkins-docker
+    image: alpine/socat
+    restart: unless-stopped
     networks:
-      jenkins:
+      jenkins-network:
         aliases:
           - docker
-    environment:
-      - DOCKER_TLS_CERTDIR=/certs
+    expose:
+      - "2375"
     volumes:
-      - jenkins-docker-certs:/certs/client
-      - jenkins-data:/var/jenkins_home
-    command: --storage-driver=overlay2
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
+#  jenkins:
+#    container_name: jenkins-blueocean
+#    image: jenkinsci/blueocean
+#    restart: unless-stopped
+#    networks:
+#      - jenkins-network
+#    ports:
+#      - 8080:8080
+#      - 50000:50000
+#    volumes:
+#      - data:/var/jenkins_home
+#    environment:
+#      - DOCKER_HOST=tcp://docker:2375
+#      - DOCKER_TLS_VERIFY=""
   jenkins-controller:
     container_name: jenkins_controller
     build: jenkins-controller
+    restart: unless-stopped
     ports:
       - 50000:50000
       - 8080:8080
     networks:
-      - jenkins
-    environment:
-      - DOCKER_HOST=tcp://docker:2376
-      - DOCKER_CERT_PATH=/certs/client
-      - DOCKER_TLS_VERIFY=1
+      - jenkins-network
     volumes:
-      - jenkins-docker-certs:/certs/client:ro
       - jenkins-data:/var/jenkins_home
-    depends_on:
-      - jenkins-docker
-  jenkins-agent:
-    container_name: jenkins_agent
-    build: jenkins-agent
-    ports:
-      - 22:22
-    networks:
-      - jenkins
     environment:
-      - JENKINS_AGENT_SSH_PUBKEY=$JENKINS_AGENT_SSH_PUBKEY
       - DOCKER_HOST=tcp://docker:2376
-      - DOCKER_CERT_PATH=/certs/client
-      - DOCKER_TLS_VERIFY=1
-      - TNS_ADMIN=/opt/oracle/network/admin
-    volumes:
-      - jenkins-docker-certs:/certs/client:ro
-      - maven-cache:/var/jenkins_home/.m2
-      - oracle-tns-admin:/opt/oracle/network/admin
-      - oracle-wallet:/opt/oracle/wallet
+      - DOCKER_TLS_VERIFY=""
     depends_on:
-      - jenkins-docker
+      - socat
+
+#version: '3'
+#
+#volumes:
+#  jenkins-docker-certs:
+#    name: jenkins-docker-certs
+#  jenkins-data:
+#    name: jenkins-data
+#  maven-cache:
+#    name: maven-cache
+#  oracle-tns-admin:
+#    name: oracle-tns-admin
+#  oracle-wallet:
+#    name: oracle-wallet
+#  
+#networks:
+#  jenkins:
+#    name: jenkins
+#    external: true
+#
+#services:
+#  jenkins-docker:
+#    container_name: jenkins_docker
+#    image: docker:dind
+#    privileged: true
+#    ports:
+#     - 2376:2376
+#    networks:
+#      jenkins:
+#        aliases:
+#          - docker
+#    environment:
+#      - DOCKER_TLS_CERTDIR=/certs
+#    volumes:
+#      - jenkins-docker-certs:/certs/client
+#      - jenkins-data:/var/jenkins_home
+#    command: --storage-driver=overlay2
+#  jenkins-controller:
+#    container_name: jenkins_controller
+#    build: jenkins-controller
+#    ports:
+#      - 50000:50000
+#      - 8080:8080
+#    networks:
+#      - jenkins
+#    environment:
+#      - DOCKER_HOST=tcp://docker:2376
+#      - DOCKER_CERT_PATH=/certs/client
+#      - DOCKER_TLS_VERIFY=1
+#    volumes:
+#      - jenkins-docker-certs:/certs/client:ro
+#      - jenkins-data:/var/jenkins_home
+#    depends_on:
+#      - jenkins-docker
+#  jenkins-agent:
+#    container_name: jenkins_agent
+#    build: jenkins-agent
+#    ports:
+#      - 22:22
+#    networks:
+#      - jenkins
+#    environment:
+#      - JENKINS_AGENT_SSH_PUBKEY=$JENKINS_AGENT_SSH_PUBKEY
+#      - DOCKER_HOST=tcp://docker:2376
+#      - DOCKER_CERT_PATH=/certs/client
+#      - DOCKER_TLS_VERIFY=1
+#      - TNS_ADMIN=/opt/oracle/network/admin
+#    volumes:
+#      - jenkins-docker-certs:/certs/client:ro
+#      - maven-cache:/var/jenkins_home/.m2
+#      - oracle-tns-admin:/opt/oracle/network/admin
+#      - oracle-wallet:/opt/oracle/wallet
+#    depends_on:
+#      - jenkins-docker
