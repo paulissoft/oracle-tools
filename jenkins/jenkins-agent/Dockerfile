@@ -78,6 +78,6 @@ USER jenkins
 RUN mkdir -m 755 ~/agent && mkdir -p -m 755 ~/.m2/repository && mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 # copy local repository with all downloaded plugins
-COPY --from=builder /root/.m2/repository /home/jenkins/.m2/repository
+COPY --from=builder --chown=jenkins:jenkins /root/.m2/repository /home/jenkins/.m2/repository
 # To prevent this error: /usr/local/bin/setup-sshd: line 54: /etc/environment: Permission denied
 USER root
