@@ -2,8 +2,6 @@
 
 # The following variables need to be set:
 # - SCM_BRANCH      
-# - SCM_CREDENTIALS 
-# - SCM_URL         
 # - SCM_USERNAME    
 # - SCM_EMAIL       
 # - CONF_DIR
@@ -14,9 +12,11 @@
 # - DB_ACTIONS
 # - APEX_DIR
 # - APEX_ACTIONS
+# - BUILD_NUMBER
 # 
 # The following variables may be set:
 # - SCM_BRANCH_PREV
+# - GIT
 #
 # See also libraries/maven/steps/process.groovy.
 
@@ -31,18 +31,18 @@ process_git()
 {
     description=$1
 
-    workspace_changes="`git status --porcelain`" 
+    workspace_changes="`${GIT} status --porcelain`" 
 
     echo "workspace changes: ${workspace_changes}"
     
     if [ -n "$workspace_changes" ]
     then
-        git add --all .
-        git commit -m"${description}. Triggered Build: $BUILD_NUMBER"
+        ${GIT} add --all .
+        ${GIT} commit -m"${description}. Triggered Build: $BUILD_NUMBER"
     fi
-    if [ "`git diff --stat=1000 --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
+    if [ "`${GIT} diff --stat=1000 --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
     then
-        git push --set-upstream origin ${SCM_BRANCH}
+        ${GIT} push --set-upstream origin ${SCM_BRANCH}
     fi
 }
 
@@ -53,19 +53,19 @@ oracle_tools_dir="`dirname $0`/.."
 
 # checking environment
 pwd
-git --version
+${GIT:=git} --version
 
 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
-git config user.name ${SCM_USERNAME}
-git config user.email ${SCM_EMAIL}
+${GIT} config user.name ${SCM_USERNAME}
+${GIT} config user.email ${SCM_EMAIL}
 
 set +eu # some variables may be unset
 
 if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
 then
-  git checkout "$SCM_BRANCH_PREV"
-  git checkout "$SCM_BRANCH"
-  git merge "$SCM_BRANCH_PREV"
+  ${GIT} checkout "$SCM_BRANCH_PREV"
+  ${GIT} checkout "$SCM_BRANCH"
+  ${GIT} merge "$SCM_BRANCH_PREV"
 fi
 
 test -n "$DB_ACTIONS" || export DB_ACTIONS=""
@@ -117,30 +117,30 @@ then
     set -- ${DB_ACTIONS}
     for profile; do invoke_mvn ${DB_DIR} $profile; done
     echo "there should be no files to add for Git:"
-    test -z "`git status --porcelain`"
+    test -z "`${GIT} status --porcelain`"
 fi
 
 echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 set -- ${APEX_ACTIONS}
 for profile; do invoke_mvn ${APEX_DIR} $profile; done
 
-# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use git diff --stat=1000 to verify it is just that file and that line
+# ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use ${GIT} diff --stat=1000 to verify it is just that file and that line
 # 
-# % git diff --stat=1000
+# % ${GIT} diff --stat=1000
 #  apex/app/src/export/application/create_application.sql | 2 +-
 #  1 file changed, 1 insertion(+), 1 deletion(-)
 
 # Check if only create_application.sql files have changed their p_flow_version.
 # Be aware of a default output width of 80, so use --stat=1000
-result="`git diff --stat=1000 -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+result="`${GIT} diff --stat=1000 -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
 if [ "$result" = "YES" ]
 then
     # 1) Retrieve all create_application.sql files that have changed only in two places (one insertion, one deletion) 
     # 2) Restore them since the change is due to the version date change
     # 3) This prohibits a git commit when the APEX export has not changed really
-    for create_application in "`git diff --stat=1000 -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
+    for create_application in "`${GIT} diff --stat=1000 -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
     do    
-        git checkout -- $create_application
+        ${GIT} checkout -- $create_application
     done
 fi
 

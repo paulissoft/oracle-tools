@@ -5,6 +5,8 @@
 # - https://stackoverflow.com/questions/51119922/how-to-connect-to-docker-via-tcp-on-macos
 # - https://davelms.medium.com/run-jenkins-in-a-docker-container-part-2-socat-d5f18820fe1d
 # - https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/
+# - https://medium.com/pismolabs/reducing-image-sizes-and-caching-maven-dependencies-in-docker-builds-b388d3f7aa88
+# - https://blog.frankel.ch/faster-maven-builds/2/
 
 # docker network create jenkins || true
 # 
