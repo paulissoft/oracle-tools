@@ -33,14 +33,11 @@ ENV SCM_EMAIL=nobody@gmail.com
 ENV CONF_DIR=conf
 ENV DB=orcl
 ENV DB_USERNAME=ORACLE_TOOLS
-# Use today as password (hoping the connection will fail)
-ENV DB_PASSWORD=`date -Idate`
+ENV DB_PASSWORD=secret
 ENV DB_DIR=db
-ENV DB_ACTIONS="db-info db-test db-generate-ddl-incr db-code-check db-generate-ddl-full"
-ENV DB_ACTIONS="db-info"
+ENV DB_ACTIONS=
 ENV APEX_DIR=apex
-ENV APEX_ACTIONS="apex-export apex-import"
-ENV APEX_ACTIONS="apex-export"
+ENV APEX_ACTIONS=
 ENV SCM_BRANCH_PREV=
 ENV GIT='echo git'
 ENV BUILD_NUMBER=0
@@ -52,7 +49,9 @@ WORKDIR /tmp
 RUN git clone --branch $SCM_BRANCH  http://github.com/paulissoft/oracle-tools.git
 WORKDIR /tmp/oracle-tools
 
-RUN ./jenkins/process.sh
+# execute each action separate since the command may fail
+RUN set -- db-info db-test db-generate-ddl-incr db-code-check db-generate-ddl-full; for db_action; do DB_ACTIONS=$db_action ./jenkins/process.sh || true; done
+RUN set -- apex-export apex-import; for apex_action; do APEX_ACTIONS=$apex_action ./jenkins/process.sh || true; done
 
 FROM $IMAGE
 
