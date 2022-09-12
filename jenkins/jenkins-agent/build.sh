@@ -15,10 +15,11 @@ export DB_ACTIONS="db-info"
 export APEX_DIR=apex
 export APEX_ACTIONS="apex-export apex-import"
 export APEX_ACTIONS="apex-export"
-export MVN_ARGS=--fail-never
 export SCM_BRANCH_PREV=
 export GIT='echo git'
 export BUILD_NUMBER=0
+export MVN_ARGS=--fail-never
+export MVN_LOG_DIR=.
 
 cd $curdir/../..
 
