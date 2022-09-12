@@ -75,7 +75,7 @@ RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
 
 # Let github.com be a known host for user jenkins
 USER jenkins
-RUN mkdir -p -m 755 ~/.m2/repository && mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+RUN mkdir -m 755 ~/agent && mkdir -p -m 755 ~/.m2/repository && mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 # copy local repository with all downloaded plugins
 COPY --from=builder /root/.m2/repository /home/jenkins/.m2/repository
