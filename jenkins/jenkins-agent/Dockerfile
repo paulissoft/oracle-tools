@@ -8,7 +8,7 @@ USER root
 # Install Maven and Docker
 RUN apt-get update -y -q && \
 		apt-get upgrade -y -q && \
-		apt-get install -y -q maven git curl openssh-client ca-certificates lsb-release iputils-ping
+		apt-get install -y -q maven git curl unzip openssh-client ca-certificates lsb-release iputils-ping
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
   https://download.docker.com/linux/debian/gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) \
