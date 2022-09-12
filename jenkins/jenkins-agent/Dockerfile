@@ -9,7 +9,7 @@ USER root
 # Install Maven
 RUN apt-get update -y -q && \
 		apt-get upgrade -y -q && \
-		apt-get install -y -q maven curl unzip
+		apt-get install -y -q maven git curl unzip
 
 # Install SQLcl
 
@@ -64,7 +64,7 @@ COPY --from=builder /opt/oracle/sqlcl /opt/oracle/sql
 # Install Maven and Docker
 RUN apt-get update -y -q && \
 		apt-get upgrade -y -q && \
-		apt-get install -y -q maven curl openssh-client ca-certificates lsb-release iputils-ping
+		apt-get install -y -q maven git curl openssh-client ca-certificates lsb-release iputils-ping
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
   https://download.docker.com/linux/debian/gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) \
