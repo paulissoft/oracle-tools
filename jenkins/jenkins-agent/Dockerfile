@@ -1,12 +1,14 @@
 ARG SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 ARG SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
+ARG IMAGE=jenkins/agent:latest
 
-FROM jenkins/ssh-agent:latest
+FROM $IMAGE
 
-# Install Maven, JDK and Docker
+USER root
+# Install Maven and Docker
 RUN apt-get update -y -q && \
 		apt-get upgrade -y -q && \
-		apt-get install -y -q curl git openssh-client ca-certificates maven default-jdk lsb-release zip unzip
+		apt-get install -y -q maven git curl unzip openssh-client ca-certificates lsb-release iputils-ping
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
   https://download.docker.com/linux/debian/gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) \
@@ -26,12 +28,10 @@ RUN mkdir -p /opt/oracle && \
     ls -l $SQLCL_ZIP && \
     unzip $SQLCL_ZIP && \
     cd -
+
 ENV SQL_HOME /opt/oracle/sqlcl
+ENV TNS_ADMIN /opt/oracle/network/admin
 
 # Let github.com be a known host for user jenkins
 USER jenkins
-RUN mkdir ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-USER root
-
-
-
+RUN mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
