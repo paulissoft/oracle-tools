@@ -9,6 +9,7 @@ volumes:
     name: jenkins-data
 
 services:
+  # See https://davelms.medium.com/run-jenkins-in-a-docker-container-part-2-socat-d5f18820fe1d
   jenkins-docker:
     container_name: jenkins_docker
     image: alpine/socat
