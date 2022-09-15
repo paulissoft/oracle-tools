@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ env.REGISTRY }}/paulissoft/pato-jenkins-agent
+  IMAGE_NAME: ghcr.io/paulissoft/pato-jenkins-agent
   CONTEXT: ./jenkins/jenkins-agent
 
 jobs:
