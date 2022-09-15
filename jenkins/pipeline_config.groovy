@@ -1,13 +1,11 @@
 // accessible via JTEs pipelineConfig
-maven = 'maven-3'
-jdk = 'jdk-9'
 
 // a clone without credentials
 scm_url_oracle_tools = 'http://github.com/paulissoft/oracle-tools.git'
 scm_branch_oracle_tools = 'development'
 
 scm_url = 'git@github.com:paulissoft/oracle-tools.git'
-scm_credentials = 'paulissoft'
+scm_credentials = 'github'
 scm_username = 'paulissoft'
 scm_email = 'paulissoft@gmail.com'
 
@@ -34,6 +32,26 @@ application_environments{
     test{
         // Oracle tools info
         scm_branch = 'test'
+
+        db = 'docker'
+        db_credentials = 'oracle-tools-development'
+        db_actions = 'db-info db-install db-generate-ddl-full'
+
+        apex_actions = 'apex-import'
+    }
+    acc{
+        // Oracle tools info
+        scm_branch = 'acc'
+
+        db = 'docker'
+        db_credentials = 'oracle-tools-development'
+        db_actions = 'db-info db-install db-generate-ddl-full'
+
+        apex_actions = 'apex-import'
+    }
+    prod{
+        // Oracle tools info
+        scm_branch = 'prod'
 
         db = 'docker'
         db_credentials = 'oracle-tools-development'

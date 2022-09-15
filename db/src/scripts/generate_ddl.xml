@@ -348,7 +348,7 @@ Z       Time zone               RFC 822 time zone   -0800
           <path refid="runtime.classpath"/>
           <path location="${jar.dir}/${ant.project.name}.jar"/>
         </classpath>
-        <env key="NLS_LANG" value="_.UTF8"/>
+        <env key="NLS_LANG" value="American_America.UTF8"/>
         <arg value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
         <arg value="${quote}@{source.schema}${quote}"/> <!-- source schema -->
         <arg value="${quote}@{source.db.name}${quote}"/> <!-- source database link -->

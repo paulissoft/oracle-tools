@@ -382,17 +382,9 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   return integer
   deterministic;
 
-  function fetch_ddl
-  ( p_schema in t_schema_nn default user
-  , p_object_type in t_metadata_object_type default null
-  , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
-  , p_grantor_is_schema in t_numeric_boolean_nn default 0
-  , p_transform_param_list in varchar2 default c_transform_param_list
-  )
-  return sys.ku$_ddls
-  pipelined;
-
+  /*
+  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
+  */
   function fetch_ddl
   ( p_schema in t_schema_nn
   , p_object_type in t_metadata_object_type

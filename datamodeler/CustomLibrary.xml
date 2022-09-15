@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- File contains Custom Libraries Scripts -->
 <custom_libraries>
-	<lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
-		<script>
-			<![CDATA[// variable used to return custom message
+  <lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
+    <script>
+      <![CDATA[// variable used to return custom message
 var ruleMessage;
 // variable used to return the type of the rule Error
 // or Warning and red/blue color will be used for result
@@ -37,326 +37,776 @@ function NotNullConstr_Name_Length(column){
  name = column.getNotNullConstraintName();
  result = true;
  if(name!=null && !"".equals(name)){
-	holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
-	if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
-		result = false;
-	}
+  holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
+  if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
+    result = false;
+  }
  }
  return result
 }]]>
-		</script>
-	</lib>
-	<lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="copyCommentsInRDBMS_logical,showSelectedTables,copyPreferredAbbreviation,setRelationName,copyCommentsInRDBMS_relational,setSecurityOptions,setTableNamesPlural,setUseDomainConstraints,setIdentityColumns,showSelectedEntities,setSelectedIdentityColumns,setSelectedSecurityOptions" >
-		<script>
-			<![CDATA[// Custom Transformation Script: Show selected tables - custom
-var appView = Java.type('oracle.dbtools.crest.swingui.ApplicationView');
+    </script>
+  </lib>
+  <lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedLogicalItems,applyStandardsForSelectedRelationalItems" >
+    <script>
+      <![CDATA[// -----------------------------------------------------------------------------
+// file  : CustomLibrary.js
+// goal  : Custom library for Oracle Data Modeler (ODM)
+// author: Gert-Jan Paulissen (Paulissoft)
+// date  : 2022-08-25
+// usage : - Copy the contents of this file and paste them into a custom library
+//           (for instance CustomLibrary) in ODM. Add each function
+//           without underscore below as function / method to the ODM library.
+//           ODM Menu: Tools | Design Rules And transformations | Libraries
+//         - Export this library to file CustomLibrary.xml.
+//         - Next add or change custom transformation scripts and use
+//           the description after each 'Custom Transformation Script:' below
+//           for the name. Set library and method in ODM as well.
+//           Menu: Tools | Design Rules And transformations | Transformations
+//         - Export these methods to file CustomTransformationScripts.xml.
+// note  : The functions applyStandardsForSelectedItems_(logical|relatonal) are
+//         the most important functiond and can be used to apply standards of
+//         selected logical or relational items.
+//         If the dynamic property canApplyStandards is set to 0,
+//         no standards will be applied.
+//         The property canApplyStandards will be set to 1 if missing.
+// -----------------------------------------------------------------------------
+
+var appView = Java.type("oracle.dbtools.crest.swingui.ApplicationView");
+var maxLength = 4000;
+var trace = false;
+var debug = false;
 
 function _msg(msg) {
     appView.log(msg);
 }
-  
+
+function _debug(msg) {
+    if (debug) {
+        _msg(msg);
+    }
+}
+
+function _showObject(obj) {
+    _msg(obj.getObjectTypeName() +
+         " " +
+         obj.getName());
+}
+
+function _trace(where, obj) {
+    if (trace) {
+        _msg(where +
+             ": " +
+             obj.getObjectTypeName() +
+             " " +
+             obj.getName());
+    }
+}
+
+function _setDirty(where, obj) {
+    _msg("Changing " +
+         obj.getObjectTypeName() +
+         " " +
+         obj.getName() +
+         " - " +
+         where);
+    obj.setDirty(true);
+}
+
+function _canProcess(where, object) {
+    var canProcess = object.getProperty(where);
+
+    if (canProcess === null || canProcess.equals("")) {
+        canProcess = "1";
+        object.setProperty(where, canProcess);
+        _setDirty(where, object);
+    }
+
+    try {
+        canProcess = Number(canProcess);
+    } catch (e) {
+        _msg(e);
+        canProcess = 0;
+    }
+
+    if (canProcess !== 0) {
+        return true;
+    } else {
+        _msg("Can not process " +
+             object.getObjectTypeName() +
+             " " +
+             object.getName() +
+             " since the dynamic property " + where + " is 0 (false).");
+
+        return false;
+    }
+}
+
+function _toStream(array) {
+    var dummy;
+
+    try {
+        dummy = array[0];
+        return java.util.Arrays.stream(array);
+    } catch (e) {
+        return java.util.Arrays.stream(array.toArray());
+    }
+}
+
 function _getSelectedObjects(model, objectType) {
     var appv = model.getAppView();
     var dpv = appv.getCurrentDPV();
-    var objects = [];
+    var obj;
+    var objects = new java.util.ArrayList();
 
-    _msg('Window: ' + dpv);
+    _msg("Window: " + dpv);
     // check there is a diagram selected and it belongs to the same model
-    if (dpv != null && dpv.getDesignPart() == model) {
-        var tvs = dpv.getSelectedTopViews();
-        
-        for (var i = 0; i < tvs.length; i++) {
-            var obj = tvs[i].getModel();
-
-            _msg('Object type: ' + obj.getObjectTypeName());
-
-            //if table then put its name in the log window
+    if (dpv !== null && dpv.getDesignPart() === model) {
+        _toStream(dpv.getSelectedTopViews()).forEach(function (tv) {
+            obj = tv.getModel();
             if (objectType.equals(obj.getObjectTypeName())) {
-                objects[objects.length] = obj
+                objects.add(obj);
             }
-        }
+        });
     }
-    _msg('# Objects of type ' + objectType + ': ' + objects.length);
+    _msg("# Objects of type " + objectType + ": " + objects.size());
 
     return objects;
 }
 
-function _showObject(obj) {
-    _msg(obj.getName());
-}
+function _copyCommentsInRDBMS(object) {
+    var where = "copyCommentsInRDBMS";
 
-function showSelectedTables(model) {
-    _getSelectedObjects(model, "Table").forEach(_showObject);  
-}
-
-// Custom Transformation Script: Show selected tables - custom
-function showSelectedEntities(model) {
-    _getSelectedObjects(model, "Entity").forEach(_showObject);  
-}
-
-// Custom Transformation Script: Copy Comments in RDBMS to Comments (logical) - custom | logical
-var maxLength = 4000;
-
-function _copyCommentInRDBMS(object) {
-    _showObject(object);
+    _trace(where, object);
     if (object.getComment().equals("")) {
         if (!object.getCommentInRDBMS().equals("")) {
             if (object.getCommentInRDBMS().length() > maxLength) {
-                object.setComment(object.getCommentInRDBMS().substring(0, maxLength));
+                object.setComment
+                ( object.getCommentInRDBMS().substring(0, maxLength)
+                );
             } else {
                 object.setComment(object.getCommentInRDBMS());
             }
-            object.setDirty(true);
+            _setDirty(where, object);
         }
     }
 }
 
-function copyCommentsInRDBMS_logical(model) {
-    var entities = model.getEntitySet().toArray();
-    
-    for (var e = 0; e < entities.length; e++) {
-        var entity = entities[e];
-        
-        _copyCommentInRDBMS(entity);
-        
-        var attributes = entity.getElements();
-        
-        for (var i = 0; i < attributes.length; i++) {
-            _copyCommentInRDBMS(attributes[i]);
+function _copyCommentsInRDBMS_container(object) {
+    _copyCommentsInRDBMS(object);
+
+    _toStream(object.getElements()).forEach(function (element) {
+        _copyCommentsInRDBMS(element);
+    });
+
+    _toStream(object.getKeys()).forEach(function (key) {
+        if (!key.isFK()) {
+            _copyCommentsInRDBMS(key);
+        } else {
+            _copyCommentsInRDBMS(key.getFKAssociation());
         }
-        
-        var keys = entity.getKeys();
-        
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            
-            if (!key.isFK()) {
-                _copyCommentInRDBMS(key);
-            } else {
-                _copyCommentInRDBMS(key.getFKAssociation());
-            }
-        }
-    }
+    });
 }
 
-// Custom Transformation Script: Copy Preferred Abbreviation to Short Name - custom | logical
 function _copyPreferredAbbreviation(object) {
-    _showObject(object);
+    var where = "copyPreferredAbbreviation";
+    var preferredAbbreviation = object.getPreferredAbbreviation();
+
+    _trace(where, object);
+
     if (object.getShortName().equals("")) {
-        var preferredAbbreviation = object.getPreferredAbbreviation();
-        
         if (!preferredAbbreviation.equals("")) {
             object.setShortName(preferredAbbreviation);
-            object.setDirty(true);
+            _setDirty(where, object);
         }
     }
 }
 
-function copyPreferredAbbreviation(model) {
-    var entities = model.getEntitySet().toArray();
-    
-    for (var e = 0; e < entities.length; e++) {
-        _copyPreferredAbbreviation(entities[e]);
+function _setRelationName(object,
+                          sourceShortName,
+                          sourceAbbreviation,
+                          targetShortName,
+                          targetAbbreviation) {
+    var where = "setRelationName";
+    var sourceName = (sourceAbbreviation.equals("") ?
+                      sourceShortName :
+                      sourceAbbreviation);
+    var targetName = (targetAbbreviation.equals("") ?
+                      targetShortName :
+                      targetAbbreviation);
+    var name = ((sourceName.equals("") || targetName.equals("")) ?
+                "" :
+                sourceName + "_" + targetName);
+
+    if (!_canProcess(where, object)) {
+        return;
     }
-}
 
-// Custom Transformation Script: Set Relation Name - custom | logical
-function _setRelationName(object, sourceShortName, sourceAbbreviation, targetShortName, targetAbbreviation) {
-    _showObject(object);
-    
-    var sourceName = (sourceAbbreviation.equals('') ? sourceShortName : sourceAbbreviation);
-    var targetName = (targetAbbreviation.equals('') ? targetShortName : targetAbbreviation);
-    var name = (sourceName.equals('') || targetName.equals('') ? '' : sourceName + '_' + targetName);
-
-    if (!name.equals('') && !object.getName().equals(name)) {
+    if (!name.equals("") && !object.getName().equals(name)) {
         object.setName(name);
-        object.setDirty(true);
+        _setDirty(where, object);
     }
 }
 
-function setRelationName(model) {
-    var relations = model.getRelationSet().toArray();
-    
-    for (var r = 0; r < relations.length; r++) {
-        _setRelationName(relations[r],
-                         relations[r].getSourceEntity().getShortName(),
-                         relations[r].getSourceEntity().getPreferredAbbreviation(),
-                         relations[r].getTargetEntity().getShortName(),
-                         relations[r].getTargetEntity().getPreferredAbbreviation());
-    }
-}
-
-// Custom Transformation Script: Copy Comments in RDBMS to Comments (relational) - custom | relational
-function copyCommentsInRDBMS_relational(model) {
-    var tables = model.getTableSet().toArray();
-    
-    for (var t = 0; t < tables.length; t++) {
-        var table = tables[t];
-        
-        _copyCommentInRDBMS(table);
-        
-        var columns = table.getElements();
-        var size = table.getElementsCollection().size();
-
-        for (var i = 0; i < columns.length; i++) {
-            _copyCommentInRDBMS(columns[i]);
-        }
-        
-        var keys = table.getKeys();
-
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-
-            if (!key.isFK()) {
-                _copyCommentInRDBMS(key);
-            } else {
-                _copyCommentInRDBMS(key.getFKAssociation());
-            }
-        }
-    }
-}
-
-// Custom Transformation Script: Set security options - custom | relational
 function _setSecurityOptions(table) {
-    _showObject(table);
+    var where = "setSecurityOptions";
 
-    var cols = table.getElements();
-    
-    for (var c = 0; c < cols.length; c++) {
-        if (cols[c].isContainsPII() != true) {
-            cols[c].setContainsPII(false);
+    _trace(where, table);
+    _toStream(table.getElements()).forEach(function (column) {
+        if (column.isContainsPII() !== false) {
+            column.setContainsPII(false);
+            _setDirty(where, column);
         }
-        if (cols[c].isContainsSensitiveInformation() != true) {
-            cols[c].setContainsSensitiveInformation(false); }
-    }
-    table.setDirty(true);
+        if (column.isContainsSensitiveInformation() !== false) {
+            column.setContainsSensitiveInformation(false);
+            _setDirty(where, column);
+        }
+    });
 }
 
-function setSecurityOptions(model) {
-    var tables = model.getTableSet().toArray();
-    
-    for (var t = 0; t < tables.length; t++) {
-        _setSecurityOptions(tables[t]);
-    }
-}
-
-// Custom Transformation Script: Set selected security options - custom | relational
-function setSelectedSecurityOptions(model) {
-    var tables = _getSelectedObjects(model, "Table");
-    
-    for (var t = 0; t < tables.length; t++) {
-        _setSecurityOptions(tables[t]);
-    }
-}
-
-// Custom Transformation Script: Table names plural - custom | relational
-function _setTableNamePlural(table) {
-    _showObject(table);
-
+function _tableNamePlural(table) {
+    var where = "tableNamePlural";
     var tableName = table.getName();
-    
+    var dirty = true;
+
+    _trace(where, table);
+
     if (tableName.endsWith("Y")) {
         // Y -> IES
         table.setName(tableName.slice(0, -1) + "IES");
-        table.setDirty(true);
     } else if (tableName.endsWith("X")) {
         // X -> CES
         table.setName(tableName.slice(0, -1) + "CES");
-        table.setDirty(true);
     } else if (!tableName.endsWith("S")) {
         // . -> .S
         table.setName(tableName + "S");
-        table.setDirty(true);
+    } else {
+        dirty = false;
+    }
+    if (dirty) {
+        _setDirty(where, table);
     }
 }
 
-function setTableNamesPlural(model) {
-    var tables = model.getTableSet().toArray();
-    
-    for (var t = 0; t < tables.length; t++) {
-        _setTableNamePlural(tables[t]);
-    }
-}
-
-// Custom Transformation Script: Set Use Domain Constraints - custom | relational
 function _setUseDomainConstraints(table) {
-    _showObject(table);
+    var where = "setUseDomainConstraints";
 
-    var cols = table.getElements();
-    
-    for(var c = 0; c < cols.length; c++) {
-        if (cols[c].getDomain() != null && cols[c].getDomain().getName() != "Unknown" && cols[c].getUseDomainConstraints() != true) {
-            cols[c].setUseDomainConstraints(true);
-            table.setDirty(true);
+    _trace(where, table);
+    _toStream(table.getElements()).forEach(function (column) {
+        if (column.getDomain() !== null &&
+            column.getDomain().getName() !== "Unknown" &&
+            column.getUseDomainConstraints() !== true) {
+            column.setUseDomainConstraints(true);
+            _setDirty(where, table);
         }
-    }
+    });
 }
 
-function setUseDomainConstraints(model) {
-    var tables = model.getTableSet().toArray();
-    
-    for (var t = 0; t < tables.length; t++) {
-        _setUseDomainConstraints(tables[t]);
-    }
-}
-
-// Custom Transformation Script: Define IDENTITY clause for ID columns - custom | relational
 function _setIdentityColumn_relational(table) {
-    _showObject(table);
+    var where = "setIdentityColumn_relational";
+    var dirty = null;
 
-    var cols = table.getElements();
-    
-    for (var c = 0; c < cols.length; c++) {
-        if (cols[c].getName().equals("ID")) {
-            cols[c].setAutoIncrementColumn(true);
-            cols[c].setIdentityColumn(true);
-            cols[c].setAutoIncrementGenerateTrigger(false);
-            cols[c].setDirty(true);
-        }
-    }
+    _trace(where, table);
+    _toStream(table.getElements())
+        .filter(function (column) { return column.getName().equals("ID"); })
+        .forEach(function (column) {
+            dirty = false;
+            if (!column.isAutoIncrementColumn()) {
+                column.setAutoIncrementColumn(true);
+                dirty = true;
+            }
+            if (!column.isIdentityColumn()) {
+                column.setIdentityColumn(true);
+                dirty = true;
+            }
+            if (column.isAutoIncrementGenerateTrigger()) {
+                column.setAutoIncrementGenerateTrigger(false);
+                dirty = true;
+            }
+            if (dirty) {
+                _setDirty(where, column);
+            }
+        });
 }
 
 function _setIdentityColumn_physical(table) {
-    _showObject(table);
+    var where = "setIdentityColumn_physical";
+    // not conform the SQL Data Modeler 18 documentation (!)
+    var clause = "IDENTITY_CLAUSE";
 
-    var cols = table.getColumns().toArray();
-    var clause = "IDENTITY_CLAUSE"; // not conform the SQL Data Modeler 18 documentation (!)
-    
-    for (var c = 0; c < cols.length; c++) {
-        if (cols[c].getName().equals("ID")) {
-            cols[c].setAutoIncrementDDL(clause);
-            cols[c].setDirty(true);
-        }
+    _trace(where, table);
+
+    _toStream(table.getColumns())
+        .filter(function (column) {
+            return column.getName().equals("ID") &&
+                   ( column.getAutoIncrementDDL() === null ||
+                     !clause.equals(column.getAutoIncrementDDL()) );
+        })
+        .forEach(function (column) {
+            column.setAutoIncrementDDL(clause);
+            _setDirty(where, column);
+        });
+}
+
+function _setIdentityColumn(relationalTable, physicalTables) {
+    var where = "setIdentityColumn";
+
+    if (!_canProcess(where, relationalTable)) {
+        return;
     }
+
+    _trace(where, relationalTable);
+
+    _setIdentityColumn_relational(relationalTable);
+
+    _toStream(physicalTables)
+        .filter(function (physicalTable) {
+            return relationalTable.getName().equals(physicalTable.getName());
+        })
+        .forEach(function (physicalTable) {
+            _setIdentityColumn_physical(physicalTable);
+        });
 }
 
 function _setIdentityColumns(relationalTables, physicalTables) {
-    var tableNames = []
-    
-    for (var rt = 0; rt < relationalTables.length; rt++) {
-        _setIdentityColumn_relational(relationalTables[rt]);
-        tableNames[tableNames.length] = relationalTables[rt].getName();
-    
-        for (var pt = 0; pt < physicalTables.length; pt++) {
-            if (relationalTables[rt].getName().equals(physicalTables[pt].getName())) {
-                _setIdentityColumn_physical(physicalTables[pt]);
-                break;
+    _toStream(relationalTables).forEach(function (relationalTable) {
+        _setIdentityColumn(relationalTable, physicalTables);
+    });
+}
+
+function _tableToLowerCase(table) {
+    var where = "tableToLowerCase";
+    var name = table.getName().toLowerCase();
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    _trace(where, table);
+
+    if (!name.equals(table.getName())) {
+        table.setName(name);
+        _setDirty(where, table);
+    }
+
+    _toStream(table.getElements()).forEach(function (column) {
+        name = column.getName().toLowerCase();
+        if (!name.equals(column.getName())) {
+            column.setName(name);
+            _setDirty(where, column);
+        }
+    });
+
+    _toStream(table.getKeys()).forEach(function (key) {
+        if (!key.isFK()) {
+            name = key.getName().toLowerCase();
+            if (!name.equals(key.getName())) {
+                key.setName(name);
+                _setDirty(where, key);
             }
+        } else {
+            name = key.getFKAssociation().getName().toLowerCase();
+            if (!name.equals(key.getFKAssociation().getName())) {
+                key.getFKAssociation().setName(name);
+                _setDirty(where, key.getFKAssociation());
+            }
+        }
+    });
+}
+
+function _tableAbbreviationToColumn(table) {
+    var where = "tableAbbreviationToColumn";
+    var abbr = table.getAbbreviation()+"_";
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    _trace(where, table);
+
+    if (abbr.length !== 1) {
+        _toStream(table.getElements()).forEach(function (column) {
+            var cname = column.getName();
+            if (!cname.startsWith(abbr)) {
+                column.setName(abbr + cname);
+            }
+        });
+    }
+}
+
+// Custom Transformation Script:
+// Table abbreviation to column | relational
+function tableAbbreviationToColumn(model) {
+    _toStream(model.getTableSet()).forEach()(function (table) {
+        _tableAbbreviationToColumn(table);
+    });
+}
+
+function _removeTableAbbrFromColumn(table) {
+    var where = "removeTableAbbrFromColumn";
+    var abbr = table.getAbbreviation()+"_";
+    var count = table.getAbbreviation().length()+1;
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    _trace(where, table);
+
+    if (count !== 1) {
+        _toStream(table.getElements()).forEach(function (column) {
+            var cname = column.getName();
+            if (cname.startsWith(abbr)) {
+                column.setName(cname.substring(count));
+                _setDirty(where, column);
+            }
+        });
+    }
+}
+
+// Custom Transformation Script:
+// Remove Table abbr from column | relational
+function removeTableAbbrFromColumn(model) {
+    _toStream(model.getTableSet()).forEach(function (table) {
+        _removeTableAbbrFromColumn(table);
+    });
+}
+
+function _tableToUpperCase(table) {
+    var where = "tableToUpperCase";
+    var name = table.getName().toUpperCase();
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    _trace(where, table);
+
+    if (!name.equals(table.getName())) {
+        table.setName(name);
+        _setDirty(where, table);
+    }
+
+    _toStream(table.getElements()).forEach(function (column) {
+        name = column.getName().toUpperCase();
+        if (!name.equals(column.getName())) {
+            column.setName(name);
+            _setDirty(where, column);
+        }
+    });
+
+    _toStream(table.getKeys()).forEach(function (key) {
+        if (!key.isFK()) {
+            name = key.getName().toUpperCase();
+            if (!name.equals(key.getName())) {
+                key.setName(name);
+                _setDirty(where, key);
+            }
+        } else {
+            name = key.getFKAssociation().getName().toUpperCase();
+            if (!name.equals(key.getFKAssociation().getName())) {
+                key.getFKAssociation().setName(name);
+                _setDirty(where, key.getFKAssociation());
+            }
+        }
+    });
+}
+
+function _copyComments(object) {
+    var where = "copyComments";
+
+    if (!_canProcess(where, object)) {
+        return;
+    }
+
+    _trace(where, object);
+    if (object.getCommentInRDBMS().equals("")) {
+        if (!object.getComment().equals("")) {
+            if (object.getComment().length() > maxLength) {
+                object.setCommentInRDBMS
+                ( object.getComment().substring(0, maxLength)
+                );
+            } else {
+                object.setCommentInRDBMS(object.getComment());
+            }
+            _setDirty(where, object);
         }
     }
 }
 
-function setIdentityColumns(model) {
-    _setIdentityColumns(model.getTableSet().toArray(),
-                        model.getStorageDesign().getTableProxySet().toArray());
+function _copyComments_container(object) {
+    _copyComments(object);
+    _toStream(object.getElements()).forEach(function (element) {
+        _copyComments(element);
+    });
+    _toStream(object.getKeys()).forEach(function (key) {
+        if (!key.isFK()) {
+            _copyComments(key);
+        } else {
+            _copyComments(key.getFKAssociation());
+        }
+    });
 }
 
-// Custom Transformation Script: Define IDENTITY clause for selected ID columns - custom | relational
-function setSelectedIdentityColumns(model) {
-    _setIdentityColumns(_getSelectedObjects(model, "Table"),
-                        model.getStorageDesign().getTableProxySet().toArray());
+function _getIndex(tab, cols) {
+    try {
+        return _toStream(tab.getKeys())
+            .filter(function (k) {
+                return !(k.isPK() || k.isUnique()) &&
+                       !k.isFK() &&
+                       k.isIndexForColumns(cols);
+            })
+            .findFirst()
+            .get();
+    } catch (e) { // NoSuchElementException
+        return null;
+    }
+}
+
+function _createIndexOnFK(table) {
+    var where = "createIndexOnFK";
+    var columns;
+    var newIndex;
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    _trace(where, table);
+
+    _toStream(table.getKeys())
+        .filter(function (index) { return index.isFK(); })
+        .forEach(function (index) {
+            columns = index.getColumns();
+            if (columns.length > 0) {
+                newIndex = _getIndex(table, columns);
+                if (newIndex === null) {
+                    newIndex = table.createIndex();
+                    _setDirty(where, table);
+                    _toStream(columns).forEach(function (column) {
+                        newIndex.add(column);
+                    });
+                }
+            }
+        });
+}
+
+// sorts table columns as asked here
+// https://forums.oracle.com/forums/thread.jspa?threadID=2508315&tstart=0
+// 1) first the pks columns,
+// 2) after them fk columns
+// 3) and after the; the not null columns"
+function _addPKcolumns(list, table) {
+    var pk = table.getPK();
+
+    if (pk !== null) {
+        _toStream(pk.getColumns())
+            .filter(function (col) { return !list.contains(col); })
+            .forEach(function (col) {
+                // in fact don't need this check,
+                // because PK columns are processed first
+                _debug("adding PK column " + col);
+                list.add(col);
+            });
+    }
+}
+
+function _addUKcolumns(list, table) {
+    _toStream(table.getKeys())
+        .filter(function (key) { return !key.isPK() && key.isUnique(); })
+        .forEach(function (key) {
+            _toStream(key.getColumns())
+                .filter(function (col) { return !list.contains(col); })
+                .forEach(function (col) {
+                    _debug("adding UK column " + col);
+                    list.add(col);
+                });
+        });
+}
+
+function _addFKcolumns(list, fkeys) {
+    _toStream(fkeys).forEach(function (fkey) {
+        _toStream(fkey.getColumns())
+            .filter(function (col) { return !list.contains(col); })
+            .forEach(function (col) {
+                _debug("adding FK column " + col);
+                list.add(col);
+            });
+    });
+}
+
+//adds mandatory or optional columns to list depending on mandatory parameter
+function _addMandatoryOptColumns(list, cols, mand) {
+    _toStream(cols)
+        .filter(function (col) {
+            return col.isMandatory() === mand && !list.contains(col);
+        })
+        .forEach(function (col) {
+            _debug("adding " +
+                   (mand ? "mandatory" : "optional") +
+                   " column " +
+                   col);
+            list.add(col);
+        });
+}
+
+function _setColumnsOrder(table) {
+    var where = "setColumnsOrder";
+    var oldColumnList = new java.util.ArrayList();
+    var newColumnList = new java.util.ArrayList();
+    var cols = table.getElements();
+    var index = 0;
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    _trace(where, table);
+
+    _toStream(cols)
+        .forEach(function (column) {
+            oldColumnList.add(column);
+        });
+
+    // add PK columns to newColumnList
+    _addPKcolumns(newColumnList, table);
+    // add UK columns to newColumnList
+    _addUKcolumns(newColumnList, table);
+    // add FK columns to newColumnList
+    _addFKcolumns(newColumnList, table.getFKAssociations());
+    // add mandatory columns
+    _addMandatoryOptColumns(newColumnList, cols, true);
+    // add optional columns
+    _addMandatoryOptColumns(newColumnList, cols, false);
+    // do we need to change?
+    if (!oldColumnList.equals(newColumnList)) {
+        // use newColumnList to reorder columns
+        newColumnList.forEach(function (col) {
+            _debug("move column " + col + " to index " + index);
+            table.moveToIndex(col, index);
+            index += 1;
+        });
+
+        // prevent reordering from engineering, can be changed with UI
+        table.setAllowColumnReorder(false);
+        _setDirty(where, table);
+    }
+}
+
+function _copyTablePrefixToIndexesAndKeys(table) {
+    var where = "copyTablePrefixToIndexesAndKeys";
+    var pos = table.getName().indexOf("_");
+    var prefix = (pos < 0 ? null : table.getName().substring(0, pos+1));
+    var name = null;
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
+    if (prefix) {
+        _toStream(table.getKeys()).forEach(function (key) {
+            if (!key.isFK()) {
+                name = key.getName();
+                if (!name.startsWith(prefix)) {
+                    key.setName(prefix + name);
+                    _setDirty(where, key);
+                }
+            } else {
+                name = key.getFKAssociation().getName();
+                if (!name.startsWith(prefix)) {
+                    key.getFKAssociation().setName(prefix + name);
+                    _setDirty(where, key.getFKAssociation());
+                }
+            }
+        });
+        _toStream(table.getIndexes()).forEach(function (index) {
+            name = index.getName();
+            if (!name.startsWith(prefix)) {
+                index.setName(prefix + name);
+                _setDirty(where, index);
+            }
+        });
+    }
+}
+
+function _applyStandardsTable(table, physicalTables) {
+    var where = "applyStandards";
+
+    _showObject(table);
+
+    if (_canProcess(where, table)) {
+        _copyComments_container(table);
+        _copyCommentsInRDBMS_container(table);
+        _setSecurityOptions(table);
+        _tableToUpperCase(table);
+        _tableNamePlural(table);
+        _setUseDomainConstraints(table);
+        _setIdentityColumn(table, physicalTables);
+        // _tableToLowerCase(table);
+        // _tableAbbreviationToColumn(table);
+        // _removeTableAbbrFromColumn(table);
+        _createIndexOnFK(table);
+        _setColumnsOrder(table);
+        // _copyTablePrefixToIndexesAndKeys(table);
+    }
+}
+
+// Custom Transformation Script:
+// Apply standards for selected relational items | relational
+function applyStandardsForSelectedRelationalItems(model) {
+    var physicalTables = model.getStorageDesign().getTableProxySet();
+
+    try {
+        _getSelectedObjects(model, "Table").forEach(function (table) {
+            _applyStandardsTable(table, physicalTables);
+        });
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
+function _applyStandardsEntity(entity) {
+    var where = "applyStandards";
+
+    _showObject(entity);
+
+    if (_canProcess(where, entity)) {
+        _copyPreferredAbbreviation(entity);
+        _copyComments_container(entity);
+        _copyCommentsInRDBMS_container(entity);
+    }
+}
+
+function _applyStandardsRelation(rel) {
+    var where = "applyStandards";
+
+    _showObject(rel);
+
+    if (_canProcess(where, rel)) {
+        _setRelationName(rel,
+                         rel.getSourceEntity().getShortName(),
+                         rel.getSourceEntity().getPreferredAbbreviation(),
+                         rel.getTargetEntity().getShortName(),
+                         rel.getTargetEntity().getPreferredAbbreviation());
+    }
+}
+
+// Custom Transformation Script:
+// Apply standards for selected logical items | logical
+function applyStandardsForSelectedLogicalItems(model) {
+    try {
+        _getSelectedObjects(model, "Entity").forEach(function (entity) {
+            _applyStandardsEntity(entity);
+        });
+        _getSelectedObjects(model, "Relation").forEach(function (rel) {
+            _applyStandardsRelation(rel);
+        });
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
 }
 ]]>
-		</script>
-	</lib>
+    </script>
+  </lib>
 </custom_libraries>

@@ -8,17 +8,17 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>151930114232313867
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(52589456859704362)
+ p_id=>wwv_flow_api.id(74539938301504928)
 ,p_name=>'Access Control'
 ,p_list_status=>'PUBLIC'
-,p_required_patch=>wwv_flow_api.id(52552867856704196)
+,p_required_patch=>wwv_flow_api.id(74576527304505094)
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(52589928462704363)
+ p_id=>wwv_flow_api.id(74539466698504927)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Users'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10031:&SESSION.::&DEBUG.:RP:::'
@@ -27,7 +27,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(52590302091704365)
+ p_id=>wwv_flow_api.id(74539093069504925)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Access Control'
 ,p_list_item_link_target=>'f?p=&APP_ID.:10030:&SESSION.::&DEBUG.::::'

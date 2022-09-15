@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>151930114232313867
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(70026403325748101)
+ p_id=>wwv_flow_api.id(57102991835461189)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-TabsRegion #REGION_CSS_CLASSES# apex-tabs-region" #REGION_ATTRIBUTES# id="#REGION_STATIC_ID#">',
@@ -37,19 +37,19 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(70026046688748101)
-,p_plug_template_id=>wwv_flow_api.id(70026403325748101)
-,p_name=>'Region Body'
-,p_placeholder=>'BODY'
-,p_has_grid_support=>true
-,p_glv_new_row=>true
-);
-wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(70025770953748100)
-,p_plug_template_id=>wwv_flow_api.id(70026403325748101)
+ p_id=>wwv_flow_api.id(57103624207461190)
+,p_plug_template_id=>wwv_flow_api.id(57102991835461189)
 ,p_name=>'Tabs'
 ,p_placeholder=>'SUB_REGIONS'
 ,p_has_grid_support=>false
+,p_glv_new_row=>true
+);
+wwv_flow_api.create_plug_tmpl_display_point(
+ p_id=>wwv_flow_api.id(57103348472461189)
+,p_plug_template_id=>wwv_flow_api.id(57102991835461189)
+,p_name=>'Region Body'
+,p_placeholder=>'BODY'
+,p_has_grid_support=>true
 ,p_glv_new_row=>true
 );
 wwv_flow_api.component_end;

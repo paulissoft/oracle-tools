@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>151930114232313867
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_plugin(
- p_id=>wwv_flow_api.id(68166312990652727)
+ p_id=>wwv_flow_api.id(58963082170556563)
 ,p_plugin_type=>'REGION TYPE'
 ,p_name=>'COM.ORACLE.APEX.HOW_TO_INSTRUCTIONS'
 ,p_display_name=>'How To Instructions'
@@ -550,8 +550,8 @@ wwv_flow_api.create_plugin(
 ,p_version_identifier=>'1.0'
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(68165986838652726)
-,p_plugin_id=>wwv_flow_api.id(68166312990652727)
+ p_id=>wwv_flow_api.id(58963408322556564)
+,p_plugin_id=>wwv_flow_api.id(58963082170556563)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>1
 ,p_display_sequence=>10
@@ -563,8 +563,8 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_translatable=>false
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(68165563640652726)
-,p_plugin_id=>wwv_flow_api.id(68166312990652727)
+ p_id=>wwv_flow_api.id(58963831520556564)
+,p_plugin_id=>wwv_flow_api.id(58963082170556563)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>2
 ,p_display_sequence=>20
@@ -575,8 +575,8 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_translatable=>false
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(68165150563652726)
-,p_plugin_id=>wwv_flow_api.id(68166312990652727)
+ p_id=>wwv_flow_api.id(58964244597556564)
+,p_plugin_id=>wwv_flow_api.id(58963082170556563)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>3
 ,p_display_sequence=>30
@@ -588,8 +588,8 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_translatable=>false
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(68164817999652726)
-,p_plugin_id=>wwv_flow_api.id(68166312990652727)
+ p_id=>wwv_flow_api.id(58964577161556564)
+,p_plugin_id=>wwv_flow_api.id(58963082170556563)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>4
 ,p_display_sequence=>40
@@ -600,8 +600,8 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_translatable=>false
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(68164341365652726)
-,p_plugin_id=>wwv_flow_api.id(68166312990652727)
+ p_id=>wwv_flow_api.id(58965053795556564)
+,p_plugin_id=>wwv_flow_api.id(58963082170556563)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>5
 ,p_display_sequence=>50
@@ -610,7 +610,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_required=>false
 ,p_default_value=>'N'
 ,p_is_translatable=>false
-,p_depending_on_attribute_id=>wwv_flow_api.id(68165986838652726)
+,p_depending_on_attribute_id=>wwv_flow_api.id(58963408322556564)
 ,p_depending_on_has_to_exist=>true
 ,p_depending_on_condition_type=>'EQUALS'
 ,p_depending_on_expression=>'Y'

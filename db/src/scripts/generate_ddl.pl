@@ -165,6 +165,10 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2022-09-06
+
+Making it easier to see duplicate objects in the output directory.
+
 =item 2022-07-17 (2)
 
 ENHANCEMENT: The generated DDL install.sql should use show errors after every stored procedure.
@@ -288,7 +292,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2022-04-26";
+my $VERSION = "2022-09-06";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -393,6 +397,10 @@ my %file_modified = ();
 my %fh_modified = ();
 
 my $TMPDIR = tempdir( CLEANUP => 1 );
+
+my $object_sep = '.';
+my $object_sep_rex = qr/\./;
+my $object_rex = qr/^.+\..+\..+$/;
 
 # PROTOTYPES
 
@@ -794,7 +802,7 @@ sub get_object ($$$;$$$) {
     
     my ($object_schema, $object_type, $object_name, $base_object_schema, $base_object_type, $base_object_name) = @_;
 
-    my $sep = ':';
+    my $sep = $object_sep;
 
     # GPA 2017-02-28 #140681641 Unique constraints must be created before a referencing key is created.
     # All DDL stored must be saved for one and only one object name, otherwise the order of DDL statements determined by the database may change.
@@ -855,7 +863,7 @@ sub object_file_name ($$$) {
     error("\$object_schema undefined") unless defined($object_schema);
     error("\$object_name undefined") unless defined($object_name);
 
-    my $object_seq_key = join(':', $object_schema, $object_type, $object_name);
+    my $object_seq_key = join($object_sep, $object_schema, $object_type, $object_name);
     my $object_file_name;
     my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
@@ -1010,7 +1018,7 @@ sub sort_sql_statements ($$$) {
         # just sort by sequence
         $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
     } else {
-        # $object_seq{$a} and $object_seq{$b} will exists do to call to add_object_seq() in add_sql_statement()
+        # $object_seq{$a} and $object_seq{$b} will exist due to call to add_object_seq() in add_sql_statement()
         debug(sprintf("get_object_seq('%s'); '%s'; get_object_seq('%s'): '%s'", $a, get_object_seq($a), $b, get_object_seq($b)));
         $result = (get_object_seq($a) <=> get_object_seq($b));
     }
@@ -1073,7 +1081,7 @@ sub object_sql_statements_flush ($$$$$) {
 
         print $$r_fh sprintf("call dbms_application_info.set_module('%s', null);\n", basename($single_output_file));
     } else {
-        my ($object_schema, $object_type, $object_name) = split(/:/, $object);
+        my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
 
         if (not(exists($object_type_info{$object_type})) ||
             not(exists($object_type_info{$object_type}->{'repeatable'})) ||
@@ -1308,7 +1316,7 @@ sub sql_statement_flush ($$$$$$) {
         print $fh "/* SQL statement $$r_nr_sql_statements (" . (defined($ddl_info) ? $ddl_info : $object) . ") */\n";
     }
 
-    my (undef, $object_type, undef) = split(/:/, $object);
+    my (undef, $object_type, undef) = split($object_sep_rex, $object);
     my $terminator = ($is_sql_statement ? ';' : '');
 
     if (defined($single_output_file) || $object_type eq 'OBJECT_GRANT') {
@@ -1563,7 +1571,7 @@ sub add_object_seq ($;$) {
         unless $object eq uc($object);
 
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
-        unless $object =~ m/^.+:.+:.+$/;
+        unless $object =~ m/$object_rex/;
 
     error("Object sequence for '$object' already exists.")
         if defined(get_object_seq($object));
@@ -1593,9 +1601,9 @@ sub read_object_seq () {
     opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
     while (my $file = readdir $dh) {
         if ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2} = join(':', $3, $4, $5);
+            $objects{$2} = join($object_sep, $3, $4, $5);
         } elsif ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2} = join(':', '', $3, $4);
+            $objects{$2} = join($object_sep, '', $3, $4);
         }
     }
     # add the files in order

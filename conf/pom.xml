@@ -281,6 +281,32 @@
                   <!-- db info -->
                   <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />
                   <property name="db.url" value="jdbc:oracle:thin:@${db.connect.identifier}" />
+
+                  <!-- GJP 2022-09-02 -->
+                  <!-- The Jenkins handling of (proxy) username should be more user friendly. -->
+                  <!-- https://github.com/paulissoft/oracle-tools/issues/50 -->
+                  <!-- test if ${env.DB_USERNAME} equals to ${db.proxy.username} or ${db.username} -->
+                  <condition property="tmp.username" value="${db.proxy.username}" else="${db.username}">
+                    <isset property="db.proxy.username"/>
+                  </condition>
+                  <fail message="Environment variabe DB_USERNAME (${env.DB_USERNAME}) is not equal to (${tmp.username}).">
+                    <condition>
+                      <and>
+                        <isset property="env.DB_USERNAME"/>
+                        <or>
+                          <isset property="db.proxy.username"/>
+                          <isset property="db.username"/>
+                        </or>
+                        <not>
+                          <isset property="db.userid"/>
+                        </not>
+                        <not>
+                          <equals arg1="${env.DB_USERNAME}" arg2="${tmp.username}" casesensitive="true"/>
+                        </not>
+                      </and>
+                    </condition>
+                  </fail>
+                  
                   <!-- use proxy users if property db.proxy.username exists -->
                   <condition property="db.username"
                              value="${db.proxy.username}[${db.schema}]"

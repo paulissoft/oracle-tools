@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>114929092615904275
+,p_default_id_offset=>151930114232313867
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_template(
- p_id=>wwv_flow_api.id(70073572471748130)
+ p_id=>wwv_flow_api.id(57055822689461160)
 ,p_theme_id=>42
 ,p_name=>'Wizard Modal Dialog'
 ,p_internal_name=>'WIZARD_MODAL_DIALOG'
@@ -148,29 +148,29 @@ wwv_flow_api.create_template(
 ,p_reference_id=>2120348229686426515
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(70073273933748130)
-,p_page_template_id=>wwv_flow_api.id(70073572471748130)
-,p_name=>'Wizard Body'
-,p_placeholder=>'BODY'
-,p_has_grid_support=>true
+ p_id=>wwv_flow_api.id(57056751675461161)
+,p_page_template_id=>wwv_flow_api.id(57055822689461160)
+,p_name=>'Wizard Buttons'
+,p_placeholder=>'REGION_POSITION_03'
+,p_has_grid_support=>false
 ,p_glv_new_row=>true
-,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(70072978866748129)
-,p_page_template_id=>wwv_flow_api.id(70073572471748130)
+ p_id=>wwv_flow_api.id(57056416294461161)
+,p_page_template_id=>wwv_flow_api.id(57055822689461160)
 ,p_name=>'Wizard Progress Bar'
 ,p_placeholder=>'REGION_POSITION_01'
 ,p_has_grid_support=>false
 ,p_glv_new_row=>true
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(70072643485748129)
-,p_page_template_id=>wwv_flow_api.id(70073572471748130)
-,p_name=>'Wizard Buttons'
-,p_placeholder=>'REGION_POSITION_03'
-,p_has_grid_support=>false
+ p_id=>wwv_flow_api.id(57056121227461160)
+,p_page_template_id=>wwv_flow_api.id(57055822689461160)
+,p_name=>'Wizard Body'
+,p_placeholder=>'BODY'
+,p_has_grid_support=>true
 ,p_glv_new_row=>true
+,p_max_fixed_grid_columns=>12
 );
 wwv_flow_api.component_end;
 end;

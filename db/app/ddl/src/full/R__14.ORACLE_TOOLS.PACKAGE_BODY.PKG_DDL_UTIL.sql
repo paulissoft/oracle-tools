@@ -85,8 +85,11 @@ $end -- $if oracle_tools.cfg_pkg.c_testing $then
   /* EXCEPTIONS */
 
   -- ORA-31603: object ... of type MATERIALIZED_VIEW not found in schema ...
-  e_object_not_found exception;
-  pragma exception_init(e_object_not_found, -31603);
+  -- GJP 2022-09-05 Not used here anymore
+  /*
+  -- e_object_not_found exception;
+  -- pragma exception_init(e_object_not_found, -31603);
+  */
 
   -- ORA-31623: a job is not attached to this session via the specified handle
   e_job_is_not_attached exception;
@@ -5501,56 +5504,6 @@ $end
     return l_result;
   end is_exclude_name_expr;
 
-  function fetch_ddl
-  ( p_schema in t_schema_nn default user
-  , p_object_type in t_metadata_object_type default null
-  , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
-  , p_grantor_is_schema in t_numeric_boolean_nn default 0
-  , p_transform_param_list in varchar2 default c_transform_param_list
-  )
-  return sys.ku$_ddls
-  pipelined
-  is
-    l_use_schema_export constant pls_integer := 
-      case
-        when p_object_type is not null and substr(p_object_type, 1, 1) != '!'
-        then 0
-        when p_object_names_include = 1
-        then 0
-        else 1
-      end;
-    l_schema_object_tab oracle_tools.t_schema_object_tab;
-  begin
-    get_schema_object
-    ( p_schema => p_schema
-    , p_object_type => p_object_type
-    , p_object_names => p_object_names
-    , p_object_names_include => p_object_names_include
-    , p_grantor_is_schema => p_grantor_is_schema
-    , p_schema_object_tab => l_schema_object_tab
-    );
-    for r in
-    ( select  value(t) as obj
-      from    table
-              ( oracle_tools.pkg_ddl_util.fetch_ddl
-                ( p_schema => p_schema
-                , p_object_type => p_object_type
-                , p_object_names => p_object_names
-                , p_object_names_include => p_object_names_include
-                , p_use_schema_export => l_use_schema_export
-                , p_schema_object_tab => l_schema_object_tab
-                , p_transform_param_list => p_transform_param_list
-                )
-              ) t
-    )
-    loop
-      pipe row (r.obj);
-    end loop;
-    
-    return; -- essential for a pipelined function
-  end fetch_ddl;
-
   /*
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
@@ -5611,7 +5564,7 @@ $end
                   ,       null as grantable -- to get the count right
                   from    dual
                   where   c_use_schema_export * p_use_schema_export = 1
-                  union
+                  union all
                   select  t.object_type()
                   ,       case
                             when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
@@ -5642,6 +5595,7 @@ $end
                   ,       t.privilege()
                   ,       t.grantable()
                   from    table(p_schema_object_tab) t
+                  where   nvl(c_use_schema_export * p_use_schema_export, 0) != 1
                 )
                 select  t.object_type
                 ,       t.object_schema
@@ -5715,40 +5669,6 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         raise;
 $end
     end init;
-
-    procedure find_next_params
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.enter(g_package_prefix || l_program || '.FIND_NEXT_PARAMS');
-$end
-
-      -- now we are going to find an object type which has at least one object not ready
-      <<find_next_params_loop>>
-      loop
-        l_params_idx := l_params_tab.next(l_params_idx);
-
-        exit find_next_params_loop when l_params_idx is null or l_params_tab(l_params_idx).object_type = 'SCHEMA_EXPORT';
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print
-        ( dbug."info"
-        , 'All objects found for schema %s and type %s'
-        , l_params_tab(l_params_idx).object_schema
-        , l_params_tab(l_params_idx).object_type
-        );
-$end
-      end loop find_next_params_loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;
-    exception
-      when others
-      then
-        dbug.leave_on_error;
-        raise;
-$end
-    end find_next_params;
 
     procedure cleanup
     is
@@ -5871,7 +5791,7 @@ $end
           end if;
       end;
 
-      find_next_params;
+      l_params_idx := l_params_tab.next(l_params_idx);
     end loop open_handle_loop;
 
     -- show 100%
