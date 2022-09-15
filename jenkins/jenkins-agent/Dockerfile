@@ -2,6 +2,8 @@ ARG SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 ARG SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
 ARG IMAGE=jenkins/agent:latest
 
+FROM $IMAGE
+
 # Labels.
 
 LABEL maintainer="paulissoft@gmail.com"
@@ -14,8 +16,6 @@ LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.name="ghcr.io/paulissoft/pato-jenkins-agent"
 LABEL org.label-schema.description="Paulissoft Application Tools for Oracle - Jenkins agent"
 LABEL org.label-schema.url="https://github.com/paulissoft/oracle-tools"
-
-FROM $IMAGE
 
 USER root
 # Install Maven and Docker
