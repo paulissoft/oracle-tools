@@ -2,6 +2,19 @@ ARG SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 ARG SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
 ARG IMAGE=jenkins/agent:latest
 
+# Labels.
+
+LABEL maintainer="paulissoft@gmail.com"
+
+# Used by GitHub to link to the site, see https://blog.codecentric.de/en/2021/03/github-container-registry/
+LABEL org.opencontainers.image.source="https://github.com/paulissoft/oracle-tools"
+
+# From https://medium.com/@chamilad/lets-make-your-docker-image-better-than-90-of-existing-ones-8b1e5de950d
+LABEL org.label-schema.schema-version="1.0"
+LABEL org.label-schema.name="ghcr.io/paulissoft/pato-jenkins-agent"
+LABEL org.label-schema.description="Paulissoft Application Tools for Oracle - Jenkins agent"
+LABEL org.label-schema.url="https://github.com/paulissoft/oracle-tools"
+
 FROM $IMAGE
 
 USER root
