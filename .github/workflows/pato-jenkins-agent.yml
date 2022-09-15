@@ -53,5 +53,5 @@ jobs:
         id: build-and-push-latest
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-          docker build -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" ${{ env.CONTEXT }
-          docker push "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.CONTEXT }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
