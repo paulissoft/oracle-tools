@@ -166,7 +166,7 @@ return varchar2
 is
   l_sqlerrm constant varchar2(32767 char) := utl_i18n.unescape_reference(p_sqlerrm);
   l_generic_exception constant varchar2(100 char) := 'ORA' || to_char(data_api_pkg.c_exception) || ': %';
-  l_separator_expr constant varchar2(100 char) := '[^' || data_api_pkg."#" || ']+';
+  l_sep constant varchar2(1 char) := data_api_pkg."#";
   l_error_code varchar2(2000 char) := null;
   l_error_message varchar2(2000 char) := null;
 begin
@@ -182,16 +182,10 @@ $end
 
   if l_sqlerrm like l_generic_exception
   then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'Generic exception; l_separator_expr: %s; first txt: %s', l_separator_expr, regexp_substr(l_sqlerrm, l_separator_expr, 1, 1)); 
-$end
-
     for r in
-    ( select  regexp_substr(l_sqlerrm, l_separator_expr, 1, level) as txt
-      ,       (level-2) as nr
-      from    dual
-      connect by
-              regexp_substr(l_sqlerrm, l_separator_expr, 1, level) is not null
+    ( select  t.column_value as txt
+      ,       (rownum-2) as nr
+      from    table(oracle_tools.api_pkg.list2collection(p_value_list => l_sqlerrm, p_sep => l_sep, p_ignore_null => 0)) t
     )
     loop
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
