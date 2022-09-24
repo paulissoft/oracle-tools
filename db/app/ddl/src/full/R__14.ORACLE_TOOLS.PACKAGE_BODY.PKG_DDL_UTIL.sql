@@ -52,6 +52,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   g_package constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT;
 
   g_package_prefix constant t_module := g_package || '.';
+  
+  g_max_fetch constant simple_integer := 10000;
 
   function get_object_no_dependencies_tab
   return t_object_natural_tab;
@@ -1401,7 +1403,8 @@ $end
       elsif p_object_type = 'OBJECT_GRANT' -- GPA 2016-11-28 #135018217
       then
         parse_object_grant;
-      elsif p_object_type = 'PROCACT_SYSTEM'
+      elsif p_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT') or
+            p_object_type in ('PROCACT_SCHEMA', 'PROCACT_SYSTEM', 'JAVA_CLASS')                 
       then
         nullify_output_parameters;        
       end if;
@@ -2301,9 +2304,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
               p_object_key := null;
 
-            when l_object_type = 'PROCACT_SCHEMA' or
-                 l_object_type = 'PROCACT_SYSTEM' or
-                 l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT')
+            when l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT') or
+                 l_object_type in ('PROCACT_SCHEMA', 'PROCACT_SYSTEM', 'JAVA_CLASS')                 
             then
               p_object_key := null;
 
@@ -3507,8 +3509,8 @@ begin
   end if;
   --
   oracle_tools.pkg_ddl_util.execute_ddl%s(l_ddl_tab);
-end;]', dbms_assert.simple_sql_name(l_network_link)
-      , dbms_assert.simple_sql_name(l_network_link)
+end;]', l_network_link -- no need to use dbms_assert since it may empty or @<network link>
+      , l_network_link
       );
 
     begin
@@ -4700,7 +4702,7 @@ order by
     end case;        
 
     open l_cursor for l_statement using p_schema_ddl.obj.object_schema(), p_schema_ddl.obj.object_name();
-    fetch l_cursor bulk collect into l_member_tab;
+    fetch l_cursor bulk collect into l_member_tab limit g_max_fetch;
     close l_cursor;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -4916,7 +4918,7 @@ order by
         member#';
 
       open l_cursor for l_statement using p_schema_ddl.obj.object_schema(), p_schema_ddl.obj.object_name();
-      fetch l_cursor bulk collect into l_type_method_tab;
+      fetch l_cursor bulk collect into l_type_method_tab limit g_max_fetch;
       close l_cursor;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -4954,7 +4956,7 @@ $end
                   , p_schema_ddl.obj.object_name()
                   , l_type_method_tab(i_idx).member_name
                   , l_type_method_tab(i_idx).member#;
-            fetch l_cursor bulk collect into l_argument_tab;
+            fetch l_cursor bulk collect into l_argument_tab limit g_max_fetch;
             close l_cursor;
 
             l_type_method_object :=
@@ -5692,7 +5694,7 @@ $end
     l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count end);
 
     open c_params;
-    fetch c_params bulk collect into l_params_tab;
+    fetch c_params bulk collect into l_params_tab limit g_max_fetch;
     close c_params;
 
     l_longops_open_rec := longops_init(p_op_name => 'open', p_units => 'handles', p_target_desc => 'DBMS_METADATA', p_totalwork => l_params_tab.count);
@@ -7100,7 +7102,7 @@ $end
            , p_network_link
            , p_grantor_is_schema
            );
-      fetch c_display_ddl_schema bulk collect into l_schema_ddl_tab;
+      fetch c_display_ddl_schema bulk collect into l_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -7595,7 +7597,7 @@ $end
            , p_network_link_target
            , p_skip_repeatables
            );
-      fetch c_display_ddl_schema_diff bulk collect into l_schema_ddl_tab;
+      fetch c_display_ddl_schema_diff bulk collect into l_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema_diff;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -8366,7 +8368,7 @@ $end
                                     , b_network_link_source => l_network_link_source
                                     , b_network_link_target => l_network_link_target
                                     );
-      fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab;
+      fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema_diff;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        

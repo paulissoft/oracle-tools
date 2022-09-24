@@ -179,9 +179,11 @@ See also L<https://github.com/paulissoft/oracle-tools/issues/37>.
 
 BUG: the referential constraints are not created in the correct order in the install.sql file.
 
-This is the case when the interface is version 5 and there are two referential constraints T1-R1 and T1-R2 for table T1, where T1-R2 depends on a primary key constraint T2-C1. The old behaviour was to combine (referential) contraints per table in a file, meaning files like *.REF_CONSTRAINT.T1.sql and *.CONSTRAINT.T2.sql. Hence the referential constraint T1-R2 would be created in the install.sql before the primary key T2-C1 since T1-R1 is mentioned earlier than T2-C1 in the DDL info file (order is T1-R1, T2-C1, T1-R2) and T1-R2 is added to its referental constraint file.
+This is the case when the interface is version 5 and there are two referential constraints T1-R1 and T1-R2 for table T1, where T1-R2 depends on a primary key constraint T2-C1. The old behaviour was to combine (referential) contraints per table in a file, meaning files like *.REF_CONSTRAINT.T1.sql and *.CONSTRAINT.T2.sql. Hence the referential constraint T1-R2 would be created in the install.sql before the primary key T2-C1 since T1-R1 is mentioned earlier than T2-C1 in the DDL info file (order is T1-R1, T2-C1, T1-R2) and T1-R2 is added to its referential constraint file.
 
 The solution is to have a single file for each (referental) constraint and not to combine them. The file name part <name> will be a combination of the table, a dash and the name of the constraint.
+
+Another solution would be to postpone creation of *.REF_CONSTRAINT.*.sql files and only create them at the end. But that is a little bit more difficult to implement.
 
 See also L<https://github.com/paulissoft/oracle-tools/issues/35>.
 

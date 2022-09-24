@@ -133,7 +133,13 @@ public class GenerateDDL
             nr = -1;
 
             conn = DriverManager.getConnection(args[++nr]);
-    
+
+            final Statement stmt = conn.createStatement();
+
+            // try to set up a common environment to get the local radix character X in 'DD-MON-RRRR HH.MI.SSXFF AM TZR' is the same everywhere
+            stmt.executeUpdate("alter session set NLS_LANGUAGE = 'AMERICAN'");
+            stmt.executeUpdate("alter session set NLS_TERRITORY = 'AMERICA'");
+
             final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?)}");
       
             pstmt.setString(1, args[++nr]);
