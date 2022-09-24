@@ -21,6 +21,8 @@ Types of changes:
 - [Something goes in Jenkins wrong when an APEX export has only changes in the create_application.sql scripts.](https://github.com/paulissoft/oracle-tools/issues/49)
 - [The Jenkins handling of (proxy) username should be more user friendly.](https://github.com/paulissoft/oracle-tools/issues/50)
 - [When a synonym points to an object that is not accessible, an error (no data found) is returned.](https://github.com/paulissoft/oracle-tools/issues/51)
+
+- [SQL injection must be impossible.](https://github.com/paulissoft/oracle-tools/issues/57)
 - [The error translation procedure api_pkg.translate_error does not handle empty parameters well.](https://github.com/paulissoft/oracle-tools/issues/60)
 
 ## [1.5.0] - 2022-08-22

@@ -3507,8 +3507,8 @@ begin
   end if;
   --
   oracle_tools.pkg_ddl_util.execute_ddl%s(l_ddl_tab);
-end;]', l_network_link
-      , l_network_link
+end;]', dbms_assert.simple_sql_name(l_network_link)
+      , dbms_assert.simple_sql_name(l_network_link)
       );
 
     begin
@@ -6160,7 +6160,7 @@ exception
     :b9 := dbms_utility.format_error_backtrace;
     raise;
 end;'
-          , l_network_link 
+          , dbms_assert.simple_sql_name(l_network_link)
           );
       begin
         oracle_tools.api_pkg.dbms_output_enable(l_network_link);
