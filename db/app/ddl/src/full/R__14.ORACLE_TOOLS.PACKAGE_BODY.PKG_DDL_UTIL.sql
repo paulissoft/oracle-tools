@@ -2206,7 +2206,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     , p_object_names_include
     );
 $end
-
+  
+    p_object_key := null;
+    
     parse_ddl
     ( p_ku$_ddl
     , p_schema
@@ -4410,7 +4412,7 @@ $end
       and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
               -- GJP 2022-08-22
               -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
-              -- so it will not be listed as a separated DDL statement.
+              -- so it will not be listed as a separate DDL statement.
       and     not(i.constraint_index = 'YES')
       and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
@@ -6432,7 +6434,7 @@ $end
        *
        * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
        *
-       * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+       * The solution is to have a better dependency sort order and thus let the referential constraint depend on the primary / unique key and not on the base table / view.
        */ 
 
       -- but the object also depends on its own base object
@@ -6487,6 +6489,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.on_error;
 $end
+            null;
         end;
       end loop;
     end if;
