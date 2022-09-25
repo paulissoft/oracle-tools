@@ -2195,7 +2195,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
     dbug.print
     ( dbug."input"
@@ -2268,10 +2268,14 @@ $end
           exception
             when others
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
               p_object_lookup_tab(p_object_key).schema_ddl.print();
 $end            
-              raise_application_error(oracle_tools.pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
+              raise_application_error
+              ( oracle_tools.pkg_ddl_error.c_object_not_correct
+              , 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.'
+              , true
+              );
           end;
 
           -- the normal stuff
@@ -2294,7 +2298,7 @@ $end
                  , p_base_object_name => l_base_object_name
                  ) = 0 -- object not but on purpose
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
               dbug.print
               ( dbug."info"
               , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name'
@@ -2339,17 +2343,19 @@ $end
 
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.print(dbug."output", 'p_object_key: %s', p_object_key);
     dbug.leave;
 $end
   exception
     -- GJP 2021-08-30 Ignore this always.
-    when oracle_tools.pkg_ddl_error.e_object_not_found or oracle_tools.pkg_ddl_error.e_could_not_parse
+    when oracle_tools.pkg_ddl_error.e_object_not_correct or
+         oracle_tools.pkg_ddl_error.e_object_not_found or
+         oracle_tools.pkg_ddl_error.e_could_not_parse
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end
 
@@ -2357,7 +2363,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end
       raise;
@@ -6058,6 +6064,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
+      null;
 
     when no_data_found
     then
@@ -6996,6 +7003,11 @@ $end
         raise_application_error(oracle_tools.pkg_ddl_error.c_wrong_db_link, 'Private database link LOOPBACK should point to this schema and database.', true);
     end;
 
+    -- GJP 2022-09-25
+    -- The ddl unit test fails when the ORACLE_TOOLS schema has a synonym for a non-existing object.
+    -- https://github.com/paulissoft/oracle-tools/issues/61
+    execute immediate 'create or replace synonym nowhere for sys.nowhere';
+
     commit;
   end ut_setup;
 
@@ -7004,7 +7016,7 @@ $end
     pragma autonomous_transaction;
 
   begin
-    null;
+    execute immediate 'drop synonym nowhere';
 
     commit;
   end ut_teardown;
