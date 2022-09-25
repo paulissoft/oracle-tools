@@ -779,6 +779,8 @@ $end
   , p_grantable out nocopy varchar2
   )
   is
+    l_ddl_text varchar2(100) := null;
+    
     procedure nullify_output_parameters
     is
     begin
@@ -1386,6 +1388,25 @@ $end
         end case;
       end loop parse_item_loop;
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+      dbug.print
+      ( dbug."info"
+      , 'p_verb: %s; p_object_name; %s; p_object_type: %s; p_object_schema: %s'
+      , p_verb
+      , p_object_name
+      , p_object_type
+      , p_object_schema
+      );
+      dbug.print
+      ( dbug."info"
+      , 'p_base_object_name: %s; p_base_object_type: %s; p_base_object_schema: %s; p_grantable: %s'
+      , p_base_object_name
+      , p_base_object_type
+      , p_base_object_schema
+      , p_grantable
+      );
+$end
+
       -- TABLE/VIEW for Oracle 10g
       if p_verb = 'ALTER' and p_object_type in ('TABLE', 'VIEW', 'CONSTRAINT', 'REF_CONSTRAINT')
       then
@@ -1406,6 +1427,18 @@ $end
       elsif p_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT') or
             p_object_type in ('PROCACT_SCHEMA', 'PROCACT_SYSTEM', 'JAVA_CLASS')                 
       then
+        l_ddl_text := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 100);
+        raise_application_error
+        ( oracle_tools.pkg_ddl_error.c_object_not_correct
+        , utl_lms.format_message
+          ( 'Verb "%s" and/or object type "%s" not correct for ddl "%s%s"'
+          , p_verb
+          , p_object_type
+          , l_ddl_text
+          , case when dbms_lob.getlength(p_ddl.ddlText) > 100 then '...' end
+          )
+        , true
+        );
         nullify_output_parameters;        
       end if;
     end if;
@@ -1435,11 +1468,13 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_p
     , p_grantable
     );
     dbug.leave;
+$end
   exception
     when others then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
+$end      
       raise;
-$end
   end parse_ddl;
 
   procedure i_object_exclude_name_expr_tab
