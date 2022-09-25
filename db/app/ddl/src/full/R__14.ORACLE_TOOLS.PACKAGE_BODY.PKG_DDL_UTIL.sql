@@ -779,7 +779,7 @@ $end
   , p_grantable out nocopy varchar2
   )
   is
-    l_ddl_text varchar2(100) := null;
+    l_ddl_text varchar2(100 char) := null;
     
     procedure nullify_output_parameters
     is
