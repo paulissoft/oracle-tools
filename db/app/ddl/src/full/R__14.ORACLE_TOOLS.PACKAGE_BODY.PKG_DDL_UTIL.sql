@@ -457,6 +457,7 @@ $end
       end;
   begin
     if l_object_type is null or
+       l_object_type = 'SCHEMA_EXPORT' or
 $if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
        l_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
@@ -465,7 +466,10 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_object_type_wrong, 'Object type (' || l_object_type || ') is not one of the metadata schema object types.');
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_object_type_wrong
+      , 'Object type (' || l_object_type || ') is not one of the metadata schema object types.'
+      );
     end if;
   end check_object_type;
 
