@@ -104,6 +104,13 @@ Example: the option
 
 disables this option and thus the FORCE keyword will be removed.
 
+=item B<--group-constraints>
+
+If this option is enabled (the default) and the interface is not version 4,
+all constraints will be grouped in one file for the referential constraints
+per base object and one for the other constraints per base object.  The
+install.sql will then create the referential constraints at the end.
+
 =item B<--help>
 
 This help.
@@ -164,6 +171,10 @@ Gert-Jan Paulissen
 =head1 HISTORY
 
 =over 4
+
+=item 2022-09-26
+
+Constraints can be grouped in one file per base object (one for referential and one for the rest).
 
 =item 2022-09-06
 
@@ -303,6 +314,7 @@ my $install_sql_preamble_printed = 0;
 # command line options
 my $dynamic_sql = 0; # displayed in print_run_info()
 my $force_view = 1; # displayed in print_run_info()
+my $group_constraints = 1;
 my $input_file = undef;
 my $output_directory = '.';
 my $single_output_file = undef;
@@ -404,6 +416,10 @@ my $object_sep = '.';
 my $object_sep_rex = qr/\./;
 my $object_rex = qr/^.+\..+\..+$/;
 
+# An array of array references containing $file, $object_type and $object_name.
+# Will be used to put REF_CONSTRAINT files at the end of install.sql if $group_constraints is true.
+my @install_sql_files = ();
+
 # PROTOTYPES
 
 sub main ();
@@ -421,6 +437,7 @@ sub smart_close ($);
 sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
+sub install_sql_write ($$$$);
 sub all_sql_statements_flush ($$$$);
 sub object_sql_statements_flush ($$$$$);
 sub sql_statement_flush ($$$$$$);
@@ -472,6 +489,7 @@ sub process_command_line () {
     #
     GetOptions('dynamic-sql!' => \$dynamic_sql,
                'force-view!' => \$force_view,
+               'group_constraints!' => \$group_constraints,
                'help' => sub { pod2usage(-verbose => 2) },
                'input-file=s' => \$input_file,
                'output-directory=s' => \$output_directory,
@@ -819,7 +837,8 @@ sub get_object ($$$;$$$) {
         my $name = $base_object_name;
         
         # For constraints the name part is either <base_name>-<constraint_name> (<constraint_name> not empty) or <base_name> (else)
-        if (defined($interface) &&
+        if (!$group_constraints &&
+            defined($interface) &&
             $interface ne PKG_DDL_UTIL_V4 &&
             $object_type =~ m/^(REF_)?CONSTRAINT$/ &&
             defined($object_name) &&
@@ -888,17 +907,9 @@ sub open_file ($$$$$$) {
     
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists, $object_type, $object_name) = @_;
 
-    if (defined $fh_install_sql && !$install_sql_preamble_printed) {
-        print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
-        $install_sql_preamble_printed = 1;
-    }
     
     if (defined $fh_install_sql) {
-        print $fh_install_sql "prompt \@\@$file\n\@\@$file\n";
-        print $fh_install_sql sprintf("show errors %s \"%s\"\n", $object_type_info{$object_type}->{'show_errors'}, $object_name)
-            if (defined($object_type) &&
-                exists($object_type_info{$object_type}) &&
-                exists($object_type_info{$object_type}->{'show_errors'}));
+        push(@install_sql_files, [$file, $object_type, $object_name]);
     }
 
     # GJP 2021-08-27 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
@@ -1045,6 +1056,16 @@ sub sort_dependent_objects ($$$) {
     return $a->{ddl}->[0] cmp $b->{ddl}->[0];
 }
 
+sub install_sql_write ($$$$) {
+    my ($fh_install_sql, $file, $object_type, $object_name) = @_;
+
+    print $fh_install_sql "prompt \@\@$file\n\@\@$file\n";
+    print $fh_install_sql sprintf("show errors %s \"%s\"\n", $object_type_info{$object_type}->{'show_errors'}, $object_name)
+        if (defined($object_type) &&
+            exists($object_type_info{$object_type}) &&
+            exists($object_type_info{$object_type}->{'show_errors'}));
+}
+
 sub all_sql_statements_flush ($$$$) {
     trace((caller(0))[3]);
 
@@ -1061,6 +1082,39 @@ sub all_sql_statements_flush ($$$$) {
     
     foreach my $object (sort { sort_sql_statements($r_sql_statements, $a, $b); } (keys %$r_sql_statements)) {
         object_sql_statements_flush($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements->{$object}->{ddls}, $object);
+    }
+
+    # Now write tthe install.sql
+    if (defined $fh_install_sql && scalar(@install_sql_files) > 0) {
+        if (!$install_sql_preamble_printed) {
+            print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
+            $install_sql_preamble_printed = 1;
+        }
+
+        if ($group_constraints &&
+            defined($interface) &&
+            $interface ne PKG_DDL_UTIL_V4) {
+            
+            foreach my $ref (@install_sql_files) {
+                my ($file, $object_type, $object_name) = ($ref->[0], $ref->[1], $ref->[2]);
+
+                install_sql_write($fh_install_sql, $file, $object_type, $object_name)
+                    if $object_type ne 'REF_CONSTRAINT';
+            }
+            foreach my $ref (@install_sql_files) {
+                my ($file, $object_type, $object_name) = ($ref->[0], $ref->[1], $ref->[2]);
+
+                install_sql_write($fh_install_sql, $file, $object_type, $object_name)
+                    if $object_type eq 'REF_CONSTRAINT';
+            }
+            
+        } else {
+            foreach my $ref (@install_sql_files) {
+                my ($file, $object_type, $object_name) = ($ref->[0], $ref->[1], $ref->[2]);
+
+                install_sql_write($fh_install_sql, $file, $object_type, $object_name);
+            }
+        }
     }
 }
 
@@ -1410,6 +1464,7 @@ sub print_run_info ($$) {
     print $fh '/* ', "perl generate_ddl.pl (version $VERSION)";
     print $fh sprintf(" --%s%s", ($dynamic_sql ? '' : 'no'), 'dynamic-sql');
     print $fh sprintf(" --%s%s", ($force_view ? '' : 'no'), 'force-view');
+    print $fh sprintf(" --%s%s", ($group_constraints ? '' : 'no'), 'group-constraints');
     print $fh sprintf(" --%s%s", ($skip_install_sql ? '' : 'no'), 'skip-install-sql');
     print $fh " --source-schema=$source_schema" if (length($source_schema) > 0);
     print $fh sprintf(" --%s%s", ($strip_source_schema ? '' : 'no'), 'strip-source-schema');
