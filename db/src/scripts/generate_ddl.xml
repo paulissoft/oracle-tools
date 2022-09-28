@@ -91,13 +91,11 @@
           <equals arg1="${@{property}}" arg2="0" casesensitive="false" trim="true"/>
         </or>
       </condition>
-      <echo message="Property perl.@{property} set to: '${perl.@{property}}'"/>
+      <!--echo message="Property perl.@{property} set to: '${perl.@{property}}'"/-->
     </sequential>
   </macrodef>
 
-  <target name="init" depends="init-common,init-full,init-incr">
-    <echo message="target.db.name: ${target.db.name}"/>
-  </target>
+  <target name="init" depends="init-common,init-full,init-incr" />
 
   <target name="init-common">
     <!-- replace ${ant.file} (../generate_ddl.xml) by ../generate_ddl.pl -->
