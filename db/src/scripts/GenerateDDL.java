@@ -136,7 +136,12 @@ public class GenerateDDL
 
             final Statement stmt = conn.createStatement();
 
-            // try to set up a common environment to get the local radix character X in 'DD-MON-RRRR HH.MI.SSXFF AM TZR' is the same everywhere
+            // GJP 2022-09-28
+            // DDL generation changes due to timestamp format for dbms_scheduler jobs should be ignored.
+            // https://github.com/paulissoft/oracle-tools/issues/59
+            
+            // Try to set up a common environment to ensure that the local radix character X in 'DD-MON-RRRR HH.MI.SSXFF AM TZR' is the same everywhere.
+            
             stmt.executeUpdate("alter session set NLS_LANGUAGE = 'AMERICAN'");
             stmt.executeUpdate("alter session set NLS_TERRITORY = 'AMERICA'");
 
