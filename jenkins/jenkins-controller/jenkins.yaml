@@ -2,13 +2,16 @@ credentials:
   system:
     domainCredentials:
     - credentials:
+      - usernamePassword:
+          description: "Username/password for schema ORACLE_TOOLS on Paulissoft Application\
+            \ Tools for Oracle development database."
+          id: "oracle-tools-development"
+          scope: GLOBAL
+          username: "ORACLE_TOOLS"
       - basicSSHUserPrivateKey:
-          description: "Access to Jenkins agent"
-          id: "jenkins-agent"
-          privateKeySource:
-            directEntry:
-          scope: SYSTEM
-          username: "jenkins"
+          description: "GitHub account to use with SSH"
+          id: "github"
+          scope: GLOBAL
 jenkins:
   agentProtocols:
   - "JNLP4-connect"
@@ -16,31 +19,41 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+  clouds:
+  - docker:
+      dockerApi:
+        connectTimeout: 60
+        dockerHost:
+          uri: "tcp://jenkins-docker:2375"
+        readTimeout: 60
+      exposeDockerHost: true
+      name: "docker"
+      templates:
+      - connector:
+          attach:
+            user: "jenkins"
+        dockerTemplateBase:
+          cpuPeriod: 0
+          cpuQuota: 0
+          image: "ghcr.io/paulissoft/pato-jenkins-agent:latest"
+          mounts:
+          - "type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository"
+          mountsString: "type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository"
+          network: "jenkins"
+        labelString: "maven jdk oracle"
+        name: "pato"
+        pullStrategy: PULL_ALWAYS
+        pullTimeout: 300
+        remoteFs: "/home/jenkins/agent"
   crumbIssuer:
     standard:
       excludeClientIPFromCrumb: false
   disableRememberMe: false
   labelAtoms:
-  - name: "Jenkins-agent"
   - name: "built-in"
-  - name: "jdk"
-  - name: "maven"
-  - name: "oracle"
   markupFormatter: "plainText"
   mode: NORMAL
   myViewsTabBar: "standard"
-  nodes:
-  - permanent:
-      labelString: "oracle maven jdk"
-      launcher:
-        ssh:
-          credentialsId: "jenkins-agent"
-          host: "jenkins-agent"
-          port: 22
-          sshHostKeyVerificationStrategy: "knownHostsFileKeyVerificationStrategy"
-      name: "Jenkins-agent"
-      remoteFS: "/home/jenkins"
-      retentionStrategy: "always"
   numExecutors: 0
   primaryView:
     all:

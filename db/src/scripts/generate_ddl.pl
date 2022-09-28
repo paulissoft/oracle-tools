@@ -104,6 +104,13 @@ Example: the option
 
 disables this option and thus the FORCE keyword will be removed.
 
+=item B<--group-constraints>
+
+If this option is enabled (the default) and the interface is not version 4,
+all constraints will be grouped in one file for the referential constraints
+per base object and one for the other constraints per base object.  The
+install.sql will then create the referential constraints at the end.
+
 =item B<--help>
 
 This help.
@@ -165,6 +172,10 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2022-09-28
+
+Constraints can be grouped in one file per base object (one for referential and one for the rest).
+
 =item 2022-09-06
 
 Making it easier to see duplicate objects in the output directory.
@@ -179,9 +190,11 @@ See also L<https://github.com/paulissoft/oracle-tools/issues/37>.
 
 BUG: the referential constraints are not created in the correct order in the install.sql file.
 
-This is the case when the interface is version 5 and there are two referential constraints T1-R1 and T1-R2 for table T1, where T1-R2 depends on a primary key constraint T2-C1. The old behaviour was to combine (referential) contraints per table in a file, meaning files like *.REF_CONSTRAINT.T1.sql and *.CONSTRAINT.T2.sql. Hence the referential constraint T1-R2 would be created in the install.sql before the primary key T2-C1 since T1-R1 is mentioned earlier than T2-C1 in the DDL info file (order is T1-R1, T2-C1, T1-R2) and T1-R2 is added to its referental constraint file.
+This is the case when the interface is version 5 and there are two referential constraints T1-R1 and T1-R2 for table T1, where T1-R2 depends on a primary key constraint T2-C1. The old behaviour was to combine (referential) contraints per table in a file, meaning files like *.REF_CONSTRAINT.T1.sql and *.CONSTRAINT.T2.sql. Hence the referential constraint T1-R2 would be created in the install.sql before the primary key T2-C1 since T1-R1 is mentioned earlier than T2-C1 in the DDL info file (order is T1-R1, T2-C1, T1-R2) and T1-R2 is added to its referential constraint file.
 
 The solution is to have a single file for each (referental) constraint and not to combine them. The file name part <name> will be a combination of the table, a dash and the name of the constraint.
+
+Another solution would be to postpone creation of *.REF_CONSTRAINT.*.sql files and only create them at the end. But that is a little bit more difficult to implement.
 
 See also L<https://github.com/paulissoft/oracle-tools/issues/35>.
 
@@ -292,7 +305,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2022-09-06";
+my $VERSION = "2022-09-28";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -301,6 +314,7 @@ my $install_sql_preamble_printed = 0;
 # command line options
 my $dynamic_sql = 0; # displayed in print_run_info()
 my $force_view = 1; # displayed in print_run_info()
+my $group_constraints = 1;
 my $input_file = undef;
 my $output_directory = '.';
 my $single_output_file = undef;
@@ -402,6 +416,14 @@ my $object_sep = '.';
 my $object_sep_rex = qr/\./;
 my $object_rex = qr/^.+\..+\..+$/;
 
+# The lines to write to install.sql (if any).
+my @install_sql_lines = ();
+# The ref constraint lines to write to install.sql at the end (if any) if
+# $group_constraints is true for interface >= v5.  Necessary to solve
+# dependency order problems when all constraints are grouped in two files:
+# one for referential constraints and one for the rest (per base object).
+my @install_sql_ref_constraint_lines = ();
+
 # PROTOTYPES
 
 sub main ();
@@ -470,6 +492,7 @@ sub process_command_line () {
     #
     GetOptions('dynamic-sql!' => \$dynamic_sql,
                'force-view!' => \$force_view,
+               'group-constraints!' => \$group_constraints,
                'help' => sub { pod2usage(-verbose => 2) },
                'input-file=s' => \$input_file,
                'output-directory=s' => \$output_directory,
@@ -817,7 +840,8 @@ sub get_object ($$$;$$$) {
         my $name = $base_object_name;
         
         # For constraints the name part is either <base_name>-<constraint_name> (<constraint_name> not empty) or <base_name> (else)
-        if (defined($interface) &&
+        if (!$group_constraints &&
+            defined($interface) &&
             $interface ne PKG_DDL_UTIL_V4 &&
             $object_type =~ m/^(REF_)?CONSTRAINT$/ &&
             defined($object_name) &&
@@ -886,17 +910,23 @@ sub open_file ($$$$$$) {
     
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists, $object_type, $object_name) = @_;
 
-    if (defined $fh_install_sql && !$install_sql_preamble_printed) {
-        print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
-        $install_sql_preamble_printed = 1;
-    }
     
     if (defined $fh_install_sql) {
-        print $fh_install_sql "prompt \@\@$file\n\@\@$file\n";
-        print $fh_install_sql sprintf("show errors %s \"%s\"\n", $object_type_info{$object_type}->{'show_errors'}, $object_name)
+        my $r_lines = \@install_sql_lines;
+
+        if ($object_type eq 'REF_CONSTRAINT' &&
+            $group_constraints &&
+            defined($interface) &&
+            $interface ne PKG_DDL_UTIL_V4) {
+            $r_lines = \@install_sql_ref_constraint_lines;
+        }
+
+        push(@$r_lines, "prompt \@\@$file\n\@\@$file\n");
+        push(@$r_lines, sprintf("show errors %s \"%s\"\n", $object_type_info{$object_type}->{'show_errors'}, $object_name))
             if (defined($object_type) &&
                 exists($object_type_info{$object_type}) &&
                 exists($object_type_info{$object_type}->{'show_errors'}));
+
     }
 
     # GJP 2021-08-27 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
@@ -1059,6 +1089,20 @@ sub all_sql_statements_flush ($$$$) {
     
     foreach my $object (sort { sort_sql_statements($r_sql_statements, $a, $b); } (keys %$r_sql_statements)) {
         object_sql_statements_flush($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements->{$object}->{ddls}, $object);
+    }
+
+    # Now write tthe install.sql
+    if (defined $fh_install_sql) {
+        if (!$install_sql_preamble_printed) {
+            print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
+            $install_sql_preamble_printed = 1;
+        }
+
+        push(@install_sql_lines, @install_sql_ref_constraint_lines);
+        
+        foreach my $line (@install_sql_lines) {
+            print $fh_install_sql $line;
+        }
     }
 }
 
@@ -1408,6 +1452,7 @@ sub print_run_info ($$) {
     print $fh '/* ', "perl generate_ddl.pl (version $VERSION)";
     print $fh sprintf(" --%s%s", ($dynamic_sql ? '' : 'no'), 'dynamic-sql');
     print $fh sprintf(" --%s%s", ($force_view ? '' : 'no'), 'force-view');
+    print $fh sprintf(" --%s%s", ($group_constraints ? '' : 'no'), 'group-constraints');
     print $fh sprintf(" --%s%s", ($skip_install_sql ? '' : 'no'), 'skip-install-sql');
     print $fh " --source-schema=$source_schema" if (length($source_schema) > 0);
     print $fh sprintf(" --%s%s", ($strip_source_schema ? '' : 'no'), 'strip-source-schema');

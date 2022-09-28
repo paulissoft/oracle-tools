@@ -25,10 +25,12 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
   c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
-  c_debugging_parse_ddl constant boolean := true; 
+  c_debugging_parse_ddl constant boolean := true;
 
-  -- pivotal issues
-
+  /*
+  -- Start of bugs/features
+  */
+  
   -- GPA 2017-02-01 #138707615 named not null constraints are recreated
   c_#138707615_1 constant boolean := true;
 
@@ -51,6 +53,15 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   -- GPA 2017-03-06 Capture invalid objects before releasing to next enviroment.
   c_#140920801 constant boolean := true; -- values: false - check nothing, true - allow checks
+
+  -- GJP 2022-09-25
+  -- DDL generation changes due to sequence start with should be ignored.
+  -- https://github.com/paulissoft/oracle-tools/issues/58
+  c_set_start_with_to_minvalue constant boolean := true;
+
+  /*
+  -- End of bugs/features
+  */
 
   -- see also generate_ddl.pl
   c_get_queue_ddl constant boolean := false;

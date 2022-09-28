@@ -128,7 +128,7 @@ begin
   while l_owner is not null
   loop
     begin
-      execute immediate 'call ' || l_owner || '.' || p_br_package_tab(l_owner) || '.enable_br(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable;
+      execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.enable_br') || '(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable;
       l_br_found := true;
     exception
       when no_data_found
@@ -243,7 +243,7 @@ begin
   while l_owner is not null
   loop
     begin
-      execute immediate 'call ' || l_owner || '.' || p_br_package_tab(l_owner) || '.check_br(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable;
+      execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.check_br') || '(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable;
       l_br_found := true;
     exception
       when no_data_found
@@ -488,7 +488,7 @@ $end
     begin
       forall i in l_tab.first .. l_tab.last save exceptions
         execute immediate
-          'update "' || p_owner || '"."' || p_table_name || '" t set t.valid = ' || p_valid || ' where t.rowid = :1'
+          'update ' || dbms_assert.qualified_sql_name('"' || p_owner || '"."' || p_table_name || '"') || ' t set t.valid = ' || p_valid || ' where t.rowid = :1'
           using l_tab(i);
     exception
       when e_dml_errors
@@ -570,7 +570,7 @@ $end
     loop
       begin
         execute immediate
-          'update "' || p_owner || '"."' || p_table_name || '" t set t.valid = ' || p_valid || ' where t.rowid = :1'
+          'update ' || dbms_assert.qualified_sql_name('"' || p_owner || '"."' || p_table_name || '"') || ' t set t.valid = ' || p_valid || ' where t.rowid = :1'
           using l_tab(i);
 
 $if cfg_pkg.c_debugging $then
@@ -663,7 +663,7 @@ $if cfg_pkg.c_debugging $then
 $end
 
     execute immediate
-      'select t.rowid from "' || r.owner || '"."' || r.table_name || '" t where t.valid != ' || p_valid
+      'select t.rowid from ' || dbms_assert.qualified_sql_name('"' || r.owner || '"."' || r.table_name || '"') || ' t where t.valid != ' || p_valid
       bulk collect into l_tab;
 
     if l_tab.count = 0
@@ -718,7 +718,7 @@ $end
   l_owner := p_br_package_tab.first;
   while l_owner is not null
   loop
-    execute immediate 'call ' || l_owner || '.' || p_br_package_tab(l_owner) || '.refresh_mv(p_mview_name => ''%_MV_BR_%'')'; -- should succeed
+    execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.refresh_mv') || '(p_mview_name => ''%_MV_BR_%'')'; -- should succeed
     l_owner := p_br_package_tab.next(l_owner);
   end loop;
 
@@ -774,7 +774,7 @@ $end
 declare
   l_error_tab dbms_sql.varchar2_table;
 begin
-  ' || l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table(p_table_name => :1, p_commit => true, p_valid => 0, p_error_tab => l_error_tab);
+  ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table') || '(p_table_name => :1, p_commit => true, p_valid => 0, p_error_tab => l_error_tab);
 end;' using l_table_name;
 
           l_everything_ok := true; -- to signal that the constraint may be enabled successfully below
@@ -804,7 +804,7 @@ end;' using l_table_name;
 declare
   l_error_tab dbms_sql.varchar2_table;
 begin
-  ' || l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table(p_commit => true, p_error_tab => l_error_tab);
+  ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table') || '(p_commit => true, p_error_tab => l_error_tab);
 end;';
     l_owner := p_br_package_tab.next(l_owner);
   end loop;

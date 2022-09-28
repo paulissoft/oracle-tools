@@ -52,6 +52,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   g_package constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT;
 
   g_package_prefix constant t_module := g_package || '.';
+  
+  g_max_fetch constant simple_integer := 10000;
 
   function get_object_no_dependencies_tab
   return t_object_natural_tab;
@@ -455,6 +457,7 @@ $end
       end;
   begin
     if l_object_type is null or
+       l_object_type = 'SCHEMA_EXPORT' or
 $if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
        l_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
@@ -463,7 +466,10 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_object_type_wrong, 'Object type (' || l_object_type || ') is not one of the metadata schema object types.');
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_object_type_wrong
+      , 'Object type (' || l_object_type || ') is not one of the metadata schema object types.'
+      );
     end if;
   end check_object_type;
 
@@ -777,6 +783,8 @@ $end
   , p_grantable out nocopy varchar2
   )
   is
+    l_ddl_text varchar2(100 char) := null;
+    
     procedure nullify_output_parameters
     is
     begin
@@ -1384,6 +1392,25 @@ $end
         end case;
       end loop parse_item_loop;
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+      dbug.print
+      ( dbug."info"
+      , 'p_verb: %s; p_object_name; %s; p_object_type: %s; p_object_schema: %s'
+      , p_verb
+      , p_object_name
+      , p_object_type
+      , p_object_schema
+      );
+      dbug.print
+      ( dbug."info"
+      , 'p_base_object_name: %s; p_base_object_type: %s; p_base_object_schema: %s; p_grantable: %s'
+      , p_base_object_name
+      , p_base_object_type
+      , p_base_object_schema
+      , p_grantable
+      );
+$end
+
       -- TABLE/VIEW for Oracle 10g
       if p_verb = 'ALTER' and p_object_type in ('TABLE', 'VIEW', 'CONSTRAINT', 'REF_CONSTRAINT')
       then
@@ -1401,8 +1428,20 @@ $end
       elsif p_object_type = 'OBJECT_GRANT' -- GPA 2016-11-28 #135018217
       then
         parse_object_grant;
-      elsif p_object_type = 'PROCACT_SYSTEM'
+      elsif p_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT') or
+            p_object_type in ('PROCACT_SCHEMA', 'PROCACT_SYSTEM', 'JAVA_CLASS')                 
       then
+        l_ddl_text := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => 100);
+        raise_application_error
+        ( oracle_tools.pkg_ddl_error.c_object_not_correct
+        , utl_lms.format_message
+          ( 'Verb "%s" and/or object type "%s" not correct for ddl "%s"'
+          , p_verb
+          , p_object_type
+          , l_ddl_text
+          )
+        , true
+        );
         nullify_output_parameters;        
       end if;
     end if;
@@ -1432,11 +1471,13 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_p
     , p_grantable
     );
     dbug.leave;
+$end
   exception
     when others then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
+$end      
       raise;
-$end
   end parse_ddl;
 
   procedure i_object_exclude_name_expr_tab
@@ -2192,7 +2233,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
     dbug.print
     ( dbug."input"
@@ -2203,7 +2244,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     , p_object_names_include
     );
 $end
-
+  
+    p_object_key := null;
+    
     parse_ddl
     ( p_ku$_ddl
     , p_schema
@@ -2263,10 +2306,14 @@ $end
           exception
             when others
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
               p_object_lookup_tab(p_object_key).schema_ddl.print();
 $end            
-              raise_application_error(oracle_tools.pkg_ddl_error.c_object_not_correct, 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.', true);
+              raise_application_error
+              ( oracle_tools.pkg_ddl_error.c_object_not_correct
+              , 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.'
+              , true
+              );
           end;
 
           -- the normal stuff
@@ -2289,7 +2336,7 @@ $end
                  , p_base_object_name => l_base_object_name
                  ) = 0 -- object not but on purpose
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
               dbug.print
               ( dbug."info"
               , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name'
@@ -2301,9 +2348,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
               p_object_key := null;
 
-            when l_object_type = 'PROCACT_SCHEMA' or
-                 l_object_type = 'PROCACT_SYSTEM' or
-                 l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT')
+            when l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT') or
+                 l_object_type in ('PROCACT_SCHEMA', 'PROCACT_SYSTEM', 'JAVA_CLASS')                 
             then
               p_object_key := null;
 
@@ -2335,17 +2381,19 @@ $end
 
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.print(dbug."output", 'p_object_key: %s', p_object_key);
     dbug.leave;
 $end
   exception
     -- GJP 2021-08-30 Ignore this always.
-    when oracle_tools.pkg_ddl_error.e_object_not_found or oracle_tools.pkg_ddl_error.e_could_not_parse
+    when oracle_tools.pkg_ddl_error.e_object_not_correct or
+         oracle_tools.pkg_ddl_error.e_object_not_found or
+         oracle_tools.pkg_ddl_error.e_could_not_parse
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end
 
@@ -2353,7 +2401,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end
       raise;
@@ -3507,7 +3555,7 @@ begin
   end if;
   --
   oracle_tools.pkg_ddl_util.execute_ddl%s(l_ddl_tab);
-end;]', l_network_link
+end;]', l_network_link -- no need to use dbms_assert since it may empty or @<network link>
       , l_network_link
       );
 
@@ -4408,7 +4456,7 @@ $end
       and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
               -- GJP 2022-08-22
               -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
-              -- so it will not be listed as a separated DDL statement.
+              -- so it will not be listed as a separate DDL statement.
       and     not(i.constraint_index = 'YES')
       and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
@@ -4700,7 +4748,7 @@ order by
     end case;        
 
     open l_cursor for l_statement using p_schema_ddl.obj.object_schema(), p_schema_ddl.obj.object_name();
-    fetch l_cursor bulk collect into l_member_tab;
+    fetch l_cursor bulk collect into l_member_tab limit g_max_fetch;
     close l_cursor;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -4916,7 +4964,7 @@ order by
         member#';
 
       open l_cursor for l_statement using p_schema_ddl.obj.object_schema(), p_schema_ddl.obj.object_name();
-      fetch l_cursor bulk collect into l_type_method_tab;
+      fetch l_cursor bulk collect into l_type_method_tab limit g_max_fetch;
       close l_cursor;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -4954,7 +5002,7 @@ $end
                   , p_schema_ddl.obj.object_name()
                   , l_type_method_tab(i_idx).member_name
                   , l_type_method_tab(i_idx).member#;
-            fetch l_cursor bulk collect into l_argument_tab;
+            fetch l_cursor bulk collect into l_argument_tab limit g_max_fetch;
             close l_cursor;
 
             l_type_method_object :=
@@ -5692,7 +5740,7 @@ $end
     l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count end);
 
     open c_params;
-    fetch c_params bulk collect into l_params_tab;
+    fetch c_params bulk collect into l_params_tab limit g_max_fetch;
     close c_params;
 
     l_longops_open_rec := longops_init(p_op_name => 'open', p_units => 'handles', p_target_desc => 'DBMS_METADATA', p_totalwork => l_params_tab.count);
@@ -6054,6 +6102,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
+      null;
 
     when no_data_found
     then
@@ -6160,7 +6209,7 @@ exception
     :b9 := dbms_utility.format_error_backtrace;
     raise;
 end;'
-          , l_network_link 
+          , dbms_assert.simple_sql_name(l_network_link)
           );
       begin
         oracle_tools.api_pkg.dbms_output_enable(l_network_link);
@@ -6430,7 +6479,7 @@ $end
        *
        * BUG: the referential constraints are not created in the correct order in the install.sql file (https://github.com/paulissoft/oracle-tools/issues/35).
        *
-       * The solution is to have a better dependency sort order and thus let the referential constraint depends on the primary / unique key and not on the base table / view.
+       * The solution is to have a better dependency sort order and thus let the referential constraint depend on the primary / unique key and not on the base table / view.
        */ 
 
       -- but the object also depends on its own base object
@@ -6485,6 +6534,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.on_error;
 $end
+            null;
         end;
       end loop;
     end if;
@@ -6991,6 +7041,11 @@ $end
         raise_application_error(oracle_tools.pkg_ddl_error.c_wrong_db_link, 'Private database link LOOPBACK should point to this schema and database.', true);
     end;
 
+    -- GJP 2022-09-25
+    -- The ddl unit test fails when the ORACLE_TOOLS schema has a synonym for a non-existing object.
+    -- https://github.com/paulissoft/oracle-tools/issues/61
+    execute immediate 'create or replace synonym nowhere for sys.nowhere';
+
     commit;
   end ut_setup;
 
@@ -6999,7 +7054,7 @@ $end
     pragma autonomous_transaction;
 
   begin
-    null;
+    execute immediate 'drop synonym nowhere';
 
     commit;
   end ut_teardown;
@@ -7100,7 +7155,7 @@ $end
            , p_network_link
            , p_grantor_is_schema
            );
-      fetch c_display_ddl_schema bulk collect into l_schema_ddl_tab;
+      fetch c_display_ddl_schema bulk collect into l_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -7595,7 +7650,7 @@ $end
            , p_network_link_target
            , p_skip_repeatables
            );
-      fetch c_display_ddl_schema_diff bulk collect into l_schema_ddl_tab;
+      fetch c_display_ddl_schema_diff bulk collect into l_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema_diff;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -8366,7 +8421,7 @@ $end
                                     , b_network_link_source => l_network_link_source
                                     , b_network_link_target => l_network_link_target
                                     );
-      fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab;
+      fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema_diff;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        

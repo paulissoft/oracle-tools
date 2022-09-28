@@ -86,7 +86,7 @@ procedure ut_expect_violation
  * Will issue:
  *
  *   execute immediate
- *     utl_lms.format_message('call dbms_output.enable@%s(:b1)', p_db_link)
+ *     'call ' || dbms_assert.qualified_sql_name('dbms_output.enable@' || p_db_link) || '(:b1)'
  *     using p_buffer_size
  *
  * @param p_db_link      The database link.
@@ -112,7 +112,7 @@ procedure dbms_output_enable
  *        begin 
  *          dbms_output.get_line@%s(l_line, l_status);
  *        end;'
- *     , p_db_link
+ *     , dbms_assert.simple_sql_name(p_db_link)
  *     ) 
  *
  * NOTE from the Oracle documentation: 
@@ -153,7 +153,7 @@ procedure dbms_output_clear
  *            dbms_output.put_line(l_line);
  *          end loop;
  *        end;'
- *     , p_db_link
+ *     , dbms_assert.simple_sql_name(p_db_link)
  *     ) 
  *
  * @param p_db_link  The database link.
