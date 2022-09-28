@@ -22,3 +22,4 @@
 #
 *.gitattributes linguist-language=gitattributes
 
+*.sh            text eol=lf

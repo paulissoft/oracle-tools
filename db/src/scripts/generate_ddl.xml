@@ -38,6 +38,8 @@
     The following properties are used for generate-ddl-full:
     - full.force.view
     Do we remove the FORCE keyword from CREATE OR REPLACE FORCE VIEW?
+    - full.group.constraints
+    Do we group referential and other constraints (each) in one file per base object?
     - full.output.directory
     The directory to put the scripts in.
     - full.skip.install.sql
@@ -411,6 +413,7 @@ Z       Time zone               RFC 822 time zone   -0800
                   temp.file="${temp.install.file}">
       <perl-arguments>
         <arg value="--${perl.full.force.view}force-view"/>
+        <arg value="--${perl.full.group.constraints}group-constraints"/>
         <arg value="--output-directory=${full.output.directory}"/>
         <arg value="--${perl.full.skip.install.sql}skip-install-sql"/>
         <arg value="--source-schema=${schema}"/>

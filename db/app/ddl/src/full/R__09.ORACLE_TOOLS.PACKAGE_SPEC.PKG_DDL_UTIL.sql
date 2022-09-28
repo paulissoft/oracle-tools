@@ -24,7 +24,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- see 11g / 12c licensing
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
-  c_debugging constant naturaln := 3; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
+  c_debugging constant naturaln := 1; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
   c_debugging_parse_ddl constant boolean := true;
 
   /*

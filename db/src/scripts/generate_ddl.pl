@@ -172,7 +172,7 @@ Gert-Jan Paulissen
 
 =over 4
 
-=item 2022-09-26
+=item 2022-09-28
 
 Constraints can be grouped in one file per base object (one for referential and one for the rest).
 
@@ -305,7 +305,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2022-09-06";
+my $VERSION = "2022-09-28";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -416,9 +416,13 @@ my $object_sep = '.';
 my $object_sep_rex = qr/\./;
 my $object_rex = qr/^.+\..+\..+$/;
 
-# An array of array references containing $file, $object_type and $object_name.
-# Will be used to put REF_CONSTRAINT files at the end of install.sql if $group_constraints is true.
-my @install_sql_files = ();
+# The lines to write to install.sql (if any).
+my @install_sql_lines = ();
+# The ref constraint lines to write to install.sql at the end (if any) if
+# $group_constraints is true for interface >= v5.  Necessary to solve
+# dependency order problems when all constraints are grouped in two files:
+# one for referential constraints and one for the rest (per base object).
+my @install_sql_ref_constraint_lines = ();
 
 # PROTOTYPES
 
@@ -437,7 +441,6 @@ sub smart_close ($);
 sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
-sub install_sql_write ($$$$);
 sub all_sql_statements_flush ($$$$);
 sub object_sql_statements_flush ($$$$$);
 sub sql_statement_flush ($$$$$$);
@@ -909,7 +912,21 @@ sub open_file ($$$$$$) {
 
     
     if (defined $fh_install_sql) {
-        push(@install_sql_files, [$file, $object_type, $object_name]);
+        my $r_lines = \@install_sql_lines;
+
+        if ($object_type eq 'REF_CONSTRAINT' &&
+            $group_constraints &&
+            defined($interface) &&
+            $interface ne PKG_DDL_UTIL_V4) {
+            $r_lines = \@install_sql_ref_constraint_lines;
+        }
+
+        push(@$r_lines, "prompt \@\@$file\n\@\@$file\n");
+        push(@$r_lines, sprintf("show errors %s \"%s\"\n", $object_type_info{$object_type}->{'show_errors'}, $object_name))
+            if (defined($object_type) &&
+                exists($object_type_info{$object_type}) &&
+                exists($object_type_info{$object_type}->{'show_errors'}));
+
     }
 
     # GJP 2021-08-27 Create the file in $output_directory later on in close_file() so modification date will not change if file is the same
@@ -1056,16 +1073,6 @@ sub sort_dependent_objects ($$$) {
     return $a->{ddl}->[0] cmp $b->{ddl}->[0];
 }
 
-sub install_sql_write ($$$$) {
-    my ($fh_install_sql, $file, $object_type, $object_name) = @_;
-
-    print $fh_install_sql "prompt \@\@$file\n\@\@$file\n";
-    print $fh_install_sql sprintf("show errors %s \"%s\"\n", $object_type_info{$object_type}->{'show_errors'}, $object_name)
-        if (defined($object_type) &&
-            exists($object_type_info{$object_type}) &&
-            exists($object_type_info{$object_type}->{'show_errors'}));
-}
-
 sub all_sql_statements_flush ($$$$) {
     trace((caller(0))[3]);
 
@@ -1085,35 +1092,16 @@ sub all_sql_statements_flush ($$$$) {
     }
 
     # Now write tthe install.sql
-    if (defined $fh_install_sql && scalar(@install_sql_files) > 0) {
+    if (defined $fh_install_sql) {
         if (!$install_sql_preamble_printed) {
             print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
             $install_sql_preamble_printed = 1;
         }
 
-        if ($group_constraints &&
-            defined($interface) &&
-            $interface ne PKG_DDL_UTIL_V4) {
-            
-            foreach my $ref (@install_sql_files) {
-                my ($file, $object_type, $object_name) = ($ref->[0], $ref->[1], $ref->[2]);
-
-                install_sql_write($fh_install_sql, $file, $object_type, $object_name)
-                    if $object_type ne 'REF_CONSTRAINT';
-            }
-            foreach my $ref (@install_sql_files) {
-                my ($file, $object_type, $object_name) = ($ref->[0], $ref->[1], $ref->[2]);
-
-                install_sql_write($fh_install_sql, $file, $object_type, $object_name)
-                    if $object_type eq 'REF_CONSTRAINT';
-            }
-            
-        } else {
-            foreach my $ref (@install_sql_files) {
-                my ($file, $object_type, $object_name) = ($ref->[0], $ref->[1], $ref->[2]);
-
-                install_sql_write($fh_install_sql, $file, $object_type, $object_name);
-            }
+        push(@install_sql_lines, @install_sql_ref_constraint_lines);
+        
+        foreach my $line (@install_sql_lines) {
+            print $fh_install_sql $line;
         }
     }
 }

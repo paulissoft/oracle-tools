@@ -17,13 +17,19 @@ Types of changes:
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
+- [DDL generation changes due to timestamp format for dbms_scheduler jobs should be ignored.](https://github.com/paulissoft/oracle-tools/issues/59)
+
+## [1.6.0] - 2022-09-28
+
 - [Add SQL Datamodeler custom library and transformations scripts.](https://github.com/paulissoft/oracle-tools/issues/46)
 - [Something goes in Jenkins wrong when an APEX export has only changes in the create_application.sql scripts.](https://github.com/paulissoft/oracle-tools/issues/49)
 - [The Jenkins handling of (proxy) username should be more user friendly.](https://github.com/paulissoft/oracle-tools/issues/50)
 - [When a synonym points to an object that is not accessible, an error (no data found) is returned.](https://github.com/paulissoft/oracle-tools/issues/51)
-
 - [SQL injection must be impossible.](https://github.com/paulissoft/oracle-tools/issues/57)
+- [DDL generation changes due to sequence start with should be ignored.](https://github.com/paulissoft/oracle-tools/issues/58)
 - [The error translation procedure api_pkg.translate_error does not handle empty parameters well.](https://github.com/paulissoft/oracle-tools/issues/60)
+- [The ddl unit test fails when the ORACLE_TOOLS schema has a synonym for a non-existing object.](https://github.com/paulissoft/oracle-tools/issues/61)
+- [It should be possible to group together (constraints) per base object and install them correctly.](https://github.com/paulissoft/oracle-tools/issues/62)
 
 ## [1.5.0] - 2022-08-22
 

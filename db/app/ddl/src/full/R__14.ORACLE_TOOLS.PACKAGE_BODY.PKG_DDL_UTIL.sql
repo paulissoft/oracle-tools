@@ -1435,11 +1435,10 @@ $end
         raise_application_error
         ( oracle_tools.pkg_ddl_error.c_object_not_correct
         , utl_lms.format_message
-          ( 'Verb "%s" and/or object type "%s" not correct for ddl "%s%s"'
+          ( 'Verb "%s" and/or object type "%s" not correct for ddl "%s"'
           , p_verb
           , p_object_type
           , l_ddl_text
-          , case when dbms_lob.getlength(p_ddl.ddlText) > 100 then '...' end
           )
         , true
         );
