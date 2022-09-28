@@ -91,10 +91,13 @@
           <equals arg1="${@{property}}" arg2="0" casesensitive="false" trim="true"/>
         </or>
       </condition>
+      <echo message="Property perl.@{property} set to: '${perl.@{property}}'"/>
     </sequential>
   </macrodef>
 
-  <target name="init" depends="init-common,init-full,init-incr" />
+  <target name="init" depends="init-common,init-full,init-incr">
+    <echo message="target.db.name: ${target.db.name}"/>
+  </target>
 
   <target name="init-common">
     <!-- replace ${ant.file} (../generate_ddl.xml) by ../generate_ddl.pl -->
@@ -189,6 +192,7 @@
     <!-- Boolean properties, see also ../../pom.xml -->
     <!-- Pivotal #132752233 -->
     <define-perl-property property="full.force.view" default="no"/>
+    <define-perl-property property="full.group.constraints" default="yes"/>
     <define-perl-property property="full.skip.install.sql" default="yes"/>
     <define-perl-property property="full.strip.source.schema" default="no"/>
 

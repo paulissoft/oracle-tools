@@ -492,7 +492,7 @@ sub process_command_line () {
     #
     GetOptions('dynamic-sql!' => \$dynamic_sql,
                'force-view!' => \$force_view,
-               'group_constraints!' => \$group_constraints,
+               'group-constraints!' => \$group_constraints,
                'help' => sub { pod2usage(-verbose => 2) },
                'input-file=s' => \$input_file,
                'output-directory=s' => \$output_directory,
