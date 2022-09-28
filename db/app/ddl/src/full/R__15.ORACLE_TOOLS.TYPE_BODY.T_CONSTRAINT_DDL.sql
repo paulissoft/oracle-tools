@@ -28,15 +28,13 @@ declare
   pragma exception_init(e_constraint_name_already_used, -02264);
 begin
   execute immediate ']' ||
-                'ALTER TABLE "' ||
-                self.obj.base_object_schema() ||
-                '"."' ||
-                self.obj.base_object_name() ||
-                '" RENAME CONSTRAINT "' ||
-                p_target.obj.object_name() ||
-                '" TO "' ||
-                self.obj.object_name() ||
-                '"' || q'[';
+                'ALTER TABLE ' ||
+                dbms_assert.qualified_sql_name('"' || self.obj.base_object_schema() || '"."' || self.obj.base_object_name() || '"') ||
+                ' RENAME CONSTRAINT ' ||
+                dbms_assert.qualified_sql_name('"' || p_target.obj.object_name() || '"') ||
+                ' TO ' ||
+                dbms_assert.qualified_sql_name('"' || self.obj.object_name() || '"') ||
+                q'[';
 exception
   when e_constraint_name_already_used
   then null;

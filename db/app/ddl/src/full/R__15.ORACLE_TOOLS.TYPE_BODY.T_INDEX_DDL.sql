@@ -54,13 +54,11 @@ declare
   pragma exception_init(e_name_already_used, -955);
 begin
   execute immediate ']' ||
-                'ALTER INDEX "' ||
-                l_target_index_object.object_schema() ||
-                '"."' ||
-                l_target_index_object.object_name() ||
-                '" RENAME TO "' ||
-                l_source_index_object.object_name() ||
-                '"' || q'[';
+                'ALTER INDEX ' ||
+                dbms_assert.qualified_sql_name('"' || l_target_index_object.object_schema() || '"."' || l_target_index_object.object_name() || '"') ||
+                ' RENAME TO ' ||
+                dbms_assert.qualified_sql_name('"' || l_source_index_object.object_name() || '"') ||
+                q'[';
 exception
   when e_name_already_used
   then null;

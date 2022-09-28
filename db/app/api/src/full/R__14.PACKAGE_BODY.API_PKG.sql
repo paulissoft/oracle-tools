@@ -64,7 +64,7 @@ $end
   
   if p_insert_procedure is not null
   then
-    execute immediate 'begin ' || p_insert_procedure || '; end;';
+    execute immediate 'begin ' || dbms_assert.sql_object_name(p_insert_procedure) || '; end;';
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -99,7 +99,7 @@ begin
   data_br_pkg.check_br(p_br_package_tab => p_br_package_tab, p_br_name => '%', p_enable => true);
   if p_delete_procedure is not null
   then
-    execute immediate 'begin ' || p_delete_procedure || '; end;';
+    execute immediate 'begin ' || dbms_assert.sql_object_name(p_delete_procedure) || '; end;';
   end if;
 end ut_teardown;
 
@@ -166,7 +166,7 @@ return varchar2
 is
   l_sqlerrm constant varchar2(32767 char) := utl_i18n.unescape_reference(p_sqlerrm);
   l_generic_exception constant varchar2(100 char) := 'ORA' || to_char(data_api_pkg.c_exception) || ': %';
-  l_separator_expr constant varchar2(100 char) := '[^' || data_api_pkg."#" || ']+';
+  l_sep constant varchar2(1 char) := data_api_pkg."#";
   l_error_code varchar2(2000 char) := null;
   l_error_message varchar2(2000 char) := null;
 begin
@@ -182,16 +182,10 @@ $end
 
   if l_sqlerrm like l_generic_exception
   then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'Generic exception; l_separator_expr: %s; first txt: %s', l_separator_expr, regexp_substr(l_sqlerrm, l_separator_expr, 1, 1)); 
-$end
-
     for r in
-    ( select  regexp_substr(l_sqlerrm, l_separator_expr, 1, level) as txt
-      ,       (level-2) as nr
-      from    dual
-      connect by
-              regexp_substr(l_sqlerrm, l_separator_expr, 1, level) is not null
+    ( select  t.column_value as txt
+      ,       (rownum-2) as nr
+      from    table(oracle_tools.api_pkg.list2collection(p_value_list => l_sqlerrm, p_sep => l_sep, p_ignore_null => 0)) t
     )
     loop
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -207,7 +201,7 @@ $end
         then
           l_error_code := r.txt;
 
-          execute immediate 'begin :1 := ' || p_function || '(:2); end;' using out l_error_message, in l_error_code;
+          execute immediate 'begin :1 := ' || dbms_assert.sql_object_name(p_function) || '(:2); end;' using out l_error_message, in l_error_code;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
           dbug.print(dbug."info", 'l_error_code: %s; l_error_message: %s', l_error_code, l_error_message); 
@@ -384,7 +378,7 @@ $end
   end if;
 
   execute immediate
-    utl_lms.format_message('call dbms_output.enable@%s(:b1)', p_db_link)
+    'call ' || dbms_assert.qualified_sql_name('dbms_output.enable@' || p_db_link) || '(:b1)'
     using p_buffer_size;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -422,7 +416,7 @@ declare
 begin 
   dbms_output.get_line@%s(l_line, l_status);
 end;'
-    , p_db_link
+    , dbms_assert.simple_sql_name(p_db_link)
     );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -464,7 +458,7 @@ begin
     dbms_output.put_line(l_line);
   end loop;
 end;'
-    , p_db_link
+    , dbms_assert.simple_sql_name(p_db_link)
     );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -501,7 +495,7 @@ $end
 
   if p_init_procedure is not null
   then
-    execute immediate 'begin ' || p_init_procedure || '; end;';
+    execute immediate 'begin ' || dbms_assert.sql_object_name(p_init_procedure) || '; end;';
   end if;
 
   case
@@ -542,7 +536,7 @@ $end
 
   if p_init_procedure is not null
   then
-    execute immediate 'begin ' || p_init_procedure || '; end;';
+    execute immediate 'begin ' || dbms_assert.sql_object_name(p_init_procedure) || '; end;';
   end if;
 
   case

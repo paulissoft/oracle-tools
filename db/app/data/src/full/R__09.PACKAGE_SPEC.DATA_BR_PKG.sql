@@ -48,7 +48,7 @@ procedure enable_br
  *
  * This procedure will invoke 
  *
- *   execute immediate 'call ' || l_owner || '.' || p_br_package_tab(l_owner) || '.enable_br(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable
+ *   execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.enable_br') || '(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable
  *
  * for each owner in p_br_package_tab.
  *
@@ -82,7 +82,7 @@ procedure check_br
  *
  * This procedure will invoke 
  *
- *   execute immediate 'call ' || l_owner || '.' || p_br_package_tab(l_owner) || '.check_br(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable
+ *   execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.check_br') || '(p_br_name => :1, p_enable => :2)' using p_br_name, p_enable
  *
  * for each owner in p_br_package_tab.
  *
@@ -157,7 +157,7 @@ procedure validate_table
  *
  * The following dynamic calls will be made:
  *
- * - execute immediate 'call ' || l_owner || '.' || p_br_package_tab(l_owner) || '.refresh_mv(p_mview_name => ''%_MV_BR_%'')'
+ * - execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.refresh_mv') || '(p_mview_name => ''%_MV_BR_%'')'
  *
  * - data_br_pkg.enable_br(p_br_package_tab; '%', true)
  *
@@ -167,14 +167,14 @@ procedure validate_table
  *   declare
  *     l_error_tab dbms_sql.varchar2_table;
  *   begin
- *     ' || l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table(p_table_name => :1, p_commit => true, p_valid => 0, p_error_tab => l_error_tab);
+ *     ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table') || '(p_table_name => :1, p_commit => true, p_valid => 0, p_error_tab => l_error_tab);
  *   end;' using l_table_name;
  *
  * - execute immediate '
  *   declare
  *     l_error_tab dbms_sql.varchar2_table;
  *   begin
- *     ' || l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table(p_commit => true, p_error_tab => l_error_tab);
+ *     ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.validate_table') || '(p_commit => true, p_error_tab => l_error_tab);
  *   end;';
  *
  *

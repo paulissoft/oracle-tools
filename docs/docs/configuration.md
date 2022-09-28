@@ -233,6 +233,7 @@ when you invoke db-code-check.
 |:-------                            |:------                      |:----------|
 |db.full.remove.output.directory     |yes                          |Remove the output directory (${db.src.full.scripts}) before generating DDL scripts?|
 |db.full.force.view                  |no                           |CREATE OR REPLACE **FORCE** VIEW or not?|
+|db.full.group.constraints           |yes                          |Referential constraints per base object will be grouped in one file (just like the other constraints) in order to create them at the end.|
 |db.full.skip.install.sql            |yes                          |skip creating install.sql/uninstall.sql scripts?|
 |db.full.interface                   |pkg_ddl_util v5              |Interface version for creating DDL scripts. Script naming convention is &lt;PREFIX&gt;&lt;SEQ&gt;.&lt;OWNER&gt;.&lt;TYPE&gt;.&lt;NAME&gt;.sql where PREFIX is "R__" for replaceable objects and empty otherwise, sequence number SEQ depends on TYPE for "pkg_ddl_util v4" and the place in file install_sequence.txt for "pkg_ddl_util v5".|
 |db.full.transform.params            |SEGMENT_ATTRIBUTES,TABLESPACE|A comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links).|

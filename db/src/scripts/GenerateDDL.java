@@ -133,7 +133,18 @@ public class GenerateDDL
             nr = -1;
 
             conn = DriverManager.getConnection(args[++nr]);
-    
+
+            final Statement stmt = conn.createStatement();
+
+            // GJP 2022-09-28
+            // DDL generation changes due to timestamp format for dbms_scheduler jobs should be ignored.
+            // https://github.com/paulissoft/oracle-tools/issues/59
+            
+            // Try to set up a common environment to ensure that the local radix character X in 'DD-MON-RRRR HH.MI.SSXFF AM TZR' is the same everywhere.
+            
+            stmt.executeUpdate("alter session set NLS_LANGUAGE = 'AMERICAN'");
+            stmt.executeUpdate("alter session set NLS_TERRITORY = 'AMERICA'");
+
             final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?)}");
       
             pstmt.setString(1, args[++nr]);

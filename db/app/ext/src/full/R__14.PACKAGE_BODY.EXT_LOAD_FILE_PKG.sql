@@ -496,11 +496,11 @@ begin
   if p_action = 'R'
   then
     begin
-      execute immediate 'truncate table ' || p_object_name;
+      execute immediate 'truncate table ' || dbms_assert.qualified_sql_name(p_object_name);
     exception
       when others
       then
-        execute immediate 'delete from ' || p_object_name;
+        execute immediate 'delete from ' || dbms_assert.qualified_sql_name(p_object_name);
     end;
   end if;
 end prepare_load;
@@ -667,11 +667,13 @@ $end
   dbms_sql.parse
   ( l_cursor
   , 'select * from ' ||
-    case
-      when p_owner is null
-      then p_object_name
-      else get_fq_object_name(p_owner => p_owner, p_object_name => p_object_name)
-    end ||
+    dbms_assert.qualified_sql_name
+    ( case
+        when p_owner is null
+        then p_object_name
+        else get_fq_object_name(p_owner => p_owner, p_object_name => p_object_name)
+      end
+    ) ||
     ' where 1 = 2'
   , dbms_sql.native
   );
@@ -809,7 +811,7 @@ $end
   p_view_name := 'LOAD_FILE_' || to_char(localtimestamp, 'yyyymmddhh24missff4') || '_V';
 
   -- We only create it, not replace
-  l_sql_statement := 'CREATE VIEW ' || p_view_name;
+  l_sql_statement := 'CREATE VIEW ' || dbms_assert.qualified_sql_name(p_view_name);
 
   -- Use the Excel Column Names (A, B, etcetera) as view column name
   for i_idx in p_column_info_tab.first .. p_column_info_tab.last
@@ -2393,11 +2395,11 @@ declare
 begin
   null;
 end;}'
-    , p_header_row
+    , dbms_assert.simple_sql_name(p_header_row)
     , p_data_type
     , p_default_value
-    , p_excel_column_name
-    , p_header_row
+    , dbms_assert.simple_sql_name(p_excel_column_name)
+    , dbms_assert.simple_sql_name(p_header_row)
     , case when p_format_mask is not null then q'[, ']' || p_format_mask || q'[']' end
     );
 
@@ -2898,9 +2900,9 @@ $end
     then
       ddl
       ( 'grant select,insert,update,delete on ' ||
-        p_object_info_rec.object_name ||
+        dbms_assert.qualified_sql_name(p_object_info_rec.object_name) ||
         ' to ' ||
-        dbms_assert.enquote_name(ext_load_file_pkg.get_load_data_owner, false)
+        dbms_assert.simple_sql_name(dbms_assert.enquote_name(ext_load_file_pkg.get_load_data_owner, false))
       );        
     end if;
   else  
@@ -3002,7 +3004,7 @@ $end
   case p_action
     when 'D'
     then
-      execute immediate 'drop view ' || p_view_name;
+      execute immediate 'drop view ' || dbms_assert.qualified_sql_name(p_view_name);
   end case;
   
 $if cfg_pkg.c_debugging $then
@@ -3171,7 +3173,7 @@ $end
 
   if get_load_data_owner != get_owner
   then
-    execute immediate 'GRANT INSERT ON "myobject" TO ' || get_load_data_owner;
+    execute immediate 'GRANT INSERT ON "myobject" TO ' || dbms_assert.simple_sql_name(get_load_data_owner);
   end if;  
 
   g_object_info_rec.view_name := 'xyz';
@@ -3225,7 +3227,7 @@ $end
   execute immediate 'drop table "myobject" purge';
   if g_view_name is not null
   then
-    execute immediate 'drop view ' || g_view_name;
+    execute immediate 'drop view ' || dbms_assert.qualified_sql_name(g_view_name);
   end if;
 
 $if cfg_pkg.c_debugging $then
@@ -3464,10 +3466,10 @@ Expenses:Bank:CreditAgricole:Checking:Compte3:Fine,2020-05-20,STMTTRN - FRAIS VI
   begin
     if l_cursor is not null
     then
-      execute immediate 'drop table ' || l_object_info_rec.object_name || ' purge';
+      execute immediate 'drop table ' || dbms_assert.qualified_sql_name(l_object_info_rec.object_name) || ' purge';
       if l_view_name is not null
       then
-        execute immediate 'drop view ' || l_view_name;
+        execute immediate 'drop view ' || dbms_assert.qualified_sql_name(l_view_name);
       end if;
       dbms_sql.close_cursor(l_cursor);
     end if;
