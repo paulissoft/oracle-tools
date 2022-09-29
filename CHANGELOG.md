@@ -18,11 +18,18 @@ Types of changes:
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
 
+## [1.7.0] - 2022-09-29
+
+### Added
+
+- [The Docker volume for the Maven local repository must mount to directory owned by jenkins agent group.](https://github.com/paulissoft/oracle-tools/issues/69)
+- [It must be possible to specify the SCM username and email as environment variables in Jenkins configuration.](https://github.com/paulissoft/oracle-tools/issues/70)
+
 ## [1.6.1] - 2022-09-29
 
 ### Fixed
 
-- [The Docker volume for the Maven local repository must mount to directory owner by jenkins agent user.](https://github.com/paulissoft/oracle-tools/issues/66)
+- [The Docker volume for the Maven local repository must mount to directory owned by jenkins agent user.](https://github.com/paulissoft/oracle-tools/issues/66)
 
 ## [1.6.0] - 2022-09-28
 

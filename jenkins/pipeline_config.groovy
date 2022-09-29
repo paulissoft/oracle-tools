@@ -6,8 +6,6 @@ scm_branch_oracle_tools = 'development'
 
 scm_url = 'git@github.com:paulissoft/oracle-tools.git'
 scm_credentials = 'github'
-scm_username = 'paulissoft'
-scm_email = 'paulissoft@gmail.com'
 
 conf_dir = 'conf/src'
 db_dir = 'db/app'

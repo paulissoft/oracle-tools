@@ -51,7 +51,8 @@ ENV TNS_ADMIN /opt/oracle/network/admin
 # So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
 # that directory must already exist and have the correct ownership
 # otherwise it will be root giving Maven download permission problems.
-RUN mkdir -p /home/jenkins/.m2/repository && chown jenkins /home/jenkins/.m2/repository
+# See also https://github.com/paulissoft/oracle-tools/issues/66.
+RUN mkdir -m 755 -p /home/jenkins/.m2/repository && chown jenkins:jenkins /home/jenkins/.m2/repository
 
 # Let github.com be a known host for user jenkins
 USER jenkins

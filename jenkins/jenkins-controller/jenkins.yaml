@@ -12,7 +12,7 @@ credentials:
           description: "GitHub account to use with SSH"
           id: "github"
           scope: GLOBAL
-          username: "your GitHub account"
+          username: "Your GitHub account"
 jenkins:
   agentProtocols:
   - "JNLP4-connect"
@@ -50,6 +50,13 @@ jenkins:
     standard:
       excludeClientIPFromCrumb: false
   disableRememberMe: false
+  globalNodeProperties:
+  - envVars:
+      env:
+      - key: "SCM_EMAIL"
+        value: "Your GitHub email"
+      - key: "SCM_USERNAME"
+        value: "Your GitHub account"
   labelAtoms:
   - name: "built-in"
   markupFormatter: "plainText"
@@ -82,6 +89,9 @@ security:
     creationOfLegacyTokenEnabled: false
     tokenGenerationOnCreationEnabled: false
     usageStatisticsEnabled: true
+  gitHooks:
+    allowedOnAgents: false
+    allowedOnController: false
   gitHostKeyVerificationConfiguration:
     sshHostKeyVerificationStrategy: "knownHostsFileVerificationStrategy"
   sSHD:
