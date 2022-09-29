@@ -101,13 +101,8 @@ set -xeu
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
 
-# show Maven local repository (withMaven adds a lot of lines so just get the last)
-find /home/jenkins/.m2/repository/.. -ls
-
-mvn -f ${DB_DIR} help:evaluate -Dexpression=settings.localRepository
-mvn_local_repository=$(mvn -f ${DB_DIR} help:evaluate -Dexpression=settings.localRepository | grep -v '\[INFO\]' | tail -n 1)
-echo "Maven local repository: ${mvn_local_repository}"
-find ${mvn_local_repository}/.. -ls
+# check permissions
+ls -ld /home/jenkins/.m2/repository
 
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"

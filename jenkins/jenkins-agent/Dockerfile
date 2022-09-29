@@ -47,6 +47,12 @@ RUN mkdir -p /opt/oracle && \
 ENV SQL_HOME /opt/oracle/sqlcl
 ENV TNS_ADMIN /opt/oracle/network/admin
 
+# As stated in the documentation, a inherits the directory content and permissions existing in the container.
+# So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
+# that directory must already exist and have the correct ownership
+# otherwise it will be root giving Maven download permission problems.
+RUN mkdir -p /home/jenkins/.m2/repository && chown jenkins /home/jenkins/.m2/repository
+
 # Let github.com be a known host for user jenkins
 USER jenkins
 RUN mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
