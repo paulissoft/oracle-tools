@@ -8,12 +8,12 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>151930114232313867
+,p_default_id_offset=>67978470344966559
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_page(
  p_id=>1
-,p_user_interface_id=>wwv_flow_api.id(57170440100461251)
+,p_user_interface_id=>wwv_flow_api.id(18420547356600209)
 ,p_name=>'Home'
 ,p_alias=>'HOME'
 ,p_step_title=>'Oracle Tools'
@@ -23,25 +23,25 @@ wwv_flow_api.create_page(
 ,p_last_upd_yyyymmddhh24miss=>'20210511124335'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(57332786999896730)
+ p_id=>wwv_flow_api.id(18582894256035688)
 ,p_plug_name=>'Navigation'
 ,p_region_template_options=>'#DEFAULT#:margin-bottom-lg'
 ,p_component_template_options=>'#DEFAULT#:t-Cards--featured force-fa-lg:t-Cards--displayIcons:t-Cards--3cols:t-Cards--hideBody:t-Cards--animColorFill'
-,p_plug_template=>wwv_flow_api.id(57074706508461172)
+,p_plug_template=>wwv_flow_api.id(18324813764600130)
 ,p_plug_display_sequence=>30
 ,p_include_in_reg_disp_sel_yn=>'Y'
 ,p_plug_display_point=>'BODY'
-,p_list_id=>wwv_flow_api.id(59061580322288840)
+,p_list_id=>wwv_flow_api.id(20311687578427798)
 ,p_plug_source_type=>'NATIVE_LIST'
-,p_list_template_id=>wwv_flow_api.id(57139094303461209)
+,p_list_template_id=>wwv_flow_api.id(18389201559600167)
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(977135355524258436)
+ p_id=>wwv_flow_api.id(1970645346310029930)
 ,p_plug_name=>'Oracle Tools'
 ,p_icon_css_classes=>'fa-dynamic-content'
 ,p_region_template_options=>'#DEFAULT#'
-,p_plug_template=>wwv_flow_api.id(57083149929461175)
+,p_plug_template=>wwv_flow_api.id(18333257185600133)
 ,p_plug_display_sequence=>20
 ,p_plug_display_point=>'BODY'
 ,p_plug_item_display_point=>'BELOW'

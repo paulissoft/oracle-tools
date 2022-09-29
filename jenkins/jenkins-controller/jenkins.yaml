@@ -12,6 +12,7 @@ credentials:
           description: "GitHub account to use with SSH"
           id: "github"
           scope: GLOBAL
+          username: "your GitHub account"
 jenkins:
   agentProtocols:
   - "JNLP4-connect"
