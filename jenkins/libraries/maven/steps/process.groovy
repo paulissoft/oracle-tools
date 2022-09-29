@@ -18,10 +18,19 @@ void call(app_env){
         assert env.SCM_CREDENTIALS != null
         env.SCM_URL = ( app_env.scm_url != null ? app_env.scm_url : pipelineConfig.scm_url )
         assert env.SCM_URL != null
-        env.SCM_USERNAME = ( app_env.scm_username != null ? app_env.scm_username : pipelineConfig.scm_username )
-        assert env.SCM_USERNAME != null
-        env.SCM_EMAIL = ( app_env.scm_email != null ? app_env.scm_email : pipelineConfig.scm_email )
-        assert env.SCM_EMAIL != null
+
+        // It must be possible to specify the SCM username and email as environment variables in Jenkins configuration.
+        // https://github.com/paulissoft/oracle-tools/issues/70
+        if ( app_env.scm_username != null ) {
+            env.SCM_USERNAME = app_env.scm_username
+        } else if ( pipelineConfig.scm_username != null ) {
+            env.SCM_USERNAME = pipelineConfig.scm_username
+        }
+        if ( app_env.scm_email != null ) {
+            env.SCM_EMAIL = app_env.scm_email
+        } else if ( pipelineConfig.scm_email != null ) {
+            env.SCM_EMAIL = pipelineConfig.scm_email
+        }
 
         env.CONF_DIR = ( app_env.conf_dir != null ? app_env.conf_dir : pipelineConfig.conf_dir )
         assert env.CONF_DIR != null
