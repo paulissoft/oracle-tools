@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>151930114232313867
+,p_default_id_offset=>67978470344966559
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_template(
- p_id=>wwv_flow_api.id(57055009665461160)
+ p_id=>wwv_flow_api.id(18305116921600118)
 ,p_theme_id=>42
 ,p_name=>'Login'
 ,p_internal_name=>'LOGIN'
@@ -147,16 +147,16 @@ wwv_flow_api.create_template(
 ,p_reference_id=>2099711150063350616
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(57055576044461160)
-,p_page_template_id=>wwv_flow_api.id(57055009665461160)
+ p_id=>wwv_flow_api.id(18305683300600118)
+,p_page_template_id=>wwv_flow_api.id(18305116921600118)
 ,p_name=>'Body Header'
 ,p_placeholder=>'REGION_POSITION_01'
 ,p_has_grid_support=>false
 ,p_glv_new_row=>true
 );
 wwv_flow_api.create_page_tmpl_display_point(
- p_id=>wwv_flow_api.id(57055274844461160)
-,p_page_template_id=>wwv_flow_api.id(57055009665461160)
+ p_id=>wwv_flow_api.id(18305382100600118)
+,p_page_template_id=>wwv_flow_api.id(18305116921600118)
 ,p_name=>'Content Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>true
