@@ -14,6 +14,7 @@ services:
     container_name: jenkins_docker
     image: alpine/socat
     restart: unless-stopped
+    hostname: jenkins-docker
     networks:
       jenkins-network:
         aliases:
