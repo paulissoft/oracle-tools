@@ -1,4 +1,5 @@
 Jenkins.instance.pluginManager.plugins.each{
-  plugin -> 
+    plugin ->
     println ("${plugin.getShortName()}")
+    // println ("${plugin.getDisplayName()} (${plugin.getShortName()}): ${plugin.getVersion()}")
 }
