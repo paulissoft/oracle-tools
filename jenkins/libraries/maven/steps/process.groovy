@@ -189,7 +189,6 @@ void call(app_env){
                 withMaven(options: [artifactsPublisher(disabled: true), 
                                     findbugsPublisher(disabled: true), 
                                     openTasksPublisher(disabled: true)]) {
-                    sh('find $WORKSPACE -print')
                     sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
                     if (!(env.SCM_CREDENTIALS == null || env.SCM_CREDENTIALS.equals(""))) {
                         sshagent([env.SCM_CREDENTIALS]) {

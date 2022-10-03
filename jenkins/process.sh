@@ -101,10 +101,10 @@ set -xeu
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
 
-# check Maven local repository permissions
-ls -ld /home/jenkins/.m2/repository
-# test SSH
-ssh -vT git@github.com || true
+## check Maven local repository permissions
+#ls -ld /home/jenkins/.m2/repository
+## test SSH
+#ssh -vT git@github.com || true
 
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
