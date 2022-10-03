@@ -121,12 +121,13 @@ void call(app_env){
             // skip checkout if the configuration project is the same as project            
             if (!(env.SCM_PROJECT_CONFIG == null || env.SCM_PROJECT_CONFIG.equals("")) &&
                 !(env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT))) {
-                echo "Checking out configuration project to ${env.SCM_PROJECT_CONFIG}" 
+                echo "Checking out configuration project ${env.SCM_URL_CONFIG} to ${env.SCM_PROJECT_CONFIG}" 
                 dir(env.SCM_PROJECT_CONFIG) {
                     if (!(env.SCM_CREDENTIALS_CONFIG == null || env.SCM_CREDENTIALS_CONFIG.equals(""))) {
                         echo "credentials: ${env.SCM_CREDENTIALS_CONFIG}" 
                         git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
                     } else {
+                        echo "without credentials" 
                         checkout([
                             $class: 'GitSCM', 
                             branches: [[name: '*/' + env.SCM_BRANCH_CONFIG]], 
@@ -146,8 +147,9 @@ void call(app_env){
             if (!(env.SCM_PROJECT_ORACLE_TOOLS == null || env.SCM_PROJECT_ORACLE_TOOLS.equals("")) &&
                 !(env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT)) &&
                 !(env.SCM_PROJECT_CONFIG != null && env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT_CONFIG))) {
-                echo "Checking out Oracle Tools project to ${env.SCM_PROJECT_ORACLE_TOOLS}"
+                echo "Checking out Oracle Tools project ${env.SCM_URL_ORACLE_TOOLS} to ${env.SCM_PROJECT_ORACLE_TOOLS}"
                 dir(env.SCM_PROJECT_ORACLE_TOOLS) {
+                    echo "without credentials" 
                     checkout([
                         $class: 'GitSCM', 
                         branches: [[name: '*/' + env.SCM_BRANCH_ORACLE_TOOLS]], 
@@ -162,12 +164,13 @@ void call(app_env){
 
         // checkout of (mandatory) project to build (maybe credentials needed)
         script {
-            echo "Checking out build project to ${env.SCM_PROJECT}"
+            echo "Checking out build project ${env.SCM_URL} to ${env.SCM_PROJECT}"
             dir(env.SCM_PROJECT) {
                 if (!(env.SCM_CREDENTIALS == null || env.SCM_CREDENTIALS.equals(""))) {
                     echo "credentials: ${env.SCM_CREDENTIALS}" 
                     git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
                 } else {
+                    echo "without credentials" 
                     checkout([
                         $class: 'GitSCM', 
                         branches: [[name: '*/' + env.SCM_BRANCH]], 
