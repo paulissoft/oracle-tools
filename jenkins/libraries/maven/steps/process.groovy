@@ -123,7 +123,11 @@ void call(app_env){
         script {
             if (env.SCM_PROJECT_CONFIG != null) {
                 dir(env.SCM_PROJECT_CONFIG) {
-                    git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
+                    if (env.SCM_CREDENTIALS_CONFIG != null) {
+                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
+                    } else {
+                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG
+                    }
                 }
             }
         }
@@ -147,7 +151,11 @@ void call(app_env){
         // checkout of project to build (maybe credentials needed)
         script {
             dir(env.SCM_PROJECT) {
-                git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
+                if (env.SCM_CREDENTIALS != null) {
+                    git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
+                } else {
+                    git url: env.SCM_URL, branch: env.SCM_BRANCH
+                }
 
                 withMaven(options: [artifactsPublisher(disabled: true), 
                                     findbugsPublisher(disabled: true), 
