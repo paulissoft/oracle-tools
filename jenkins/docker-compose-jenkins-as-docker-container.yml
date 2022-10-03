@@ -15,10 +15,7 @@ services:
     image: alpine/socat
     restart: unless-stopped
     hostname: jenkins-docker
-    networks:
-      jenkins-network:
-        aliases:
-          - jenkins-docker
+    networks: jenkins-network
     expose:
       - "2375"
     volumes:
@@ -28,6 +25,7 @@ services:
     container_name: jenkins_controller
     build: jenkins-controller
     restart: unless-stopped
+    hostname: jenkins-controller
     ports:
       - 50000:50000
       - 8080:8080
