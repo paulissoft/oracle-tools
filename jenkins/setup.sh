@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
 
 if [ $# -ge 1 ]
 then

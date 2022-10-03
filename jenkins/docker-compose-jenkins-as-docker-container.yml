@@ -15,7 +15,8 @@ services:
     image: alpine/socat
     restart: unless-stopped
     hostname: jenkins-docker
-    networks: jenkins-network
+    networks:
+      - jenkins-network
     expose:
       - "2375"
     volumes:

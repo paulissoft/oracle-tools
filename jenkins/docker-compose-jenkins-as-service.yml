@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  jenkins-network:
+    name: jenkins
+
 volumes:
   jenkins-data:
     name: jenkins-data
@@ -11,6 +15,8 @@ services:
     image: alpine/socat
     restart: unless-stopped
     hostname: jenkins-docker
+    networks:
+      - jenkins-network
     expose:
       - "2375"
     volumes:
@@ -19,7 +25,11 @@ services:
   dns-proxy-server:
     container_name: dns_proxy_server
     image: defreitas/dns-proxy-server
+    networks:
+      - jenkins-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/resolv.conf:/etc/resolv.conf
     hostname: dns.mageddo
+    depends_on:
+      - jenkins-docker
