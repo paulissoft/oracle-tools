@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>151930114232313867
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_plug_template(
- p_id=>wwv_flow_api.id(18345792061600141)
+ p_id=>wwv_flow_api.id(57095684805461183)
 ,p_layout=>'TABLE'
 ,p_template=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<div class="t-Login-region t-Form--stretchInputs t-Form--labelsAbove #REGION_CSS_CLASSES#" id="#REGION_ID#" #REGION_ATTRIBUTES#>',
@@ -41,8 +41,8 @@ wwv_flow_api.create_plug_template(
 ,p_translate_this_template=>'N'
 );
 wwv_flow_api.create_plug_tmpl_display_point(
- p_id=>wwv_flow_api.id(18346072195600141)
-,p_plug_template_id=>wwv_flow_api.id(18345792061600141)
+ p_id=>wwv_flow_api.id(57095964939461183)
+,p_plug_template_id=>wwv_flow_api.id(57095684805461183)
 ,p_name=>'Content Body'
 ,p_placeholder=>'BODY'
 ,p_has_grid_support=>false
