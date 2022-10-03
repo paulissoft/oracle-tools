@@ -57,6 +57,12 @@ void call(app_env){
             env.SCM_BRANCH_CONFIG = pipelineConfig.scm_branch_config
         }
 
+        if ( app_env.scm_credentials_config != null ) {
+            env.SCM_CREDENTIALS_CONFIG = app_env.scm_credentials_config
+        } else if ( pipelineConfig.scm_credentials_config != null ) {
+            env.SCM_CREDENTIALS_CONFIG = pipelineConfig.scm_credentials_config
+        }
+
         if (env.SCM_URL_CONFIG != null && env.SCM_BRANCH_CONFIG != null) {
             env.SCM_PROJECT_CONFIG = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
         }
@@ -71,7 +77,6 @@ void call(app_env){
         env.SCM_BRANCH_PREV = ( app_env.scm_branch_prev != null ? app_env.scm_branch_prev : ( app_env.previous != null ? app_env.previous.scm_branch : '' ) )
 
         env.SCM_CREDENTIALS = ( app_env.scm_credentials != null ? app_env.scm_credentials : pipelineConfig.scm_credentials )
-        // assert env.SCM_CREDENTIALS != null : "The pipeline configuration must contain a value for 'scm_credentials' (in application environment '${app_env.long_name}' or global)"
 
         env.SCM_URL = ( app_env.scm_url != null ? app_env.scm_url : pipelineConfig.scm_url )
         assert env.SCM_URL != null : "The pipeline configuration must contain a value for 'scm_url' (in application environment '${app_env.long_name}' or global)"
