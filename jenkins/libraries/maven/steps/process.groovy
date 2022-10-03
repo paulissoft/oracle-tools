@@ -126,7 +126,14 @@ void call(app_env){
                     if (env.SCM_CREDENTIALS_CONFIG != null) {
                         git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
                     } else {
-                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG
+                        checkout([
+                            $class: 'GitSCM', 
+                            branches: [[name: '*/' + env.SCM_BRANCH_CONFIG]], 
+                            doGenerateSubmoduleConfigurations: false, 
+                            extensions: [[$class: 'CleanCheckout']], 
+                            submoduleCfg: [], 
+                            userRemoteConfigs: [[url: env.SCM_URL_CONFIG]]
+                        ])
                     }
                 }
             }
@@ -154,7 +161,14 @@ void call(app_env){
                 if (env.SCM_CREDENTIALS != null) {
                     git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
                 } else {
-                    git url: env.SCM_URL, branch: env.SCM_BRANCH
+                    checkout([
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/' + env.SCM_BRANCH]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'CleanCheckout']], 
+                        submoduleCfg: [], 
+                        userRemoteConfigs: [[url: env.SCM_URL]]
+                    ])
                 }
 
                 withMaven(options: [artifactsPublisher(disabled: true), 
