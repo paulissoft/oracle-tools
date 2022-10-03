@@ -39,7 +39,6 @@ void call(app_env){
 
         if (env.SCM_URL_ORACLE_TOOLS != null && env.SCM_BRANCH_ORACLE_TOOLS != null) {
             env.SCM_PROJECT_ORACLE_TOOLS = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
-            env.SCM_PROJECT_ORACLE_TOOLS += ( env.SCM_BRANCH_ORACLE_TOOLS.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH_ORACLE_TOOLS )
         }
         
         /*
@@ -60,7 +59,6 @@ void call(app_env){
 
         if (env.SCM_URL_CONFIG != null && env.SCM_BRANCH_CONFIG != null) {
             env.SCM_PROJECT_CONFIG = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
-            env.SCM_PROJECT_CONFIG += ( env.SCM_BRANCH_CONFIG.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH_CONFIG )
         }
         
         /*
@@ -79,7 +77,6 @@ void call(app_env){
         assert env.SCM_URL != null : "The pipeline configuration must contain a value for 'scm_url' (in application environment '${app_env.long_name}' or global)"
 
         env.SCM_PROJECT = env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
-        env.SCM_PROJECT += ( env.SCM_BRANCH.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH )
 
         /*
         -- The configuration directory to work on (pipeline config application environment, pipeline config global).
@@ -119,44 +116,7 @@ void call(app_env){
         // Clean before build
         cleanWs()
 
-        // checkout of configuration project (maybe credentials needed)
-        script {
-            if (env.SCM_PROJECT_CONFIG != null) {
-                dir(env.SCM_PROJECT_CONFIG) {
-                    if (env.SCM_CREDENTIALS_CONFIG != null) {
-                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
-                    } else {
-                        checkout([
-                            $class: 'GitSCM', 
-                            branches: [[name: '*/' + env.SCM_BRANCH_CONFIG]], 
-                            doGenerateSubmoduleConfigurations: false, 
-                            extensions: [[$class: 'CleanCheckout']], 
-                            submoduleCfg: [], 
-                            userRemoteConfigs: [[url: env.SCM_URL_CONFIG]]
-                        ])
-                    }
-                }
-            }
-        }
-        
-        // checkout of Oracle Tools (no credentials needed)
-        script {
-            if (env.SCM_PROJECT_ORACLE_TOOLS != null &&
-                !(env.SCM_PROJECT_CONFIG != null && env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT_ORACLE_TOOLS))) {
-                dir(env.SCM_PROJECT_ORACLE_TOOLS) {
-                    checkout([
-                        $class: 'GitSCM', 
-                        branches: [[name: '*/' + env.SCM_BRANCH_ORACLE_TOOLS]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [[$class: 'CleanCheckout']], 
-                        submoduleCfg: [], 
-                        userRemoteConfigs: [[url: env.SCM_URL_ORACLE_TOOLS]]
-                    ])
-                }
-            }
-        }
-
-        // checkout of project to build (maybe credentials needed)
+        // checkout of (mandatory) project to build (maybe credentials needed)
         script {
             dir(env.SCM_PROJECT) {
                 if (env.SCM_CREDENTIALS != null) {
@@ -187,5 +147,47 @@ void call(app_env){
                 }
             }
         }
+        
+        // checkout of (optional) configuration project (maybe credentials needed)
+        script {
+            // skip checkout if the configuration project is the same as project
+            if (env.SCM_PROJECT_CONFIG != null &&
+                !(env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT))) {
+                dir(env.SCM_PROJECT_CONFIG) {
+                    if (env.SCM_CREDENTIALS_CONFIG != null) {
+                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
+                    } else {
+                        checkout([
+                            $class: 'GitSCM', 
+                            branches: [[name: '*/' + env.SCM_BRANCH_CONFIG]], 
+                            doGenerateSubmoduleConfigurations: false, 
+                            extensions: [[$class: 'CleanCheckout']], 
+                            submoduleCfg: [], 
+                            userRemoteConfigs: [[url: env.SCM_URL_CONFIG]]
+                        ])
+                    }
+                }
+            }
+        }
+        
+        // checkout of (optional) Oracle Tools (no credentials needed)
+        script {
+            // skip checkout if the Oracle Tools project is the same as the (configuration) project
+            if (env.SCM_PROJECT_ORACLE_TOOLS != null &&
+                !(env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT)) &&
+                !(env.SCM_PROJECT_CONFIG != null && env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT_CONFIG))) {
+                dir(env.SCM_PROJECT_ORACLE_TOOLS) {
+                    checkout([
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/' + env.SCM_BRANCH_ORACLE_TOOLS]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'CleanCheckout']], 
+                        submoduleCfg: [], 
+                        userRemoteConfigs: [[url: env.SCM_URL_ORACLE_TOOLS]]
+                    ])
+                }
+            }
+        }
+
     }
 }
