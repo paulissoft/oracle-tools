@@ -1,6 +1,6 @@
 #!/bin/bash -eux
 
-if [ $# -ge 0 ]
+if [ $# -ge 1 ]
 then
     docker_compose_file=$1
 else    
