@@ -116,38 +116,6 @@ void call(app_env){
         // Clean before build
         cleanWs()
 
-        // checkout of (mandatory) project to build (maybe credentials needed)
-        script {
-            dir(env.SCM_PROJECT) {
-                if (env.SCM_CREDENTIALS != null) {
-                    git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
-                } else {
-                    checkout([
-                        $class: 'GitSCM', 
-                        branches: [[name: '*/' + env.SCM_BRANCH]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [[$class: 'CleanCheckout']], 
-                        submoduleCfg: [], 
-                        userRemoteConfigs: [[url: env.SCM_URL]]
-                    ])
-                }
-
-                withMaven(options: [artifactsPublisher(disabled: true), 
-                                    findbugsPublisher(disabled: true), 
-                                    openTasksPublisher(disabled: true)]) {
-                    if (env.SCM_CREDENTIALS != null) {
-                        sshagent([env.SCM_CREDENTIALS]) {
-                            sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
-                            sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
-                        }
-                    } else {
-                        sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
-                        sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
-                    }
-                }
-            }
-        }
-        
         // checkout of (optional) configuration project (maybe credentials needed)
         script {
             // skip checkout if the configuration project is the same as project
@@ -189,5 +157,36 @@ void call(app_env){
             }
         }
 
+        // checkout of (mandatory) project to build (maybe credentials needed)
+        script {
+            dir(env.SCM_PROJECT) {
+                if (env.SCM_CREDENTIALS != null) {
+                    git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
+                } else {
+                    checkout([
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/' + env.SCM_BRANCH]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'CleanCheckout']], 
+                        submoduleCfg: [], 
+                        userRemoteConfigs: [[url: env.SCM_URL]]
+                    ])
+                }
+
+                withMaven(options: [artifactsPublisher(disabled: true), 
+                                    findbugsPublisher(disabled: true), 
+                                    openTasksPublisher(disabled: true)]) {
+                    sh('find $WORKSPACE -print')
+                    sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
+                    if (env.SCM_CREDENTIALS != null) {
+                        sshagent([env.SCM_CREDENTIALS]) {
+                            sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                        }
+                    } else {
+                        sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                    }
+                }
+            }
+        }
     }
 }
