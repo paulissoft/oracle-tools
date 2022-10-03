@@ -39,7 +39,7 @@ void call(app_env){
         }
         assert env.SCM_BRANCH_ORACLE_TOOLS != null : "The pipeline configuration must contain a value for 'scm_branch_oracle_tools' (in application environment '${app_env.long_name}' or global) or environment variable SCM_BRANCH_ORACLE_TOOLS must be defined"
 
-        env.SCM_PROJECT_ORACLE_TOOLS = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\.git$", "")
+        env.SCM_PROJECT_ORACLE_TOOLS = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git$", "")
         env.SCM_PROJECT_ORACLE_TOOLS += ( env.SCM_BRANCH_ORACLE_TOOLS.matches("^(master|main)$") ? "" : "." + env.SCM_BRANCH_ORACLE_TOOLS )
         
         /*
@@ -60,7 +60,7 @@ void call(app_env){
         }
         assert env.SCM_BRANCH_CONFIG != null : "The pipeline configuration must contain a value for 'scm_branch_config' (in application environment '${app_env.long_name}' or global) or environment variable SCM_BRANCH_CONFIG must be defined"
 
-        env.SCM_PROJECT_CONFIG = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\.git$", "")
+        env.SCM_PROJECT_CONFIG = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git$", "")
         env.SCM_PROJECT_CONFIG += ( env.SCM_BRANCH_CONFIG.matches("^(master|main)$") ? "" : "." + env.SCM_BRANCH_CONFIG )
         
         /*
@@ -73,12 +73,12 @@ void call(app_env){
         env.SCM_BRANCH_PREV = ( app_env.scm_branch_prev != null ? app_env.scm_branch_prev : ( app_env.previous != null ? app_env.previous.scm_branch : '' ) )
 
         env.SCM_CREDENTIALS = ( app_env.scm_credentials != null ? app_env.scm_credentials : pipelineConfig.scm_credentials )
-        assert env.SCM_CREDENTIALS != null : "The pipeline configuration must contain a value for 'scm_credentials' (in application environment '${app_env.long_name}' or global)"
+        // assert env.SCM_CREDENTIALS != null : "The pipeline configuration must contain a value for 'scm_credentials' (in application environment '${app_env.long_name}' or global)"
 
         env.SCM_URL = ( app_env.scm_url != null ? app_env.scm_url : pipelineConfig.scm_url )
         assert env.SCM_URL != null : "The pipeline configuration must contain a value for 'scm_url' (in application environment '${app_env.long_name}' or global)"
 
-        env.SCM_PROJECT = env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\.git$", "")
+        env.SCM_PROJECT = env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git$", "")
         env.SCM_PROJECT += ( env.SCM_BRANCH.matches("^(master|main)$") ? "" : "." + env.SCM_BRANCH )
 
         /*
@@ -123,11 +123,7 @@ void call(app_env){
         script {
             if (env.SCM_PROJECT_CONFIG != null) {
                 dir(env.SCM_PROJECT_CONFIG) {
-                    if (env.SCM_CREDENTIALS_CONFIG != null) {
-                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
-                    } else {
-                        git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG
-                    }
+                    git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
                 }
             }
         }
@@ -148,16 +144,23 @@ void call(app_env){
             }
         }
 
-        // checkout of project to build (credentials needed)
-        dir(env.SCM_PROJECT) {
-            git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
+        // checkout of project to build (maybe credentials needed)
+        script {
+            dir(env.SCM_PROJECT) {
+                git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
 
-            withMaven(options: [artifactsPublisher(disabled: true), 
-                                findbugsPublisher(disabled: true), 
-                                openTasksPublisher(disabled: true)]) {
-                sshagent([env.SCM_CREDENTIALS]) {
-                    sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
-                    sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                withMaven(options: [artifactsPublisher(disabled: true), 
+                                    findbugsPublisher(disabled: true), 
+                                    openTasksPublisher(disabled: true)]) {
+                    if (env.SCM_CREDENTIALS != null) {
+                        sshagent([env.SCM_CREDENTIALS]) {
+                            sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
+                            sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                        }
+                    } else {
+                        sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
+                        sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                    }
                 }
             }
         }
