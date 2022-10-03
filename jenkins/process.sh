@@ -105,6 +105,13 @@ db_config_dir=`cd ${CONF_DIR} && pwd`
 #ls -ld /home/jenkins/.m2/repository
 ## test SSH
 #ssh -vT git@github.com || true
+for d in /opt/oracle/wallet /opt/oracle/network/admin
+do
+    if [ -d $d ]
+    then
+        find $d -print
+    fi
+done
 
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
