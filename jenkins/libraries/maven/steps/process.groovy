@@ -30,17 +30,17 @@ void call(app_env){
         } else if ( pipelineConfig.scm_url_oracle_tools != null ) {
             env.SCM_URL_ORACLE_TOOLS = pipelineConfig.scm_url_oracle_tools
         }
-        assert env.SCM_URL_ORACLE_TOOLS != null : "The pipeline configuration must contain a value for 'scm_url_oracle_tools' (in application environment '${app_env.long_name}' or global) or environment variable SCM_URL_ORACLE_TOOLS must be defined"
 
         if ( app_env.scm_branch_oracle_tools != null ) {
             env.SCM_BRANCH_ORACLE_TOOLS = app_env.scm_branch_oracle_tools
         } else if ( pipelineConfig.scm_branch_oracle_tools != null ) {
             env.SCM_BRANCH_ORACLE_TOOLS = pipelineConfig.scm_branch_oracle_tools
         }
-        assert env.SCM_BRANCH_ORACLE_TOOLS != null : "The pipeline configuration must contain a value for 'scm_branch_oracle_tools' (in application environment '${app_env.long_name}' or global) or environment variable SCM_BRANCH_ORACLE_TOOLS must be defined"
 
-        env.SCM_PROJECT_ORACLE_TOOLS = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
-        env.SCM_PROJECT_ORACLE_TOOLS += ( env.SCM_BRANCH_ORACLE_TOOLS.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH_ORACLE_TOOLS )
+        if (env.SCM_URL_ORACLE_TOOLS != null && env.SCM_BRANCH_ORACLE_TOOLS != null) {
+            env.SCM_PROJECT_ORACLE_TOOLS = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+            env.SCM_PROJECT_ORACLE_TOOLS += ( env.SCM_BRANCH_ORACLE_TOOLS.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH_ORACLE_TOOLS )
+        }
         
         /*
         -- The SCM (database) configuration project needed to build the SCM project (pipeline config application environment, pipeline config global or environment variable).
@@ -51,17 +51,17 @@ void call(app_env){
         } else if ( pipelineConfig.scm_url_config != null ) {
             env.SCM_URL_CONFIG = pipelineConfig.scm_url_config
         }
-        assert env.SCM_URL_CONFIG != null : "The pipeline configuration must contain a value for 'scm_url_config' (in application environment '${app_env.long_name}' or global) or environment variable SCM_URL_CONFIG must be defined"
 
         if ( app_env.scm_branch_config != null ) {
             env.SCM_BRANCH_CONFIG = app_env.scm_branch_config
         } else if ( pipelineConfig.scm_branch_config != null ) {
             env.SCM_BRANCH_CONFIG = pipelineConfig.scm_branch_config
         }
-        assert env.SCM_BRANCH_CONFIG != null : "The pipeline configuration must contain a value for 'scm_branch_config' (in application environment '${app_env.long_name}' or global) or environment variable SCM_BRANCH_CONFIG must be defined"
 
-        env.SCM_PROJECT_CONFIG = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
-        env.SCM_PROJECT_CONFIG += ( env.SCM_BRANCH_CONFIG.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH_CONFIG )
+        if (env.SCM_URL_CONFIG != null && env.SCM_BRANCH_CONFIG != null) {
+            env.SCM_PROJECT_CONFIG = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+            env.SCM_PROJECT_CONFIG += ( env.SCM_BRANCH_CONFIG.matches("^(master|main)\$") ? "" : "." + env.SCM_BRANCH_CONFIG )
+        }
         
         /*
         -- The SCM project to work on (pipeline config application environment).
@@ -141,7 +141,8 @@ void call(app_env){
         
         // checkout of Oracle Tools (no credentials needed)
         script {
-            if (env.SCM_PROJECT_CONFIG == null || env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT_ORACLE_TOOLS)) {
+            if (env.SCM_PROJECT_ORACLE_TOOLS != null &&
+                !(env.SCM_PROJECT_CONFIG != null && env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT_ORACLE_TOOLS))) {
                 dir(env.SCM_PROJECT_ORACLE_TOOLS) {
                     checkout([
                         $class: 'GitSCM', 
