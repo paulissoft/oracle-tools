@@ -16,7 +16,8 @@ fi
 
 # See https://serverfault.com/questions/789601/check-is-container-service-running-with-docker-compose
 
-service=jenkins-controller
+# common service
+service=jenkins-docker
 if [ -z `docker-compose -f $docker_compose_file ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose -f $docker_compose_file ps -q $service)` ]
 then
     echo "Service $service is not running."
