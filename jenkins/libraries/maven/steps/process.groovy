@@ -118,11 +118,13 @@ void call(app_env){
 
         // checkout of (optional) configuration project (maybe credentials needed)
         script {
-            // skip checkout if the configuration project is the same as project
-            if (env.SCM_PROJECT_CONFIG != null &&
+            // skip checkout if the configuration project is the same as project            
+            if (!(env.SCM_PROJECT_CONFIG == null || env.SCM_PROJECT_CONFIG.equals("")) &&
                 !(env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT))) {
+                echo "Checking out configuration project to ${env.SCM_PROJECT_CONFIG}" 
                 dir(env.SCM_PROJECT_CONFIG) {
-                    if (env.SCM_CREDENTIALS_CONFIG != null) {
+                    if (!(env.SCM_CREDENTIALS_CONFIG == null || env.SCM_CREDENTIALS_CONFIG.equals(""))) {
+                        echo "credentials: ${env.SCM_CREDENTIALS_CONFIG}" 
                         git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
                     } else {
                         checkout([
@@ -141,9 +143,10 @@ void call(app_env){
         // checkout of (optional) Oracle Tools (no credentials needed)
         script {
             // skip checkout if the Oracle Tools project is the same as the (configuration) project
-            if (env.SCM_PROJECT_ORACLE_TOOLS != null &&
+            if (!(env.SCM_PROJECT_ORACLE_TOOLS == null || env.SCM_PROJECT_ORACLE_TOOLS.equals("")) &&
                 !(env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT)) &&
                 !(env.SCM_PROJECT_CONFIG != null && env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT_CONFIG))) {
+                echo "Checking out Oracle Tools project to ${env.SCM_PROJECT_ORACLE_TOOLS}"
                 dir(env.SCM_PROJECT_ORACLE_TOOLS) {
                     checkout([
                         $class: 'GitSCM', 
@@ -159,8 +162,10 @@ void call(app_env){
 
         // checkout of (mandatory) project to build (maybe credentials needed)
         script {
+            echo "Checking out build project to ${env.SCM_PROJECT}"
             dir(env.SCM_PROJECT) {
-                if (env.SCM_CREDENTIALS != null) {
+                if (!(env.SCM_CREDENTIALS == null || env.SCM_CREDENTIALS.equals(""))) {
+                    echo "credentials: ${env.SCM_CREDENTIALS}" 
                     git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
                 } else {
                     checkout([
@@ -178,7 +183,7 @@ void call(app_env){
                                     openTasksPublisher(disabled: true)]) {
                     sh('find $WORKSPACE -print')
                     sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
-                    if (env.SCM_CREDENTIALS != null) {
+                    if (!(env.SCM_CREDENTIALS == null || env.SCM_CREDENTIALS.equals(""))) {
                         sshagent([env.SCM_CREDENTIALS]) {
                             sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
                         }
