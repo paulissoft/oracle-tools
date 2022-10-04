@@ -1,4 +1,9 @@
 // -*- mode: groovy; coding: utf-8 -*-
+
+def is_empty(String value) {
+    return value == null || value.equals("")
+}
+
 def show_env(app_env, pipelineConfig, env) {
     String[] properties = [ 'scm_url_oracle_tools'
                            ,'scm_branch_oracle_tools'
@@ -25,16 +30,16 @@ def show_env(app_env, pipelineConfig, env) {
 
     println "app_env class: " + app_env.getClass()
     for (String property in properties.sort()) {
-        println "app_env.$property = " + app_env.getProperty(property)
+        String v = app_env.getProperty(property)
+        
+        if (!is_empty(v)) {
+            println "app_env.$property = " + v
+        }
     }
     println "pipelineConfig class: " + pipelineConfig.getClass()
-    pipelineConfig.sort().each{k, v -> println "pipelineConfig.$k = $v"}
+    pipelineConfig.sort().each{k, v -> if (properties.contains(k) && !is_empty(v)) { println "pipelineConfig.$k = $v" }}
     println "env class: " + env.getClass()
-    env.getEnvironment().sort().each{k, v -> println "env.$k = $v"}
-}
-
-def is_empty(String value) {
-    return value == null || value.equals("")
+    env.getEnvironment().sort().each{k, v -> if (properties.contains(k.toLowerCase()) && !is_empty(v)) { println "env.$k = $v" }}
 }
 
 def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, Integer level=3, String default_value=null) {
