@@ -28,7 +28,6 @@ def show_env(app_env, pipelineConfig, env) {
                            ,'scm_project'
     ]
 
-    println "app_env class: " + app_env.getClass()
     for (String property in properties.sort()) {
         String v = app_env.getProperty(property)
         
@@ -36,9 +35,7 @@ def show_env(app_env, pipelineConfig, env) {
             println "app_env.$property = " + v
         }
     }
-    println "pipelineConfig class: " + pipelineConfig.getClass()
     pipelineConfig.sort().each{k, v -> if (properties.contains(k) && !is_empty(v)) { println "pipelineConfig.$k = $v" }}
-    println "env class: " + env.getClass()
     env.getEnvironment().sort().each{k, v -> if (properties.contains(k.toLowerCase()) && !is_empty(v)) { println "env.$k = $v" }}
 }
 
@@ -126,14 +123,14 @@ void call(app_env){
         env.DB = set_env(app_env, pipelineConfig, env, 'db', true, 1)
         env.DB_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'db_credentials', true, 1) // application environment specific
         env.DB_DIR = set_env(app_env, pipelineConfig, env, 'db_dir')
-        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', true, 2) // application environment or pipeline configuration specific
+        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2) // application environment or pipeline configuration specific
 
         /*
         -- The APEX info to work on
         */
         
         env.APEX_DIR = set_env(app_env, pipelineConfig, env, 'apex_dir')
-        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', true, 2) // application environment or pipeline configuration specific
+        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
         
         /*
         -- SCM credentials username and e-mail
