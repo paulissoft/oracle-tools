@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>151930114232313867
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list_of_values(
- p_id=>wwv_flow_api.id(24306244633298892)
+ p_id=>wwv_flow_api.id(63056137377159934)
 ,p_lov_name=>'LOV_QUOTE_CHARACTERS'
 ,p_lov_query=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'select ''" (double quote)'' as d,',

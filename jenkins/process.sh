@@ -101,9 +101,6 @@ set -xeu
 
 db_config_dir=`cd ${CONF_DIR} && pwd`
 
-# check permissions
-ls -ld /home/jenkins/.m2/repository
-
 # First DB run
 echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 set -- ${DB_ACTIONS}

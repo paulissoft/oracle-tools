@@ -14,28 +14,22 @@ services:
     container_name: jenkins_docker
     image: alpine/socat
     restart: unless-stopped
+    hostname: jenkins-docker
     networks:
-      jenkins-network:
-        aliases:
-          - jenkins-docker
+      - jenkins-network
     expose:
       - "2375"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
-  jenkins-controller:
-    container_name: jenkins_controller
-    build: jenkins-controller
-    restart: unless-stopped
-    ports:
-      - 50000:50000
-      - 8080:8080
+  dns-proxy-server:
+    container_name: dns_proxy_server
+    image: defreitas/dns-proxy-server
     networks:
       - jenkins-network
     volumes:
-      - jenkins-data:/var/jenkins_home
-    environment:
-      - DOCKER_HOST=tcp://jenkins-docker:2375
-      - DOCKER_TLS_VERIFY=""
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/resolv.conf:/etc/resolv.conf
+    hostname: dns.mageddo
     depends_on:
       - jenkins-docker
