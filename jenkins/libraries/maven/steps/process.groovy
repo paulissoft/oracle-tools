@@ -28,6 +28,8 @@ def show_env(app_env, pipelineConfig, env) {
                            ,'scm_project'
     ]
 
+    println "Start of showing the application environment, pipeline configuration and environment"
+    
     for (String property in properties.sort()) {
         String v = app_env.getProperty(property)
         
@@ -37,6 +39,8 @@ def show_env(app_env, pipelineConfig, env) {
     }
     pipelineConfig.sort().each{k, v -> if (properties.contains(k) && !is_empty(v)) { println "pipelineConfig.$k = $v" }}
     env.getEnvironment().sort().each{k, v -> if (properties.contains(k.toLowerCase()) && !is_empty(v)) { println "env.$k = $v" }}
+
+    println "End of showing the application environment, pipeline configuration and environment"
 }
 
 def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, Integer level=3, String default_value=null) {
@@ -78,7 +82,7 @@ def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, In
         assert !is_empty(value) : error
     }
 
-    println "env.$KEY = $value"
+    println "Setting environment variable $KEY to $value"
     
     return value
 }
