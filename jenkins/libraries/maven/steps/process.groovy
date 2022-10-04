@@ -1,4 +1,10 @@
 // -*- mode: groovy; coding: utf-8 -*-
+def show_env(app_env, pipelineConfig, env) {
+    app_env.sort().each(k, v -> println "app_env.$k = $v")
+    pipelineConfig.sort().each(k, v -> println "pipelineConfig.$k = $v")
+    env.sort().each(k, v -> println "env.$k = $v")
+}
+
 def is_empty(String value) {
     return value == null || value.equals("")
 }
@@ -43,6 +49,8 @@ def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, In
         
 void call(app_env){
     script {
+        show_env(app_env, pipelineConfig, env)
+        
         /*
         -- The SCM Oracle Tools project needed to build the SCM project (pipeline config application environment, pipeline config global or environment variable).
         */
