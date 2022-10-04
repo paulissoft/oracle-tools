@@ -18,6 +18,12 @@ Types of changes:
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
 
+## [1.8.0] - 2022-10-04
+
+### Added
+
+- [The Jenkins job should be able to run without GitHub SSH credentials.](https://github.com/paulissoft/oracle-tools/issues/73)
+
 ## [1.7.0] - 2022-09-29
 
 ### Added
