@@ -78,6 +78,8 @@ def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, In
         assert !is_empty(value) : error
     }
 
+    println "env.$KEY = $value"
+    
     return value
 }
         
@@ -123,14 +125,14 @@ void call(app_env){
         env.DB = set_env(app_env, pipelineConfig, env, 'db', true, 1)
         env.DB_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'db_credentials', true, 1) // application environment specific
         env.DB_DIR = set_env(app_env, pipelineConfig, env, 'db_dir')
-        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2) // application environment or pipeline configuration specific
+        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2, '') // application environment or pipeline configuration specific
 
         /*
         -- The APEX info to work on
         */
         
         env.APEX_DIR = set_env(app_env, pipelineConfig, env, 'apex_dir')
-        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
+        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2, '') // application environment or pipeline configuration specific
         
         /*
         -- SCM credentials username and e-mail
