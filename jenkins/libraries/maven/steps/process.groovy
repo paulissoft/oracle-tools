@@ -1,90 +1,90 @@
 // -*- mode: groovy; coding: utf-8 -*-
+def is_empty(String value) {
+    return value == null || value.equals("")
+}
+
+def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, Integer level=3, String default_value=null) {
+    String value = app_env[key]
+    String KEY = key.toUpperCase()
+    
+    if (is_empty(value) && level > 1) {
+        value = pipelineConfig[key]
+
+        if (is_empty(value) && level > 2) {
+            value = env[KEY]
+        }
+    }
+
+    env[KEY] = ( is_empty(value) ? default_value : value )
+
+    if (mandatory) {
+        String error;
+
+        switch(level) {
+            case 3:
+                error = "Either application environment '${app_env.long_name}' variable 'app_env.${key}' or " +
+                    "pipeline configuration variable 'pipelineConfig.${key}' or " +
+                    "environment variable 'env.${KEY}' must be a non-empty string"
+                break
+            case 2:
+                error = "Either application environment '${app_env.long_name}' variable 'app_env.${key}' or " +
+                    "pipeline configuration variable 'pipelineConfig.${key}' must be a non-empty string"
+                break
+            case 1:
+                error = "Application environment '${app_env.long_name}' variable 'app_env.${key}' must be a non-empty string"
+                break
+            default:
+                assert level >= 1 && level <= 3: "Level must be between 1 and 3"
+        }
+        
+        assert !is_empty(value) : error
+    }
+}
+        
 void call(app_env){
     script {
-        def is_empty(String value) {
-            return value == null || value.equals("")
-        }
-        
-        def set_env(String key, Boolean mandatory=true, Integer level=3, String default_value=null) {
-            String value = app_env[key]
-            String KEY = key.toUpperCase()
-            
-            if (is_empty(value) && level > 1) {
-                value = pipelineConfig[key]
-
-                if (is_empty(value) && level > 2) {
-                    value = env[KEY]
-                }
-            }
-
-            env[KEY] = ( is_empty(value) ? default_value : value )
-
-            if (mandatory) {
-                String error;
-
-                switch(level) {
-                    case 3:
-                        error = "Either application environment '${app_env.long_name}' variable 'app_env.${key}' or " +
-                            "pipeline configuration variable 'pipelineConfig.${key}' or " +
-                            "environment variable 'env.${KEY}' must be a non-empty string"
-                        break
-                    case 2:
-                        error = "Either application environment '${app_env.long_name}' variable 'app_env.${key}' or " +
-                            "pipeline configuration variable 'pipelineConfig.${key}' must be a non-empty string"
-                        break
-                    case 1:
-                        error = "Application environment '${app_env.long_name}' variable 'app_env.${key}' must be a non-empty string"
-                        break
-                    default:
-                        assert level >= 1 && level <= 3: "Level must be between 1 and 3"
-                }
-                
-                assert !is_empty(value) : error
-            }
-        }
-        
         /*
         -- The SCM Oracle Tools project needed to build the SCM project (pipeline config application environment, pipeline config global or environment variable).
         */
 
-        set_env('scm_url_oracle_tools', false)
-        set_env('scm_branch_oracle_tools', !is_empty(env.SCM_URL_ORACLE_TOOLS)) // mandatory if the URL is there
+        set_env(app_env, pipelineConfig, env, 'scm_url_oracle_tools', false)
+        set_env(app_env, pipelineConfig, env, 'scm_branch_oracle_tools', !is_empty(env.SCM_URL_ORACLE_TOOLS)) // mandatory if the URL is there
         if (!is_empty(env.SCM_URL_ORACLE_TOOLS)) {
-            set_env('scm_project_oracle_tools', true, 3, env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
+            set_env(app_env, pipelineConfig, env, 'scm_project_oracle_tools', true, 3, env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
         }
         
         /*
         -- The SCM (database) configuration project needed to build the SCM project (pipeline config application environment, pipeline config global or environment variable).
         */
 
-        set_env('scm_url_config', false)
-        set_env('scm_branch_config', !is_empty(env.SCM_URL_CONFIG)) // mandatory if the URL is there
-        set_env('scm_credentials_config', false)
+        set_env(app_env, pipelineConfig, env, 'scm_url_config', false)
+        set_env(app_env, pipelineConfig, env, 'scm_branch_config', !is_empty(env.SCM_URL_CONFIG)) // mandatory if the URL is there
+        set_env(app_env, pipelineConfig, env, 'scm_credentials_config', false)
         if (!is_empty(env.SCM_URL_CONFIG)) {
-            set_env('scm_project_config', true, 3, env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
+            set_env(app_env, pipelineConfig, env, 'scm_project_config', true, 3, env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
         }
         
         /*
         -- The configuration directory to work on (pipeline config application environment, pipeline config global).
         */
         
-        set_env('conf_dir')
+        set_env(app_env, pipelineConfig, env, 'conf_dir')
 
         /*
         -- The database info to work on (pipeline config application environment, pipeline config global).
         */
         
-        set_env('db', true, 1)
-        set_env('db_credentials', true, 1) // application environment specific
-        set_env('db_dir')
-        set_env('db_actions', true, 2) // application environment or pipeline configuration specific
+        set_env(app_env, pipelineConfig, env, 'db', true, 1)
+        set_env(app_env, pipelineConfig, env, 'db_credentials', true, 1) // application environment specific
+        set_env(app_env, pipelineConfig, env, 'db_dir')
+        set_env(app_env, pipelineConfig, env, 'db_actions', true, 2) // application environment or pipeline configuration specific
 
         /*
         -- The APEX info to work on (pipeline config application environment, pipeline config global).
         */
         
-        set_env('apex_dir')
-        set_env('apex_actions', true, 2) // application environment or pipeline configuration specific
+        set_env(app_env, pipelineConfig, env, 'apex_dir')
+        set_env(app_env, pipelineConfig, env, 'apex_actions', true, 2) // application environment or pipeline configuration specific
         
         /*
         -- SCM credentials username and e-mail
@@ -94,18 +94,18 @@ void call(app_env){
         // https://github.com/paulissoft/oracle-tools/issues/70
         Boolean credentials_needed = (env.DB_ACTIONS =~ /\bdb-generate-ddl-full\b/) || (env.APEX_ACTIONS =~ /\bapex-export\b/)
         
-        set_env('scm_username', credentials_needed)
-        set_env('scm_email', credentials_needed)
+        set_env(app_env, pipelineConfig, env, 'scm_username', credentials_needed)
+        set_env(app_env, pipelineConfig, env, 'scm_email', credentials_needed)
 
         /*
         -- The SCM project to work on (pipeline config application environment).
         */
         
-        set_env('scm_branch', true, 1)
-        set_env('scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
-        set_env('scm_credentials', credentials_needed)
-        set_env('scm_url', true)
-        set_env('scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
+        set_env(app_env, pipelineConfig, env, 'scm_branch', true, 1)
+        set_env(app_env, pipelineConfig, env, 'scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
+        set_env(app_env, pipelineConfig, env, 'scm_credentials', credentials_needed)
+        set_env(app_env, pipelineConfig, env, 'scm_url', true)
+        set_env(app_env, pipelineConfig, env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
     }
     
     withCredentials([usernamePassword(credentialsId: env.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
@@ -114,10 +114,6 @@ void call(app_env){
 
         // checkout of (optional) configuration project (maybe credentials needed)
         script {
-            def is_empty(String value) {
-                return value == null || value.equals("")
-            }
-            
             // skip checkout if the configuration project is the same as project            
             if (!is_empty(env.SCM_PROJECT_CONFIG) &&
                 !env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT)) {
