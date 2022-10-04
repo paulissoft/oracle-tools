@@ -1,11 +1,36 @@
 // -*- mode: groovy; coding: utf-8 -*-
 def show_env(app_env, pipelineConfig, env) {
+    String[] properties = [ 'scm_url_oracle_tools'
+                           ,'scm_branch_oracle_tools'
+                           ,'scm_project_oracle_tools'
+                           ,'scm_url_config'
+                           ,'scm_branch_config'
+                           ,'scm_credentials_config'
+                           ,'scm_project_config'
+                           ,'conf_dir'
+                           ,'db'
+                           ,'db_credentials'
+                           ,'db_dir'
+                           ,'db_actions'
+                           ,'apex_dir'
+                           ,'apex_actions'
+                           ,'scm_username'
+                           ,'scm_email'
+                           ,'scm_branch'
+                           ,'scm_branch_prev'
+                           ,'scm_credentials'
+                           ,'scm_url'
+                           ,'scm_project'
+    ]
+
     println "app_env class: " + app_env.getClass()
-    println "app_env: " + app_env.toString()
+    for (String property in properties.sort()) {
+        println "app_env.$property = " + app_env.getProperty(property)
+    }
     println "pipelineConfig class: " + pipelineConfig.getClass()
-    println "pipelineConfig: " + pipelineConfig.toString()
+    pipelineConfig.sort().each{k, v -> println "pipelineConfig.$k = $v"}
     println "env class: " + env.getClass()
-    println "env: " + env.toString()
+    env.getEnvironment().sort().each{k, v -> println "env.$k = $v"}
 }
 
 def is_empty(String value) {
