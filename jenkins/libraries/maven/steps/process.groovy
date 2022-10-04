@@ -1,11 +1,11 @@
 // -*- mode: groovy; coding: utf-8 -*-
 def show_env(app_env, pipelineConfig, env) {
     println "app_env class: " + app_env.getClass()
-    app_env.sort().each{k, v -> println "app_env.$k = $v"}
+    println "app_env: " + app_env.toString()
     println "pipelineConfig class: " + pipelineConfig.getClass()
-    pipelineConfig.sort().each{k, v -> println "pipelineConfig.$k = $v"}
+    println "pipelineConfig: " + pipelineConfig.toString()
     println "env class: " + env.getClass()
-    env.sort().each{k, v -> println "env.$k = $v"}
+    println "env: " + env.toString()
 }
 
 def is_empty(String value) {
