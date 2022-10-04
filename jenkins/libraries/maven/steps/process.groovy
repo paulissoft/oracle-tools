@@ -43,7 +43,7 @@ def show_env(app_env, pipelineConfig, env) {
     println "End of showing the application environment, pipeline configuration and environment"
 }
 
-def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, Integer level=3, String default_value=null) {
+def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, Integer level=3, String default_value='') {
     String value = app_env[key]
     String KEY = key.toUpperCase()
     
@@ -82,7 +82,7 @@ def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, In
         assert !is_empty(value) : error
     }
 
-    println "Setting environment variable $KEY to $value"
+    println "Setting environment variable $KEY to '$value'"
     
     return value
 }
@@ -129,14 +129,14 @@ void call(app_env){
         env.DB = set_env(app_env, pipelineConfig, env, 'db', true, 1)
         env.DB_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'db_credentials', true, 1) // application environment specific
         env.DB_DIR = set_env(app_env, pipelineConfig, env, 'db_dir')
-        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2, '') // application environment or pipeline configuration specific
+        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2) // application environment or pipeline configuration specific
 
         /*
         -- The APEX info to work on
         */
         
         env.APEX_DIR = set_env(app_env, pipelineConfig, env, 'apex_dir')
-        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2, '') // application environment or pipeline configuration specific
+        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
         
         /*
         -- SCM credentials username and e-mail
@@ -169,7 +169,7 @@ void call(app_env){
             // skip checkout if the configuration project is the same as project            
             if (!is_empty(env.SCM_PROJECT_CONFIG) &&
                 !env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT)) {
-                echo "Checking out configuration project ${env.SCM_URL_CONFIG} to ${env.SCM_PROJECT_CONFIG} with credentials ${env.SCM_CREDENTIALS_CONFIG}" 
+                echo "Checking out configuration project, url='${env.SCM_URL_CONFIG}', branch='${env.SCM_BRANCH_CONFIG}', directory='${env.SCM_PROJECT_CONFIG}', credentials='${env.SCM_CREDENTIALS_CONFIG}'"
                 dir(env.SCM_PROJECT_CONFIG) {
                     if (!is_empty(env.SCM_CREDENTIALS_CONFIG)) {
                         git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
@@ -185,14 +185,15 @@ void call(app_env){
                     }
                 }
             }
+        }
         
-            // checkout of (optional) Oracle Tools (no credentials needed)
-
+        // checkout of (optional) Oracle Tools (no credentials needed)
+        script {
             // skip checkout if the Oracle Tools project is the same as the (configuration) project
             if (!is_empty(env.SCM_PROJECT_ORACLE_TOOLS) &&
                 (is_empty(env.SCM_PROJECT)        || !env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT)) &&
                 (is_empty(env.SCM_PROJECT_CONFIG) || !env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT_CONFIG))) {
-                echo "Checking out Oracle Tools project ${env.SCM_URL_ORACLE_TOOLS} to ${env.SCM_PROJECT_ORACLE_TOOLS} without credentials"
+                echo "Checking out Oracle Tools project, url='${env.SCM_URL_ORACLE_TOOLS};, branch='${env.SCM_BRANCH_ORACLE_TOOLS}', directory='${env.SCM_PROJECT_ORACLE_TOOLS}', no credentials"
                 dir(env.SCM_PROJECT_ORACLE_TOOLS) {
                     checkout([
                         $class: 'GitSCM', 
@@ -204,10 +205,11 @@ void call(app_env){
                     ])
                 }
             }
+        }
 
-            // checkout of (mandatory) project to build (maybe credentials needed)
-
-            echo "Checking out build project ${env.SCM_URL} to ${env.SCM_PROJECT} with credentials ${env.SCM_CREDENTIALS}" 
+        // checkout of (mandatory) project to build (maybe credentials needed)
+        script {
+            echo "Checking out build project, url='${env.SCM_URL}', branch='${env.SCM_BRANCH}', directory='${env.SCM_PROJECT}', credentials='${env.SCM_CREDENTIALS}'"
             dir(env.SCM_PROJECT) {
                 if (!is_empty(env.SCM_CREDENTIALS)) {                    
                     git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
