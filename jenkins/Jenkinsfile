@@ -5,12 +5,14 @@ pipeline {
         skipDefaultCheckout()
     }
     stages {
-        steps {
-            script {
-                pipelineConfig.application_environments.each{ k, v ->
-                    stage(k) {
-                        println "environment: ${k}"
-                        process k v
+        stage("build") {
+            steps {
+                script {
+                    pipelineConfig.application_environments.each{ k, v ->
+                        stage(k) {
+                            println "environment: ${k}"
+                            process k v
+                        }
                     }
                 }
             }
