@@ -12,13 +12,11 @@ db_dir = 'db/app'
 apex_dir = 'apex/app'
 
 libraries{
-//  merge = true 
   maven
 }
 
 application_environments{
     dev{
-        // Oracle tools info
         scm_branch = 'development'
 
         db = 'docker'
@@ -28,7 +26,6 @@ application_environments{
         apex_actions = 'apex-export'
     }
     test{
-        // Oracle tools info
         scm_branch = 'test'
 
         db = 'docker'
@@ -38,7 +35,6 @@ application_environments{
         apex_actions = 'apex-import'
     }
     acc{
-        // Oracle tools info
         scm_branch = 'acc'
 
         db = 'docker'
@@ -48,7 +44,6 @@ application_environments{
         apex_actions = 'apex-import'
     }
     prod{
-        // Oracle tools info
         scm_branch = 'prod'
 
         db = 'docker'
