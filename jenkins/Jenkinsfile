@@ -5,13 +5,11 @@ pipeline {
         skipDefaultCheckout()
     }
     stages {
-        stage("pipeline") {
-            steps {
-                script {
-                    pipelineConfig.application_environments.each{ env ->
-                        println "environment: ${env}"
-                        process env.getValue()
-                    }
+        script {
+            pipelineConfig.application_environments.each{ k, v ->
+                stage(k) {
+                    println "environment: ${k}"
+                    process k v
                 }
             }
         }

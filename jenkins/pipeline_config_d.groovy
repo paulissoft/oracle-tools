@@ -12,13 +12,11 @@ db_dir = 'db/app'
 apex_dir = 'apex/app'
 
 libraries{
-//  merge = true 
   maven
 }
 
 application_environments{
     dev{
-        // Oracle tools info
         scm_branch = 'development'
 
         db = 'docker'
