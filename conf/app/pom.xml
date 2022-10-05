@@ -21,6 +21,9 @@
         <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
         <conf.test.connection>false</conf.test.connection> <!-- no recursion -->
         <conf.test.connection.skip>false</conf.test.connection.skip>
+        <!-- Pass as environment variables for security reasons (Jenkins) -->
+        <db.username>${env.DB_USERNAME}</db.username>
+        <db.password>${env.DB_PASSWORD}</db.password>
       </properties>
       <build>
         <plugins>

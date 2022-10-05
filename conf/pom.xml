@@ -385,8 +385,8 @@
                     <arg value="${oracle-tools.dir}/conf/app/pom.xml"/>
                     <arg value="-Ptest-connection"/>
                     <arg value="-Ddb.url=${db.url}"/>
-                    <arg value="-Ddb.username=${db.username}"/>
                     <arg value="-Dconf.test.connection.skip=${conf.test.connection.skip}"/>
+                    <env key="DB_USERNAME" value="${db.username}"/>
                     <env key="DB_PASSWORD" value="${db.password}"/>
                     <env key="LC_CTYPE" value="en_US.UTF-8"/>
                     <env key="LC_ALL" value="en_US.UTF-8"/>
