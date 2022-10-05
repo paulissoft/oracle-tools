@@ -66,7 +66,6 @@
     <conf.phase.init>initialize</conf.phase.init>
     <!-- give the generate-resources phase a chance to extract resources -->
     <conf.phase.process>process-resources</conf.phase.process>
-
     <!-- 
          This property is used to construct the db.username property below in
          the conf-connect antrun execution.
@@ -339,6 +338,12 @@
                   <!-- db.prev.database.link is empty meaning the previous database schema is used -->
                   <property name="db.prev.database.link"
                             value="${db.schema}@${db.prev.service}" />
+                  <condition property="conf.test.connection" value="false" else="true">
+                    <or>
+                      <contains string="${db.url}" substring="${" />
+                      <contains string="${db.username}" substring="${" />
+                    </or>
+                  </condition>
                 </target>
               </configuration>
               <goals>
@@ -346,6 +351,52 @@
               </goals>
             </execution>
 
+            <execution>
+              <!-- This must be named -->
+              <id>conf-test-connection</id>
+              <phase>${conf.phase.process}</phase>
+              <configuration>
+                <exportAntProperties>true</exportAntProperties>
+                <target if="${conf.test.connection}">
+                  <!-- It must be possible to test the connection with a timeout. -->
+                  <!-- https://github.com/paulissoft/oracle-tools/issues/77 -->
+                  <echo level="${ant.log.level}" message="Testing connection with url '${db.url}' and username '${db.username}'" />
+                  <exec executable="perl"
+                        spawn="false"
+                        failonerror="false"
+                        outputproperty="test.connection.output"
+                        errorproperty="test.connection.error"
+                        resultproperty="test.connection.result"
+                        failifexecutionfails="false">
+                    <arg value="${oracle-tools.dir}/src/scripts/timeout.pl"/>
+                    <arg value="mvn"/>
+                    <arg value="-q"/>
+                    <arg value="-f"/>
+                    <arg value="${oracle-tools.dir}/conf/app/pom.xml"/>
+                    <arg value="-Ptest-connection"/>
+                    <arg value="-Ddb.url=${db.url}"/>
+                    <arg value="-Ddb.username=${db.username}"/>
+                    <env key="DB_PASSWORD" value="${db.password}"/>
+                    <env key="LC_CTYPE" value="en_US.UTF-8"/>
+                    <env key="LC_ALL" value="en_US.UTF-8"/>
+                  </exec>
+                  <fail message="${test.connection.error}">
+                    <condition>
+                      <and>
+                        <isset property="test.connection.result"/>
+                        <not>
+                          <equals arg1="${test.connection.result}" arg2="0"/>
+                        </not>
+                      </and>
+                    </condition>
+                  </fail>
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
+            
             <execution>
               <id>conf-debug-after</id>
               <phase>${conf.phase.process}</phase>
@@ -407,6 +458,7 @@
       <properties>
         <default.goal>compile</default.goal>
         <conf.connect.skip>false</conf.connect.skip>
+        <conf.test.connection>false</conf.test.connection>
         <db.install.skip>true</db.install.skip>
         <apex.skip>true</apex.skip>
         <maven.debug>true</maven.debug>
@@ -432,6 +484,7 @@
         <!-- When child projects have this POM as parent and this project as
              dependency, this is the way to set oracle-tools.conf.src.dir.
         -->
+        <conf.test.connection>false</conf.test.connection>
         <oracle-tools.conf.version>${project.parent.version}</oracle-tools.conf.version>
         <oracle-tools.conf.src.dir>${project.build.directory}/dependency/conf-${oracle-tools.conf.version}/src</oracle-tools.conf.src.dir>
       </properties>

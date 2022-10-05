@@ -37,12 +37,12 @@ public class TestConnection {
         
         System.out.println("Db Url: " + dbUrl);
         System.out.println("Db Username: " + dbUsername);
+        System.out.println("Db Password: " + (dbPassword != null ? "***" : "null"));
 
         Properties info = new Properties();     
         info.put(OracleConnection.CONNECTION_PROPERTY_USER_NAME, dbUsername);
         info.put(OracleConnection.CONNECTION_PROPERTY_PASSWORD, dbPassword);          
         info.put(OracleConnection.CONNECTION_PROPERTY_DEFAULT_ROW_PREFETCH, "20");    
-  
 
         OracleDataSource ods = new OracleDataSource();
         ods.setURL(dbUrl);    

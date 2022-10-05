@@ -19,6 +19,7 @@
         <conf.connect.skip>false</conf.connect.skip>
         <db.schema>${oracle_tools_schema}</db.schema>
         <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
+        <conf.test.connection>false</conf.test.connection> <!-- no recursion -->
       </properties>
       <build>
         <plugins>

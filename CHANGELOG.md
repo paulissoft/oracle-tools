@@ -18,6 +18,13 @@ Types of changes:
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
 
+## [1.9.0] - 2022-10-05
+
+### Added
+
+- [It must be possible to test the connection with a timeout.](https://github.com/paulissoft/oracle-tools/issues/77)
+- [It must be possible to specify stages in the Jenkins pipeline.](https://github.com/paulissoft/oracle-tools/issues/78)
+
 ## [1.8.1] - 2022-10-04
 
 ### Fixed
