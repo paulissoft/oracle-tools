@@ -11,7 +11,7 @@ pipeline {
                     pipelineConfig.application_environments.each{ k, v ->
                         stage(k) {
                             println "environment: ${k}"
-                            process k v
+                            process(k, v)
                         }
                     }
                 }
