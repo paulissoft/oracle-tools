@@ -21,6 +21,7 @@ services:
   dns-proxy-server:
     container_name: dns_proxy_server
     image: defreitas/dns-proxy-server
+    restart: unless-stopped
     networks:
       - jenkins-network
     volumes:
