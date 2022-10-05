@@ -361,6 +361,16 @@
                   <!-- It must be possible to test the connection with a timeout. -->
                   <!-- https://github.com/paulissoft/oracle-tools/issues/77 -->
                   <echo level="${ant.log.level}" message="Testing connection with url '${db.url}' and username '${db.username}'" />
+                  <!-- This build directory will be created due to the invocation of maven below so store the poperties there. -->
+                  <property name="property.file" location="${oracle-tools.dir}/conf/app/target/.connect.properties"/>
+                  <property file="${property.file}"/>
+                  <!-- Ant Contrib new style -->
+                  <ac:propertycopy xmlns:ac="antlib:net.sf.antcontrib"
+                                   property="conf.test.connection.skip"
+                                   override="true"
+                                   from="conf.test.connection.skip.${db}"
+                                   silent="true"/>
+                  <property name="conf.test.connection.skip" value="false" /> <!-- default -->
                   <exec executable="perl"
                         spawn="false"
                         failonerror="false"
@@ -376,6 +386,7 @@
                     <arg value="-Ptest-connection"/>
                     <arg value="-Ddb.url=${db.url}"/>
                     <arg value="-Ddb.username=${db.username}"/>
+                    <arg value="-Dconf.test.connection.skip=${conf.test.connection.skip}"/>
                     <env key="DB_PASSWORD" value="${db.password}"/>
                     <env key="LC_CTYPE" value="en_US.UTF-8"/>
                     <env key="LC_ALL" value="en_US.UTF-8"/>
@@ -390,6 +401,10 @@
                       </and>
                     </condition>
                   </fail>
+                  <!-- Store the fact that a database connection has been successful for this database. -->
+                  <propertyfile file="${property.file}">
+                    <entry key="conf.test.connection.skip.${db}" value="true"/>
+                  </propertyfile>
                 </target>
               </configuration>
               <goals>
@@ -507,4 +522,8 @@
     </profile>
   </profiles>
   
+  <modules>
+    <module>app</module>
+  </modules>
+
 </project>
