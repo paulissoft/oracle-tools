@@ -89,75 +89,77 @@ def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, In
         
 void call(app_env){
     script {
-        show_env(app_env, pipelineConfig, env)
-        
-        /*
-        -- The SCM Oracle Tools project needed to build the SCM project
-        */
-
-        env.SCM_URL_ORACLE_TOOLS = set_env(app_env, pipelineConfig, env, 'scm_url_oracle_tools', false)
-        env.SCM_BRANCH_ORACLE_TOOLS = set_env(app_env, pipelineConfig, env, 'scm_branch_oracle_tools', !is_empty(env.SCM_URL_ORACLE_TOOLS)) // mandatory if the URL is there
-        if (!is_empty(env.SCM_URL_ORACLE_TOOLS)) {
-            String name = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+        stage("${app_env.long_name} - setup environment") {
+            show_env(app_env, pipelineConfig, env)
             
-            env.SCM_PROJECT_ORACLE_TOOLS = set_env(app_env, pipelineConfig, env, 'scm_project_oracle_tools', true, 3, name)
-        }
-        
-        /*
-        -- The SCM (database) configuration project needed to build the SCM project
-        */
+            /*
+             -- The SCM Oracle Tools project needed to build the SCM project
+             */
 
-        env.SCM_URL_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_url_config', false)
-        env.SCM_BRANCH_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_branch_config', !is_empty(env.SCM_URL_CONFIG)) // mandatory if the URL is there
-        env.SCM_CREDENTIALS_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_credentials_config', false)
-        if (!is_empty(env.SCM_URL_CONFIG)) {
-            String name = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+            env.SCM_URL_ORACLE_TOOLS = set_env(app_env, pipelineConfig, env, 'scm_url_oracle_tools', false)
+            env.SCM_BRANCH_ORACLE_TOOLS = set_env(app_env, pipelineConfig, env, 'scm_branch_oracle_tools', !is_empty(env.SCM_URL_ORACLE_TOOLS)) // mandatory if the URL is there
+            if (!is_empty(env.SCM_URL_ORACLE_TOOLS)) {
+                String name = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+                
+                env.SCM_PROJECT_ORACLE_TOOLS = set_env(app_env, pipelineConfig, env, 'scm_project_oracle_tools', true, 3, name)
+            }
             
-            env.SCM_PROJECT_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_project_config', true, 3, name)
+            /*
+             -- The SCM (database) configuration project needed to build the SCM project
+             */
+
+            env.SCM_URL_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_url_config', false)
+            env.SCM_BRANCH_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_branch_config', !is_empty(env.SCM_URL_CONFIG)) // mandatory if the URL is there
+            env.SCM_CREDENTIALS_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_credentials_config', false)
+            if (!is_empty(env.SCM_URL_CONFIG)) {
+                String name = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+                
+                env.SCM_PROJECT_CONFIG = set_env(app_env, pipelineConfig, env, 'scm_project_config', true, 3, name)
+            }
+            
+            /*
+             -- The configuration directory to work on
+             */
+            
+            env.CONF_DIR = set_env(app_env, pipelineConfig, env, 'conf_dir')
+
+            /*
+             -- The database info to work on
+             */
+            
+            env.DB = set_env(app_env, pipelineConfig, env, 'db', true, 1)
+            env.DB_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'db_credentials', true, 1) // application environment specific
+            env.DB_DIR = set_env(app_env, pipelineConfig, env, 'db_dir')
+            env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2) // application environment or pipeline configuration specific
+
+            /*
+             -- The APEX info to work on
+             */
+            
+            env.APEX_DIR = set_env(app_env, pipelineConfig, env, 'apex_dir')
+            env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
+            
+            /*
+             -- SCM credentials username and e-mail
+             */
+            
+            // It must be possible to specify the SCM username and email as environment variables in Jenkins configuration.
+            // https://github.com/paulissoft/oracle-tools/issues/70
+            Boolean credentials_needed = (env.DB_ACTIONS =~ /\bdb-generate-ddl-full\b/) || (env.APEX_ACTIONS =~ /\bapex-export\b/)
+            
+            env.SCM_USERNAME = set_env(app_env, pipelineConfig, env, 'scm_username', credentials_needed)
+            env.SCM_EMAIL = set_env(app_env, pipelineConfig, env, 'scm_email', credentials_needed)
+
+            /*
+             -- The SCM project to work on
+             */
+            
+            env.SCM_BRANCH = set_env(app_env, pipelineConfig, env, 'scm_branch', true, 1)
+            env.SCM_BRANCH_PREV = set_env(app_env, pipelineConfig, env, 'scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
+            env.SCM_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'scm_credentials', credentials_needed)
+            env.SCM_URL = set_env(app_env, pipelineConfig, env, 'scm_url', true)
+            env.SCM_PROJECT = set_env(app_env, pipelineConfig, env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
         }
-        
-        /*
-        -- The configuration directory to work on
-        */
-        
-        env.CONF_DIR = set_env(app_env, pipelineConfig, env, 'conf_dir')
-
-        /*
-        -- The database info to work on
-        */
-        
-        env.DB = set_env(app_env, pipelineConfig, env, 'db', true, 1)
-        env.DB_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'db_credentials', true, 1) // application environment specific
-        env.DB_DIR = set_env(app_env, pipelineConfig, env, 'db_dir')
-        env.DB_ACTIONS = set_env(app_env, pipelineConfig, env, 'db_actions', false, 2) // application environment or pipeline configuration specific
-
-        /*
-        -- The APEX info to work on
-        */
-        
-        env.APEX_DIR = set_env(app_env, pipelineConfig, env, 'apex_dir')
-        env.APEX_ACTIONS = set_env(app_env, pipelineConfig, env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
-        
-        /*
-        -- SCM credentials username and e-mail
-        */
-        
-        // It must be possible to specify the SCM username and email as environment variables in Jenkins configuration.
-        // https://github.com/paulissoft/oracle-tools/issues/70
-        Boolean credentials_needed = (env.DB_ACTIONS =~ /\bdb-generate-ddl-full\b/) || (env.APEX_ACTIONS =~ /\bapex-export\b/)
-        
-        env.SCM_USERNAME = set_env(app_env, pipelineConfig, env, 'scm_username', credentials_needed)
-        env.SCM_EMAIL = set_env(app_env, pipelineConfig, env, 'scm_email', credentials_needed)
-
-        /*
-        -- The SCM project to work on
-        */
-        
-        env.SCM_BRANCH = set_env(app_env, pipelineConfig, env, 'scm_branch', true, 1)
-        env.SCM_BRANCH_PREV = set_env(app_env, pipelineConfig, env, 'scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
-        env.SCM_CREDENTIALS = set_env(app_env, pipelineConfig, env, 'scm_credentials', credentials_needed)
-        env.SCM_URL = set_env(app_env, pipelineConfig, env, 'scm_url', true)
-        env.SCM_PROJECT = set_env(app_env, pipelineConfig, env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
     }
     
     withCredentials([usernamePassword(credentialsId: env.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
