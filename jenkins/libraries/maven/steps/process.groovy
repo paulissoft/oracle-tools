@@ -89,7 +89,7 @@ def set_env(app_env, pipelineConfig, env, String key, Boolean mandatory=true, In
         
 void call(app_env){
     script {
-        stage("${app_env.long_name} - setup environment") {
+        stage("${app_env} - setup environment") {
             show_env(app_env, pipelineConfig, env)
             
             /*
