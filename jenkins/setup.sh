@@ -1,9 +1,9 @@
 #!/bin/bash -eu
 
 init() {
-    ! printenv DEBUG || set -x
+    ! printenv DEBUG 1>/dev/null || set -x
     
-    if ! printenv DOCKER_COMPOSE_FILE
+    if ! printenv DOCKER_COMPOSE_FILE 1>/dev/null
     then
         case $(uname) in
             Linux)
@@ -17,7 +17,7 @@ init() {
 
     if [ $NFS -ne 0 ]
     then
-        if ! printenv SHARED_DIRECTORY
+        if ! printenv SHARED_DIRECTORY 1>/dev/null
         then
             export SHARED_DIRECTORY=~/nfs/jenkins/home
         fi
@@ -73,7 +73,7 @@ start() {
             container=$(echo $item | cut -d ':' -f 2)
             service=$(echo $item | cut -d ':' -f 3)
 
-            if ! printenv $var
+            if ! printenv $var 1>/dev/null
             then
                 case $(uname) in
                     # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume

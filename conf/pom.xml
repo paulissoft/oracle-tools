@@ -344,14 +344,14 @@
                   <tstamp /> <!-- sets ${TODAY} -->
                   <!-- The exec below will create directory ${oracle-tools.dir}/conf/app/target/ -->
                   <property name="conf.test.connection.property.file"
-                            location="${oracle-tools.dir}/conf/app/target/conf.test.connection.${TODAY}.properties" />
+                            location="${oracle-tools.dir}/conf/app/target/conf.test.connection.properties" />
                   <property file="${conf.test.connection.property.file}" />
 
                   <!-- Ant Contrib new style -->
                   <ac:propertycopy xmlns:ac="antlib:net.sf.antcontrib"
                                    property="conf.test.connection.ok"
                                    override="true"
-                                   from="conf.test.connection.ok.${db}"
+                                   from="conf.test.connection.ok.${db}.${TODAY}"
                                    silent="true" />
 
                   <ac:if xmlns:ac="antlib:net.sf.antcontrib">
@@ -410,7 +410,7 @@
                       </fail>
                       <!-- Store the fact that the test for a database connection has been successful for this database. -->
                       <propertyfile file="${conf.test.connection.property.file}">
-                        <entry key="conf.test.connection.ok.${db}" value="true"/>
+                        <entry key="conf.test.connection.ok.${db}.${TODAY}" value="true"/>
                       </propertyfile>                     
                     </else>
                   </ac:if>
