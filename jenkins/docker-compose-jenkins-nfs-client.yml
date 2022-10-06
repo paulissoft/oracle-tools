@@ -9,7 +9,7 @@ volumes:
     name: jenkins-agent-home
     driver_opts:
       type: "nfs"
-      o: "addr=${JENKINS_NFS_SERVER:-host.docker.internal},nfsvers=4,nolock,soft,rw"
+      o: "addr=${JENKINS_NFS_SERVER},nfsvers=4,nolock,soft,rw"
       device: ":"
 
 services:
