@@ -5,7 +5,7 @@ networks:
     name: jenkins
 
 volumes:
-  jenkins-agent:
+  jenkins-agent-home:
     name: jenkins-agent-home
     driver_opts:
       type: "nfs"
@@ -16,14 +16,9 @@ services:
   jenkins-nfs-client:
     container_name: jenkins_nfs_client
     image: ghcr.io/paulissoft/pato-jenkins-agent:latest
-    restart: unless-stopped
     hostname: jenkins-nfs-client
     networks:
       - jenkins-network
     volumes:
-      - type: volume
-        source: jenkins-agent
-        target: /home/jenkins
-        volume:
-          nocopy: true
+      - jenkins-agent-home:/home/jenkins:rw
 

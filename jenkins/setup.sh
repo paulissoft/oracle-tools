@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
 
 init() {
     if ! printenv DOCKER_COMPOSE_FILE
@@ -15,10 +15,14 @@ init() {
 
     if ! printenv SHARED_DIRECTORY
     then
-        export SHARED_DIRECTORY=~/nfs/jenkins/agent
-        test -d $SHARED_DIRECTORY || mkdir -p $SHARED_DIRECTORY
-        chmod -R 777 $SHARED_DIRECTORY
+        export SHARED_DIRECTORY=~/nfs/jenkins/home
     fi
+    # Create the shared directory as well as the Maven .m2/repository directory and the workspace
+    for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
+    do
+        test -d $d || mkdir -p $d
+        chmod -R 777 $d
+    done
 
     # The docker-compose.yml is the common file.
     # The $DOCKER_COMPOSE_FILE is environment specific.
@@ -65,7 +69,11 @@ start() {
         docker volume rm jenkins-agent-home
     fi
 
-    docker-compose $docker_compose_files $docker_compose_command_and_options
+    ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
+
+    echo "Testing NFS setup"
+    echo ""
+    docker run --rm -it -v jenkins-agent-home:/home/jenkins ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls
 }
 
 # main
