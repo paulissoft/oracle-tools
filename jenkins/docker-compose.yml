@@ -24,6 +24,10 @@ services:
     restart: unless-stopped
     networks:
       - jenkins-network
+    # https://github.com/mageddo/dns-proxy-server/issues/166
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc:/host/etc
+    environment:
+      - MG_RESOLVCONF=/host/etc/resolv.conf
     hostname: dns.mageddo
