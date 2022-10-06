@@ -6,7 +6,6 @@ do
     if docker volume ls | grep $v
     then
         echo "Showing Docker volume $v"
-        echo ""
-        docker run --rm -it -v $v:/tmp/volume ghcr.io/paulissoft/pato-jenkins-agent:latest find /tmp/volume -ls
+        echo "#files: $((set -x; docker run --rm -it -v $v:/tmp/volume ghcr.io/paulissoft/pato-jenkins-agent:latest find /tmp/volume -print) | wc -l)"
     fi    
 done
