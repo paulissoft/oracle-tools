@@ -19,3 +19,4 @@ services:
       - ${SHARED_DIRECTORY}:/nfsshare
     environment:
       - SHARED_DIRECTORY=/nfsshare
+      - SYNC=true

@@ -31,7 +31,9 @@ init() {
 
     if [ ! -d $SHARED_DIRECTORY/.ssh ]
     then
-        mkdir -m 700 $SHARED_DIRECTORY/.ssh && ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
+        mkdir -m 700 $SHARED_DIRECTORY/.ssh
+        ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
+        chmod 700 $SHARED_DIRECTORY/.ssh/known_hosts
     fi
 
     # The docker-compose.yml is the common file.
