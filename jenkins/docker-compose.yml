@@ -21,11 +21,9 @@ services:
   dns-proxy-server:
     container_name: dns_proxy_server
     image: defreitas/dns-proxy-server
+    restart: unless-stopped
     networks:
       - jenkins-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/resolv.conf:/etc/resolv.conf
     hostname: dns.mageddo
-    depends_on:
-      - jenkins-docker

@@ -39,9 +39,12 @@ jenkins:
           image: "ghcr.io/paulissoft/pato-jenkins-agent:latest"
           mounts:
           - "type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository"
-          mountsString: "type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository"
+          - "type=volume,src=jenkins-agent-workspace,dst=/home/jenkins/agent/workspace"
+          mountsString: |-
+            type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository
+            type=volume,src=jenkins-agent-workspace,dst=/home/jenkins/agent/workspace
           network: "jenkins"
-        labelString: "maven jdk oracle"
+        labelString: "maven sql jdk oracle"
         name: "pato"
         pullStrategy: PULL_ALWAYS
         pullTimeout: 300

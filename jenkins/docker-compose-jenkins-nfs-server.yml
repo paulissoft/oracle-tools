@@ -1,0 +1,36 @@
+version: '3.8'
+
+networks:
+  jenkins-network:
+    name: jenkins
+
+services:
+  jenkins-nfs-server-m2-repository:
+    container_name: jenkins_nfs_server_m2_repository
+    image: itsthenetwork/nfs-server-alpine
+    restart: unless-stopped
+    hostname: jenkins-nfs-server-m2-repository
+    networks:
+      - jenkins-network
+#    ports:
+#      - "2049:2049"
+    privileged: true
+    volumes:
+      - ${SHARED_DIRECTORY_M2_REPOSITORY}:/nfsshare
+    environment:
+      - SHARED_DIRECTORY=/nfsshare
+  jenkins-nfs-server-agent-workspace:
+    container_name: jenkins_nfs_server_agent_workspace
+    image: itsthenetwork/nfs-server-alpine
+    restart: unless-stopped
+    hostname: jenkins-nfs-server-agent-workspace
+    networks:
+      - jenkins-network
+#    ports:
+#      - "3049:2049"
+    privileged: true
+    volumes:
+      - ${SHARED_DIRECTORY_AGENT_WORKSPACE}:/nfsshare
+    environment:
+      - SHARED_DIRECTORY=/nfsshare
+      - SYNC=true
