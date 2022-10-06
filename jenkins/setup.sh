@@ -73,7 +73,7 @@ start() {
 
     echo "Testing NFS setup"
     echo ""
-    docker run --rm -it -v jenkins-agent-home:/home/jenkins ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls
+    ( set -x; docker run --rm -it -v jenkins-agent-home:/home/jenkins ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
 }
 
 # main
