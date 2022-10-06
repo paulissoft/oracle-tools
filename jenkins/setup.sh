@@ -33,7 +33,8 @@ init() {
 
     # The docker-compose.yml is the common file.
     # The $DOCKER_COMPOSE_FILE is environment specific.
-    docker_compose_files="-f docker-compose.yml -f docker-compose-jenkins-nfs-server.yml -f docker-compose-jenkins-nfs-client.yml"
+    docker_compose_files="-f docker-compose.yml"
+    test $NFS -eq 0 || docker_compose_files="$docker_compose_files -f docker-compose-jenkins-nfs-server.yml -f docker-compose-jenkins-nfs-client.yml"
     test -z "$DOCKER_COMPOSE_FILE" || docker_compose_files="$docker_compose_files -f $DOCKER_COMPOSE_FILE"
 }
 
@@ -54,31 +55,34 @@ build() {
 }
 
 start() {
-    for item in \
-        JENKINS_NFS_SERVER_M2_REPOSITORY:jenkins_nfs_server_m2_repository:jenkins-nfs-server-m2-repository \
-            JENKINS_NFS_SERVER_AGENT_WORKSPACE:jenkins_nfs_server_agent_workspace:jenkins-nfs-server-agent-workspace
-    do
-        var=$(echo $item | cut -d ':' -f 1)
-        container=$(echo $item | cut -d ':' -f 2)
-        service=$(echo $item | cut -d ':' -f 3)
+    if [ $NFS -ne 0 ]
+    then
+        for item in \
+            JENKINS_NFS_SERVER_M2_REPOSITORY:jenkins_nfs_server_m2_repository:jenkins-nfs-server-m2-repository \
+                JENKINS_NFS_SERVER_AGENT_WORKSPACE:jenkins_nfs_server_agent_workspace:jenkins-nfs-server-agent-workspace
+        do
+            var=$(echo $item | cut -d ':' -f 1)
+            container=$(echo $item | cut -d ':' -f 2)
+            service=$(echo $item | cut -d ':' -f 3)
 
-        if ! printenv $var
-        then
-            case $(uname) in
-                # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
-                # since the host can not obtain a Docker container IP address via DNS.
-                Darwin)
-                    docker-compose -f docker-compose-jenkins-nfs-server.yml up -d $service
-                    eval export $var=$(docker inspect $container --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
-                    ;;
-                # Here the dns-proxy-server should be able to do the right thing.
-                *)
-                    eval $var=$service
-                    ;;
-            esac
-        fi
-    done
-
+            if ! printenv $var
+            then
+                case $(uname) in
+                    # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
+                    # since the host can not obtain a Docker container IP address via DNS.
+                    Darwin)
+                        docker-compose -f docker-compose-jenkins-nfs-server.yml up -d $service
+                        eval export $var=$(docker inspect $container --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
+                        ;;
+                    # Here the dns-proxy-server should be able to do the right thing.
+                    *)
+                        eval $var=$service
+                        ;;
+                esac
+            fi
+        done
+    fi
+    
     # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
     set -- jenkins-m2-repository jenkins-agent-workspace
     for v
@@ -91,19 +95,20 @@ start() {
 
     ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
 
-    echo "Testing NFS setup"
-    echo ""
-    ( set -x; docker run --rm -it -v jenkins-agent-home:/home/jenkins:rw ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
+    $curdir/show_volumes.sh
 }
 
 # main
 
+curdir=$(dirname $0)
 if [ $# -ge 1 ]
 then
     docker_compose_command_and_options="$@"
 else
     docker_compose_command_and_options="up -d"
 fi
+# No NFS for the time being
+NFS=0
 
 init
 build
