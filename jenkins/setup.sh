@@ -24,9 +24,11 @@ init() {
     then
         export SHARED_DIRECTORY_AGENT_WORKSPACE=~/nfs/jenkins/home/agent
     fi
+
     # Create the shared directories Maven repository directory and the workspace
     for d in $SHARED_DIRECTORY_M2_REPOSITORY/repository $SHARED_DIRECTORY_AGENT_WORKSPACE/workspace
-    do
+    do 
+        rm -fri $d
         test -d $d || mkdir -p $d
         chmod -R 777 $d
     done
@@ -103,9 +105,12 @@ start() {
 
     if [ $volumes_exist -eq 1 ]
     then
-        echo "Testing NFS setup"
+        echo "Testing NFS setup #1"
         echo ""
-        ( set -x; docker run --rm -it -v jenkins-m2-repository:/home/jenkins/.m2 -v jenkins-agent-workspace:/home/jenkins/agent ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
+        ( set -x; docker run --rm -it -v jenkins-m2-repository:/home/jenkins/.m2 ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
+        echo "Testing NFS setup #2"
+        echo ""
+        ( set -x; docker run --rm -it -v jenkins-agent-workspace:/home/jenkins/agent ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
     fi
 }
 
