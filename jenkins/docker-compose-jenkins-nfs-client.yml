@@ -5,20 +5,34 @@ networks:
     name: jenkins
 
 volumes:
-  jenkins-agent-home:
-    name: jenkins-agent-home
+  jenkins-m2-repository:
+    name: jenkins-m2-repository
     driver_opts:
       type: "nfs"
-      o: "addr=${JENKINS_NFS_SERVER:-host.docker.internal},nfsvers=4,nolock,soft,rw"
+      o: "addr=${JENKINS_NFS_SERVER_M2_REPOSITORY},nfsvers=4,nolock,soft,rw"
+      device: ":"
+  jenkins-agent-workspace:
+    name: jenkins-agent-workspace
+    driver_opts:
+      type: "nfs"
+      o: "addr=${JENKINS_NFS_SERVER_AGENT_WORKSPACE},nfsvers=4,nolock,soft,rw"
       device: ":"
 
 services:
-  jenkins-nfs-client:
-    container_name: jenkins_nfs_client
+  jenkins-nfs-client-m2-repository:
+    container_name: jenkins_nfs_client_m2_repository
     image: ghcr.io/paulissoft/pato-jenkins-agent:latest
-    hostname: jenkins-nfs-client
+    hostname: jenkins-nfs-client-m2-repository
     networks:
       - jenkins-network
     volumes:
-      - jenkins-agent-home:/home/jenkins:rw
+      - jenkins-m2-repository:/home/jenkins:rw
+  jenkins-nfs-client-agent-workspace:
+    container_name: jenkins_nfs_client_agent_workspace
+    image: ghcr.io/paulissoft/pato-jenkins-agent:latest
+    hostname: jenkins-nfs-client-agent-workspace
+    networks:
+      - jenkins-network
+    volumes:
+      - jenkins-agent-workspace:/home/jenkins:rw
 

@@ -1,6 +1,8 @@
 #!/bin/bash -eu
 
 init() {
+    ! printenv DEBUG || set -x
+    
     if ! printenv DOCKER_COMPOSE_FILE
     then
         case $(uname) in
@@ -13,12 +15,17 @@ init() {
         esac
     fi
 
-    if ! printenv SHARED_DIRECTORY
+    if ! printenv SHARED_DIRECTORY_M2_REPOSITORY
     then
-        export SHARED_DIRECTORY=~/nfs/jenkins/home
+        export SHARED_DIRECTORY_M2_REPOSITORY=~/nfs/jenkins/home/.m2
     fi
-    # Create the shared directory as well as the Maven .m2/repository directory and the workspace
-    for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
+    
+    if ! printenv SHARED_DIRECTORY_AGENT_WORKSPACE
+    then
+        export SHARED_DIRECTORY_AGENT_WORKSPACE=~/nfs/jenkins/home/agent
+    fi
+    # Create the shared directories Maven repository directory and the workspace
+    for d in $SHARED_DIRECTORY_M2_REPOSITORY/repository $SHARED_DIRECTORY_AGENT_WORKSPACE/workspace
     do
         test -d $d || mkdir -p $d
         chmod -R 777 $d
@@ -47,33 +54,59 @@ build() {
 }
 
 start() {
-    if ! printenv JENKINS_NFS_SERVER
-    then
-        case $(uname) in
-            # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
-            # since the host can not obtain a Docker container IP address via DNS.
-            Darwin)
-                docker-compose -f docker-compose-jenkins-nfs-server.yml up -d jenkins-nfs-server
-                export JENKINS_NFS_SERVER=$(docker inspect jenkins_nfs_server --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
-                ;;
-            # Here the dns-proxy-server should be able to do the right thing.
-            *)
-                export JENKINS_NFS_SERVER=jenkins-nfs-server
-                ;;
-        esac
-    fi
+    for item in \
+        JENKINS_NFS_SERVER_M2_REPOSITORY:jenkins_nfs_server_m2_repository:jenkins-nfs-server-m2-repository \
+            JENKINS_NFS_SERVER_AGENT_WORKSPACE:jenkins_nfs_server_agent_workspace:jenkins-nfs-server-agent-workspace
+    do
+        var=$(echo $item | cut -d ':' -f 1)
+        container=$(echo $item | cut -d ':' -f 2)
+        service=$(echo $item | cut -d ':' -f 3)
 
-    # Remove the volume jenkins-agent-home since it may have been created with the wrong ${JENKINS_NFS_SERVER}
-    if docker volume ls | grep jenkins-agent-home
-    then
-        docker volume rm jenkins-agent-home
-    fi
+        if ! printenv $var
+        then
+            case $(uname) in
+                # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
+                # since the host can not obtain a Docker container IP address via DNS.
+                Darwin)
+                    docker-compose -f docker-compose-jenkins-nfs-server.yml up -d $service
+                    eval export $var=$(docker inspect $container --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
+                    ;;
+                # Here the dns-proxy-server should be able to do the right thing.
+                *)
+                    eval $var=$service
+                    ;;
+            esac
+        fi
+    done
+
+    # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
+    set -- jenkins-m2-repository jenkins-agent-workspace
+    for v
+    do
+        if docker volume ls | grep $v
+        then
+            docker volume rm $v
+        fi
+    done
 
     ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
 
-    echo "Testing NFS setup"
-    echo ""
-    ( set -x; docker run --rm -it -v jenkins-agent-home:/home/jenkins ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
+    volumes_exist=1
+    for v
+    do
+        if ! docker volume ls | grep $v
+        then
+            volumes_exist=0
+            break
+        fi
+    done
+
+    if [ $volumes_exist -eq 1 ]
+    then
+        echo "Testing NFS setup"
+        echo ""
+        ( set -x; docker run --rm -it -v jenkins-m2-repository:/home/jenkins/.m2 -v jenkins-agent-workspace:/home/jenkins/agent ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
+    fi
 }
 
 # main
