@@ -1,0 +1,29 @@
+version: '3.8'
+
+networks:
+  jenkins-network:
+    name: jenkins
+
+volumes:
+  jenkins-agent:
+    name: jenkins-agent-home
+    driver_opts:
+      type: "nfs"
+      o: "addr=${JENKINS_NFS_SERVER:-host.docker.internal},nfsvers=4,nolock,soft,rw"
+      device: ":"
+
+services:
+  jenkins-nfs-client:
+    container_name: jenkins_nfs_client
+    image: ghcr.io/paulissoft/pato-jenkins-agent:latest
+    restart: unless-stopped
+    hostname: jenkins-nfs-client
+    networks:
+      - jenkins-network
+    volumes:
+      - type: volume
+        source: jenkins-agent
+        target: /home/jenkins
+        volume:
+          nocopy: true
+

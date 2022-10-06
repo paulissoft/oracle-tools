@@ -1,30 +1,82 @@
-#!/bin/bash -eu
+#!/bin/bash -eux
+
+init() {
+    if ! printenv DOCKER_COMPOSE_FILE
+    then
+        case $(uname) in
+            Linux)
+                DOCKER_COMPOSE_FILE=
+                ;;
+            *)
+                DOCKER_COMPOSE_FILE=docker-compose-jenkins-controller.yml
+                ;;
+        esac
+    fi
+
+    if ! printenv SHARED_DIRECTORY
+    then
+        export SHARED_DIRECTORY=~/nfs/jenkins/agent
+        test -d $SHARED_DIRECTORY || mkdir -p $SHARED_DIRECTORY
+        chmod -R 777 $SHARED_DIRECTORY
+    fi
+
+    # The docker-compose.yml is the common file.
+    # The $DOCKER_COMPOSE_FILE is environment specific.
+    docker_compose_files="-f docker-compose.yml -f docker-compose-jenkins-nfs-server.yml -f docker-compose-jenkins-nfs-client.yml"
+    test -z "$DOCKER_COMPOSE_FILE" || docker_compose_files="$docker_compose_files -f $DOCKER_COMPOSE_FILE"
+}
+
+build() {
+    # See https://serverfault.com/questions/789601/check-is-container-service-running-with-docker-compose
+    
+    # common service
+    service=jenkins-docker
+    if [ -z `docker-compose $docker_compose_files ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose $docker_compose_files ps -q $service)` ]
+    then
+        echo "Service $service is not running."
+    else
+        echo "Service $service is running: shutting it down."
+        docker-compose $docker_compose_files down --remove-orphans
+    fi
+
+    docker-compose $docker_compose_files build
+}
+
+start() {
+    if ! printenv JENKINS_NFS_SERVER
+    then
+        case $(uname) in
+            # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
+            # since the host can not obtain a Docker container IP address via DNS.
+            Darwin)
+                docker-compose -f docker-compose-jenkins-nfs-server.yml up -d jenkins-nfs-server
+                export JENKINS_NFS_SERVER=$(docker inspect jenkins_nfs_server --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
+                ;;
+            # Here the dns-proxy-server should be able to do the right thing.
+            *)
+                export JENKINS_NFS_SERVER=jenkins-nfs-server
+                ;;
+        esac
+    fi
+
+    # Remove the volume jenkins-agent-home since it may have been created with the wrong ${JENKINS_NFS_SERVER}
+    if docker volume ls | grep jenkins-agent-home
+    then
+        docker volume rm jenkins-agent-home
+    fi
+
+    docker-compose $docker_compose_files $docker_compose_command_and_options
+}
+
+# main
 
 if [ $# -ge 1 ]
 then
-    docker_compose_file=$1
-else    
-    case $(uname) in
-        Linux)
-            docker_compose_file=docker-compose-jenkins-as-service.yml
-            ;;
-        *)
-            docker_compose_file=docker-compose-jenkins-as-docker-container.yml
-            ;;
-    esac
-fi
-
-# See https://serverfault.com/questions/789601/check-is-container-service-running-with-docker-compose
-
-# common service
-service=jenkins-docker
-if [ -z `docker-compose -f $docker_compose_file ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose -f $docker_compose_file ps -q $service)` ]
-then
-    echo "Service $service is not running."
+    docker_compose_command_and_options="$@"
 else
-    echo "Service $service is running: shutting it down."
-    docker-compose -f $docker_compose_file down --remove-orphans
+    docker_compose_command_and_options="up -d"
 fi
 
-docker-compose -f $docker_compose_file build
-docker-compose -f $docker_compose_file up -d
+init
+build
+start

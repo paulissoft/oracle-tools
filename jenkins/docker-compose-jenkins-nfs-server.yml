@@ -1,0 +1,21 @@
+version: '3.8'
+
+networks:
+  jenkins-network:
+    name: jenkins
+
+services:
+  jenkins-nfs-server:
+    container_name: jenkins_nfs_server
+    image: itsthenetwork/nfs-server-alpine
+    restart: unless-stopped
+    hostname: jenkins-nfs-server
+    networks:
+      - jenkins-network
+    ports:
+      - "2049:2049"
+    privileged: true
+    volumes:
+      - ${SHARED_DIRECTORY}:/nfsshare
+    environment:
+      - SHARED_DIRECTORY=/nfsshare
