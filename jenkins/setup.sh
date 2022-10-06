@@ -19,14 +19,17 @@ init() {
     then
         export SHARED_DIRECTORY=~/nfs/jenkins/home
     fi
+    
+    rm -fr $SHARED_DIRECTORY
+    
     # Create the shared directory as well as the Maven .m2/repository directory and the workspace
     for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
     do
         test -d $d || mkdir -p $d
-        chmod -R 700 $d
+        chmod -R 755 $d
     done
 
-    if [ -d $SHARED_DIRECTORY/.ssh ]
+    if [ ! -d $SHARED_DIRECTORY/.ssh ]
     then
         mkdir -m 700 $SHARED_DIRECTORY/.ssh && ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
     fi
