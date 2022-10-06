@@ -1,6 +1,8 @@
 #!/bin/bash -eu
 
 init() {
+    ! printenv DEBUG || set -x
+    
     if ! printenv DOCKER_COMPOSE_FILE
     then
         case $(uname) in
@@ -21,8 +23,13 @@ init() {
     for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
     do
         test -d $d || mkdir -p $d
-        chmod -R 777 $d
+        chmod -R 700 $d
     done
+
+    if [ -d $SHARED_DIRECTORY/.ssh ]
+    then
+        mkdir -m 700 $SHARED_DIRECTORY/.ssh && ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
+    fi
 
     # The docker-compose.yml is the common file.
     # The $DOCKER_COMPOSE_FILE is environment specific.
@@ -73,7 +80,7 @@ start() {
 
     echo "Testing NFS setup"
     echo ""
-    ( set -x; docker run --rm -it -v jenkins-agent-home:/home/jenkins ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
+    ( set -x; docker run --rm -it -v jenkins-agent-home:/home/jenkins:rw ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
 }
 
 # main
