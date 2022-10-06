@@ -33,3 +33,4 @@ services:
       - ${SHARED_DIRECTORY_AGENT_WORKSPACE}:/nfsshare
     environment:
       - SHARED_DIRECTORY=/nfsshare
+      - SYNC=true

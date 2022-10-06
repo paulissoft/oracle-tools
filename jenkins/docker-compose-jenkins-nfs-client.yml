@@ -9,13 +9,7 @@ volumes:
     name: jenkins-m2-repository
     driver_opts:
       type: "nfs"
-      o: "addr=${JENKINS_NFS_SERVER_M2_REPOSITORY},nfsvers=4,nolock,soft,rw"
-      device: ":"
-  jenkins-agent-workspace:
-    name: jenkins-agent-workspace
-    driver_opts:
-      type: "nfs"
-      o: "addr=${JENKINS_NFS_SERVER_AGENT_WORKSPACE},nfsvers=4,nolock,soft,rw"
+      o: "addr=${JENKINS_NFS_SERVER},nfsvers=4,nolock,soft,rw"
       device: ":"
 
 services:

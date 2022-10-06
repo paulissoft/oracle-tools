@@ -15,23 +15,21 @@ init() {
         esac
     fi
 
-    if ! printenv SHARED_DIRECTORY_M2_REPOSITORY
-    then
-        export SHARED_DIRECTORY_M2_REPOSITORY=~/nfs/jenkins/home/.m2
-    fi
+    rm -fr $SHARED_DIRECTORY
     
-    if ! printenv SHARED_DIRECTORY_AGENT_WORKSPACE
-    then
-        export SHARED_DIRECTORY_AGENT_WORKSPACE=~/nfs/jenkins/home/agent
-    fi
-
-    # Create the shared directories Maven repository directory and the workspace
-    for d in $SHARED_DIRECTORY_M2_REPOSITORY/repository $SHARED_DIRECTORY_AGENT_WORKSPACE/workspace
-    do 
-        rm -fri $d
+    # Create the shared directory as well as the Maven .m2/repository directory and the workspace
+    for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
+    do
         test -d $d || mkdir -p $d
-        chmod -R 777 $d
+        chmod -R 755 $d
     done
+
+    if [ ! -d $SHARED_DIRECTORY/.ssh ]
+    then
+        mkdir -m 700 $SHARED_DIRECTORY/.ssh
+        ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
+        chmod 700 $SHARED_DIRECTORY/.ssh/known_hosts
+    fi
 
     # The docker-compose.yml is the common file.
     # The $DOCKER_COMPOSE_FILE is environment specific.
@@ -93,25 +91,9 @@ start() {
 
     ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
 
-    volumes_exist=1
-    for v
-    do
-        if ! docker volume ls | grep $v
-        then
-            volumes_exist=0
-            break
-        fi
-    done
-
-    if [ $volumes_exist -eq 1 ]
-    then
-        echo "Testing NFS setup #1"
-        echo ""
-        ( set -x; docker run --rm -it -v jenkins-m2-repository:/home/jenkins/.m2 ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
-        echo "Testing NFS setup #2"
-        echo ""
-        ( set -x; docker run --rm -it -v jenkins-agent-workspace:/home/jenkins/agent ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
-    fi
+    echo "Testing NFS setup"
+    echo ""
+    ( set -x; docker run --rm -it -v jenkins-agent-home:/home/jenkins:rw ghcr.io/paulissoft/pato-jenkins-agent:latest find . -ls )
 }
 
 # main

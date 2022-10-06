@@ -51,15 +51,15 @@ ENV TNS_ADMIN /opt/oracle/network/admin
 # If you use Oracle Wallet
 RUN mkdir -m 755 -p /opt/oracle/wallet
 
+# Let github.com be a known host for user jenkins
+USER jenkins
+RUN mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+
 # As stated in the documentation, a inherits the directory content and permissions existing in the container.
 # So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
 # that directory must already exist and have the correct ownership
 # otherwise it will be root giving Maven download permission problems.
 # See also https://github.com/paulissoft/oracle-tools/issues/66.
-RUN mkdir -m 755 -p /home/jenkins/.m2/repository  && chown jenkins:jenkins /home/jenkins/.m2/repository
+RUN mkdir -m 755 -p /home/jenkins/.m2/repository
 # Also create a workspace directory owned by jenkins
-RUN mkdir -m 755 -p /home/jenkins/agent/workspace && chown jenkins:jenkins /home/jenkins/agent/workspace
-
-# Let github.com be a known host for user jenkins
-USER jenkins
-RUN mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+RUN mkdir -m 755 -p /home/jenkins/agent/workspace
