@@ -88,6 +88,7 @@ def get_env(app_env_name, app_env, pipelineConfig, env, String key, Boolean mand
 }
         
 void call(app_env_name, app_env){
+    stages {
     script {
         stage("${app_env_name} - setup environment") {
             show_env(app_env, pipelineConfig, env)
@@ -258,6 +259,7 @@ void call(app_env_name, app_env){
                     }
                 }
             }
+        }
         }
     }
 }
