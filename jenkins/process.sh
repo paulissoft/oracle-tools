@@ -20,6 +20,7 @@
 # - SCM_EMAIL       
 # - SCM_BRANCH_PREV
 # - GIT
+# - MVN
 # - MVN_ARGS
 # - MVN_LOG_DIR
 #
@@ -60,6 +61,7 @@ init() {
     test -n "$DB_ACTIONS" || export DB_ACTIONS=""
     test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
     # equivalent of Maven 4 MAVEN_ARGS
+    test -n "$MVN" || export MVN=mvn
     test -n "$MVN_ARGS" || export MVN_ARGS=""
 
     # ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
@@ -74,7 +76,7 @@ init() {
             exit 1
         fi
     else
-        # let MVN_LOG_DIR point to a non existing directory so mvn will not create the log file
+        # let MVN_LOG_DIR point to a non existing directory so ${MVN} will not create the log file
         MVN_LOG_DIR=/directory-does-not-exist
     fi
     export MVN_LOG_DIR
@@ -93,7 +95,7 @@ init() {
 
 invoke_mvn()
 {
-    mvn -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} -l $MVN_LOG_DIR/mvn-${2}.log ${MVN_ARGS}
+    ${MVN} -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} -l $MVN_LOG_DIR/mvn-${2}.log ${MVN_ARGS}
 }
 
 process_git()
