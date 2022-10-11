@@ -17,6 +17,10 @@ Types of changes:
 
 - [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
+- [It must be possible to use the Maven daemon in Jenkins.](https://github.com/paulissoft/oracle-tools/issues/82)
+- [It must be possible to run actions for different application environments or actions in parallel on Jenkins.](https://github.com/paulissoft/oracle-tools/issues/83)
+- [It must be possible to have a dry run for Jenkins.](https://github.com/paulissoft/oracle-tools/issues/84)
+- [In Jenkins it must be possible to use NFS for the Maven local repository and the controller/agent workspace.](https://github.com/paulissoft/oracle-tools/issues/85)
 
 ## [1.9.0] - 2022-10-05
 
