@@ -272,12 +272,14 @@ void call(app_env_name, app_env){
                         if (env.DRY_RUN) {
                             echo "Skipping the execution of Maven actions since it is a dry run"
                         } else {
+                            String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
+                            
                             if (!is_empty(env.SCM_CREDENTIALS)) {
                                 sshagent([env.SCM_CREDENTIALS]) {
-                                    sh("script=$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh && chmod +x $script && $script")
+                                    sh("ls -l ${script} && chmod +x ${script} && ${script}")
                                 }
                             } else {
-                                sh("script=$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh && chmod +x $script && $script")
+                                sh("ls -l ${script} && chmod +x ${script} && ${script}")
                             }
                         }
                     }
