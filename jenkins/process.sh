@@ -77,7 +77,7 @@ init() {
         fi
     else
         # let MVN_LOG_DIR point to a non existing directory so ${MVN} will not create the log file
-        MVN_LOG_DIR=/directory-does-not-exist
+        MVN_LOG_DIR=
     fi
     export MVN_LOG_DIR
 
@@ -95,7 +95,13 @@ init() {
 
 invoke_mvn()
 {
-    ${MVN} -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} -l $MVN_LOG_DIR/mvn-${2}.log ${MVN_ARGS}
+    if [ -n "$MVN_LOG_DIR" ]
+    then
+        mvn_log_args="-l $MVN_LOG_DIR/mvn-${2}.log"
+    else
+        mvn_log_args=" "
+    fi
+    ${MVN} -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} $mvn_log_args ${MVN_ARGS}
 }
 
 process_git()
