@@ -164,12 +164,12 @@ void call(app_env_name, app_env){
             env.SCM_URL = get_env(app_env_name, app_env, 'scm_url', true)
             env.SCM_PROJECT = get_env(app_env_name, app_env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
 
-            /*
             // It must be possible to have a dry run for Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/84
             env.DRY_RUN = get_env(app_env_name, app_env, 'dry_run', false)
             // It must be possible to use the Maven daemon in Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/82
+            /*
             env.MVN = get_env(app_env_name, app_env, 'mvn', true, 'mvn')
             env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
             env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
@@ -190,7 +190,7 @@ void call(app_env_name, app_env){
                     echo "About to check-out configuration project, " +
                         "url='${env.SCM_URL_CONFIG}', " +
                         "branch='${env.SCM_BRANCH_CONFIG}', " +
-                        "directory='${env.SCM_PROJECT_CONFIG}', " +
+                        "directory='${app_env_name}/${env.SCM_PROJECT_CONFIG}', " +
                         "credentials='${env.SCM_CREDENTIALS_CONFIG}'"
                     dir("${app_env_name}/${env.SCM_PROJECT_CONFIG}") {
                         if (env.DRY_RUN) {
@@ -222,7 +222,7 @@ void call(app_env_name, app_env){
                     echo "About to check-out PATO project, " +
                         "url='${env.SCM_URL_ORACLE_TOOLS}', " +
                         "branch='${env.SCM_BRANCH_ORACLE_TOOLS}', " +
-                        "directory='${env.SCM_PROJECT_ORACLE_TOOLS}', " +
+                        "directory='${app_env_name}/${env.SCM_PROJECT_ORACLE_TOOLS}', " +
                         "no credentials"
                     dir("${app_env_name}/${env.SCM_PROJECT_ORACLE_TOOLS}") {
                         if (env.DRY_RUN) {
@@ -248,7 +248,7 @@ void call(app_env_name, app_env){
                 echo "About to check-out build project, " +
                     "url='${env.SCM_URL}', " +
                     "branch='${env.SCM_BRANCH}', " +
-                    "directory='${env.SCM_PROJECT}', " +
+                    "directory='${app_env_name}/${env.SCM_PROJECT}', " +
                     "credentials='${env.SCM_CREDENTIALS}'"
                 dir("${app_env_name}/${env.SCM_PROJECT}") {
                     if (env.DRY_RUN) {
@@ -274,13 +274,14 @@ void call(app_env_name, app_env){
                         if (env.DRY_RUN) {
                             echo "Skipping the execution of Maven actions since it is a dry run"
                         } else {
-                            sh('chmod +x $WORKSPACE/oracle-tools/jenkins/process.sh')
+                            sh('find $WORKSPACE -name process.sh')
+                            sh('chmod +x $WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh')
                             if (!is_empty(env.SCM_CREDENTIALS)) {
                                 sshagent([env.SCM_CREDENTIALS]) {
-                                    sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                                    sh('$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh')
                                 }
                             } else {
-                                sh('$WORKSPACE/oracle-tools/jenkins/process.sh')
+                                sh('$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh')
                             }
                         }
                     }
