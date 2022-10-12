@@ -274,12 +274,10 @@ void call(app_env_name, app_env){
                         } else {
                             if (!is_empty(env.SCM_CREDENTIALS)) {
                                 sshagent([env.SCM_CREDENTIALS]) {
-                                    sh('find $WORKSPACE -name process.sh')
-                                    sh("ls -l $WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh")
+                                    sh("script=$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh && chmod +x $script && $script")
                                 }
                             } else {
-                                sh('find $WORKSPACE -name process.sh')
-                                sh("ls -l $WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh")
+                                sh("script=$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh && chmod +x $script && $script")
                             }
                         }
                     }
