@@ -54,9 +54,10 @@ WORKDIR /opt
 
 ADD $MVND_DOWNLOAD_URL .
 
-RUN unzip $MVND_ZIP && mv $MVND_ZIP_BASE mvnd
+RUN unzip $MVND_ZIP && mv $MVND_ZIP_BASE mvnd && rm $MVND_ZIP 
 
 ENV MVND_HOME=/opt/mvnd
+ENV MVN_HOME=/opt/mvnd/mvn
 
 # -------------
 # Install SQLcl
@@ -71,7 +72,7 @@ WORKDIR /opt/oracle
 ADD $SQLCL_URL .
 
 # unpacks to sqlcl
-RUN unzip $SQLCL_ZIP && ls -l /opt/oracle/sqlcl/bin/sql
+RUN unzip $SQLCL_ZIP && ls -l /opt/oracle/sqlcl/bin/sql && rm $SQLCL_ZIP 
 
 ENV SQL_HOME=/opt/oracle/sqlcl
 
@@ -87,14 +88,11 @@ RUN chmod -R 755 /opt
 
 ENV TNS_ADMIN=/opt/oracle/network/admin
 
-# -----------------------
-# Update /etc/environment
-# -----------------------
+# ------------------
+# Update environment
+# ------------------
 
-RUN echo "SQL_HOME=$SQL_HOME" >> /etc/environment && \
-		echo "TNS_ADMIN=$TNS_ADMIN" >> /etc/environment && \
-		echo "PATH=$MVND_HOME/bin:$PATH" >> /etc/environment && \
-		cat /etc/environment
+ENV PATH="$MVND_HOME/bin:$MVN_HOME/bin:$PATH"
  
 # ------------
 # User jenkins
@@ -102,7 +100,10 @@ RUN echo "SQL_HOME=$SQL_HOME" >> /etc/environment && \
 
 # Let github.com be a known host for user jenkins
 USER jenkins
-RUN mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+WORKDIR /home/jenkins
+
+RUN mkdir -m 700 /home/jenkins/.ssh && ssh-keyscan github.com >> /home/jenkins/.ssh/known_hosts
 
 # As stated in the documentation, a inherits the directory content and permissions existing in the container.
 # So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
