@@ -1,5 +1,9 @@
 ARG SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 ARG SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
+ARG MVND_VERSION=0.8.2
+ARG MVND_ZIP_BASE=maven-mvnd-$MVND_VERSION-linux-amd64
+ARG MVND_ZIP=$MVND_ZIP_BASE.zip
+ARG MVND_DOWNLOAD_URL=https://github.com/apache/maven-mvnd/releases/download/$MVND_VERSION/$MVND_ZIP
 ARG IMAGE=jenkins/agent:latest
 
 FROM $IMAGE
@@ -20,36 +24,81 @@ LABEL org.opencontainers.image.description="Paulissoft Application Tools for Ora
 #LABEL org.label-schema.url="https://github.com/paulissoft/oracle-tools"
 
 USER root
-# Install Maven and Docker
+
+# --------------
+# Install Docker
+# --------------
+
+# Here we need several RUN commands since we create the docker list for the docker-ce-cli installation
+
 RUN apt-get update -y -q && \
-		apt-get upgrade -y -q && \
-		apt-get install -y -q maven git curl unzip openssh-client ca-certificates lsb-release iputils-ping
+    apt-get install -y -q git curl unzip openssh-client ca-certificates lsb-release iputils-ping
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
   https://download.docker.com/linux/debian/gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) \
   signed-by=/usr/share/keyrings/docker-archive-keyring.asc] \
   https://download.docker.com/linux/debian \
   $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
+RUN apt-get update && apt-get install -y docker-ce-cli
 
+# --------------------
+# Install Maven daemon
+# --------------------
+
+# must redeclare an ARG after FROM (see also https://benkyriakou.com/posts/docker-args-empty)
+ARG MVND_ZIP_BASE
+ARG MVND_ZIP
+ARG MVND_DOWNLOAD_URL
+
+WORKDIR /opt
+
+ADD $MVND_DOWNLOAD_URL .
+
+RUN unzip $MVND_ZIP && mv $MVND_ZIP_BASE mvnd
+
+ENV MVND_HOME=/opt/mvnd
+
+# -------------
 # Install SQLcl
+# -------------
 
 # must redeclare an ARG after FROM (see also https://benkyriakou.com/posts/docker-args-empty)
 ARG SQLCL_ZIP
 ARG SQLCL_URL
-RUN mkdir -m 755 -p /opt/oracle && \
-    cd /opt/oracle && \
-    curl -o $SQLCL_ZIP $SQLCL_URL && \
-    ls -l $SQLCL_ZIP && \
-    unzip $SQLCL_ZIP && \
-    cd -
-ENV SQL_HOME /opt/oracle/sqlcl
 
-RUN mkdir -m 755 -p /opt/oracle/network/admin
-ENV TNS_ADMIN /opt/oracle/network/admin
+WORKDIR /opt/oracle
 
-# If you use Oracle Wallet
-RUN mkdir -m 755 -p /opt/oracle/wallet
+ADD $SQLCL_URL .
+
+# unpacks to sqlcl
+RUN unzip $SQLCL_ZIP && ls -l /opt/oracle/sqlcl/bin/sql
+
+ENV SQL_HOME=/opt/oracle/sqlcl
+
+# -------
+# SQL*Net
+# -------
+
+WORKDIR /opt/oracle/network/admin
+
+WORKDIR /opt/oracle/wallet
+
+RUN chmod -R 755 /opt
+
+ENV TNS_ADMIN=/opt/oracle/network/admin
+
+# -----------------------
+# Update /etc/environment
+# -----------------------
+
+RUN echo "SQL_HOME=$SQL_HOME" >> /etc/environment && \
+		echo "TNS_ADMIN=$TNS_ADMIN" >> /etc/environment && \
+		echo "PATH=$MVND_HOME/bin:$PATH" >> /etc/environment && \
+		cat /etc/environment
+ 
+# ------------
+# User jenkins
+# ------------
 
 # Let github.com be a known host for user jenkins
 USER jenkins
