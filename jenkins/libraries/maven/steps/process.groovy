@@ -169,11 +169,9 @@ void call(app_env_name, app_env){
             env.DRY_RUN = get_env(app_env_name, app_env, 'dry_run', false)
             // It must be possible to use the Maven daemon in Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/82
-            env.MVN = get_env(app_env_name, app_env, 'mvn', true, 'mvn')
-            /*
+            env.MVN = get_env(app_env_name, app_env, 'mvn', true, 3, 'mvn')
             env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
             env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
-            */
         }
     }
     
