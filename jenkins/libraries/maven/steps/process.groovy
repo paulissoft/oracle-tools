@@ -164,6 +164,7 @@ void call(app_env_name, app_env){
             env.SCM_URL = get_env(app_env_name, app_env, 'scm_url', true)
             env.SCM_PROJECT = get_env(app_env_name, app_env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
 
+            /*
             // It must be possible to have a dry run for Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/84
             env.DRY_RUN = get_env(app_env_name, app_env, 'dry_run', false)
@@ -172,6 +173,7 @@ void call(app_env_name, app_env){
             env.MVN = get_env(app_env_name, app_env, 'mvn', true, 'mvn')
             env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
             env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
+            */
         }
     }
     
