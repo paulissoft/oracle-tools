@@ -169,8 +169,8 @@ void call(app_env_name, app_env){
             env.DRY_RUN = get_env(app_env_name, app_env, 'dry_run', false)
             // It must be possible to use the Maven daemon in Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/82
-            /*
             env.MVN = get_env(app_env_name, app_env, 'mvn', true, 'mvn')
+            /*
             env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
             env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
             */
@@ -274,13 +274,13 @@ void call(app_env_name, app_env){
                         if (env.DRY_RUN) {
                             echo "Skipping the execution of Maven actions since it is a dry run"
                         } else {
-                            sh('find $WORKSPACE -name process.sh')
-                            sh('chmod +x $WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh')
                             if (!is_empty(env.SCM_CREDENTIALS)) {
                                 sshagent([env.SCM_CREDENTIALS]) {
+                                    sh('find $WORKSPACE -name process.sh')
                                     sh('$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh')
                                 }
                             } else {
+                                sh('find $WORKSPACE -name process.sh')
                                 sh('$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh')
                             }
                         }
