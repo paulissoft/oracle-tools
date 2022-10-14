@@ -1,160 +1,5 @@
 // -*- mode: groovy; coding: utf-8 -*-
 
-def is_empty(value) {
-    return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
-}
-
-def show_env(app_env, pipelineConfig, env) {
-    String[] properties = [ 'apex_actions'
-                           ,'apex_dir'
-                           ,'conf_dir'
-                           ,'db'
-                           ,'db_actions'
-                           ,'db_credentials'
-                           ,'db_dir'
-                           ,'dry_run'
-                           ,'mvn'
-                           ,'mvn_args'
-                           ,'mvn_log_dir'
-                           ,'scm_branch'
-                           ,'scm_branch_config'
-                           ,'scm_branch_oracle_tools'
-                           ,'scm_branch_prev'
-                           ,'scm_credentials'
-                           ,'scm_credentials_config'
-                           ,'scm_email'
-                           ,'scm_project'
-                           ,'scm_project_config'
-                           ,'scm_project_oracle_tools'
-                           ,'scm_url'
-                           ,'scm_url_config'
-                           ,'scm_url_oracle_tools'
-                           ,'scm_username'
-    ]
-
-    println "Start of showing the application environment, pipeline configuration and environment"
-    
-    for (String property in properties.sort()) {
-        String v = app_env.getProperty(property)
-        
-        if (!is_empty(v)) {
-            println "app_env.$property = " + v
-        }
-    }
-    pipelineConfig.sort().each{k, v -> if (properties.contains(k) && !is_empty(v)) { println "pipelineConfig.$k = $v" }}
-    env.getEnvironment().sort().each{k, v -> if (properties.contains(k.toLowerCase()) && !is_empty(v)) { println "env.$k = $v" }}
-
-    println "End of showing the application environment, pipeline configuration and environment"
-}
-
-def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer level=3, String default_value='') {
-    String value = app_env[key]
-    String KEY = key.toUpperCase()
-    
-    if (is_empty(value) && level > 1) {
-        value = pipelineConfig[key]
-
-        if (is_empty(value) && level > 2) {
-            value = env[KEY]
-        }
-    }
-
-    if ( is_empty(value) ) {
-        value = default_value
-    }
-
-    if (mandatory) {
-        String error;
-
-        switch(level) {
-            case 3:
-                error = "Either application environment variable 'pipelineConfig.application_environments.${app_env_name}.${key}' or " +
-                    "pipeline configuration variable 'pipelineConfig.${key}' or " +
-                    "environment variable '${KEY}' must be a non-empty string"
-                break
-            case 2:
-                error = "Either application environment variable 'pipelineConfig.application_environments.${app_env_name}.${key}' or " +
-                    "pipeline configuration variable 'pipelineConfig.${key}' must be a non-empty string"
-                break
-            case 1:
-                error = "Application environment variable 'pipelineConfig.application_environments.${app_env_name}.${key}' must be a non-empty string"
-                break
-            default:
-                assert level >= 1 && level <= 3: "Level must be between 1 and 3"
-        }
-        
-        assert !is_empty(value) : error
-    }
-
-    println "Setting environment variable $KEY to '$value'"
-    
-    return value
-}
-
-void sequential(app_envs) {
-    if (env.VERBOSE > 1) {
-        println "process.sequential(${app_envs})"
-    }    
-
-    node() {
-        for (app_env in app_envs) {
-            if (app_env != null) {
-                if (env.VERBOSE > 1) {
-                    println app_env
-                }
-    
-                stage("process ${app_env}") {
-                    process app_env
-                }
-            }
-        }
-    }
-}
-
-void parallel(app_envs) {
-    if (env.VERBOSE > 1) {
-        println "process.parallel(${app_envs})"
-    }    
-
-    // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
-    
-    // While you can't use Groovy's .collect or similar methods currently, you can
-    // still transform a list into a set of actual build steps to be executed in
-    // parallel.
-
-    // The map we'll store the parallel steps in before executing them.
-    def parallel_steps = app_envs.collectEntries {
-        it != null ? ["process ${it}" : transform_to_step(it)] : [:]
-    }
-
-    if (env.VERBOSE > 1) {
-        println "# parallel steps: " + parallel_steps.size()
-    }
-    
-    // Actually run the steps in parallel - parallel takes a map as an argument,
-    // hence the above.
-
-    // PLEASE BE CAREFUL: parallel is also a Jenkins pipeline step so add steps. in front
-    steps.parallel parallel_steps
-}
-
-// Take the string and echo it.
-def transform_to_step(app_env) {
-    // We need to wrap what we return in a Groovy closure, or else it's invoked
-    // when this method is called, not when we pass it to parallel.
-    // To do this, you need to wrap the code below in { }, and either return
-    // that explicitly, or use { -> } syntax.
-    return {
-        node {
-            if (env.VERBOSE > 1) {
-                println app_env
-            }
-                
-            process app_env
-        }
-    }
-}
-
 void call(app_env) {
     def app_env_name = app_env.name
 
@@ -359,4 +204,159 @@ void call(app_env) {
             }
         }
     }
+}
+
+void sequential(app_envs) {
+    if (env.VERBOSE > 1) {
+        println "process.sequential(${app_envs})"
+    }    
+
+    node() {
+        for (app_env in app_envs) {
+            if (app_env != null) {
+                if (env.VERBOSE > 1) {
+                    println app_env
+                }
+    
+                stage("${app_env}") {
+                    process app_env
+                }
+            }
+        }
+    }
+}
+
+void parallel(app_envs) {
+    if (env.VERBOSE > 1) {
+        println "process.parallel(${app_envs})"
+    }    
+
+    // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
+    
+    // While you can't use Groovy's .collect or similar methods currently, you can
+    // still transform a list into a set of actual build steps to be executed in
+    // parallel.
+
+    // The map we'll store the parallel steps in before executing them.
+    def parallel_steps = app_envs.collectEntries {
+        it != null ? ["${it}" : transform_to_step(it)] : [:]
+    }
+
+    if (env.VERBOSE > 1) {
+        println "# parallel steps: " + parallel_steps.size()
+    }
+    
+    // Actually run the steps in parallel - parallel takes a map as an argument,
+    // hence the above.
+
+    // PLEASE BE CAREFUL: parallel is also a Jenkins pipeline step so add steps. in front
+    steps.parallel parallel_steps
+}
+
+// Take the string and echo it.
+def transform_to_step(app_env) {
+    // We need to wrap what we return in a Groovy closure, or else it's invoked
+    // when this method is called, not when we pass it to parallel.
+    // To do this, you need to wrap the code below in { }, and either return
+    // that explicitly, or use { -> } syntax.
+    return {
+        node {
+            if (env.VERBOSE > 1) {
+                println app_env
+            }
+                
+            process app_env
+        }
+    }
+}
+
+def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer level=3, String default_value='') {
+    String value = app_env[key]
+    String KEY = key.toUpperCase()
+    
+    if (is_empty(value) && level > 1) {
+        value = pipelineConfig[key]
+
+        if (is_empty(value) && level > 2) {
+            value = env[KEY]
+        }
+    }
+
+    if ( is_empty(value) ) {
+        value = default_value
+    }
+
+    if (mandatory) {
+        String error;
+
+        switch(level) {
+            case 3:
+                error = "Either application environment variable 'pipelineConfig.application_environments.${app_env_name}.${key}' or " +
+                    "pipeline configuration variable 'pipelineConfig.${key}' or " +
+                    "environment variable '${KEY}' must be a non-empty string"
+                break
+            case 2:
+                error = "Either application environment variable 'pipelineConfig.application_environments.${app_env_name}.${key}' or " +
+                    "pipeline configuration variable 'pipelineConfig.${key}' must be a non-empty string"
+                break
+            case 1:
+                error = "Application environment variable 'pipelineConfig.application_environments.${app_env_name}.${key}' must be a non-empty string"
+                break
+            default:
+                assert level >= 1 && level <= 3: "Level must be between 1 and 3"
+        }
+        
+        assert !is_empty(value) : error
+    }
+
+    println "Setting environment variable $KEY to '$value'"
+    
+    return value
+}
+
+def show_env(app_env, pipelineConfig, env) {
+    String[] properties = [ 'apex_actions'
+                           ,'apex_dir'
+                           ,'conf_dir'
+                           ,'db'
+                           ,'db_actions'
+                           ,'db_credentials'
+                           ,'db_dir'
+                           ,'dry_run'
+                           ,'mvn'
+                           ,'mvn_args'
+                           ,'mvn_log_dir'
+                           ,'scm_branch'
+                           ,'scm_branch_config'
+                           ,'scm_branch_oracle_tools'
+                           ,'scm_branch_prev'
+                           ,'scm_credentials'
+                           ,'scm_credentials_config'
+                           ,'scm_email'
+                           ,'scm_project'
+                           ,'scm_project_config'
+                           ,'scm_project_oracle_tools'
+                           ,'scm_url'
+                           ,'scm_url_config'
+                           ,'scm_url_oracle_tools'
+                           ,'scm_username'
+    ]
+
+    println "Start of showing the application environment, pipeline configuration and environment"
+    
+    for (String property in properties.sort()) {
+        String v = app_env.getProperty(property)
+        
+        if (!is_empty(v)) {
+            println "app_env.$property = " + v
+        }
+    }
+    pipelineConfig.sort().each{k, v -> if (properties.contains(k) && !is_empty(v)) { println "pipelineConfig.$k = $v" }}
+    env.getEnvironment().sort().each{k, v -> if (properties.contains(k.toLowerCase()) && !is_empty(v)) { println "env.$k = $v" }}
+
+    println "End of showing the application environment, pipeline configuration and environment"
+}
+
+def is_empty(value) {
+    return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
 }
