@@ -90,8 +90,14 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
     
     return value
 }
-        
-void call(app_env, app_env_name=null){
+
+void sequential(def app_envs) {
+    for (int i = 0; i < app_envs.size(); i++) {
+        println 'app_envs[' + i + ']: ' + app_envs[i]
+    }    
+}
+
+void call(app_env, app_env_name=null) {
     script {
         println 'app_env: ' + app_env.dump()
         println 'app_env_name: ' + app_env_name
