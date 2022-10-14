@@ -92,9 +92,17 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
 }
 
 void sequential(app_envs) {
+    if (env.VERBOSE > 1) {
+        println "process.sequential(${app_envs})"
+    }    
+
     node() {
         for (app_env in app_envs) {
             if (app_env != null) {
+                if (env.VERBOSE > 1) {
+                    println app_env
+                }
+    
                 stage("process ${app_env}") {
                     process app_env
                 }
@@ -104,6 +112,10 @@ void sequential(app_envs) {
 }
 
 void parallel(app_envs) {
+    if (env.VERBOSE > 1) {
+        println "process.parallel(${app_envs})"
+    }    
+
     // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
     
     // While you can't use Groovy's .collect or similar methods currently, you can
@@ -112,9 +124,13 @@ void parallel(app_envs) {
 
     // The map we'll store the parallel steps in before executing them.
     def parallel_steps = app_envs.collectEntries {
-        it != null ? ["process ${it}" : transform_to_step(it)] : [:]
+        ["process ${it}" : transform_to_step(it)]
     }
 
+    if (env.VERBOSE > 1) {
+        println parallel_steps
+    }
+    
     // Actually run the steps in parallel - parallel takes a map as an argument,
     // hence the above.
     parallel parallel_steps
@@ -128,18 +144,25 @@ def transform_to_step(app_env) {
     // that explicitly, or use { -> } syntax.
     return {
         node {
-            process app_env
+            if (app_env != null) {
+                if (env.VERBOSE > 1) {
+                    println app_env
+                }
+                
+                process app_env
+            }
         }
     }
 }
 
-void call(app_env, app_env_name=null) {
-    script {
-        println 'app_env: ' + app_env.dump()
-        println 'app_env_name: ' + app_env_name
-        
-        app_env_name = app_env_name ?: app_env.name
-        
+void call(app_env) {
+    def app_env_name = app_env.name
+
+    if (env.VERBOSE > 1) {
+        println "process(${app_env})"
+    }    
+
+    script {        
         stage("${app_env_name} - setup environment") {
             show_env(app_env, pipelineConfig, env)
             
