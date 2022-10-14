@@ -100,8 +100,10 @@ void call(app_env, Boolean parallel_step=false) {
     }
     
     withCredentials([usernamePassword(credentialsId: env.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
-        // Clean before build
-        cleanWs()
+        if (!parallel_step) {
+            // Clean before build
+            cleanWs()
+        }
 
         // checkout of (optional) configuration project (maybe credentials needed)
         script {
