@@ -104,9 +104,7 @@ init() {
         apex_scm_write=1
     fi
 
-    # get absolute path
-    echo "WORKSPACE: ${WORKSPACE}"
-    workspace=`cd '${WORKSPACE}' && pwd`
+    workspace="${WORKSPACE}"
 }
 
 signal_scm_ready() {
