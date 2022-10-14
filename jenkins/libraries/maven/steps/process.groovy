@@ -91,7 +91,7 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
     return value
 }
 
-void sequential(def app_envs) {
+void sequential(java.util.List app_envs) {
     for (int i = 0; i < app_envs.size(); i++) {
         println 'app_envs[' + i + ']: ' + app_envs[i]
     }    
