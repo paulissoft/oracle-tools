@@ -1,9 +1,11 @@
 // -*- mode: groovy; coding: utf-8 -*-
 
-void call(app_env) {
-    def app_env_name = app_env.name
+Integer VERBOSE = env.VERBOSE.isInteger() ? env.VERBOSE as Integer : 0
 
-    if (env.VERBOSE > 1) {
+void call(app_env) {
+    String app_env_name = app_env.name
+
+    if (VERBOSE > 1) {
         println "process(${app_env})"
     }    
 
@@ -207,17 +209,13 @@ void call(app_env) {
 }
 
 void sequential(app_envs) {
-    if (env.VERBOSE > 1) {
+    if (VERBOSE > 1) {
         println "process.sequential(${app_envs})"
     }    
 
     node() {
         for (app_env in app_envs) {
             if (app_env != null) {
-                if (env.VERBOSE > 1) {
-                    println app_env
-                }
-    
                 stage("${app_env}") {
                     process app_env
                 }
@@ -227,7 +225,7 @@ void sequential(app_envs) {
 }
 
 void parallel(app_envs) {
-    if (env.VERBOSE > 1) {
+    if (VERBOSE > 1) {
         println "process.parallel(${app_envs})"
     }    
 
@@ -238,12 +236,8 @@ void parallel(app_envs) {
     // parallel.
 
     // The map we'll store the parallel steps in before executing them.
-    def parallel_steps = app_envs.collectEntries {
+    Map parallel_steps = app_envs.collectEntries {
         it != null ? ["${it}" : transform_to_step(it)] : [:]
-    }
-
-    if (env.VERBOSE > 1) {
-        println "# parallel steps: " + parallel_steps.size()
     }
     
     // Actually run the steps in parallel - parallel takes a map as an argument,
@@ -254,23 +248,19 @@ void parallel(app_envs) {
 }
 
 // Take the string and echo it.
-def transform_to_step(app_env) {
+void transform_to_step(app_env) {
     // We need to wrap what we return in a Groovy closure, or else it's invoked
     // when this method is called, not when we pass it to parallel.
     // To do this, you need to wrap the code below in { }, and either return
     // that explicitly, or use { -> } syntax.
     return {
         node {
-            if (env.VERBOSE > 1) {
-                println app_env
-            }
-                
             process app_env
         }
     }
 }
 
-def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer level=3, String default_value='') {
+String get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer level=3, String default_value='') {
     String value = app_env[key]
     String KEY = key.toUpperCase()
     
@@ -309,12 +299,18 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
         assert !is_empty(value) : error
     }
 
-    println "Setting environment variable $KEY to '$value'"
+    if (VERBOSE > 0) {
+        println "Setting environment variable $KEY to '$value'"
+    }
     
     return value
 }
 
-def show_env(app_env, pipelineConfig, env) {
+void show_env(app_env, pipelineConfig, env) {
+    if (VERBOSE <= 0) {
+        return
+    }
+
     String[] properties = [ 'apex_actions'
                            ,'apex_dir'
                            ,'conf_dir'
@@ -357,6 +353,6 @@ def show_env(app_env, pipelineConfig, env) {
     println "End of showing the application environment, pipeline configuration and environment"
 }
 
-def is_empty(value) {
+Boolean is_empty(value) {
     return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
 }
