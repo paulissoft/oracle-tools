@@ -1,7 +1,7 @@
 // -*- mode: groovy; coding: utf-8 -*-
 
-def is_empty(String value) {
-    return value == null || value.equals("")
+def is_empty(value) {
+    return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
 }
 
 def show_env(app_env, pipelineConfig, env) {
