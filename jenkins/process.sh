@@ -105,6 +105,7 @@ init() {
     fi
 
     # get absolute path
+    echo "WORKSPACE: ${WORKSPACE}"
     workspace=`cd '${WORKSPACE}' && pwd`
 }
 
