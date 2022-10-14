@@ -102,7 +102,7 @@ void call(app_env, app_env_name=null) {
         println 'app_env: ' + app_env.dump()
         println 'app_env_name: ' + app_env_name
         
-        app_env_name = app_env_name ?: app_env.short_name
+        app_env_name = app_env_name ?: app_env.name
         
         stage("${app_env_name} - setup environment") {
             show_env(app_env, pipelineConfig, env)
@@ -276,10 +276,11 @@ void call(app_env, app_env_name=null) {
                     }
                     
                     echo "About to execute Maven actions"
+                    /*
                     withMaven(options: [artifactsPublisher(disabled: true), 
                                         findbugsPublisher(disabled: true), 
                                         openTasksPublisher(disabled: true),
-                                        junitPublisher(disabled: true)]) {
+                                        junitPublisher(disabled: true)]) {*/
                         if (env.DRY_RUN) {
                             echo "Skipping the execution of Maven actions since it is a dry run"
                         } else {
@@ -292,8 +293,9 @@ void call(app_env, app_env_name=null) {
                             } else {
                                 sh("ls -l ${script} && chmod +x ${script} && ${script}")
                             }
-                        }
                     }
+                    /*
+                    }*/
                 }
             }
         }
