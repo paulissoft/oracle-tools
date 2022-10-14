@@ -120,14 +120,23 @@ signal_scm_ready() {
 # simple implementation of a wait for file: better use iwatch / inotifywait
 wait_for_scm_ready_prev() {
     tool=$1
+    increment=10
+    timeout=60
+    elapsed=0
     
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then
         scm_ready_file="${workspace}/${APP_ENV_PREV}.${tool}.scm.ready"
-        while [ ! -f "$scm_ready_file" ]
+        while [ ! -f "$scm_ready_file" -a $elapsed -lt $timeout ]
         do
-            sleep 10
+            sleep $increment
+            elapsed=`expr $elapsed + $increment`
         done
+        if [ ! -f "$scm_ready_file" ]
+        then
+            echo "Timeout after waiting $timeout seconds for file $scm_ready_file" 1>&2
+            exit 1
+        fi
         rm "$scm_ready_file"
     fi
 }
