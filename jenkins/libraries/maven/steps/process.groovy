@@ -10,6 +10,8 @@ void call(app_env, Boolean parallel_step=false) {
     script {        
         stage("${app_env_name} - setup environment") {
             show_env(app_env, pipelineConfig, env)
+                        
+            assert !"${env.WORKSPACE}".contains(" "): "Workspace (${env.WORKSPACE}) should not contain spaces"
             
             /*
              -- The SCM PATO project needed to build the SCM project
@@ -190,17 +192,14 @@ void call(app_env, Boolean parallel_step=false) {
                     if (env.DRY_RUN) {
                         echo "Skipping the execution of Maven actions since it is a dry run"
                     } else {
-                        // WORKSPACE may have spaces
                         String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
 
-                        echo "WORKSPACE: ${WORKSPACE}"
-                        
                         if (!is_empty(env.SCM_CREDENTIALS)) {
                             sshagent([env.SCM_CREDENTIALS]) {
-                                sh("ls -l '${script}' && chmod +x '${script}' && '${script}'")
+                                sh("ls -l ${script} && chmod +x ${script} && ${script}")
                             }
                         } else {
-                            sh("ls -l '${script}' && chmod +x '${script}' && '${script}'")
+                            sh("ls -l ${script} && chmod +x ${script} && ${script}")
                         }
                     }
                 }
