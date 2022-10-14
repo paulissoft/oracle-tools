@@ -95,7 +95,7 @@ void sequential(app_envs) {
     node() {
         println "app_envs: " + app_envs
         for (int i=0; i < app_envs.size(); i++) {
-            if (app_envs[i] == null) {
+            if (!(app_envs[i] isinstanceof org.boozallen.plugins.jte.init.primitives.injectors.ApplicationEnvironment)) {
                 continue
             }
             echo "app_envs[$i]: " + app_envs[i].dump()
