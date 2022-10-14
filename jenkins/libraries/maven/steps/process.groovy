@@ -92,24 +92,15 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
 }
 
 void sequential(app_envs) {
-    pipeline {
-        agent any
-        stages {
-            stage('sequential') {
-                steps {
-                    script {
-                        println "app_envs: " + app_envs
-                        for (int i=0; i < app_envs.size(); i++) {
-                            if (app_envs[i] == null) {
-                                continue
-                            }
-                            echo "app_envs[$i]: " + app_envs[i].dump()
-                            stage(app_envs[i].name) {
-                                process app_envs[i]           
-                            }
-                        }
-                    }
-                }
+    script {
+        println "app_envs: " + app_envs
+        for (int i=0; i < app_envs.size(); i++) {
+            if (app_envs[i] == null) {
+                continue
+            }
+            echo "app_envs[$i]: " + app_envs[i].dump()
+            stage(app_envs[i].name) {
+                process app_envs[i]           
             }
         }
     }
