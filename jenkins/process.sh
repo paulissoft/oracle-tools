@@ -140,7 +140,7 @@ invoke_mvn()
     else
         mvn_log_args=" "
     fi
-    ${MVN} -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} $mvn_log_args ${MVN_ARGS}
+    ${MVN} -B -f ${1} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${2} $mvn_log_args ${MVN_ARGS}
 }
 
 process_git()
