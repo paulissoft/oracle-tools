@@ -91,8 +91,13 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
     return value
 }
         
-void call(app_env_name, app_env){
+void call(app_env, app_env_name=null){
     script {
+        println 'app_env: ' + app_env.dump()
+        println 'app_env_name: ' + app_env_name
+        
+        app_env_name = app_env_name ?: app_env.short_name
+        
         stage("${app_env_name} - setup environment") {
             show_env(app_env, pipelineConfig, env)
             
