@@ -2,7 +2,7 @@
 
 void call(app_env) {
     String app_env_name = app_env.name
-
+        
     if (env.VERBOSE > 1) {
         println "process(${app_env})"
     }    
@@ -57,7 +57,7 @@ void call(app_env) {
             
             env.APEX_DIR = get_env(app_env_name, app_env, 'apex_dir')
             env.APEX_ACTIONS = get_env(app_env_name, app_env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
-            
+
             /*
              -- SCM credentials username and e-mail
              */
@@ -87,6 +87,11 @@ void call(app_env) {
             env.MVN = get_env(app_env_name, app_env, 'mvn', true, 3, 'mvn')
             env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
             env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
+
+            env.APP_ENV = app_env.name
+            if (app_env.previous != null) {
+                env.APP_ENV_PREV = app_env.previous.name
+            }
         }
     }
     
@@ -180,26 +185,19 @@ void call(app_env) {
                     }
                     
                     echo "About to execute Maven actions"
-                    /*
-                    withMaven(options: [artifactsPublisher(disabled: true), 
-                                        findbugsPublisher(disabled: true), 
-                                        openTasksPublisher(disabled: true),
-                                        junitPublisher(disabled: true)]) {*/
-                        if (env.DRY_RUN) {
-                            echo "Skipping the execution of Maven actions since it is a dry run"
-                        } else {
-                            String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
-                            
-                            if (!is_empty(env.SCM_CREDENTIALS)) {
-                                sshagent([env.SCM_CREDENTIALS]) {
-                                    sh("ls -l ${script} && chmod +x ${script} && ${script}")
-                                }
-                            } else {
+                    if (env.DRY_RUN) {
+                        echo "Skipping the execution of Maven actions since it is a dry run"
+                    } else {
+                        String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
+                        
+                        if (!is_empty(env.SCM_CREDENTIALS)) {
+                            sshagent([env.SCM_CREDENTIALS]) {
                                 sh("ls -l ${script} && chmod +x ${script} && ${script}")
                             }
+                        } else {
+                            sh("ls -l ${script} && chmod +x ${script} && ${script}")
+                        }
                     }
-                    /*
-                    }*/
                 }
             }
         }

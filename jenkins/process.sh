@@ -14,6 +14,8 @@
 # - APEX_DIR
 # - APEX_ACTIONS
 # - BUILD_NUMBER
+# - WORKSPACE
+# - APP_ENV
 # 
 # The following variables may be set:
 # - SCM_USERNAME    
@@ -23,6 +25,7 @@
 # - MVN
 # - MVN_ARGS
 # - MVN_LOG_DIR
+# - APP_ENV_PREV
 #
 # See also libraries/maven/steps/process.groovy.
 
@@ -51,19 +54,14 @@ init() {
         ${GIT} config user.email ${SCM_EMAIL}
     fi
 
-    if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
-    then
-        ${GIT} checkout "$SCM_BRANCH_PREV"
-        ${GIT} checkout "$SCM_BRANCH"
-        ${GIT} merge "$SCM_BRANCH_PREV"
-    fi
-
+    test -n "$SCM_BRANCH_PREV" || export SCM_BRANCH_PREV=""
     test -n "$DB_ACTIONS" || export DB_ACTIONS=""
     test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
     # equivalent of Maven 4 MAVEN_ARGS
     test -n "$MVN" || export MVN=mvn
     test -n "$MVN_ARGS" || export MVN_ARGS=""
-
+    test -n "$APP_ENV_PREV" || export APP_ENV_PREV=""
+    
     # ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
     if [ -n "$MVN_LOG_DIR" ]
     then
@@ -90,7 +88,45 @@ init() {
 
     set -xeu
 
+    # get absolute path
     db_config_dir=`cd ${CONF_DIR} && pwd`
+
+    db_scm_write=
+    if echo "$DB_ACTIONS" | grep db-generate-ddl-full
+    then
+        db_scm_write=1
+    fi
+
+    apex_scm_write=
+    if echo "$APEX_ACTIONS" | grep apex-export
+    then
+        apex_scm_write=1
+    fi
+
+    # get absolute path
+    workspace=`cd ${WORKSPACE} && pwd`
+}
+
+signal_scm_ready() {
+    tool=$1
+    
+    # signal the rest of the jobs that this part is ready
+    touch "${workspace}/${APP_ENV}.${tool}.scm.ready"
+}
+
+# simple implementation of a wait for file: better use iwatch / inotifywait
+wait_for_scm_ready_prev() {
+    tool=$1
+    
+    if [ -n "$APP_ENV_PREV" ]
+    then
+        scm_ready_file="${workspace}/${APP_ENV_PREV}.${tool}.scm.ready"
+        while [ ! -f $scm_ready_file ]
+        do
+            sleep 10
+        done
+        rm $scm_ready_file
+    fi
 }
 
 invoke_mvn()
@@ -126,6 +162,7 @@ process_git()
 process_db() {
     # First DB run
     echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
+
     set -- ${DB_ACTIONS}
     for profile; do invoke_mvn ${DB_DIR} $profile; done
     
@@ -147,6 +184,7 @@ process_db() {
 
 process_apex() {
     echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
+
     set -- ${APEX_ACTIONS}
     for profile; do invoke_mvn ${APEX_DIR} $profile; done
 
@@ -175,8 +213,28 @@ process_apex() {
 
 main() {
     init
+
+    # signal as soon as possible both DB and APEX
+    test -n "$db_scm_write" || signal_scm_ready db
+    test -n "$apex_scm_write" || signal_scm_ready apex    
+
+    wait_for_scm_ready_prev db    
+    wait_for_scm_ready_prev apex
+
+    if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
+    then
+        ${GIT} checkout "$SCM_BRANCH_PREV"
+        ${GIT} checkout "$SCM_BRANCH"
+        ${GIT} merge "$SCM_BRANCH_PREV"
+    fi
+
     test -z "${DB_ACTIONS}" || process_db
+    # inverse
+    test -z "$db_scm_write" || signal_scm_ready db
+    
     test -z "${APEX_ACTIONS}" || process_apex
+    # inverse
+    test -z "$apex_scm_write" || signal_scm_ready apex    
 }
 
 main
