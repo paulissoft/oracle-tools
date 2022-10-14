@@ -1,6 +1,6 @@
 // -*- mode: groovy; coding: utf-8 -*-
 
-void call(app_env) {
+void call(app_env, Boolean parallel_step=false) {
     String app_env_name = app_env.name
         
     if (env.VERBOSE > 1) {
@@ -88,9 +88,11 @@ void call(app_env) {
             env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
             env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
 
-            env.APP_ENV = app_env.name
-            if (app_env.previous != null) {
-                env.APP_ENV_PREV = app_env.previous.name
+            if (parallel_step) {
+                env.APP_ENV = app_env.name
+                if (app_env.previous != null) {
+                    env.APP_ENV_PREV = app_env.previous.name
+                }
             }
         }
     }
@@ -251,7 +253,7 @@ void transform_to_step(app_env) {
     // that explicitly, or use { -> } syntax.
     return {
         node {
-            process app_env
+            process app_env, true
         }
     }
 }

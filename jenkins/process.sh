@@ -15,7 +15,6 @@
 # - APEX_ACTIONS
 # - BUILD_NUMBER
 # - WORKSPACE
-# - APP_ENV
 # 
 # The following variables may be set:
 # - SCM_USERNAME    
@@ -25,7 +24,8 @@
 # - MVN
 # - MVN_ARGS
 # - MVN_LOG_DIR
-# - APP_ENV_PREV
+# - APP_ENV (parallel procesing)
+# - APP_ENV_PREV (parallel procesing)
 #
 # See also libraries/maven/steps/process.groovy.
 
@@ -60,6 +60,7 @@ init() {
     # equivalent of Maven 4 MAVEN_ARGS
     test -n "$MVN" || export MVN=mvn
     test -n "$MVN_ARGS" || export MVN_ARGS=""
+    test -n "$APP_ENV" || export APP_ENV=""
     test -n "$APP_ENV_PREV" || export APP_ENV_PREV=""
     
     # ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
@@ -109,16 +110,19 @@ init() {
 
 signal_scm_ready() {
     tool=$1
-    
-    # signal the rest of the jobs that this part is ready
-    touch "${workspace}/${APP_ENV}.${tool}.scm.ready"
+
+    if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
+    then
+        # signal the rest of the jobs that this part is ready
+        touch "${workspace}/${APP_ENV}.${tool}.scm.ready"
+    fi
 }
 
 # simple implementation of a wait for file: better use iwatch / inotifywait
 wait_for_scm_ready_prev() {
     tool=$1
     
-    if [ -n "$APP_ENV_PREV" ]
+    if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then
         scm_ready_file="${workspace}/${APP_ENV_PREV}.${tool}.scm.ready"
         while [ ! -f $scm_ready_file ]
