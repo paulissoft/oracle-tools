@@ -128,7 +128,7 @@ void parallel(app_envs) {
     }
 
     if (env.VERBOSE > 1) {
-        println parallel_steps
+        println "# parallel steps: " + parallel_steps.size()
     }
     
     // Actually run the steps in parallel - parallel takes a map as an argument,
