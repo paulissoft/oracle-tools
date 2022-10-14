@@ -133,7 +133,9 @@ void parallel(app_envs) {
     
     // Actually run the steps in parallel - parallel takes a map as an argument,
     // hence the above.
-    parallel parallel_steps
+
+    // PLEASE BE CAREFUL: parallel is also a Jenkins pipeline step so add steps. in front
+    steps.parallel parallel_steps
 }
 
 // Take the string and echo it.
