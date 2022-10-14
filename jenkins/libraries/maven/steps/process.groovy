@@ -192,6 +192,8 @@ void call(app_env, Boolean parallel_step=false) {
                     } else {
                         // WORKSPACE may have spaces
                         String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
+
+                        echo "WORKSPACE: ${WORKSPACE}"
                         
                         if (!is_empty(env.SCM_CREDENTIALS)) {
                             sshagent([env.SCM_CREDENTIALS]) {
