@@ -24,8 +24,8 @@
 # - MVN
 # - MVN_ARGS
 # - MVN_LOG_DIR
-# - APP_ENV (parallel procesing)
-# - APP_ENV_PREV (parallel procesing)
+# - APP_ENV (must be set when parallel processing)
+# - APP_ENV_PREV (may be set when parallel processing)
 #
 # See also libraries/maven/steps/process.groovy.
 
@@ -105,12 +105,14 @@ init() {
     fi
 
     workspace="${WORKSPACE}"
+    echo "APP_ENV: $APP_ENV"
+    echo "APP_ENV_PREV: $APP_ENV_PREV"
 }
 
 signal_scm_ready() {
     tool=$1
 
-    if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
+    if [ -n "$APP_ENV" ]
     then
         # signal the rest of the jobs that this part is ready
         touch "${workspace}/${APP_ENV}.${tool}.scm.ready"
