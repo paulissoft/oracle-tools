@@ -124,7 +124,7 @@ void parallel(app_envs) {
 
     // The map we'll store the parallel steps in before executing them.
     def parallel_steps = app_envs.collectEntries {
-        ["process ${it}" : transform_to_step(it)]
+        it != null ? ["process ${it}" : transform_to_step(it)] : [:]
     }
 
     if (env.VERBOSE > 1) {
@@ -146,13 +146,11 @@ def transform_to_step(app_env) {
     // that explicitly, or use { -> } syntax.
     return {
         node {
-            if (app_env != null) {
-                if (env.VERBOSE > 1) {
-                    println app_env
-                }
-                
-                process app_env
+            if (env.VERBOSE > 1) {
+                println app_env
             }
+                
+            process app_env
         }
     }
 }
