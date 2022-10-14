@@ -93,15 +93,42 @@ def get_env(app_env_name, app_env, String key, Boolean mandatory=true, Integer l
 
 void sequential(app_envs) {
     node() {
-        println "app_envs: " + app_envs
-        for (int i=0; i < app_envs.size(); i++) {
-            if (!(app_envs[i] instanceof org.boozallen.plugins.jte.init.primitives.injectors.ApplicationEnvironment)) {
-                continue
+        for (app_env in app_envs) {
+            if (app_env != null) {
+                stage("process ${app_env}") {
+                    process app_env
+                }
             }
-            echo "app_envs[$i]: " + app_envs[i].dump()
-            stage(app_envs[i].name) {
-                process app_envs[i]
-            }
+        }
+    }
+}
+
+void parallel(app_envs) {
+    // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
+    
+    // While you can't use Groovy's .collect or similar methods currently, you can
+    // still transform a list into a set of actual build steps to be executed in
+    // parallel.
+
+    // The map we'll store the parallel steps in before executing them.
+    def parallel_steps = app_envs.collectEntries {
+        it != null ? ["process ${it}" : transform_to_step(it)] : [:]
+    }
+
+    // Actually run the steps in parallel - parallel takes a map as an argument,
+    // hence the above.
+    parallel parallel_steps
+}
+
+// Take the string and echo it.
+def transform_to_step(app_env) {
+    // We need to wrap what we return in a Groovy closure, or else it's invoked
+    // when this method is called, not when we pass it to parallel.
+    // To do this, you need to wrap the code below in { }, and either return
+    // that explicitly, or use { -> } syntax.
+    return {
+        node {
+            process app_env
         }
     }
 }
