@@ -1,11 +1,9 @@
 // -*- mode: groovy; coding: utf-8 -*-
 
-Integer VERBOSE = env.VERBOSE.isInteger() ? env.VERBOSE as Integer : 0
-
 void call(app_env) {
     String app_env_name = app_env.name
 
-    if (VERBOSE > 1) {
+    if (env.VERBOSE > 1) {
         println "process(${app_env})"
     }    
 
@@ -209,7 +207,7 @@ void call(app_env) {
 }
 
 void sequential(app_envs) {
-    if (VERBOSE > 1) {
+    if (env.VERBOSE > 1) {
         println "process.sequential(${app_envs})"
     }    
 
@@ -225,7 +223,7 @@ void sequential(app_envs) {
 }
 
 void parallel(app_envs) {
-    if (VERBOSE > 1) {
+    if (env.VERBOSE > 1) {
         println "process.parallel(${app_envs})"
     }    
 
@@ -299,7 +297,7 @@ String get_env(app_env_name, app_env, String key, Boolean mandatory=true, Intege
         assert !is_empty(value) : error
     }
 
-    if (VERBOSE > 0) {
+    if (env.VERBOSE > 0) {
         println "Setting environment variable $KEY to '$value'"
     }
     
@@ -307,7 +305,7 @@ String get_env(app_env_name, app_env, String key, Boolean mandatory=true, Intege
 }
 
 void show_env(app_env, pipelineConfig, env) {
-    if (VERBOSE <= 0) {
+    if (!(env.VERBOSE > 0)) {
         return
     }
 
