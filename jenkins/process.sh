@@ -105,7 +105,7 @@ init() {
     fi
 
     # get absolute path
-    workspace=`cd ${WORKSPACE} && pwd`
+    workspace=`cd '${WORKSPACE}' && pwd`
 }
 
 signal_scm_ready() {
@@ -125,11 +125,11 @@ wait_for_scm_ready_prev() {
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then
         scm_ready_file="${workspace}/${APP_ENV_PREV}.${tool}.scm.ready"
-        while [ ! -f $scm_ready_file ]
+        while [ ! -f "$scm_ready_file" ]
         do
             sleep 10
         done
-        rm $scm_ready_file
+        rm "$scm_ready_file"
     fi
 }
 

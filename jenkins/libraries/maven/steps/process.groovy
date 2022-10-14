@@ -20,7 +20,7 @@ void call(app_env, Boolean parallel_step=false) {
             if (!is_empty(env.SCM_URL_ORACLE_TOOLS)) {
                 String name = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
                 
-                env.SCM_PROJECT_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_project_oracle_tools', true, 3, name)
+                env.SCM_PROJECT_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_project_oracle_tools', true, 3, name).replaceAll(" ", "_")
             }
             
             /*
@@ -33,7 +33,7 @@ void call(app_env, Boolean parallel_step=false) {
             if (!is_empty(env.SCM_URL_CONFIG)) {
                 String name = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
                 
-                env.SCM_PROJECT_CONFIG = get_env(app_env_name, app_env, 'scm_project_config', true, 3, name)
+                env.SCM_PROJECT_CONFIG = get_env(app_env_name, app_env, 'scm_project_config', true, 3, name).replaceAll(" ", "_")
             }
             
             /*
@@ -77,7 +77,7 @@ void call(app_env, Boolean parallel_step=false) {
             env.SCM_BRANCH_PREV = get_env(app_env_name, app_env, 'scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
             env.SCM_CREDENTIALS = get_env(app_env_name, app_env, 'scm_credentials', credentials_needed)
             env.SCM_URL = get_env(app_env_name, app_env, 'scm_url', true)
-            env.SCM_PROJECT = get_env(app_env_name, app_env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", ""))
+            env.SCM_PROJECT = get_env(app_env_name, app_env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")).replaceAll(" ", "_")
 
             // It must be possible to have a dry run for Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/84
@@ -190,14 +190,15 @@ void call(app_env, Boolean parallel_step=false) {
                     if (env.DRY_RUN) {
                         echo "Skipping the execution of Maven actions since it is a dry run"
                     } else {
+                        // WORKSPACE may have spaces
                         String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
                         
                         if (!is_empty(env.SCM_CREDENTIALS)) {
                             sshagent([env.SCM_CREDENTIALS]) {
-                                sh("ls -l ${script} && chmod +x ${script} && ${script}")
+                                sh("ls -l '${script}' && chmod +x '${script}' && '${script}'")
                             }
                         } else {
-                            sh("ls -l ${script} && chmod +x ${script} && ${script}")
+                            sh("ls -l '${script}' && chmod +x '${script}' && '${script}'")
                         }
                     }
                 }
