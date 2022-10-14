@@ -123,7 +123,7 @@ signal_scm_ready() {
 wait_for_scm_ready_prev() {
     tool=$1
     increment=10
-    timeout=60
+    timeout=3600
     elapsed=0
     
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
