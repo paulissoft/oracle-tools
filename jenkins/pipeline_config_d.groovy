@@ -26,3 +26,10 @@ application_environments{
         apex_actions = 'apex-export'
     }
 }
+
+// define test, acc and prod as keywords so Jenkinsfile knows them
+keywords {
+    test = null
+    acc = null
+    prod = null
+}
