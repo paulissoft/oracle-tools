@@ -248,10 +248,10 @@ ${process_script}
                     } else {
                         if (!is_empty(vars.SCM_CREDENTIALS)) {
                             sshagent([vars.SCM_CREDENTIALS]) {
-                                sh("""$script""")
+                                sh(script)
                             }
                         } else {
-                            sh("""${script}""")
+                            sh(script)
                         }
                     }
                 }
@@ -371,5 +371,6 @@ Boolean is_empty(value) {
 }
 
 Integer verbose() {
-    return env.VERBOSE && env.VERBOSE.isInteger() ? env.VERBOSE as Integer : 0
+    String VERBOSE = env.VERBOSE ?: ""
+    return VERBOSE.isInteger() ? VERBOSE as Integer : 0
 }
