@@ -230,7 +230,7 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
 
                     String oracle_tools = var.SCM_PROJECT_ORACLE_TOOLS ?: ${var.SCM_PROJECT}
                     String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
-                    String script = var.collect({it => /$it.key="$it.value"/}).join("\n") + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
+                    String script = var.collect({it -> /$it.key="$it.value"/}).join("\n") + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
 
                     echo "Shell script to execute:\n$script"
                         
