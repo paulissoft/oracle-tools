@@ -231,11 +231,12 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
                     String oracle_tools = vars.SCM_PROJECT_ORACLE_TOOLS ?: ${vars.SCM_PROJECT}
                     String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
                     String script = "set +xv\n" +
-                        vars.collect({key, value -> /$key="$value"/}).join("\n") +
+                        vars.collect({key, value -> /export $key='$value'/}).join("\n") +
                         """
 set -xv
 ls -l ${process_script}
 chmod +x ${process_script}
+env
 ${process_script}
 """
 
