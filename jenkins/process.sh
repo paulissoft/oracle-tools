@@ -3,39 +3,39 @@
 # Script to be invoked from a Jenkins build.
 # Environment variables must be set otherwise an error occurs (-eu above).
 
-# The following variables need to be set (and should be exported):
+# The following variables need to be set and not empty (and should be exported):
 mandatory_variables=`cat <<EOF
-SCM_BRANCH
+APEX_DIR
+BUILD_NUMBER
 CONF_DIR
 DB
 DB_DIR
-DB_ACTIONS
-APEX_DIR
-APEX_ACTIONS
-BUILD_NUMBER
+SCM_BRANCH
 WORKSPACE
 
 EOF`
 
-# also mandatory but do not echo them
+# Also mandatory but do not echo them
 secret_mandatory_variables=`cat <<EOF
-DB_USERNAME
 DB_PASSWORD
+DB_USERNAME
 
 EOF`
 
 # 
-# The following variables may be set (and should be exported):
+# The following variables may be unset or empty (and should be exported):
 optional_variables=`cat <<EOF
-SCM_USERNAME
-SCM_EMAIL
-SCM_BRANCH_PREV
+APEX_ACTIONS
+APP_ENV
+APP_ENV_PREV
+DB_ACTIONS
 GIT
 MVN
 MVN_ARGS
 MVN_LOG_DIR
-APP_ENV
-APP_ENV_PREV
+SCM_BRANCH_PREV
+SCM_EMAIL
+SCM_USERNAME
 
 EOF`
 
