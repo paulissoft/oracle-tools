@@ -1,31 +1,37 @@
-#!/bin/sh -xeu
+#!/bin/sh -eux
 
 # Script to be invoked from a Jenkins build.
 # Environment variables must be set otherwise an error occurs (-eu above).
 
-# The following variables need to be set:
-# - SCM_BRANCH      
-# - CONF_DIR
-# - DB
-# - DB_USERNAME
-# - DB_PASSWORD
-# - DB_DIR
-# - DB_ACTIONS
-# - APEX_DIR
-# - APEX_ACTIONS
-# - BUILD_NUMBER
-# - WORKSPACE
+# The following variables need to be set (and should be exported):
+mandatory_variables= \
+                   SCM_BRANCH \
+                   CONF_DIR \
+                   DB \
+                   DB_DIR \
+                   DB_ACTIONS \
+                   APEX_DIR \
+                   APEX_ACTIONS \
+                   BUILD_NUMBER \
+                   WORKSPACE
+
+# also mandatory but do not echo them
+secret_mandatory_variables= \
+                          DB_USERNAME \
+                          DB_PASSWORD \
+
 # 
-# The following variables may be set:
-# - SCM_USERNAME    
-# - SCM_EMAIL       
-# - SCM_BRANCH_PREV
-# - GIT
-# - MVN
-# - MVN_ARGS
-# - MVN_LOG_DIR
-# - APP_ENV (must be set when parallel processing)
-# - APP_ENV_PREV (may be set when parallel processing)
+# The following variables may be set (and should be exported):
+optional_variables= \
+                  SCM_USERNAME \
+                  SCM_EMAIL \
+                  SCM_BRANCH_PREV \
+                  GIT \
+                  MVN \
+                  MVN_ARGS \
+                  MVN_LOG_DIR \
+                  APP_ENV \
+                  APP_ENV_PREV
 #
 # See also libraries/maven/steps/process.groovy.
 
@@ -43,9 +49,32 @@ init() {
     # checking environment
     pwd
 
-    set +eu # some variables may be unset
+    set +eux # some variables may be unset
 
     ${GIT:=git} --version
+    ${MVN:=mvn} --version
+
+    # Stop when variable unset
+    set -- $mandatory_variables
+    for v
+    do
+        test -n "${!v}" || { echo "Variable ${!v} not set or null" 1>&2; exit 1; }
+        echo "$v: '${!v}'"
+    done
+
+    set -- $secret_mandatory_variables
+    for v
+    do
+        test -n "${!v}" || { echo "Variable ${!v} not set" 1>&2; exit 1; }
+    done
+
+    set -- $optional_variables
+    for v
+    do
+        printenv ${!v} 1>/dev/null || eval export ${!v}=
+        printenv ${!v} 1>/dev/null || { echo "Programming error, since variable ${!v} is stil not set" 1>&2; exit 1; }
+        echo "$v: '${!v}'"
+    done
 
     if [ -n "${SCM_USERNAME}" -a -n "${SCM_EMAIL}" ]
     then
@@ -54,15 +83,6 @@ init() {
         ${GIT} config user.email ${SCM_EMAIL}
     fi
 
-    test -n "$SCM_BRANCH_PREV" || export SCM_BRANCH_PREV=""
-    test -n "$DB_ACTIONS" || export DB_ACTIONS=""
-    test -n "$APEX_ACTIONS" || export APEX_ACTIONS=""
-    # equivalent of Maven 4 MAVEN_ARGS
-    test -n "$MVN" || export MVN=mvn
-    test -n "$MVN_ARGS" || export MVN_ARGS=""
-    test -n "$APP_ENV" || export APP_ENV=""
-    test -n "$APP_ENV_PREV" || export APP_ENV_PREV=""
-    
     # ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
     if [ -n "$MVN_LOG_DIR" ]
     then
@@ -80,33 +100,28 @@ init() {
     fi
     export MVN_LOG_DIR
 
-    # Maven property db.password is by default the environment variable DB_PASSWORD
-    if ! printenv DB_PASSWORD 1>/dev/null
-    then
-        echo "Environment variable DB_PASSWORD is not set." 1>&2
-        exit 1
-    fi
-
-    set -xeu
+    set -eux
 
     # get absolute path
     db_config_dir=`cd ${CONF_DIR} && pwd`
 
-    db_scm_write=
+    db_scm_write=0
     if echo "$DB_ACTIONS" | grep db-generate-ddl-full
     then
         db_scm_write=1
     fi
 
-    apex_scm_write=
+    apex_scm_write=0
     if echo "$APEX_ACTIONS" | grep apex-export
     then
         apex_scm_write=1
     fi
 
-    workspace="${WORKSPACE}"
-    echo "APP_ENV: $APP_ENV"
-    echo "APP_ENV_PREV: $APP_ENV_PREV"
+    parallel=0
+    if [ -n "$APP_ENV" ]
+    then
+        parallel=1
+    fi
 }
 
 signal_scm_ready() {
@@ -115,31 +130,29 @@ signal_scm_ready() {
     if [ -n "$APP_ENV" ]
     then
         # signal the rest of the jobs that this part is ready
-        touch "${workspace}/${APP_ENV}.${tool}.scm.ready"
+        touch "${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
     fi
 }
 
 # simple implementation of a wait for file: better use iwatch / inotifywait
-wait_for_scm_ready_prev() {
-    tool=$1
-    increment=10
-    timeout=3600
-    elapsed=0
-    
+wait_for_scm_ready_prev() {    
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then
-        scm_ready_file="${workspace}/${APP_ENV_PREV}.${tool}.scm.ready"
-        while [ ! -f "$scm_ready_file" -a $elapsed -lt $timeout ]
-        do
-            sleep $increment
-            elapsed=`expr $elapsed + $increment`
-        done
-        if [ ! -f "$scm_ready_file" ]
+        tool=$1
+        export SCM_READY_FILE="${WORKSPACE}/${APP_ENV_PREV}.${tool}.scm.ready"
+        export INCREMENT=10
+        timeout=3600
+
+        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc 'while [ ! -f "$SCM_READY_FILE" ]; do sleep $INCREMENT; done'
+
+        if [ ! -f "$SCM_READY_FILE" ]
         then
-            echo "Timeout after waiting $timeout seconds for file $scm_ready_file" 1>&2
+            # Should never come here due to timeout.pl script but it does not hurt neither
+            echo "Timeout after waiting $timeout seconds for file $SCM_READY_FILE" 1>&2
             exit 1
         fi
-        rm "$scm_ready_file"
+        
+        rm -f "$SCM_READY_FILE"
     fi
 }
 
@@ -228,12 +241,15 @@ process_apex() {
 main() {
     init
 
-    # signal as soon as possible both DB and APEX
-    test -n "$db_scm_write" || signal_scm_ready db
-    test -n "$apex_scm_write" || signal_scm_ready apex    
+    if [ "$parallel" -ne 0 ]
+    then
+        # signal as soon as possible both DB and APEX
+        test "$db_scm_write" -ne 0 || signal_scm_ready db
+        test "$apex_scm_write" -ne 0 || signal_scm_ready apex    
 
-    wait_for_scm_ready_prev db    
-    wait_for_scm_ready_prev apex
+        wait_for_scm_ready_prev db    
+        wait_for_scm_ready_prev apex
+    fi
 
     if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
     then
@@ -244,11 +260,11 @@ main() {
 
     test -z "${DB_ACTIONS}" || process_db
     # inverse
-    test -z "$db_scm_write" || signal_scm_ready db
+    test "$parallel" -eq 0 || test "$db_scm_write" -eq 0 || signal_scm_ready db
     
     test -z "${APEX_ACTIONS}" || process_apex
     # inverse
-    test -z "$apex_scm_write" || signal_scm_ready apex    
+    test "$parallel" -eq 0 || test "$apex_acm_write" -eq 0 || signal_scm_ready apex    
 }
 
 main

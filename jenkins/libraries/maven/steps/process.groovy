@@ -1,7 +1,16 @@
 // -*- mode: groovy; coding: utf-8 -*-
 
-void call(app_env, Boolean parallel_step=false) {
+void call(List app_envs, Boolean parallel_step=false) {
+    if (parallel_step) {
+        parallel(app_envs)
+    } else {
+        sequential(app_envs)
+    }
+}
+
+void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
     String app_env_name = app_env.name
+    Map var = [:]
         
     if (env.VERBOSE > 1) {
         println "process(${app_env})"
@@ -17,48 +26,48 @@ void call(app_env, Boolean parallel_step=false) {
              -- The SCM PATO project needed to build the SCM project
              */
 
-            env.SCM_URL_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_url_oracle_tools', false)
-            env.SCM_BRANCH_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_branch_oracle_tools', !is_empty(env.SCM_URL_ORACLE_TOOLS)) // mandatory if the URL is there
-            if (!is_empty(env.SCM_URL_ORACLE_TOOLS)) {
-                String name = env.SCM_URL_ORACLE_TOOLS.substring(env.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+            var.SCM_URL_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_url_oracle_tools', false)
+            var.SCM_BRANCH_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_branch_oracle_tools', !is_empty(var.SCM_URL_ORACLE_TOOLS)) // mandatory if the URL is there
+            if (!is_empty(var.SCM_URL_ORACLE_TOOLS)) {
+                String name = var.SCM_URL_ORACLE_TOOLS.substring(var.SCM_URL_ORACLE_TOOLS.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
                 
-                env.SCM_PROJECT_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_project_oracle_tools', true, 3, name).replaceAll(" ", "_")
+                var.SCM_PROJECT_ORACLE_TOOLS = get_env(app_env_name, app_env, 'scm_project_oracle_tools', true, 3, name).replaceAll(" ", "_")
             }
             
             /*
              -- The SCM (database) configuration project needed to build the SCM project
              */
 
-            env.SCM_URL_CONFIG = get_env(app_env_name, app_env, 'scm_url_config', false)
-            env.SCM_BRANCH_CONFIG = get_env(app_env_name, app_env, 'scm_branch_config', !is_empty(env.SCM_URL_CONFIG)) // mandatory if the URL is there
-            env.SCM_CREDENTIALS_CONFIG = get_env(app_env_name, app_env, 'scm_credentials_config', false)
-            if (!is_empty(env.SCM_URL_CONFIG)) {
-                String name = env.SCM_URL_CONFIG.substring(env.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
+            var.SCM_URL_CONFIG = get_env(app_env_name, app_env, 'scm_url_config', false)
+            var.SCM_BRANCH_CONFIG = get_env(app_env_name, app_env, 'scm_branch_config', !is_empty(var.SCM_URL_CONFIG)) // mandatory if the URL is there
+            var.SCM_CREDENTIALS_CONFIG = get_env(app_env_name, app_env, 'scm_credentials_config', false)
+            if (!is_empty(var.SCM_URL_CONFIG)) {
+                String name = var.SCM_URL_CONFIG.substring(var.SCM_URL_CONFIG.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")
                 
-                env.SCM_PROJECT_CONFIG = get_env(app_env_name, app_env, 'scm_project_config', true, 3, name).replaceAll(" ", "_")
+                var.SCM_PROJECT_CONFIG = get_env(app_env_name, app_env, 'scm_project_config', true, 3, name).replaceAll(" ", "_")
             }
             
             /*
              -- The configuration directory to work on
              */
             
-            env.CONF_DIR = get_env(app_env_name, app_env, 'conf_dir')
+            var.CONF_DIR = get_env(app_env_name, app_env, 'conf_dir')
 
             /*
              -- The database info to work on
              */
             
-            env.DB = get_env(app_env_name, app_env, 'db', true, 1)
-            env.DB_CREDENTIALS = get_env(app_env_name, app_env, 'db_credentials', true, 1) // application environment specific
-            env.DB_DIR = get_env(app_env_name, app_env, 'db_dir')
-            env.DB_ACTIONS = get_env(app_env_name, app_env, 'db_actions', false, 2) // application environment or pipeline configuration specific
+            var.DB = get_env(app_env_name, app_env, 'db', true, 1)
+            var.DB_CREDENTIALS = get_env(app_env_name, app_env, 'db_credentials', true, 1) // application environment specific
+            var.DB_DIR = get_env(app_env_name, app_env, 'db_dir')
+            var.DB_ACTIONS = get_env(app_env_name, app_env, 'db_actions', false, 2) // application environment or pipeline configuration specific
 
             /*
              -- The APEX info to work on
              */
             
-            env.APEX_DIR = get_env(app_env_name, app_env, 'apex_dir')
-            env.APEX_ACTIONS = get_env(app_env_name, app_env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
+            var.APEX_DIR = get_env(app_env_name, app_env, 'apex_dir')
+            var.APEX_ACTIONS = get_env(app_env_name, app_env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
 
             /*
              -- SCM credentials username and e-mail
@@ -66,64 +75,64 @@ void call(app_env, Boolean parallel_step=false) {
             
             // It must be possible to specify the SCM username and email as environment variables in Jenkins configuration.
             // https://github.com/paulissoft/oracle-tools/issues/70
-            Boolean credentials_needed = (env.DB_ACTIONS =~ /\bdb-generate-ddl-full\b/) || (env.APEX_ACTIONS =~ /\bapex-export\b/)
+            Boolean credentials_needed = (var.DB_ACTIONS =~ /\bdb-generate-ddl-full\b/) || (var.APEX_ACTIONS =~ /\bapex-export\b/)
             
-            env.SCM_USERNAME = get_env(app_env_name, app_env, 'scm_username', credentials_needed)
-            env.SCM_EMAIL = get_env(app_env_name, app_env, 'scm_email', credentials_needed)
+            var.SCM_USERNAME = get_env(app_env_name, app_env, 'scm_username', credentials_needed)
+            var.SCM_EMAIL = get_env(app_env_name, app_env, 'scm_email', credentials_needed)
 
             /*
              -- The SCM project to work on
              */
             
-            env.SCM_BRANCH = get_env(app_env_name, app_env, 'scm_branch', true, 1)
-            env.SCM_BRANCH_PREV = get_env(app_env_name, app_env, 'scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
-            env.SCM_CREDENTIALS = get_env(app_env_name, app_env, 'scm_credentials', credentials_needed)
-            env.SCM_URL = get_env(app_env_name, app_env, 'scm_url', true)
-            env.SCM_PROJECT = get_env(app_env_name, app_env, 'scm_project', true, 3, env.SCM_URL.substring(env.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")).replaceAll(" ", "_")
+            var.SCM_BRANCH = get_env(app_env_name, app_env, 'scm_branch', true, 1)
+            var.SCM_BRANCH_PREV = get_env(app_env_name, app_env, 'scm_branch_prev', false, 1, ( app_env.previous != null ? app_env.previous.scm_branch : '' ))
+            var.SCM_CREDENTIALS = get_env(app_env_name, app_env, 'scm_credentials', credentials_needed)
+            var.SCM_URL = get_env(app_env_name, app_env, 'scm_url', true)
+            var.SCM_PROJECT = get_env(app_env_name, app_env, 'scm_project', true, 3, var.SCM_URL.substring(var.SCM_URL.lastIndexOf("/") + 1).replaceAll("\\.git\$", "")).replaceAll(" ", "_")
 
             // It must be possible to have a dry run for Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/84
-            env.DRY_RUN = get_env(app_env_name, app_env, 'dry_run', false)
+            var.DRY_RUN = get_env(app_env_name, app_env, 'dry_run', false)
             // It must be possible to use the Maven daemon in Jenkins.
             // https://github.com/paulissoft/oracle-tools/issues/82
-            env.MVN = get_env(app_env_name, app_env, 'mvn', true, 3, 'mvn')
-            env.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
-            env.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
+            var.MVN = get_env(app_env_name, app_env, 'mvn', true, 3, 'mvn')
+            var.MVN_ARGS = get_env(app_env_name, app_env, 'mvn_args', false)
+            var.MVN_LOG_DIR = get_env(app_env_name, app_env, 'mvn_log_dir', false)
 
             if (parallel_step) {
-                env.APP_ENV = app_env.name
+                var.APP_ENV = app_env.name
                 if (app_env.previous != null) {
-                    env.APP_ENV_PREV = app_env.previous.name
+                    var.APP_ENV_PREV = app_env.previous.name
                 }
             }
         }
     }
     
-    withCredentials([usernamePassword(credentialsId: env.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
+    withCredentials([usernamePassword(credentialsId: var.DB_CREDENTIALS, passwordVariable: 'DB_PASSWORD', usernameVariable: 'DB_USERNAME')]) {
         // checkout of (optional) configuration project (maybe credentials needed)
         script {
             // skip checkout if the configuration project is the same as project            
-            if (!is_empty(env.SCM_PROJECT_CONFIG) &&
-                !env.SCM_PROJECT_CONFIG.equals(env.SCM_PROJECT)) {
+            if (!is_empty(var.SCM_PROJECT_CONFIG) &&
+                !var.SCM_PROJECT_CONFIG.equals(var.SCM_PROJECT)) {
                 stage("${app_env_name} - checkout configuration project") {
                     echo "About to check-out configuration project, " +
-                        "url='${env.SCM_URL_CONFIG}', " +
-                        "branch='${env.SCM_BRANCH_CONFIG}', " +
-                        "directory='${app_env_name}/${env.SCM_PROJECT_CONFIG}', " +
-                        "credentials='${env.SCM_CREDENTIALS_CONFIG}'"
-                    dir("${app_env_name}/${env.SCM_PROJECT_CONFIG}") {
-                        if (env.DRY_RUN) {
+                        "url='${var.SCM_URL_CONFIG}', " +
+                        "branch='${var.SCM_BRANCH_CONFIG}', " +
+                        "directory='${app_env_name}/${var.SCM_PROJECT_CONFIG}', " +
+                        "credentials='${var.SCM_CREDENTIALS_CONFIG}'"
+                    dir("${app_env_name}/${var.SCM_PROJECT_CONFIG}") {
+                        if (var.DRY_RUN) {
                             echo "Skipping check-out since it is a dry run"
-                        } else if (!is_empty(env.SCM_CREDENTIALS_CONFIG)) {
-                            git url: env.SCM_URL_CONFIG, branch: env.SCM_BRANCH_CONFIG, credentialsId: env.SCM_CREDENTIALS_CONFIG
+                        } else if (!is_empty(var.SCM_CREDENTIALS_CONFIG)) {
+                            git url: var.SCM_URL_CONFIG, branch: var.SCM_BRANCH_CONFIG, credentialsId: var.SCM_CREDENTIALS_CONFIG
                         } else {
                             checkout([
                                 $class: 'GitSCM', 
-                                branches: [[name: '*/' + env.SCM_BRANCH_CONFIG]], 
+                                branches: [[name: '*/' + var.SCM_BRANCH_CONFIG]], 
                                 doGenerateSubmoduleConfigurations: false, 
                                 extensions: [[$class: 'CleanCheckout']], 
                                 submoduleCfg: [], 
-                                userRemoteConfigs: [[url: env.SCM_URL_CONFIG]]
+                                userRemoteConfigs: [[url: var.SCM_URL_CONFIG]]
                             ])
                         }
                     }
@@ -134,26 +143,26 @@ void call(app_env, Boolean parallel_step=false) {
         // checkout of (optional) PATO (no credentials needed)
         script {
             // skip checkout if the PATO project is the same as the (configuration) project
-            if (!is_empty(env.SCM_PROJECT_ORACLE_TOOLS) &&
-                (is_empty(env.SCM_PROJECT)        || !env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT)) &&
-                (is_empty(env.SCM_PROJECT_CONFIG) || !env.SCM_PROJECT_ORACLE_TOOLS.equals(env.SCM_PROJECT_CONFIG))) {
+            if (!is_empty(var.SCM_PROJECT_ORACLE_TOOLS) &&
+                (is_empty(var.SCM_PROJECT)        || !var.SCM_PROJECT_ORACLE_TOOLS.equals(var.SCM_PROJECT)) &&
+                (is_empty(var.SCM_PROJECT_CONFIG) || !var.SCM_PROJECT_ORACLE_TOOLS.equals(var.SCM_PROJECT_CONFIG))) {
                 stage("${app_env_name} - checkout PATO project") {
                     echo "About to check-out PATO project, " +
-                        "url='${env.SCM_URL_ORACLE_TOOLS}', " +
-                        "branch='${env.SCM_BRANCH_ORACLE_TOOLS}', " +
-                        "directory='${app_env_name}/${env.SCM_PROJECT_ORACLE_TOOLS}', " +
+                        "url='${var.SCM_URL_ORACLE_TOOLS}', " +
+                        "branch='${var.SCM_BRANCH_ORACLE_TOOLS}', " +
+                        "directory='${app_env_name}/${var.SCM_PROJECT_ORACLE_TOOLS}', " +
                         "no credentials"
-                    dir("${app_env_name}/${env.SCM_PROJECT_ORACLE_TOOLS}") {
-                        if (env.DRY_RUN) {
+                    dir("${app_env_name}/${var.SCM_PROJECT_ORACLE_TOOLS}") {
+                        if (var.DRY_RUN) {
                             echo "Skipping check-out since it is a dry run"
                         } else {
                             checkout([
                                 $class: 'GitSCM', 
-                                branches: [[name: '*/' + env.SCM_BRANCH_ORACLE_TOOLS]], 
+                                branches: [[name: '*/' + var.SCM_BRANCH_ORACLE_TOOLS]], 
                                 doGenerateSubmoduleConfigurations: false, 
                                 extensions: [[$class: 'CleanCheckout']], 
                                 submoduleCfg: [], 
-                                userRemoteConfigs: [[url: env.SCM_URL_ORACLE_TOOLS]]
+                                userRemoteConfigs: [[url: var.SCM_URL_ORACLE_TOOLS]]
                             ])
                         }
                     }
@@ -165,38 +174,42 @@ void call(app_env, Boolean parallel_step=false) {
         script {
             stage("${app_env_name} - process") {
                 echo "About to check-out build project, " +
-                    "url='${env.SCM_URL}', " +
-                    "branch='${env.SCM_BRANCH}', " +
-                    "directory='${app_env_name}/${env.SCM_PROJECT}', " +
-                    "credentials='${env.SCM_CREDENTIALS}'"
-                dir("${app_env_name}/${env.SCM_PROJECT}") {
-                    if (env.DRY_RUN) {
+                    "url='${var.SCM_URL}', " +
+                    "branch='${var.SCM_BRANCH}', " +
+                    "directory='${app_env_name}/${var.SCM_PROJECT}', " +
+                    "credentials='${var.SCM_CREDENTIALS}'"
+                dir("${app_env_name}/${var.SCM_PROJECT}") {
+                    if (var.DRY_RUN) {
                         echo "Skipping check-out since it is a dry run"
-                    } else if (!is_empty(env.SCM_CREDENTIALS)) {                    
-                        git url: env.SCM_URL, branch: env.SCM_BRANCH, credentialsId: env.SCM_CREDENTIALS
+                    } else if (!is_empty(var.SCM_CREDENTIALS)) {                    
+                        git url: var.SCM_URL, branch: var.SCM_BRANCH, credentialsId: var.SCM_CREDENTIALS
                     } else {
                         checkout([
                             $class: 'GitSCM', 
-                            branches: [[name: '*/' + env.SCM_BRANCH]], 
+                            branches: [[name: '*/' + var.SCM_BRANCH]], 
                             doGenerateSubmoduleConfigurations: false, 
                             extensions: [[$class: 'CleanCheckout']], 
                             submoduleCfg: [], 
-                            userRemoteConfigs: [[url: env.SCM_URL]]
+                            userRemoteConfigs: [[url: var.SCM_URL]]
                         ])
                     }
                     
                     echo "About to execute Maven actions"
-                    if (env.DRY_RUN) {
+                    if (var.DRY_RUN) {
                         echo "Skipping the execution of Maven actions since it is a dry run"
                     } else {
-                        String script = "$WORKSPACE/${app_env_name}/${env.SCM_PROJECT}/jenkins/process.sh"
+                        String oracle_tools = var.SCM_PROJECT_ORACLE_TOOLS ?: ${var.SCM_PROJECT}
+                        String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
+                        String script = to_key_value(var) + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
 
-                        if (!is_empty(env.SCM_CREDENTIALS)) {
-                            sshagent([env.SCM_CREDENTIALS]) {
-                                sh("ls -l ${script} && chmod +x ${script} && ${script}")
+                        echo "Shell script to execute:\n$script"
+                        
+                        if (!is_empty(var.SCM_CREDENTIALS)) {
+                            sshagent([var.SCM_CREDENTIALS]) {
+                                sh("""$script""")
                             }
                         } else {
-                            sh("ls -l ${script} && chmod +x ${script} && ${script}")
+                            sh("""${script}""")
                         }
                     }
                 }
@@ -352,4 +365,8 @@ void show_env(app_env, pipelineConfig, env) {
 
 Boolean is_empty(value) {
     return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
+}
+
+void to_key_value = {
+    it.collect { /$it.key="$it.value"/ } join "\n"
 }
