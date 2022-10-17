@@ -80,7 +80,7 @@ init() {
     set -- $optional_variables
     for v
     do
-        printenv ${v} 1>/dev/null || eval ${v}=
+        test -n "`printenv ${v}`" || eval ${v}=
         export $v
         echo "$v: '`printenv ${v}`'"
     done
