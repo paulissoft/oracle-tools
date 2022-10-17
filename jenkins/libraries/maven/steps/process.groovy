@@ -8,7 +8,7 @@ void call(List app_envs, Boolean parallel_step=false) {
     }
 }
 
-void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
+void call(app_env, Boolean parallel_step=false) {
     String app_env_name = app_env.name
     Map var = [:]
         
