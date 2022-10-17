@@ -3,7 +3,7 @@ import org.boozallen.plugins.jte.init.primitives.injectors.ApplicationEnvironmen
 
 void call(List app_envs, Boolean parallel_step=false, Boolean clean_workspace=false) {
     if (env.VERBOSE > 1) {
-        println "process(${app_envs}, ${parallel_step}, ${clean_workspace})"
+        println "process(app_envs: ${app_envs}, parallel_step: ${parallel_step}, clean_workspace: ${clean_workspace})"
     }    
 
     if (clean_workspace) {
@@ -45,7 +45,7 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
     Map var = [:]
         
     if (env.VERBOSE > 1) {
-        println "process(${app_env}, ${parallel_step})"
+        println "process(app_env: ${app_env}, parallel_step: ${parallel_step})"
     }    
 
     script {        
