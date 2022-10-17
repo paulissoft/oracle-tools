@@ -56,7 +56,7 @@ init() {
     # checking environment
     pwd
 
-    set +eu # some variables may be unset
+    set +eux # some variables may be unset
 
     ${GIT:=git} --version
     ${MVN:=mvn} -B --version

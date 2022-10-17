@@ -236,7 +236,6 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
 set -xv
 ls -l ${process_script}
 chmod +x ${process_script}
-env
 ${process_script}
 """
 
