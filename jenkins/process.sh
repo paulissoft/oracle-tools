@@ -65,28 +65,24 @@ init() {
     set -- $mandatory_variables
     for v
     do
-        echo "v: '$v'"
         test -n "`printenv ${v}`" || { echo "Variable ${v} not set or null" 1>&2; exit 1; }
+        export $v
         echo "$v: '`printenv ${v}`'"
-        export $v # just to be sure
     done
 
     set -- $secret_mandatory_variables
     for v
     do
-        echo "v: '$v'"
         test -n "`printenv ${v}`" || { echo "Variable ${v} not set or null" 1>&2; exit 1; }
-        export $v # just to be sure
+        export $v
     done
 
     set -- $optional_variables
     for v
     do
-        echo "v: '$v'"
         printenv ${v} 1>/dev/null || eval ${v}=
-        printenv ${v} 1>/dev/null || { echo "Programming error, since variable ${v} is stil not set" 1>&2; exit 1; }
+        export $v
         echo "$v: '`printenv ${v}`'"
-        export $v # just to be sure
     done
 
     if [ -n "${SCM_USERNAME}" -a -n "${SCM_EMAIL}" ]
