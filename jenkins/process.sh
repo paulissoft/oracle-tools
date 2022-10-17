@@ -58,8 +58,12 @@ init() {
 
     set +eux # some variables may be unset
 
-    ${GIT:=git} --version
-    ${MVN:=mvn} -B --version
+    # set some defaults
+    test -n "${GIT}" || GIT=git
+    test -n "${MVN}" || MVN=mvn
+    
+    $GIT --version
+    $MVN -B --version
 
     # Stop when variable unset
     set -- $mandatory_variables
