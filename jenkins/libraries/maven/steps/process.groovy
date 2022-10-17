@@ -2,7 +2,7 @@
 import org.boozallen.plugins.jte.init.primitives.injectors.ApplicationEnvironment
 
 void call(List app_envs, Boolean parallel_step=false, Boolean clean_workspace=false) {
-    if (env.VERBOSE > 1) {
+    if (verbose > 1) {
         println "process(app_envs: ${app_envs}, parallel_step: ${parallel_step}, clean_workspace: ${clean_workspace})"
     }    
 
@@ -44,7 +44,7 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
     String app_env_name = app_env.name
     Map vars = [:] // new environment variables
         
-    if (env.VERBOSE > 1) {
+    if (verbose > 1) {
         println "process(app_env: ${app_env}, parallel_step: ${parallel_step})"
     }    
 
@@ -239,7 +239,7 @@ chmod +x ${process_script}
 ${process_script}
 """
 
-                    if (env.VERBOSE > 0) {
+                    if (verbose > 0) {
                         echo "Script to execute:\n${script}"
                     }
 
@@ -312,7 +312,7 @@ String get_env(app_env_name, app_env, String key, Boolean mandatory=true, Intege
         assert !is_empty(value) : error
     }
 
-    if (env.VERBOSE > 0) {
+    if (verbose > 0) {
         println "Setting environment variable $KEY to '$value'"
     }
     
@@ -320,7 +320,7 @@ String get_env(app_env_name, app_env, String key, Boolean mandatory=true, Intege
 }
 
 void show_env(app_env, pipelineConfig, env) {
-    if (!(env.VERBOSE > 0)) {
+    if (!(verbose > 0)) {
         return
     }
 
@@ -368,4 +368,8 @@ void show_env(app_env, pipelineConfig, env) {
 
 Boolean is_empty(value) {
     return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
+}
+
+Integer verbose() {
+    return env.VERBOSE && env.VERBOSE.isInteger() ? env.VERBOSE as Integer : 0
 }
