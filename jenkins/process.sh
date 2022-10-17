@@ -4,6 +4,8 @@
 # Environment variables must be set otherwise an error occurs (-eu above).
 
 # The following variables need to be set (and should be exported):
+read --help
+
 read -r -d '' mandatory_variables <<EOF
 SCM_BRANCH
 CONF_DIR
