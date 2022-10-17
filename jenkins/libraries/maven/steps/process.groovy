@@ -361,6 +361,6 @@ Boolean is_empty(value) {
     return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
 }
 
-void to_key_value = {
+def to_key_value = {
     it.collect { /$it.key="$it.value"/ } join "\n"
 }
