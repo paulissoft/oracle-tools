@@ -1,3 +1,2 @@
 // -*- mode: groovy; coding: utf-8 -*-
-// -*- mode: groovy; coding: utf-8 -*-
 process([ dev, test, acc, prod ])
