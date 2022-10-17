@@ -1,11 +1,42 @@
 // -*- mode: groovy; coding: utf-8 -*-
 import org.boozallen.plugins.jte.init.primitives.injectors.ApplicationEnvironment
 
-void call(List app_envs, Boolean parallel_step=false) {
+void call(List app_envs, Boolean parallel_step=false, Boolean clean_workspace=false) {
+    if (env.VERBOSE > 1) {
+        println "process(${app_envs}, ${parallel_step}, ${clean_workspace})"
+    }    
+
+    if (clean_workspace) {
+        cleanWs()
+    }
+    
     if (parallel_step) {
-        parallel(app_envs)
+        // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
+    
+        // While you can't use Groovy's .collect or similar methods currently, you can
+        // still transform a list into a set of actual build steps to be executed in
+        // parallel.
+
+        // The map we'll store the parallel steps in before executing them.
+        Map parallel_steps = app_envs.collectEntries {
+            it instanceof ApplicationEnvironment ? ["${it}" : transform_to_step(it)] : [:]
+        }
+    
+        // Actually run the steps in parallel - parallel takes a map as an argument,
+        // hence the above.
+
+        // PLEASE BE CAREFUL: parallel is also a Jenkins pipeline step so add steps. in front
+        steps.parallel parallel_steps
     } else {
-        sequential(app_envs)
+        node() {
+            for (app_env in app_envs) {
+                if (app_env instanceof ApplicationEnvironment) {
+                    stage("${app_env}") {
+                        process app_env
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -14,7 +45,7 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
     Map var = [:]
         
     if (env.VERBOSE > 1) {
-        println "process(${app_env})"
+        println "process(${app_env}, ${parallel_step})"
     }    
 
     script {        
@@ -217,45 +248,6 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
             }
         }
     }
-}
-
-void sequential(app_envs) {
-    if (env.VERBOSE > 1) {
-        println "process.sequential(${app_envs})"
-    }    
-
-    node() {
-        for (app_env in app_envs) {
-            if (app_env instanceof ApplicationEnvironment) {
-                stage("${app_env}") {
-                    process app_env
-                }
-            }
-        }
-    }
-}
-
-void parallel(app_envs) {
-    if (env.VERBOSE > 1) {
-        println "process.parallel(${app_envs})"
-    }    
-
-    // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
-    
-    // While you can't use Groovy's .collect or similar methods currently, you can
-    // still transform a list into a set of actual build steps to be executed in
-    // parallel.
-
-    // The map we'll store the parallel steps in before executing them.
-    Map parallel_steps = app_envs.collectEntries {
-        it instanceof ApplicationEnvironment ? ["${it}" : transform_to_step(it)] : [:]
-    }
-    
-    // Actually run the steps in parallel - parallel takes a map as an argument,
-    // hence the above.
-
-    // PLEASE BE CAREFUL: parallel is also a Jenkins pipeline step so add steps. in front
-    steps.parallel parallel_steps
 }
 
 // Take the string and echo it.
