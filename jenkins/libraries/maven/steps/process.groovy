@@ -230,8 +230,8 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
 
                     String oracle_tools = var.SCM_PROJECT_ORACLE_TOOLS ?: ${var.SCM_PROJECT}
                     String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
-                    String script = to_key_value(var) + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
-                    
+                    String script = var.collect({it => /$it.key="$it.value"/}).join("\n") + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
+
                     echo "Shell script to execute:\n$script"
                         
                     if (var.DRY_RUN) {
@@ -359,8 +359,4 @@ void show_env(app_env, pipelineConfig, env) {
 
 Boolean is_empty(value) {
     return value == null || value.toString().equals("") || value.toString().equals("[]") || value.toString().equals("{[:]")
-}
-
-def to_key_value = {
-    it.collect { /$it.key="$it.value"/ } join "\n"
 }
