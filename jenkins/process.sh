@@ -276,7 +276,7 @@ main() {
     
     test -z "${APEX_ACTIONS}" || process_apex
     # inverse
-    test "$parallel" -eq 0 || test "$apex_acm_write" -eq 0 || signal_scm_ready apex    
+    test "$parallel" -eq 0 || test "$apex_scm_write" -eq 0 || signal_scm_ready apex    
 }
 
 main
