@@ -68,6 +68,7 @@ init() {
         echo "v: '$v'"
         test -n "`printenv ${v}`" || { echo "Variable ${v} not set or null" 1>&2; exit 1; }
         echo "$v: '`printenv ${v}`'"
+        export $v # just to be sure
     done
 
     set -- $secret_mandatory_variables
@@ -75,15 +76,17 @@ init() {
     do
         echo "v: '$v'"
         test -n "`printenv ${v}`" || { echo "Variable ${v} not set or null" 1>&2; exit 1; }
+        export $v # just to be sure
     done
 
     set -- $optional_variables
     for v
     do
         echo "v: '$v'"
-        printenv ${v} 1>/dev/null || eval export ${v}=
+        printenv ${v} 1>/dev/null || eval ${v}=
         printenv ${v} 1>/dev/null || { echo "Programming error, since variable ${v} is stil not set" 1>&2; exit 1; }
         echo "$v: '`printenv ${v}`'"
+        export $v # just to be sure
     done
 
     if [ -n "${SCM_USERNAME}" -a -n "${SCM_EMAIL}" ]
@@ -108,7 +111,6 @@ init() {
         # let MVN_LOG_DIR point to a non existing directory so ${MVN} will not create the log file
         MVN_LOG_DIR=
     fi
-    export MVN_LOG_DIR
 
     set -eux
 

@@ -371,6 +371,9 @@ Boolean is_empty(value) {
 }
 
 Integer verbose() {
-    String VERBOSE = env.VERBOSE ?: ""
-    return VERBOSE.isInteger() ? VERBOSE as Integer : 0
+    try {
+        return env.containsKey('VERBOSE') && env.VERBOSE != null && env.VERBOSE.isInteger() ? env.VERBOSE as Integer : 0
+    } catch (e) {
+        return 0
+    }
 }
