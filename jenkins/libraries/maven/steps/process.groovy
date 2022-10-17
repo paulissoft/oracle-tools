@@ -227,15 +227,16 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
                     }
                     
                     echo "About to execute Maven actions"
+
+                    String oracle_tools = var.SCM_PROJECT_ORACLE_TOOLS ?: ${var.SCM_PROJECT}
+                    String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
+                    String script = to_key_value(var) + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
+                    
+                    echo "Shell script to execute:\n$script"
+                        
                     if (var.DRY_RUN) {
                         echo "Skipping the execution of Maven actions since it is a dry run"
                     } else {
-                        String oracle_tools = var.SCM_PROJECT_ORACLE_TOOLS ?: ${var.SCM_PROJECT}
-                        String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
-                        String script = to_key_value(var) + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
-
-                        echo "Shell script to execute:\n$script"
-                        
                         if (!is_empty(var.SCM_CREDENTIALS)) {
                             sshagent([var.SCM_CREDENTIALS]) {
                                 sh("""$script""")
