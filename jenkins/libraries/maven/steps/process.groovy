@@ -230,10 +230,12 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
 
                     String oracle_tools = vars.SCM_PROJECT_ORACLE_TOOLS ?: ${vars.SCM_PROJECT}
                     String process_script = "$WORKSPACE/${app_env_name}/${oracle_tools}/jenkins/process.sh"
-                    String script = vars.collect({key, value -> /$key="$value"/}).join("\n") + "ls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
+                    String script = "set +xv\n" + vars.collect({key, value -> /$key="$value"/}).join("\n") + "\nset -xv\nls -l ${process_script} && chmod +x ${process_script} && ${process_script}"
 
-                    echo "Shell script to execute:\n$script"
-                        
+                    if (env.VERBOSE > 0) {
+                        echo "Script to execute:\n${script}"
+                    }
+
                     if (vars.DRY_RUN) {
                         echo "Skipping the execution of Maven actions since it is a dry run"
                     } else {
