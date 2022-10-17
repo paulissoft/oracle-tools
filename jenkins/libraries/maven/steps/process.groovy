@@ -226,7 +226,7 @@ void sequential(app_envs) {
 
     node() {
         for (app_env in app_envs) {
-            if (app_env != null) {
+            if (app_env instanceof ApplicationEnvironment) {
                 stage("${app_env}") {
                     process app_env
                 }
@@ -248,7 +248,7 @@ void parallel(app_envs) {
 
     // The map we'll store the parallel steps in before executing them.
     Map parallel_steps = app_envs.collectEntries {
-        it != null ? ["${it}" : transform_to_step(it)] : [:]
+        it instanceof ApplicationEnvironment ? ["${it}" : transform_to_step(it)] : [:]
     }
     
     // Actually run the steps in parallel - parallel takes a map as an argument,
