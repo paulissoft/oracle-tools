@@ -58,13 +58,6 @@ init() {
 
     set +eux # some variables may be unset
 
-    # set some defaults
-    test -n "${GIT}" || GIT=git
-    test -n "${MVN}" || MVN=mvn
-    
-    $GIT --version
-    $MVN -B --version
-
     # Stop when variable unset
     set -- $mandatory_variables
     for v
@@ -89,6 +82,15 @@ init() {
         echo "$v: '`printenv ${v}`'"
     done
 
+    set -eux
+    
+    # set some defaults
+    test -n "${GIT}" || GIT=git
+    test -n "${MVN}" || MVN=mvn
+    
+    $GIT --version
+    $MVN -B --version
+
     if [ -n "${SCM_USERNAME}" -a -n "${SCM_EMAIL}" ]
     then
         export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
@@ -111,8 +113,6 @@ init() {
         # let MVN_LOG_DIR point to a non existing directory so ${MVN} will not create the log file
         MVN_LOG_DIR=
     fi
-
-    set -eux
 
     # get absolute path
     db_config_dir=`cd ${CONF_DIR} && pwd`
