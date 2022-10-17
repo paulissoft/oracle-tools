@@ -53,15 +53,16 @@ init() {
     # checking environment
     pwd
 
-    set +eux # some variables may be unset
+    set +eu # some variables may be unset
 
     ${GIT:=git} --version
-    ${MVN:=mvn} --version
+    ${MVN:=mvn} -B --version
 
     # Stop when variable unset
     set -- $mandatory_variables
     for v
     do
+        echo "v: '$v'"
         test -n "${!v}" || { echo "Variable ${!v} not set or null" 1>&2; exit 1; }
         echo "$v: '${!v}'"
     done
@@ -69,12 +70,14 @@ init() {
     set -- $secret_mandatory_variables
     for v
     do
+        echo "v: '$v'"
         test -n "${!v}" || { echo "Variable ${!v} not set" 1>&2; exit 1; }
     done
 
     set -- $optional_variables
     for v
     do
+        echo "v: '$v'"
         printenv ${!v} 1>/dev/null || eval export ${!v}=
         printenv ${!v} 1>/dev/null || { echo "Programming error, since variable ${!v} is stil not set" 1>&2; exit 1; }
         echo "$v: '${!v}'"
