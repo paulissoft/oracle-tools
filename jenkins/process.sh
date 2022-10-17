@@ -4,37 +4,40 @@
 # Environment variables must be set otherwise an error occurs (-eu above).
 
 # The following variables need to be set (and should be exported):
-mandatory_variables=' \
-                   SCM_BRANCH \
-                   CONF_DIR \
-                   DB \
-                   DB_DIR \
-                   DB_ACTIONS \
-                   APEX_DIR \
-                   APEX_ACTIONS \
-                   BUILD_NUMBER \
-                   WORKSPACE \
-'
+read -r -d '' mandatory_variables <<EOF
+SCM_BRANCH
+CONF_DIR
+DB
+DB_DIR
+DB_ACTIONS
+APEX_DIR
+APEX_ACTIONS
+BUILD_NUMBER
+WORKSPACE
+
+EOF
 
 # also mandatory but do not echo them
-secret_mandatory_variables=' \
-                          DB_USERNAME \
-                          DB_PASSWORD \
-'
+read -r -d '' secret_mandatory_variables <<EOF
+DB_USERNAME
+DB_PASSWORD
+
+EOF
 
 # 
 # The following variables may be set (and should be exported):
-optional_variables=' \
-                  SCM_USERNAME \
-                  SCM_EMAIL \
-                  SCM_BRANCH_PREV \
-                  GIT \
-                  MVN \
-                  MVN_ARGS \
-                  MVN_LOG_DIR \
-                  APP_ENV \
-                  APP_ENV_PREV \
-'
+read -r -d '' optional_variables <<EOF
+SCM_USERNAME
+SCM_EMAIL
+SCM_BRANCH_PREV
+GIT
+MVN
+MVN_ARGS
+MVN_LOG_DIR
+APP_ENV
+APP_ENV_PREV
+
+EOF
 
 #
 # See also libraries/maven/steps/process.groovy.
