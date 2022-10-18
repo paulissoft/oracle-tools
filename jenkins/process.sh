@@ -220,6 +220,7 @@ invoke_mvn()
         case $tool in
             db)
                 test $db_scm_write -eq 0 || signal_scm_ready FAIL $tool
+                test $apex_scm_write -eq 0 || signal_scm_ready FAIL $tool
                 ;;
             apex)
                 test $apex_scm_write -eq 0 || signal_scm_ready FAIL $tool
