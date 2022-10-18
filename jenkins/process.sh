@@ -171,7 +171,9 @@ signal_scm_ready() {
 
         # signal the rest of the jobs that this part is ready
         echo $status > $scm_ready_file
-        ls -l $scm_ready_file
+        echo "pwd: `pwd`"
+        echo "scm_ready_file: $scm_ready_file"
+        ls -l ${WORKSPACE}
     fi
 }
 
@@ -184,7 +186,9 @@ wait_for_scm_ready_prev() {
         declare -r increment=10
         declare -r timeout=600
 
-        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; date; done"
+        echo "pwd: `pwd`"
+        echo "scm_ready_file: $scm_ready_file"
+        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; date; ls -l ${WORKSPACE}; done"
 
         if [ ! -f "$scm_ready_file" ]
         then
