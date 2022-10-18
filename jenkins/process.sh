@@ -1,4 +1,8 @@
-#!/bin/sh -eux
+#!/usr/bin/env bash
+
+# Only Korn and Bash seem to support trap ... ERR
+
+set -eux
 
 # Script to be invoked from a Jenkins build.
 # Environment variables must be set otherwise an error occurs (-eu above).
