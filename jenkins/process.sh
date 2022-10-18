@@ -1,4 +1,6 @@
-#!/bin/sh -eux
+#!/usr/bin/env bash
+
+set -eux
 
 # Script to be invoked from a Jenkins build.
 # Environment variables must be set otherwise an error occurs (-eu above).
@@ -163,11 +165,11 @@ init() {
 signal_scm_ready() {
     if [ -n "$APP_ENV" ]
     then
-        status=$1
-        tool=$2
+        # $1: status
+        # $2: tool
 
         # signal the rest of the jobs that this part is ready
-        echo $status > "${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
+        echo $1 > "${WORKSPACE}/${APP_ENV}.${2}.scm.ready"
     fi
 }
 
@@ -175,10 +177,10 @@ signal_scm_ready() {
 wait_for_scm_ready_prev() {    
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then
-        tool=$1
-        export SCM_READY_FILE="${WORKSPACE}/${APP_ENV_PREV}.${tool}.scm.ready"
+        # $1: tool
+        export SCM_READY_FILE="${WORKSPACE}/${APP_ENV_PREV}.${1}.scm.ready"
         export INCREMENT=10
-        timeout=3600
+        declare -r timeout=3600
 
         perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc 'while [ ! -f "$SCM_READY_FILE" ]; do sleep $INCREMENT; done'
 
@@ -196,9 +198,9 @@ wait_for_scm_ready_prev() {
 
 invoke_mvn()
 {
-    dir=$1
-    profile=$2
-    tool=$3
+    declare -r dir=$1
+    declare -r profile=$2
+    declare -r tool=$3
     
     if [ -n "$MVN_LOG_DIR" ]
     then
@@ -210,26 +212,28 @@ invoke_mvn()
     # disable error checking to catch the mvn error status
     set +e
     ${MVN} -B -f ${dir} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${profile} $mvn_log_args ${MVN_ARGS}
-    status=$?
+    declare -r status=$?
     # enable error checking
     set -e
     if [ $status -ne 0 ]
     then
-        case $profile in
-            db-generate-ddl-full | apex-export)
-                # Git changing profiles
-                signal_scm_ready FAIL $tool
-                exit 1
+        case $tool in
+            db)
+                test $db_scm_write -eq 0 || signal_scm_ready FAIL $tool
+                ;;
+            apex)
+                test $apex_scm_write -eq 0 || signal_scm_ready FAIL $tool
                 ;;
         esac
+        exit $status
     fi
 }
 
 process_git()
 {
-    description=$1
+    declare -r description=$1
 
-    workspace_changes="`${GIT} status --porcelain`" 
+    declare -r workspace_changes="`${GIT} status --porcelain`" 
 
     echo "workspace changes: ${workspace_changes}"
     
