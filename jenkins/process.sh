@@ -136,7 +136,7 @@ init() {
         test "$db_scm_write" -eq 0 || command="signal_scm_ready FAIL db; $command"
         if [ "$command" != 'exit 1' ]
         then
-            trap "$command" ERR
+            trap "set -x; $command" ERR
         fi
     fi
 
