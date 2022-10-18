@@ -83,7 +83,27 @@ init() {
     done
 
     set -eux
-    
+
+    parallel=0
+    if [ -n "$APP_ENV" ]
+    then
+        parallel=1
+    fi
+
+    trap 'signal_scm_ready FAIL db; signal_scm_ready FAIL apex' ERR
+
+    db_scm_write=0
+    if echo "$DB_ACTIONS" | grep db-generate-ddl-full
+    then
+        db_scm_write=1
+    fi
+
+    apex_scm_write=0
+    if echo "$APEX_ACTIONS" | grep apex-export
+    then
+        apex_scm_write=1
+    fi
+
     # set some defaults
     test -n "${GIT}" || GIT=git
     test -n "${MVN}" || MVN=mvn
@@ -116,33 +136,28 @@ init() {
 
     # get absolute path
     db_config_dir=`cd ${CONF_DIR} && pwd`
-
-    db_scm_write=0
-    if echo "$DB_ACTIONS" | grep db-generate-ddl-full
-    then
-        db_scm_write=1
-    fi
-
-    apex_scm_write=0
-    if echo "$APEX_ACTIONS" | grep apex-export
-    then
-        apex_scm_write=1
-    fi
-
-    parallel=0
-    if [ -n "$APP_ENV" ]
-    then
-        parallel=1
-    fi
 }
 
 signal_scm_ready() {
-    tool=$1
+    status=$1
+    tool=$2
 
     if [ -n "$APP_ENV" ]
     then
         # signal the rest of the jobs that this part is ready
-        touch "${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
+        echo $status > "${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
+
+        # change trap only when status is OK
+        if [ $status = 'OK' ]
+        then
+            if [ $tool = 'db' ]
+            then
+                trap 'signal_scm_ready FAIL apex' ERR
+            else
+                # clear all
+                trap - ERR
+            fi
+        fi
     fi
 }
 
@@ -163,8 +178,9 @@ wait_for_scm_ready_prev() {
             echo "Timeout after waiting $timeout seconds for file $SCM_READY_FILE" 1>&2
             exit 1
         fi
-        
+        status=`cat $SCM_READY_FILE`
         rm -f "$SCM_READY_FILE"
+        test "$status" = 'OK' || { echo "Process that wrote $SCM_READY_FILE failed with status '$status'" 1>&2; exit 1 }
     fi
 }
 
@@ -256,8 +272,8 @@ main() {
     if [ "$parallel" -ne 0 ]
     then
         # signal as soon as possible both DB and APEX
-        test "$db_scm_write" -ne 0 || signal_scm_ready db
-        test "$apex_scm_write" -ne 0 || signal_scm_ready apex    
+        test "$db_scm_write" -ne 0 || signal_scm_ready OK db
+        test "$apex_scm_write" -ne 0 || signal_scm_ready OK apex
 
         wait_for_scm_ready_prev db    
         wait_for_scm_ready_prev apex
@@ -272,11 +288,11 @@ main() {
 
     test -z "${DB_ACTIONS}" || process_db
     # inverse
-    test "$parallel" -eq 0 || test "$db_scm_write" -eq 0 || signal_scm_ready db
+    test "$parallel" -eq 0 || test "$db_scm_write" -eq 0 || signal_scm_ready OK db
     
     test -z "${APEX_ACTIONS}" || process_apex
     # inverse
-    test "$parallel" -eq 0 || test "$apex_scm_write" -eq 0 || signal_scm_ready apex    
+    test "$parallel" -eq 0 || test "$apex_scm_write" -eq 0 || signal_scm_ready OK apex    
 }
 
 main
