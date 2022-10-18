@@ -94,8 +94,6 @@ init() {
         parallel=1
     fi
 
-    trap 'signal_scm_ready FAIL db; signal_scm_ready FAIL apex; exit 0' ERR
-
     db_scm_write=0
     if echo "$DB_ACTIONS" | grep db-generate-ddl-full
     then
@@ -106,6 +104,19 @@ init() {
     if echo "$APEX_ACTIONS" | grep apex-export
     then
         apex_scm_write=1
+    fi
+
+    if [ $parallel -eq 1 ]
+    then
+        # trap command must end with 'exit STATUS' where STATUS will be the final $?
+        command='exit 1'
+        # final trap command should do db first and then apex so that's why we reverse here
+        test "$apex_scm_write" -eq 0 || command="signal_scm_ready FAIL apex; $command"
+        test "$db_scm_write" -eq 0 || command="signal_scm_ready FAIL db; $command"
+        if [ "$command" != 'exit 1' ]
+        then
+            trap "$command" ERR
+        fi
     fi
 
     # set some defaults
@@ -150,18 +161,6 @@ signal_scm_ready() {
     then
         # signal the rest of the jobs that this part is ready
         echo $status > "${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
-
-        # change trap only when status is OK
-        if [ $status = 'OK' ]
-        then
-            if [ $tool = 'db' ]
-            then
-                trap 'signal_scm_ready FAIL apex' ERR
-            else
-                # clear all
-                trap - ERR
-            fi
-        fi
     fi
 }
 
