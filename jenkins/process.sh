@@ -101,22 +101,37 @@ init() {
         parallel=1
     fi
 
-    # Does the previous application environment write to Git after its db actions?
-    db_scm_write=0
-    if echo "$DB_ACTIONS_PREV" | grep db-generate-ddl-full
+    if [ "$parallel" -eq 0 ]
     then
-        db_scm_write=1
-    fi
+        db_scm_write_prev=0
+        db_scm_write=0
+        apex_scm_write_prev=0
+        apex_scm_write=0
+    else
+        # Does the previous application environment write to Git after its db actions?
+        if echo "$DB_ACTIONS_PREV" | grep db-generate-ddl-full
+        then
+            db_scm_write_prev=1
+        fi
 
-    # Does the previous application environment write to Git after its APEX actions?
-    apex_scm_write=0
-    if echo "$APEX_ACTIONS_PREV" | grep apex-export
-    then
-        apex_scm_write=1
-    fi
+        # Does the current application environment write to Git after its db actions?
+        if echo "$DB_ACTIONS" | grep db-generate-ddl-full
+        then
+            db_scm_write=1
+        fi
 
-    if [ $parallel -eq 1 ]
-    then
+        # Does the previous application environment write to Git after its APEX actions?
+        if echo "$APEX_ACTIONS_PREV" | grep apex-export
+        then
+            apex_scm_write_prev=1
+        fi
+
+        # Does the current application environment write to Git after its APEX actions?
+        if echo "$APEX_ACTIONS" | grep apex-export
+        then
+            apex_scm_write=1
+        fi
+
         # trap command must end with 'exit STATUS' where STATUS will be the final $?
         command='exit 1'
         # final trap command should do db first and then apex so that's why we reverse here
@@ -287,8 +302,8 @@ main() {
         test "$db_scm_write" -ne 0 || signal_scm_ready OK db
         test "$apex_scm_write" -ne 0 || signal_scm_ready OK apex
 
-        wait_for_scm_ready_prev db    
-        wait_for_scm_ready_prev apex
+        test "$db_scm_write_prev" -eq 0 || wait_for_scm_ready_prev db    
+        test "$apex_scm_write_prev" -eq 0 || wait_for_scm_ready_prev apex
     fi
 
     if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
