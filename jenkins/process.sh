@@ -225,11 +225,13 @@ invoke_mvn()
     then
         case $tool in
             db)
-                test $db_scm_write -eq 0 || signal_scm_ready FAIL $tool
-                test $apex_scm_write -eq 0 || signal_scm_ready FAIL $tool
+                # APEX comes always after db so we need to signal that scm is ready for APEX too
+                test $db_scm_write -eq 0 || signal_scm_ready FAIL db
+                test $apex_scm_write -eq 0 || signal_scm_ready FAIL apex
                 ;;
             apex)
-                test $apex_scm_write -eq 0 || signal_scm_ready FAIL $tool
+                # APEX comes always after db so there is no need to signal scm ready for db (should have been already)
+                test $apex_scm_write -eq 0 || signal_scm_ready FAIL apex
                 ;;
         esac
         exit $status
