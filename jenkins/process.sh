@@ -30,8 +30,6 @@ EOF`
 # The following variables may be unset or empty (and should be exported):
 optional_variables=`cat <<EOF
 APEX_ACTIONS
-APP_ENV
-APP_ENV_PREV
 DB_ACTIONS
 GIT
 MVN
@@ -40,6 +38,15 @@ MVN_LOG_DIR
 SCM_BRANCH_PREV
 SCM_EMAIL
 SCM_USERNAME
+
+EOF`
+
+# The following variables may be unset or empty (and should be exported):
+parallel_variables=`cat <<EOF
+APEX_ACTIONS_PREV
+APP_ENV
+APP_ENV_PREV
+DB_ACTIONS_PREV
 
 EOF`
 
@@ -78,7 +85,7 @@ init() {
         export $v
     done
 
-    set -- $optional_variables
+    set -- $optional_variables $parallel_variables
     for v
     do
         test -n "`printenv ${v}`" || eval ${v}=
@@ -94,14 +101,16 @@ init() {
         parallel=1
     fi
 
+    # Does the previous application environment write to Git after its db actions?
     db_scm_write=0
-    if echo "$DB_ACTIONS" | grep db-generate-ddl-full
+    if echo "$DB_ACTIONS_PREV" | grep db-generate-ddl-full
     then
         db_scm_write=1
     fi
 
+    # Does the previous application environment write to Git after its APEX actions?
     apex_scm_write=0
-    if echo "$APEX_ACTIONS" | grep apex-export
+    if echo "$APEX_ACTIONS_PREV" | grep apex-export
     then
         apex_scm_write=1
     fi

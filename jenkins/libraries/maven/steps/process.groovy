@@ -92,14 +92,14 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
             vars.DB = get_env(app_env_name, app_env, 'db', true, 1)
             vars.DB_CREDENTIALS = get_env(app_env_name, app_env, 'db_credentials', true, 1) // application environment specific
             vars.DB_DIR = get_env(app_env_name, app_env, 'db_dir')
-            vars.DB_ACTIONS = get_env(app_env_name, app_env, 'db_actions', false, 2) // application environment or pipeline configuration specific
+            vars.DB_ACTIONS = get_env(app_env_name, app_env, 'db_actions', false, 1) // just the application environment (see vars.DB_ACTIONS_PREV below)
 
             /*
              -- The APEX info to work on
              */
             
             vars.APEX_DIR = get_env(app_env_name, app_env, 'apex_dir')
-            vars.APEX_ACTIONS = get_env(app_env_name, app_env, 'apex_actions', false, 2) // application environment or pipeline configuration specific
+            vars.APEX_ACTIONS = get_env(app_env_name, app_env, 'apex_actions', false, 1) // just the application environment (see vars.APEX_ACTIONS_PREV below)
 
             /*
              -- SCM credentials username and e-mail
@@ -134,7 +134,9 @@ void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {
             if (parallel_step) {
                 vars.APP_ENV = app_env.name
                 if (app_env.previous != null) {
+                    vars.APEX_ACTIONS_PREV = app_env.previous.apex_actions
                     vars.APP_ENV_PREV = app_env.previous.name
+                    vars.DB_ACTIONS_PREV = app_env.previous.db_actions
                 }
             }
         }
