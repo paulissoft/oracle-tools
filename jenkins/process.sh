@@ -182,9 +182,9 @@ wait_for_scm_ready_prev() {
         declare -r tool=$1        
         declare -r scm_ready_file="${WORKSPACE}/${APP_ENV_PREV}.${tool}.scm.ready"
         declare -r increment=10
-        declare -r timeout=60
+        declare -r timeout=600
 
-        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; done"
+        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; date; done"
 
         if [ ! -f "$scm_ready_file" ]
         then
