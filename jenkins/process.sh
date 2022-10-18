@@ -96,18 +96,15 @@ init() {
     set -eux
 
     parallel=0
+    db_scm_write_prev=0
+    db_scm_write=0
+    apex_scm_write_prev=0
+    apex_scm_write=0
+    
     if [ -n "$APP_ENV" ]
     then
         parallel=1
-    fi
 
-    if [ "$parallel" -eq 0 ]
-    then
-        db_scm_write_prev=0
-        db_scm_write=0
-        apex_scm_write_prev=0
-        apex_scm_write=0
-    else
         # Does the previous application environment write to Git after its db actions?
         if echo "$DB_ACTIONS_PREV" | grep db-generate-ddl-full
         then
@@ -178,11 +175,11 @@ init() {
 }
 
 signal_scm_ready() {
-    status=$1
-    tool=$2
-
     if [ -n "$APP_ENV" ]
     then
+        status=$1
+        tool=$2
+
         # signal the rest of the jobs that this part is ready
         echo $status > "${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
     fi
