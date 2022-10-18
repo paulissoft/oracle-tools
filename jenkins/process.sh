@@ -180,7 +180,7 @@ wait_for_scm_ready_prev() {
         fi
         status=`cat $SCM_READY_FILE`
         rm -f "$SCM_READY_FILE"
-        test "$status" = 'OK' || { echo "Process that wrote $SCM_READY_FILE failed with status '$status'" 1>&2; exit 1 }
+        test "$status" = 'OK' || { echo "Process that wrote $SCM_READY_FILE failed with status '$status'" 1>&2; exit 1; }
     fi
 }
 
