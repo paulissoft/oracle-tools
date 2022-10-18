@@ -90,7 +90,7 @@ init() {
         parallel=1
     fi
 
-    trap 'signal_scm_ready FAIL db; signal_scm_ready FAIL apex' ERR
+    trap 'signal_scm_ready FAIL db; signal_scm_ready FAIL apex; exit 0' ERR
 
     db_scm_write=0
     if echo "$DB_ACTIONS" | grep db-generate-ddl-full
