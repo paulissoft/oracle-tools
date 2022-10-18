@@ -165,11 +165,13 @@ init() {
 signal_scm_ready() {
     if [ -n "$APP_ENV" ]
     then
-        # $1: status
-        # $2: tool
+        declare -r status=$1
+        declare -r tool=$2
+        declare -r scm_ready_file="${WORKSPACE}/${APP_ENV}.${tool}.scm.ready"
 
         # signal the rest of the jobs that this part is ready
-        echo $1 > "${WORKSPACE}/${APP_ENV}.${2}.scm.ready"
+        echo $status > $scm_ready_file
+        ls -l $scm_ready_file
     fi
 }
 
@@ -177,22 +179,24 @@ signal_scm_ready() {
 wait_for_scm_ready_prev() {    
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then
-        # $1: tool
-        export SCM_READY_FILE="${WORKSPACE}/${APP_ENV_PREV}.${1}.scm.ready"
-        export INCREMENT=10
-        declare -r timeout=3600
+        declare -r tool=$1        
+        declare -r scm_ready_file="${WORKSPACE}/${APP_ENV_PREV}.${tool}.scm.ready"
+        declare -r increment=10
+        declare -r timeout=60
 
-        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc 'while [ ! -f "$SCM_READY_FILE" ]; do sleep $INCREMENT; done'
+        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; done"
 
-        if [ ! -f "$SCM_READY_FILE" ]
+        if [ ! -f "$scm_ready_file" ]
         then
             # Should never come here due to timeout.pl script but it does not hurt neither
-            echo "Timeout after waiting $timeout seconds for file $SCM_READY_FILE" 1>&2
+            echo "Timeout after waiting $timeout seconds for file $scm_ready_file" 1>&2
             exit 1
         fi
-        status=`cat $SCM_READY_FILE`
-        rm -f "$SCM_READY_FILE"
-        test "$status" = 'OK' || { echo "Process that wrote $SCM_READY_FILE failed with status '$status'" 1>&2; exit 1; }
+
+        declare -r status=`cat $scm_ready_file`
+
+        rm -f "$scm_ready_file"
+        test "$status" = 'OK' || { echo "Process that wrote $scm_ready_file failed with status '$status'" 1>&2; exit 1; }
     fi
 }
 
@@ -212,7 +216,9 @@ invoke_mvn()
     # disable error checking to catch the mvn error status
     set +e
     ${MVN} -B -f ${dir} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${profile} $mvn_log_args ${MVN_ARGS}
+
     declare -r status=$?
+
     # enable error checking
     set -e
     if [ $status -ne 0 ]
@@ -233,7 +239,6 @@ invoke_mvn()
 process_git()
 {
     declare -r description=$1
-
     declare -r workspace_changes="`${GIT} status --porcelain`" 
 
     echo "workspace changes: ${workspace_changes}"
@@ -286,7 +291,8 @@ process_apex() {
 
     # Check if only create_application.sql files have changed their p_flow_version.
     # Be aware of a default output width of 80, so use --stat=1000
-    result="`${GIT} diff --stat=1000 -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+    declare -r result="`${GIT} diff --stat=1000 -- ${APEX_DIR} | awk -f $oracle_tools_dir/jenkins/only_create_application_changed.awk`"
+    
     if [ "$result" = "YES" ]
     then
         # 1) Retrieve all create_application.sql files that have changed only in two places (one insertion, one deletion) 
