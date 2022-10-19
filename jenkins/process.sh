@@ -191,7 +191,7 @@ wait_for_scm_ready_prev() {
         declare -r tool=$1        
         declare -r scm_ready_file="${WORKSPACE}/${APP_ENV_PREV}.${tool}.scm.ready"
         declare -r increment=10
-        declare -r timeout=600
+        declare -r timeout=3600
 
         echo "pwd: `pwd`"
         echo "scm_ready_file: $scm_ready_file"
@@ -273,7 +273,7 @@ process_db() {
     echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 
     set -- ${DB_ACTIONS}
-    for profile; do x invoke_mvn ${DB_DIR} $profile db; done
+    for profile; do invoke_mvn ${DB_DIR} $profile db; done
     
     process_git "Database changes"
     
@@ -285,7 +285,7 @@ process_db() {
         DB_ACTIONS="db-install db-generate-ddl-full"
         echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
         set -- ${DB_ACTIONS}
-        for profile; do x invoke_mvn ${DB_DIR} $profile db; done
+        for profile; do invoke_mvn ${DB_DIR} $profile db; done
         echo "there should be no files to add for Git:"
         test -z "`${GIT} status --porcelain`"
     fi
@@ -295,7 +295,7 @@ process_apex() {
     echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 
     set -- ${APEX_ACTIONS}
-    for profile; do x invoke_mvn ${APEX_DIR} $profile apex; done
+    for profile; do invoke_mvn ${APEX_DIR} $profile apex; done
 
     # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use ${GIT} diff --stat=1000 to verify it is just that file and that line
     # 
