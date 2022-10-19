@@ -66,6 +66,7 @@
     <conf.phase.init>initialize</conf.phase.init>
     <!-- give the generate-resources phase a chance to extract resources -->
     <conf.phase.process>process-resources</conf.phase.process>
+    <conf.test.connection.timeout>600</conf.test.connection.timeout>
     <!-- 
          This property is used to construct the db.username property below in
          the conf-connect antrun execution.
@@ -387,6 +388,8 @@
                             resultproperty="test.connection.result"
                             failifexecutionfails="false">
                         <arg value="${oracle-tools.dir}/src/scripts/timeout.pl"/>
+                        <arg value="--timeout"/>
+                        <arg value="${conf.test.connection.timeout}"/>
                         <arg value="mvn"/>
                         <arg value="-q"/>
                         <arg value="-f"/>
