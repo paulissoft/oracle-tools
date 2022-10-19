@@ -60,7 +60,7 @@ begin
       then exit;
     end;
   end loop;
-  if l_message is not null
+  if not(l_message is null or l_message like '%Unable to set values for index UTL_RECOMP_SORT_%: does not exist or insufficient privileges%')
   then
     raise_application_error(-20000, l_message || chr(10));
   end if;
