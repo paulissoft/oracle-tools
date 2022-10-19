@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eux
+set -eu
 
 # Script to be invoked from a Jenkins build.
 # Environment variables must be set otherwise an error occurs (-eu above).
@@ -52,6 +52,7 @@ EOF`
 # See also libraries/maven/steps/process.groovy.
 
 # Functions:
+# - x
 # - init
 # - invoke_mvn
 # - process_git
@@ -59,13 +60,17 @@ EOF`
 # - process_apex
 # - main
 
+
+# start a subshell to set -x and run the command
+function x() { (set -x; "$@") } 
+
 init() {
     oracle_tools_dir="`dirname $0`/.."
 
     # checking environment
     pwd
 
-    set +eux # some variables may be unset
+    set +eu # some variables may be unset
 
     # Stop when variable unset
     set -- $mandatory_variables
@@ -91,7 +96,7 @@ init() {
         echo "$v: '`printenv ${v}`'"
     done
 
-    set -eux
+    set -eu
 
     parallel=0
     db_scm_write_prev=0
@@ -138,8 +143,8 @@ init() {
     if [ -n "${SCM_USERNAME}" -a -n "${SCM_EMAIL}" ]
     then
         export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
-        ${GIT} config user.name ${SCM_USERNAME}
-        ${GIT} config user.email ${SCM_EMAIL}
+        x ${GIT} config user.name ${SCM_USERNAME}
+        x ${GIT} config user.email ${SCM_EMAIL}
     fi
 
     # ensure that -l $MVN_LOG_DIR by default does not exist so Maven will log to stdout
@@ -160,6 +165,9 @@ init() {
 
     # get absolute path
     db_config_dir=`cd ${CONF_DIR} && pwd`
+
+    trap 'Normal exit && echo "status: $?"' EXIT
+    trap 'Error && echo "status: $?"' ERR
 }
 
 signal_scm_ready() {
@@ -188,7 +196,7 @@ wait_for_scm_ready_prev() {
 
         echo "pwd: `pwd`"
         echo "scm_ready_file: $scm_ready_file"
-        perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; date; ls -l ${WORKSPACE}; done"
+        x perl ${oracle_tools_dir}/src/scripts/timeout.pl -t $timeout sh -xc "while [ ! -f $scm_ready_file ]; do sleep $increment; date; ls -l ${WORKSPACE}; done"
 
         if [ ! -f "$scm_ready_file" ]
         then
@@ -219,7 +227,8 @@ invoke_mvn()
 
     # disable error checking to catch the mvn error status
     set +e
-    ${MVN} -B -f ${dir} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${profile} $mvn_log_args ${MVN_ARGS}
+
+    x ${MVN} -B -f ${dir} -Doracle-tools.dir=${oracle_tools_dir} -Ddb.config.dir=${db_config_dir} -Ddb=${DB} -P${profile} $mvn_log_args ${MVN_ARGS}
 
     declare -r status=$?
 
@@ -230,12 +239,12 @@ invoke_mvn()
         case $tool in
             db)
                 # APEX comes always after db so we need to signal that scm is ready for APEX too
-                test $db_scm_write -eq 0 || signal_scm_ready FAIL db
-                test $apex_scm_write -eq 0 || signal_scm_ready FAIL apex
+                test $db_scm_write -eq 0 || x signal_scm_ready FAIL db
+                test $apex_scm_write -eq 0 || x signal_scm_ready FAIL apex
                 ;;
             apex)
                 # APEX comes always after db so there is no need to signal scm ready for db (should have been already)
-                test $apex_scm_write -eq 0 || signal_scm_ready FAIL apex
+                test $apex_scm_write -eq 0 || x signal_scm_ready FAIL apex
                 ;;
         esac
         exit $status
@@ -251,12 +260,12 @@ process_git()
     
     if [ -n "$workspace_changes" ]
     then
-        ${GIT} add --all .
-        ${GIT} commit -m"${description}. Triggered Build: $BUILD_NUMBER"
+        x ${GIT} add --all .
+        x ${GIT} commit -m"${description}. Triggered Build: $BUILD_NUMBER"
     fi
     if [ "`${GIT} diff --stat=1000 --cached origin/${SCM_BRANCH} | wc -l`" -ne 0 ]
     then
-        ${GIT} push --set-upstream origin ${SCM_BRANCH}
+        x ${GIT} push --set-upstream origin ${SCM_BRANCH}
     fi
 }
 
@@ -265,7 +274,7 @@ process_db() {
     echo "processing DB actions ${DB_ACTIONS} in ${DB_DIR} with configuration directory $db_config_dir"
 
     set -- ${DB_ACTIONS}
-    for profile; do invoke_mvn ${DB_DIR} $profile db; done
+    for profile; do x invoke_mvn ${DB_DIR} $profile db; done
     
     process_git "Database changes"
     
@@ -277,7 +286,7 @@ process_db() {
         DB_ACTIONS="db-install db-generate-ddl-full"
         echo "checking that there are no changes after a second round of ${DB_ACTIONS} (standard output is suppressed)"
         set -- ${DB_ACTIONS}
-        for profile; do invoke_mvn ${DB_DIR} $profile db; done
+        for profile; do x invoke_mvn ${DB_DIR} $profile db; done
         echo "there should be no files to add for Git:"
         test -z "`${GIT} status --porcelain`"
     fi
@@ -287,7 +296,7 @@ process_apex() {
     echo "processing APEX actions ${APEX_ACTIONS} in ${APEX_DIR} with configuration directory $db_config_dir"
 
     set -- ${APEX_ACTIONS}
-    for profile; do invoke_mvn ${APEX_DIR} $profile apex; done
+    for profile; do x invoke_mvn ${APEX_DIR} $profile apex; done
 
     # ${APEX_DIR}/src/export/application/create_application.sql changes its p_flow_version so use ${GIT} diff --stat=1000 to verify it is just that file and that line
     # 
@@ -306,7 +315,7 @@ process_apex() {
         # 3) This prohibits a git commit when the APEX export has not changed really
         for create_application in "`${GIT} diff --stat=1000 -- ${APEX_DIR} | grep -E '\bcreate_application\.sql\s+\|\s+2\s+\+-$' | cut -d '|' -f 1`"
         do    
-            ${GIT} checkout -- $create_application
+            x ${GIT} checkout -- $create_application
         done
     fi
 
@@ -314,32 +323,32 @@ process_apex() {
 }
 
 main() {
-    init
+    x init
 
     if [ "$parallel" -ne 0 ]
     then
         # signal as soon as possible both DB and APEX
-        test "$db_scm_write" -ne 0 || signal_scm_ready OK db
-        test "$apex_scm_write" -ne 0 || signal_scm_ready OK apex
+        test "$db_scm_write" -ne 0 || x signal_scm_ready OK db
+        test "$apex_scm_write" -ne 0 || x signal_scm_ready OK apex
 
-        test "$db_scm_write_prev" -eq 0 || wait_for_scm_ready_prev db    
-        test "$apex_scm_write_prev" -eq 0 || wait_for_scm_ready_prev apex
+        test "$db_scm_write_prev" -eq 0 || x wait_for_scm_ready_prev db    
+        test "$apex_scm_write_prev" -eq 0 || x wait_for_scm_ready_prev apex
     fi
 
     if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
     then
-        ${GIT} checkout "$SCM_BRANCH_PREV"
-        ${GIT} checkout "$SCM_BRANCH"
-        ${GIT} merge "$SCM_BRANCH_PREV"
+        x ${GIT} checkout "$SCM_BRANCH_PREV"
+        x ${GIT} checkout "$SCM_BRANCH"
+        x ${GIT} merge "$SCM_BRANCH_PREV"
     fi
 
-    test -z "${DB_ACTIONS}" || process_db
+    test -z "${DB_ACTIONS}" || x process_db
     # inverse
-    test "$parallel" -eq 0 || test "$db_scm_write" -eq 0 || signal_scm_ready OK db
+    test "$parallel" -eq 0 || test "$db_scm_write" -eq 0 || x signal_scm_ready OK db
     
-    test -z "${APEX_ACTIONS}" || process_apex
+    test -z "${APEX_ACTIONS}" || x process_apex
     # inverse
-    test "$parallel" -eq 0 || test "$apex_scm_write" -eq 0 || signal_scm_ready OK apex    
+    test "$parallel" -eq 0 || test "$apex_scm_write" -eq 0 || x signal_scm_ready OK apex    
 }
 
 main
