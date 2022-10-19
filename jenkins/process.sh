@@ -66,6 +66,11 @@ function x() { (set -x; "$@") }
 
 init() {
     oracle_tools_dir="`dirname $0`/.."
+    parallel=0
+    db_scm_write_prev=0
+    db_scm_write=0
+    apex_scm_write_prev=0
+    apex_scm_write=0
 
     # checking environment
     pwd
@@ -98,12 +103,6 @@ init() {
 
     set -eu
 
-    parallel=0
-    db_scm_write_prev=0
-    db_scm_write=0
-    apex_scm_write_prev=0
-    apex_scm_write=0
-    
     if [ -n "$APP_ENV" ]
     then
         parallel=1
@@ -166,8 +165,8 @@ init() {
     # get absolute path
     db_config_dir=`cd ${CONF_DIR} && pwd`
 
-    trap 'Normal exit && echo "status: $?"' EXIT
-    trap 'Error && echo "status: $?"' ERR
+    trap 'echo "EXIT; status: $?"' EXIT
+    trap 'echo "ERR; status: $?"' ERR
 }
 
 signal_scm_ready() {
@@ -323,7 +322,7 @@ process_apex() {
 }
 
 main() {
-    x init
+    init
 
     if [ "$parallel" -ne 0 ]
     then
@@ -342,11 +341,11 @@ main() {
         x ${GIT} merge "$SCM_BRANCH_PREV"
     fi
 
-    test -z "${DB_ACTIONS}" || x process_db
+    test -z "${DB_ACTIONS}" || process_db
     # inverse
     test "$parallel" -eq 0 || test "$db_scm_write" -eq 0 || x signal_scm_ready OK db
     
-    test -z "${APEX_ACTIONS}" || x process_apex
+    test -z "${APEX_ACTIONS}" || process_apex
     # inverse
     test "$parallel" -eq 0 || test "$apex_scm_write" -eq 0 || x signal_scm_ready OK apex    
 }
