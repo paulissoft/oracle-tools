@@ -26,6 +26,8 @@ services:
   jenkins-nfs-client:
     container_name: jenkins_nfs_client
     image: ghcr.io/paulissoft/pato-jenkins-agent:latest
+#    image: jenkins/inbound-agent:latest
+    command: sleep infinity
     hostname: jenkins-nfs-client
     networks:
       - jenkins-network
