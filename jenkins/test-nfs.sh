@@ -9,12 +9,13 @@ file1=/home/jenkins/agent/workspace/test1.txt
 dir1=$(dirname $file1)
 file2=/home/jenkins/.m2/repository/test2.txt
 dir2=$(dirname $file2)
+oracle_tools_dir=$(dirname $0)/..
 
 if [ $# -ne 0 ]
 then
     set -- $*
 else
-    set -- 0 1 2 3 4 1 5 1
+    set -- 0 1 2 3 1 4 1
 fi
 
 for step
@@ -33,19 +34,22 @@ do
            echo ""
            ;;
         2) echo "Trying to touch a file on jenkins_nfs_client as root: this must FAIL"
-           ! x docker exec --interactive --tty jenkins_nfs_client touch $file1 || exit 1
-           ! x docker exec --interactive --tty jenkins_nfs_client touch $file2 || exit 1
+           ! perl $oracle_tools_dir/src/scripts/timeout.pl -t 5 docker exec --interactive --tty jenkins_nfs_client touch $file1 || exit 1
+           ! perl $oracle_tools_dir/src/scripts/timeout.pl -t 5 docker exec --interactive --tty jenkins_nfs_client touch $file2 || exit 1
            echo ""
            ;;
-        4) echo "Trying to touch a file on jenkins_nfs_client as user: this must be OK"
+        3) echo "Trying to touch a file on jenkins_nfs_client as user: this must be OK"
            x docker exec --interactive --tty --user jenkins jenkins_nfs_client touch $file1
            x docker exec --interactive --tty --user jenkins jenkins_nfs_client touch $file2
            echo ""
            ;;
-        5) echo "Removing test files from jenkins_nfs_client"
+        4) echo "Removing test files from jenkins_nfs_client"
            x docker exec --interactive --tty --user jenkins jenkins_nfs_client bash -c "rm -f $file1"
            x docker exec --interactive --tty --user jenkins jenkins_nfs_client bash -c "rm -f $file2"
            echo ""
+           ;;
+        *) echo "Unknown step" 1>&2
+           exit 1
            ;;
     esac
     sleep 1
