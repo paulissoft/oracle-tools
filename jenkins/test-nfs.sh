@@ -34,8 +34,8 @@ do
            echo ""
            ;;
         2) echo "Trying to touch a file on jenkins_nfs_client as root: this must FAIL"
-           ! perl $oracle_tools_dir/src/scripts/timeout.pl -t 5 docker exec --interactive --tty jenkins_nfs_client touch $file1 || exit 1
-           ! perl $oracle_tools_dir/src/scripts/timeout.pl -t 5 docker exec --interactive --tty jenkins_nfs_client touch $file2 || exit 1
+           ! x perl $oracle_tools_dir/src/scripts/timeout.pl -t 5 docker exec --interactive --tty jenkins_nfs_client touch $file1 || exit 1
+           ! x perl $oracle_tools_dir/src/scripts/timeout.pl -t 5 docker exec --interactive --tty jenkins_nfs_client touch $file2 || exit 1
            echo ""
            ;;
         3) echo "Trying to touch a file on jenkins_nfs_client as user: this must be OK"
