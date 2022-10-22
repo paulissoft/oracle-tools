@@ -62,33 +62,26 @@ build() {
     docker-compose $docker_compose_files build
 }
 
+set_lib_module_dir()
+{
+    if test "$(uname)" = "Darwin"
+    then
+        declare dir=./.initrd
+        test -d $dir || mkdir -p $dir
+        # make dir absolute
+        dir=$(cd $dir && pwd)
+        test -d $dir/lib/modules || (cd $dir && gzip -dc /Applications/Docker.app/Contents//Resources/linuxkit/initrd.img | cpio -id 'lib/modules')
+        LIB_MODULES_DIR=$dir/lib/modules
+    else
+        LIB_MODULES_DIR=/lib/modules               
+    fi
+    export LIB_MODULES_DIR
+}
+
 start() {
     if [ $NFS -ne 0 ]
     then
-        for item in \
-            JENKINS_NFS_SERVER_M2_REPOSITORY:jenkins_nfs_server_m2_repository:jenkins-nfs-server-m2-repository \
-                JENKINS_NFS_SERVER_AGENT_WORKSPACE:jenkins_nfs_server_agent_workspace:jenkins-nfs-server-agent-workspace
-        do
-            var=$(echo $item | cut -d ':' -f 1)
-            container=$(echo $item | cut -d ':' -f 2)
-            service=$(echo $item | cut -d ':' -f 3)
-
-            if ! printenv $var 1>/dev/null
-            then
-                case $(uname) in
-                    # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
-                    # since the host can not obtain a Docker container IP address via DNS.
-                    Darwin)
-                        docker-compose -f docker-compose-jenkins-nfs-server.yml up -d $service
-                        eval export $var=$(docker inspect $container --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
-                        ;;
-                    # Here the dns-proxy-server should be able to do the right thing.
-                    *)
-                        eval $var=$service
-                        ;;
-                esac
-            fi
-        done
+        set_lib_module_dir
     fi
     
     # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables

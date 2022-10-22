@@ -3,34 +3,31 @@ version: '3.8'
 networks:
   jenkins-network:
     name: jenkins
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.1.0/24
 
 services:
-  jenkins-nfs-server-m2-repository:
-    container_name: jenkins_nfs_server_m2_repository
-    image: itsthenetwork/nfs-server-alpine
+  jenkins-nfs-server:
+    container_name: jenkins_nfs_server
+    build: jenkins-nfs-server
     restart: unless-stopped
-    hostname: jenkins-nfs-server-m2-repository
-    networks:
-      - jenkins-network
-#    ports:
-#      - "2049:2049"
-    privileged: true
-    volumes:
-      - ${SHARED_DIRECTORY_M2_REPOSITORY}:/nfsshare
+    cap_add:
+      - SYS_ADMIN
+      - SYS_MODULE
     environment:
-      - SHARED_DIRECTORY=/nfsshare
-  jenkins-nfs-server-agent-workspace:
-    container_name: jenkins_nfs_server_agent_workspace
-    image: itsthenetwork/nfs-server-alpine
-    restart: unless-stopped
-    hostname: jenkins-nfs-server-agent-workspace
+      - NFS_LOG_LEVEL=DEBUG
+      - NFS_DISABLE_VERSION_3=1
+    hostname: jenkins-nfs-server
     networks:
-      - jenkins-network
-#    ports:
-#      - "3049:2049"
-    privileged: true
+      jenkins-network:
+        ipv4_address: 192.168.1.3
     volumes:
-      - ${SHARED_DIRECTORY_AGENT_WORKSPACE}:/nfsshare
-    environment:
-      - SHARED_DIRECTORY=/nfsshare
-      - SYNC=true
+    - type: volume
+      source: nfs-server-volume
+      target: /nfs
+    - type: bind
+      source: ${LIB_MODULES_DIR}
+      target: /lib/modules
+      read_only: true

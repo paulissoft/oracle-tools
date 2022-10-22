@@ -3,6 +3,10 @@ version: '3.8'
 networks:
   jenkins-network:
     name: jenkins
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.1.0/24
 
 services:
   # See https://davelms.medium.com/run-jenkins-in-a-docker-container-part-2-socat-d5f18820fe1d
@@ -12,22 +16,23 @@ services:
     restart: unless-stopped
     hostname: jenkins-docker
     networks:
-      - jenkins-network
+      jenkins-network:
+        ipv4_address: 192.168.1.2
     expose:
       - "2375"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
-  dns-proxy-server:
-    container_name: dns_proxy_server
-    image: defreitas/dns-proxy-server
-    restart: unless-stopped
-    networks:
-      - jenkins-network
-    # https://github.com/mageddo/dns-proxy-server/issues/166
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc:/host/etc
-    environment:
-      - MG_RESOLVCONF=/host/etc/resolv.conf
-    hostname: dns.mageddo
+#  dns-proxy-server:
+#    container_name: dns_proxy_server
+#    image: defreitas/dns-proxy-server
+#    restart: unless-stopped
+#    networks:
+#      - jenkins-network
+#    # https://github.com/mageddo/dns-proxy-server/issues/166
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#      - /etc:/host/etc
+#    environment:
+#      - MG_RESOLVCONF=/host/etc/resolv.conf
+#    hostname: dns.mageddo

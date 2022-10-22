@@ -3,30 +3,44 @@ version: '3.8'
 networks:
   jenkins-network:
     name: jenkins
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.1.0/24
 
 volumes:
+  jenkins-agent-workspace:
+    name: jenkins-agent-workspace
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.1.3,nfsvers=4,nolock,soft,rw"
+      device: ":/workspace"
   jenkins-m2-repository:
     name: jenkins-m2-repository
     driver_opts:
       type: "nfs"
-      o: "addr=${JENKINS_NFS_SERVER},nfsvers=4,nolock,soft,rw"
-      device: ":"
-
+      o: "addr=192.168.1.3,nfsvers=4,nolock,soft,rw"
+      device: ":/repository"
+     
 services:
-  jenkins-nfs-client-m2-repository:
-    container_name: jenkins_nfs_client_m2_repository
+  jenkins-nfs-client:
+    container_name: jenkins_nfs_client
     image: ghcr.io/paulissoft/pato-jenkins-agent:latest
-    hostname: jenkins-nfs-client-m2-repository
+    hostname: jenkins-nfs-client
     networks:
       - jenkins-network
     volumes:
       - jenkins-m2-repository:/home/jenkins:rw
-  jenkins-nfs-client-agent-workspace:
-    container_name: jenkins_nfs_client_agent_workspace
-    image: ghcr.io/paulissoft/pato-jenkins-agent:latest
-    hostname: jenkins-nfs-client-agent-workspace
-    networks:
-      - jenkins-network
     volumes:
-      - jenkins-agent-workspace:/home/jenkins:rw
+    - type: volume
+      source: jenkins-agent-workspace
+      target: /home/jenkins/agent/workspace
+      volume:
+        nocopy: true
+    - type: volume
+      source: jenkins-m2-repository
+      target: /home/jenkins/.m2/repository
+      volume:
+        nocopy: true
 
+      
