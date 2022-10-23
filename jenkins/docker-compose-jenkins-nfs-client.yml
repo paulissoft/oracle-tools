@@ -36,7 +36,8 @@ services:
           wait
     hostname: jenkins-nfs-client
     networks:
-      - jenkins-network
+      jenkins-network:
+        ipv4_address: 192.168.1.5
     volumes:
     - type: volume
       source: jenkins-agent-workspace

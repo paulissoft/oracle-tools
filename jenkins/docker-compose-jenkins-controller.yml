@@ -22,7 +22,8 @@ services:
       - 50000:50000
       - 8080:8080
     networks:
-      - jenkins-network
+      jenkins-network:
+        ipv4_address: 192.168.1.4
     volumes:
       - jenkins-data:/var/jenkins_home
     environment:
