@@ -38,10 +38,10 @@ jenkins:
           cpuQuota: 0
           image: "ghcr.io/paulissoft/pato-jenkins-agent:latest"
           mounts:
-          - "type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository"
+          - "type=volume,src=jenkins-m2-repository,dst=/home/jenkins/.m2/repository"
           - "type=volume,src=jenkins-agent-workspace,dst=/home/jenkins/agent/workspace"
           mountsString: |-
-            type=volume,src=maven-local-repository,dst=/home/jenkins/.m2/repository
+            type=volume,src=jenkins-m2-repository,dst=/home/jenkins/.m2/repository
             type=volume,src=jenkins-agent-workspace,dst=/home/jenkins/agent/workspace
           network: "jenkins"
         labelString: "maven sql jdk oracle"
