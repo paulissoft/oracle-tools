@@ -1,12 +1,43 @@
 #!/bin/bash -eu
 
-# Environment variables used:
-# - DEBUG: for executing set -x
+#
+# Description
+# ===========
+# This script sets up the Jenkins environment with Docker Compose.
+# Docker Compose is executed with one or more Docker Compose files using the
+# command supplied on the command line (default 'up -d' meaning start and daemonize).
+#
+# Usage
+# =====
+# setup.sh [ DOCKER COMPOSE COMMAND and OPTIONS ]
+#
+# Environment variables
+# =====================
+# - DEBUG: for executing with set -x
 # - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not (0=false; 1=true)? On Linux no, else yes.
 # - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. Defaults to a path (~/nfs/jenkins/home).
-# - JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? Defaults to no.
+# - JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? Defaults to yes.
 # - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
 # - CLEANUP: do we clean up Docker volumes and the NFS_SERVER_VOLUME host path (0=false; 1=true)? Defaults to no.
+#
+# Docker Compose files
+# ====================
+# The following files may be used depending on the condition behind parentheses:
+# - docker-compose.yml (if [ $JENKINS -ne 0 ])
+# - docker-compose-jenkins-controller.yml (if [ "$JENKINS_CONTROLLER" -ne 0 ])
+# - docker-compose-jenkins-nfs-server.yml (if [ "$NFS" -ne 0 ])
+# - docker-compose-jenkins-nfs-client.yml (if [ "$NFS" -ne 0 ])
+#
+# Examples
+# ========
+# To bring down all services:
+#
+# $ setup.sh down
+#
+# To add debugging while starting up:
+#
+# $ DEBUG=1 setup.sh
+#
 
 init() {
     ! printenv DEBUG 1>/dev/null || set -x
@@ -36,7 +67,7 @@ init() {
     then
         if ! printenv NFS_SERVER_VOLUME 1>/dev/null
         then
-            export NFS_SERVER_VOLUME=~/nfs/jenkins/home
+            export NFS_SERVER_VOLUME=nfs-server-volume
         fi
 
         # Is NFS_SERVER_VOLUME a Docker volume or a path?
@@ -94,25 +125,22 @@ build() {
     
     # See https://serverfault.com/questions/789601/check-is-container-service-running-with-docker-compose
     
-    # common service
-    if [ $JENKINS -ne 0 ]
-    then
-        service=jenkins-docker
-    elif [ $NFS -ne 0 ]
-    then
-        service=jenkins-nfs-server
-    else
-        echo "Either JENKINS or NFS must be true" 1>&2
-        exit 1
-    fi
+    # common service(s)
+    services='jenkins-docker jenkins-nfs-server'
+
+    for service in $services
+    do
+        if [ -z `docker-compose $docker_compose_files ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose $docker_compose_files ps -q $service)` ]
+        then
+            echo "Service $service is not running."
+        else
+            echo "Service $service is running: shutting it down."
+            services=
+            break
+        fi
+    done
     
-    if [ -z `docker-compose $docker_compose_files ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose $docker_compose_files ps -q $service)` ]
-    then
-        echo "Service $service is not running."
-    else
-        echo "Service $service is running: shutting it down."
-        docker-compose $docker_compose_files down --remove-orphans
-    fi
+    test -n "$services" || docker-compose $docker_compose_files down --remove-orphans
 
     docker-compose $docker_compose_files build
 }
@@ -132,13 +160,10 @@ start() {
     fi
 
     ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
-
-    # $curdir/show_volumes.sh
 }
 
-# main
+# MAIN
 
-curdir=$(dirname $0)
 if [ $# -ge 1 ]
 then
     docker_compose_command_and_options="$@"
@@ -146,7 +171,7 @@ else
     docker_compose_command_and_options="up -d"
 fi
 
-echo "JENKINS: ${JENKINS:=0}"
+echo "JENKINS: ${JENKINS:=1}"
 echo "NFS: ${NFS:=1}"
 echo "CLEANUP: ${CLEANUP:=0}"
 
