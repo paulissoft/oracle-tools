@@ -1,4 +1,6 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
+
+! printenv DEBUG 1>/dev/null || set -x
 
 # all possible volumes used
 for item in \
