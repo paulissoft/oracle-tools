@@ -27,12 +27,16 @@ services:
     container_name: jenkins_nfs_client
     image: ghcr.io/paulissoft/pato-jenkins-agent:latest
 #    image: jenkins/inbound-agent:latest
-    command: sleep infinity
+    command:
+      - /bin/sh
+      - -c
+      - |
+          trap : TERM INT
+          sleep infinity
+          wait
     hostname: jenkins-nfs-client
     networks:
       - jenkins-network
-    volumes:
-      - jenkins-m2-repository:/home/jenkins:rw
     volumes:
     - type: volume
       source: jenkins-agent-workspace

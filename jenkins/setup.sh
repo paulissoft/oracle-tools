@@ -1,51 +1,71 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
+
+# Environment variables used:
+# - DEBUG: for executing set -x
+# - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not (0=false; 1=true)? On Linux no, else yes.
+# - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. Defaults to a path (~/nfs/jenkins/home).
+# - JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? Defaults to no.
+# - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
+# - CLEANUP: do we clean up Docker volumes and the NFS_SERVER_VOLUME host path (0=false; 1=true)? Defaults to no.
 
 init() {
     ! printenv DEBUG 1>/dev/null || set -x
 
     if [ $JENKINS -ne 0 ]
     then
-        if ! printenv DOCKER_COMPOSE_FILE 1>/dev/null
+        # The docker-compose.yml is the common file.
+        docker_compose_files="-f docker-compose.yml"
+        if ! printenv JENKINS_CONTROLLER 1>/dev/null
         then
             case $(uname) in
                 Linux)
-                    DOCKER_COMPOSE_FILE=
+                    # Assume that Jenkins is installed as a service 
+                    JENKINS_CONTROLLER=0
                     ;;
                 *)
-                    DOCKER_COMPOSE_FILE=docker-compose-jenkins-controller.yml
+                    JENKINS_CONTROLLER=1
                     ;;
             esac
         fi
-        # The docker-compose.yml is the common file.
-        # The $DOCKER_COMPOSE_FILE is environment specific.
-        docker_compose_files="-f docker-compose.yml"
-        test -z "$DOCKER_COMPOSE_FILE" || docker_compose_files="$docker_compose_files -f $DOCKER_COMPOSE_FILE"
+        test "$JENKINS_CONTROLLER" -eq 0 || docker_compose_files="$docker_compose_files -f docker-compose-jenkins-controller.yml"
     else
         docker_compose_files=
     fi
     
     if [ $NFS -ne 0 ]
     then
-        if ! printenv SHARED_DIRECTORY 1>/dev/null
+        if ! printenv NFS_SERVER_VOLUME 1>/dev/null
         then
-            export SHARED_DIRECTORY=~/nfs/jenkins/home
+            export NFS_SERVER_VOLUME=~/nfs/jenkins/home
         fi
-    
-        rm -fr $SHARED_DIRECTORY
-    
-        # Create the shared directory as well as the Maven .m2/repository directory and the workspace
-        for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
-        do
-            test -d $d || mkdir -p $d
-            chmod -R 755 $d
-        done
 
-        if [ ! -d $SHARED_DIRECTORY/.ssh ]
+        # Is NFS_SERVER_VOLUME a Docker volume or a path?
+        case "$NFS_SERVER_VOLUME" in
+            ~* | */*)
+                NFS_SERVER_VOLUME_TYPE=bind
+                ;;
+            *)
+                NFS_SERVER_VOLUME_TYPE=volume
+                ;;
+        esac
+
+        if [ "$NFS_SERVER_VOLUME_TYPE" = "bind" ]
         then
-            mkdir -m 700 $SHARED_DIRECTORY/.ssh
-            ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
-            chmod 700 $SHARED_DIRECTORY/.ssh/known_hosts
+            test "$CLEANUP" -eq 0 || test ! -d "$NFS_SERVER_VOLUME" || rm -fr "$NFS_SERVER_VOLUME"
+    
+            # Create the shared directory as well as the Maven .m2/repository directory and the workspace
+            for d in $NFS_SERVER_VOLUME $NFS_SERVER_VOLUME/repository $NFS_SERVER_VOLUME/workspace
+            do
+                test -d $d || mkdir -p $d
+                chmod -R 755 $d
+            done
+            # make NFS_SERVER_VOLUME absolute
+            NFS_SERVER_VOLUME=$(cd $NFS_SERVER_VOLUME && pwd)
         fi
+
+        # Both NFS_SERVER_VOLUME_TYPE and NFS_SERVER_VOLUME will be used in docker-compose-jenkins-nfs-server.yml
+        export NFS_SERVER_VOLUME_TYPE NFS_SERVER_VOLUME
+        
         docker_compose_files="$docker_compose_files -f docker-compose-jenkins-nfs-server.yml -f docker-compose-jenkins-nfs-client.yml"
     fi
 }
@@ -98,7 +118,7 @@ build() {
 }
 
 start() {
-    if [ $RM_VOLUMES -ne 0 ]
+    if [ $CLEANUP -ne 0 ]
     then
         # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
         set -- jenkins-m2-repository jenkins-agent-workspace
@@ -128,7 +148,7 @@ fi
 
 echo "JENKINS: ${JENKINS:=0}"
 echo "NFS: ${NFS:=1}"
-echo "RM_VOLUMES: ${RM_VOLUMES:=1}"
+echo "CLEANUP: ${CLEANUP:=0}"
 
 init
 build
