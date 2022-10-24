@@ -13,12 +13,13 @@
 #
 # Environment variables
 # =====================
-# - DEBUG: for executing with set -x
-# - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not (0=false; 1=true)? On Linux no, else yes.
-# - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. Defaults to a path (~/nfs/jenkins/home).
-# - JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? Defaults to yes.
-# - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
 # - CLEANUP: do we clean up Docker volumes and the NFS_SERVER_VOLUME host path (0=false; 1=true)? Defaults to no.
+# - COMPOSE_PROFILES: a comma separated list of Docker Compose profiles.
+# - DEBUG: for executing with set -x
+# - JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? Defaults to yes.
+# - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not (0=false; 1=true)? On Linux no, else yes.
+# - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
+# - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. Defaults to a path (~/nfs/jenkins/home).
 #
 # Docker Compose files
 # ====================
@@ -39,13 +40,31 @@
 # $ DEBUG=1 setup.sh
 #
 
+add_to_list() {
+    declare -r list=$1
+    shift
+    declare -r sep=$1
+    shift
+
+    for e
+    do
+        if [ -z "${!list}" ]
+        then
+            eval ${list}="${e}"
+        else
+            eval ${list}="${!list}${sep}${e}"
+        fi
+    done
+}
+
 init() {
     ! printenv DEBUG 1>/dev/null || set -x
 
+    compose_profiles=
     if [ $JENKINS -ne 0 ]
     then
-        # The docker-compose.yml is the common file.
-        docker_compose_files="-f docker-compose.yml"
+        # The profile docker is common.
+        add_to_list compose_profiles , docker
         if ! printenv JENKINS_CONTROLLER 1>/dev/null
         then
             case $(uname) in
@@ -58,9 +77,7 @@ init() {
                     ;;
             esac
         fi
-        test "$JENKINS_CONTROLLER" -eq 0 || docker_compose_files="$docker_compose_files -f docker-compose-jenkins-controller.yml"
-    else
-        docker_compose_files=
+        test "$JENKINS_CONTROLLER" -eq 0 || add_to_list compose_profiles , controller
     fi
     
     if [ $NFS -ne 0 ]
@@ -97,8 +114,11 @@ init() {
         # Both NFS_SERVER_VOLUME_TYPE and NFS_SERVER_VOLUME will be used in docker-compose-jenkins-nfs-server.yml
         export NFS_SERVER_VOLUME_TYPE NFS_SERVER_VOLUME
         
-        docker_compose_files="$docker_compose_files -f docker-compose-jenkins-nfs-server.yml -f docker-compose-jenkins-nfs-client.yml"
+        add_to_list compose_profiles , nfs
     fi
+
+    # Do not overwrite COMPOSE_FILES when set
+    printenv COMPOSE_PROFILES 1>/dev/null || export COMPOSE_PROFILES=${compose_profiles}
 }
 
 set_lib_module_dir()
@@ -130,7 +150,7 @@ build() {
 
     for service in $services
     do
-        if [ -z `docker-compose $docker_compose_files ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose $docker_compose_files ps -q $service)` ]
+        if [ -z `docker-compose ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose ps -q $service)` ]
         then
             echo "Service $service is not running."
         else
@@ -140,9 +160,9 @@ build() {
         fi
     done
     
-    test -n "$services" || docker-compose $docker_compose_files down --remove-orphans
+    test -n "$services" || docker-compose down --remove-orphans
 
-    docker-compose $docker_compose_files build
+    docker-compose build
 }
 
 start() {
@@ -159,7 +179,7 @@ start() {
         done
     fi
 
-    ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
+    ( set -x; docker-compose $docker_compose_command_and_options )
 }
 
 # MAIN

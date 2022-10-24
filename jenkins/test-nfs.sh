@@ -28,13 +28,19 @@ do
            do
                x docker exec --interactive --tty --user root $c id jenkins
            done
-           echo ""
-           echo "Showing contents of jenkins_nfs_server"
-           x docker exec --interactive --tty --user root jenkins_nfs_server bash -c 'find /nfs'
-           echo ""
-           echo "Showing contents of jenkins_nfs_client"
-           x docker exec --interactive --tty --user jenkins jenkins_nfs_client find $dir1 $dir2 -ls
-           echo ""
+           for item in root:jenkins_nfs_server:/nfs/workspace \
+                           root:jenkins_nfs_server:/nfs/repository \
+                           jenkins:jenkins_nfs_client:$dir1 \
+                           jenkins:jenkins_nfs_client:$dir2
+           do
+               user=$(echo $item | cut -d ':' -f 1)
+               container=$(echo $item | cut -d ':' -f 2)
+               dir=$(echo $item | cut -d ':' -f 3)
+               echo "$user@$container:$dir (first 10 files/folders)"
+               echo ""
+               docker exec --interactive --tty --user $user $container bash -c "find $dir | head -10"
+               echo ""
+           done
            ;;
         2) echo "Trying to touch a file on jenkins_nfs_client as root: this must FAIL"
            ! x time docker exec --interactive --tty --user root jenkins_nfs_client touch $file1 || exit 1
