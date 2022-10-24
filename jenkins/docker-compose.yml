@@ -78,11 +78,11 @@ services:
       jenkins-network:
         ipv4_address: 192.168.1.3
     volumes:
-    - type: ${NFS_SERVER_VOLUME_TYPE}
-      source: ${NFS_SERVER_VOLUME}
+    - type: ${NFS_SERVER_VOLUME_TYPE:-volume}
+      source: ${NFS_SERVER_VOLUME:-nfs-server-volume}
       target: /nfs
     - type: bind
-      source: ${LIB_MODULES_DIR}
+      source: ${LIB_MODULES_DIR:-/lib/modules}
       target: /lib/modules
       read_only: true
     environment:
