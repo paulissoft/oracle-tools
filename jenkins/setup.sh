@@ -165,11 +165,11 @@ build() {
     docker-compose build
 }
 
-start() {
+process() {
     if [ $CLEANUP -ne 0 ]
     then
         # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
-        set -- jenkins-m2-repository jenkins-agent-workspace
+        set -- nfs-server-volume jenkins-m2-repository jenkins-agent-workspace
         for v
         do
             if docker volume ls | grep $v
@@ -177,6 +177,7 @@ start() {
                 docker volume rm $v || true
             fi
         done
+        docker volume ls
     fi
 
     ( set -x; docker-compose $docker_compose_command_and_options )
@@ -197,4 +198,4 @@ echo "CLEANUP: ${CLEANUP:=0}"
 
 init
 build
-start
+process
