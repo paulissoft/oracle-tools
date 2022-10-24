@@ -11,6 +11,8 @@ ARG NFS_USR
 ARG NFS_UID
 
 COPY exports.txt /etc/exports
+COPY hosts.allow /etc/
+COPY hosts.deny /etc/
 
 RUN	addgroup --gid $NFS_GID $NFS_GRP && \
 		adduser --no-create-home --disabled-password --gecos "" --uid $NFS_UID --ingroup $NFS_GRP $NFS_USR && \
