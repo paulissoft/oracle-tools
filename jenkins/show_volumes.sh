@@ -4,8 +4,7 @@
 
 # all possible volumes used
 for item in \
-    maven-local-repository:/home/jenkins/.m2/repository \
-        jenkins-agent-workspace:/home/jenkins/agent/workspace \
+    jenkins-agent-workspace:/home/jenkins/agent/workspace \
         jenkins-m2-repository:/home/jenkins/.m2/repository
 do
     v=$(echo $item | cut -d ':' -f 1)

@@ -106,7 +106,7 @@ WORKDIR /home/jenkins
 RUN mkdir -m 700 /home/jenkins/.ssh && ssh-keyscan github.com >> /home/jenkins/.ssh/known_hosts
 
 # As stated in the documentation, a inherits the directory content and permissions existing in the container.
-# So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
+# So when volume jenkins-m2-repository attaches to /home/jenkins/.m2/repository,
 # that directory must already exist and have the correct ownership
 # otherwise it will be root giving Maven download permission problems.
 # See also https://github.com/paulissoft/oracle-tools/issues/66.
