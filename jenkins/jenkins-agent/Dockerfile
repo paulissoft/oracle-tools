@@ -5,6 +5,7 @@ ARG MVND_ZIP_BASE=maven-mvnd-$MVND_VERSION-linux-amd64
 ARG MVND_ZIP=$MVND_ZIP_BASE.zip
 ARG MVND_DOWNLOAD_URL=https://github.com/apache/maven-mvnd/releases/download/$MVND_VERSION/$MVND_ZIP
 ARG IMAGE=jenkins/agent:latest
+ARG STARTING_USER=jenkins
 
 FROM $IMAGE
 
@@ -113,3 +114,6 @@ RUN mkdir -m 700 /home/jenkins/.ssh && ssh-keyscan github.com >> /home/jenkins/.
 RUN mkdir -m 755 -p /home/jenkins/.m2/repository
 # Also create a workspace directory owned by jenkins
 RUN mkdir -m 755 -p /home/jenkins/agent/workspace
+
+ARG STARTING_USER
+USER $STARTING_USER

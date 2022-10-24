@@ -20,6 +20,8 @@
 # - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not (0=false; 1=true)? On Linux no, else yes.
 # - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
 # - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. Defaults to a path (~/nfs/jenkins/home).
+# - NFS_SSH_AGENT: do we want to set up a NFS SSH agent or not (0=false; 1=true)?. Defaults to yes.
+# - SSH_PUBKEY: the file containing the SSH public key. Defaults to ~/.ssh/id_rsa.pub.
 #
 # Docker Compose files
 # ====================
@@ -84,7 +86,7 @@ init() {
     then
         if ! printenv NFS_SERVER_VOLUME 1>/dev/null
         then
-            export NFS_SERVER_VOLUME=nfs-server-volume
+            NFS_SERVER_VOLUME=nfs-server-volume
         fi
 
         # Is NFS_SERVER_VOLUME a Docker volume or a path?
@@ -113,12 +115,22 @@ init() {
 
         # Both NFS_SERVER_VOLUME_TYPE and NFS_SERVER_VOLUME will be used in docker-compose-jenkins-nfs-server.yml
         export NFS_SERVER_VOLUME_TYPE NFS_SERVER_VOLUME
-        
-        add_to_list compose_profiles , nfs
+        echo "NFS_SERVER_VOLUME_TYPE: ${NFS_SERVER_VOLUME_TYPE}"
+        echo "NFS_SERVER_VOLUME: ${NFS_SERVER_VOLUME}"
+
+        if [ "$NFS_SSH_AGENT" -eq 1 ]
+        then
+            eval test -f "$SSH_PUBKEY" || { echo "Can not read SSH public key file '$SSH_PUBKEY'" 1>&2; exit 1; }
+            export JENKINS_AGENT_SSH_PUBKEY=$(cat $SSH_PUBKEY)
+            add_to_list compose_profiles , nfs nfs-ssh-agent
+        else
+            add_to_list compose_profiles , nfs nfs-client
+        fi        
     fi
 
     # Do not overwrite COMPOSE_FILES when set
     printenv COMPOSE_PROFILES 1>/dev/null || export COMPOSE_PROFILES=${compose_profiles}
+    echo "COMPOSE_PROFILES: ${COMPOSE_PROFILES}"
 }
 
 set_lib_module_dir()
@@ -135,6 +147,7 @@ set_lib_module_dir()
         LIB_MODULES_DIR=/lib/modules               
     fi
     export LIB_MODULES_DIR
+    echo "LIB_MODULES_DIR: ${LIB_MODULES_DIR}"
 }
 
 build() {
@@ -192,9 +205,11 @@ else
     docker_compose_command_and_options="up -d"
 fi
 
+echo "CLEANUP: ${CLEANUP:=0}"
 echo "JENKINS: ${JENKINS:=1}"
 echo "NFS: ${NFS:=1}"
-echo "CLEANUP: ${CLEANUP:=0}"
+echo "NFS_SSH_AGENT: ${NFS_SSH_AGENT:=1}"
+echo "SSH_PUBKEY: ${SSH_PUBKEY:=~/.ssh/id_rsa.pub}"
 
 init
 build

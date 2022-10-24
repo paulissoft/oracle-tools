@@ -67,6 +67,8 @@ services:
   jenkins-nfs-server:
     profiles:
       - nfs
+      - nfs-client
+      - nfs-ssh-agent
     container_name: jenkins_nfs_server
     build: jenkins-nfs-server
     restart: unless-stopped
@@ -90,7 +92,7 @@ services:
       - NFS_DISABLE_VERSION_3=1
   jenkins-nfs-client:
     profiles:
-      - nfs
+      - nfs-client
     container_name: jenkins_nfs_client
     image: ghcr.io/paulissoft/pato-jenkins-agent:latest
     restart: unless-stopped
@@ -118,6 +120,35 @@ services:
         nocopy: true
     depends_on:
       - jenkins-nfs-server
+  jenkins-ssh-agent:
+    profiles:
+      - nfs-ssh-agent
+    container_name: jenkins_ssh_agent
+    build:
+      context: jenkins-agent
+      args:
+        - IMAGE=jenkins/ssh-agent:latest
+        - STARTING_USER=root
+    restart: unless-stopped
+    hostname: jenkins-ssh-agent
+    networks:
+      jenkins-network:
+        ipv4_address: 192.168.1.6
+    volumes:
+    - type: volume
+      source: jenkins-agent-workspace
+      target: /home/jenkins/agent/workspace
+      volume:
+        nocopy: true
+    - type: volume
+      source: jenkins-m2-repository
+      target: /home/jenkins/.m2/repository
+      volume:
+        nocopy: true
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=${JENKINS_AGENT_SSH_PUBKEY:-}
+    depends_on:
+      - jenkins-nfs-server
   dns-proxy-server:  # for the time being not necessary hence profile dns that is not added in setup.sh
     profiles:
       - dns
@@ -127,7 +158,7 @@ services:
     hostname: dns.mageddo
     networks:
       jenkins-network:
-        ipv4_address: 192.168.1.6
+        ipv4_address: 192.168.1.7
     # https://github.com/mageddo/dns-proxy-server/issues/166
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
