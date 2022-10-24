@@ -23,10 +23,19 @@ do
            x docker exec --interactive --tty --user root jenkins_nfs_server bash -c 'rm -f /nfs/*/test*.txt || true'
            echo ""
            ;;
-        1) echo "Showing user jenkins on each container"
+        1) for f in /etc/exports /etc/hosts.allow /etc/hosts.deny
+           do
+               echo "--- root@jenkins_nfs_server:$f ---"
+               echo ""
+               docker exec --interactive --tty --user root jenkins_nfs_server cat $f
+               echo ""
+           done
            for c in jenkins_nfs_server jenkins_nfs_client
            do
-               x docker exec --interactive --tty --user root $c id jenkins
+               echo "--- id of user jenkins on container $c ---"
+               echo ""
+               docker exec --interactive --tty --user root $c id jenkins
+               echo ""
            done
            for item in root:jenkins_nfs_server:/nfs/workspace \
                            root:jenkins_nfs_server:/nfs/repository \
@@ -36,7 +45,7 @@ do
                user=$(echo $item | cut -d ':' -f 1)
                container=$(echo $item | cut -d ':' -f 2)
                dir=$(echo $item | cut -d ':' -f 3)
-               echo "$user@$container:$dir (first 10 files/folders)"
+               echo "--- $user@$container:$dir (first 10 files/folders) ---"
                echo ""
                docker exec --interactive --tty --user $user $container bash -c "find $dir | head -10"
                echo ""
