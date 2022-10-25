@@ -191,8 +191,7 @@ shutdown() {
 
     if [ $CLEANUP -ne 0 ]
     then
-        # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
-        set -- nfs-server-volume jenkins-m2-repository jenkins-agent-workspace
+        set -- jenkins-data nfs-server-volume jenkins-agent-workspace jenkins-m2-repository
         for v
         do
             if docker volume ls | grep $v

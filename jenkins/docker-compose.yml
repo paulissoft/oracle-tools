@@ -98,6 +98,23 @@ services:
       - JENKINS_SSH_AGENT_PUB_KEY=${JENKINS_SSH_AGENT_PUB_KEY:-}
     depends_on:
       - jenkins-nfs-server
+  # just a sidekick for jenkins-controller below
+  # so that it will add that hosts the jenkins known hosts in volume jenkins-data
+  jenkins-ssh-agent-add-to-known-hosts:
+    profiles:
+      - jenkins-ssh-agent
+    container_name: jenkins_ssh_agent_add_to_known_hosts
+    image: "ghcr.io/paulissoft/pato-jenkins-agent:latest"
+    restart: "no"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+    command:
+      - /bin/sh
+      - -c
+      - |
+        test -d /var/jenkins_home/.ssh || mkdir -m 700 /var/jenkins_home/.ssh
+        ssh-keygen -f /var/jenkins_home/.ssh/known_hosts -R 192.168.1.4
+        ssh-keyscan 192.168.1.4 >> /var/jenkins_home/.ssh/known_hosts
   jenkins-controller:
     profiles:
       - controller
