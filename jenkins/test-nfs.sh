@@ -18,16 +18,15 @@ then
 fi
 
 jenkins_nfs_server=jenkins_nfs_server
-jenkins_nfs_client=
-for c in jenkins_nfs_client jenkins_ssh_agent
+jenkins_agents=
+for c in jenkins_ssh_agent
 do
     if docker container ls | grep $c
     then
-        jenkins_nfs_client=$c
-        break
+        jenkins_agents="$jenkins_agents $c"
     fi
 done
-test -n "$jenkins_nfs_client" || { echo "Could not detect an NFS client" 1>& 2; exit 1; }
+test -n "$jenkins_agents" || { echo "Could not detect a Jenkins agent (NFS client)" 1>& 2; exit 1; }
 
 for step
 do
@@ -44,17 +43,19 @@ do
                docker exec --interactive --tty --user root $jenkins_nfs_server cat $f
                echo ""
            done
-           for c in $jenkins_nfs_server $jenkins_nfs_client
+           for c in $jenkins_nfs_server $jenkins_agents
            do
                echo "--- id of user jenkins on container $c ---"
                echo ""
                docker exec --interactive --tty --user root $c id jenkins
                echo ""
            done
-           for item in root:$jenkins_nfs_server:/nfs/workspace \
-                           root:$jenkins_nfs_server:/nfs/repository \
-                           jenkins:$jenkins_nfs_client:$dir1 \
-                           jenkins:$jenkins_nfs_client:$dir2
+           items="root:$jenkins_nfs_server:/nfs/workspace root:$jenkins_nfs_server:/nfs/repository"
+           for c in $jenkins_agents
+           do
+               items="$items jenkins:$c:$dir1 jenkins:$c:$dir2"
+           done
+           for item in $items
            do
                user=$(echo $item | cut -d ':' -f 1)
                container=$(echo $item | cut -d ':' -f 2)
@@ -65,20 +66,29 @@ do
                echo ""
            done
            ;;
-        2) echo "Trying to touch a file on $jenkins_nfs_client as root: this must FAIL"
-           ! x time docker exec --interactive --tty --user root $jenkins_nfs_client touch $file1 || exit 1
-           ! x time docker exec --interactive --tty --user root $jenkins_nfs_client touch $file2 || exit 1
-           echo ""
+        2) for jenkins_agent in $jenkins_agents
+           do
+               echo "Trying to touch a file on $jenkins_agent as root: this must FAIL"           
+               ! x time docker exec --interactive --tty --user root $jenkins_agent touch $file1 || exit 1
+               ! x time docker exec --interactive --tty --user root $jenkins_agent touch $file2 || exit 1
+               echo ""
+           done
            ;;
-        3) echo "Trying to touch a file on $jenkins_nfs_client as user: this must be OK"
-           x docker exec --interactive --tty --user jenkins $jenkins_nfs_client touch $file1
-           x docker exec --interactive --tty --user jenkins $jenkins_nfs_client touch $file2
-           echo ""
+        3) for jenkins_agent in $jenkins_agents
+           do
+               echo "Trying to touch a file on $jenkins_agent as user: this must be OK"           
+               x docker exec --interactive --tty --user jenkins $jenkins_agent touch $file1
+               x docker exec --interactive --tty --user jenkins $jenkins_agent touch $file2
+               echo ""
+           done
            ;;
-        4) echo "Removing test files from $jenkins_nfs_client"
-           x docker exec --interactive --tty --user jenkins $jenkins_nfs_client bash -c "rm -f $file1"
-           x docker exec --interactive --tty --user jenkins $jenkins_nfs_client bash -c "rm -f $file2"
-           echo ""
+        4) for jenkins_agent in $jenkins_agents
+           do
+               echo "Removing test files from $jenkins_agent"           
+               x docker exec --interactive --tty --user jenkins $jenkins_agent bash -c "rm -f $file1"
+               x docker exec --interactive --tty --user jenkins $jenkins_agent bash -c "rm -f $file2"
+               echo ""
+           done
            ;;
         *) echo "Unknown step" 1>&2
            exit 1

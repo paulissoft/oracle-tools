@@ -1,46 +1,48 @@
 #!/bin/bash -eu
 
-#
-# Description
-# ===========
-# This script sets up the Jenkins environment with Docker Compose.
-# Docker Compose is executed with one or more Docker Compose files using the
-# command supplied on the command line (default 'up -d' meaning start and daemonize).
-#
-# Usage
-# =====
-# setup.sh [ DOCKER COMPOSE COMMAND and OPTIONS ]
-#
-# Environment variables
-# =====================
-# - CLEANUP: do we clean up Docker volumes and the NFS_SERVER_VOLUME host path (0=false; 1=true)? Defaults to no.
-# - COMPOSE_PROFILES: a comma separated list of Docker Compose profiles.
-# - DEBUG: for executing with set -x
-# - JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? Defaults to yes.
-# - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not (0=false; 1=true)? On Linux no, else yes.
-# - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
-# - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. Defaults to a path (~/nfs/jenkins/home).
-# - NFS_SSH_AGENT: do we want to set up a NFS SSH agent or not (0=false; 1=true)?. Defaults to yes.
-# - SSH_PUBKEY: the file containing the SSH public key. Defaults to ~/.ssh/id_rsa.pub.
-#
-# Docker Compose files
-# ====================
-# The following files may be used depending on the condition behind parentheses:
-# - docker-compose.yml (if [ $JENKINS -ne 0 ])
-# - docker-compose-jenkins-controller.yml (if [ "$JENKINS_CONTROLLER" -ne 0 ])
-# - docker-compose-jenkins-nfs-server.yml (if [ "$NFS" -ne 0 ])
-# - docker-compose-jenkins-nfs-client.yml (if [ "$NFS" -ne 0 ])
-#
-# Examples
-# ========
-# To bring down all services:
-#
-# $ setup.sh down
-#
-# To add debugging while starting up:
-#
-# $ DEBUG=1 setup.sh
-#
+usage() {
+    echo "=== usage ==="
+    cat <<EOF
+
+Description
+===========
+This script sets up the Jenkins environment for Docker Compose.  Docker
+Compose is executed with one or more Docker Compose profiles using the command
+supplied on the command line (default 'up --build --detach' meaning build and
+run containers in the background).
+
+Usage
+=====
+setup.sh [ up | down | -h | --help | docker-compose COMMAND and OPTIONS ]
+
+Environment variables
+=====================
+- CLEANUP: do we clean up Docker volumes and the NFS_SERVER_VOLUME host path 
+  (0=false; 1=true)? Defaults to no.
+- COMPOSE_PROFILES: a comma separated list of Docker Compose profiles.
+- DEBUG: for executing with set -x
+- JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? 
+  Defaults to yes.
+- JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not 
+  (0=false; 1=true)? On Linux no, else yes.
+- JENKINS_SSH_AGENT_PRIVATE: file with the SSH private key for the Jenkins SSH agent.
+  Defaults to ~/.ssh/jenkins_ssh_agent.
+- NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
+- NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. 
+  Defaults to a path (~/nfs/jenkins/home).
+
+Examples
+========
+To bring down all services:
+
+\$ setup.sh down
+
+To add debugging while starting up:
+
+\$ DEBUG=1 setup.sh
+
+EOF
+}
 
 add_to_list() {
     declare -r list=$1
@@ -60,7 +62,17 @@ add_to_list() {
 }
 
 init() {
+    echo "=== init ==="
     ! printenv DEBUG 1>/dev/null || set -x
+
+    echo "CLEANUP: ${CLEANUP:=0}"
+    echo "JENKINS: ${JENKINS:=1}"
+    echo "NFS: ${NFS:=1}"
+    echo "JENKINS_SSH_AGENT_PRIVATE: ${JENKINS_SSH_AGENT_PRIVATE:=~/.ssh/jenkins_ssh_agent}"
+
+    jenkins_ssh_agent_private_dir=$(eval cd $(dirname ${JENKINS_SSH_AGENT_PRIVATE}) && pwd)
+    jenkins_ssh_agent_private_base=$(basename ${JENKINS_SSH_AGENT_PRIVATE})
+    JENKINS_SSH_AGENT_PRIVATE="${jenkins_ssh_agent_private_dir}/${jenkins_ssh_agent_private_base}"
 
     compose_profiles=
     if [ $JENKINS -ne 0 ]
@@ -79,6 +91,7 @@ init() {
                     ;;
             esac
         fi
+        echo "JENKINS_CONTROLLER: ${JENKINS_CONTROLLER}"
         test "$JENKINS_CONTROLLER" -eq 0 || add_to_list compose_profiles , controller
     fi
     
@@ -113,49 +126,45 @@ init() {
             NFS_SERVER_VOLUME=$(cd $NFS_SERVER_VOLUME && pwd)
         fi
 
-        # Both NFS_SERVER_VOLUME_TYPE and NFS_SERVER_VOLUME will be used in docker-compose-jenkins-nfs-server.yml
+        # Both NFS_SERVER_VOLUME_TYPE and NFS_SERVER_VOLUME will be used in docker-compose.yml
         export NFS_SERVER_VOLUME_TYPE NFS_SERVER_VOLUME
         echo "NFS_SERVER_VOLUME_TYPE: ${NFS_SERVER_VOLUME_TYPE}"
         echo "NFS_SERVER_VOLUME: ${NFS_SERVER_VOLUME}"
 
-        if [ "$NFS_SSH_AGENT" -eq 1 ]
+        # Setup Jenkins SSH agent
+        if [ ! -f "$JENKINS_SSH_AGENT_PRIVATE" ]
         then
-            eval test -f "$SSH_PUBKEY" || { echo "Can not read SSH public key file '$SSH_PUBKEY'" 1>&2; exit 1; }
-            export JENKINS_AGENT_SSH_PUBKEY=$(cat $SSH_PUBKEY)
-            add_to_list compose_profiles , nfs nfs-ssh-agent
+            echo "SSH private key file '$JENKINS_SSH_AGENT_PRIVATE' does not exist: starting ssh-keygen"
+            ssh-keygen
+        fi
+        test -f "$JENKINS_SSH_AGENT_PRIVATE" || { echo "SSH privated key file '$JENKINS_SSH_AGENT_PRIVATE' does still not exist" 1>&2; exit 1; }
+        export JENKINS_SSH_AGENT_PUB_KEY=$(eval cat ${JENKINS_SSH_AGENT_PRIVATE}.pub)
+        echo "JENKINS_SSH_AGENT_PUB_KEY: ${JENKINS_SSH_AGENT_PUB_KEY}"
+        add_to_list compose_profiles , nfs jenkins-ssh-agent
+
+        if test "$(uname)" = "Darwin"
+        then
+            declare dir=./.initrd
+            test -d $dir || mkdir -p $dir
+            # make dir absolute
+            dir=$(cd $dir && pwd)
+            test -d $dir/lib/modules || (cd $dir && gzip -dc /Applications/Docker.app/Contents//Resources/linuxkit/initrd.img | cpio -id 'lib/modules')
+            LIB_MODULES_DIR=$dir/lib/modules
         else
-            add_to_list compose_profiles , nfs nfs-client
-        fi        
+            LIB_MODULES_DIR=/lib/modules               
+        fi
+        export LIB_MODULES_DIR
+        echo "LIB_MODULES_DIR: ${LIB_MODULES_DIR}"
     fi
 
     # Do not overwrite COMPOSE_FILES when set
     printenv COMPOSE_PROFILES 1>/dev/null || export COMPOSE_PROFILES=${compose_profiles}
     echo "COMPOSE_PROFILES: ${COMPOSE_PROFILES}"
+    echo ""
 }
 
-set_lib_module_dir()
-{
-    if test "$(uname)" = "Darwin"
-    then
-        declare dir=./.initrd
-        test -d $dir || mkdir -p $dir
-        # make dir absolute
-        dir=$(cd $dir && pwd)
-        test -d $dir/lib/modules || (cd $dir && gzip -dc /Applications/Docker.app/Contents//Resources/linuxkit/initrd.img | cpio -id 'lib/modules')
-        LIB_MODULES_DIR=$dir/lib/modules
-    else
-        LIB_MODULES_DIR=/lib/modules               
-    fi
-    export LIB_MODULES_DIR
-    echo "LIB_MODULES_DIR: ${LIB_MODULES_DIR}"
-}
-
-build() {
-    if [ $NFS -ne 0 ]
-    then
-        set_lib_module_dir
-    fi
-    
+shutdown() {
+    echo "=== shutdown ==="
     # See https://serverfault.com/questions/789601/check-is-container-service-running-with-docker-compose
     
     # common service(s)
@@ -173,12 +182,13 @@ build() {
         fi
     done
     
-    test -n "$services" || docker-compose down --remove-orphans
+    if [ -n "$services" ]
+    then
+        echo "Doing nothing since no services are running."
+    else
+        docker-compose down --remove-orphans
+    fi
 
-    docker-compose build
-}
-
-process() {
     if [ $CLEANUP -ne 0 ]
     then
         # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
@@ -190,27 +200,34 @@ process() {
                 docker volume rm $v || true
             fi
         done
-        docker volume ls
     fi
+}
 
-    ( set -x; docker-compose $docker_compose_command_and_options )
+process() {
+    echo "=== process (docker-compose $@) ==="
+    ( set -x; docker-compose "$@" )
 }
 
 # MAIN
 
 if [ $# -ge 1 ]
 then
-    docker_compose_command_and_options="$@"
+    case "$1" in
+        up)
+            init
+            shutdown
+            process "$@"
+            ;;
+        down)
+            init
+            shutdown
+            ;;
+        -h | --help)
+            usage
+            ;;
+    esac
 else
-    docker_compose_command_and_options="up -d"
+    init
+    shutdown
+    process up --build --detach
 fi
-
-echo "CLEANUP: ${CLEANUP:=0}"
-echo "JENKINS: ${JENKINS:=1}"
-echo "NFS: ${NFS:=1}"
-echo "NFS_SSH_AGENT: ${NFS_SSH_AGENT:=1}"
-echo "SSH_PUBKEY: ${SSH_PUBKEY:=~/.ssh/id_rsa.pub}"
-
-init
-build
-process
