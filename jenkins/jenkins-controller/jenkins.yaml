@@ -44,7 +44,7 @@ jenkins:
             type=volume,src=jenkins-m2-repository,dst=/home/jenkins/.m2/repository
             type=volume,src=jenkins-agent-workspace,dst=/home/jenkins/agent/workspace
           network: "jenkins"
-        labelString: "maven sql jdk oracle"
+        labelString: "maven sql jdk oracle cloud"
         name: "pato"
         pullStrategy: PULL_ALWAYS
         pullTimeout: 300
