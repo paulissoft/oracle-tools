@@ -140,7 +140,7 @@ init() {
         test -f "$JENKINS_SSH_AGENT_PRIVATE" || { echo "SSH privated key file '$JENKINS_SSH_AGENT_PRIVATE' does still not exist" 1>&2; exit 1; }
         export JENKINS_SSH_AGENT_PUB_KEY=$(eval cat ${JENKINS_SSH_AGENT_PRIVATE}.pub)
         echo "JENKINS_SSH_AGENT_PUB_KEY: ${JENKINS_SSH_AGENT_PUB_KEY}"
-        add_to_list compose_profiles , nfs jenkins-ssh-agent
+        add_to_list compose_profiles , nfs agent
 
         if test "$(uname)" = "Darwin"
         then

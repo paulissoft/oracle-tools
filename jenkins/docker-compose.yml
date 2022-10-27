@@ -47,7 +47,7 @@ services:
   jenkins-nfs-server:
     profiles:
       - nfs
-      - jenkins-ssh-agent
+      - agent
     container_name: jenkins_nfs_server
     build: jenkins-nfs-server
     restart: unless-stopped
@@ -71,7 +71,7 @@ services:
       - NFS_DISABLE_VERSION_3=1
   jenkins-ssh-agent:
     profiles:
-      - jenkins-ssh-agent
+      - agent
     container_name: jenkins_ssh_agent
     build:
       context: jenkins-agent
@@ -122,17 +122,20 @@ services:
   # so that it will add that hosts the jenkins known hosts in volume jenkins-data
   jenkins-ssh-agent-add-to-known-hosts:
     profiles:
-      - jenkins-ssh-agent
+      - agent
       - controller
     container_name: jenkins_ssh_agent_add_to_known_hosts
     image: "ghcr.io/paulissoft/pato-jenkins-agent:latest"
     restart: "no"
+    networks:
+      - jenkins-network
     volumes:
       - jenkins-data:/var/jenkins_home
     command:
       - /bin/sh
       - -c
       - |
+        set -x
         test -d /var/jenkins_home/.ssh || mkdir -m 700 /var/jenkins_home/.ssh
         ssh-keygen -f /var/jenkins_home/.ssh/known_hosts -R 192.168.1.4
         ssh-keyscan 192.168.1.4 >> /var/jenkins_home/.ssh/known_hosts
