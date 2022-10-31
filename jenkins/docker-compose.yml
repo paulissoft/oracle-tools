@@ -47,7 +47,6 @@ services:
   jenkins-nfs-server:
     profiles:
       - nfs
-      - agent
     container_name: jenkins_nfs_server
     build: jenkins-nfs-server
     restart: unless-stopped
@@ -69,35 +68,6 @@ services:
     environment:
       - NFS_LOG_LEVEL=DEBUG
       - NFS_DISABLE_VERSION_3=1
-  jenkins-ssh-agent:
-    profiles:
-      - agent
-    container_name: jenkins_ssh_agent
-    build:
-      context: jenkins-agent
-      args:
-        - IMAGE=jenkins/ssh-agent:latest
-        - STARTING_USER=root
-    restart: unless-stopped
-    hostname: jenkins-ssh-agent
-    networks:
-      jenkins-network:
-        ipv4_address: 192.168.1.4
-    volumes:
-    - type: volume
-      source: jenkins-agent-workspace
-      target: /home/jenkins/agent/workspace
-      volume:
-        nocopy: true
-    - type: volume
-      source: jenkins-m2-repository
-      target: /home/jenkins/.m2/repository
-      volume:
-        nocopy: true
-    environment:
-      - JENKINS_SSH_AGENT_PUB_KEY=${JENKINS_SSH_AGENT_PUB_KEY:-}
-    depends_on:
-      - jenkins-nfs-server
   jenkins-controller:
     profiles:
       - controller
@@ -120,25 +90,30 @@ services:
       - jenkins-docker
   # just a sidekick for jenkins-controller below
   # so that it will add that hosts the jenkins known hosts in volume jenkins-data
-  jenkins-ssh-agent-add-to-known-hosts:
+  jenkins-create-nfs-volumes:
     profiles:
-      - agent
-      - controller
-    container_name: jenkins_ssh_agent_add_to_known_hosts
+      - nfs
+    container_name: jenkins_create_nfs_volumes
     image: "ghcr.io/paulissoft/pato-jenkins-agent:latest"
     restart: "no"
     networks:
       - jenkins-network
     volumes:
-      - jenkins-data:/var/jenkins_home
+    - type: volume
+      source: jenkins-agent-workspace
+      target: /home/jenkins/agent/workspace
+      volume:
+        nocopy: true
+    - type: volume
+      source: jenkins-m2-repository
+      target: /home/jenkins/.m2/repository
+      volume:
+        nocopy: true
     command:
       - /bin/sh
       - -c
       - |
         set -x
-        test -d /var/jenkins_home/.ssh || mkdir -m 700 /var/jenkins_home/.ssh
-        ssh-keygen -f /var/jenkins_home/.ssh/known_hosts -R 192.168.1.4
-        ssh-keyscan 192.168.1.4 >> /var/jenkins_home/.ssh/known_hosts
+        find /home/jenkins/agent/workspace /home/jenkins/.m2/repository
     depends_on:
-      - jenkins-ssh-agent
-      - jenkins-controller
+      - jenkins-nfs-server
