@@ -25,8 +25,6 @@ Environment variables
   Defaults to yes.
 - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not 
   (0=false; 1=true)? On Linux no, else yes.
-- JENKINS_SSH_AGENT_PRIVATE: file with the SSH private key for the Jenkins SSH agent.
-  Defaults to ~/.ssh/jenkins_ssh_agent.
 - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
 - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. 
   Defaults to a path (~/nfs/jenkins/home).
@@ -68,11 +66,6 @@ init() {
     echo "CLEANUP: ${CLEANUP:=0}"
     echo "JENKINS: ${JENKINS:=1}"
     echo "NFS: ${NFS:=1}"
-    echo "JENKINS_SSH_AGENT_PRIVATE: ${JENKINS_SSH_AGENT_PRIVATE:=~/.ssh/jenkins_ssh_agent}"
-
-    jenkins_ssh_agent_private_dir=$(eval cd $(dirname ${JENKINS_SSH_AGENT_PRIVATE}) && pwd)
-    jenkins_ssh_agent_private_base=$(basename ${JENKINS_SSH_AGENT_PRIVATE})
-    JENKINS_SSH_AGENT_PRIVATE="${jenkins_ssh_agent_private_dir}/${jenkins_ssh_agent_private_base}"
 
     compose_profiles=
     if [ $JENKINS -ne 0 ]
@@ -131,16 +124,7 @@ init() {
         echo "NFS_SERVER_VOLUME_TYPE: ${NFS_SERVER_VOLUME_TYPE}"
         echo "NFS_SERVER_VOLUME: ${NFS_SERVER_VOLUME}"
 
-        # Setup Jenkins SSH agent
-        if [ ! -f "$JENKINS_SSH_AGENT_PRIVATE" ]
-        then
-            echo "SSH private key file '$JENKINS_SSH_AGENT_PRIVATE' does not exist: starting ssh-keygen"
-            ssh-keygen
-        fi
-        test -f "$JENKINS_SSH_AGENT_PRIVATE" || { echo "SSH privated key file '$JENKINS_SSH_AGENT_PRIVATE' does still not exist" 1>&2; exit 1; }
-        export JENKINS_SSH_AGENT_PUB_KEY=$(eval cat ${JENKINS_SSH_AGENT_PRIVATE}.pub)
-        echo "JENKINS_SSH_AGENT_PUB_KEY: ${JENKINS_SSH_AGENT_PUB_KEY}"
-        add_to_list compose_profiles , nfs agent
+        add_to_list compose_profiles , nfs
 
         if test "$(uname)" = "Darwin"
         then
@@ -209,24 +193,22 @@ process() {
 
 # MAIN
 
-if [ $# -ge 1 ]
+if [ $# -eq 0 ]
 then
-    case "$1" in
-        up)
-            init
-            shutdown
-            process "$@"
-            ;;
-        down)
-            init
-            shutdown
-            ;;
-        -h | --help)
-            usage
-            ;;
-    esac
-else
-    init
-    shutdown
-    process up --build --detach
+    set -- up --build --detach
 fi
+
+case "$1" in
+    up)
+        init
+        shutdown
+        process "$@"
+        ;;
+    down)
+        init
+        shutdown
+        ;;
+    -h | --help)
+        usage
+        ;;
+esac
