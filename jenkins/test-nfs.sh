@@ -17,16 +17,10 @@ then
     set -- 0 1 2 3 1 4 1
 fi
 
+docker run --name jenkins_agent --rm -d -it -v jenkins-agent-workspace:/home/jenkins/agent/workspace -v jenkins-m2-repository:/home/jenkins/.m2/repository ghcr.io/paulissoft/pato-jenkins-agent:latest sleep 3600
+
 jenkins_nfs_server=jenkins_nfs_server
-jenkins_agents=
-for c in jenkins_ssh_agent
-do
-    if docker container ls | grep $c
-    then
-        jenkins_agents="$jenkins_agents $c"
-    fi
-done
-test -n "$jenkins_agents" || { echo "Could not detect a Jenkins agent (NFS client)" 1>& 2; exit 1; }
+jenkins_agents=jenkins_agent
 
 for step
 do
@@ -95,5 +89,7 @@ do
            ;;
     esac
 done
+
+docker stop jenkins_agent
 
 echo "=== the END ==="
