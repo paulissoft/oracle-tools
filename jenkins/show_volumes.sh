@@ -1,9 +1,10 @@
 #!/bin/bash -eu
 
+! printenv DEBUG 1>/dev/null || set -x
+
 # all possible volumes used
 for item in \
-    maven-local-repository:/home/jenkins/.m2/repository \
-        jenkins-agent-workspace:/home/jenkins/agent/workspace \
+    jenkins-agent-workspace:/home/jenkins/agent/workspace \
         jenkins-m2-repository:/home/jenkins/.m2/repository
 do
     v=$(echo $item | cut -d ':' -f 1)
@@ -11,7 +12,8 @@ do
     if docker volume ls | grep $v 1>/dev/null
     then
         docker_cmd="docker run --rm -it -v $v:$d ghcr.io/paulissoft/pato-jenkins-agent:latest"
-        echo "Docker volume $v has $($docker_cmd find $d -print | wc -l) files"
+        nr_files=$($docker_cmd find $d -print | wc -l)
+        echo "Docker volume $v has $nr_files files ($docker_cmd)"
         if printenv DEBUG 1>/dev/null
         then
             docker_cmd="$docker_cmd find $d -ls"

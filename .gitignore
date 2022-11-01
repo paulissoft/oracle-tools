@@ -4,3 +4,4 @@ target
 *.log
 .flattened-pom.xml
 *.tmp
+jenkins/.initrd

@@ -1,123 +1,214 @@
 #!/bin/bash -eu
 
+usage() {
+    echo "=== usage ==="
+    cat <<EOF
+
+Description
+===========
+This script sets up the Jenkins environment for Docker Compose.  Docker
+Compose is executed with one or more Docker Compose profiles using the command
+supplied on the command line (default 'up --build --detach' meaning build and
+run containers in the background).
+
+Usage
+=====
+setup.sh [ up | down | -h | --help | docker-compose COMMAND and OPTIONS ]
+
+Environment variables
+=====================
+- CLEANUP: do we clean up Docker volumes and the NFS_SERVER_VOLUME host path 
+  (0=false; 1=true)? Defaults to no.
+- COMPOSE_PROFILES: a comma separated list of Docker Compose profiles.
+- DEBUG: for executing with set -x
+- JENKINS: will we set up containers necessary for Jenkins (0=false; 1=true)? 
+  Defaults to yes.
+- JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not 
+  (0=false; 1=true)? On Linux no, else yes.
+- NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
+- NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. 
+  Defaults to a path (~/nfs/jenkins/home).
+
+Examples
+========
+To bring down all services:
+
+\$ setup.sh down
+
+To add debugging while starting up:
+
+\$ DEBUG=1 setup.sh
+
+EOF
+}
+
+add_to_list() {
+    declare -r list=$1
+    shift
+    declare -r sep=$1
+    shift
+
+    for e
+    do
+        if [ -z "${!list}" ]
+        then
+            eval ${list}="${e}"
+        else
+            eval ${list}="${!list}${sep}${e}"
+        fi
+    done
+}
+
 init() {
+    echo "=== init ==="
     ! printenv DEBUG 1>/dev/null || set -x
-    
-    if ! printenv DOCKER_COMPOSE_FILE 1>/dev/null
+
+    echo "CLEANUP: ${CLEANUP:=0}"
+    echo "JENKINS: ${JENKINS:=1}"
+    echo "NFS: ${NFS:=1}"
+
+    compose_profiles=
+    if [ $JENKINS -ne 0 ]
     then
-        case $(uname) in
-            Linux)
-                DOCKER_COMPOSE_FILE=
+        # The profile docker is common.
+        add_to_list compose_profiles , docker
+        if ! printenv JENKINS_CONTROLLER 1>/dev/null
+        then
+            case $(uname) in
+                Linux)
+                    # Assume that Jenkins is installed as a service 
+                    JENKINS_CONTROLLER=0
+                    ;;
+                *)
+                    JENKINS_CONTROLLER=1
+                    ;;
+            esac
+        fi
+        echo "JENKINS_CONTROLLER: ${JENKINS_CONTROLLER}"
+        test "$JENKINS_CONTROLLER" -eq 0 || add_to_list compose_profiles , controller
+    fi
+    
+    if [ $NFS -ne 0 ]
+    then
+        if ! printenv NFS_SERVER_VOLUME 1>/dev/null
+        then
+            NFS_SERVER_VOLUME=nfs-server-volume
+        fi
+
+        # Is NFS_SERVER_VOLUME a Docker volume or a path?
+        case "$NFS_SERVER_VOLUME" in
+            ~* | */*)
+                NFS_SERVER_VOLUME_TYPE=bind
                 ;;
             *)
-                DOCKER_COMPOSE_FILE=docker-compose-jenkins-controller.yml
+                NFS_SERVER_VOLUME_TYPE=volume
                 ;;
         esac
+
+        if [ "$NFS_SERVER_VOLUME_TYPE" = "bind" ]
+        then
+            test "$CLEANUP" -eq 0 || test ! -d "$NFS_SERVER_VOLUME" || rm -fr "$NFS_SERVER_VOLUME"
+    
+            # Create the shared directory as well as the Maven .m2/repository directory and the workspace
+            for d in $NFS_SERVER_VOLUME $NFS_SERVER_VOLUME/repository $NFS_SERVER_VOLUME/workspace
+            do
+                test -d $d || mkdir -p $d
+                chmod -R 755 $d
+            done
+            # make NFS_SERVER_VOLUME absolute
+            NFS_SERVER_VOLUME=$(cd $NFS_SERVER_VOLUME && pwd)
+        fi
+
+        # Both NFS_SERVER_VOLUME_TYPE and NFS_SERVER_VOLUME will be used in docker-compose.yml
+        export NFS_SERVER_VOLUME_TYPE NFS_SERVER_VOLUME
+        echo "NFS_SERVER_VOLUME_TYPE: ${NFS_SERVER_VOLUME_TYPE}"
+        echo "NFS_SERVER_VOLUME: ${NFS_SERVER_VOLUME}"
+
+        add_to_list compose_profiles , nfs
+
+        if test "$(uname)" = "Darwin"
+        then
+            declare dir=./.initrd
+            test -d $dir || mkdir -p $dir
+            # make dir absolute
+            dir=$(cd $dir && pwd)
+            test -d $dir/lib/modules || (cd $dir && gzip -dc /Applications/Docker.app/Contents//Resources/linuxkit/initrd.img | cpio -id 'lib/modules')
+            LIB_MODULES_DIR=$dir/lib/modules
+        else
+            LIB_MODULES_DIR=/lib/modules               
+        fi
+        export LIB_MODULES_DIR
+        echo "LIB_MODULES_DIR: ${LIB_MODULES_DIR}"
     fi
 
-    if [ $NFS -ne 0 ]
-    then
-        if ! printenv SHARED_DIRECTORY 1>/dev/null
-        then
-            export SHARED_DIRECTORY=~/nfs/jenkins/home
-        fi
-    
-        rm -fr $SHARED_DIRECTORY
-    
-        # Create the shared directory as well as the Maven .m2/repository directory and the workspace
-        for d in $SHARED_DIRECTORY $SHARED_DIRECTORY/.m2/repository $SHARED_DIRECTORY/agent/workspace
-        do
-            test -d $d || mkdir -p $d
-            chmod -R 755 $d
-        done
-
-        if [ ! -d $SHARED_DIRECTORY/.ssh ]
-        then
-            mkdir -m 700 $SHARED_DIRECTORY/.ssh
-            ssh-keyscan github.com > $SHARED_DIRECTORY/.ssh/known_hosts
-            chmod 700 $SHARED_DIRECTORY/.ssh/known_hosts
-        fi
-    fi
-
-    # The docker-compose.yml is the common file.
-    # The $DOCKER_COMPOSE_FILE is environment specific.
-    docker_compose_files="-f docker-compose.yml"
-    test $NFS -eq 0 || docker_compose_files="$docker_compose_files -f docker-compose-jenkins-nfs-server.yml -f docker-compose-jenkins-nfs-client.yml"
-    test -z "$DOCKER_COMPOSE_FILE" || docker_compose_files="$docker_compose_files -f $DOCKER_COMPOSE_FILE"
+    # Do not overwrite COMPOSE_FILES when set
+    printenv COMPOSE_PROFILES 1>/dev/null || export COMPOSE_PROFILES=${compose_profiles}
+    echo "COMPOSE_PROFILES: ${COMPOSE_PROFILES}"
+    echo ""
 }
 
-build() {
+shutdown() {
+    echo "=== shutdown ==="
     # See https://serverfault.com/questions/789601/check-is-container-service-running-with-docker-compose
     
-    # common service
-    service=jenkins-docker
-    if [ -z `docker-compose $docker_compose_files ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose $docker_compose_files ps -q $service)` ]
+    # common service(s)
+    services='jenkins-docker jenkins-nfs-server'
+
+    for service in $services
+    do
+        if [ -z `docker-compose ps -q $service` ] || [ -z `docker ps -q --no-trunc | grep $(docker-compose ps -q $service)` ]
+        then
+            echo "Service $service is not running."
+        else
+            echo "Service $service is running: shutting it down."
+            services=
+            break
+        fi
+    done
+    
+    if [ -n "$services" ]
     then
-        echo "Service $service is not running."
+        echo "Doing nothing since no services are running."
     else
-        echo "Service $service is running: shutting it down."
-        docker-compose $docker_compose_files down --remove-orphans
+        docker-compose down --remove-orphans
     fi
 
-    docker-compose $docker_compose_files build
-}
-
-start() {
-    if [ $NFS -ne 0 ]
+    if [ $CLEANUP -ne 0 ]
     then
-        for item in \
-            JENKINS_NFS_SERVER_M2_REPOSITORY:jenkins_nfs_server_m2_repository:jenkins-nfs-server-m2-repository \
-                JENKINS_NFS_SERVER_AGENT_WORKSPACE:jenkins_nfs_server_agent_workspace:jenkins-nfs-server-agent-workspace
+        set -- jenkins-data nfs-server-volume jenkins-agent-workspace jenkins-m2-repository
+        for v
         do
-            var=$(echo $item | cut -d ':' -f 1)
-            container=$(echo $item | cut -d ':' -f 2)
-            service=$(echo $item | cut -d ':' -f 3)
-
-            if ! printenv $var 1>/dev/null
+            if docker volume ls | grep $v
             then
-                case $(uname) in
-                    # We need the IP address of the jenkins-nfs-server on a Mac for the NFS volume
-                    # since the host can not obtain a Docker container IP address via DNS.
-                    Darwin)
-                        docker-compose -f docker-compose-jenkins-nfs-server.yml up -d $service
-                        eval export $var=$(docker inspect $container --format '{{.NetworkSettings.Networks.jenkins.IPAddress}}')
-                        ;;
-                    # Here the dns-proxy-server should be able to do the right thing.
-                    *)
-                        eval $var=$service
-                        ;;
-                esac
+                docker volume rm $v || true
             fi
         done
     fi
-    
-    # Remove the volumes since they may have been created with the wrong JENKINS_NFS_SERVER variables
-    set -- jenkins-m2-repository jenkins-agent-workspace
-    for v
-    do
-        if docker volume ls | grep $v
-        then
-            docker volume rm $v
-        fi
-    done
-
-    ( set -x; docker-compose $docker_compose_files $docker_compose_command_and_options )
-
-    $curdir/show_volumes.sh
 }
 
-# main
+process() {
+    echo "=== process (docker-compose $@) ==="
+    ( set -x; docker-compose "$@" )
+}
 
-curdir=$(dirname $0)
-if [ $# -ge 1 ]
+# MAIN
+
+if [ $# -eq 0 ]
 then
-    docker_compose_command_and_options="$@"
-else
-    docker_compose_command_and_options="up -d"
+    set -- up --build --detach
 fi
-# No NFS for the time being
-NFS=0
 
-init
-build
-start
+case "$1" in
+    up)
+        init
+        shutdown
+        process "$@"
+        ;;
+    down)
+        init
+        shutdown
+        ;;
+    -h | --help)
+        usage
+        ;;
+esac

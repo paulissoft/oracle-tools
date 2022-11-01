@@ -5,6 +5,7 @@ ARG MVND_ZIP_BASE=maven-mvnd-$MVND_VERSION-linux-amd64
 ARG MVND_ZIP=$MVND_ZIP_BASE.zip
 ARG MVND_DOWNLOAD_URL=https://github.com/apache/maven-mvnd/releases/download/$MVND_VERSION/$MVND_ZIP
 ARG IMAGE=jenkins/agent:latest
+ARG STARTING_USER=jenkins
 
 FROM $IMAGE
 
@@ -106,10 +107,13 @@ WORKDIR /home/jenkins
 RUN mkdir -m 700 /home/jenkins/.ssh && ssh-keyscan github.com >> /home/jenkins/.ssh/known_hosts
 
 # As stated in the documentation, a inherits the directory content and permissions existing in the container.
-# So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
+# So when volume jenkins-m2-repository attaches to /home/jenkins/.m2/repository,
 # that directory must already exist and have the correct ownership
 # otherwise it will be root giving Maven download permission problems.
 # See also https://github.com/paulissoft/oracle-tools/issues/66.
 RUN mkdir -m 755 -p /home/jenkins/.m2/repository
 # Also create a workspace directory owned by jenkins
 RUN mkdir -m 755 -p /home/jenkins/agent/workspace
+
+ARG STARTING_USER
+USER $STARTING_USER
