@@ -24,7 +24,7 @@ This help.
 
 =item B<-t|--timeout>
 
-The timeout specified in seconds. Defaults to 10 seconds. A timeout less than 1 will be set to 10.
+The timeout specified in seconds. Defaults to 60 seconds. A timeout less than 1 will be set to 60.
 
 =item B<-v|--verbose>
 
@@ -58,7 +58,9 @@ use Getopt::Long;
 use Pod::Usage;
 use POSIX ":sys_wait_h";
 
-my $timeout = 10;
+use constant TIMEOUT => 60;
+
+my $timeout = TIMEOUT;
 my $verbose = 0;
 
 # prototypes
@@ -94,7 +96,7 @@ sub parse_command_line () {
         )
         or pod2usage(-verbose => 0);
 
-    $timeout = 10
+    $timeout = TIMEOUT
         if (!defined($timeout) || $timeout < 1);
 } # parse_command_line
 

@@ -1,6 +1,11 @@
 ARG SQLCL_ZIP=sqlcl-21.4.1.17.1458.zip
 ARG SQLCL_URL=https://download.oracle.com/otn_software/java/sqldeveloper/$SQLCL_ZIP
+ARG MVND_VERSION=0.8.2
+ARG MVND_ZIP_BASE=maven-mvnd-$MVND_VERSION-linux-amd64
+ARG MVND_ZIP=$MVND_ZIP_BASE.zip
+ARG MVND_DOWNLOAD_URL=https://github.com/apache/maven-mvnd/releases/download/$MVND_VERSION/$MVND_ZIP
 ARG IMAGE=jenkins/agent:latest
+ARG STARTING_USER=jenkins
 
 FROM $IMAGE
 
@@ -20,46 +25,95 @@ LABEL org.opencontainers.image.description="Paulissoft Application Tools for Ora
 #LABEL org.label-schema.url="https://github.com/paulissoft/oracle-tools"
 
 USER root
-# Install Maven and Docker
+
+# --------------
+# Install Docker
+# --------------
+
+# Here we need several RUN commands since we create the docker list for the docker-ce-cli installation
+
 RUN apt-get update -y -q && \
-		apt-get upgrade -y -q && \
-		apt-get install -y -q maven git curl unzip openssh-client ca-certificates lsb-release iputils-ping
+    apt-get install -y -q git curl unzip openssh-client ca-certificates lsb-release iputils-ping
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
   https://download.docker.com/linux/debian/gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) \
   signed-by=/usr/share/keyrings/docker-archive-keyring.asc] \
   https://download.docker.com/linux/debian \
   $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-RUN apt-get update && apt-get install -y docker-ce-cli iputils-ping
+RUN apt-get update && apt-get install -y docker-ce-cli
 
+# --------------------
+# Install Maven daemon
+# --------------------
+
+# must redeclare an ARG after FROM (see also https://benkyriakou.com/posts/docker-args-empty)
+ARG MVND_ZIP_BASE
+ARG MVND_ZIP
+ARG MVND_DOWNLOAD_URL
+
+WORKDIR /opt
+
+ADD $MVND_DOWNLOAD_URL .
+
+RUN unzip $MVND_ZIP && mv $MVND_ZIP_BASE mvnd && rm $MVND_ZIP 
+
+ENV MVND_HOME=/opt/mvnd
+ENV MVN_HOME=/opt/mvnd/mvn
+
+# -------------
 # Install SQLcl
+# -------------
 
 # must redeclare an ARG after FROM (see also https://benkyriakou.com/posts/docker-args-empty)
 ARG SQLCL_ZIP
 ARG SQLCL_URL
-RUN mkdir -m 755 -p /opt/oracle && \
-    cd /opt/oracle && \
-    curl -o $SQLCL_ZIP $SQLCL_URL && \
-    ls -l $SQLCL_ZIP && \
-    unzip $SQLCL_ZIP && \
-    cd -
-ENV SQL_HOME /opt/oracle/sqlcl
 
-RUN mkdir -m 755 -p /opt/oracle/network/admin
-ENV TNS_ADMIN /opt/oracle/network/admin
+WORKDIR /opt/oracle
 
-# If you use Oracle Wallet
-RUN mkdir -m 755 -p /opt/oracle/wallet
+ADD $SQLCL_URL .
+
+# unpacks to sqlcl
+RUN unzip $SQLCL_ZIP && ls -l /opt/oracle/sqlcl/bin/sql && rm $SQLCL_ZIP 
+
+ENV SQL_HOME=/opt/oracle/sqlcl
+
+# -------
+# SQL*Net
+# -------
+
+WORKDIR /opt/oracle/network/admin
+
+WORKDIR /opt/oracle/wallet
+
+RUN chmod -R 755 /opt
+
+ENV TNS_ADMIN=/opt/oracle/network/admin
+
+# ------------------
+# Update environment
+# ------------------
+
+ENV PATH="$MVND_HOME/bin:$MVN_HOME/bin:$PATH"
+ 
+# ------------
+# User jenkins
+# ------------
 
 # Let github.com be a known host for user jenkins
 USER jenkins
-RUN mkdir -m 700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+WORKDIR /home/jenkins
+
+RUN mkdir -m 700 /home/jenkins/.ssh && ssh-keyscan github.com >> /home/jenkins/.ssh/known_hosts
 
 # As stated in the documentation, a inherits the directory content and permissions existing in the container.
-# So when volume maven-local-repository attaches to /home/jenkins/.m2/repository,
+# So when volume jenkins-m2-repository attaches to /home/jenkins/.m2/repository,
 # that directory must already exist and have the correct ownership
 # otherwise it will be root giving Maven download permission problems.
 # See also https://github.com/paulissoft/oracle-tools/issues/66.
 RUN mkdir -m 755 -p /home/jenkins/.m2/repository
 # Also create a workspace directory owned by jenkins
 RUN mkdir -m 755 -p /home/jenkins/agent/workspace
+
+ARG STARTING_USER
+USER $STARTING_USER

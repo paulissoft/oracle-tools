@@ -1,0 +1,7 @@
+# from https://tldp.org/HOWTO/NFS-HOWTO/index.html
+portmap: 192.168.1.0/24
+lockd: 192.168.1.0/24
+rquotad: 192.168.1.0/24
+mountd: 192.168.1.0/24
+statd: 192.168.1.0/24
+
