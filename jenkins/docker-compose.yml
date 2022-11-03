@@ -83,7 +83,7 @@ services:
         ipv4_address: 192.168.1.5
     volumes:
       - jenkins-data:/var/jenkins_home
-      - ${JENKINS_SSH_AGENT_PUB_KEY:-~/.ssh/id_rsa}:/var/jenkins_home/.ssh/${JENKINS_SSH_AGENT_PRIVATE_BASE:-id_rsa}
+      - ${JENKINS_SSH_PRIVATE_KEY:-~/.ssh/id_rsa}:/var/jenkins_home/.ssh/${JENKINS_SSH_PRIVATE_KEY_BASE:-id_rsa}
     environment:
       - DOCKER_HOST=tcp://192.168.1.2:2375
       - DOCKER_TLS_VERIFY=""

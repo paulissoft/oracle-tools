@@ -25,8 +25,8 @@ Environment variables
   Defaults to yes.
 - JENKINS_CONTROLLER: do we setup a Jenkins Docker controller or not 
   (0=false; 1=true)? When a system control for jenkins is enabled on Linux no, else yes.
-- JENKINS_SSH_AGENT_PRIVATE: file with the SSH private key for the Jenkins SSH agent.
-  Defaults to ~/.ssh/jenkins_ssh_agent.
+- JENKINS_SSH_PRIVATE_KEY: SSH private key file for communication with GitHub.
+  Defaults to ~/.ssh/id_rsa.
 - NFS: will we set up NFS (0=false; 1=true)? Defaults to yes.
 - NFS_SERVER_VOLUME: the NFS server Docker volume or bind host path. 
   Defaults to a path (~/nfs/jenkins/home).
@@ -68,22 +68,21 @@ init() {
     echo "CLEANUP: ${CLEANUP:=0}"
     echo "JENKINS: ${JENKINS:=1}"
     echo "NFS: ${NFS:=1}"
-    echo "JENKINS_SSH_AGENT_PRIVATE: ${JENKINS_SSH_AGENT_PRIVATE:=~/.ssh/id_ed25519}"
+    echo "JENKINS_SSH_PRIVATE_KEY: ${JENKINS_SSH_PRIVATE_KEY:=~/.ssh/id_rsa}"
 
-    jenkins_ssh_agent_private_dir=$(eval cd $(dirname ${JENKINS_SSH_AGENT_PRIVATE}) && pwd)
-    export JENKINS_SSH_AGENT_PRIVATE_BASE=$(basename ${JENKINS_SSH_AGENT_PRIVATE})
-    JENKINS_SSH_AGENT_PRIVATE="${jenkins_ssh_agent_private_dir}/${JENKINS_SSH_AGENT_PRIVATE_BASE}"
+    jenkins_ssh_private_key_dir=$(eval cd $(dirname ${JENKINS_SSH_PRIVATE_KEY}) && pwd)
+
+    # Make JENKINS_SSH_PRIVATE_KEY an absolute path
+    export JENKINS_SSH_PRIVATE_KEY_BASE=$(basename ${JENKINS_SSH_PRIVATE_KEY})
+    export JENKINS_SSH_PRIVATE_KEY="${jenkins_ssh_private_key_dir}/${JENKINS_SSH_PRIVATE_KEY_BASE}"
     
-    # Setup Jenkins SSH agent
-    if [ ! -f "$JENKINS_SSH_AGENT_PRIVATE" ]
+    # Set up Jenkins SSH communication
+    if [ ! -f "$JENKINS_SSH_PRIVATE_KEY" ]
     then
-        echo "SSH private key file '$JENKINS_SSH_AGENT_PRIVATE' does not exist: starting ssh-keygen"
-        ssh-keygen
+        echo "SSH private key file '$JENKINS_SSH_PRIVATE_KEY' does not exist: starting ssh-keygen"
+        ssh-keygen -t rsa -f "$JENKINS_SSH_PRIVATE_KEY"
     fi
-    test -f "$JENKINS_SSH_AGENT_PRIVATE" || { echo "SSH privated key file '$JENKINS_SSH_AGENT_PRIVATE' does still not exist" 1>&2; exit 1; }
-    export JENKINS_SSH_AGENT_PUB_KEY=$(eval cat ${JENKINS_SSH_AGENT_PRIVATE}.pub)
-    echo "JENKINS_SSH_AGENT_PUB_KEY: ${JENKINS_SSH_AGENT_PUB_KEY}"
-
+    test -f "$JENKINS_SSH_PRIVATE_KEY" || { echo "SSH private key file '$JENKINS_SSH_PRIVATE_KEY' does still not exist" 1>&2; exit 1; }
     
     compose_profiles=
     if [ $JENKINS -ne 0 ]
