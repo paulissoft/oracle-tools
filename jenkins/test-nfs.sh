@@ -63,8 +63,8 @@ do
         2) for jenkins_agent in $jenkins_agents
            do
                echo "Trying to touch a file on $jenkins_agent as root: this must FAIL"           
-               ! x time docker exec --interactive --tty --user root $jenkins_agent touch $file1 || exit 1
-               ! x time docker exec --interactive --tty --user root $jenkins_agent touch $file2 || exit 1
+               ! x docker exec --interactive --tty --user root $jenkins_agent touch $file1 || exit 1
+               ! x docker exec --interactive --tty --user root $jenkins_agent touch $file2 || exit 1
                echo ""
            done
            ;;
