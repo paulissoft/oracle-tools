@@ -12,7 +12,6 @@ credentials:
           description: "GitHub account to use with SSH"
           id: "github"
           scope: GLOBAL
-          username: "Your GitHub account"
 jenkins:
   agentProtocols:
   - "JNLP4-connect"
@@ -57,9 +56,15 @@ jenkins:
   - envVars:
       env:
       - key: "SCM_EMAIL"
-        value: "Your GitHub email"
       - key: "SCM_USERNAME"
-        value: "Your GitHub account"
+      - key: "SCM_URL_ORACLE_TOOLS"
+        value: "git@github.com:paulissoft/oracle-tools.git"
+      - key: "SCM_BRANCH_ORACLE_TOOLS"
+        value: "master"
+      - key: "SCM_CREDENTIALS_ORACLE_TOOLS"
+        value: "github"
+      - key: "VERBOSE"
+        value: "0"
   labelAtoms:
   - name: "built-in"
   markupFormatter: "plainText"
