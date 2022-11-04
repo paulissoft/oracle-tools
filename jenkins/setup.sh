@@ -82,7 +82,13 @@ init() {
         echo "SSH private key file '$JENKINS_SSH_PRIVATE_KEY' does not exist: starting ssh-keygen"
         ssh-keygen -t rsa -f "$JENKINS_SSH_PRIVATE_KEY"
     fi
-    test -f "$JENKINS_SSH_PRIVATE_KEY" || { echo "SSH private key file '$JENKINS_SSH_PRIVATE_KEY' does still not exist" 1>&2; exit 1; }
+    if [ -f "$JENKINS_SSH_PRIVATE_KEY" ]
+    then
+        echo "SSH private key file: '$JENKINS_SSH_PRIVATE_KEY'"
+    else
+        echo "SSH private key file '$JENKINS_SSH_PRIVATE_KEY' does still not exist" 1>&2
+        exit 1
+    fi
     
     compose_profiles=
     if [ $JENKINS -ne 0 ]
