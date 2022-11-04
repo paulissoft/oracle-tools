@@ -66,6 +66,7 @@
     <conf.phase.init>initialize</conf.phase.init>
     <!-- give the generate-resources phase a chance to extract resources -->
     <conf.phase.process>process-resources</conf.phase.process>
+    <conf.test.connection>false</conf.test.connection>
     <conf.test.connection.timeout>600</conf.test.connection.timeout>
     <!-- 
          This property is used to construct the db.username property below in
