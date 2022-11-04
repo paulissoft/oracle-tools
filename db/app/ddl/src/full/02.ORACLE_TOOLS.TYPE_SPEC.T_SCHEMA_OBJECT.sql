@@ -6,7 +6,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
 , final member procedure network_link
   ( self in out nocopy oracle_tools.t_schema_object
   , p_network_link in varchar2
-  )
+  ) 
 , final member function object_schema return varchar2 deterministic
 , final member procedure object_schema
   ( self in out nocopy oracle_tools.t_schema_object
