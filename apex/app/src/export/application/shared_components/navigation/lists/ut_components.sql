@@ -8,313 +8,313 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>151930114232313867
+,p_default_id_offset=>67978470344966559
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_list(
- p_id=>wwv_flow_api.id(59068076309381341)
+ p_id=>wwv_flow_api.id(20318183565520299)
 ,p_name=>'UT - Components'
 ,p_list_status=>'PUBLIC'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59069222637381342)
+ p_id=>wwv_flow_api.id(20319329893520300)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'Activity Timeline'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1406:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-history'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59069578864381342)
+ p_id=>wwv_flow_api.id(20319686120520300)
 ,p_list_item_display_sequence=>20
 ,p_list_item_link_text=>'Alert'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1202:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-alert'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59069973075381342)
+ p_id=>wwv_flow_api.id(20320080331520300)
 ,p_list_item_display_sequence=>30
 ,p_list_item_link_text=>'Badges List'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1304:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-badge-list'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59070409356381343)
+ p_id=>wwv_flow_api.id(20320516612520301)
 ,p_list_item_display_sequence=>50
 ,p_list_item_link_text=>'Breadcrumb'
 ,p_list_item_link_target=>'f?p=&APP_ID.:3810:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-breadcrumb'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59070812425381343)
+ p_id=>wwv_flow_api.id(20320919681520301)
 ,p_list_item_display_sequence=>60
 ,p_list_item_link_text=>'Buttons'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1500:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-button'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59071243753381343)
+ p_id=>wwv_flow_api.id(20321351009520301)
 ,p_list_item_display_sequence=>70
 ,p_list_item_link_text=>'Button Group'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1204:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-button-group'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59071559070381343)
+ p_id=>wwv_flow_api.id(20321666326520301)
 ,p_list_item_display_sequence=>80
 ,p_list_item_link_text=>'Button Container Region'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1250:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-button-container'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59071981674381343)
+ p_id=>wwv_flow_api.id(20322088930520301)
 ,p_list_item_display_sequence=>90
 ,p_list_item_link_text=>'Calendars'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1800:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-calendar'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59072446588381343)
+ p_id=>wwv_flow_api.id(20322553844520301)
 ,p_list_item_display_sequence=>100
 ,p_list_item_link_text=>'Cards'
 ,p_list_item_link_target=>'f?p=&APP_ID.:3100:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-cards'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59072763180381343)
+ p_id=>wwv_flow_api.id(20322870436520301)
 ,p_list_item_display_sequence=>110
 ,p_list_item_link_text=>'Carousel'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1205:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-carousel'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59073231561381343)
+ p_id=>wwv_flow_api.id(20323338817520301)
 ,p_list_item_display_sequence=>120
 ,p_list_item_link_text=>'Charts'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1902:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-bar-chart'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59073593064381343)
+ p_id=>wwv_flow_api.id(20323700320520301)
 ,p_list_item_display_sequence=>130
 ,p_list_item_link_text=>'Collapsible'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1206:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-collapsible'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59073959680381344)
+ p_id=>wwv_flow_api.id(20324066936520302)
 ,p_list_item_display_sequence=>140
 ,p_list_item_link_text=>'Comments'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1405:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-comments-o'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59074427590381344)
+ p_id=>wwv_flow_api.id(20324534846520302)
 ,p_list_item_display_sequence=>150
 ,p_list_item_link_text=>'Data Tables and Reports'
 ,p_list_item_link_target=>'f?p=&APP_ID.:3400:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-table'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59074760111381344)
+ p_id=>wwv_flow_api.id(20324867367520302)
 ,p_list_item_display_sequence=>160
 ,p_list_item_link_text=>'Forms'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1600:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-forms'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59075200462381344)
+ p_id=>wwv_flow_api.id(20325307718520302)
 ,p_list_item_display_sequence=>170
 ,p_list_item_link_text=>'Help Text'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1903:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>' fa-question-circle-o'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59075573325381344)
+ p_id=>wwv_flow_api.id(20325680581520302)
 ,p_list_item_display_sequence=>180
 ,p_list_item_link_text=>'Hero'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1203:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-hero'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59076055077381344)
+ p_id=>wwv_flow_api.id(20326162333520302)
 ,p_list_item_display_sequence=>190
 ,p_list_item_link_text=>'Lists'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1300:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-list'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59076425101381344)
+ p_id=>wwv_flow_api.id(20326532357520302)
 ,p_list_item_display_sequence=>195
 ,p_list_item_link_text=>'List View'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1700:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-list'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59076784422381345)
+ p_id=>wwv_flow_api.id(20326891678520303)
 ,p_list_item_display_sequence=>200
 ,p_list_item_link_text=>'Map Chart'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1904:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-map-o'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59077237510381345)
+ p_id=>wwv_flow_api.id(20327344766520303)
 ,p_list_item_display_sequence=>205
 ,p_list_item_link_text=>'Menu Bar'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1305:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-tabs'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59077639592381345)
+ p_id=>wwv_flow_api.id(20327746848520303)
 ,p_list_item_display_sequence=>208
 ,p_list_item_link_text=>'Menu Popup'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1306:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-list-alt'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59078049157381345)
+ p_id=>wwv_flow_api.id(20328156413520303)
 ,p_list_item_display_sequence=>210
 ,p_list_item_link_text=>'Modal Dialogs'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1906:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-layout-modal-header'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59078437881381345)
+ p_id=>wwv_flow_api.id(20328545137520303)
 ,p_list_item_display_sequence=>220
 ,p_list_item_link_text=>'PL/SQL Dynamic Content'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1908:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-dynamic-content'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59078778753381345)
+ p_id=>wwv_flow_api.id(20328886009520303)
 ,p_list_item_display_sequence=>230
 ,p_list_item_link_text=>'Region Display Selector'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1907:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-tabs'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59079257175381345)
+ p_id=>wwv_flow_api.id(20329364431520303)
 ,p_list_item_display_sequence=>235
 ,p_list_item_link_text=>'Responsive Tables'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1710:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-table'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59079559194381345)
+ p_id=>wwv_flow_api.id(20329666450520303)
 ,p_list_item_display_sequence=>240
 ,p_list_item_link_text=>'Standard Region'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1201:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-layout-header'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59080020685381345)
+ p_id=>wwv_flow_api.id(20330127941520303)
 ,p_list_item_display_sequence=>250
 ,p_list_item_link_text=>'Static Content'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1905:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-code'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59080449107381345)
+ p_id=>wwv_flow_api.id(20330556363520303)
 ,p_list_item_display_sequence=>255
 ,p_list_item_link_text=>'Tabs'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1907:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-tabs'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'NEVER'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59080848839381346)
+ p_id=>wwv_flow_api.id(20330956095520304)
 ,p_list_item_display_sequence=>260
 ,p_list_item_link_text=>'Title Bar Region'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1207:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-breadcrumb'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59081204342381346)
+ p_id=>wwv_flow_api.id(20331311598520304)
 ,p_list_item_display_sequence=>270
 ,p_list_item_link_text=>'Tree'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1901:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-tree-org'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59081573649381346)
+ p_id=>wwv_flow_api.id(20331680905520304)
 ,p_list_item_display_sequence=>280
 ,p_list_item_link_text=>'URL'
 ,p_list_item_icon=>'fa-link'
 ,p_list_item_disp_cond_type=>'NEVER'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59068387285381342)
+ p_id=>wwv_flow_api.id(20318494541520300)
 ,p_list_item_display_sequence=>290
 ,p_list_item_link_text=>'Value Attribute Pairs Report'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1403:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-th-list'
-,p_required_patch=>wwv_flow_api.id(59115309832406600)
+,p_required_patch=>wwv_flow_api.id(20365417088545558)
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_api.create_list_item(
- p_id=>wwv_flow_api.id(59068846780381342)
+ p_id=>wwv_flow_api.id(20318954036520300)
 ,p_list_item_display_sequence=>300
 ,p_list_item_link_text=>'Wizards'
 ,p_list_item_link_target=>'f?p=&APP_ID.:1208:&SESSION.::&DEBUG.::::'
