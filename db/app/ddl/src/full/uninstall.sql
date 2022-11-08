@@ -1,7 +1,7 @@
 /* perl generate_ddl.pl (version 2022-09-28) --nodynamic-sql --force-view --group-constraints --skip-install-sql --nostrip-source-schema */
 
 /*
--- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//host.docker.internal:1521/orcl
+-- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
