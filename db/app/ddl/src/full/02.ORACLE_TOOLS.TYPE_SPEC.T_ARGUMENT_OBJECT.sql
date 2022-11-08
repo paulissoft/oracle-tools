@@ -4,18 +4,18 @@ CREATE TYPE "ORACLE_TOOLS"."T_ARGUMENT_OBJECT" authid current_user is object
 
   Please note that these arguments are only used in type methods. Only DATA_LEVEL 0 arguments are stored here.
 
-  USER_ARGUMENTS.POSITION is mapped to ARGUMENT#. 
+  USER_ARGUMENTS.POSITION is mapped to ARGUMENT#.
 
   Column              Datatype              Description
   ------              --------              -----------
   */
   argument#$          integer            -- This column holds the position of this item in the argument list, or zero for a function return value.
-, argument_name$      varchar2(30)	 -- If the argument is a scalar type, then the argument name is the name of the argument.
+, argument_name$      varchar2(30)       -- If the argument is a scalar type, then the argument name is the name of the argument.
                                          -- A null argument name is used to denote a function return.
                                          -- ARGUMENT_NAME can refer to any of the following:
                                          -- a) Return type, if ARGUMENT_NAME is null
                                          -- b) The argument that appears in the argument list if ARGUMENT_NAME is not null
-                                          
+
 , data_type_name$     varchar2(30 char)  -- Datatype of the argument
 , in_out$             varchar2(9 char)   -- Direction of the argument: IN, OUT or IN/OUT
 , type_owner$         varchar2(30 char)  -- Owner of the type of the argument
