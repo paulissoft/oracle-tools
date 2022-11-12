@@ -6,8 +6,10 @@ void call(List app_envs, Boolean parallel_step=false, Boolean clean_workspace=fa
         println "process(app_envs: ${app_envs}, parallel_step: ${parallel_step}, clean_workspace: ${clean_workspace})"
     }
 
-    // no left overs, see process.sh
-    sh "rm ${env.WORKSPACE}/*.*.scm.ready || true"
+    node {
+        // no left overs, see process.sh
+        sh "rm ${env.WORKSPACE}/*.*.scm.ready || true"
+    }
     
     if (parallel_step) {
         // See also Parallel From List, https://www.jenkins.io/doc/pipeline/examples/#parallel-multiple-nodes
