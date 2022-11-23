@@ -62,7 +62,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- GJP 2022-11-23
   -- It must be possible to specify the object type for object names when generating DDL.
   -- https://github.com/paulissoft/oracle-tools/issues/89
-  c_object_names_plus_type constant boolean := true;
+  c_object_names_plus_type constant boolean := false;
 
   /*
   -- End of bugs/features
@@ -263,7 +263,25 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
 
   /**
-  * Get all the object info from the ALL_OBJECTS, ALL_SYNONYMS, ALL_TAB_PRIVS, ALL_TAB_COMMENTS and ALL_COL_COMMENTS.
+  * Get all the object info from several dictionary views.
+  * 
+  * These are the dictionary views:
+  * <ul>
+  * <li>ALL_QUEUE_TABLES</li>
+  * <li>ALL_MVIEWS</li>
+  * <li>ALL_TABLES</li>
+  * <li>ALL_OBJECTS</li>
+  * <li>ALL_TAB_PRIVS</li>
+  * <li>ALL_SYNONYMS</li>
+  * <li>ALL_TAB_COMMENTS</li>
+  * <li>ALL_MVIEW_COMMENTS</li>
+  * <li>ALL_COL_COMMENTS</li>
+  * <li>ALL_CONS_COLUMNS</li>
+  * <li>ALL_CONSTRAINTS</li>
+  * <li>ALL_TAB_COLUMNS</li>
+  * <li>ALL_TRIGGERS</li>
+  * <li>ALL_INDEXES</li>
+  * </ul>
   *
   * <p>
   * See display_ddl_schema() for a description of the usage of p_object_type, p_object_names and p_object_names_include.
@@ -376,8 +394,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_base_object_name in t_object_name default null
   )
   return t_numeric_boolean_nn
-  deterministic
-  ;
+  deterministic;
 
   function is_dependent_object_type
   ( p_object_type in t_metadata_object_type
@@ -469,6 +486,20 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
   );
 
+  /**
+   * Return a list of DBMS_METADATA object types.
+   *
+   *
+   * @param p_what  Either DBA, PUBLIC, SCHEMA or DEPENDENT
+   *
+   * @return a list of DBMS_METADATA object types 
+   */
+  function get_md_object_type_tab
+  ( p_what in varchar2
+  )
+  return oracle_tools.t_text_tab
+  deterministic;
+
 $if oracle_tools.cfg_pkg.c_testing $then
 
   -- test functions
@@ -514,6 +545,9 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   procedure ut_modify_ddl_text;
+
+  --%test
+  procedure ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
