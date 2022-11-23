@@ -5454,10 +5454,19 @@ $end
              p_object_names_include =
              case -- found?
                when p_object_name is not null and
+$if pkg_ddl_util.c_object_names_plus_type $then
+                    ( instr(p_object_names, ','||p_object_name||',') > 0 or instr(p_object_names, ','||p_metadata_object_type||':'||p_object_name||',') > 0 )
+$else
                     instr(p_object_names, ','||p_object_name||',') > 0
+$end
+                    
                then 1
                when p_base_object_name is not null and
+$if pkg_ddl_util.c_object_names_plus_type $then
+                    ( instr(p_object_names, ','||p_base_object_name||',') > 0 or instr(p_object_names, ','||p_metadata_base_object_type||':'||p_base_object_name||',') > 0 )
+$else
                     instr(p_object_names, ','||p_base_object_name||',') > 0
+$end                    
                then 1
                else 0
              end

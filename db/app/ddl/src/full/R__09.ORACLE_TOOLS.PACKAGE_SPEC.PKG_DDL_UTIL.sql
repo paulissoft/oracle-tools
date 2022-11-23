@@ -59,6 +59,11 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- https://github.com/paulissoft/oracle-tools/issues/58
   c_set_start_with_to_minvalue constant boolean := true;
 
+  -- GJP 2022-11-23
+  -- It must be possible to specify the object type for object names when generating DDL.
+  -- https://github.com/paulissoft/oracle-tools/issues/89
+  c_object_names_plus_type constant boolean := true;
+
   /*
   -- End of bugs/features
   */
