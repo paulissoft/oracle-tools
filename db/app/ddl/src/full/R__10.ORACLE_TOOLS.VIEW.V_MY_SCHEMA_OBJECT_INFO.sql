@@ -9,13 +9,13 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_INFO" ("OBJECT_SCHEMA"
 ,       t.grantee() as grantee
 ,       t.privilege() as privilege
 ,       t.grantable() as grantable
-from  table
+from    table
         ( oracle_tools.pkg_ddl_util.get_schema_object
-          ( user -- p_schema
-          , null -- p_object_type
-          , null -- p_object_names
-          , null -- p_object_names_include
-          , 0    -- p_grantor_is_schema
+          ( p_schema => user
+          , p_object_type => null
+          , p_object_names => null
+          , p_object_names_include => null
+          , p_grantor_is_schema => 0
           )
         ) t;
 
