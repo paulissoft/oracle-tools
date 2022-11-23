@@ -229,6 +229,17 @@ $end
     , 'PROCOBJ'
     );
 
+  g_dependent_md_object_type_tab constant oracle_tools.t_text_tab :=
+    oracle_tools.t_text_tab
+    ( 'OBJECT_GRANT'
+    , 'SYNONYM'
+    , 'COMMENT'
+    , 'CONSTRAINT'
+    , 'REF_CONSTRAINT'
+    , 'INDEX'
+    , 'TRIGGER'
+    );
+
   g_chk_tab t_object_natural_tab;
 
   g_transform_param_tab t_transform_param_tab;
@@ -3831,16 +3842,13 @@ $end
 
     l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT');
 
-    -- see all the queries where base info is stored
-    l_dependent_object_type_tab constant oracle_tools.t_text_tab := oracle_tools.t_text_tab('OBJECT_GRANT', 'SYNONYM', 'COMMENT', 'CONSTRAINT', 'REF_CONSTRAINT', 'INDEX', 'TRIGGER');
-
     /*
       We have two steps in this routine:
       1) gathering named objects
       2) gathering dependent objects (sometimes based on the named objects)
 
       In step 1 we should not check the named objects because they need to be created for step 2, 
-      unless we will never gather dependent objects. Or, in other words, if p_object_type
+      otherwise we will never gather dependent objects. Or, in other words, if p_object_type
       is not one of the dependent object types and not INDEX or TRIGGER we can already check in 
       step 1 which will lead to a better performance.
 
@@ -3848,8 +3856,8 @@ $end
     */
     l_object_types_to_check oracle_tools.t_text_tab :=
       case
-        when p_object_type member of l_dependent_object_type_tab
-        then l_dependent_object_type_tab -- do not check for example TABLE
+        when p_object_type member of g_dependent_md_object_type_tab
+        then g_dependent_md_object_type_tab -- do not check for example TABLE
         else g_schema_md_object_type_tab -- check all
       end;
 
@@ -4046,9 +4054,9 @@ $end
                 where   o.owner = p_schema
                 and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
                 and     o.generated = 'N' -- GPA 2016-12-19 #136334705
-                        -- OWNER  OBJECT_NAME           SUBOBJECT_NAME
-                        -- =====  ===========           ==============
-                        -- ORACLE_TOOLS oracle_tools.t_table_column_ddl  $VSN_1
+                        -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
+                        -- =====         ===========                      ==============
+                        -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
                 and     o.subobject_name is null
                         -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
                 and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
@@ -5455,7 +5463,9 @@ $end
              case -- found?
                when p_object_name is not null and
 $if pkg_ddl_util.c_object_names_plus_type $then
-                    ( instr(p_object_names, ','||p_object_name||',') > 0 or instr(p_object_names, ','||p_metadata_object_type||':'||p_object_name||',') > 0 )
+                    ( instr(p_object_names, ','||p_object_name||',') > 0 or 
+                      instr(p_object_names, ','||p_metadata_object_type||':'||p_object_name||',') > 0 
+                    )
 $else
                     instr(p_object_names, ','||p_object_name||',') > 0
 $end
@@ -5463,7 +5473,10 @@ $end
                then 1
                when p_base_object_name is not null and
 $if pkg_ddl_util.c_object_names_plus_type $then
-                    ( instr(p_object_names, ','||p_base_object_name||',') > 0 or instr(p_object_names, ','||p_metadata_base_object_type||':'||p_base_object_name||',') > 0 )
+                    ( instr(p_object_names, ','||p_base_object_name||',') > 0 or 
+                      instr(p_object_names, ','||p_metadata_object_type||':'||p_base_object_name||',') > 0 or
+                      instr(p_object_names, ','||p_metadata_base_object_type||':'||p_base_object_name||',') > 0 
+                    )
 $else
                     instr(p_object_names, ','||p_base_object_name||',') > 0
 $end                    
@@ -6640,6 +6653,25 @@ $end
       raise;
   end migrate_schema_ddl;
 
+  function get_md_object_type_tab
+  ( p_what in varchar2
+  )  
+  return oracle_tools.t_text_tab
+  deterministic
+  is
+  begin
+    return case upper(p_what)
+             when 'DBA'
+             then g_dba_md_object_type_tab
+             when 'PUBLIC'
+             then g_public_md_object_type_tab
+             when 'SCHEMA'
+             then g_schema_md_object_type_tab
+             when 'DEPENDENT'
+             then g_dependent_md_object_type_tab
+           end;
+  end get_md_object_type_tab;
+  
 $if oracle_tools.cfg_pkg.c_testing $then
 
   /*
@@ -8675,6 +8707,72 @@ $end
       end if;
      end loop;
   end ut_modify_ddl_text;
+
+  procedure ut_get_schema_object_filter
+  is
+    l_schema_object_tab oracle_tools.t_schema_object_tab;
+    l_expected sys_refcursor;
+    l_actual   sys_refcursor;
+
+    l_program constant t_module := g_package_prefix || 'UT_GET_SCHEMA_OBJECT_FILTER';
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(l_program);
+$end
+
+    select  value(t)
+    bulk collect
+    into    l_schema_object_tab
+    from    table
+            ( oracle_tools.pkg_ddl_util.get_schema_object
+              ( p_schema => user
+              , p_object_type => null
+              , p_object_names => null
+              , p_object_names_include => null
+              , p_grantor_is_schema => 0
+              )
+            ) t
+            /*
+            inner join select all_dependencies d
+            on d.owner = user and
+               d.name = 'PKG_DDL_UTIL' and
+               d.referenced_owner = d.owner and
+               d.referenced_name = t.object_name()
+            */
+    ;
+
+    for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
+    loop
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'id: %s', l_schema_object_tab(i_idx).id());
+$end
+
+      open l_expected for
+        select  l_schema_object_tab(i_idx).id() as id
+        from    dual;
+      open l_actual for
+        select  t.id() as id
+        from    table
+                ( oracle_tools.pkg_ddl_util.get_schema_object
+                  ( p_schema => user
+                  , p_object_type => l_schema_object_tab(i_idx).object_type()
+                  , p_object_names => nvl(l_schema_object_tab(i_idx).base_object_name(), l_schema_object_tab(i_idx).object_name())
+                  , p_object_names_include => 1
+                  , p_grantor_is_schema => 0
+                  )
+                ) t;
+      ut.expect(l_actual, l_schema_object_tab(i_idx).id()).to_equal(l_expected);
+    end loop;
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
