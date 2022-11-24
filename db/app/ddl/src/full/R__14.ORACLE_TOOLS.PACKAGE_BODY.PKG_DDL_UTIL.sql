@@ -52,7 +52,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   g_package constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT;
 
   g_package_prefix constant t_module := g_package || '.';
-  
+
   g_max_fetch constant simple_integer := 10000;
 
   function get_object_no_dependencies_tab
@@ -795,7 +795,7 @@ $end
   )
   is
     l_ddl_text varchar2(100 char) := null;
-    
+
     procedure nullify_output_parameters
     is
     begin
@@ -2255,9 +2255,9 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_p
     , p_object_names_include
     );
 $end
-  
+
     p_object_key := null;
-    
+
     parse_ddl
     ( p_ku$_ddl
     , p_schema
@@ -5477,7 +5477,7 @@ $if pkg_ddl_util.c_object_names_plus_type $then
 $else
                     instr(p_object_names, ','||p_object_name||',') > 0
 $end
-                    
+
                then 1
                when p_base_object_name is not null and
 $if pkg_ddl_util.c_object_names_plus_type $then
@@ -6679,7 +6679,7 @@ $end
              then g_dependent_md_object_type_tab
            end;
   end get_md_object_type_tab;
-  
+
 $if oracle_tools.cfg_pkg.c_testing $then
 
   /*
@@ -8800,7 +8800,7 @@ $end
                 ) t;
       ut.expect(l_actual, l_schema_object_tab(i_idx).id()).to_equal(l_expected);
     end loop;
-  
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception

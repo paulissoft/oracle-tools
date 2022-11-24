@@ -30,7 +30,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   /*
   -- Start of bugs/features
   */
-  
+
   -- GPA 2017-02-01 #138707615 named not null constraints are recreated
   c_#138707615_1 constant boolean := true;
 
@@ -413,7 +413,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   )
   return sys.ku$_ddls
   pipelined;
-  
+
   /*
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
