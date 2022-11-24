@@ -8756,7 +8756,25 @@ $end
                 ( oracle_tools.pkg_ddl_util.get_schema_object
                   ( p_schema => user
                   , p_object_type => l_schema_object_tab(i_idx).object_type()
-                  , p_object_names => nvl(l_schema_object_tab(i_idx).base_object_name(), l_schema_object_tab(i_idx).object_name())
+                  , p_object_names =>
+                      case l_schema_object_tab(i_idx).object_type()
+                        -- dependent object types
+                        when 'OBJECT_GRANT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'SYNONYM'
+                        then l_schema_object_tab(i_idx).object_name()
+                        when 'COMMENT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'CONSTRAINT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'REF_CONSTRAINT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'INDEX'
+                        then l_schema_object_tab(i_idx).object_name()
+                        when 'TRIGGER'
+                        then l_schema_object_tab(i_idx).object_name()
+                        else l_schema_object_tab(i_idx).object_name()
+                      end 
                   , p_object_names_include => 1
                   , p_grantor_is_schema => 0
                   )
