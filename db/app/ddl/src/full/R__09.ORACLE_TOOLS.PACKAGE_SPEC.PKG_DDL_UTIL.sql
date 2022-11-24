@@ -283,34 +283,18 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * <li>ALL_INDEXES</li>
   * </ul>
   *
-  * <p>
-  * See display_ddl_schema() for a description of the usage of p_object_type, p_object_names and p_object_names_include.
-  * </p>
-  *
-  * @param p_schema                Schema name.
-  * @param p_object_type           Filter for object type.
-  * @param p_object_names          A list of object names separated by a comma.
-  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
-  * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+  * @param p_schema_object_filter  The schema object filter.
   * @param p_schema_object_tab     Only applicable for the procedure variant. See the description for return.
   *
   * @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
   */
   procedure get_schema_object
-  ( p_schema in t_schema_nn default user
-  , p_object_type in t_metadata_object_type default null
-  , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
-  , p_grantor_is_schema in t_numeric_boolean_nn default 0
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   );
 
   function get_schema_object
-  ( p_schema in t_schema_nn default user
-  , p_object_type in t_metadata_object_type default null
-  , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
-  , p_grantor_is_schema in t_numeric_boolean_nn default 0
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
   )
   return oracle_tools.t_schema_object_tab
   pipelined;
