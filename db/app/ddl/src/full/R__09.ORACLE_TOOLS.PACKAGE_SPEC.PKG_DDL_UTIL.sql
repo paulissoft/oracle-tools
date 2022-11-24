@@ -149,7 +149,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- >= 0, not null
   , p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list
@@ -186,7 +186,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   function display_ddl_schema_diff
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_source in t_schema default user
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
@@ -234,7 +234,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   procedure synchronize
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_source in t_schema default user
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
@@ -257,7 +257,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   procedure uninstall
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_target in t_schema_nn default user
   , p_network_link_target in t_network_link default null
   );
@@ -369,7 +369,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   ( -- filter values
     p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  , p_object_names_include in t_numeric_boolean /* Not OK (TBD) */
   , p_object_types_to_check in oracle_tools.t_text_tab
     -- database values
   , p_metadata_object_type in t_metadata_object_type
@@ -406,7 +406,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   ( p_schema in t_schema_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  , p_object_names_include in t_numeric_boolean /* Not OK (TBD) */
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2
@@ -421,7 +421,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   ( p_schema in t_schema_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  , p_object_names_include in t_numeric_boolean /* Not OK (TBD) */
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list
@@ -438,7 +438,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
