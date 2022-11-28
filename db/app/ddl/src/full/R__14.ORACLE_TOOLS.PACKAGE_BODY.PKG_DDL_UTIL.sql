@@ -2819,729 +2819,6 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
   end remap_schema;
 
-  procedure get_schema_object
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
-  , p_grantor_is_schema in t_numeric_boolean_nn
-  , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-  )
-  is
-    l_schema_object_filter constant oracle_tools.t_schema_object_filter :=
-      oracle_tools.t_schema_object_filter
-      ( p_schema => p_schema
-      , p_object_type => p_object_type
-      , p_object_names => p_object_names
-      , p_object_names_include => p_object_names_include
-      , p_grantor_is_schema => p_grantor_is_schema
-      );
-
-    type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
-
-    l_excluded_tables_tab t_excluded_tables_tab;
-
-    l_named_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
-    l_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
-    l_schema_object oracle_tools.t_schema_object;
-
-    l_refcursor sys_refcursor;
-
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT');
-
-    /*
-      We have two steps in this routine:
-      1) gathering named objects
-      2) gathering dependent objects (sometimes based on the named objects)
-
-      In step 1 we should not check the named objects because they need to be created for step 2, 
-      otherwise we will never gather dependent objects. Or, in other words, if p_object_type
-      is not one of the dependent object types and not INDEX or TRIGGER we can already check in 
-      step 1 which will lead to a better performance.
-
-      If we do not check named objects, we must do it later on, after step 2.
-    */
-    l_object_types_to_check oracle_tools.t_text_tab :=
-      case
-        when p_object_type member of g_dependent_md_object_type_tab
-        then g_dependent_md_object_type_tab -- do not check for example TABLE
-        else g_schema_md_object_type_tab -- check all
-      end;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab)
-    is
-      l_object_tab t_object_natural_tab;
-    begin
-      if p_schema_object_tab.count > 0
-      then
-        for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
-        loop
-          p_schema_object_tab(i_idx).print();
-          if l_object_tab.exists(p_schema_object_tab(i_idx).signature())
-          then
-            raise_application_error(oracle_tools.pkg_ddl_error.c_duplicate_item, 'The signature of the object is a duplicate: ' || p_schema_object_tab(i_idx).signature());
-          else
-            l_object_tab(p_schema_object_tab(i_idx).signature()) := 0;
-          end if;
-        end loop;
-      end if;
-    end check_duplicates;
-$end            
-
-    procedure cleanup
-    is
-    begin
-      if l_refcursor%isopen
-      then
-        close l_refcursor;
-      end if;
-    end cleanup;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'GET_SCHEMA_OBJECT');
-    dbug.print(dbug."input"
-               ,'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_grantor_is_schema: %s'
-               ,p_schema
-               ,p_object_type
-               ,p_object_names
-               ,p_object_names_include
-               ,p_grantor_is_schema);
-$end
-
-    -- input checks
-    check_schema(p_schema => p_schema, p_network_link => null);
-    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
-    check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
-    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
-
-    -- queue table
-    for r in
-    ( select  q.owner
-      ,       q.queue_table
-      from    all_queue_tables q
-      where   q.owner = p_schema
-    )
-    loop
-      longops_show(l_longops_rec);
-      l_excluded_tables_tab(r.queue_table) := true;
-$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
-      -- this is a special case since we need to exclude first
-      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
-         ( -- filter values
-           p_schema_object_filter => l_schema_object_filter
-         , p_object_types_to_check => l_object_types_to_check
-           -- database values
-         , p_metadata_object_type => 'AQ_QUEUE_TABLE'
-         , p_object_name => r.queue_table
-         ) = 1
-      then
-        l_named_object_tab.extend(1);
-        oracle_tools.t_named_object.create_named_object
-        ( p_object_type => 'AQ_QUEUE_TABLE'
-        , p_object_schema => r.owner
-        , p_object_name => r.queue_table
-        , p_named_object => l_named_object_tab(l_named_object_tab.last)
-        );
-      end if;
-$else
-      /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
-$end
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
-$end
-
-    -- no MATERIALIZED VIEW tables unless PREBUILT
-    for r in
-    ( select  m.owner
-      ,       m.mview_name
-      ,       m.build_mode
-      from    all_mviews m
-      where   m.owner = p_schema
-    )
-    loop
-      longops_show(l_longops_rec);
-      if r.build_mode != 'PREBUILT'
-      then
-        l_excluded_tables_tab(r.mview_name) := true;
-      end if;
-      -- this is a special case since we need to exclude first
-      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
-         ( -- filter values
-           p_schema_object_filter => l_schema_object_filter
-         , p_object_types_to_check => l_object_types_to_check
-           -- database values
-         , p_metadata_object_type => 'MATERIALIZED_VIEW'
-         , p_object_name => r.mview_name
-         ) = 1
-      then
-        l_named_object_tab.extend(1);
-        l_named_object_tab(l_named_object_tab.last) := oracle_tools.t_materialized_view_object(r.owner, r.mview_name);
-      end if;
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
-$end
-
-    for r in
-    ( select  t.owner
-      ,       t.table_name
-      ,       t.tablespace_name
-      ,       'TABLE' as object_type
-      from    all_tables t
-      where   t.owner = p_schema
-      and     t.nested = 'NO' -- Exclude nested tables, their DDL is part of their parent table.
-      and     ( t.iot_type is null or t.iot_type = 'IOT' ) -- Only the IOT table itself, not an overflow or mapping
-              -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-      and     substr(t.table_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
-      union -- not union all because since Oracle 12, temporary tables are also shown in all_tables
-      -- temporary tables
-      select  t.owner
-      ,       t.object_name as table_name
-      ,       null as tablespace_name
-      ,       t.object_type
-      from    all_objects t
-      where   t.owner = p_schema
-      and     t.object_type = 'TABLE'
-      and     t.temporary = 'Y'
-      and     t.generated = 'N' -- GPA 2016-12-19 #136334705
-              -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-      and     substr(t.object_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
-    )
-    loop
-      longops_show(l_longops_rec);
-      if r.object_type <> 'TABLE'
-      then
-        raise program_error;
-      end if;
-      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
-         ( -- filter values
-           p_schema_object_filter => l_schema_object_filter
-         , p_object_types_to_check => l_object_types_to_check
-           -- database values
-         , p_metadata_object_type => r.object_type
-         , p_object_name => r.table_name
-         ) = 1
-      then
-        l_schema_object := oracle_tools.t_table_object(r.owner, r.table_name, r.tablespace_name);
-        if not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
-        then
-          l_named_object_tab.extend(1);
-          l_named_object_tab(l_named_object_tab.last) := l_schema_object;
-        end if;
-      end if;
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
-$end
-
-    for r in
-    ( /*
-      -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
-      */
-      select  o.owner
-      ,       o.object_type
-      ,       o.object_name
-      from    ( select  o.owner
-                        -- use scalar subquery cache
-                ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(o.object_type) from dual) as object_type
-                ,       o.object_name
-                from    all_objects o
-                where   o.owner = p_schema
-                and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
-                and     o.generated = 'N' -- GPA 2016-12-19 #136334705
-                        -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
-                        -- =====         ===========                      ==============
-                        -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
-                and     o.subobject_name is null
-                        -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-                and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
-              ) o
-      where   o.object_type member of g_schema_md_object_type_tab
-              -- use scalar subquery cache
-      and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
-      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => o.object_type
-              , p_object_name => o.object_name
-              ) = 1
-    )
-    loop
-      longops_show(l_longops_rec);
-      l_named_object_tab.extend(1);
-      oracle_tools.t_named_object.create_named_object
-      ( p_object_type => r.object_type
-      , p_object_schema => r.owner
-      , p_object_name => r.object_name
-      , p_named_object => l_named_object_tab(l_named_object_tab.last)
-      );
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
-$end
-
-    /*
-    -- now dependent objects based on the retrieved objects thus far or
-    -- dependent objects based on an object in another schema
-    */
-
-    for r in
-    ( -- before Oracle 12 there was no type column in all_tab_privs
-      with prv as -- use this clause to speed up the query for <owner>
-      ( -- several grantors may have executed the same grant statement
-        select  p.table_schema
-        ,       p.table_name
-        ,       p.grantee
-        ,       p.privilege
-        ,       max(p.grantable) as grantable -- YES comes after NO
-        from    all_tab_privs p
-        where   p.table_schema = p_schema
-        and     ( p_grantor_is_schema = 0 or p.grantor = p_schema )
-        group by
-                p.table_schema
-        ,       p.table_name
-        ,       p.grantee
-        ,       p.privilege
-      )
-      -- grants for all our objects
-      select  obj.obj as base_object
-      ,       null as object_schema
-      ,       p.grantee
-      ,       p.privilege
-      ,       p.grantable
-      from    ( select  obj.object_type() as object_type
-                ,       obj.object_schema() as object_schema
-                ,       obj.object_name() as object_name
-                ,       value(obj) as obj
-                from    table(l_named_object_tab) obj
-              ) obj
-              inner join prv p
-              on p.table_schema = obj.object_schema and p.table_name = obj.object_name
-      where   obj.object_type not like '%BODY'
-      and     obj.object_type not in ('MATERIALIZED_VIEW') -- grants are on underlying tables
-      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => 'OBJECT_GRANT'
-              , p_object_name => null
-              , p_metadata_base_object_type => obj.object_type
-              , p_base_object_name => obj.object_name
-              ) = 1
-    )
-    loop
-      longops_show(l_longops_rec);
-      l_schema_object_tab.extend(1);
-      l_schema_object_tab(l_schema_object_tab.last) :=
-        oracle_tools.t_object_grant_object
-        ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-        , p_object_schema => r.object_schema
-        , p_grantee => r.grantee
-        , p_privilege => r.privilege
-        , p_grantable => r.grantable
-        );
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
-$end
-
-    for r in
-    ( select  t.*
-      from    ( -- public synonyms for all our objects
-                select  value(obj)     as base_object
-                ,       s.owner        as object_schema
-                ,       'SYNONYM'      as object_type
-                ,       s.synonym_name as object_name
-                ,       null           as column_name
-                from    table(l_named_object_tab) obj
-                        inner join all_synonyms s
-                        on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
-                where   obj.object_type() not like '%BODY'
-                and     obj.object_type() <> 'MATERIALIZED_VIEW'
-                and     s.owner = 'PUBLIC'
-                union all
-                -- table/view comments
-                select  value(obj)     as base_object
-                ,       null           as object_schema
-                ,       'COMMENT'      as object_type
-                ,       null           as object_name
-                ,       null           as column_name
-                from    table(l_named_object_tab) obj
-                        inner join all_tab_comments t
-                        on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
-                where   obj.object_type() in ('TABLE', 'VIEW')
-                and     t.comments is not null
-                union all
-                -- materialized view comments
-                select  value(obj)     as base_object
-                ,       null           as object_schema
-                ,       'COMMENT'      as object_type
-                ,       null           as object_name
-                ,       null           as column_name
-                from    table(l_named_object_tab) obj
-                        inner join all_mview_comments m
-                        on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
-                where   obj.object_type() = 'MATERIALIZED_VIEW'
-                and     m.comments is not null
-                union all
-                -- column comments
-                select  value(obj)     as base_object
-                ,       null           as object_schema
-                ,       'COMMENT'      as object_type
-                ,       null           as object_name
-                ,       c.column_name  as column_name
-                from    table(l_named_object_tab) obj
-                        inner join all_col_comments c
-                        on c.owner = obj.object_schema() and c.table_name = obj.object_name()
-                where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
-                and     c.comments is not null
-              ) t
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => t.object_type
-              , p_object_name => t.object_name
-              , p_metadata_base_object_type => t.base_object.object_type()
-              , p_base_object_name => t.base_object.object_name()
-              ) = 1
-    )
-    loop
-      longops_show(l_longops_rec);
-      l_schema_object_tab.extend(1);
-      case r.object_type
-        when 'SYNONYM'
-        then
-          l_schema_object_tab(l_schema_object_tab.last) :=
-            oracle_tools.t_synonym_object
-            ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-            , p_object_schema => r.object_schema
-            , p_object_name => r.object_name
-            );
-        when 'COMMENT'
-        then
-          l_schema_object_tab(l_schema_object_tab.last) :=
-            oracle_tools.t_comment_object
-            ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-            , p_object_schema => r.object_schema
-            , p_column_name => r.column_name
-            );
-      end case;
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
-$end
-
-    for r in
-    ( -- constraints for objects in the same schema
-      select  t.*
-      from    ( select  value(obj) as base_object
-                ,       c.owner as object_schema
-                ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
-                ,       c.constraint_name as object_name
-                ,       c.constraint_type
-                ,       c.search_condition
-$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
-                ,       case c.constraint_type
-                          when 'C'
-                          then ( select  cc.column_name
-                                 from    all_cons_columns cc
-                                 where   cc.owner = c.owner
-                                 and     cc.table_name = c.table_name
-                                 and     cc.constraint_name = c.constraint_name
-                                 and     rownum = 1
-                               )
-                          else null
-                        end as any_column_name
-$end                          
-                from    table(l_named_object_tab) obj
-                        inner join all_constraints c
-                        on c.owner = obj.object_schema() and c.table_name = obj.object_name()
-                where   obj.object_type() in ('TABLE', 'VIEW')
-                        /* Type of constraint definition:
-                           C (check constraint on a table)
-                           P (primary key)
-                           U (unique key)
-                           R (referential integrity)
-                           V (with check option, on a view)
-                           O (with read only, on a view)
-                        */
-                and     c.constraint_type in ('C', 'P', 'U', 'R')
-$if not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
-                        -- exclude system generated not null constraints
-                and     ( c.constraint_name not like 'SYS\_C%' escape '\' or
-                          c.constraint_type <> 'C' or
-                          -- column is the only column in the check constraint and must be nullable
-                          ( 1, 'Y' ) in
-                          ( select  count(cc.column_name)
-                            ,       max(tc.nullable)
-                            from    all_cons_columns cc
-                                    inner join all_tab_columns tc
-                                    on tc.owner = cc.owner and tc.table_name = cc.table_name and tc.column_name = cc.column_name
-                            where   cc.owner = c.owner
-                            and     cc.table_name = c.table_name
-                            and     cc.constraint_name = c.constraint_name
-                          )
-                        )
-$end
-              ) t
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => t.object_type
-              , p_object_name => t.object_name
-              , p_metadata_base_object_type => t.base_object.object_type()
-              , p_base_object_name => t.base_object.object_name()
-              ) = 1
-    )
-    loop
-$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
-      -- We do NOT want a NOT NULL constraint, named or not.
-      -- Since search_condition is a LONG we must use PL/SQL to filter
-      if r.search_condition is not null and
-         r.any_column_name is not null and
-         r.search_condition = '"' || r.any_column_name || '" IS NOT NULL'
-      then
-        -- This is a not null constraint.
-        -- Since search_condition has only one column, any column name is THE column name.
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-        dbug.print
-        ( dbug."info"
-        , 'ignoring not null constraint: owner: %s; table: %s; constraint: %s; search_condition: %s'
-        , r.object_schema
-        , r.base_object.object_name()
-        , r.object_name
-        , r.search_condition
-        );
-$end
-        null;
-      else
-$end
-
-        longops_show(l_longops_rec);
-        l_schema_object_tab.extend(1);
-        case r.object_type
-          when 'REF_CONSTRAINT'
-          then
-            l_schema_object_tab(l_schema_object_tab.last) :=
-              oracle_tools.t_ref_constraint_object
-              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-              , p_object_schema => r.object_schema
-              , p_object_name => r.object_name
-              , p_constraint_type => r.constraint_type
-              , p_column_names => null
-              );
-
-          when 'CONSTRAINT'
-          then
-            l_schema_object_tab(l_schema_object_tab.last) :=
-              oracle_tools.t_constraint_object
-              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-              , p_object_schema => r.object_schema
-              , p_object_name => r.object_name
-              , p_constraint_type => r.constraint_type
-              , p_search_condition => r.search_condition
-              );
-        end case;
-
-$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
-      end if;
-$end        
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
-$end
-
-    for r in
-    ( select  t.*
-      from    ( -- private synonyms for this schema which may point to another schema
-                select  s.owner as object_schema
-                ,       'SYNONYM' as object_type
-                ,       s.synonym_name as object_name
-                ,       obj.owner as base_object_schema
-                        -- use scalar subquery cache
-                ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type) from dual) as base_object_type
-                ,       obj.object_name as base_object_name
-                ,       null as column_name
-                from    all_objects obj inner join all_synonyms s
-                        on s.table_owner = obj.owner and s.table_name = obj.object_name
-                where   obj.object_type not like '%BODY'
-                and     obj.object_type <> 'MATERIALIZED VIEW'
-                and     s.owner = p_schema
-                union all
-                -- triggers for this schema which may point to another schema
-                select  t.owner as object_schema
-                ,       'TRIGGER' as object_type
-                ,       t.trigger_name as object_name
-/* GJP 20170106 see oracle_tools.t_schema_object.chk()
-                -- when the trigger is based on an object in another schema, no base info
-                ,       case when t.owner = t.table_owner then t.table_owner end as base_object_schema
-                ,       case when t.owner = t.table_owner then t.base_object_type end as base_object_type
-                ,       case when t.owner = t.table_owner then t.table_name end as base_object_name
-*/
-                ,       t.table_owner as base_object_schema
-                        -- use scalar subquery cache
-                ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(t.base_object_type) from dual) as base_object_type
-                ,       t.table_name as base_object_name
-                ,       null as column_name
-                from    all_triggers t
-                where   t.owner = p_schema
-                and     t.base_object_type in ('TABLE', 'VIEW')
-              ) t
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => t.object_type
-              , p_object_name => t.object_name
-              , p_metadata_base_object_type => t.base_object_type
-              , p_base_object_name => t.base_object_name
-              ) = 1
-    )
-    loop
-      longops_show(l_longops_rec);
-      l_schema_object_tab.extend(1);
-      oracle_tools.t_schema_object.create_schema_object
-      ( p_object_schema => r.object_schema
-      , p_object_type => r.object_type
-      , p_object_name => r.object_name
-      , p_base_object_schema => r.base_object_schema
-      , p_base_object_type => r.base_object_type
-      , p_base_object_name => r.base_object_name
-      , p_column_name => r.column_name
-      , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
-      );
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
-$end
-
-    for r in
-    ( -- indexes
-      select  i.owner as object_schema
-      ,       i.index_name as object_name
-/* GJP 20170106 see oracle_tools.t_schema_object.chk()
-      -- when the index is based on an object in another schema, no base info
-      ,       case when i.owner = i.table_owner then i.table_owner end as base_object_schema
-      ,       case when i.owner = i.table_owner then i.table_type end as base_object_type
-      ,       case when i.owner = i.table_owner then i.table_name end as base_object_name
-*/
-      ,       i.table_owner as base_object_schema
-              -- use scalar subquery cache
-      ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) from dual) as base_object_type
-      ,       i.table_name as base_object_name
-      ,       i.tablespace_name
-      from    all_indexes i
-      where   i.owner = p_schema
-              -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-      and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
-              -- GJP 2022-08-22
-              -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
-              -- so it will not be listed as a separate DDL statement.
-      and     not(i.constraint_index = 'YES')
-      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => 'INDEX'
-              , p_object_name => i.index_name
-              , p_metadata_base_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type)
-              , p_base_object_name => i.table_name
-              ) = 1
-    )
-    loop
-      longops_show(l_longops_rec);
-      l_schema_object_tab.extend(1);
-      l_schema_object_tab(l_schema_object_tab.last) :=
-        oracle_tools.t_index_object
-        ( p_base_object =>
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => r.base_object_schema
-            , p_object_type => r.base_object_type
-            , p_object_name => r.base_object_name
-            )
-        , p_object_schema => r.object_schema
-        , p_object_name => r.object_name
-        , p_tablespace_name => r.tablespace_name
-        );
-    end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
-$end
-
-    if l_object_types_to_check = g_schema_md_object_type_tab
-    then
-      -- every object in l_named_object_tab has been checked already by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
-
-      -- combine and filter based on the map function of oracle_tools.t_schema_object and its subtypes
-      -- GPA 2017-01-27 For performance reasons do not use DISTINCT since the sets should be unique and distinct already
-      p_schema_object_tab := l_named_object_tab multiset union /*distinct*/ l_schema_object_tab;
-    else
-      -- objects in l_named_object_tab have NOT been totally checked by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
-      l_object_types_to_check := g_schema_md_object_type_tab;
-
-      select  value(obj) as base_object
-      bulk collect
-      into    p_schema_object_tab
-      from    table(l_named_object_tab) obj
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
-              ( -- filter values
-                p_schema_object_filter => l_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
-                -- database values
-              , p_metadata_object_type => obj.object_type()
-              , p_object_name => obj.object_name()
-              , p_metadata_base_object_type => obj.base_object_type()
-              , p_base_object_name => obj.base_object_name()
-              ) = 1
-      ;
-
-      p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ l_schema_object_tab;
-    end if;
-
-    longops_done(l_longops_rec);
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(p_schema_object_tab);
-$end
-
-    cleanup;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));
-    dbug.leave;
-$end
-
-  exception
-    when others
-    then
-      cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave_on_error;
-$end
-      raise;
-  end get_schema_object;
-
   /* PUBLIC ROUTINES */
 
   function display_ddl_schema
@@ -4525,15 +3802,708 @@ $end
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   )
   is
+    l_schema constant t_schema_nn := p_schema_object_filter.schema();
+    l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
+    
+    type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
+
+    l_excluded_tables_tab t_excluded_tables_tab;
+
+    l_named_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
+    l_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
+    l_schema_object oracle_tools.t_schema_object;
+
+    l_refcursor sys_refcursor;
+
+    l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT');
+
+    /*
+      We have two steps in this routine:
+      1) gathering named objects
+      2) gathering dependent objects (sometimes based on the named objects)
+
+      In step 1 we should not check the named objects because they need to be created for step 2, 
+      otherwise we will never gather dependent objects. Or, in other words, if p_object_type
+      is not one of the dependent object types and not INDEX or TRIGGER we can already check in 
+      step 1 which will lead to a better performance.
+
+      If we do not check named objects, we must do it later on, after step 2.
+    */
+    l_object_types_to_check oracle_tools.t_text_tab :=
+      case
+        when p_schema_object_filter.object_type() member of g_dependent_md_object_type_tab
+        then g_dependent_md_object_type_tab -- do not check for example TABLE
+        else g_schema_md_object_type_tab -- check all
+      end;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab)
+    is
+      l_object_tab t_object_natural_tab;
+    begin
+      if p_schema_object_tab.count > 0
+      then
+        for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
+        loop
+          p_schema_object_tab(i_idx).print();
+          if l_object_tab.exists(p_schema_object_tab(i_idx).signature())
+          then
+            raise_application_error(oracle_tools.pkg_ddl_error.c_duplicate_item, 'The signature of the object is a duplicate: ' || p_schema_object_tab(i_idx).signature());
+          else
+            l_object_tab(p_schema_object_tab(i_idx).signature()) := 0;
+          end if;
+        end loop;
+      end if;
+    end check_duplicates;
+$end            
+
+    procedure cleanup
+    is
+    begin
+      if l_refcursor%isopen
+      then
+        close l_refcursor;
+      end if;
+    end cleanup;
   begin
-    get_schema_object
-    ( p_schema => p_schema_object_filter.schema()
-    , p_object_type => p_schema_object_filter.object_type()
-    , p_object_names => p_schema_object_filter.object_names()
-    , p_object_names_include => p_schema_object_filter.object_names_include()
-    , p_grantor_is_schema => p_schema_object_filter.grantor_is_schema()
-    , p_schema_object_tab => p_schema_object_tab
-    );
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || 'GET_SCHEMA_OBJECT');
+    p_schema_object_filter.print();
+$end
+
+/*
+    -- input checks
+    check_schema(p_schema => p_schema, p_network_link => null);
+    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
+    check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
+    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
+    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
+*/
+
+    -- queue table
+    for r in
+    ( select  q.owner
+      ,       q.queue_table
+      from    all_queue_tables q
+      where   q.owner = l_schema
+    )
+    loop
+      longops_show(l_longops_rec);
+      l_excluded_tables_tab(r.queue_table) := true;
+$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+      -- this is a special case since we need to exclude first
+      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
+         ( -- filter values
+           p_schema_object_filter => p_schema_object_filter
+         , p_object_types_to_check => l_object_types_to_check
+           -- database values
+         , p_metadata_object_type => 'AQ_QUEUE_TABLE'
+         , p_object_name => r.queue_table
+         ) = 1
+      then
+        l_named_object_tab.extend(1);
+        oracle_tools.t_named_object.create_named_object
+        ( p_object_type => 'AQ_QUEUE_TABLE'
+        , p_object_schema => r.owner
+        , p_object_name => r.queue_table
+        , p_named_object => l_named_object_tab(l_named_object_tab.last)
+        );
+      end if;
+$else
+      /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
+$end
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_named_object_tab);
+$end
+
+    -- no MATERIALIZED VIEW tables unless PREBUILT
+    for r in
+    ( select  m.owner
+      ,       m.mview_name
+      ,       m.build_mode
+      from    all_mviews m
+      where   m.owner = l_schema
+    )
+    loop
+      longops_show(l_longops_rec);
+      if r.build_mode != 'PREBUILT'
+      then
+        l_excluded_tables_tab(r.mview_name) := true;
+      end if;
+      -- this is a special case since we need to exclude first
+      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
+         ( -- filter values
+           p_schema_object_filter => p_schema_object_filter
+         , p_object_types_to_check => l_object_types_to_check
+           -- database values
+         , p_metadata_object_type => 'MATERIALIZED_VIEW'
+         , p_object_name => r.mview_name
+         ) = 1
+      then
+        l_named_object_tab.extend(1);
+        l_named_object_tab(l_named_object_tab.last) := oracle_tools.t_materialized_view_object(r.owner, r.mview_name);
+      end if;
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_named_object_tab);
+$end
+
+    for r in
+    ( select  t.owner
+      ,       t.table_name
+      ,       t.tablespace_name
+      ,       'TABLE' as object_type
+      from    all_tables t
+      where   t.owner = l_schema
+      and     t.nested = 'NO' -- Exclude nested tables, their DDL is part of their parent table.
+      and     ( t.iot_type is null or t.iot_type = 'IOT' ) -- Only the IOT table itself, not an overflow or mapping
+              -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+      and     substr(t.table_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
+      union -- not union all because since Oracle 12, temporary tables are also shown in all_tables
+      -- temporary tables
+      select  t.owner
+      ,       t.object_name as table_name
+      ,       null as tablespace_name
+      ,       t.object_type
+      from    all_objects t
+      where   t.owner = l_schema
+      and     t.object_type = 'TABLE'
+      and     t.temporary = 'Y'
+      and     t.generated = 'N' -- GPA 2016-12-19 #136334705
+              -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+      and     substr(t.object_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
+    )
+    loop
+      longops_show(l_longops_rec);
+      if r.object_type <> 'TABLE'
+      then
+        raise program_error;
+      end if;
+      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
+         ( -- filter values
+           p_schema_object_filter => p_schema_object_filter
+         , p_object_types_to_check => l_object_types_to_check
+           -- database values
+         , p_metadata_object_type => r.object_type
+         , p_object_name => r.table_name
+         ) = 1
+      then
+        l_schema_object := oracle_tools.t_table_object(r.owner, r.table_name, r.tablespace_name);
+        if not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
+        then
+          l_named_object_tab.extend(1);
+          l_named_object_tab(l_named_object_tab.last) := l_schema_object;
+        end if;
+      end if;
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_named_object_tab);
+$end
+
+    for r in
+    ( /*
+      -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
+      */
+      select  o.owner
+      ,       o.object_type
+      ,       o.object_name
+      from    ( select  o.owner
+                        -- use scalar subquery cache
+                ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(o.object_type) from dual) as object_type
+                ,       o.object_name
+                from    all_objects o
+                where   o.owner = l_schema
+                and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+                and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+                        -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
+                        -- =====         ===========                      ==============
+                        -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
+                and     o.subobject_name is null
+                        -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+                and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
+              ) o
+      where   o.object_type member of g_schema_md_object_type_tab
+              -- use scalar subquery cache
+      and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
+      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => o.object_type
+              , p_object_name => o.object_name
+              ) = 1
+    )
+    loop
+      longops_show(l_longops_rec);
+      l_named_object_tab.extend(1);
+      oracle_tools.t_named_object.create_named_object
+      ( p_object_type => r.object_type
+      , p_object_schema => r.owner
+      , p_object_name => r.object_name
+      , p_named_object => l_named_object_tab(l_named_object_tab.last)
+      );
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_named_object_tab);
+$end
+
+    /*
+    -- now dependent objects based on the retrieved objects thus far or
+    -- dependent objects based on an object in another schema
+    */
+
+    for r in
+    ( -- before Oracle 12 there was no type column in all_tab_privs
+      with prv as -- use this clause to speed up the query for <owner>
+      ( -- several grantors may have executed the same grant statement
+        select  p.table_schema
+        ,       p.table_name
+        ,       p.grantee
+        ,       p.privilege
+        ,       max(p.grantable) as grantable -- YES comes after NO
+        from    all_tab_privs p
+        where   p.table_schema = l_schema
+        and     ( l_grantor_is_schema = 0 or p.grantor = l_schema )
+        group by
+                p.table_schema
+        ,       p.table_name
+        ,       p.grantee
+        ,       p.privilege
+      )
+      -- grants for all our objects
+      select  obj.obj as base_object
+      ,       null as object_schema
+      ,       p.grantee
+      ,       p.privilege
+      ,       p.grantable
+      from    ( select  obj.object_type() as object_type
+                ,       obj.object_schema() as object_schema
+                ,       obj.object_name() as object_name
+                ,       value(obj) as obj
+                from    table(l_named_object_tab) obj
+              ) obj
+              inner join prv p
+              on p.table_schema = obj.object_schema and p.table_name = obj.object_name
+      where   obj.object_type not like '%BODY'
+      and     obj.object_type not in ('MATERIALIZED_VIEW') -- grants are on underlying tables
+      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => 'OBJECT_GRANT'
+              , p_object_name => null
+              , p_metadata_base_object_type => obj.object_type
+              , p_base_object_name => obj.object_name
+              ) = 1
+    )
+    loop
+      longops_show(l_longops_rec);
+      l_schema_object_tab.extend(1);
+      l_schema_object_tab(l_schema_object_tab.last) :=
+        oracle_tools.t_object_grant_object
+        ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+        , p_object_schema => r.object_schema
+        , p_grantee => r.grantee
+        , p_privilege => r.privilege
+        , p_grantable => r.grantable
+        );
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_schema_object_tab);
+$end
+
+    for r in
+    ( select  t.*
+      from    ( -- public synonyms for all our objects
+                select  value(obj)     as base_object
+                ,       s.owner        as object_schema
+                ,       'SYNONYM'      as object_type
+                ,       s.synonym_name as object_name
+                ,       null           as column_name
+                from    table(l_named_object_tab) obj
+                        inner join all_synonyms s
+                        on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
+                where   obj.object_type() not like '%BODY'
+                and     obj.object_type() <> 'MATERIALIZED_VIEW'
+                and     s.owner = 'PUBLIC'
+                union all
+                -- table/view comments
+                select  value(obj)     as base_object
+                ,       null           as object_schema
+                ,       'COMMENT'      as object_type
+                ,       null           as object_name
+                ,       null           as column_name
+                from    table(l_named_object_tab) obj
+                        inner join all_tab_comments t
+                        on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
+                where   obj.object_type() in ('TABLE', 'VIEW')
+                and     t.comments is not null
+                union all
+                -- materialized view comments
+                select  value(obj)     as base_object
+                ,       null           as object_schema
+                ,       'COMMENT'      as object_type
+                ,       null           as object_name
+                ,       null           as column_name
+                from    table(l_named_object_tab) obj
+                        inner join all_mview_comments m
+                        on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
+                where   obj.object_type() = 'MATERIALIZED_VIEW'
+                and     m.comments is not null
+                union all
+                -- column comments
+                select  value(obj)     as base_object
+                ,       null           as object_schema
+                ,       'COMMENT'      as object_type
+                ,       null           as object_name
+                ,       c.column_name  as column_name
+                from    table(l_named_object_tab) obj
+                        inner join all_col_comments c
+                        on c.owner = obj.object_schema() and c.table_name = obj.object_name()
+                where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
+                and     c.comments is not null
+              ) t
+      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => t.object_type
+              , p_object_name => t.object_name
+              , p_metadata_base_object_type => t.base_object.object_type()
+              , p_base_object_name => t.base_object.object_name()
+              ) = 1
+    )
+    loop
+      longops_show(l_longops_rec);
+      l_schema_object_tab.extend(1);
+      case r.object_type
+        when 'SYNONYM'
+        then
+          l_schema_object_tab(l_schema_object_tab.last) :=
+            oracle_tools.t_synonym_object
+            ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+            , p_object_schema => r.object_schema
+            , p_object_name => r.object_name
+            );
+        when 'COMMENT'
+        then
+          l_schema_object_tab(l_schema_object_tab.last) :=
+            oracle_tools.t_comment_object
+            ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+            , p_object_schema => r.object_schema
+            , p_column_name => r.column_name
+            );
+      end case;
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_schema_object_tab);
+$end
+
+    for r in
+    ( -- constraints for objects in the same schema
+      select  t.*
+      from    ( select  value(obj) as base_object
+                ,       c.owner as object_schema
+                ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
+                ,       c.constraint_name as object_name
+                ,       c.constraint_type
+                ,       c.search_condition
+$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+                ,       case c.constraint_type
+                          when 'C'
+                          then ( select  cc.column_name
+                                 from    all_cons_columns cc
+                                 where   cc.owner = c.owner
+                                 and     cc.table_name = c.table_name
+                                 and     cc.constraint_name = c.constraint_name
+                                 and     rownum = 1
+                               )
+                          else null
+                        end as any_column_name
+$end                          
+                from    table(l_named_object_tab) obj
+                        inner join all_constraints c
+                        on c.owner = obj.object_schema() and c.table_name = obj.object_name()
+                where   obj.object_type() in ('TABLE', 'VIEW')
+                        /* Type of constraint definition:
+                           C (check constraint on a table)
+                           P (primary key)
+                           U (unique key)
+                           R (referential integrity)
+                           V (with check option, on a view)
+                           O (with read only, on a view)
+                        */
+                and     c.constraint_type in ('C', 'P', 'U', 'R')
+$if not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
+                        -- exclude system generated not null constraints
+                and     ( c.constraint_name not like 'SYS\_C%' escape '\' or
+                          c.constraint_type <> 'C' or
+                          -- column is the only column in the check constraint and must be nullable
+                          ( 1, 'Y' ) in
+                          ( select  count(cc.column_name)
+                            ,       max(tc.nullable)
+                            from    all_cons_columns cc
+                                    inner join all_tab_columns tc
+                                    on tc.owner = cc.owner and tc.table_name = cc.table_name and tc.column_name = cc.column_name
+                            where   cc.owner = c.owner
+                            and     cc.table_name = c.table_name
+                            and     cc.constraint_name = c.constraint_name
+                          )
+                        )
+$end
+              ) t
+      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => t.object_type
+              , p_object_name => t.object_name
+              , p_metadata_base_object_type => t.base_object.object_type()
+              , p_base_object_name => t.base_object.object_name()
+              ) = 1
+    )
+    loop
+$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+      -- We do NOT want a NOT NULL constraint, named or not.
+      -- Since search_condition is a LONG we must use PL/SQL to filter
+      if r.search_condition is not null and
+         r.any_column_name is not null and
+         r.search_condition = '"' || r.any_column_name || '" IS NOT NULL'
+      then
+        -- This is a not null constraint.
+        -- Since search_condition has only one column, any column name is THE column name.
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+        dbug.print
+        ( dbug."info"
+        , 'ignoring not null constraint: owner: %s; table: %s; constraint: %s; search_condition: %s'
+        , r.object_schema
+        , r.base_object.object_name()
+        , r.object_name
+        , r.search_condition
+        );
+$end
+        null;
+      else
+$end
+
+        longops_show(l_longops_rec);
+        l_schema_object_tab.extend(1);
+        case r.object_type
+          when 'REF_CONSTRAINT'
+          then
+            l_schema_object_tab(l_schema_object_tab.last) :=
+              oracle_tools.t_ref_constraint_object
+              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+              , p_object_schema => r.object_schema
+              , p_object_name => r.object_name
+              , p_constraint_type => r.constraint_type
+              , p_column_names => null
+              );
+
+          when 'CONSTRAINT'
+          then
+            l_schema_object_tab(l_schema_object_tab.last) :=
+              oracle_tools.t_constraint_object
+              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+              , p_object_schema => r.object_schema
+              , p_object_name => r.object_name
+              , p_constraint_type => r.constraint_type
+              , p_search_condition => r.search_condition
+              );
+        end case;
+
+$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+      end if;
+$end        
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_schema_object_tab);
+$end
+
+    for r in
+    ( select  t.*
+      from    ( -- private synonyms for this schema which may point to another schema
+                select  s.owner as object_schema
+                ,       'SYNONYM' as object_type
+                ,       s.synonym_name as object_name
+                ,       obj.owner as base_object_schema
+                        -- use scalar subquery cache
+                ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type) from dual) as base_object_type
+                ,       obj.object_name as base_object_name
+                ,       null as column_name
+                from    all_objects obj inner join all_synonyms s
+                        on s.table_owner = obj.owner and s.table_name = obj.object_name
+                where   obj.object_type not like '%BODY'
+                and     obj.object_type <> 'MATERIALIZED VIEW'
+                and     s.owner = l_schema
+                union all
+                -- triggers for this schema which may point to another schema
+                select  t.owner as object_schema
+                ,       'TRIGGER' as object_type
+                ,       t.trigger_name as object_name
+/* GJP 20170106 see oracle_tools.t_schema_object.chk()
+                -- when the trigger is based on an object in another schema, no base info
+                ,       case when t.owner = t.table_owner then t.table_owner end as base_object_schema
+                ,       case when t.owner = t.table_owner then t.base_object_type end as base_object_type
+                ,       case when t.owner = t.table_owner then t.table_name end as base_object_name
+*/
+                ,       t.table_owner as base_object_schema
+                        -- use scalar subquery cache
+                ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(t.base_object_type) from dual) as base_object_type
+                ,       t.table_name as base_object_name
+                ,       null as column_name
+                from    all_triggers t
+                where   t.owner = l_schema
+                and     t.base_object_type in ('TABLE', 'VIEW')
+              ) t
+      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => t.object_type
+              , p_object_name => t.object_name
+              , p_metadata_base_object_type => t.base_object_type
+              , p_base_object_name => t.base_object_name
+              ) = 1
+    )
+    loop
+      longops_show(l_longops_rec);
+      l_schema_object_tab.extend(1);
+      oracle_tools.t_schema_object.create_schema_object
+      ( p_object_schema => r.object_schema
+      , p_object_type => r.object_type
+      , p_object_name => r.object_name
+      , p_base_object_schema => r.base_object_schema
+      , p_base_object_type => r.base_object_type
+      , p_base_object_name => r.base_object_name
+      , p_column_name => r.column_name
+      , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
+      );
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_schema_object_tab);
+$end
+
+    for r in
+    ( -- indexes
+      select  i.owner as object_schema
+      ,       i.index_name as object_name
+/* GJP 20170106 see oracle_tools.t_schema_object.chk()
+      -- when the index is based on an object in another schema, no base info
+      ,       case when i.owner = i.table_owner then i.table_owner end as base_object_schema
+      ,       case when i.owner = i.table_owner then i.table_type end as base_object_type
+      ,       case when i.owner = i.table_owner then i.table_name end as base_object_name
+*/
+      ,       i.table_owner as base_object_schema
+              -- use scalar subquery cache
+      ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) from dual) as base_object_type
+      ,       i.table_name as base_object_name
+      ,       i.tablespace_name
+      from    all_indexes i
+      where   i.owner = l_schema
+              -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+      and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
+              -- GJP 2022-08-22
+              -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
+              -- so it will not be listed as a separate DDL statement.
+      and     not(i.constraint_index = 'YES')
+      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => 'INDEX'
+              , p_object_name => i.index_name
+              , p_metadata_base_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type)
+              , p_base_object_name => i.table_name
+              ) = 1
+    )
+    loop
+      longops_show(l_longops_rec);
+      l_schema_object_tab.extend(1);
+      l_schema_object_tab(l_schema_object_tab.last) :=
+        oracle_tools.t_index_object
+        ( p_base_object =>
+            oracle_tools.t_named_object.create_named_object
+            ( p_object_schema => r.base_object_schema
+            , p_object_type => r.base_object_type
+            , p_object_name => r.base_object_name
+            )
+        , p_object_schema => r.object_schema
+        , p_object_name => r.object_name
+        , p_tablespace_name => r.tablespace_name
+        );
+    end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(l_schema_object_tab);
+$end
+
+    if l_object_types_to_check = g_schema_md_object_type_tab
+    then
+      -- every object in l_named_object_tab has been checked already by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
+
+      -- combine and filter based on the map function of oracle_tools.t_schema_object and its subtypes
+      -- GPA 2017-01-27 For performance reasons do not use DISTINCT since the sets should be unique and distinct already
+      p_schema_object_tab := l_named_object_tab multiset union /*distinct*/ l_schema_object_tab;
+    else
+      -- objects in l_named_object_tab have NOT been totally checked by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
+      l_object_types_to_check := g_schema_md_object_type_tab;
+
+      select  value(obj) as base_object
+      bulk collect
+      into    p_schema_object_tab
+      from    table(l_named_object_tab) obj
+      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+              ( -- filter values
+                p_schema_object_filter => p_schema_object_filter
+              , p_object_types_to_check => l_object_types_to_check
+                -- database values
+              , p_metadata_object_type => obj.object_type()
+              , p_object_name => obj.object_name()
+              , p_metadata_base_object_type => obj.base_object_type()
+              , p_base_object_name => obj.base_object_name()
+              ) = 1
+      ;
+
+      p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ l_schema_object_tab;
+    end if;
+
+    longops_done(l_longops_rec);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    check_duplicates(p_schema_object_tab);
+$end
+
+    cleanup;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));
+    dbug.leave;
+$end
+
+  exception
+    when others
+    then
+      cleanup;
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      raise;
   end get_schema_object;
 
   function get_schema_object
