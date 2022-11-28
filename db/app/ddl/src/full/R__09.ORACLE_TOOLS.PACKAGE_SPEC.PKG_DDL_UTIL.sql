@@ -367,9 +367,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
    */
   function schema_object_matches_filter
   ( -- filter values
-    p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean /* Not OK (TBD) */
+    p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
   , p_object_types_to_check in oracle_tools.t_text_tab
     -- database values
   , p_metadata_object_type in t_metadata_object_type
@@ -379,7 +377,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   )
   return t_numeric_boolean_nn
   deterministic;
-
+  
   function is_dependent_object_type
   ( p_object_type in t_metadata_object_type
   )
@@ -403,10 +401,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function fetch_ddl
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean /* Not OK (TBD) */
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2
@@ -418,10 +413,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function get_schema_ddl
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean /* Not OK (TBD) */
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list
