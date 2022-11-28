@@ -2209,10 +2209,7 @@ $end
   end md_fetch_ddl;
 
   procedure parse_object
-  ( p_schema in varchar2
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_constraint_lookup_tab in t_constraint_lookup_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab
   , p_ku$_ddl in out nocopy sys.ku$_ddl
@@ -2246,21 +2243,14 @@ $end
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
-    dbug.print
-    ( dbug."input"
-    , 'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s'
-    , p_schema
-    , p_object_type
-    , p_object_names
-    , p_object_names_include
-    );
+    p_schema_object_filter.print();
 $end
 
     p_object_key := null;
 
     parse_ddl
     ( p_ku$_ddl
-    , p_schema
+    , p_schema_object_filter.schema()
     , p_object_lookup_tab
     , p_constraint_lookup_tab
     , l_verb
@@ -2300,7 +2290,7 @@ $end
         );
 
       -- check the object type (base object set if necessary and so on)
-      l_schema_object.chk(p_schema);
+      l_schema_object.chk(p_schema_object_filter.schema());
 
       p_object_key := l_schema_object.id();
 
@@ -2313,7 +2303,7 @@ $end
           );
 
           begin
-            p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema);
+            p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema_object_filter.schema());
           exception
             when others
             then
@@ -2336,9 +2326,7 @@ $end
           case
             when schema_object_matches_filter
                  ( -- filter values
-                   p_object_type => p_object_type
-                 , p_object_names => p_object_names
-                 , p_object_names_include => p_object_names_include
+                   p_schema_object_filter => p_schema_object_filter
                  , p_object_types_to_check => null
                    -- database values
                  , p_metadata_object_type => l_object_type
@@ -2840,7 +2828,14 @@ $end
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   )
   is
-    l_object_names constant varchar2(4000 char) := p_object_names;
+    l_schema_object_filter constant oracle_tools.t_schema_object_filter :=
+      oracle_tools.t_schema_object_filter
+      ( p_schema => p_schema
+      , p_object_type => p_object_type
+      , p_object_names => p_object_names
+      , p_object_names_include => p_object_names_include
+      , p_grantor_is_schema => p_grantor_is_schema
+      );
 
     type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -2935,9 +2930,7 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
       -- this is a special case since we need to exclude first
       if oracle_tools.pkg_ddl_util.schema_object_matches_filter
          ( -- filter values
-           p_object_type => p_object_type
-         , p_object_names => l_object_names
-         , p_object_names_include => p_object_names_include
+           p_schema_object_filter => l_schema_object_filter
          , p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_metadata_object_type => 'AQ_QUEUE_TABLE'
@@ -2978,9 +2971,7 @@ $end
       -- this is a special case since we need to exclude first
       if oracle_tools.pkg_ddl_util.schema_object_matches_filter
          ( -- filter values
-           p_object_type => p_object_type
-         , p_object_names => l_object_names
-         , p_object_names_include => p_object_names_include
+           p_schema_object_filter => l_schema_object_filter
          , p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_metadata_object_type => 'MATERIALIZED_VIEW'
@@ -3029,9 +3020,7 @@ $end
       end if;
       if oracle_tools.pkg_ddl_util.schema_object_matches_filter
          ( -- filter values
-           p_object_type => p_object_type
-         , p_object_names => l_object_names
-         , p_object_names_include => p_object_names_include
+           p_schema_object_filter => l_schema_object_filter
          , p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_metadata_object_type => r.object_type
@@ -3078,9 +3067,7 @@ $end
       and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
       and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => o.object_type
@@ -3143,9 +3130,7 @@ $end
       and     obj.object_type not in ('MATERIALIZED_VIEW') -- grants are on underlying tables
       and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => 'OBJECT_GRANT'
@@ -3224,9 +3209,7 @@ $end
               ) t
       where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => t.object_type
@@ -3317,9 +3300,7 @@ $end
               ) t
       where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => t.object_type
@@ -3425,9 +3406,7 @@ $end
               ) t
       where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => t.object_type
@@ -3480,9 +3459,7 @@ $end
       and     not(i.constraint_index = 'YES')
       and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => 'INDEX'
@@ -3529,9 +3506,7 @@ $end
       from    table(l_named_object_tab) obj
       where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
               ( -- filter values
-                p_object_type => p_object_type
-              , p_object_names => l_object_names
-              , p_object_names_include => p_object_names_include
+                p_schema_object_filter => l_schema_object_filter
               , p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => obj.object_type()
@@ -3591,10 +3566,6 @@ $end
         then 0
         else 1
       end;
-    l_object_names constant t_object_names :=
-      ',' ||
-      replace(replace(replace(replace(p_object_names, chr(9)), chr(13)), chr(10)), chr(32)) ||
-      ',';
     l_schema_object_filter constant oracle_tools.t_schema_object_filter :=
       oracle_tools.t_schema_object_filter
       ( p_schema => p_schema
@@ -3684,10 +3655,7 @@ $end
           from    ( select  value(s) as schema_ddl
                     from    table
                             ( oracle_tools.pkg_ddl_util.get_schema_ddl
-                              ( p_schema => p_schema
-                              , p_object_type => p_object_type
-                              , p_object_names => l_object_names
-                              , p_object_names_include => p_object_names_include
+                              ( p_schema_object_filter => l_schema_object_filter
                               , p_use_schema_export => l_use_schema_export
                               , p_schema_object_tab => l_schema_object_tab
                               , p_transform_param_list => p_transform_param_list
@@ -3715,10 +3683,7 @@ $end
           select  value(s) as schema_ddl
           from    table
                   ( oracle_tools.pkg_ddl_util.get_schema_ddl
-                    ( p_schema => p_schema
-                    , p_object_type => p_object_type
-                    , p_object_names => l_object_names
-                    , p_object_names_include => p_object_names_include
+                    ( p_schema_object_filter => l_schema_object_filter
                     , p_use_schema_export => l_use_schema_export
                     , p_schema_object_tab => l_schema_object_tab
                     , p_transform_param_list => p_transform_param_list
@@ -5406,9 +5371,7 @@ $end
   */
   function schema_object_matches_filter
   ( -- filter values
-    p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+    p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_object_types_to_check in oracle_tools.t_text_tab
     -- database values
   , p_metadata_object_type in t_metadata_object_type
@@ -5460,14 +5423,13 @@ $end
         l_result := 1; -- anything is fine
 
       when -- filter on object type
-           ( p_object_type is null or
-             p_object_type = p_metadata_object_type or
-             p_object_type = p_metadata_base_object_type
+           ( p_schema_object_filter.object_type() is null or
+             p_schema_object_filter.object_type() in ( p_metadata_object_type, p_metadata_base_object_type )
            )
            and
            -- filter on object name
-           ( p_object_names_include is null or
-             p_object_names_include =
+           ( p_schema_object_filter.object_names_include() is null or
+             p_schema_object_filter.object_names_include() =
              case -- found?
                when p_object_name is not null and
 $if pkg_ddl_util.c_object_names_plus_type $then
@@ -5475,7 +5437,7 @@ $if pkg_ddl_util.c_object_names_plus_type $then
                       instr(p_object_names, ','||p_metadata_object_type||':'||p_object_name||',') > 0 
                     )
 $else
-                    instr(p_object_names, ','||p_object_name||',') > 0
+                    instr(p_schema_object_filter.object_names(), ','||p_object_name||',') > 0
 $end
 
                then 1
@@ -5486,7 +5448,7 @@ $if pkg_ddl_util.c_object_names_plus_type $then
                       instr(p_object_names, ','||p_metadata_base_object_type||':'||p_base_object_name||',') > 0 
                     )
 $else
-                    instr(p_object_names, ','||p_base_object_name||',') > 0
+                    instr(p_schema_object_filter.object_names(), ','||p_base_object_name||',') > 0
 $end                    
                then 1
                else 0
@@ -5586,10 +5548,7 @@ $end
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function fetch_ddl
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2
@@ -5623,7 +5582,7 @@ $end
       For all other object types, either the object_schema or the base_object_schema is null.
     */
 
-    cursor c_params is
+    cursor c_params(b_schema in varchar2) is
       select  object_type
       ,       object_schema
       ,       base_object_schema
@@ -5632,7 +5591,7 @@ $end
       ,       nr_objects
       from    ( with src as
                 ( select  'SCHEMA_EXPORT' as object_type
-                  ,       p_schema as object_schema
+                  ,       b_schema as object_schema
                   ,       null as object_name
                   ,       null as base_object_schema
                   ,       null as base_object_name
@@ -5657,14 +5616,14 @@ $end
                   ,       case
                             when t.object_type() in ('INDEX', 'TRIGGER')
                             then null
-                            when t.object_type() = 'SYNONYM' and t.object_schema() = p_schema
+                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
                             then null
                             else t.base_object_schema()
                           end as base_object_schema
                   ,       case
-                            when t.object_type() in ('INDEX', 'TRIGGER') and t.object_schema() = p_schema
+                            when t.object_type() in ('INDEX', 'TRIGGER') and t.object_schema() = b_schema
                             then null
-                            when t.object_type() = 'SYNONYM' and t.object_schema() = p_schema
+                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
                             then null
                             else t.base_object_name()
                           end as base_object_name
@@ -5706,7 +5665,7 @@ $end
                 ,       t.base_object_schema
               )
       order by
-              case object_schema when 'PUBLIC' then 0 when p_schema then 1 else 2 end -- PUBLIC synonyms first
+              case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
       ,       case when object_type = 'SCHEMA_EXPORT' then 0 else 1 end -- SCHEMA_EXPORT next
       ,       object_type
       ,       object_schema
@@ -5759,7 +5718,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.print
     ( dbug."input"
     , 'p_schema: %s; p_use_schema_export: %s; p_schema_object_tab.count: %s'
-    , p_schema
+    , p_schema_object_filter.schema()
     , p_use_schema_export
     , case when p_schema_object_tab is not null then p_schema_object_tab.count end
     );
@@ -5769,7 +5728,7 @@ $end
 
     l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count end);
 
-    open c_params;
+    open c_params(p_schema_object_filter.schema());
     fetch c_params bulk collect into l_params_tab limit g_max_fetch;
     close c_params;
 
@@ -5914,10 +5873,7 @@ $end
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function get_schema_ddl
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_use_schema_export in t_numeric_boolean_nn
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2
@@ -5950,7 +5906,7 @@ $end
           begin
             l_schema_object := p_schema_object_tab(i_idx);
 
-            l_schema_object.chk(p_schema);
+            l_schema_object.chk(p_schema_object_filter.schema());
 
             l_object_key := l_schema_object.id();
 
@@ -6038,7 +5994,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.print
     ( dbug."input"
     , 'p_schema: %s; p_use_schema_export: %s; p_schema_object_tab.count: %s'
-    , p_schema
+    , p_schema_object_filter.schema()
     , p_use_schema_export
     , case when p_schema_object_tab is not null then p_schema_object_tab.count end
     );
@@ -6052,10 +6008,7 @@ $end
     ( select  value(t) as obj
       from    table
               ( oracle_tools.pkg_ddl_util.fetch_ddl
-                ( p_schema => p_schema
-                , p_object_type => p_object_type
-                , p_object_names => p_object_names
-                , p_object_names_include => p_object_names_include
+                ( p_schema_object_filter => p_schema_object_filter
                 , p_use_schema_export => p_use_schema_export
                 , p_schema_object_tab => p_schema_object_tab
                 , p_transform_param_list => p_transform_param_list
@@ -6065,10 +6018,7 @@ $end
     loop
       begin
         parse_object
-        ( p_schema => p_schema
-        , p_object_type => p_object_type
-        , p_object_names => p_object_names
-        , p_object_names_include => p_object_names_include
+        ( p_schema_object_filter => p_schema_object_filter
         , p_constraint_lookup_tab => l_constraint_lookup_tab
         , p_object_lookup_tab => l_object_lookup_tab
         , p_ku$_ddl => r.obj
