@@ -784,17 +784,17 @@ DROP TYPE ORACLE_TOOLS.T_OBJECT_INFO_TAB;
 call dbms_application_info.set_action('SQL statement 176');
 DROP TYPE ORACLE_TOOLS.T_OBJECT_INFO_REC;
 
-/* SQL statement 177 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_TAB;;;;;;;;2) */
+/* SQL statement 177 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 177');
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER;
+
+/* SQL statement 178 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_TAB;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 178');
 DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_TAB;
 
-/* SQL statement 178 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 178');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT;
-
-/* SQL statement 179 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
+/* SQL statement 179 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 179');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER;
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT;
 
 /* SQL statement 180 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TEXT_TAB;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 180');
