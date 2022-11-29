@@ -2324,10 +2324,9 @@ $end
         when no_data_found
         then
           case
-            when schema_object_matches_filter
+            when p_schema_object_filter.matches_schema_object
                  ( -- filter values
-                   p_schema_object_filter => p_schema_object_filter
-                 , p_object_types_to_check => null
+                   p_object_types_to_check => null
                    -- database values
                  , p_metadata_object_type => l_object_type
                  , p_object_name => l_object_name
@@ -3892,10 +3891,9 @@ $end
       l_excluded_tables_tab(r.queue_table) := true;
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
       -- this is a special case since we need to exclude first
-      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      if p_schema_object_filter.matches_schema_object
          ( -- filter values
-           p_schema_object_filter => p_schema_object_filter
-         , p_object_types_to_check => l_object_types_to_check
+           p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_metadata_object_type => 'AQ_QUEUE_TABLE'
          , p_object_name => r.queue_table
@@ -3933,10 +3931,9 @@ $end
         l_excluded_tables_tab(r.mview_name) := true;
       end if;
       -- this is a special case since we need to exclude first
-      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      if p_schema_object_filter.matches_schema_object
          ( -- filter values
-           p_schema_object_filter => p_schema_object_filter
-         , p_object_types_to_check => l_object_types_to_check
+           p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_metadata_object_type => 'MATERIALIZED_VIEW'
          , p_object_name => r.mview_name
@@ -3982,10 +3979,9 @@ $end
       then
         raise program_error;
       end if;
-      if oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      if p_schema_object_filter.matches_schema_object
          ( -- filter values
-           p_schema_object_filter => p_schema_object_filter
-         , p_object_types_to_check => l_object_types_to_check
+           p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_metadata_object_type => r.object_type
          , p_object_name => r.table_name
@@ -4029,10 +4025,9 @@ $end
       where   o.object_type member of g_schema_md_object_type_tab
               -- use scalar subquery cache
       and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
-      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      and     p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => o.object_type
               , p_object_name => o.object_name
@@ -4092,10 +4087,9 @@ $end
               on p.table_schema = obj.object_schema and p.table_name = obj.object_name
       where   obj.object_type not like '%BODY'
       and     obj.object_type not in ('MATERIALIZED_VIEW') -- grants are on underlying tables
-      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      and     p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => 'OBJECT_GRANT'
               , p_object_name => null
@@ -4171,10 +4165,9 @@ $end
                 where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
                 and     c.comments is not null
               ) t
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      where   p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => t.object_type
               , p_object_name => t.object_name
@@ -4262,10 +4255,9 @@ $if not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
                         )
 $end
               ) t
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      where   p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => t.object_type
               , p_object_name => t.object_name
@@ -4368,10 +4360,9 @@ $end
                 where   t.owner = l_schema
                 and     t.base_object_type in ('TABLE', 'VIEW')
               ) t
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      where   p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => t.object_type
               , p_object_name => t.object_name
@@ -4421,10 +4412,9 @@ $end
               -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
               -- so it will not be listed as a separate DDL statement.
       and     not(i.constraint_index = 'YES')
-      and     oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      and     p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
               , p_metadata_object_type => 'INDEX'
               , p_object_name => i.index_name
@@ -4455,28 +4445,24 @@ $end
 
     if l_object_types_to_check = g_schema_md_object_type_tab
     then
-      -- every object in l_named_object_tab has been checked already by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
+      -- every object in l_named_object_tab has been checked already by p_schema_object_filter.matches_schema_object()
 
       -- combine and filter based on the map function of oracle_tools.t_schema_object and its subtypes
       -- GPA 2017-01-27 For performance reasons do not use DISTINCT since the sets should be unique and distinct already
       p_schema_object_tab := l_named_object_tab multiset union /*distinct*/ l_schema_object_tab;
     else
-      -- objects in l_named_object_tab have NOT been totally checked by oracle_tools.pkg_ddl_util.schema_object_matches_filter()
+      -- objects in l_named_object_tab have NOT been totally checked by p_schema_object_filter.matches_schema_object()
       l_object_types_to_check := g_schema_md_object_type_tab;
 
       select  value(obj) as base_object
       bulk collect
       into    p_schema_object_tab
       from    table(l_named_object_tab) obj
-      where   oracle_tools.pkg_ddl_util.schema_object_matches_filter
+      where   p_schema_object_filter.matches_schema_object
               ( -- filter values
-                p_schema_object_filter => p_schema_object_filter
-              , p_object_types_to_check => l_object_types_to_check
+                p_object_types_to_check => l_object_types_to_check
                 -- database values
-              , p_metadata_object_type => obj.object_type()
-              , p_object_name => obj.object_name()
-              , p_metadata_base_object_type => obj.base_object_type()
-              , p_base_object_name => obj.base_object_name()
+              , p_schema_object => value(obj)
               ) = 1
       ;
 
@@ -5335,109 +5321,6 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
       raise;
 $end
   end chk_schema_object;
-
-  /*
-  -- helper function
-  */
-  function schema_object_matches_filter
-  ( -- filter values
-    p_schema_object_filter in oracle_tools.t_schema_object_filter
-  , p_object_types_to_check in oracle_tools.t_text_tab
-    -- database values
-  , p_metadata_object_type in t_metadata_object_type
-  , p_object_name in t_object_name
-  , p_metadata_base_object_type in t_metadata_object_type default null
-  , p_base_object_name in t_object_name default null
-  )
-  return t_numeric_boolean_nn
-  deterministic
-  is
-    l_result t_numeric_boolean_nn := 0;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-    dbug.enter(g_package_prefix || 'SCHEMA_OBJECT_MATCHES_FILTER');
-    dbug.print
-    ( dbug."input"
-    , 'cardinality(p_object_types_to_check): %s; p_metadata_object_type: %s; p_object_name: %s; p_metadata_base_object_type: %s; p_base_object_name: %s'
-    , cardinality(p_object_types_to_check)
-    , p_metadata_object_type
-    , p_object_name
-    , p_metadata_base_object_type
-    , p_base_object_name
-    );
-
-    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
-    check_object_names(p_object_names => substr(p_object_names, 2, length(p_object_names)-2), p_object_names_include => p_object_names_include);
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
-    check_object_type(p_object_type => p_metadata_object_type, p_exclude_allowed => false);
-    check_object_type(p_object_type => p_metadata_base_object_type, p_exclude_allowed => false);
-$end    
-
-    case
-      -- exclude certain (semi-)dependent objects
-      when p_metadata_base_object_type is not null and
-           p_base_object_name is not null and
-           is_exclude_name_expr(p_metadata_base_object_type, p_base_object_name) = 1
-      then
-        l_result := 0;
-
-      -- exclude certain objects
-      when p_metadata_object_type is not null and
-           p_object_name is not null and
-           is_exclude_name_expr(p_metadata_object_type, p_object_name) = 1
-      then
-        l_result := 0;
-
-      when p_object_types_to_check is not null and p_metadata_object_type not member of p_object_types_to_check
-      then
-        l_result := 1; -- anything is fine
-
-      when -- filter on object type
-           ( p_schema_object_filter.object_type() is null or
-             p_schema_object_filter.object_type() in ( p_metadata_object_type, p_metadata_base_object_type )
-           )
-           and
-           -- filter on object name
-           ( p_schema_object_filter.object_names_include() is null or
-             p_schema_object_filter.object_names_include() =
-             case -- found?
-               when p_object_name is not null and
-$if pkg_ddl_util.c_object_names_plus_type $then
-                    ( instr(p_object_names, ','||p_object_name||',') > 0 or 
-                      instr(p_object_names, ','||p_metadata_object_type||':'||p_object_name||',') > 0 
-                    )
-$else
-                    instr(p_schema_object_filter.object_names(), ','||p_object_name||',') > 0
-$end
-
-               then 1
-               when p_base_object_name is not null and
-$if pkg_ddl_util.c_object_names_plus_type $then
-                    ( instr(p_object_names, ','||p_base_object_name||',') > 0 or 
-                      instr(p_object_names, ','||p_metadata_object_type||':'||p_base_object_name||',') > 0 or
-                      instr(p_object_names, ','||p_metadata_base_object_type||':'||p_base_object_name||',') > 0 
-                    )
-$else
-                    instr(p_schema_object_filter.object_names(), ','||p_base_object_name||',') > 0
-$end                    
-               then 1
-               else 0
-             end
-           )
-      then
-        l_result := 1;
-
-      else
-        l_result := 0;
-    end case;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-    dbug.print(dbug."output", 'return: %s', l_result);
-    dbug.leave;
-$end
-
-    return l_result;
-  end schema_object_matches_filter;
 
   function is_dependent_object_type
   ( p_object_type in t_metadata_object_type
