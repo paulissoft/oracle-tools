@@ -5533,6 +5533,8 @@ $end
     -- ORA-04092: cannot COMMIT in a trigger
     pragma autonomous_transaction;
 
+    l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+
     l_handle number := null;
 
     l_ddl_tab sys.ku$_ddls; -- moet package globaal zijn i.v.m. performance
@@ -5552,7 +5554,10 @@ $end
       For all other object types, either the object_schema or the base_object_schema is null.
     */
 
-    cursor c_params(b_schema in varchar2) is
+    cursor c_params
+    ( b_schema in varchar2
+    , b_schema_object_tab in oracle_tools.t_schema_object_tab
+    ) is
       select  object_type
       ,       object_schema
       ,       base_object_schema
@@ -5601,7 +5606,7 @@ $end
                   ,       t.grantee()
                   ,       t.privilege()
                   ,       t.grantable()
-                  from    table(p_schema_object_tab) t
+                  from    table(b_schema_object_tab) t
                   where   nvl(c_use_schema_export * p_use_schema_export, 0) != 1
                 )
                 select  t.object_type
@@ -5696,9 +5701,23 @@ $end
 
     init;
 
-    l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count end);
+    if p_schema_object_tab is null
+    then
+      get_schema_object
+      ( p_schema_object_filter => p_schema_object_filter
+      , p_schema_object_tab => l_schema_object_tab
+      );
+    end if;
 
-    open c_params(p_schema_object_filter.schema());
+    l_longops_rec :=
+      longops_init
+      ( p_op_name => 'fetch'
+      , p_units => 'objects'
+      , p_target_desc => l_program
+      , p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count else l_schema_object_tab.count end
+      );
+
+    open c_params(p_schema_object_filter.schema(), nvl(p_schema_object_tab, l_schema_object_tab));
     fetch c_params bulk collect into l_params_tab limit g_max_fetch;
     close c_params;
 
@@ -5734,7 +5753,11 @@ $end
           ( p_totalwork =>
               case
                 when r_params.object_type = 'SCHEMA_EXPORT'
-                then case when p_schema_object_tab is not null then p_schema_object_tab.count end - l_longops_rec.sofar
+                then case
+                       when p_schema_object_tab is not null
+                       then p_schema_object_tab.count
+                       else l_schema_object_tab.count
+                     end - l_longops_rec.sofar
                 else r_params.nr_objects
               end
           , p_op_name =>
@@ -5851,6 +5874,8 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
+    l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_object_key t_object;
@@ -5860,7 +5885,7 @@ $end
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec;
 
-    procedure init
+    procedure init(p_schema_object_tab in oracle_tools.t_schema_object_tab)
     is
       l_schema_object oracle_tools.t_schema_object;
       l_ref_constraint_object oracle_tools.t_ref_constraint_object;
@@ -5970,7 +5995,15 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     );
 $end
 
-    init;
+    if p_schema_object_tab is null
+    then
+      get_schema_object
+      ( p_schema_object_filter => p_schema_object_filter
+      , p_schema_object_tab => l_schema_object_tab
+      );
+    end if;
+
+    init(nvl(p_schema_object_tab, l_schema_object_tab));
 
     l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => l_object_lookup_tab.count);
 
@@ -5980,7 +6013,7 @@ $end
               ( oracle_tools.pkg_ddl_util.fetch_ddl
                 ( p_schema_object_filter => p_schema_object_filter
                 , p_use_schema_export => p_use_schema_export
-                , p_schema_object_tab => p_schema_object_tab
+                , p_schema_object_tab => nvl(p_schema_object_tab, l_schema_object_tab)
                 , p_transform_param_list => p_transform_param_list
                 )
               ) t
