@@ -172,6 +172,11 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2022-12-02
+
+The strip source schema functionality did not work well: reading existing
+scripts, writing scripts, replacement of schema in DDL (schema.object).
+
 =item 2022-09-28
 
 Constraints can be grouped in one file per base object (one for referential and one for the rest).
@@ -305,7 +310,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2022-09-28";
+my $VERSION = "2022-12-02";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -1583,6 +1588,7 @@ sub beautify_line ($$$$$$) {
 
     if ($strip_source_schema && defined($source_schema)) {
         $$r_line =~ s/"$source_schema"\.//g;
+        $$r_line =~ s/\b$source_schema\.//g;
     }
 
     debug("\$\$r_line after : $$r_line");
