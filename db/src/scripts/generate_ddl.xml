@@ -442,6 +442,8 @@ Z       Time zone               RFC 822 time zone   -0800
       <perl-arguments>
         <arg value="--output-directory=${full.output.directory}"/>
         <arg value="--single-output-file=uninstall.sql"/>
+        <arg value="--source-schema=${schema}"/>
+        <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
       </perl-arguments>
     </generate-ddl>
   </target>
@@ -503,6 +505,8 @@ Z       Time zone               RFC 822 time zone   -0800
         <arg value="--${perl.incr.dynamic.sql}dynamic-sql"/>
         <arg value="--output-directory=${incr.output.directory}"/>
         <arg value="--single-output-file=V${sync.basename}.sql"/>
+        <arg value="--source-schema=${schema}"/>
+        <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
       </perl-arguments>
     </generate-ddl>
     <property name="generated.schema.incr.file"
