@@ -1239,7 +1239,9 @@ $end
             where   obj.owner = p_schema
             and     obj.object_name = p_base_object_name
             and     obj.object_type in ( 'TABLE', 'VIEW' )
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
+$end            
             ;
 
           when l_comment like '% ON MATERIALIZED VIEW %'
@@ -1254,7 +1256,9 @@ $end
             where   obj.owner = p_schema
             and     obj.object_name = p_base_object_name
             and     obj.object_type in ( 'TABLE', 'MATERIALIZED VIEW', 'VIEW' )
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
+$end            
             ;
 
           when trim(replace(replace(l_comment, chr(13)), chr(10))) is null
@@ -3969,7 +3973,9 @@ $end
       where   t.owner = l_schema
       and     t.object_type = 'TABLE'
       and     t.temporary = 'Y'
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
       and     t.generated = 'N' -- GPA 2016-12-19 #136334705
+$end      
               -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
       and     substr(t.object_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
     )
@@ -4014,7 +4020,9 @@ $end
                 from    all_objects o
                 where   o.owner = l_schema
                 and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
                 and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end                
                         -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
                         -- =====         ===========                      ==============
                         -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
@@ -4211,7 +4219,7 @@ $end
                 ,       c.constraint_name as object_name
                 ,       c.constraint_type
                 ,       c.search_condition
-$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
                 ,       case c.constraint_type
                           when 'C'
                           then ( select  cc.column_name
@@ -4225,7 +4233,7 @@ $if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
                         end as any_column_name
 $end                          
                 from    table(l_named_object_tab) obj
-                        inner join all_constraints c
+                        inner join all_constraints c /* this is where we are interested in */
                         on c.owner = obj.object_schema() and c.table_name = obj.object_name()
                 where   obj.object_type() in ('TABLE', 'VIEW')
                         /* Type of constraint definition:
@@ -4237,7 +4245,9 @@ $end
                            O (with read only, on a view)
                         */
                 and     c.constraint_type in ('C', 'P', 'U', 'R')
-$if not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+                and     c.generated = 'USER NAME'         
+$elsif not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
                         -- exclude system generated not null constraints
                 and     ( c.constraint_name not like 'SYS\_C%' escape '\' or
                           c.constraint_type <> 'C' or
@@ -4266,7 +4276,7 @@ $end
               ) = 1
     )
     loop
-$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
       -- We do NOT want a NOT NULL constraint, named or not.
       -- Since search_condition is a LONG we must use PL/SQL to filter
       if r.search_condition is not null and
@@ -4287,7 +4297,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
         null;
       else
-$end
+$end -- $if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
 
         longops_show(l_longops_rec);
         l_schema_object_tab.extend(1);
@@ -4315,7 +4325,7 @@ $end
               );
         end case;
 
-$if oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
       end if;
 $end        
     end loop;
@@ -4335,11 +4345,13 @@ $end
                 ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type) from dual) as base_object_type
                 ,       obj.object_name as base_object_name
                 ,       null as column_name
-                from    all_objects obj inner join all_synonyms s
-                        on s.table_owner = obj.owner and s.table_name = obj.object_name
+                from    all_synonyms s
+                        inner join all_objects obj
+                        on obj.owner = s.table_owner and obj.object_name = s.table_name
                 where   obj.object_type not like '%BODY'
                 and     obj.object_type <> 'MATERIALIZED VIEW'
                 and     s.owner = l_schema
+                -- no need to check on s.generated since we are interested in synonyms, not objects
                 union all
                 -- triggers for this schema which may point to another schema
                 select  t.owner as object_schema
@@ -4421,6 +4433,9 @@ $end
               , p_metadata_base_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type)
               , p_base_object_name => i.table_name
               ) = 1
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+      and     i.generated = 'N'
+$end      
     )
     loop
       longops_show(l_longops_rec);
@@ -5225,6 +5240,9 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
         where   obj.owner = p_named_object.object_schema()
         and     obj.object_type = p_named_object.dict_object_type()
         and     obj.object_name = p_named_object.object_name()
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+        and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
+$end        
         ;
         if l_status = 'VALID'
         then
@@ -6211,6 +6229,9 @@ $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then -- GJP 2022-07-16 FALSE
         where   t1.owner = p_schema
         and     t1.owner = t2.owner /* same schema */
         and     t1.constraint_type = 'R'
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+        -- no need to exclude since this is dependency checking not object selection
+$end        
 $else -- GJP 2022-07-16 TRUE
         -- more simple: just the constraints
         select  oracle_tools.t_schema_object.create_schema_object
@@ -6240,6 +6261,9 @@ $else -- GJP 2022-07-16 TRUE
         and     c.constraint_type = 'R'
         and     oracle_tools.t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
         and     oracle_tools.t_schema_object.dict2metadata_object_type(tr.object_type) in ( select t.type from allowed_types t )
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+        -- no need to exclude since this is dependency checking not object selection
+$end
 $end
         union all
         -- dependencies based on prebuilt tables
@@ -6286,6 +6310,9 @@ $end
         and     c.index_name is not null
         and     oracle_tools.t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
         and     oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) in ( select t.type from allowed_types t )
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+        -- no need to exclude since this is dependency checking not object selection
+$end
       )
       select  t1.*
       from    deps t1
@@ -6797,7 +6824,7 @@ $end
     , p_network_link_target => l_network_link_target
     );
 
-    -- drop objects which are excluded in get_schema_object()
+    -- drop (user created) objects which are excluded in get_schema_object()
     l_drop_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
     for r in
     ( select  oracle_tools.t_schema_ddl.create_schema_ddl
@@ -6813,6 +6840,9 @@ $end
                 ,       o.object_name
                 from    all_objects o
                 where   o.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+                and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end                
               ) o
       where   (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
     )
@@ -6865,12 +6895,15 @@ $end
       then null;
     end;
 
-    -- schema EMPTY should be empty now
+    -- schema EMPTY should not have user created objects
     begin
       select  1
       into    l_found
       from    all_objects o
       where   o.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+      and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end      
       and     rownum = 1
       ;
       raise too_many_rows;
@@ -7278,7 +7311,9 @@ $end
               from   ( select  t.*
                        ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
                        from    all_objects t
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
+$end                       
                      ) t
               where  t.owner in (g_owner, g_owner_utplsql)
               and    t.orderseq <= 3 -- reduce the time
@@ -7677,7 +7712,9 @@ $end
               from   ( select  t.*
                        ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
                        from    all_objects t
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
+$end                       
                      ) t
               where  t.owner in (g_owner, g_owner_utplsql)
               and    t.orderseq <= 3
@@ -7896,7 +7933,16 @@ $end
     -- ABC XYZ as parameter
     ut.expect(oracle_tools.t_schema_object.dict2metadata_object_type('ABC XYZ'), l_program || '#ABC XYZ').to_equal('ABC_XYZ');
 
-    for r in (select distinct t.object_type from all_objects t where t.generated = 'N' /* GPA 2016-12-19 #136334705 */ order by t.object_type)
+    for r in
+    ( select  distinct
+              t.object_type
+      from    all_objects t
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+      where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
+$end      
+      order by
+              t.object_type
+    )
     loop
       l_metadata_object_type := case
                                   when r.object_type in ('JOB','PROGRAM','RULE','RULE SET','EVALUATION CONTEXT') then
@@ -8112,6 +8158,9 @@ $end
       from    all_indexes i
       where   i.owner <> i.table_owner
       and     i.table_name is not null
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+      and     i.generated = 'N'
+$end      
     )
     loop
       if r.fq_object_name is not null
@@ -8243,6 +8292,9 @@ $end
       into    l_count
       from    all_objects t
       where   t.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+      and     t.generated = 'N' -- GPA 2016-12-19 #136334705
+$end      
       and     oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) = 0;
 
       ut.expect(l_count, l_program || '#cleanup' || '#' || i_try).to_equal(0);
@@ -8250,12 +8302,15 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       if l_count != 0
       then
-        dbug.print(dbug."error", 'schema %s should not contain objects', g_empty);
+        dbug.print(dbug."error", 'schema %s should not contain user created objects', g_empty);
         for r in
         ( select  o.object_type
           ,       o.object_name
           from    all_objects o
           where   o.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end          
           order by
                   o.object_type
           ,       o.object_name

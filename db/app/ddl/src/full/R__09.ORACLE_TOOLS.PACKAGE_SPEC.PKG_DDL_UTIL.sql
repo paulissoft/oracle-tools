@@ -28,8 +28,11 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_debugging_parse_ddl constant boolean := true;
 
   /*
-  -- Start of bugs/features
+  -- Start of bugs/features (oldest first)
   */
+
+  -- GPA 2016-12-19 #136334705 Only user created items from ALL_OBJECTS
+  c_#136334705 constant boolean := true;
 
   -- GPA 2017-02-01 #138707615 named not null constraints are recreated
   c_#138707615_1 constant boolean := true;
@@ -63,6 +66,20 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- It must be possible to specify the object type for object names when generating DDL.
   -- https://github.com/paulissoft/oracle-tools/issues/89
   c_object_names_plus_type constant boolean := false;
+
+  -- GJP 2022-12-14 The DDL generator does not create a correct constraint script.
+  --
+  -- ALL_OBJECTS, ALL_INDEXES and ALL_CONSTRAINTS have a GENERATED column to separate system generated and user generated items.
+  -- The distinct values for the first two are 'N' and 'Y', for the latter these are 'GENERATED NAME' and 'USER NAME'.
+  -- This filtering must be applied to all usages.
+  --
+  -- This supersedes bug #136334705 (see above) since that is only for ALL_OBJECTS.
+  --
+  -- This supersedes all code for:
+  -- * c_#138707615_1 (true/false irrelevant)
+  --
+  -- See also https://github.com/paulissoft/oracle-tools/issues/92.
+  c_exclude_generated_items constant boolean := true;
 
   /*
   -- End of bugs/features

@@ -21,6 +21,8 @@ Types of changes:
 - [It must be possible to run actions for different application environments or actions in parallel on Jenkins.](https://github.com/paulissoft/oracle-tools/issues/83)
 - [It must be possible to have a dry run for Jenkins.](https://github.com/paulissoft/oracle-tools/issues/84)
 - [In Jenkins it must be possible to use NFS for the Maven local repository and the controller/agent workspace.](https://github.com/paulissoft/oracle-tools/issues/85)
+- [The strip source schema for generating DDL scripts does not work well.](https://github.com/paulissoft/oracle-tools/issues/91)
+- [The DDL generator does not create a correct constraint script.](https://github.com/paulissoft/oracle-tools/issues/92)
 
 ## [1.9.0] - 2022-10-05
 
