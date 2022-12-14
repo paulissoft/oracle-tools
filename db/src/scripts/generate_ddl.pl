@@ -172,6 +172,11 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2022-12-02
+
+The strip source schema functionality did not work well: reading existing
+scripts, writing scripts, replacement of schema in DDL (schema.object).
+
 =item 2022-09-28
 
 Constraints can be grouped in one file per base object (one for referential and one for the rest).
@@ -305,7 +310,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2022-09-28";
+my $VERSION = "2022-12-02";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -414,7 +419,6 @@ my $TMPDIR = tempdir( CLEANUP => 1 );
 
 my $object_sep = '.';
 my $object_sep_rex = qr/\./;
-my $object_rex = qr/^.+\..+\..+$/;
 
 # The lines to write to install.sql (if any).
 my @install_sql_lines = ();
@@ -480,6 +484,8 @@ sub main () {
 sub process_command_line () {
     trace((caller(0))[3]);
 
+    my @argv = @ARGV;
+
     # Windows FTYPE and ASSOC cause the command 'generate_ddl -h -c file'
     # to have ARGV[0] == ' -h -c file' and number of arguments 1.
     # Hence strip the spaces from $ARGV[0] and recreate @ARGV.
@@ -517,6 +523,9 @@ sub process_command_line () {
         pod2usage(-message => "$0: output directory does not exist. Run with --help option.\n")
             unless (defined($output_directory) && -d $output_directory);
     }
+
+    print STDERR "Command line: $0 @argv\n"
+        if ($verbose > 0);
 }
 
 sub process () {
@@ -1048,9 +1057,37 @@ sub sort_sql_statements ($$$) {
         # just sort by sequence
         $result = ($r_sql_statements->{$a}->{seq} <=> $r_sql_statements->{$b}->{seq});
     } else {
-        # $object_seq{$a} and $object_seq{$b} will exist due to call to add_object_seq() in add_sql_statement()
-        debug(sprintf("get_object_seq('%s'); '%s'; get_object_seq('%s'): '%s'", $a, get_object_seq($a), $b, get_object_seq($b)));
-        $result = (get_object_seq($a) <=> get_object_seq($b));
+        my ($a_idx, $b_idx) = ($a, $b);
+        my ($a_seq, $b_seq) = (get_object_seq($a_idx), get_object_seq($b_idx));
+
+        if ($strip_source_schema) {
+            if (!defined($a_seq)) {
+                $a_idx =~ s/^$source_schema//;
+                $a_seq = get_object_seq($a_idx);
+            }
+            if (!defined($b_seq)) {
+                $b_idx =~ s/^$source_schema//;
+                $b_seq = get_object_seq($b_idx);
+            }
+        }
+
+        eval {
+            my $dumper = Data::Dumper->new([\%object_seq], [qw(*object_seq)]);
+
+            $dumper->Sortkeys(1);
+            
+            warning($dumper->Dump())
+                unless ( defined($a_seq) && defined($b_seq) );
+        };
+
+        error("No object sequence for $a")
+            unless defined($a_seq);
+        error("No object sequence for $b")
+            unless defined($b_seq);
+        
+        debug(sprintf("get_object_seq('%s'); '%s'; get_object_seq('%s'): '%s'", $a_idx, $a_seq, $b_idx, $b_seq));
+        
+        $result = $a_seq <=> $b_seq;
     }
 
     return $result;
@@ -1551,6 +1588,7 @@ sub beautify_line ($$$$$$) {
 
     if ($strip_source_schema && defined($source_schema)) {
         $$r_line =~ s/"$source_schema"\.//g;
+        $$r_line =~ s/\b$source_schema\.//g;
     }
 
     debug("\$\$r_line after : $$r_line");
@@ -1616,7 +1654,7 @@ sub add_object_seq ($;$) {
         unless $object eq uc($object);
 
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
-        unless $object =~ m/$object_rex/;
+        unless $object =~ m/^.+\..+\..+$/;
 
     error("Object sequence for '$object' already exists.")
         if defined(get_object_seq($object));
@@ -1648,7 +1686,7 @@ sub read_object_seq () {
         if ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
             $objects{$2} = join($object_sep, $3, $4, $5);
         } elsif ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2} = join($object_sep, '', $3, $4);
+            $objects{$2} = join($object_sep, $source_schema, $3, $4);
         }
     }
     # add the files in order

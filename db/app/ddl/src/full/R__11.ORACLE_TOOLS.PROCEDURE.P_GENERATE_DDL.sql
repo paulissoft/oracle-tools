@@ -85,16 +85,7 @@ $end
           open l_cursor for
             select  '-- ddl info: ' ||
                     u.verb() || ';' ||
-                    t.obj.object_schema() || ';' ||
-                    t.obj.object_type() || ';' ||
-                    t.obj.object_name() || ';' ||
-                    t.obj.base_object_schema() || ';' ||
-                    t.obj.base_object_type() || ';' ||
-                    t.obj.base_object_name() || ';' ||
-                    t.obj.column_name() || ';' ||
-                    t.obj.grantee() || ';' ||
-                    t.obj.privilege() || ';' ||
-                    t.obj.grantable() || ';' ||
+                    replace(t.obj.schema_object_info(), ':', ';') || ';' ||
                     u.ddl#() || chr(10) as ddl_info
             ,       u.text
             from    table
@@ -117,16 +108,7 @@ $end
           open l_cursor for
             select  '-- ddl info: ' ||
                     u.verb() || ';' ||
-                    t.obj.object_schema() || ';' ||
-                    t.obj.object_type() || ';' ||
-                    t.obj.object_name() || ';' ||
-                    t.obj.base_object_schema() || ';' ||
-                    t.obj.base_object_type() || ';' ||
-                    t.obj.base_object_name() || ';' ||
-                    t.obj.column_name() || ';' ||
-                    t.obj.grantee() || ';' ||
-                    t.obj.privilege() || ';' ||
-                    t.obj.grantable() || ';' ||
+                    replace(t.obj.schema_object_info(), ':', ';') || ';' ||
                     u.ddl#() || chr(10) as ddl_info
             ,       u.text
             from    table

@@ -883,6 +883,23 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
+member function schema_object_info
+return varchar2
+deterministic
+is
+begin
+  return self.object_schema() || ':' ||
+         self.object_type() || ':' ||
+         self.object_name() || ':' ||
+         self.base_object_schema() || ':' ||
+         self.base_object_type() || ':' ||
+         self.base_object_name() || ':' ||
+         self.column_name() || ':' ||
+         self.grantee() || ':' ||
+         self.privilege() || ':' ||
+         self.grantable();  
+end schema_object_info;
+
 end;
 /
 
