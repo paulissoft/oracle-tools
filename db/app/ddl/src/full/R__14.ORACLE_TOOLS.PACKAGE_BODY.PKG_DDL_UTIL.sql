@@ -1058,6 +1058,10 @@ $end
         then
           l_search_condition := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
 
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+          dbug.print(dbug."info", 'l_search_condition: %s', l_search_condition);
+$end
+
           if l_constraint like l_constraint_expr_tab(6)
           then
             if l_search_condition like '"%" CONSTRAINT "%"%'
@@ -1066,6 +1070,9 @@ $end
               l_pos1 := instr(l_search_condition, '"', 1, 3);
               l_pos2 := instr(l_search_condition, '"', 1, 4);
               p_object_name := substr(l_search_condition, l_pos1+1, l_pos2 - (l_pos1+1));              
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+              dbug.print(dbug."info", 'named constraint: %s', p_object_name);
+$end
             end if;
             l_search_condition := replace(l_search_condition, ' NOT NULL ENABLE', ' IS NOT NULL');
           end if;
@@ -1093,15 +1100,15 @@ $end
           then
             begin
               p_object_name := p_object_lookup_tab(p_constraint_lookup_tab(l_constraint_object.signature())).schema_ddl.obj.object_name();
-  $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               dbug.print( dbug."info", 'p_object_name (%s) determined by lookup', p_object_name);
-  $end
+$end
             exception
               when others
               then
-  $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 dbug.print( dbug."warning", 'p_object_name could not be determined by lookup: %s', sqlerrm);
-  $end
+$end
                 open c_con(b_schema => p_schema, b_table_name => p_base_object_name);
                 <<fetch_loop>>
                 loop
@@ -1109,21 +1116,21 @@ $end
 
                   exit fetch_loop when c_con%notfound;
 
-  $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                   dbug.print
                   ( dbug."info"
                   , 'r_con.constraint_name: %s; r_con.search_condition: %s'
                   , r_con.constraint_name
                   , r_con.search_condition
                   );
-  $end
+$end
 
                   if r_con.search_condition = l_search_condition
                   then
                     p_object_name := r_con.constraint_name;
-  $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                     dbug.print( dbug."info", 'p_object_name (%s) determined by dictionary search', p_object_name);
-  $end
+$end
                     exit fetch_loop;
                   end if;
                 end loop fetch_loop;
