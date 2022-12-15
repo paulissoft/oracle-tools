@@ -39,7 +39,11 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
   c_euro_sign constant varchar2(1 char) := '€';
 
-  c_use_schema_export constant pls_integer := 1;
+  -- GJP 2022-12-15
+  -- Set constant to 0.
+  -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
+  -- https://github.com/paulissoft/oracle-tools/issues/98
+  c_use_schema_export constant pls_integer := 0;
   c_dbms_metadata_set_count constant pls_integer := 100;
 
   -- ORA-01795: maximum number of expressions in a list is 1000
@@ -1621,7 +1625,7 @@ $end
 
   procedure md_set_transform_param
   ( p_transform_handle in number default dbms_metadata.session_transform
-  , p_object_type_tab in oracle_tools.t_text_tab default oracle_tools.t_text_tab('INDEX', 'TABLE', 'CLUSTER', 'CONSTRAINT', 'TABLE', 'VIEW', 'TYPE_SPEC')
+  , p_object_type_tab in oracle_tools.t_text_tab default oracle_tools.t_text_tab('INDEX', 'TABLE', 'CLUSTER', 'CONSTRAINT', 'VIEW', 'TYPE_SPEC')
   , p_use_object_type_param in boolean default false
   , p_transform_param_tab in t_transform_param_tab default g_transform_param_tab
   )
@@ -1723,14 +1727,16 @@ $end
         set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
         set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
+      -- GJP 2022-12-15 Maybe setting CONSTRAINTS before CONSTRAINTS_AS_ALTER may generate this command:
+      -- ALTER TABLE "BC_BO"."BC_CONSUMPTION_PREDICTIONS" MODIFY ("GRD_ID" CONSTRAINT "NNC_CPN_GRD_ID" NOT NULL ENABLE)
+      if p_object_type_tab(i_idx) in ('TABLE', 'VIEW')
+      then
+        set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+      end if;
       if p_object_type_tab(i_idx) = 'TABLE'
       then
         set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
         set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-      end if;
-      if p_object_type_tab(i_idx) in ('TABLE', 'VIEW')
-      then
-        set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'VIEW'
       then
