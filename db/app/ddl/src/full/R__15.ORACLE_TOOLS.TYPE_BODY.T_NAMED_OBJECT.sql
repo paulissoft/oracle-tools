@@ -36,7 +36,7 @@ $end
     from    all_objects o
     where   o.owner = p_object_schema
     and     o.object_name = p_object_name
-    and     o.object_type not in ('INDEX', 'TRIGGER', 'PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW') -- only primary objects
+    and     o.object_type not in ('INDEX', 'TRIGGER', 'PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW', 'TABLE PARTITION') -- only primary objects
     ;
 
     l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);

@@ -1626,37 +1626,126 @@ $end
   , p_transform_param_tab in t_transform_param_tab default g_transform_param_tab
   )
   is
+    procedure set_transform_param
+    ( transform_handle   in number
+    , name               in varchar2
+    , value              in varchar2
+    , object_type        in varchar2 default null
+    )
+    is
+    begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print
+      ( dbug."info"
+      , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (1)'
+      , transform_handle
+      , name
+      , value
+      , object_type
+      );
+$end      
+      dbms_metadata.set_transform_param
+      ( transform_handle
+      , name
+      , value
+      , object_type
+      );
+    end;
+
+    procedure set_transform_param
+    ( transform_handle   in number
+    , name               in varchar2
+    , value              in boolean default true
+    , object_type        in varchar2 default null
+    )
+    is
+    begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print
+      ( dbug."info"
+      , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (2)'
+      , transform_handle
+      , name
+      , dbug.cast_to_varchar2(value)
+      , object_type
+      );
+$end      
+      dbms_metadata.set_transform_param
+      ( transform_handle
+      , name
+      , value
+      , object_type
+      );
+    end;
+
+    procedure set_transform_param
+    ( transform_handle   in number
+    , name               in varchar2
+    , value              in number
+    , object_type        in varchar2 default null
+    )
+    is
+    begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print
+      ( dbug."info"
+      , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (3)'
+      , transform_handle
+      , name
+      , value
+      , object_type
+      );
+$end      
+      dbms_metadata.set_transform_param
+      ( transform_handle
+      , name
+      , value
+      , object_type
+      );
+    end;
   begin
-    dbms_metadata.set_transform_param(p_transform_handle, 'PRETTY'              , true );
-    dbms_metadata.set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter($$PLSQL_UNIT_OWNER||'.'||$$PLSQL_UNIT||'.MD_SET_TRANSFORM_PARAM');
+    dbug.print(dbug."input", 'p_use_object_type_param: %s', p_use_object_type_param);
+$end
+
+    set_transform_param(p_transform_handle, 'PRETTY'              , true );
+    set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
 
     for i_idx in p_object_type_tab.first .. p_object_type_tab.last
     loop
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'p_object_type_tab(%s): %s', i_idx, p_object_type_tab(i_idx));
+$end
       if p_object_type_tab(i_idx) in ('TABLE', 'INDEX', 'CLUSTER', 'CONSTRAINT', 'ROLLBACK_SEGMENT', 'TABLESPACE')
       then
-        dbms_metadata.set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata.set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata.set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TABLE'
       then
-        dbms_metadata.set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata.set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) in ('TABLE', 'VIEW')
       then
-        dbms_metadata.set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'VIEW'
       then
         -- GPA 2016-12-01 The FORCE keyword may be removed by the generate_ddl.pl script, depending on an option.
-        dbms_metadata.set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TYPE_SPEC'
       then
-        dbms_metadata.set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
     end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
   end md_set_transform_param;
 
   procedure md_set_filter
@@ -5515,6 +5604,19 @@ $end
     -- ORA-04092: cannot COMMIT in a trigger
     pragma autonomous_transaction;
 
+    -- GJP 2022-12-15
+    -- Set schema export to 0 if one of the filter is not the default values (except schema).
+    -- If we do not do that fetch_ddl will issue a SCHEMA EXPORT without filtering.
+    l_use_schema_export constant t_numeric_boolean_nn :=
+      case
+        when p_schema_object_filter.object_type() is null and
+             p_schema_object_filter.object_names() is null and
+             p_schema_object_filter.object_names_include() is null and
+             p_schema_object_filter.grantor_is_schema() = 0
+        then p_use_schema_export
+        else 0
+      end;
+      
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
 
     l_handle number := null;
@@ -5538,6 +5640,7 @@ $end
 
     cursor c_params
     ( b_schema in varchar2
+    , b_use_schema_export in t_numeric_boolean_nn
     , b_schema_object_tab in oracle_tools.t_schema_object_tab
     ) is
       select  object_type
@@ -5557,7 +5660,7 @@ $end
                   ,       null as privilege -- to get the count right
                   ,       null as grantable -- to get the count right
                   from    dual
-                  where   c_use_schema_export * p_use_schema_export = 1
+                  where   c_use_schema_export * b_use_schema_export = 1
                   union all
                   select  t.object_type()
                   ,       case
@@ -5589,7 +5692,7 @@ $end
                   ,       t.privilege()
                   ,       t.grantable()
                   from    table(b_schema_object_tab) t
-                  where   nvl(c_use_schema_export * p_use_schema_export, 0) != 1
+                  where   nvl(c_use_schema_export * b_use_schema_export, 0) != 1
                 )
                 select  t.object_type
                 ,       t.object_schema
@@ -5674,9 +5777,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || l_program);
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s; p_use_schema_export: %s; p_schema_object_tab.count: %s'
+    , 'p_schema: %s; p_use_schema_export: %s; l_use_schema_export: %s; p_schema_object_tab.count: %s'
     , p_schema_object_filter.schema()
     , p_use_schema_export
+    , l_use_schema_export
     , case when p_schema_object_tab is not null then p_schema_object_tab.count end
     );
 $end
@@ -5699,7 +5803,7 @@ $end
       , p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count else l_schema_object_tab.count end
       );
 
-    open c_params(p_schema_object_filter.schema(), nvl(p_schema_object_tab, l_schema_object_tab));
+    open c_params(p_schema_object_filter.schema(), l_use_schema_export, nvl(p_schema_object_tab, l_schema_object_tab));
     fetch c_params bulk collect into l_params_tab limit g_max_fetch;
     close c_params;
 
@@ -5945,9 +6049,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
             then dbug."info"
             else dbug."warning"
           end
-        , 'l_object_lookup_tab(%s): %s'
+        , 'l_object_lookup_tab(%s); count: %s; ready: %s'
         , l_object_key
         , l_object_lookup_tab(l_object_key).count
+        , dbug.cast_to_varchar2(l_object_lookup_tab(l_object_key).ready)
         );
         if l_object_lookup_tab(l_object_key).count >= 1
         then
