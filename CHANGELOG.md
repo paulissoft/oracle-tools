@@ -24,6 +24,7 @@ Types of changes:
 - [The strip source schema for generating DDL scripts does not work well.](https://github.com/paulissoft/oracle-tools/issues/91)
 - [The DDL generator does not create a correct constraint script.](https://github.com/paulissoft/oracle-tools/issues/92)
 - [The DDL generator can not parse a specific ALTER TABLE MODIFY CHECK constraint.](https://github.com/paulissoft/oracle-tools/issues/95)
+- [Error logging must include object concerned for DDL generation.](https://github.com/paulissoft/oracle-tools/issues/97)
 
 ## [1.9.0] - 2022-10-05
 
