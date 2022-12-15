@@ -1233,7 +1233,7 @@ $end
       then
         nullify_output_parameters;
       else        
-        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_constraint || '"');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse ALTER DDL "' || l_constraint || '"');
       end if;
     end parse_alter;
 
@@ -1310,7 +1310,7 @@ $end
             nullify_output_parameters;
 
           else
-            raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_comment || '"');
+            raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse COMMENT DDL "' || l_comment || '"');
         end case;
       end if;
     exception
@@ -1343,7 +1343,7 @@ $end
       then
         nullify_output_parameters;
       else
-        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_plsql_block || '"');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse PROCOBJ DDL "' || l_plsql_block || '"');
       end if;
     end parse_procobj;
 
@@ -1381,7 +1381,7 @@ $end
       then
         nullify_output_parameters;
       else
-        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_index || '"');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse INDEX DDL "' || l_index || '"');
       end if;
     end parse_index;
 
@@ -1407,7 +1407,7 @@ $end
       then
         nullify_output_parameters;
       else
-        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse "' || l_object_grant || '"');
+        raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_parse, 'Could not parse OBJECT_GRANT DDL "' || l_object_grant || '"');
       end if;
     end parse_object_grant;
 
@@ -2132,10 +2132,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   exception
     when others then
       dbug.leave_on_error;
-      raise_application_error
-      ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
-      , p_object_type||';'||p_object_schema||';'||p_base_object_schema
-      , true
+      oracle_tools.pkg_ddl_error.reraise_error
+      ( p_object_type||';'||p_object_schema||';'||p_base_object_schema
       );
 $end
   end md_open;
@@ -3081,7 +3079,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
@@ -3517,7 +3515,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
     when others
     then
@@ -4584,7 +4582,7 @@ $end
 
     when no_data_found
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
   end get_schema_object;
 
   procedure get_member_ddl
@@ -4791,7 +4789,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 dbug.on_error;
 $end
-                raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
+                oracle_tools.pkg_ddl_error.reraise_error('attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name);
             end;
 
           when 'TABLE'
@@ -4934,7 +4932,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 dbug.on_error;
 $end
-                raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, 'column [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
+                oracle_tools.pkg_ddl_error.reraise_error('column [' || i_idx || ']: ' || l_member_tab(i_idx).member_name);
             end;
         end case;
       end loop member_loop;
@@ -5031,7 +5029,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
               dbug.on_error;
 $end
-              raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, 'attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name, true);
+              oracle_tools.pkg_ddl_error.reraise_error('attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name);
           end;
         end loop;
       end if;
@@ -5131,42 +5129,45 @@ $end
 
     if p_schema_object.object_type() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty');
+      oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty', p_schema_object.schema_object_info());
     elsif p_schema_object.dict2metadata_object_type() = p_schema_object.object_type()
     then
       null; -- ok
     else
-      raise_application_error
+      oracle_tools.pkg_ddl_error.raise_error
       ( oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Object type (' ||
         p_schema_object.object_type() ||
         ') should be equal to this DBMS_METADATA object type (' ||
         p_schema_object.dict2metadata_object_type() ||
         ')'
+      , p_schema_object.schema_object_info()  
       );
     end if;
 
     if (p_schema_object.base_object_type() is null) != (p_schema_object.base_object_schema() is null)
     then
-      raise_application_error
+      oracle_tools.pkg_ddl_error.raise_error
       ( oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object type (' ||
         p_schema_object.base_object_type() ||
         ') and base object schema (' ||
         p_schema_object.base_object_schema() ||
         ') must both be empty or both not empty'
+      , p_schema_object.schema_object_info()  
       );
     end if;
 
     if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
     then
-      raise_application_error
+      oracle_tools.pkg_ddl_error.raise_error
       ( oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object name (' ||
         p_schema_object.base_object_name() ||
         ') and base object schema (' ||
         p_schema_object.base_object_schema() ||
         ') must both be empty or both not empty'
+      , p_schema_object.schema_object_info()  
       );
     end if;
 
@@ -5196,12 +5197,20 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty or ' || p_schema);
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Object schema should be empty or ' || p_schema
+      , p_dependent_or_granted_object.schema_object_info()
+      );
     end if;
 
     if p_dependent_or_granted_object.base_object$ is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object should not be empty.');
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Base object should not be empty.'
+      , p_dependent_or_granted_object.schema_object_info()
+      );
     end if;
 
     -- GPA 2017-01-18 too strict for triggers, synonyms, indexes, etc.
@@ -5216,17 +5225,29 @@ $end
 
     if p_dependent_or_granted_object.base_object_schema() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Base object schema should not be empty'
+      , p_dependent_or_granted_object.schema_object_info()
+      );
     end if;
 
     if p_dependent_or_granted_object.base_object_type() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object type should not be empty');
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Base object type should not be empty'
+      , p_dependent_or_granted_object.schema_object_info()
+      );
     end if;
 
     if p_dependent_or_granted_object.base_object_name() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object name should not be empty');
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Base object name should not be empty'
+      , p_dependent_or_granted_object.schema_object_info()
+      );
     end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
@@ -5257,18 +5278,23 @@ $end
 
     if p_named_object.object_name() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Object name should not be empty'
+      , p_named_object.schema_object_info()
+      );
     end if;
     if p_named_object.object_schema() = p_schema
     then
       null; -- ok
     else
-      raise_application_error
+      oracle_tools.pkg_ddl_error.raise_error
       ( oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Object schema (' ||
         p_named_object.object_schema() ||
         ') must be ' ||
         p_schema
+      , p_named_object.schema_object_info()
       );
     end if;
 
@@ -5300,12 +5326,12 @@ $end
 
         when value_error
         then
-          raise_application_error
+          oracle_tools.pkg_ddl_error.raise_error
           ( oracle_tools.pkg_ddl_error.c_object_not_valid
           , 'Object status (' ||
             l_status ||
             ') must be VALID'
-          , true
+          , p_named_object.schema_object_info()
           );
       end;
     end if;
@@ -5327,6 +5353,7 @@ $end
   , p_schema in varchar2
   )
   is
+    l_error_message varchar2(2000 char) := null;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (4)');
@@ -5338,15 +5365,15 @@ $end
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema);
+      l_error_message := 'Object schema (' || p_constraint_object.object_schema() || ') must be ' || p_schema;
     end if;
     if p_constraint_object.base_object_schema() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty.');
+      l_error_message := 'Base object schema should not be empty.';
     end if;
     if p_constraint_object.constraint_type() is null
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.');
+      l_error_message := 'Constraint type should not be empty.';
     end if;
 
     case 
@@ -5354,25 +5381,34 @@ $end
       then
         if p_constraint_object.column_names() is null
         then
-          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
+          l_error_message := 'Column names should not be empty';
         end if;
         if p_constraint_object.search_condition() is not null
         then
-          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Search condition should be empty');
+          l_error_message := 'Search condition should be empty';
         end if;
 
       when p_constraint_object.constraint_type() in ('C')
       then
         if p_constraint_object.column_names() is not null
         then
-          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should be empty');
+          l_error_message := 'Column names should be empty';
         end if;
         if p_constraint_object.search_condition() is null
         then
-          raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Search condition should not be empty');
+          l_error_message := 'Search condition should not be empty';
         end if;
 
     end case;
+
+    if l_error_message is not null
+    then
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , l_error_message
+      , p_constraint_object.schema_object_info()
+      );
+    end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.leave;
@@ -5796,7 +5832,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
     when others
     then
@@ -5880,7 +5916,7 @@ $end
             end if;
           exception
             when others
-            then raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, 'Object id: ' || l_schema_object.id() || chr(10) || 'Object signature: ' || l_object_key, true);
+            then oracle_tools.pkg_ddl_error.reraise_error('Object id: ' || l_schema_object.id() || chr(10) || 'Object signature: ' || l_object_key);
           end;  
         end loop;
       end if;
@@ -5916,14 +5952,15 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         then
           null;
         else
-          raise_application_error
+          oracle_tools.pkg_ddl_error.raise_error
           ( oracle_tools.pkg_ddl_error.c_no_ddl_retrieved
           , utl_lms.format_message
-            ( 'No DDL retrieved for object %s: use "select * from table(%s.%s.fetch_ddl)" to get more info.'
-            , l_object_key
+            ( 'No DDL retrieved: use "select * from table(%s.%s.fetch_ddl)" to get more info.'
             , $$PLSQL_UNIT_OWNER
             , $$PLSQL_UNIT
             )
+          , l_object_key
+          , 'object key'
           );
         end if;
         l_object_key := l_object_lookup_tab.next(l_object_key);
@@ -6045,7 +6082,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
     when others
     then
@@ -6224,7 +6261,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);    
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
   end get_display_ddl_schema;
 
   /*
@@ -6509,7 +6546,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, l_program, true);
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others

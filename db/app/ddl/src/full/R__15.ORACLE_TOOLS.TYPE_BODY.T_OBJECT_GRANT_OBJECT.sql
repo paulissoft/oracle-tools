@@ -84,6 +84,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
   l_statement varchar2(4000 char) := null;
+  l_error_message varchar2(2000 char);
 $end
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
@@ -92,30 +93,20 @@ $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
-  if self.object_schema() is not null
-  then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema should be empty.');
-  end if;
-  if self.object_name() is not null
-  then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should be empty.');
-  end if;
+  l_error_message := 
+    case
+      when self.object_schema() is not null then 'Object schema should be empty.'
+      when self.object_name() is not null then 'Object name should be empty.'
+      when self.column_name() is not null then 'Column name should be null.'
+      when self.grantee() is null then 'Grantee should not be null.'
+      when self.privilege() is null then 'Privilege should not be null.'
+      when self.grantable() is null then 'Grantable should not be null.'
+      else null
+    end;
 
-  if self.column_name() is not null
+  if l_error_message is not null
   then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column name should be null.');
-  end if;
-  if self.grantee() is null
-  then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Grantee should not be null.');
-  end if;
-  if self.privilege() is null
-  then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Privilege should not be null.');
-  end if;
-  if self.grantable() is null
-  then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Grantable should not be null.');
+    oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, l_error_message, self.schema_object_info());
   end if;
 
 $if oracle_tools.pkg_ddl_util.c_#140920801 $then

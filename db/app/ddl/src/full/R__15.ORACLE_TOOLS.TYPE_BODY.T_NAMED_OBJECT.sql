@@ -58,7 +58,17 @@ $end
     when 'JAVA_SOURCE'           then p_named_object := oracle_tools.t_java_source_object(p_object_schema, p_object_name);
     when 'REFRESH_GROUP'         then p_named_object := oracle_tools.t_refresh_group_object(p_object_schema, p_object_name);
     when 'PROCOBJ'               then p_named_object := oracle_tools.t_procobj_object(p_object_schema, p_object_name);
-    else raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type "' || l_object_type || '" is not listed here.');
+    else oracle_tools.pkg_ddl_error.raise_error
+         ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+         , 'Object type "' || l_object_type || '" is not listed here.'
+         , utl_lms.format_message
+           ( '%s/%s/%s'
+           , p_object_type
+           , p_object_schema
+           , p_object_name
+           )
+         , 'object type/schema/name'
+         );
   end case;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then

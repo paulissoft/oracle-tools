@@ -99,6 +99,36 @@ c_not_implemented              constant pls_integer := -20122;
 e_not_implemented              exception;
 pragma exception_init(e_not_implemented, -20122);
 
+/**
+ * Raise an error.
+ *
+ * Will issue raise_application_error(p_error_number, p_error_message), catch that error and reraise it with 
+ * reraise_error('An error occurred for object with ' || p_context_label || ': ' || p_context_info);
+ *
+ * @param p_error_number   The error number (one of the constants above) as argument to raise_application_error().
+ * @param p_error_message  The error message.
+ * @param p_context_info   The context information.
+ * @param p_context_label  The context label.
+ */
+procedure raise_error
+( p_error_number in pls_integer
+, p_error_message in varchar2
+, p_context_info in varchar2
+, p_context_label in varchar2 default 'object schema info'
+);
+
+/**
+ * Reraise an error.
+ *
+ * Will issue raise_application_error(oracle_tools.pkg_ddl_error.c_reraise_with_backtrace, p_error_message, true).
+ * Should be called in an exception handler.
+ *
+ * @param p_error_message  The error message.
+ */
+procedure reraise_error
+( p_error_message in varchar2
+);
+
 end pkg_ddl_error;
 /
 
