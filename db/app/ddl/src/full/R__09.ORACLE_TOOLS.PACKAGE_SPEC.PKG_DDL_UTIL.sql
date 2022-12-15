@@ -75,11 +75,13 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   --
   -- This supersedes bug #136334705 (see above) since that is only for ALL_OBJECTS.
   --
-  -- This supersedes all code for:
-  -- * c_#138707615_1 (true/false irrelevant)
-  --
   -- See also https://github.com/paulissoft/oracle-tools/issues/92.
-  c_exclude_generated_items constant boolean := true;
+  c_exclude_system_objects constant boolean := true;
+  c_exclude_system_indexes constant boolean := true;
+  c_exclude_system_constraints constant boolean := false; -- true: only 'USER NAME'
+
+  -- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
+  c_exclude_not_null_constraints constant boolean := false;
 
   /*
   -- End of bugs/features

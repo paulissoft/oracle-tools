@@ -1283,7 +1283,7 @@ $end
             where   obj.owner = p_schema
             and     obj.object_name = p_base_object_name
             and     obj.object_type in ( 'TABLE', 'VIEW' )
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
 $end            
             ;
@@ -1300,7 +1300,7 @@ $end
             where   obj.owner = p_schema
             and     obj.object_name = p_base_object_name
             and     obj.object_type in ( 'TABLE', 'MATERIALIZED VIEW', 'VIEW' )
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
 $end            
             ;
@@ -4015,7 +4015,7 @@ $end
       where   t.owner = l_schema
       and     t.object_type = 'TABLE'
       and     t.temporary = 'Y'
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       and     t.generated = 'N' -- GPA 2016-12-19 #136334705
 $end      
               -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
@@ -4062,7 +4062,7 @@ $end
                 from    all_objects o
                 where   o.owner = l_schema
                 and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                 and     o.generated = 'N' -- GPA 2016-12-19 #136334705
 $end                
                         -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
@@ -4261,7 +4261,7 @@ $end
                 ,       c.constraint_name as object_name
                 ,       c.constraint_type
                 ,       c.search_condition
-$if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
                 ,       case c.constraint_type
                           when 'C'
                           then ( select  cc.column_name
@@ -4287,9 +4287,10 @@ $end
                            O (with read only, on a view)
                         */
                 and     c.constraint_type in ('C', 'P', 'U', 'R')
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
-                and     c.generated = 'USER NAME'         
-$elsif not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
+                and     c.generated = 'USER NAME'
+$end
+$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
                         -- exclude system generated not null constraints
                 and     ( c.constraint_name not like 'SYS\_C%' escape '\' or
                           c.constraint_type <> 'C' or
@@ -4318,7 +4319,7 @@ $end
               ) = 1
     )
     loop
-$if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
       -- We do NOT want a NOT NULL constraint, named or not.
       -- Since search_condition is a LONG we must use PL/SQL to filter
       if r.search_condition is not null and
@@ -4339,7 +4340,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
         null;
       else
-$end -- $if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
 
         longops_show(l_longops_rec);
         l_schema_object_tab.extend(1);
@@ -4367,7 +4368,7 @@ $end -- $if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_
               );
         end case;
 
-$if not(oracle_tools.pkg_ddl_util.c_exclude_generated_items) and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
+$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
       end if;
 $end        
     end loop;
@@ -4475,7 +4476,7 @@ $end
               , p_metadata_base_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type)
               , p_base_object_name => i.table_name
               ) = 1
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
       and     i.generated = 'N'
 $end      
     )
@@ -5310,7 +5311,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
         where   obj.owner = p_named_object.object_schema()
         and     obj.object_type = p_named_object.dict_object_type()
         and     obj.object_name = p_named_object.object_name()
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
         and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
 $end        
         ;
@@ -6318,7 +6319,7 @@ $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then -- GJP 2022-07-16 FALSE
         where   t1.owner = p_schema
         and     t1.owner = t2.owner /* same schema */
         and     t1.constraint_type = 'R'
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
         -- no need to exclude since this is dependency checking not object selection
 $end        
 $else -- GJP 2022-07-16 TRUE
@@ -6350,7 +6351,7 @@ $else -- GJP 2022-07-16 TRUE
         and     c.constraint_type = 'R'
         and     oracle_tools.t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
         and     oracle_tools.t_schema_object.dict2metadata_object_type(tr.object_type) in ( select t.type from allowed_types t )
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
         -- no need to exclude since this is dependency checking not object selection
 $end
 $end
@@ -6399,7 +6400,7 @@ $end
         and     c.index_name is not null
         and     oracle_tools.t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
         and     oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) in ( select t.type from allowed_types t )
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
         -- no need to exclude since this is dependency checking not object selection
 $end
       )
@@ -6929,7 +6930,7 @@ $end
                 ,       o.object_name
                 from    all_objects o
                 where   o.owner = g_empty
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                 and     o.generated = 'N' -- GPA 2016-12-19 #136334705
 $end                
               ) o
@@ -6990,7 +6991,7 @@ $end
       into    l_found
       from    all_objects o
       where   o.owner = g_empty
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       and     o.generated = 'N' -- GPA 2016-12-19 #136334705
 $end      
       and     rownum = 1
@@ -7400,7 +7401,7 @@ $end
               from   ( select  t.*
                        ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
                        from    all_objects t
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end                       
                      ) t
@@ -7801,7 +7802,7 @@ $end
               from   ( select  t.*
                        ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
                        from    all_objects t
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end                       
                      ) t
@@ -8026,7 +8027,7 @@ $end
     ( select  distinct
               t.object_type
       from    all_objects t
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end      
       order by
@@ -8247,7 +8248,7 @@ $end
       from    all_indexes i
       where   i.owner <> i.table_owner
       and     i.table_name is not null
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
       and     i.generated = 'N'
 $end      
     )
@@ -8381,7 +8382,7 @@ $end
       into    l_count
       from    all_objects t
       where   t.owner = g_empty
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       and     t.generated = 'N' -- GPA 2016-12-19 #136334705
 $end      
       and     oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) = 0;
@@ -8397,7 +8398,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
           ,       o.object_name
           from    all_objects o
           where   o.owner = g_empty
-$if oracle_tools.pkg_ddl_util.c_exclude_generated_items $then
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
           and     o.generated = 'N' -- GPA 2016-12-19 #136334705
 $end          
           order by
