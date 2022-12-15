@@ -67,14 +67,12 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 exception
   when no_data_found
   then
-    raise_application_error
-    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
-    , utl_lms.format_message
+    oracle_tools.pkg_ddl_error.reraise_error
+    ( utl_lms.format_message
       ( 'p_object_schema: %s; p_object_name: %s'
       , p_object_schema
       , p_object_name
       )
-    , true
     );
 
   when others

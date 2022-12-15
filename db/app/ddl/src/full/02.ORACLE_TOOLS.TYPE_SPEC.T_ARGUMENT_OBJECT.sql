@@ -10,7 +10,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_ARGUMENT_OBJECT" authid current_user is object
   ------              --------              -----------
   */
   argument#$          integer            -- This column holds the position of this item in the argument list, or zero for a function return value.
-, argument_name$      varchar2(30)	 -- If the argument is a scalar type, then the argument name is the name of the argument.
+, argument_name$      varchar2(30)       -- If the argument is a scalar type, then the argument name is the name of the argument.
                                          -- A null argument name is used to denote a function return.
                                          -- ARGUMENT_NAME can refer to any of the following:
                                          -- a) Return type, if ARGUMENT_NAME is null

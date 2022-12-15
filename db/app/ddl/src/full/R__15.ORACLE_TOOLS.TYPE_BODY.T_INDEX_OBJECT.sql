@@ -221,11 +221,19 @@ $end
 
   if self.object_name() is null
   then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object name should not be empty');
+    oracle_tools.pkg_ddl_error.raise_error
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+    , 'Object name should not be empty'
+    , self.schema_object_info()
+    );
   end if;
   if self.column_names() is null
   then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Column names should not be empty');
+    oracle_tools.pkg_ddl_error.raise_error
+    ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+    , 'Column names should not be empty'
+    , self.schema_object_info()
+    );
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then

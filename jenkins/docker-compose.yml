@@ -83,13 +83,13 @@ services:
         ipv4_address: 192.168.1.5
     volumes:
       - jenkins-data:/var/jenkins_home
+      - ${JENKINS_SSH_PRIVATE_KEY:-~/.ssh/id_rsa}:/var/jenkins_home/.ssh/${JENKINS_SSH_PRIVATE_KEY_BASE:-id_rsa}
     environment:
       - DOCKER_HOST=tcp://192.168.1.2:2375
       - DOCKER_TLS_VERIFY=""
     depends_on:
       - jenkins-docker
-  # just a sidekick for jenkins-controller below
-  # so that it will add that hosts the jenkins known hosts in volume jenkins-data
+  # Just a sidekick that will create two NFS client volumes.
   jenkins-create-nfs-volumes:
     profiles:
       - nfs

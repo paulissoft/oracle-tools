@@ -65,7 +65,7 @@ $end
 
   if self.dict_object_type() is null
   then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Dictionary object type should not be null.');
+    oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Dictionary object type should not be null.', self.schema_object_info());
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then

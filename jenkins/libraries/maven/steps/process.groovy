@@ -4,10 +4,11 @@ import org.boozallen.plugins.jte.init.primitives.injectors.ApplicationEnvironmen
 void call(List app_envs, Boolean parallel_step=false, Boolean clean_workspace=false) {
     if (verbose_level() > 1) {
         println "process(app_envs: ${app_envs}, parallel_step: ${parallel_step}, clean_workspace: ${clean_workspace})"
-    }    
+    }
 
-    if (clean_workspace) {
-        cleanWs()
+    node {
+        // no left overs, see process.sh
+        sh "rm ${env.WORKSPACE}/*.*.scm.ready || true"
     }
     
     if (parallel_step) {
@@ -38,6 +39,9 @@ void call(List app_envs, Boolean parallel_step=false, Boolean clean_workspace=fa
             }
         }
     }
+    if (clean_workspace) {
+        cleanWs()
+    }    
 }
 
 void call(ApplicationEnvironment app_env, Boolean parallel_step=false) {

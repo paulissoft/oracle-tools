@@ -94,6 +94,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   , p_schema in varchar2
   )
 , member function base_dict_object_type return varchar2 deterministic
+, member function schema_object_info return varchar2 deterministic 
 )
 not instantiable
 not final;

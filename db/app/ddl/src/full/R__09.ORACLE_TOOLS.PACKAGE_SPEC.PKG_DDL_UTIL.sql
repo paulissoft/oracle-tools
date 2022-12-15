@@ -28,9 +28,12 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_debugging_parse_ddl constant boolean := true;
 
   /*
-  -- Start of bugs/features
+  -- Start of bugs/features (oldest first)
   */
-  
+
+  -- GPA 2016-12-19 #136334705 Only user created items from ALL_OBJECTS
+  c_#136334705 constant boolean := true;
+
   -- GPA 2017-02-01 #138707615 named not null constraints are recreated
   c_#138707615_1 constant boolean := true;
 
@@ -58,6 +61,27 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- DDL generation changes due to sequence start with should be ignored.
   -- https://github.com/paulissoft/oracle-tools/issues/58
   c_set_start_with_to_minvalue constant boolean := true;
+
+  -- GJP 2022-11-23
+  -- It must be possible to specify the object type for object names when generating DDL.
+  -- https://github.com/paulissoft/oracle-tools/issues/89
+  c_object_names_plus_type constant boolean := false;
+
+  -- GJP 2022-12-14 The DDL generator does not create a correct constraint script.
+  --
+  -- ALL_OBJECTS, ALL_INDEXES and ALL_CONSTRAINTS have a GENERATED column to separate system generated and user generated items.
+  -- The distinct values for the first two are 'N' and 'Y', for the latter these are 'GENERATED NAME' and 'USER NAME'.
+  -- This filtering must be applied to all usages.
+  --
+  -- This supersedes bug #136334705 (see above) since that is only for ALL_OBJECTS.
+  --
+  -- See also https://github.com/paulissoft/oracle-tools/issues/92.
+  c_exclude_system_objects constant boolean := true;
+  c_exclude_system_indexes constant boolean := true;
+  c_exclude_system_constraints constant boolean := false; -- true: only 'USER NAME'
+
+  -- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
+  c_exclude_not_null_constraints constant boolean := false;
 
   /*
   -- End of bugs/features
@@ -144,7 +168,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- >= 0, not null
   , p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list
@@ -181,7 +205,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   function display_ddl_schema_diff
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_source in t_schema default user
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
@@ -229,7 +253,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   procedure synchronize
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_source in t_schema default user
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
@@ -252,42 +276,44 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   procedure uninstall
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_target in t_schema_nn default user
   , p_network_link_target in t_network_link default null
   );
 
   /**
-  * Get all the object info from the ALL_OBJECTS, ALL_SYNONYMS, ALL_TAB_PRIVS, ALL_TAB_COMMENTS and ALL_COL_COMMENTS.
+  * Get all the object info from several dictionary views.
+  * 
+  * These are the dictionary views:
+  * <ul>
+  * <li>ALL_QUEUE_TABLES</li>
+  * <li>ALL_MVIEWS</li>
+  * <li>ALL_TABLES</li>
+  * <li>ALL_OBJECTS</li>
+  * <li>ALL_TAB_PRIVS</li>
+  * <li>ALL_SYNONYMS</li>
+  * <li>ALL_TAB_COMMENTS</li>
+  * <li>ALL_MVIEW_COMMENTS</li>
+  * <li>ALL_COL_COMMENTS</li>
+  * <li>ALL_CONS_COLUMNS</li>
+  * <li>ALL_CONSTRAINTS</li>
+  * <li>ALL_TAB_COLUMNS</li>
+  * <li>ALL_TRIGGERS</li>
+  * <li>ALL_INDEXES</li>
+  * </ul>
   *
-  * <p>
-  * See display_ddl_schema() for a description of the usage of p_object_type, p_object_names and p_object_names_include.
-  * </p>
-  *
-  * @param p_schema                Schema name.
-  * @param p_object_type           Filter for object type.
-  * @param p_object_names          A list of object names separated by a comma.
-  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
-  * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+  * @param p_schema_object_filter  The schema object filter.
   * @param p_schema_object_tab     Only applicable for the procedure variant. See the description for return.
   *
   * @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
   */
   procedure get_schema_object
-  ( p_schema in t_schema_nn default user
-  , p_object_type in t_metadata_object_type default null
-  , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
-  , p_grantor_is_schema in t_numeric_boolean_nn default 0
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   );
 
   function get_schema_object
-  ( p_schema in t_schema_nn default user
-  , p_object_type in t_metadata_object_type default null
-  , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
-  , p_grantor_is_schema in t_numeric_boolean_nn default 0
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
   )
   return oracle_tools.t_schema_object_tab
   pipelined;
@@ -333,47 +359,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema in varchar2
   );
 
-  /*
-  -- helper function
-  */
-  /**
-   * Determine whether a schema object matches a filter.
-   *
-   * Rules:
-   * <ol>
-   * <li>A schema base object where is_exclude_name_expr() = 1: return 0</li>
-   * <li>A schema object where is_exclude_name_expr() = 1: return 0</li>
-   * <li>If p_metadata_object_type is not member of p_object_types_to_check: return 1</li>
-   * <li>When p_object_type is empty or equal to the (base) object type and the combination of p_object_name and p_object_names_include matches p_object_names: return 1</li>
-   * <li>Else: return 0</li>
-   * </ol>
-   *
-   * @param p_object_type                 A metadata object type (from client).
-   * @param p_object_names                A comma separated list of object names (from client).
-   * @param p_object_names_include        How to treat the object name list: include (1), exclude (0) or don't care (null)?
-   * @param p_object_types_to_check       A list of metadata object types to check for (null = check all).
-   * @param p_metadata_object_type        The schema object type (metadata).
-   * @param p_object_name                 The schema object name.
-   * @param p_metadata_base_object_type   The schema base object type (metadata).
-   * @param p_base_object_name            The schema base object name.
-   *
-   */
-  function schema_object_matches_filter
-  ( -- filter values
-    p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
-  , p_object_types_to_check in oracle_tools.t_text_tab
-    -- database values
-  , p_metadata_object_type in t_metadata_object_type
-  , p_object_name in t_object_name
-  , p_metadata_base_object_type in t_metadata_object_type default null
-  , p_base_object_name in t_object_name default null
-  )
-  return t_numeric_boolean_nn
-  deterministic
-  ;
-
   function is_dependent_object_type
   ( p_object_type in t_metadata_object_type
   )
@@ -397,27 +382,23 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function fetch_ddl
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
-  , p_use_schema_export in t_numeric_boolean_nn
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab
-  , p_transform_param_list in varchar2
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
+  , p_use_schema_export in t_numeric_boolean_nn default 0
+    -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
+  , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return sys.ku$_ddls
   pipelined;
-  
+
   /*
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function get_schema_ddl
-  ( p_schema in t_schema_nn
-  , p_object_type in t_metadata_object_type
-  , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
-  , p_use_schema_export in t_numeric_boolean_nn
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
+  , p_use_schema_export in t_numeric_boolean_nn default 0
+    -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
   , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return oracle_tools.t_schema_ddl_tab
@@ -432,7 +413,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
+  , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
@@ -463,6 +444,20 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_target in oracle_tools.t_schema_ddl
   , p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
   );
+
+  /**
+   * Return a list of DBMS_METADATA object types.
+   *
+   *
+   * @param p_what  Either DBA, PUBLIC, SCHEMA or DEPENDENT
+   *
+   * @return a list of DBMS_METADATA object types 
+   */
+  function get_md_object_type_tab
+  ( p_what in varchar2
+  )
+  return oracle_tools.t_text_tab
+  deterministic;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
@@ -509,6 +504,9 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   procedure ut_modify_ddl_text;
+
+  --%test
+  procedure ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

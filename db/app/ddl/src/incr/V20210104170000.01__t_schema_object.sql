@@ -8,7 +8,7 @@ create type oracle_tools.t_schema_object authid current_user as object
 , final member procedure network_link
   ( self in out nocopy oracle_tools.t_schema_object
   , p_network_link in varchar2
-  ) 
+  )
 , final member function object_schema return varchar2 deterministic
 , final member procedure object_schema
   ( self in out nocopy oracle_tools.t_schema_object
@@ -96,6 +96,7 @@ create type oracle_tools.t_schema_object authid current_user as object
   , p_schema in varchar2
   )
 , member function base_dict_object_type return varchar2 deterministic
+, member function schema_object_info return varchar2 deterministic 
 )
 not instantiable
 not final]';

@@ -184,7 +184,7 @@ signal_scm_ready() {
     fi
 }
 
-# simple implementation of a wait for file: better use iwatch / inotifywait
+# simple implementation of a wait for file: better use iwatch / inotifywait?
 wait_for_scm_ready_prev() {    
     if [ -n "$APP_ENV" -a -n "$APP_ENV_PREV" ]
     then

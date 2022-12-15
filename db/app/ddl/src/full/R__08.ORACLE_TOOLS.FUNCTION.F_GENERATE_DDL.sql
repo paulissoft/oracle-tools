@@ -21,19 +21,20 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
-  , 'pi_source_schema: %s; pi_source_database_link: %s; pi_target_schema: %s; pi_target_database_link: %s'
+  , 'pi_source_schema: %s; pi_source_database_link: %s; pi_target_schema: %s; pi_target_database_link: %s; pi_object_type: %s'
   , pi_source_schema
   , pi_source_database_link
   , pi_target_schema
   , pi_target_database_link
+  , pi_object_type
   );
   dbug.print
   ( dbug."input"
-  , 'pi_object_type: %s; pi_object_names_include: %s; pi_object_names: %s; pi_skip_repeatables: %s; pi_interface: %s'
-  , pi_object_type
+  , 'pi_object_names_include: %s; pi_object_names: %s; pi_skip_repeatables: %s; pi_transform_param_list: %s; pi_interface: %s'
   , pi_object_names_include
   , pi_object_names
   , pi_skip_repeatables
+  , pi_transform_param_list
   , pi_interface
   );
 $end
