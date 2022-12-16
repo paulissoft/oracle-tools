@@ -39,11 +39,6 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
   c_euro_sign constant varchar2(1 char) := '€';
 
-  -- GJP 2022-12-15
-  -- Set constant to 0.
-  -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
-  -- https://github.com/paulissoft/oracle-tools/issues/98
-  c_use_schema_export constant pls_integer := 0;
   c_dbms_metadata_set_count constant pls_integer := 100;
 
   -- ORA-01795: maximum number of expressions in a list is 1000
@@ -1623,6 +1618,111 @@ $end
     end if;
   end get_transform_param_tab;
 
+  procedure dbms_metadata#set_transform_param
+  ( transform_handle   in number
+  , name               in varchar2
+  , value              in varchar2
+  , object_type        in varchar2 default null
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print
+    ( dbug."info"
+    , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (1)'
+    , transform_handle
+    , name
+    , value
+    , object_type
+    );
+$end      
+    dbms_metadata.set_transform_param
+    ( transform_handle
+    , name
+    , value
+    , object_type
+    );
+  end;
+
+  procedure dbms_metadata#set_transform_param
+  ( transform_handle   in number
+  , name               in varchar2
+  , value              in boolean default true
+  , object_type        in varchar2 default null
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print
+    ( dbug."info"
+    , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (2)'
+    , transform_handle
+    , name
+    , dbug.cast_to_varchar2(value)
+    , object_type
+    );
+$end      
+    dbms_metadata.set_transform_param
+    ( transform_handle
+    , name
+    , value
+    , object_type
+    );
+  end;
+
+  procedure dbms_metadata#set_transform_param
+  ( transform_handle   in number
+  , name               in varchar2
+  , value              in number
+  , object_type        in varchar2 default null
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print
+    ( dbug."info"
+    , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (3)'
+    , transform_handle
+    , name
+    , value
+    , object_type
+    );
+$end      
+    dbms_metadata.set_transform_param
+    ( transform_handle
+    , name
+    , value
+    , object_type
+    );
+  end;
+    
+  procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in varchar2)
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
+$end
+    dbms_metadata.set_filter(handle, name, value);
+  end dbms_metadata#set_filter;
+
+  procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in boolean default true)
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, dbug.cast_to_varchar2(value));
+$end
+    dbms_metadata.set_filter(handle, name, value);
+  end dbms_metadata#set_filter;
+
+  procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in number)
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+    dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
+$end
+    dbms_metadata.set_filter(handle, name, value);
+  end dbms_metadata#set_filter;
+
   procedure md_set_transform_param
   ( p_transform_handle in number default dbms_metadata.session_transform
   , p_object_type_tab in oracle_tools.t_text_tab default oracle_tools.t_text_tab('INDEX', 'TABLE', 'CLUSTER', 'CONSTRAINT', 'VIEW', 'TYPE_SPEC')
@@ -1630,91 +1730,14 @@ $end
   , p_transform_param_tab in t_transform_param_tab default g_transform_param_tab
   )
   is
-    procedure set_transform_param
-    ( transform_handle   in number
-    , name               in varchar2
-    , value              in varchar2
-    , object_type        in varchar2 default null
-    )
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (1)'
-      , transform_handle
-      , name
-      , value
-      , object_type
-      );
-$end      
-      dbms_metadata.set_transform_param
-      ( transform_handle
-      , name
-      , value
-      , object_type
-      );
-    end;
-
-    procedure set_transform_param
-    ( transform_handle   in number
-    , name               in varchar2
-    , value              in boolean default true
-    , object_type        in varchar2 default null
-    )
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (2)'
-      , transform_handle
-      , name
-      , dbug.cast_to_varchar2(value)
-      , object_type
-      );
-$end      
-      dbms_metadata.set_transform_param
-      ( transform_handle
-      , name
-      , value
-      , object_type
-      );
-    end;
-
-    procedure set_transform_param
-    ( transform_handle   in number
-    , name               in varchar2
-    , value              in number
-    , object_type        in varchar2 default null
-    )
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (3)'
-      , transform_handle
-      , name
-      , value
-      , object_type
-      );
-$end      
-      dbms_metadata.set_transform_param
-      ( transform_handle
-      , name
-      , value
-      , object_type
-      );
-    end;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter($$PLSQL_UNIT_OWNER||'.'||$$PLSQL_UNIT||'.MD_SET_TRANSFORM_PARAM');
     dbug.print(dbug."input", 'p_use_object_type_param: %s', p_use_object_type_param);
 $end
 
-    set_transform_param(p_transform_handle, 'PRETTY'              , true );
-    set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
+    dbms_metadata#set_transform_param(p_transform_handle, 'PRETTY'              , true );
+    dbms_metadata#set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
 
     for i_idx in p_object_type_tab.first .. p_object_type_tab.last
     loop
@@ -1723,29 +1746,29 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
       if p_object_type_tab(i_idx) in ('TABLE', 'INDEX', 'CLUSTER', 'CONSTRAINT', 'ROLLBACK_SEGMENT', 'TABLESPACE')
       then
-        set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       -- GJP 2022-12-15 Maybe setting CONSTRAINTS before CONSTRAINTS_AS_ALTER may generate this command:
       -- ALTER TABLE "BC_BO"."BC_CONSUMPTION_PREDICTIONS" MODIFY ("GRD_ID" CONSTRAINT "NNC_CPN_GRD_ID" NOT NULL ENABLE)
       if p_object_type_tab(i_idx) in ('TABLE', 'VIEW')
       then
-        set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TABLE'
       then
-        set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'VIEW'
       then
         -- GPA 2016-12-01 The FORCE keyword may be removed by the generate_ddl.pl script, depending on an option.
-        set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TYPE_SPEC'
       then
-        set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata#set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
     end loop;
 
@@ -1794,33 +1817,6 @@ $end
       return l_in_list;
     end in_list_expr;
 
-    procedure set_filter(handle in number, name in varchar2, value in varchar2)
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-      dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
-$end
-      dbms_metadata.set_filter(handle, name, value);
-    end set_filter;
-
-    procedure set_filter(handle in number, name in varchar2, value in boolean default true)
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-      dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, dbug.cast_to_varchar2(value));
-$end
-      dbms_metadata.set_filter(handle, name, value);
-    end set_filter;
-
-    procedure set_filter(handle in number, name in varchar2, value in number)
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-      dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
-$end
-      dbms_metadata.set_filter(handle, name, value);
-    end set_filter;
-
     procedure set_exclude_name_expr(p_object_type in t_metadata_object_type, p_name in varchar2)
     is
       l_exclude_name_expr_tab oracle_tools.t_text_tab;
@@ -1830,7 +1826,7 @@ $end
       then
         for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
         loop
-          set_filter(handle => p_handle, name => p_name, value => q'[LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']');
+          dbms_metadata#set_filter(handle => p_handle, name => p_name, value => q'[LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']');
         end loop;
       end if;
     end set_exclude_name_expr;
@@ -1847,9 +1843,9 @@ $end
     if p_object_type = 'SCHEMA_EXPORT'
     then
       -- Use filters to specify the schema. See SCHEMA_EXPORT_OBJECTS for a complete overview.
-      set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
-      -- set_filter(handle => p_handle, name => 'INCLUDE_USER', value => true);
-      set_filter
+      dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+      -- dbms_metadata#set_filter(handle => p_handle, name => 'INCLUDE_USER', value => true);
+      dbms_metadata#set_filter
       ( handle => p_handle
       , name =>  'EXCLUDE_PATH_EXPR'
       , value => 'in ('   ||
@@ -1905,28 +1901,34 @@ $end
             raise program_error;
           end if;
 
-          set_filter(handle => p_handle, name => 'SYSTEM_GENERATED', value => false);
-          set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+          dbms_metadata#set_filter(handle => p_handle, name => 'SYSTEM_GENERATED', value => false);
+          dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
 
           if p_object_name_tab is not null and
              p_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            set_filter(handle => p_handle
-                      ,name => 'NAME_EXPR'
-                      ,value => in_list_expr(p_object_name_tab));
+            dbms_metadata#set_filter
+            ( handle => p_handle
+            , name => 'NAME_EXPR'
+            , value => in_list_expr(p_object_name_tab)
+            );
           end if;
 
           if p_base_object_name_tab is not null and
              p_base_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            set_filter(handle => p_handle
-                      ,name => 'BASE_OBJECT_NAME_EXPR'
-                      ,value => in_list_expr(p_base_object_name_tab));
+            dbms_metadata#set_filter
+            ( handle => p_handle
+            , name => 'BASE_OBJECT_NAME_EXPR'
+            , value => in_list_expr(p_base_object_name_tab)
+            );
           end if;
 
-          set_filter(handle => p_handle
-                    ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
-                    ,value => in_list_expr(c_object_to_ignore_tab));
+          dbms_metadata#set_filter
+          ( handle => p_handle
+          , name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
+          , value => in_list_expr(c_object_to_ignore_tab)
+          );
         else
           if is_dependent_object_type(p_object_type => p_object_type) = 1
           then
@@ -1935,19 +1937,23 @@ $end
             raise program_error;
           end if;
 
-          set_filter(handle => p_handle, name => 'BASE_OBJECT_SCHEMA', value => p_base_object_schema);
+          dbms_metadata#set_filter(handle => p_handle, name => 'BASE_OBJECT_SCHEMA', value => p_base_object_schema);
 
           if p_base_object_name_tab is not null and
              p_base_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            set_filter(handle => p_handle
-                      ,name => 'BASE_OBJECT_NAME_EXPR'
-                      ,value => in_list_expr(p_base_object_name_tab));
+            dbms_metadata#set_filter
+            ( handle => p_handle
+            , name => 'BASE_OBJECT_NAME_EXPR'
+            , value => in_list_expr(p_base_object_name_tab)
+            );
           end if;
 
-          set_filter(handle => p_handle
-                    ,name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
-                    ,value => in_list_expr(c_object_to_ignore_tab));
+          dbms_metadata#set_filter
+          ( handle => p_handle
+          , name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
+          , value => in_list_expr(c_object_to_ignore_tab)
+          );
 
           if p_object_type = 'OBJECT_GRANT'
           then
@@ -1956,7 +1962,7 @@ $end
         end if;
       elsif p_object_type = 'SYNONYM'
       then
-        set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+        dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
 
         -- Voor synoniemen moet gelden:
         -- 1a) lange naam van synonym moet gelijk zijn aan korte naam EN
@@ -1964,28 +1970,34 @@ $end
         if p_object_schema != 'PUBLIC'
         then
           -- simple custom filter: always allowed
-          set_filter(handle => p_handle
-                    ,name => 'CUSTOM_FILTER'
-                    ,value => '/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME');
+          dbms_metadata#set_filter
+          ( handle => p_handle
+          , name => 'CUSTOM_FILTER'
+          , value => '/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME'
+          );
         else
           -- simple custom filter: always allowed
-          set_filter(handle => p_handle
-                    ,name => 'CUSTOM_FILTER'
-                    ,value => q'[/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME AND /* 1b */ KU$.OWNER_NAME = ']' ||
-                              dbms_assert.schema_name(p_base_object_schema) || q'[']');
+          dbms_metadata#set_filter
+          ( handle => p_handle
+          , name => 'CUSTOM_FILTER'
+          , value => q'[/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME AND /* 1b */ KU$.OWNER_NAME = ']' ||
+                     dbms_assert.schema_name(p_base_object_schema) || q'[']'
+          );
         end if;
 
         if p_object_name_tab is not null and
            p_object_name_tab.count between 1 and c_max_object_name_tab_count
         then
-          set_filter(handle => p_handle
-                    ,name => 'NAME_EXPR'
-                    ,value => in_list_expr(p_object_name_tab));
+          dbms_metadata#set_filter
+          ( handle => p_handle
+          , name => 'NAME_EXPR'
+          , value => in_list_expr(p_object_name_tab)
+          );
         end if;
       else
         if p_object_schema != 'DBA'
         then
-          set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+          dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
         end if;
 
         if p_object_type not in ('DEFAULT_ROLE', 'FGA_POLICY', 'ROLE_GRANT')
@@ -1993,19 +2005,23 @@ $end
           if p_object_name_tab is not null and
              p_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            set_filter(handle => p_handle
-                      ,name => 'NAME_EXPR'
-                      ,value => in_list_expr(p_object_name_tab));
+            dbms_metadata#set_filter
+            ( handle => p_handle
+            , name => 'NAME_EXPR'
+            , value => in_list_expr(p_object_name_tab)
+            );
           end if;
 
-          set_filter(handle => p_handle
-                    ,name => 'EXCLUDE_NAME_EXPR'
-                    ,value => in_list_expr(c_object_to_ignore_tab));
+          dbms_metadata#set_filter
+          ( handle => p_handle
+          , name => 'EXCLUDE_NAME_EXPR'
+          , value => in_list_expr(c_object_to_ignore_tab)
+          );
         end if;
 
         if p_object_type = 'TABLE'
         then
-          set_filter(handle => p_handle, name => 'SECONDARY', value => false);
+          dbms_metadata#set_filter(handle => p_handle, name => 'SECONDARY', value => false);
         end if;
       end if;
 
@@ -2975,14 +2991,6 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
-    l_use_schema_export constant pls_integer := 
-      case
-        when p_object_type is not null and substr(p_object_type, 1, 1) != '!'
-        then 0
-        when p_object_names_include = 1
-        then 0
-        else 1
-      end;
     l_schema_object_filter constant oracle_tools.t_schema_object_filter :=
       oracle_tools.t_schema_object_filter
       ( p_schema => p_schema
@@ -3073,7 +3081,6 @@ $end
                     from    table
                             ( oracle_tools.pkg_ddl_util.get_schema_ddl
                               ( p_schema_object_filter => l_schema_object_filter
-                              , p_use_schema_export => l_use_schema_export
                               , p_schema_object_tab => l_schema_object_tab
                               , p_transform_param_list => p_transform_param_list
                               )
@@ -3101,7 +3108,6 @@ $end
           from    table
                   ( oracle_tools.pkg_ddl_util.get_schema_ddl
                     ( p_schema_object_filter => l_schema_object_filter
-                    , p_use_schema_export => l_use_schema_export
                     , p_schema_object_tab => l_schema_object_tab
                     , p_transform_param_list => p_transform_param_list
                     )
@@ -5595,9 +5601,11 @@ $end
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function fetch_ddl
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-  , p_use_schema_export in t_numeric_boolean_nn
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab
+  ( p_object_type in varchar2
+  , p_object_schema in varchar2
+  , p_object_name_tab in oracle_tools.t_text_tab
+  , p_base_object_schema in varchar2
+  , p_base_object_name_tab in oracle_tools.t_text_tab
   , p_transform_param_list in varchar2
   )
   return sys.ku$_ddls
@@ -5609,40 +5617,93 @@ $end
     -- ORA-06512: at "SYS.DBMS_METADATA", line 1225
     -- ORA-04092: cannot COMMIT in a trigger
     pragma autonomous_transaction;
-
-    -- GJP 2022-12-15
-    -- Set schema export to 0 if one of the filter is not the default values (except schema).
-    -- If we do not do that fetch_ddl will issue a SCHEMA EXPORT without filtering.
-    l_use_schema_export constant t_numeric_boolean_nn :=
-      case
-        when p_schema_object_filter.object_type() is null and
-             p_schema_object_filter.object_names() is null and
-             p_schema_object_filter.object_names_include() is null and
-             p_schema_object_filter.grantor_is_schema() = 0
-        then p_use_schema_export
-        else 0
-      end;
-      
-    l_schema_object_tab oracle_tools.t_schema_object_tab := null;
-
+    
     l_handle number := null;
 
-    l_ddl_tab sys.ku$_ddls; -- moet package globaal zijn i.v.m. performance
+    l_ddl_tab sys.ku$_ddls; -- should be package global for better performance
+    l_transform_param_tab t_transform_param_tab;
+  begin
+    get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
+    
+    md_open
+    ( p_object_type => p_object_type
+    , p_object_schema => p_object_schema
+    , p_object_name_tab => p_object_name_tab
+    , p_base_object_schema => p_base_object_schema
+    , p_base_object_name_tab => p_base_object_name_tab
+    , p_transform_param_tab => l_transform_param_tab
+    , p_handle => l_handle
+    );
 
-    /*
-      Only for the following object types both object_schema and base_object_schema may be not null:
-      1) INDEX (based on an object in another schema)
-      2) TRIGGER (based on an object in another schema)
-      3) SYNONYM (object_schema is either PUBLIC and base_object_schema is p_schema or object_schema = p_schema)
-      4) REF_CONSTRAINT/CONSTRAINT (based on an object in another schema)
+    -- objects fetched for this param
+    <<fetch_loop>>
+    loop
+      md_fetch_ddl(l_handle, true, l_ddl_tab);
 
-      In the first three cases, you must supply an empty base_object_schema for dbms_metadata.open(), except
-      when object_schema <> p_schema (e.g. the public synonyms).
+      exit fetch_loop when l_ddl_tab is null;
 
-      In the fourth case, you must supply an empty object_schema for dbms_metadata.open().
+      if l_ddl_tab.count > 0
+      then
+        for i_ku$ddls_idx in l_ddl_tab.first .. l_ddl_tab.last
+        loop
+          pipe row (l_ddl_tab(i_ku$ddls_idx));
+        end loop;
+      end if;
+    end loop fetch_loop;
 
-      For all other object types, either the object_schema or the base_object_schema is null.
-    */
+    md_close(l_handle);
+  exception
+    when no_data_needed
+    then
+      if l_handle is not null
+      then
+        md_close(l_handle);
+      end if;
+      
+    when others
+    then
+      if l_handle is not null
+      then
+        md_close(l_handle);
+      end if;
+      if p_object_type = 'SCHEMA_EXPORT'
+      then
+        null;
+      else
+        raise;
+      end if;
+  end fetch_ddl;
+
+  /*
+  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
+  */
+  function get_schema_ddl
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab
+  , p_transform_param_list in varchar2
+  )
+  return oracle_tools.t_schema_ddl_tab
+  pipelined
+  is
+    -- GJP 2022-12-15
+
+    -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
+    -- https://github.com/paulissoft/oracle-tools/issues/98
+    -- Solve that by adding TABLE_EXPORT as well
+
+    l_use_schema_export constant pls_integer := 
+      case
+        when p_schema_object_filter.object_type() is not null or
+             p_schema_object_filter.object_names_include() = 1
+        then 0
+        else 1 -- but maybe 0
+      end;
+    l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+
+    l_object_lookup_tab t_object_lookup_tab; -- list of all objects
+    l_constraint_lookup_tab t_constraint_lookup_tab;
+    l_object_key t_object;
+    l_nr_objects_ready pls_integer := 0;
 
     cursor c_params
     ( b_schema in varchar2
@@ -5666,8 +5727,25 @@ $end
                   ,       null as privilege -- to get the count right
                   ,       null as grantable -- to get the count right
                   from    dual
-                  where   c_use_schema_export * b_use_schema_export = 1
-                  union all
+                  where   b_use_schema_export = 1
+                  union
+                  select  'TABLE_EXPORT' as object_type
+                  ,       b_schema as object_schema
+                  ,       case
+                            when t.object_type() = 'TABLE'
+                            then t.object_name()
+                            else t.base_object_name()
+                          end as object_name
+                  ,       null as base_object_schema
+                  ,       null as base_object_name
+                  ,       null as column_name -- to get the count right
+                  ,       null as grantee -- to get the count right
+                  ,       null as privilege -- to get the count right
+                  ,       null as grantable -- to get the count right
+                  from    table(b_schema_object_tab) t
+                  where   b_use_schema_export = 1
+                  and     'TABLE' in ( t.object_type(), t.base_object_type() )
+                  union
                   select  t.object_type()
                   ,       case
                             when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
@@ -5698,7 +5776,7 @@ $end
                   ,       t.privilege()
                   ,       t.grantable()
                   from    table(b_schema_object_tab) t
-                  where   nvl(c_use_schema_export * b_use_schema_export, 0) != 1
+                  where   b_use_schema_export = 0
                 )
                 select  t.object_type
                 ,       t.object_schema
@@ -5732,7 +5810,7 @@ $end
               )
       order by
               case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
-      ,       case when object_type = 'SCHEMA_EXPORT' then 0 else 1 end -- SCHEMA_EXPORT next
+      ,       case object_type when 'SCHEMA_EXPORT' then 0 when 'TABLE_EXPORT' then 1 else 2 end -- SCHEMA_EXPORT, TABLE_EXPORT next
       ,       object_type
       ,       object_schema
       ,       base_object_schema
@@ -5743,234 +5821,6 @@ $end
     l_params_tab t_params_tab;
     r_params c_params%rowtype;
     l_params_idx pls_integer;
-
-    l_transform_param_tab t_transform_param_tab;
-
-    l_program constant t_module := 'FETCH_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
-
-    -- dbms_application_info stuff
-    l_longops_rec t_longops_rec;
-
-    -- dbms_application_info stuff for dbms_metadata.open
-    l_longops_open_rec t_longops_rec;
-
-    procedure init
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.enter(g_package_prefix || l_program || '.INIT');
-$end
-
-      get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;
-    exception
-      when others
-      then
-        dbug.leave_on_error;
-        raise;
-$end
-    end init;
-
-    procedure cleanup
-    is
-    begin
-      md_close(l_handle);
-    end cleanup;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || l_program);
-    dbug.print
-    ( dbug."input"
-    , 'p_schema: %s; p_use_schema_export: %s; l_use_schema_export: %s; p_schema_object_tab.count: %s'
-    , p_schema_object_filter.schema()
-    , p_use_schema_export
-    , l_use_schema_export
-    , case when p_schema_object_tab is not null then p_schema_object_tab.count end
-    );
-$end
-
-    init;
-
-    if p_schema_object_tab is null
-    then
-      get_schema_object
-      ( p_schema_object_filter => p_schema_object_filter
-      , p_schema_object_tab => l_schema_object_tab
-      );
-    end if;
-
-    l_longops_rec :=
-      longops_init
-      ( p_op_name => 'fetch'
-      , p_units => 'objects'
-      , p_target_desc => l_program
-      , p_totalwork => case when p_schema_object_tab is not null then p_schema_object_tab.count else l_schema_object_tab.count end
-      );
-
-    open c_params(p_schema_object_filter.schema(), l_use_schema_export, nvl(p_schema_object_tab, l_schema_object_tab));
-    fetch c_params bulk collect into l_params_tab limit g_max_fetch;
-    close c_params;
-
-    l_longops_open_rec := longops_init(p_op_name => 'open', p_units => 'handles', p_target_desc => 'DBMS_METADATA', p_totalwork => l_params_tab.count);
-
-    l_params_idx := l_params_tab.first;
-    <<open_handle_loop>>
-    loop
-      exit when l_params_idx is null;
-
-      r_params := l_params_tab(l_params_idx);
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 1 $then
-      dbug.print
-      ( dbug."debug"
-      , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
-      , r_params.object_type
-      , r_params.object_schema
-      , r_params.base_object_schema
-      , r_params.object_name_tab.count
-      , r_params.base_object_name_tab.count
-      );
-      dbug.print
-      ( dbug."debug"
-      , 'r_params.nr_objects: %s'
-      , r_params.nr_objects
-      );
-$end
-      declare
-        -- dbms_application_info stuff
-        l_longops_type_rec t_longops_rec :=
-          longops_init
-          ( p_totalwork =>
-              case
-                when r_params.object_type = 'SCHEMA_EXPORT'
-                then case
-                       when p_schema_object_tab is not null
-                       then p_schema_object_tab.count
-                       else l_schema_object_tab.count
-                     end - l_longops_rec.sofar
-                else r_params.nr_objects
-              end
-          , p_op_name =>
-              'fetch' ||
-              case when r_params.object_schema is not null then '; schema ' || r_params.object_schema end ||
-              case when r_params.base_object_schema is not null then '; base schema ' || r_params.base_object_schema end
-          , p_units => 'objects'
-          , p_target_desc => r_params.object_type
-          );
-      begin
-        md_open
-        ( p_object_type => r_params.object_type
-        , p_object_schema => r_params.object_schema
-        , p_object_name_tab => r_params.object_name_tab
-        , p_base_object_schema => r_params.base_object_schema
-        , p_base_object_name_tab => r_params.base_object_name_tab
-        , p_transform_param_tab => l_transform_param_tab
-        , p_handle => l_handle
-        );
-
-        -- open handles
-        l_longops_open_rec.target_desc := r_params.object_type;
-        longops_show(l_longops_open_rec);
-
-        -- objects fetched for this param
-        <<fetch_loop>>
-        loop
-          md_fetch_ddl(l_handle, true, l_ddl_tab);
-
-          exit fetch_loop when l_ddl_tab is null;
-
-          if l_ddl_tab.count > 0
-          then
-            for i_ku$ddls_idx in l_ddl_tab.first .. l_ddl_tab.last
-            loop
-              pipe row (l_ddl_tab(i_ku$ddls_idx));
-            end loop;
-          end if;
-
-          -- objects fetched for this param
-          longops_show(l_longops_type_rec, 0);
-        end loop fetch_loop;
-
-        -- overall
-        longops_done(l_longops_type_rec);        
-        longops_show(l_longops_rec, l_longops_type_rec.totalwork);
-
-        md_close(l_handle);
-      exception
-        when others
-        then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.on_error;
-$end
-          md_close(l_handle);
-          if r_params.object_type = 'SCHEMA_EXPORT'
-          then
-            null;
-          else
-            raise;
-          end if;
-      end;
-
-      l_params_idx := l_params_tab.next(l_params_idx);
-    end loop open_handle_loop;
-
-    -- show 100%
-    longops_done(l_longops_open_rec);
-    longops_done(l_longops_rec);
-
-    cleanup;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.leave;
-$end
-
-    commit; -- see pragma
-
-    return; -- essential for a pipelined function
-  exception
-    when no_data_needed
-    then
-      cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;
-$end
-
-    when no_data_found
-    then
-      cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave_on_error;
-$end
-      oracle_tools.pkg_ddl_error.reraise_error(l_program);
-
-    when others
-    then
-      cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave_on_error;
-$end
-      raise;
-  end fetch_ddl;
-
-  /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
-  */
-  function get_schema_ddl
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-  , p_use_schema_export in t_numeric_boolean_nn
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab
-  , p_transform_param_list in varchar2
-  )
-  return oracle_tools.t_schema_ddl_tab
-  pipelined
-  is
-    l_schema_object_tab oracle_tools.t_schema_object_tab := null;
-
-    l_object_lookup_tab t_object_lookup_tab; -- list of all objects
-    l_constraint_lookup_tab t_constraint_lookup_tab;
-    l_object_key t_object;
 
     l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
@@ -6090,9 +5940,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
     dbug.enter(g_package_prefix || l_program);
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s; p_use_schema_export: %s; p_schema_object_tab.count: %s'
+    , 'p_schema: %s; p_schema_object_tab.count: %s'
     , p_schema_object_filter.schema()
-    , p_use_schema_export
     , case when p_schema_object_tab is not null then p_schema_object_tab.count end
     );
 $end
@@ -6109,65 +5958,120 @@ $end
 
     l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => l_object_lookup_tab.count);
 
-    for r in
-    ( select  value(t) as obj
-      from    table
-              ( oracle_tools.pkg_ddl_util.fetch_ddl
-                ( p_schema_object_filter => p_schema_object_filter
-                , p_use_schema_export => p_use_schema_export
-                , p_schema_object_tab => nvl(p_schema_object_tab, l_schema_object_tab)
-                , p_transform_param_list => p_transform_param_list
-                )
-              ) t
-    )
+    open c_params(p_schema_object_filter.schema(), l_use_schema_export, nvl(p_schema_object_tab, l_schema_object_tab));
+
+    <<params_loop>>
     loop
-      begin
-        parse_object
-        ( p_schema_object_filter => p_schema_object_filter
-        , p_constraint_lookup_tab => l_constraint_lookup_tab
-        , p_object_lookup_tab => l_object_lookup_tab
-        , p_ku$_ddl => r.obj
-        , p_object_key => l_object_key
+      fetch c_params bulk collect into l_params_tab limit g_max_fetch;
+      
+      l_params_idx := l_params_tab.first;
+      <<param_loop>>
+      loop
+        exit param_loop when l_params_idx is null;
+
+        r_params := l_params_tab(l_params_idx);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 1 $then
+        dbug.print
+        ( dbug."debug"
+        , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
+        , r_params.object_type
+        , r_params.object_schema
+        , r_params.base_object_schema
+        , r_params.object_name_tab.count
+        , r_params.base_object_name_tab.count
         );
+        dbug.print
+        ( dbug."debug"
+        , 'r_params.nr_objects: %s'
+        , r_params.nr_objects
+        );
+$end
 
-        if l_object_key is not null
-        then
-          -- some checks
-          if not(l_object_lookup_tab.exists(l_object_key))
-          then
-            raise_application_error
-            ( oracle_tools.pkg_ddl_error.c_object_not_found
-            , 'Can not find object with key "' || l_object_key || '"'
+        <<fetch_loop>>
+        for r in
+        ( select  value(t) as obj
+          from    table
+                  ( oracle_tools.pkg_ddl_util.fetch_ddl
+                    ( p_object_type => r_params.object_type
+                    , p_object_schema => r_params.object_schema
+                    , p_object_name_tab => r_params.object_name_tab
+                    , p_base_object_schema => r_params.base_object_schema
+                    , p_base_object_name_tab => r_params.base_object_name_tab
+                    , p_transform_param_list => p_transform_param_list
+                    )
+                  ) t
+        )
+        loop
+          begin
+            parse_object
+            ( p_schema_object_filter => p_schema_object_filter
+            , p_constraint_lookup_tab => l_constraint_lookup_tab
+            , p_object_lookup_tab => l_object_lookup_tab
+            , p_ku$_ddl => r.obj
+            , p_object_key => l_object_key
             );
-          end if;
 
-          if not(l_object_lookup_tab(l_object_key).ready)
-          then
-            pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
-            l_object_lookup_tab(l_object_key).ready := true;
-          end if;
-        end if;
+            if l_object_key is not null
+            then
+              -- some checks
+              if not(l_object_lookup_tab.exists(l_object_key))
+              then
+                raise_application_error
+                ( oracle_tools.pkg_ddl_error.c_object_not_found
+                , 'Can not find object with key "' || l_object_key || '"'
+                );
+              end if;
 
-        longops_show(l_longops_rec, 0);
-      exception
-        when oracle_tools.pkg_ddl_error.e_object_not_found
-        then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          l_object_key := l_object_lookup_tab.first;
-          <<object_loop>>
-          while l_object_key is not null
-          loop
-            dbug.print
-            ( dbug."debug"
-            , 'Object key: %s'
-            , l_object_key
-            );
-            l_object_key := l_object_lookup_tab.next(l_object_key);
-          end loop object_loop;
-$end        
-          raise;
-      end;
-    end loop fetch_loop;
+              if not(l_object_lookup_tab(l_object_key).ready)
+              then
+                pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
+                l_object_lookup_tab(l_object_key).ready := true;
+                l_nr_objects_ready := l_nr_objects_ready + 1;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 0 $then
+                dbug.print(dbug."info", 'l_nr_objects_ready: %s', l_nr_objects_ready);
+$end
+
+                if l_nr_objects_ready = l_object_lookup_tab.count
+                then
+                  -- every object in l_object_lookup_tab is ready
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 0 $then
+                  dbug.print(dbug."info", 'all schema DDL fetched');
+$end
+                  exit params_loop;
+                end if;
+              end if;
+            end if;
+
+            longops_show(l_longops_rec, 0);
+          exception
+            when oracle_tools.pkg_ddl_error.e_object_not_found
+            then
+  $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+              l_object_key := l_object_lookup_tab.first;
+              <<object_loop>>
+              while l_object_key is not null
+              loop
+                dbug.print
+                ( dbug."debug"
+                , 'Object key: %s'
+                , l_object_key
+                );
+                l_object_key := l_object_lookup_tab.next(l_object_key);
+              end loop object_loop;
+  $end        
+              raise;
+          end;
+        end loop fetch_loop;
+
+        l_params_idx := l_params_tab.next(l_params_idx);
+      end loop param_loop;
+      
+      exit params_loop when l_params_tab.count < g_max_fetch; -- next fetch will return 0
+    end loop params_loop;
+    
+    close c_params;
 
     -- overall
     longops_done(l_longops_rec);
@@ -6890,7 +6794,7 @@ $end
     , p_str_tab => p_line_tab
     );
 
-    dbms_metadata.set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
+    dbms_metadata#set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
 
     skip_ws_lines_around(p_line_tab, p_first, p_last);
 
