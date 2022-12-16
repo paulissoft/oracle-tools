@@ -468,7 +468,6 @@ $end
   begin
     if l_object_type is null or
        l_object_type = 'SCHEMA_EXPORT' or
-       l_object_type = 'TABLE_EXPORT' or
 $if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
        l_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
@@ -1841,7 +1840,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
                ,p_base_object_schema);
 $end
 
-    if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
+    if p_object_type = 'SCHEMA_EXPORT'
     then
       -- Use filters to specify the schema. See SCHEMA_EXPORT_OBJECTS for a complete overview.
       dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
@@ -2030,7 +2029,7 @@ $end
       then
         set_exclude_name_expr(p_object_type => p_object_type, p_name => 'EXCLUDE_NAME_EXPR');
       end if;
-    end if; -- if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
+    end if; -- if p_object_type = 'SCHEMA_EXPORT'
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -2205,7 +2204,7 @@ $end
     -- ORA-06502: PL/SQL: numeric or value error
     -- LPX-00210: expected '<' instead of '\'
 
-    if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
+    if p_object_type = 'SCHEMA_EXPORT'
     then
       md_set_transform_param
       ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
@@ -5667,7 +5666,7 @@ $end
       then
         md_close(l_handle);
       end if;
-      if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
+      if p_object_type = 'SCHEMA_EXPORT'
       then
         null;
       else
@@ -5690,14 +5689,14 @@ $end
 
     -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
     -- https://github.com/paulissoft/oracle-tools/issues/98
-    -- Solve that by adding TABLE_EXPORT as well
+    -- Solve that by adding the individual objects as well but quitting as soon as possible.
 
     l_use_schema_export constant pls_integer := 
       case
         when p_schema_object_filter.object_type() is not null or
              p_schema_object_filter.object_names_include() = 1
         then 0
-        else 0 -- but maybe 0
+        else 1 -- but maybe 0
       end;
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
 
@@ -5729,24 +5728,8 @@ $end
                   ,       null as grantable -- to get the count right
                   from    dual
                   where   b_use_schema_export = 1
-                  union
-                  select  'TABLE_EXPORT' as object_type
-                  ,       b_schema as object_schema
-                  ,       case
-                            when t.object_type() = 'TABLE'
-                            then t.object_name()
-                            else t.base_object_name()
-                          end as object_name
-                  ,       null as base_object_schema
-                  ,       null as base_object_name
-                  ,       null as column_name -- to get the count right
-                  ,       null as grantee -- to get the count right
-                  ,       null as privilege -- to get the count right
-                  ,       null as grantable -- to get the count right
-                  from    table(b_schema_object_tab) t
-                  where   b_use_schema_export = 1
-                  and     'TABLE' in ( t.object_type(), t.base_object_type() )
-                  union
+                  union all
+                  -- these parameters always as a last resort
                   select  t.object_type()
                   ,       case
                             when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
@@ -5777,7 +5760,6 @@ $end
                   ,       t.privilege()
                   ,       t.grantable()
                   from    table(b_schema_object_tab) t
-                  where   b_use_schema_export = 0
                 )
                 select  t.object_type
                 ,       t.object_schema
@@ -5813,9 +5795,8 @@ $end
               case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
       ,       case object_type
                 when 'SCHEMA_EXPORT' then 0
-                when 'TABLE_EXPORT' then 1
-                else 2
-              end -- SCHEMA_EXPORT, TABLE_EXPORT next
+                else 1
+              end -- SCHEMA_EXPORT next
       ,       object_type
       ,       object_schema
       ,       base_object_schema
