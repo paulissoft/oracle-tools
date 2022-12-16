@@ -57,6 +57,7 @@ overriding member procedure chk
 , p_schema in varchar2
 )
 is
+  l_error_message varchar2(2000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
@@ -75,29 +76,39 @@ $end
   then
     null; -- ok
   else
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema must be PUBLIC or ' || p_schema);
+    l_error_message := 'Object schema must be PUBLIC or ' || p_schema;
   end if;
 
   if self.object_schema() = 'PUBLIC'
   then
     if (self.base_object_schema() is null)
     then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema should not be empty');
+      l_error_message := 'Base object schema should not be empty';
     end if;
     if self.base_object_schema() = p_schema
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Base object schema must be ' || p_schema || ' for a PUBLIC synonym');
+      l_error_message := 'Base object schema must be ' || p_schema || ' for a PUBLIC synonym';
     end if;
   else
     if self.object_schema() = p_schema
     then
       null; -- ok
     else
-      raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object schema must be ' || p_schema || ' for a private synonym');
+      l_error_message := 'Object schema must be ' || p_schema || ' for a private synonym';
     end if;
+  end if;
 
+  if l_error_message is not null
+  then
+    oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, l_error_message, self.schema_object_info());
+  end if;
+  
+  if self.object_schema() = 'PUBLIC'
+  then
+    null;
+  else  
     oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
   end if;
 

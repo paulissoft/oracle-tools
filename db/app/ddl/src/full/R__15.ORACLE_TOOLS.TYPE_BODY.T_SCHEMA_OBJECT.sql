@@ -56,7 +56,7 @@ member procedure base_object_schema
 )
 is
 begin
-  raise_application_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.');
+  oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.', self.schema_object_info());
 end base_object_schema;
 
 member function base_object_type

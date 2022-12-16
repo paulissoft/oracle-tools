@@ -304,13 +304,13 @@ $end
 
   if self.ddl_tab is null or self.ddl_tab.count = 0
   then
-    raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'The number of ddl statements must be at least 1');
+    oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'The number of ddl statements must be at least 1', self.obj.schema_object_info());
   else
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
     loop
       if self.ddl_tab(i_idx).text is null or self.ddl_tab(i_idx).text.count = 0
       then
-        raise_application_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx);
+        oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx, self.obj.schema_object_info());
       end if;
     end loop;
   end if;
@@ -365,9 +365,8 @@ exception
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave_on_error;
 $end
-    raise_application_error
-    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
-    , '# parts: ' || l_part_tab.count ||
+    oracle_tools.pkg_ddl_error.reraise_error
+    ( '# parts: ' || l_part_tab.count ||
       '; part #0: ' || case when l_part_tab.count >= l_part_tab.first+0 then l_part_tab(l_part_tab.first+0) end ||
       '; part #1: ' || case when l_part_tab.count >= l_part_tab.first+1 then l_part_tab(l_part_tab.first+1) end ||
       '; part #2: ' || case when l_part_tab.count >= l_part_tab.first+2 then l_part_tab(l_part_tab.first+2) end ||
@@ -379,7 +378,6 @@ $end
       '; part #8: ' || case when l_part_tab.count >= l_part_tab.first+8 then l_part_tab(l_part_tab.first+8) end ||
       '; part #9: ' || case when l_part_tab.count >= l_part_tab.first+8 then l_part_tab(l_part_tab.first+9) end ||
       '; verb #0: ' || case when l_verb_tab.count >= l_verb_tab.first+0 then l_verb_tab(l_verb_tab.first+0) end
-    , true
     );
 end execute_ddl;
 

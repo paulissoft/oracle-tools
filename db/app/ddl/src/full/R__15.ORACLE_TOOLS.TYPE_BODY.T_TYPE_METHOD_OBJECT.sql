@@ -224,7 +224,7 @@ $end
   then
     null;
   else
-    raise_application_error
+    oracle_tools.pkg_ddl_error.raise_error
     ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
@@ -235,6 +235,7 @@ $end
       '" results and "' ||
       cardinality(self.arguments) ||
       '" arguments.'
+    , self.schema_object_info()
     );
   end if;
 
@@ -242,12 +243,13 @@ $end
   then
     null;
   else
-    raise_application_error
+    oracle_tools.pkg_ddl_error.raise_error
     ( oracle_tools.pkg_ddl_error.c_invalid_parameters
     , 'Method (' ||
       self.member_name() ||
       ') must have a TYPE_SPEC as its base object: ' ||
       self.base_object$.id()
+    , self.schema_object_info()
     );
   end if;
 

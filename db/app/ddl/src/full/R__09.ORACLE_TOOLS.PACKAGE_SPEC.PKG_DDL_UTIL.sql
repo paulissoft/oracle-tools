@@ -75,11 +75,13 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   --
   -- This supersedes bug #136334705 (see above) since that is only for ALL_OBJECTS.
   --
-  -- This supersedes all code for:
-  -- * c_#138707615_1 (true/false irrelevant)
-  --
   -- See also https://github.com/paulissoft/oracle-tools/issues/92.
-  c_exclude_generated_items constant boolean := true;
+  c_exclude_system_objects constant boolean := true;
+  c_exclude_system_indexes constant boolean := true;
+  c_exclude_system_constraints constant boolean := false; -- true: only 'USER NAME'
+
+  -- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
+  c_exclude_not_null_constraints constant boolean := false;
 
   /*
   -- End of bugs/features
@@ -381,10 +383,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   function fetch_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
-  , p_use_schema_export in t_numeric_boolean_nn
+  , p_use_schema_export in t_numeric_boolean_nn default 0
     -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
   , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
-  , p_transform_param_list in varchar2
+  , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return sys.ku$_ddls
   pipelined;
@@ -394,7 +396,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   */
   function get_schema_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
-  , p_use_schema_export in t_numeric_boolean_nn
+  , p_use_schema_export in t_numeric_boolean_nn default 0
     -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
   , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
   , p_transform_param_list in varchar2 default c_transform_param_list
