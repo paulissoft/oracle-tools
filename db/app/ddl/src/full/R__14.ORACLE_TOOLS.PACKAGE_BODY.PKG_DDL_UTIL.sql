@@ -468,6 +468,7 @@ $end
   begin
     if l_object_type is null or
        l_object_type = 'SCHEMA_EXPORT' or
+       l_object_type = 'TABLE_EXPORT' or
 $if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
        l_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
@@ -1699,7 +1700,7 @@ $end
   procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in varchar2)
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
 $end
     dbms_metadata.set_filter(handle, name, value);
@@ -1708,7 +1709,7 @@ $end
   procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in boolean default true)
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, dbug.cast_to_varchar2(value));
 $end
     dbms_metadata.set_filter(handle, name, value);
@@ -1717,7 +1718,7 @@ $end
   procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in number)
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
 $end
     dbms_metadata.set_filter(handle, name, value);
@@ -1831,7 +1832,7 @@ $end
       end if;
     end set_exclude_name_expr;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'MD_SET_FILTER');
     dbug.print(dbug."input"
                ,'p_object_type: %s; p_object_schema: %s; p_base_object_schema: %s'
@@ -1840,7 +1841,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
                ,p_base_object_schema);
 $end
 
-    if p_object_type = 'SCHEMA_EXPORT'
+    if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
     then
       -- Use filters to specify the schema. See SCHEMA_EXPORT_OBJECTS for a complete overview.
       dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
@@ -2029,9 +2030,9 @@ $end
       then
         set_exclude_name_expr(p_object_type => p_object_type, p_name => 'EXCLUDE_NAME_EXPR');
       end if;
-    end if; -- if p_object_type = 'SCHEMA_EXPORT'
+    end if; -- if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -2053,7 +2054,7 @@ $end
   is
     l_found pls_integer := null;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'MD_OPEN');
     dbug.print(dbug."input"
                ,'p_object_type: %s; p_object_schema: %s; p_base_object_schema: %s'
@@ -2204,7 +2205,7 @@ $end
     -- ORA-06502: PL/SQL: numeric or value error
     -- LPX-00210: expected '<' instead of '\'
 
-    if p_object_type = 'SCHEMA_EXPORT'
+    if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
     then
       md_set_transform_param
       ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
@@ -2238,7 +2239,7 @@ $end
 
     dbms_metadata.set_count(handle => p_handle, value => c_dbms_metadata_set_count);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others then
@@ -2262,7 +2263,7 @@ $end
     l_pos2 pls_integer;
     l_ddl_tab_last pls_integer;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'MD_FETCH_DDL');
 $end
 
@@ -2273,13 +2274,13 @@ $end
       then
         -- GRANT DELETE, INSERT, SELECT, UPDATE, REFERENCES, ON COMMIT REFRESH, QUERY REWRITE, DEBUG, FLASHBACK ...
         l_ddl_tab_last := p_ddl_tab.last; -- the collection may expand so just store the last entry
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."info", 'p_ddl_tab.first: %s; l_ddl_tab_last: %s', p_ddl_tab.first, l_ddl_tab_last);
 $end
         for i_ku$ddls_idx in p_ddl_tab.first .. l_ddl_tab_last
         loop
           l_statement := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl_tab(i_ku$ddls_idx).ddlText, p_offset => 1, p_amount => 4000);
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print
           ( dbug."info"
           , 'i_ku$ddls_idx: %s; length(ltrim(l_statement)): %s; ltrim(l_statement): %s'
@@ -2294,7 +2295,7 @@ $end
             l_pos2 := instr(l_statement, ' ON "');
             l_privileges := substr(l_statement, l_pos1, l_pos2 - l_pos1);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.print(dbug."info", 'l_privileges: %s', l_privileges);
 $end
 
@@ -2311,7 +2312,7 @@ $end
 
               for i_idx in l_line_tab.first .. l_line_tab.last
               loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 dbug.print
                 ( dbug."info"
                 , 'replace(l_statement, l_privileges, l_line_tab(%s)): %s'
@@ -2348,13 +2349,13 @@ $end
     exception
       when e_job_is_not_attached
       then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.on_error;
 $end
         p_ddl_tab := null;
     end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."output", 'p_ddl_tab.count: %s', case when p_ddl_tab is not null then p_ddl_tab.count end);
     dbug.leave;
   exception
@@ -5666,7 +5667,7 @@ $end
       then
         md_close(l_handle);
       end if;
-      if p_object_type = 'SCHEMA_EXPORT'
+      if p_object_type in ('SCHEMA_EXPORT', 'TABLE_EXPORT')
       then
         null;
       else
@@ -5810,7 +5811,11 @@ $end
               )
       order by
               case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
-      ,       case object_type when 'SCHEMA_EXPORT' then 0 when 'TABLE_EXPORT' then 1 else 2 end -- SCHEMA_EXPORT, TABLE_EXPORT next
+      ,       case object_type
+                when 'SCHEMA_EXPORT' then 0
+                when 'TABLE_EXPORT' then 1
+                else 2
+              end -- SCHEMA_EXPORT, TABLE_EXPORT next
       ,       object_type
       ,       object_schema
       ,       base_object_schema
@@ -5917,7 +5922,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
           oracle_tools.pkg_ddl_error.raise_error
           ( oracle_tools.pkg_ddl_error.c_no_ddl_retrieved
           , utl_lms.format_message
-            ( 'No DDL retrieved: use "select * from table(%s.%s.fetch_ddl)" to get more info.'
+            ( 'No DDL retrieved.'
             , $$PLSQL_UNIT_OWNER
             , $$PLSQL_UNIT
             )
@@ -5963,6 +5968,10 @@ $end
     <<params_loop>>
     loop
       fetch c_params bulk collect into l_params_tab limit g_max_fetch;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
+$end
       
       l_params_idx := l_params_tab.first;
       <<param_loop>>
@@ -5971,7 +5980,7 @@ $end
 
         r_params := l_params_tab(l_params_idx);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print
         ( dbug."debug"
         , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
@@ -6029,14 +6038,14 @@ $end
                 l_object_lookup_tab(l_object_key).ready := true;
                 l_nr_objects_ready := l_nr_objects_ready + 1;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 0 $then
-                dbug.print(dbug."info", 'l_nr_objects_ready: %s', l_nr_objects_ready);
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                dbug.print(dbug."info", '# objects ready: %s (out of %s)', l_nr_objects_ready, l_object_lookup_tab.count);
 $end
 
                 if l_nr_objects_ready = l_object_lookup_tab.count
                 then
                   -- every object in l_object_lookup_tab is ready
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging > 0 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                   dbug.print(dbug."info", 'all schema DDL fetched');
 $end
                   exit params_loop;
