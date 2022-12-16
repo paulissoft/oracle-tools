@@ -5697,7 +5697,7 @@ $end
         when p_schema_object_filter.object_type() is not null or
              p_schema_object_filter.object_names_include() = 1
         then 0
-        else 1 -- but maybe 0
+        else 0 -- but maybe 0
       end;
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
 
