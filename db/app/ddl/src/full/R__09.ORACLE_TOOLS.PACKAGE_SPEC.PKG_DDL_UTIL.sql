@@ -26,7 +26,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   -- 0: none, 1: standard, 2: verbose, 3: even more verbose
   c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
-  c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then true $else false $end; -- idem
+  c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then false $else false $end; -- idem
   c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then false $else false $end; -- idem
 
   /*
