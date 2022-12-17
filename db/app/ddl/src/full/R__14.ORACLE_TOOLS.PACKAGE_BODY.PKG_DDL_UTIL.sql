@@ -5924,6 +5924,15 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
         raise;
     end chk;
 $end
+
+    procedure cleanup
+    is
+    begin
+      if c_params%isopen
+      then
+        close c_params;
+      end if;
+    end cleanup;
   begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
