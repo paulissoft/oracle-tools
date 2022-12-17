@@ -307,7 +307,7 @@ $end
       p_longops_rec.totalwork := p_longops_rec.sofar;
       longops_show(p_longops_rec, 0);
     end if;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
     ( dbug."info"
     , 'p_longops_rec.target_desc: %s; p_longops_rec.totalwork: %s'
@@ -483,7 +483,7 @@ $end
     end if;
   end check_object_type;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 
   procedure print
   ( p_line_tab in dbms_sql.varchar2a
@@ -642,7 +642,7 @@ $end
     l_n t_object;
     l_m t_object;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'TSORT');
 $end
 
@@ -692,7 +692,7 @@ $end
       exit when p_error_n is not null;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'p_error_n: %s', p_error_n);
     dbug.leave;
   exception
@@ -710,7 +710,7 @@ $end
   is
     l_error_n t_object;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'DSORT');
 $end
 
@@ -733,7 +733,7 @@ $end
       end if;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -748,7 +748,7 @@ $end
   is
     l_host all_db_links.host%type;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'GET_HOST');
     dbug.print(dbug."input", 'p_network_link: %s', p_network_link);
 $end
@@ -760,7 +760,7 @@ $end
       select dbms_assert.enquote_name(t.host) into l_host from all_db_links t where t.db_link = upper(p_network_link);
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'return: %s', l_host);
     dbug.leave;
 $end
@@ -768,7 +768,7 @@ $end
     return l_host;
   exception
     when others then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."output", 'return: %s', to_char(null));
       dbug.leave;
 $end
@@ -882,7 +882,7 @@ $end
         l_pos1 := instr(l_constraint, '"', 1, 5);
         l_pos2 := instr(l_constraint, '"', 1, 6);
         p_object_name := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.print
         ( dbug."info"
         , 'l_pos1: %s; l_pos2: %s; p_object_name: %s'
@@ -903,7 +903,7 @@ $end
         then
           l_column_names := replace(substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1)), ' ');
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print
           ( dbug."info"
           , 'l_pos1: %s; l_pos2: %s; l_column_names: %s'
@@ -957,7 +957,7 @@ $end
               then
                 l_ref_column_names := replace(substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1)), ' '); -- assumes a column name does not have a space inside
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 dbug.print
                 ( dbug."info"
                 , 'l_pos1: %s; l_pos2: %s; l_ref_column_names: %s'
@@ -974,7 +974,7 @@ $end
                                 );
               end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               l_ref_object.print();
 $end
 
@@ -988,19 +988,19 @@ $end
                                      );
           end case;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           l_constraint_object.print();
 $end
 
           begin
             p_object_name := p_object_lookup_tab(p_constraint_lookup_tab(l_constraint_object.signature())).schema_ddl.obj.object_name();
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             dbug.print( dbug."info", 'p_object_name (%s) determined by lookup', p_object_name);
 $end
           exception
             when others
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               dbug.print
               ( dbug."warning"
               , 'constraint signature: %s; constraint looked up: %s; p_object_name could not be determined by lookup: %s'
@@ -1021,7 +1021,7 @@ $end
                 and     c.table_name = p_base_object_name
               )
               loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 dbug.print
                 ( dbug."info"
                 , 'r_cc.constraint_name: %s; r_cc.column_names: %s'
@@ -1032,7 +1032,7 @@ $end
                 if replace(r_cc.column_names, ' ') = replace(l_column_names, ' ')
                 then
                   p_object_name := r_cc.constraint_name;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                   dbug.print( dbug."info", 'p_object_name (%s) determined by dictionary search', p_object_name);
 $end
                   exit;
@@ -1057,7 +1057,7 @@ $end
         then
           l_search_condition := substr(l_constraint, l_pos1+1, l_pos2 - (l_pos1+1));
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print(dbug."info", 'l_search_condition: %s', l_search_condition);
 $end
 
@@ -1069,7 +1069,7 @@ $end
               l_pos1 := instr(l_search_condition, '"', 1, 3);
               l_pos2 := instr(l_search_condition, '"', 1, 4);
               p_object_name := substr(l_search_condition, l_pos1+1, l_pos2 - (l_pos1+1));              
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               dbug.print(dbug."info", 'named constraint: %s', p_object_name);
 $end
             end if;
@@ -1091,7 +1091,7 @@ $end
                                  , p_search_condition => l_search_condition
                                  );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           l_constraint_object.print();
 $end
 
@@ -1099,13 +1099,13 @@ $end
           then
             begin
               p_object_name := p_object_lookup_tab(p_constraint_lookup_tab(l_constraint_object.signature())).schema_ddl.obj.object_name();
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               dbug.print( dbug."info", 'p_object_name (%s) determined by lookup', p_object_name);
 $end
             exception
               when others
               then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 dbug.print( dbug."warning", 'p_object_name could not be determined by lookup: %s', sqlerrm);
 $end
                 open c_con(b_schema => p_schema, b_table_name => p_base_object_name);
@@ -1115,7 +1115,7 @@ $end
 
                   exit fetch_loop when c_con%notfound;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                   dbug.print
                   ( dbug."info"
                   , 'r_con.constraint_name: %s; r_con.search_condition: %s'
@@ -1127,7 +1127,7 @@ $end
                   if r_con.search_condition = l_search_condition
                   then
                     p_object_name := r_con.constraint_name;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                     dbug.print( dbug."info", 'p_object_name (%s) determined by dictionary search', p_object_name);
 $end
                     exit fetch_loop;
@@ -1148,7 +1148,7 @@ $end
       end loop;
       l_constraint := substr(l_constraint, l_pos1);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print(dbug."info", 'l_constraint: "%s"', l_constraint);
 $end
       if l_constraint like l_constraint_expr_tab(1)
@@ -1188,7 +1188,7 @@ $end
           p_object_schema := p_base_object_schema;
         end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.print
         ( dbug."info"
         , 'p_object_type: %s; named constraint?: %s'
@@ -1246,7 +1246,7 @@ $end
       l_pos2 pls_integer;
       l_comment constant all_tab_comments.comments%type := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl.ddlText, p_amount => case when l_pos1 > 0 then l_pos1 else 2000 end);
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print(dbug."info", 'l_comment: "%s"', l_comment);
 $end
 
@@ -1330,7 +1330,7 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print(dbug."info", 'l_plsql_block: "%s"', l_plsql_block);
 $end
       if upper(l_plsql_block) like q'[%DBMS_SCHEDULER.CREATE_%('"%"'%]'
@@ -1352,7 +1352,7 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print(dbug."info", 'l_index: "%s"', l_index);
 $end
       if l_index like 'CREATE INDEX %' or
@@ -1390,7 +1390,7 @@ $end
       l_pos1 pls_integer := null;
       l_pos2 pls_integer := null;
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print(dbug."info", 'l_object_grant: "%s"', l_object_grant);
 $end
       if l_object_grant like 'GRANT %'
@@ -1411,7 +1411,7 @@ $end
     end parse_object_grant;
 
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_DDL');
     dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
@@ -1422,7 +1422,7 @@ $end
       <<parse_item_loop>>
       for i_parsed_item_idx in p_ddl.parseditems.first .. p_ddl.parseditems.last
       loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.print(dbug."info"
                    ,'p_ddl.parseditems(%s).item: %s; value: %s'
                    ,i_parsed_item_idx
@@ -1450,7 +1450,7 @@ $end
         end case;
       end loop parse_item_loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.print
       ( dbug."info"
       , 'p_verb: %s; p_object_name; %s; p_object_type: %s; p_object_schema: %s'
@@ -1504,7 +1504,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.print
     ( dbug."output"
     , 'p_verb: %s; p_object_name; %s; p_object_type: %s; p_object_schema: %s'
@@ -1532,7 +1532,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_p
 $end
   exception
     when others then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end      
       raise;
@@ -1626,7 +1626,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print
     ( dbug."info"
     , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (1)'
@@ -1652,7 +1652,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print
     ( dbug."info"
     , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (2)'
@@ -1678,7 +1678,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print
     ( dbug."info"
     , 'dbms_metadata.set_transform_param(%s, %s, %s, %s) (3)'
@@ -1699,7 +1699,7 @@ $end
   procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in varchar2)
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
 $end
     dbms_metadata.set_filter(handle, name, value);
@@ -1708,7 +1708,7 @@ $end
   procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in boolean default true)
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, dbug.cast_to_varchar2(value));
 $end
     dbms_metadata.set_filter(handle, name, value);
@@ -1717,7 +1717,7 @@ $end
   procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in number)
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
 $end
     dbms_metadata.set_filter(handle, name, value);
@@ -1731,7 +1731,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter($$PLSQL_UNIT_OWNER||'.'||$$PLSQL_UNIT||'.MD_SET_TRANSFORM_PARAM');
     dbug.print(dbug."input", 'p_use_object_type_param: %s', p_use_object_type_param);
 $end
@@ -1741,7 +1741,7 @@ $end
 
     for i_idx in p_object_type_tab.first .. p_object_type_tab.last
     loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", 'p_object_type_tab(%s): %s', i_idx, p_object_type_tab(i_idx));
 $end
       if p_object_type_tab(i_idx) in ('TABLE', 'INDEX', 'CLUSTER', 'CONSTRAINT', 'ROLLBACK_SEGMENT', 'TABLESPACE')
@@ -1772,7 +1772,7 @@ $end
       end if;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
   end md_set_transform_param;
@@ -1831,7 +1831,7 @@ $end
       end if;
     end set_exclude_name_expr;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MD_SET_FILTER');
     dbug.print(dbug."input"
                ,'p_object_type: %s; p_object_schema: %s; p_base_object_schema: %s'
@@ -2031,7 +2031,7 @@ $end
       end if;
     end if; -- if p_object_type = 'SCHEMA_EXPORT'
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -2053,7 +2053,7 @@ $end
   is
     l_found pls_integer := null;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MD_OPEN');
     dbug.print(dbug."input"
                ,'p_object_type: %s; p_object_schema: %s; p_base_object_schema: %s'
@@ -2238,7 +2238,7 @@ $end
 
     dbms_metadata.set_count(handle => p_handle, value => c_dbms_metadata_set_count);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others then
@@ -2262,7 +2262,7 @@ $end
     l_pos2 pls_integer;
     l_ddl_tab_last pls_integer;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MD_FETCH_DDL');
 $end
 
@@ -2273,13 +2273,13 @@ $end
       then
         -- GRANT DELETE, INSERT, SELECT, UPDATE, REFERENCES, ON COMMIT REFRESH, QUERY REWRITE, DEBUG, FLASHBACK ...
         l_ddl_tab_last := p_ddl_tab.last; -- the collection may expand so just store the last entry
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.print(dbug."info", 'p_ddl_tab.first: %s; l_ddl_tab_last: %s', p_ddl_tab.first, l_ddl_tab_last);
 $end
         for i_ku$ddls_idx in p_ddl_tab.first .. l_ddl_tab_last
         loop
           l_statement := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl_tab(i_ku$ddls_idx).ddlText, p_offset => 1, p_amount => 4000);
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print
           ( dbug."info"
           , 'i_ku$ddls_idx: %s; length(ltrim(l_statement)): %s; ltrim(l_statement): %s'
@@ -2294,7 +2294,7 @@ $end
             l_pos2 := instr(l_statement, ' ON "');
             l_privileges := substr(l_statement, l_pos1, l_pos2 - l_pos1);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             dbug.print(dbug."info", 'l_privileges: %s', l_privileges);
 $end
 
@@ -2311,7 +2311,7 @@ $end
 
               for i_idx in l_line_tab.first .. l_line_tab.last
               loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
                 dbug.print
                 ( dbug."info"
                 , 'replace(l_statement, l_privileges, l_line_tab(%s)): %s'
@@ -2348,13 +2348,13 @@ $end
     exception
       when e_job_is_not_attached
       then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.on_error;
 $end
         p_ddl_tab := null;
     end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'p_ddl_tab.count: %s', case when p_ddl_tab is not null then p_ddl_tab.count end);
     dbug.leave;
   exception
@@ -2398,7 +2398,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
     p_schema_object_filter.print();
 $end
@@ -2464,7 +2464,7 @@ $end
           exception
             when others
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
               p_object_lookup_tab(p_object_key).schema_ddl.print();
 $end            
               raise_application_error
@@ -2491,7 +2491,7 @@ $end
                  , p_base_object_name => l_base_object_name
                  ) = 0 -- object not but on purpose
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
               dbug.print
               ( dbug."info"
               , 'l_object_type: %s; l_object_name: %s; l_base_object_type: %s; l_base_object_name'
@@ -2536,7 +2536,7 @@ $end
 
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.print(dbug."output", 'p_object_key: %s', p_object_key);
     dbug.leave;
 $end
@@ -2548,7 +2548,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end
 
@@ -2556,7 +2556,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
       dbug.leave_on_error;
 $end
       raise;
@@ -2584,7 +2584,7 @@ $end
   is
     l_idx pls_integer := p_schema_ddl_tab.last;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package || '.REMOVE_DDL');
     dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_filter: %s; p_schema_ddl_tab.count: %s', p_object_schema, p_object_type, p_filter, p_schema_ddl_tab.count);
 $end
@@ -2592,7 +2592,7 @@ $end
     loop
       exit when l_idx is null;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print
       ( dbug."info"
       , '[%s] object_schema: %s; object_type: %s; text: %s'
@@ -2620,7 +2620,7 @@ $end
       end if;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'p_schema_ddl_tab.count: %s', p_schema_ddl_tab.count);
     dbug.leave;
 $end
@@ -2749,7 +2749,7 @@ $end
         end loop;
       end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       if p_ddl_text != l_ddl_text
       then
         dbug.print(dbug."info", 'old ddl text: %s', substr(p_ddl_text, 1, 255));
@@ -2769,7 +2769,7 @@ $end
   is
     l_ref_constraint_object oracle_tools.t_ref_constraint_object;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (1)');
     p_schema_object.print;
 $end
@@ -2797,7 +2797,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     p_schema_object.print;
     dbug.leave;
   exception
@@ -2825,7 +2825,7 @@ $end
       dbms_lob.writeappend(lob_loc => p_clob, amount => length(p_buffer || p_append), buffer => p_buffer || p_append);
     end append_clob;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
 $end
 
@@ -2895,7 +2895,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -2912,7 +2912,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (3)');
 $end
 
@@ -2928,7 +2928,7 @@ $end
       end loop;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -2945,7 +2945,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (4)');
 $end
 
@@ -2965,7 +2965,7 @@ $end
     , p_ddl_tab => p_schema_ddl.ddl_tab
     );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -3010,7 +3010,7 @@ $end
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DISPLAY_DDL_SCHEMA');
     dbug.print(dbug."input"
                ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
@@ -3161,7 +3161,7 @@ $end
 
     longops_done(l_longops_rec);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
@@ -3170,19 +3170,19 @@ $end
   exception
     when no_data_needed
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
     when no_data_found -- disappears otherwise
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
     then
       dbug.leave_on_error;
@@ -3206,7 +3206,7 @@ $end
     l_action varchar2(100) := "nothing";
     l_comment varchar2(4000 char) := 'there are no changes';
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'CREATE_SCHEMA_DDL');
     dbug.print(dbug."input", 'p_source_schema_ddl.obj:');
     if p_source_schema_ddl is not null then p_source_schema_ddl.obj.print(); end if;
@@ -3221,7 +3221,7 @@ $end
 
     -- determine action and comment
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print
     ( dbug."info"
     , '(p_target_schema_ddl is null): %s; (p_source_schema_ddl is null): %s; (p_target_schema_ddl = p_source_schema_ddl): %s'
@@ -3297,7 +3297,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."info", 'l_action: %s; l_comment: %s', l_action, l_comment);
 $end
 
@@ -3344,13 +3344,13 @@ $end
         );
     end case;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
   exception
     when others
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -3405,7 +3405,7 @@ $end
       end if;
     end free_memory;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print(dbug."input"
                ,'p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_schema_source: %s; p_schema_target: %s'
@@ -3462,7 +3462,7 @@ $end
       free_memory(l_source_schema_ddl_tab);
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'cardinality(l_source_schema_ddl_tab): %s', cardinality(l_source_schema_ddl_tab));
 $end
 
@@ -3506,7 +3506,7 @@ $end
       free_memory(l_target_schema_ddl_tab);
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'cardinality(l_target_schema_ddl_tab): %s', cardinality(l_target_schema_ddl_tab));
 $end
 
@@ -3567,7 +3567,7 @@ $end
                 end asc nulls last -- create next
     )
     loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print
       ( dbug."debug"
       , 'sofar: %s; source signature: %s; target signature: %s; id different: %s'
@@ -3597,7 +3597,7 @@ $end
 
     longops_done(l_longops_rec);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
@@ -3606,21 +3606,21 @@ $end
   exception
     when no_data_needed
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
     when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
     when others
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -3632,14 +3632,14 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (1)');
     dbug.print(dbug."input", 'p_id: %s; p_text[:255]: %s', p_id, substr(p_text, 1, 255));
 $end
 
     oracle_tools.t_schema_ddl.execute_ddl(p_id => p_id, p_text => p_text);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -3657,7 +3657,7 @@ $end
     l_statement varchar2(32767) := null;
     l_network_link all_db_links.db_link%type := null;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (2)');
     dbug.print(dbug."input", 'p_network_link: %s; p_ddl_text_tab(1)[:255]: %s', p_network_link, substr(p_ddl_text_tab(1), 1, 255));
 $end
@@ -3719,7 +3719,7 @@ end;]', l_network_link -- no need to use dbms_assert since it may empty or @<net
         raise;
     end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -3752,7 +3752,7 @@ $end
     e_errors_during_recompilation exception;
     pragma exception_init(e_errors_during_recompilation, -4045);
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (3)');
     dbug.print(dbug."input", 'p_ddl_tab.count: %s', p_ddl_tab.count);
 $end
@@ -3770,7 +3770,7 @@ $end
     --
     dbms_sql.close_cursor(l_cursor);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
   exception
@@ -3781,7 +3781,7 @@ $end
          e_errors_during_recompilation
     then 
       dbms_sql.close_cursor(l_cursor);
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
 $end
       null; -- no reraise
@@ -3794,7 +3794,7 @@ $end
       */
       l_last_error_position := 1 + nvl(dbms_sql.last_error_position, 0);
       dbms_sql.close_cursor(l_cursor);
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
 $end
       raise_application_error
@@ -3810,7 +3810,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (4)');
     dbug.print(dbug."input"
                ,'p_schema_ddl_tab.count: %s; p_network_link: %s'
@@ -3827,7 +3827,7 @@ $end
         then
           for i_ddl_idx in p_schema_ddl_tab(i_idx).ddl_tab.first .. p_schema_ddl_tab(i_idx).ddl_tab.last
           loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).print();
 $end          
             if p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).verb() = '--' 
@@ -3842,7 +3842,7 @@ $end
       end loop;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -3864,11 +3864,11 @@ $end
   is
     l_diff_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     l_program constant t_module := g_package_prefix || 'SYNCHRONIZE';
 $end
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
 
@@ -3895,7 +3895,7 @@ $end
 
     execute_ddl(l_diff_schema_ddl_tab, p_network_link_target);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -3915,11 +3915,11 @@ $end
   is
     l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     l_program constant t_module := g_package_prefix || 'UNINSTALL';
 $end
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
 
@@ -3933,7 +3933,7 @@ $end
     , p_network_link_target => p_network_link_target
     );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -3982,7 +3982,7 @@ $end
         else g_schema_md_object_type_tab -- check all
       end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab)
     is
       l_object_tab t_object_natural_tab;
@@ -4012,7 +4012,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'GET_SCHEMA_OBJECT');
     p_schema_object_filter.print();
 $end
@@ -4059,7 +4059,7 @@ $else
 $end
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab);
 $end
 
@@ -4091,7 +4091,7 @@ $end
       end if;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab);
 $end
 
@@ -4145,7 +4145,7 @@ $end
       end if;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab);
 $end
 
@@ -4195,7 +4195,7 @@ $end
       );
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab);
 $end
 
@@ -4261,7 +4261,7 @@ $end
         );
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab);
 $end
 
@@ -4349,7 +4349,7 @@ $end
       end case;
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab);
 $end
 
@@ -4429,7 +4429,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
       then
         -- This is a not null constraint.
         -- Since search_condition has only one column, any column name is THE column name.
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.print
         ( dbug."info"
         , 'ignoring not null constraint: owner: %s; table: %s; constraint: %s; search_condition: %s'
@@ -4474,7 +4474,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
 $end        
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab);
 $end
 
@@ -4541,7 +4541,7 @@ $end
       );
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab);
 $end
 
@@ -4598,7 +4598,7 @@ $end
         );
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab);
 $end
 
@@ -4630,13 +4630,13 @@ $end
 
     longops_done(l_longops_rec);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(p_schema_object_tab);
 $end
 
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));
     dbug.leave;
 $end
@@ -4645,7 +4645,7 @@ $end
     when others
     then
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -4773,7 +4773,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'GET_MEMBER_DDL');
     p_schema_ddl.print();
 $end
@@ -4847,7 +4847,7 @@ order by
     fetch l_cursor bulk collect into l_member_tab limit g_max_fetch;
     close l_cursor;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'l_member_tab.count: %s', l_member_tab.count);
 $end
 
@@ -4856,7 +4856,7 @@ $end
       <<member_loop>>
       for i_idx in l_member_tab.first .. l_member_tab.last
       loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."info", 'l_member_tab(%s); member#: %s; member_name: %s', i_idx, l_member_tab(i_idx).member#, l_member_tab(i_idx).member_name);
 $end
         case p_schema_ddl.obj.object_type()
@@ -4879,7 +4879,7 @@ $end
 
               l_member_ddl := oracle_tools.t_type_attribute_ddl(l_member_object);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               l_member_ddl.print();
 $end
 
@@ -4888,7 +4888,7 @@ $end
             exception
               when others
               then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 dbug.on_error;
 $end
                 oracle_tools.pkg_ddl_error.reraise_error('attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name);
@@ -4955,7 +4955,7 @@ $end
 
               l_pos := dbms_lob.instr(lob_loc => l_table_ddl_clob, pattern => l_pattern, offset => l_start);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
               dbug.print(dbug."info", 'l_pattern: %s; l_start: %s; l_pos: %s', l_pattern, l_start, l_pos);
 $end
 
@@ -4976,7 +4976,7 @@ $end
 
               l_pos := dbms_lob.instr(lob_loc => l_table_ddl_clob, pattern => l_pattern, offset => l_start);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
               dbug.print(dbug."info", 'l_pattern: %s; l_start: %s; l_pos: %s', l_pattern, l_start, l_pos);
 $end
 
@@ -5020,7 +5020,7 @@ $end
                 raise program_error;
               end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
               l_member_ddl.print();
 $end
 
@@ -5031,7 +5031,7 @@ $end
             exception
               when others
               then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 dbug.on_error;
 $end
                 oracle_tools.pkg_ddl_error.reraise_error('column [' || i_idx || ']: ' || l_member_tab(i_idx).member_name);
@@ -5063,7 +5063,7 @@ order by
       fetch l_cursor bulk collect into l_type_method_tab limit g_max_fetch;
       close l_cursor;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'l_type_method_tab.count: %s', l_type_method_tab.count);
 $end
 
@@ -5089,7 +5089,7 @@ order by
 
         for i_idx in l_type_method_tab.first .. l_type_method_tab.last
         loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print(dbug."info", 'l_type_method_tab(%s); member#: %s; member_name: %s', i_idx, l_type_method_tab(i_idx).member#, l_type_method_tab(i_idx).member_name);
 $end
           begin
@@ -5117,7 +5117,7 @@ $end
 
             l_member_ddl := oracle_tools.t_type_method_ddl(l_type_method_object);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             l_member_ddl.print();
 $end
 
@@ -5128,7 +5128,7 @@ $end
           exception
             when others
             then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
               dbug.on_error;
 $end
               oracle_tools.pkg_ddl_error.reraise_error('attribute [' || i_idx || ']: ' || l_member_tab(i_idx).member_name);
@@ -5139,14 +5139,14 @@ $end
 
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
   exception
     when others
     then
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -5158,7 +5158,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'DO_CHK (1)');
     dbug.print(dbug."input", 'p_object_type: %s; p_value: %s', p_object_type, dbug.cast_to_varchar2(p_value));
 $end
@@ -5185,7 +5185,7 @@ $end
         end;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
   exception
     when others
@@ -5202,14 +5202,14 @@ $end
   is
     l_value boolean;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'DO_CHK (2)');
     dbug.print(dbug."input", 'p_object_type: %s', p_object_type);
 $end
 
     l_value := case when g_chk_tab.exists(p_object_type) and g_chk_tab(p_object_type) = 1 then true else false end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'return: %s', l_value);
     dbug.leave;
 $end
@@ -5223,7 +5223,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (1)');
     dbug.print(dbug."input", 'p_schema_object:');
     p_schema_object.print();
@@ -5273,7 +5273,7 @@ $end
       );
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.leave;
   exception
     when others
@@ -5289,7 +5289,7 @@ $end
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (2)');
 $end
 
@@ -5352,7 +5352,7 @@ $end
       );
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.leave;
   exception
     when others
@@ -5372,7 +5372,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
     l_status all_objects.status%type := null;
 $end  
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (3)');
 $end
 
@@ -5440,7 +5440,7 @@ $end
 
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.leave;
   exception
     when others
@@ -5457,7 +5457,7 @@ $end
   is
     l_error_message varchar2(2000 char) := null;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.enter(g_package_prefix || 'CHK_SCHEMA_OBJECT (4)');
 $end
 
@@ -5512,7 +5512,7 @@ $end
       );
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.leave;
   exception
     when others
@@ -5529,7 +5529,7 @@ $end
   deterministic
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     check_object_type(p_object_type => p_object_type, p_exclude_allowed => false);
 $end    
 
@@ -5581,7 +5581,7 @@ $end
     l_result integer;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.enter(g_package_prefix || 'IS_EXCLUDE_NAME_EXPR');
     dbug.print(dbug."input", 'p_object_type: %s; p_object_name: %s', p_object_type, p_object_name);    
 $end
@@ -5589,7 +5589,7 @@ $end
     get_exclude_name_expr_tab(p_object_type => p_object_type, p_object_name => p_object_name, p_exclude_name_expr_tab => l_exclude_name_expr_tab);
     l_result := sign(l_exclude_name_expr_tab.count); -- when 0 return 0; when > 0 return 1
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.print(dbug."output", 'return: %s', l_result);
     dbug.leave;
 $end
@@ -5818,7 +5818,7 @@ $end
       l_schema_object oracle_tools.t_schema_object;
       l_ref_constraint_object oracle_tools.t_ref_constraint_object;
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.enter(g_package_prefix || l_program || '.INIT');
 $end
 
@@ -5844,7 +5844,7 @@ $end
               raise dup_val_on_index;
             end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             l_schema_object.print();
 $end
 
@@ -5870,7 +5870,7 @@ $end
 
       l_nr_objects_countdown := l_constraint_lookup_tab.count;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
     exception
       when others
@@ -5880,7 +5880,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
     end init;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     procedure chk
     is
     begin
@@ -5934,7 +5934,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print
     ( dbug."input"
@@ -5994,7 +5994,7 @@ $end
       loop
         fetch c_params bulk collect into l_params_tab limit g_max_fetch;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
 $end
         
@@ -6005,7 +6005,7 @@ $end
 
           r_params := l_params_tab(l_params_idx);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print
           ( dbug."debug"
           , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
@@ -6083,7 +6083,7 @@ $end
             exception
               when oracle_tools.pkg_ddl_error.e_object_not_found
               then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 l_object_key := l_object_lookup_tab.first;
                 <<object_loop>>
                 while l_object_key is not null
@@ -6113,11 +6113,11 @@ $end
     -- overall
     longops_done(l_longops_rec);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     chk;
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
@@ -6125,21 +6125,21 @@ $end
   exception
     when no_data_needed
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
       null;
 
     when no_data_found
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
     when others
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -6164,7 +6164,7 @@ $end
     l_network_link all_db_links.db_link%type := null;
     l_error_backtrace varchar2(32767 char) := null;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS');
     dbug.print(dbug."input"
                ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
@@ -6200,7 +6200,7 @@ $end
                 ) t;
       -- PLS-00994: Cursor Variables cannot be declared as part of a package
       g_cursor := dbms_sql.to_cursor_number(l_cursor);  
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
 $end
     else
@@ -6247,14 +6247,14 @@ end;'
         when others
         then
           oracle_tools.api_pkg.dbms_output_flush(l_network_link);
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print(dbug."error", 'error backtrace: %s', l_error_backtrace);
 $end
           raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       end;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -6281,12 +6281,12 @@ $end
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
     -- PLS-00994: Cursor Variables cannot be declared as part of a package
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
 $end
     if g_cursor is null
@@ -6305,13 +6305,13 @@ $end
 
     longops_done(l_longops_rec);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
   exception
     when no_data_found
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
@@ -6483,7 +6483,7 @@ $end
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_units => 'objects');
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print(dbug."input", 'p_schema: %s; p_schema_object_tab.count: %s', p_schema, p_schema_object_tab.count);
     dbug.print(dbug."input", 'p_schema_object_tab(1).id: %s', case when p_schema_object_tab.count > 0 then p_schema_object_tab(1).id end);    
@@ -6503,7 +6503,7 @@ $end
     loop
       -- object depends on object dependency so the latter must be there first
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'object %s depends on object %s', r.obj.id, r.ref_obj.id);
 $end
 
@@ -6526,7 +6526,7 @@ $end
            l_dependent_or_granted_object.base_object$ is not null and
            l_dependent_or_granted_object.base_object$.id != r.ref_obj.id /* no need to add the same entry twice */
         then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print
           ( dbug."info"
           , 'object %s depends on its base object %s'
@@ -6551,12 +6551,12 @@ $end
            See also https://github.com/paulissoft/oracle-tools/issues/47
         */
         begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print(dbug."debug", 'l_object_by_dep_tab(%s): %s', i_idx, l_object_by_dep_tab(i_idx));
 $end
           l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print(dbug."debug", 'l_schema_object.id: %s', l_schema_object.id);
 $end
 
@@ -6566,7 +6566,7 @@ $end
         exception
           when no_data_found
           then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.on_error;
 $end
             null;
@@ -6580,7 +6580,7 @@ $end
     -- 100%
     longops_done(l_longops_rec);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
@@ -6589,19 +6589,19 @@ $end
   exception
     when no_data_needed
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
     when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
     then
       dbug.leave_on_error;
@@ -6626,7 +6626,7 @@ $end
       null;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MIGRATE_SCHEMA_DDL');
 $end
 
@@ -6653,14 +6653,14 @@ $end
 
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
   exception
     when others
     then
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -6710,7 +6710,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'SKIP_WS_LINES_AROUND');
     dbug.print(dbug."input", 'p_text_tab.count: %s; p_text_tab.first: %s; p_text_tab.last: %s', p_text_tab.count, p_text_tab.first, p_text_tab.last);
 $end
@@ -6721,7 +6721,7 @@ $end
     loop
       if p_first <= p_last
       then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         dbug.print(dbug."info", 'p_text_tab(%s): "%s"', p_first, case when p_text_tab.exists(p_first) then p_text_tab(p_first) else '<DOES NOT EXIST>' end);
 $end
         if p_text_tab.exists(p_first) and trim(p_text_tab(p_first)) is null
@@ -6769,7 +6769,7 @@ $end
       end if;
     end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'p_text_tab.count: %s; p_first: %s; p_last: %s', p_text_tab.count, p_first, p_last);
     dbug.leave;
   exception
@@ -6817,7 +6817,7 @@ $end
         return null;
     end;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'GET_SOURCE');
     dbug.print(dbug."input", 'p_owner: %s; p_object_type: %s; p_object_name: %s', p_owner, p_object_type, p_object_name);
 $end
@@ -6835,7 +6835,7 @@ $end
 
     skip_ws_lines_around(p_line_tab, p_first, p_last);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."output", 'p_line_tab.count: %s; p_first: %s; p_last: %s', p_line_tab.count, p_first, p_last);
     dbug.leave;
   exception
@@ -6862,7 +6862,7 @@ $end
     l_line2 varchar2(32767 char);
     l_result boolean := true;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'EQ');
     dbug.print(dbug."input", 'p_line1_tab.count: %s; p_first1: %s; p_last1: %s', p_line1_tab.count, p_first1, p_last1);
     dbug.print(dbug."input", 'p_line2_tab.count: %s; p_first2: %s; p_last2: %s', p_line2_tab.count, p_first2, p_last2);
@@ -6912,7 +6912,7 @@ $end
       else
         -- one line does not exist or the lines are not equal
         l_result := false;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print
         ( dbug."warning"
         , 'difference found:'
@@ -6935,14 +6935,14 @@ $end
       l_idx2 := l_idx2 + 1;
     end loop line_loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."output", 'return: %s', l_result);
     dbug.leave;
 $end
 
    return l_result;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   exception
     when others
     then
@@ -6957,7 +6957,7 @@ $end
     l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
     l_program constant t_module := 'CLEANUP_EMPTY';
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
 
@@ -7000,14 +7000,14 @@ $end
 
     execute_ddl(l_drop_schema_ddl_tab, l_network_link_target);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
   exception
     when others
     then
       null;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
   end cleanup_empty;
@@ -7184,7 +7184,7 @@ $end
     )
     is
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.enter(g_package_prefix || l_program || '.CHK');
       dbug.print
       ( dbug."input"
@@ -7223,7 +7223,7 @@ $end
       when others
       then
         if c_display_ddl_schema%isopen then close c_display_ddl_schema; end if;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.leave;
 $end        
         ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
@@ -7258,7 +7258,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
@@ -7492,7 +7492,7 @@ $end
         l_longops_rec := longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
       end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print
       ( dbug."info"
       , 'r.owner: %s; r.object_type: %s; r.object_name: %s'
@@ -7545,7 +7545,7 @@ $end
           ,      u.ddl#()
         )
         loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print
           ( dbug."info"
           , 'r_text.object_schema: %s; r_text.object_type: %s; r_text.object_name: %s'
@@ -7607,14 +7607,14 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
   exception
     when others
     then
       cleanup;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise;
@@ -7680,7 +7680,7 @@ $end
     )
     is
     begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.enter(g_package_prefix || l_program || '.CHK');
       dbug.print
       ( dbug."input"
@@ -7720,7 +7720,7 @@ $end
       when others
       then
         if c_display_ddl_schema_diff%isopen then close c_display_ddl_schema_diff; end if;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.leave;
 $end        
         ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
@@ -7736,7 +7736,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
@@ -7894,7 +7894,7 @@ $end
         l_longops_rec := longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
       end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print
       ( dbug."info"
       , 'r.owner: %s; r.object_type: %s; r.object_name: %s'
@@ -7912,7 +7912,7 @@ $end
           dbms_lob.trim(l_clob1, 0);
         end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."info", 'try %s; retrieving l_line1_tab', i_try);
 $end
 
@@ -7947,7 +7947,7 @@ $end
           ,      u.ddl#()
         )
         loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           dbug.print
           ( dbug."info"
           , 'r_text.object_schema: %s; r_text.object_type: %s; r_text.object_name: %s'
@@ -7989,7 +7989,7 @@ $end
           skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
         end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."info", 'try %s; retrieving l_line2_tab', i_try);
 $end
 
@@ -8013,7 +8013,7 @@ $end
         then
           for i_line_idx in l_first2 .. l_last2
           loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.print
             ( dbug."info"
             , 'line2: %s'
@@ -8037,7 +8037,7 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -8065,7 +8065,7 @@ $end
 
     l_program constant t_module := 'UT_DICT2METADATA_OBJECT_TYPE';
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
@@ -8102,7 +8102,7 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
   end ut_dict2metadata_object_type;
@@ -8114,7 +8114,7 @@ $end
     l_program constant t_module := 'UT_IS_A_REPEATABLE';
     l_object_type_tab oracle_tools.t_text_tab;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
@@ -8169,7 +8169,7 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -8196,7 +8196,7 @@ $end
 
     l_program constant t_module := 'UT_GET_SCHEMA_OBJECT';
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
@@ -8329,7 +8329,7 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -8392,7 +8392,7 @@ $end
       null; -- special beforetest annotation will take care of cleaning EMPTY
     end cleanup;
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
 
@@ -8423,7 +8423,7 @@ $end
 
       end case;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       dbug.print(dbug."info", 'step 1');
 $end
 
@@ -8441,7 +8441,7 @@ $end
 
       ut.expect(l_count, l_program || '#cleanup' || '#' || i_try).to_equal(0);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       if l_count != 0
       then
         dbug.print(dbug."error", 'schema %s should not contain user created objects', g_empty);
@@ -8464,7 +8464,7 @@ $end
       end if;
 $end          
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       dbug.print(dbug."info", 'step 2');
 $end
 
@@ -8477,7 +8477,7 @@ $end
 
       ut.expect(l_count, l_program || '#no public synonyms' || '#' || i_try).to_equal(0);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       dbug.print(dbug."info", 'step 3');
 $end
 
@@ -8492,7 +8492,7 @@ $end
       , p_network_link_target => l_network_link_target
       );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       dbug.print(dbug."info", 'step 4');
 $end
       /* step 4 */
@@ -8510,7 +8510,7 @@ $end
       fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab limit g_max_fetch;
       close c_display_ddl_schema_diff;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
       dbug.print(dbug."info", 'step 5');
 $end
 
@@ -8526,7 +8526,7 @@ $end
 
       ut.expect(l_diff_schema_ddl_tab.count, l_program || '#differences' || '#' || i_try).to_equal(0);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       if l_diff_schema_ddl_tab.count > 0
       then
         dbug.print(dbug."error", 'schema DDL differences found');
@@ -8544,7 +8544,7 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -8570,7 +8570,7 @@ $end
 
     l_program constant t_module := g_package_prefix || 'UT_SORT_OBJECTS_BY_DEPS';
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
 
@@ -8665,7 +8665,7 @@ $end
 
     commit;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -8764,7 +8764,7 @@ $end
 
     l_program constant t_module := g_package_prefix || 'UT_GET_SCHEMA_OBJECT_FILTER';
   begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
 
@@ -8793,7 +8793,7 @@ $end
 
     for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
     loop
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'id: %s', l_schema_object_tab(i_idx).id());
 $end
 
@@ -8834,7 +8834,7 @@ $end
       ut.expect(l_actual, l_schema_object_tab(i_idx).id()).to_equal(l_expected);
     end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
