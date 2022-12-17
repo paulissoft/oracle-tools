@@ -5956,126 +5956,160 @@ $end
 
     l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => l_object_lookup_tab.count);
 
-    open c_params(p_schema_object_filter.schema(), l_use_schema_export, nvl(p_schema_object_tab, l_schema_object_tab));
-
-    <<params_loop>>
+    -- GJP 2022-12-17 Note SCHEMA_EXPORT.
+    -- Under some circumstances just a SCHEMA_EXPORT does not do the job,
+    -- for instance when named not null constraints do not show up as
+    -- ALTER TABLE commands although we have asked DBMS_METADATA to do so.
+    -- In that case we will try the other variant as well as long
+    -- as there are objects to retrieve DDL for (l_nr_objects_countdown > 0).
+    -- We may as well generalise that: if you start with use_schema_export
+    -- being 1, you may try use_schema_export 0 later. And vice versa.
+    -- So just a loop of two values and we quit the loop as soon as the
+    -- countdown is 0.
+    <<outer_loop>>
+    for i_use_schema_export in l_use_schema_export .. l_use_schema_export+1
     loop
-      fetch c_params bulk collect into l_params_tab limit g_max_fetch;
+      if i_use_schema_export != l_use_schema_export
+      then
+        -- apparently we are not done: construct a schema object list with just the
+        -- missing objects
+        l_schema_object_tab.delete;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
-$end
-      
-      l_params_idx := l_params_tab.first;
-      <<param_loop>>
-      loop
-        exit param_loop when l_params_idx is null;
-
-        r_params := l_params_tab(l_params_idx);
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print
-        ( dbug."debug"
-        , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
-        , r_params.object_type
-        , r_params.object_schema
-        , r_params.base_object_schema
-        , r_params.object_name_tab.count
-        , r_params.base_object_name_tab.count
-        );
-        dbug.print
-        ( dbug."debug"
-        , 'r_params.nr_objects: %s'
-        , r_params.nr_objects
-        );
-$end
-
-        <<fetch_loop>>
-        for r in
-        ( select  value(t) as obj
-          from    table
-                  ( oracle_tools.pkg_ddl_util.fetch_ddl
-                    ( p_object_type => r_params.object_type
-                    , p_object_schema => r_params.object_schema
-                    , p_object_name_tab => r_params.object_name_tab
-                    , p_base_object_schema => r_params.base_object_schema
-                    , p_base_object_name_tab => r_params.base_object_name_tab
-                    , p_transform_param_list => p_transform_param_list
-                    )
-                  ) t
-        )
+        -- since we are here it means that there are more objects to catch
+        l_object_key := l_object_lookup_tab.first;
+        while l_object_key is not null
         loop
-          begin
-            parse_object
-            ( p_schema_object_filter => p_schema_object_filter
-            , p_constraint_lookup_tab => l_constraint_lookup_tab
-            , p_object_lookup_tab => l_object_lookup_tab
-            , p_ku$_ddl => r.obj
-            , p_object_key => l_object_key
-            );
+          if not(l_object_lookup_tab(l_object_key).ready)
+          then
+            l_schema_object_tab.extend(1);
+            l_schema_object_tab(l_schema_object_tab.last) := l_object_lookup_tab(l_object_key).schema_ddl.obj;
+          end if;
+          l_object_key := l_object_lookup_tab.next(l_object_key);
+        end loop;
+      end if;
 
-            if l_object_key is not null
-            then
-              -- some checks
-              if not(l_object_lookup_tab.exists(l_object_key))
-              then
-                raise_application_error
-                ( oracle_tools.pkg_ddl_error.c_object_not_found
-                , 'Can not find object with key "' || l_object_key || '"'
-                );
-              end if;
+      open c_params(p_schema_object_filter.schema(), l_use_schema_export, nvl(p_schema_object_tab, l_schema_object_tab));
 
-              if not(l_object_lookup_tab(l_object_key).ready)
-              then
-                pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
-                l_object_lookup_tab(l_object_key).ready := true;
-                begin
-                  l_nr_objects_countdown := l_nr_objects_countdown - 1;
+      <<params_loop>>
+      loop
+        fetch c_params bulk collect into l_params_tab limit g_max_fetch;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                  dbug.print(dbug."info", '# objects to go: %s', l_nr_objects_countdown);
-$end         
-                exception
-                  when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
-                  then
-                  -- every object in l_object_lookup_tab is ready
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                    dbug.print(dbug."info", 'all schema DDL fetched');
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
 $end
-                    exit params_loop;
-                end;
+        
+        l_params_idx := l_params_tab.first;
+        <<param_loop>>
+        loop
+          exit param_loop when l_params_idx is null;
+
+          r_params := l_params_tab(l_params_idx);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print
+          ( dbug."debug"
+          , 'r_params.object_type: %s; r_params.object_schema: %s; r_params.base_object_schema: %s: r_params.object_name_tab.count: %s; r_params.base_object_name_tab.count: %s'
+          , r_params.object_type
+          , r_params.object_schema
+          , r_params.base_object_schema
+          , r_params.object_name_tab.count
+          , r_params.base_object_name_tab.count
+          );
+          dbug.print
+          ( dbug."debug"
+          , 'r_params.nr_objects: %s'
+          , r_params.nr_objects
+          );
+$end
+
+          <<fetch_loop>>
+          for r in
+          ( select  value(t) as obj
+            from    table
+                    ( oracle_tools.pkg_ddl_util.fetch_ddl
+                      ( p_object_type => r_params.object_type
+                      , p_object_schema => r_params.object_schema
+                      , p_object_name_tab => r_params.object_name_tab
+                      , p_base_object_schema => r_params.base_object_schema
+                      , p_base_object_name_tab => r_params.base_object_name_tab
+                      , p_transform_param_list => p_transform_param_list
+                      )
+                    ) t
+          )
+          loop
+            begin
+              parse_object
+              ( p_schema_object_filter => p_schema_object_filter
+              , p_constraint_lookup_tab => l_constraint_lookup_tab
+              , p_object_lookup_tab => l_object_lookup_tab
+              , p_ku$_ddl => r.obj
+              , p_object_key => l_object_key
+              );
+
+              if l_object_key is not null
+              then
+                -- some checks
+                if not(l_object_lookup_tab.exists(l_object_key))
+                then
+                  raise_application_error
+                  ( oracle_tools.pkg_ddl_error.c_object_not_found
+                  , 'Can not find object with key "' || l_object_key || '"'
+                  );
+                end if;
+
+                if not(l_object_lookup_tab(l_object_key).ready)
+                then
+                  pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
+                  l_object_lookup_tab(l_object_key).ready := true;
+                  begin
+                    l_nr_objects_countdown := l_nr_objects_countdown - 1;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                    dbug.print(dbug."info", '# objects to go: %s', l_nr_objects_countdown);
+$end         
+                  exception
+                    when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
+                    then
+                    -- every object in l_object_lookup_tab is ready
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                      dbug.print(dbug."info", 'all schema DDL fetched');
+$end
+                      exit outer_loop;
+                  end;
+                end if;
               end if;
-            end if;
 
-            longops_show(l_longops_rec, 0);
-          exception
-            when oracle_tools.pkg_ddl_error.e_object_not_found
-            then
-  $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-              l_object_key := l_object_lookup_tab.first;
-              <<object_loop>>
-              while l_object_key is not null
-              loop
-                dbug.print
-                ( dbug."debug"
-                , 'Object key: %s'
-                , l_object_key
-                );
-                l_object_key := l_object_lookup_tab.next(l_object_key);
-              end loop object_loop;
-  $end        
-              raise;
-          end;
-        end loop fetch_loop;
+              longops_show(l_longops_rec, 0);
+            exception
+              when oracle_tools.pkg_ddl_error.e_object_not_found
+              then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                l_object_key := l_object_lookup_tab.first;
+                <<object_loop>>
+                while l_object_key is not null
+                loop
+                  dbug.print
+                  ( dbug."debug"
+                  , 'Object key: %s'
+                  , l_object_key
+                  );
+                  l_object_key := l_object_lookup_tab.next(l_object_key);
+                end loop object_loop;
+$end        
+                raise;
+            end;
+          end loop fetch_loop;
 
-        l_params_idx := l_params_tab.next(l_params_idx);
-      end loop param_loop;
+          l_params_idx := l_params_tab.next(l_params_idx);
+        end loop param_loop;
+        
+        exit params_loop when l_params_tab.count < g_max_fetch; -- next fetch will return 0
+      end loop params_loop;
       
-      exit params_loop when l_params_tab.count < g_max_fetch; -- next fetch will return 0
-    end loop params_loop;
-    
-    close c_params;
+      close c_params;
 
+    end loop outer_loop;
+    
     -- overall
     longops_done(l_longops_rec);
 
