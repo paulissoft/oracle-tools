@@ -6493,7 +6493,7 @@ $end
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_units => 'objects');
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print(dbug."input", 'p_schema: %s; p_schema_object_tab.count: %s', p_schema, p_schema_object_tab.count);
     dbug.print(dbug."input", 'p_schema_object_tab(1).id: %s', case when p_schema_object_tab.count > 0 then p_schema_object_tab(1).id end);    
@@ -6513,7 +6513,7 @@ $end
     loop
       -- object depends on object dependency so the latter must be there first
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.print(dbug."info", 'object %s depends on object %s', r.obj.id, r.ref_obj.id);
 $end
 
@@ -6536,7 +6536,7 @@ $end
            l_dependent_or_granted_object.base_object$ is not null and
            l_dependent_or_granted_object.base_object$.id != r.ref_obj.id /* no need to add the same entry twice */
         then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print
           ( dbug."info"
           , 'object %s depends on its base object %s'
@@ -6561,12 +6561,12 @@ $end
            See also https://github.com/paulissoft/oracle-tools/issues/47
         */
         begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print(dbug."debug", 'l_object_by_dep_tab(%s): %s', i_idx, l_object_by_dep_tab(i_idx));
 $end
           l_schema_object := l_schema_object_lookup_tab(l_object_by_dep_tab(i_idx));
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print(dbug."debug", 'l_schema_object.id: %s', l_schema_object.id);
 $end
 
@@ -6576,7 +6576,7 @@ $end
         exception
           when no_data_found
           then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
             dbug.on_error;
 $end
             null;
@@ -6590,7 +6590,7 @@ $end
     -- 100%
     longops_done(l_longops_rec);
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
 $end
 
@@ -6599,19 +6599,19 @@ $end
   exception
     when no_data_needed
     then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
     when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
     then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
 $end
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     when others
     then
       dbug.leave_on_error;
