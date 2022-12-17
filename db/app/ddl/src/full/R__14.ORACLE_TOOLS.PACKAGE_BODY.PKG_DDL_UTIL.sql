@@ -5699,11 +5699,10 @@ $end
         else 1 -- but maybe 0
       end;
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
-
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_object_key t_object;
-    l_nr_objects_countdown positiven := 1; -- any value > 0 will do
+    l_nr_objects_countdown positiven := 1; -- any value > 0 will do, see init()
 
     cursor c_params
     ( b_schema in varchar2
@@ -5972,32 +5971,18 @@ $end
     <<outer_loop>>
     for i_use_schema_export in l_use_schema_export .. l_use_schema_export+1
     loop
-      if i_use_schema_export != l_use_schema_export
+      -- sanity check
+      if mod(i_use_schema_export, 2) = 0 and l_schema_object_tab is null and p_schema_object_tab is null
       then
-        -- apparently we are not done: construct a schema object list with just the
-        -- missing objects
-        l_schema_object_tab.delete;
-
-        -- since we are here it means that there are more objects to catch
-        l_object_key := l_object_lookup_tab.first;
-        while l_object_key is not null
-        loop
-          if not(l_object_lookup_tab(l_object_key).ready)
-          then
-            l_schema_object_tab.extend(1);
-            l_schema_object_tab(l_schema_object_tab.last) := l_object_lookup_tab(l_object_key).schema_ddl.obj;
-          end if;
-          l_object_key := l_object_lookup_tab.next(l_object_key);
-        end loop;
+        raise program_error;
       end if;
-      
+          
       open c_params
       ( p_schema_object_filter.schema()
       , mod(i_use_schema_export, 2) -- so it will always be 0 or 1
-      , case
-          when i_use_schema_export = l_use_schema_export and p_schema_object_tab is not null
-          then p_schema_object_tab
-          else l_schema_object_tab
+      , case mod(i_use_schema_export, 2)
+          when 0 then nvl(l_schema_object_tab, p_schema_object_tab) -- yes, first l_schema_object_tab, see end of params_loop
+          else null -- not relevant for SCHEMA_EXPORT
         end
       );
 
@@ -6119,6 +6104,41 @@ $end
       
       close c_params;
 
+      -- Apparently we are not done.
+      -- 1) first iteration (i_use_schema_export = l_use_schema_export) with SCHEMA_EXPORT:
+      --    construct a schema object list with just the missing objects and
+      --    execute the second iteration
+      -- 2) second iteration (i_use_schema_export != l_use_schema_export):
+      --    just output the objects with missing DDL (better than to throw an exception)
+      
+      if i_use_schema_export = l_use_schema_export
+      then
+        if l_use_schema_export = 1 -- case 1, next iteration uses l_schema_object_tab
+        then
+          l_schema_object_tab := oracle_tools.t_schema_object_tab();
+        else
+          l_schema_object_tab := null;
+        end if;  
+      end if;
+        
+      l_object_key := l_object_lookup_tab.first;
+      while l_object_key is not null
+      loop
+        if not(l_object_lookup_tab(l_object_key).ready)
+        then
+          if i_use_schema_export != l_use_schema_export
+          then
+            -- case 2
+            pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
+          elsif l_use_schema_export = 1
+          then
+            -- case 1
+            l_schema_object_tab.extend(1);
+            l_schema_object_tab(l_schema_object_tab.last) := l_object_lookup_tab(l_object_key).schema_ddl.obj;
+          end if;          
+        end if;
+        l_object_key := l_object_lookup_tab.next(l_object_key);
+      end loop;
     end loop outer_loop;
     
     -- overall
