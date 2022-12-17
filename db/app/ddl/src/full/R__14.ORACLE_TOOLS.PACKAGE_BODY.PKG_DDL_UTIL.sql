@@ -5835,6 +5835,9 @@ $end
 
             if not l_object_lookup_tab.exists(l_object_key)
             then
+              -- Here we initialise l_object_lookup_tab(l_object_key).schema_ddl.
+              -- l_object_lookup_tab(l_object_key).count will be 0 (default).
+              -- l_object_lookup_tab(l_object_key).ready will be false (default).
               oracle_tools.t_schema_ddl.create_schema_ddl
               ( p_obj => l_schema_object
               , p_ddl_tab => oracle_tools.t_ddl_tab()
@@ -5987,8 +5990,16 @@ $end
           l_object_key := l_object_lookup_tab.next(l_object_key);
         end loop;
       end if;
-
-      open c_params(p_schema_object_filter.schema(), l_use_schema_export, nvl(p_schema_object_tab, l_schema_object_tab));
+      
+      open c_params
+      ( p_schema_object_filter.schema()
+      , mod(i_use_schema_export, 2) -- so it will always be 0 or 1
+      , case
+          when i_use_schema_export = l_use_schema_export and p_schema_object_tab is not null
+          then p_schema_object_tab
+          else l_schema_object_tab
+        end
+      );
 
       <<params_loop>>
       loop
