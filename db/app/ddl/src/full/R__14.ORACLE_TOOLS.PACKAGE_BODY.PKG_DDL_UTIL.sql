@@ -5870,7 +5870,14 @@ $end
         end loop;
       end if;
 
-      l_nr_objects_countdown := l_constraint_lookup_tab.count;
+      begin
+        l_nr_objects_countdown := l_object_lookup_tab.count;
+      exception
+        when value_error
+        then
+          -- no objects to lookup
+          raise no_data_found;
+      end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
@@ -6152,17 +6159,21 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
+    cleanup;
+
     return; -- essential for a pipelined function
   exception
     when no_data_needed
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
-      null;
+      -- no need to reraise
 
     when no_data_found
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -6170,6 +6181,7 @@ $end
 
     when others
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
