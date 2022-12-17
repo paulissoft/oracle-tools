@@ -5889,51 +5889,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
     end init;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    procedure chk
-    is
-    begin
-      dbug.enter(g_package_prefix || l_program || '.CHK');
-      l_object_key := l_object_lookup_tab.first;
-      while l_object_key is not null
-      loop
-        dbug.print
-        ( case sign(l_object_lookup_tab(l_object_key).count)
-            when 1 -- found by get_schema_object and fetch_ddl
-            then dbug."info"
-            else dbug."warning"
-          end
-        , 'l_object_lookup_tab(%s); count: %s; ready: %s'
-        , l_object_key
-        , l_object_lookup_tab(l_object_key).count
-        , dbug.cast_to_varchar2(l_object_lookup_tab(l_object_key).ready)
-        );
-        if l_object_lookup_tab(l_object_key).count >= 1
-        then
-          null;
-        else
-          oracle_tools.pkg_ddl_error.raise_error
-          ( oracle_tools.pkg_ddl_error.c_no_ddl_retrieved
-          , utl_lms.format_message
-            ( 'No DDL retrieved.'
-            , $$PLSQL_UNIT_OWNER
-            , $$PLSQL_UNIT
-            )
-          , l_object_key
-          , 'object key'
-          );
-        end if;
-        l_object_key := l_object_lookup_tab.next(l_object_key);
-      end loop;
-      dbug.leave;
-    exception
-      when others
-      then
-        dbug.leave_on_error;
-        raise;
-    end chk;
-$end
-
     procedure cleanup
     is
     begin
@@ -6126,6 +6081,7 @@ $end
       --    execute the second iteration
       -- 2) second iteration (i_use_schema_export != l_use_schema_export):
       --    just output the objects with missing DDL (better than to throw an exception)
+      --    and add a comment (-- No DDL retrieved.)
       
       if i_use_schema_export = l_use_schema_export
       then
@@ -6145,6 +6101,12 @@ $end
           if i_use_schema_export != l_use_schema_export
           then
             -- case 2
+            -- add comment otherwise the schema DDL table is empty and will this object never be displayed
+            l_object_lookup_tab(l_object_key).schema_ddl.add_ddl
+            ( p_verb => '--'
+            , p_text => '-- No DDL retrieved.'
+            );
+
             pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
           elsif l_use_schema_export = 1
           then
@@ -6159,10 +6121,6 @@ $end
     
     -- overall
     longops_done(l_longops_rec);
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    chk;
-$end
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
