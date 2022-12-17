@@ -5691,7 +5691,7 @@ $end
     -- https://github.com/paulissoft/oracle-tools/issues/98
     -- Solve that by adding the individual objects as well but quitting as soon as possible.
 
-    l_use_schema_export constant pls_integer := 
+    l_use_schema_export constant t_numeric_boolean_nn := 
       case
         when p_schema_object_filter.object_type() is not null or
              p_schema_object_filter.object_names_include() = 1
@@ -5703,7 +5703,7 @@ $end
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_object_key t_object;
-    l_nr_objects_ready pls_integer := 0;
+    l_nr_objects_countdown positiven := 1; -- any value > 0 will do
 
     cursor c_params
     ( b_schema in varchar2
@@ -5727,9 +5727,8 @@ $end
                   ,       null as privilege -- to get the count right
                   ,       null as grantable -- to get the count right
                   from    dual
-                  where   b_use_schema_export = 1
+                  where   b_use_schema_export != 0
                   union all
-                  -- these parameters always as a last resort
                   select  t.object_type()
                   ,       case
                             when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
@@ -5760,6 +5759,7 @@ $end
                   ,       t.privilege()
                   ,       t.grantable()
                   from    table(b_schema_object_tab) t
+                  where   b_use_schema_export = 0
                 )
                 select  t.object_type
                 ,       t.object_schema
@@ -5867,6 +5867,9 @@ $end
           end;  
         end loop;
       end if;
+
+      l_nr_objects_countdown := l_constraint_lookup_tab.count;
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
     exception
@@ -6017,20 +6020,21 @@ $end
               then
                 pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
                 l_object_lookup_tab(l_object_key).ready := true;
-                l_nr_objects_ready := l_nr_objects_ready + 1;
+                begin
+                  l_nr_objects_countdown := l_nr_objects_countdown - 1;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                dbug.print(dbug."info", '# objects ready: %s (out of %s)', l_nr_objects_ready, l_object_lookup_tab.count);
-$end
-
-                if l_nr_objects_ready = l_object_lookup_tab.count
-                then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                  dbug.print(dbug."info", '# objects to go: %s', l_nr_objects_countdown);
+$end         
+                exception
+                  when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
+                  then
                   -- every object in l_object_lookup_tab is ready
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                  dbug.print(dbug."info", 'all schema DDL fetched');
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                    dbug.print(dbug."info", 'all schema DDL fetched');
 $end
-                  exit params_loop;
-                end if;
+                    exit params_loop;
+                end;
               end if;
             end if;
 
