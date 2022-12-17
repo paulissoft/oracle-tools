@@ -5978,6 +5978,15 @@ $end
     <<outer_loop>>
     for i_use_schema_export in l_use_schema_export .. l_use_schema_export+1
     loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print
+      ( dbug."info"
+      , 'i_use_schema_export: %s; l_use_schema_export: %s'
+      , i_use_schema_export
+      , l_use_schema_export
+      );
+$end
+
       -- sanity check
       if mod(i_use_schema_export, 2) = 0 and l_schema_object_tab is null and p_schema_object_tab is null
       then
