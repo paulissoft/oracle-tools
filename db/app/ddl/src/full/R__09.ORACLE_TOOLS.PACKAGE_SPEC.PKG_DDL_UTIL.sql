@@ -456,6 +456,17 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   return oracle_tools.t_text_tab
   deterministic;
 
+  procedure check_schema
+  ( p_schema in t_schema
+  , p_network_link in t_network_link
+  , p_description in varchar2 default 'Schema'
+  );
+  
+  procedure check_numeric_boolean
+  ( p_numeric_boolean in t_numeric_boolean
+  , p_description in varchar2 
+  );
+
 $if oracle_tools.cfg_pkg.c_testing $then
 
   -- test functions
