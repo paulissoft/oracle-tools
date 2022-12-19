@@ -1,13 +1,9 @@
 CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as object
 ( schema$ varchar2(30 char)
-, object_type$ varchar2(30 char)
-, object_names$ varchar2(4000 char)
-, object_names_include$ integer
 , grantor_is_schema$ integer
-, schema_object_info_include$ integer
--- set in constructor
-, object_name_tab$ oracle_tools.t_text_tab
-, schema_object_info_tab$ oracle_tools.t_text_tab
+, objects_tab$ oracle_tools.t_text_tab
+, objects_include$ integer
+, objects_cmp_tab$ oracle_tools.t_text_tab
 , constructor function t_schema_object_filter
   ( self in out nocopy oracle_tools.t_schema_object_filter
   , p_schema in varchar2 default user
@@ -15,18 +11,12 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
   , p_object_names in varchar2 default null
   , p_object_names_include in integer default null
   , p_grantor_is_schema in integer default 0
-  , p_schema_object_info in clob default null
-  , p_schema_object_info_include in integer default null
+  , p_objects in clob default null
+  , p_objects_include in integer default null
   )
   return self as result
 , member function schema return varchar2 deterministic
-, member function object_type return varchar2 deterministic
-, member function object_names return varchar2 deterministic
-, member function object_names_include return integer deterministic
 , member function grantor_is_schema return integer deterministic
-, member function schema_object_info_include return integer deterministic
-, member function object_name_tab return oracle_tools.t_text_tab deterministic
-, member function schema_object_info_tab return oracle_tools.t_text_tab deterministic
 , member procedure print
   ( self in oracle_tools.t_schema_object_filter
   )
@@ -43,8 +33,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
    * <li>A schema base object where is_exclude_name_expr() = 1: return 0</li>
    * <li>A schema object where is_exclude_name_expr() = 1: return 0</li>
    * <li>If metadata object type is not member of p_object_types_to_check: return 1</li>
-   * <li>When schema_object_info_include$ is null and object_type$ is empty or equal to the metadata (base) object type and object_names_include$ is null or ((base) object name part of object_names$) = (object_names_include$): return 1</li>
-   * <li>When schema_object_info_include$ is NOT null and (schema object id part of schema_object_info_tab$) = (schema_object_info_include$): return 1</li>
+   * <li>When objects_include$ is null and object_type$ is empty or equal to the metadata (base) object type and object_names_include$ is null or ((base) object name part of object_names$) = (object_names_include$): return 1</li>
+   * <li>When objects_include$ is NOT null and (schema object id part of objects_tab$) = (objects_include$): return 1</li>
    * <li>Else: return 0</li>
    * </ol>
    *
