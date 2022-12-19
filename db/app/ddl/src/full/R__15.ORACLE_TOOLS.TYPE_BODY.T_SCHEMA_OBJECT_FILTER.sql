@@ -128,10 +128,10 @@ $end
     p_object_tab := l_empty_tab;
   end add_items;  
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CONSTRUCTOR');
   dbug.print
-  ( dbug."info"
+  ( dbug."input"
   , 'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_grantor_is_schema: %s'
   , p_schema
   , p_object_type
@@ -140,7 +140,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   , p_grantor_is_schema
   );
   dbug.print
-  ( dbug."info"
+  ( dbug."input"
   , 'p_objects: %s; p_objects_include: %s'
   , oracle_tools.pkg_str_util.dbms_lob_substr(p_objects, 100)
   , p_objects_include
@@ -225,12 +225,41 @@ $end
     self.objects_cmp_tab$ := null;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  self.print;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print
+  ( dbug."output"
+  , 'schema$: %s; grantor_is_schema$: %s; objects_tab$.count: %s; objects_include$: %s'
+  , self.schema$
+  , self.grantor_is_schema$
+  , cardinality(self.objects_tab$)
+  , self.objects_include$
+  );
+  if cardinality(self.objects_tab$) > 0
+  then
+    for i_idx in self.objects_tab$.first .. self.objects_tab$.last
+    loop
+      dbug.print
+      ( dbug."output"
+      , '[%s] objects_tab$ element: %s; objects_cmp_tab$ element: "%s"'
+      , i_idx
+      , self.objects_tab$(i_idx)
+      , self.objects_cmp_tab$(i_idx)
+      );
+    end loop;
+  end if;
+
   dbug.leave;
 $end
 
   return; -- essential
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end  
 end;
 
 member function schema
@@ -254,11 +283,11 @@ member procedure print
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   dbug.print
   ( dbug."info"
-  , 'schema: %s; grantor_is_schema: %s; objects_tab.count: %s; objects_include: %s'
+  , 'schema$: %s; grantor_is_schema$: %s; objects_tab$.count: %s; objects_include$: %s'
   , self.schema$
   , self.grantor_is_schema$
   , cardinality(self.objects_tab$)
@@ -268,7 +297,13 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   then
     for i_idx in self.objects_tab$.first .. self.objects_tab$.last
     loop
-      dbug.print(dbug."info", 'objects_tab(%s): %s; cmp: "%s"', self.objects_tab$(i_idx), self.objects_cmp_tab$(i_idx));
+      dbug.print
+      ( dbug."info"
+      , '[%s] objects_tab$ element: %s; objects_cmp_tab$ element: "%s"'
+      , i_idx
+      , self.objects_tab$(i_idx)
+      , self.objects_cmp_tab$(i_idx)
+      );
     end loop;
   end if;
   dbug.leave;
@@ -291,7 +326,7 @@ is
   l_base_object_name oracle_tools.pkg_ddl_util.t_object_name := null;
   l_result integer := 0;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
   dbug.print
   ( dbug."input"
@@ -316,7 +351,7 @@ $end
     end if;
   end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print
   ( dbug."info"
   , 'l_metadata_object_type: %s; l_object_name: %s; l_metadata_base_object_type: %s; l_base_object_name: %s'
@@ -357,8 +392,8 @@ $end
             when '=' then l_result := case when p_schema_object_id = self.objects_tab$(i_idx) then 1 else 0 end;
             when '~' then l_result := case when p_schema_object_id like self.objects_tab$(i_idx) escape '\' then 1 else 0 end;
           end case;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-          dbug.print(dbug."info", '[%s] %s %s %s: %s', i_idx, p_schema_object_id, self.objects_cmp_tab$(i_idx), self.objects_tab$(i_idx), l_result);
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+          dbug.print(dbug."info", '[%s] %s "%s" %s: %s', i_idx, p_schema_object_id, self.objects_cmp_tab$(i_idx), self.objects_tab$(i_idx), l_result);
 $end
           exit when l_result != 0;
         end loop;
@@ -375,7 +410,7 @@ $end
       l_result := 0;
   end case;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_result);
   dbug.leave;
 $end
