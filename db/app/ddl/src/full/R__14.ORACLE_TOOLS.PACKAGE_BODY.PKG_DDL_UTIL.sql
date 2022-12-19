@@ -3269,8 +3269,8 @@ $end
   , p_network_link_target in t_network_link
   , p_skip_repeatables in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_object_names in clob
-  , p_object_names_include in t_numeric_boolean
+  , p_objects in clob
+  , p_objects_include in t_numeric_boolean
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined
@@ -3773,8 +3773,8 @@ $end
   , p_schema_target in t_schema_nn
   , p_network_link_source in t_network_link
   , p_network_link_target in t_network_link
-  , p_object_names in clob
-  , p_object_names_include in t_numeric_boolean
+  , p_objects in clob
+  , p_objects_include in t_numeric_boolean
   )
   is
     l_diff_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
@@ -3832,8 +3832,8 @@ $end
   , p_object_names_include in t_numeric_boolean
   , p_schema_target in t_schema_nn
   , p_network_link_target in t_network_link
-  , p_object_names in clob
-  , p_object_names_include in t_numeric_boolean
+  , p_objects in clob
+  , p_objects_include in t_numeric_boolean
   )
   is
     l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
@@ -6083,8 +6083,8 @@ $end
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_object_names in clob
-  , p_object_names_include in t_numeric_boolean
+  , p_objects in clob
+  , p_objects_include in t_numeric_boolean
   )
   is
     l_cursor sys_refcursor;
