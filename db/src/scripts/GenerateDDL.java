@@ -20,7 +20,7 @@ public class GenerateDDL
     // args[11]: owner of pkg_ddl_util package (MUST BE THE LAST PARAMETER)
     public static void main(String[] args) throws SQLException, IOException, Exception
     {
-        final int args_size = 12;
+        final int args_size = 14;
         int nr;
         final PrintStream out = new PrintStream(System.out, true, "UTF-8");
         Connection conn = null;
@@ -35,7 +35,7 @@ public class GenerateDDL
                                                        "<source schema> <source database link> " +
                                                        "<target schema> <target database link> " +
                                                        "<object type> <object names include> <object names> " +
-                                                       "<skip repeatables> <interface> <transform params> <owner>");
+                                                       "<skip repeatables> <interface> <transform params> <objects include> <objects> <owner>");
             }
 
             final Map<String, String> env = System.getenv();
@@ -116,6 +116,16 @@ public class GenerateDDL
                     break;
                     
                 case 11:
+                    // objects include
+                    out.println("objects include     : " + args[nr]);
+                    break;
+    
+                case 12:
+                    // objects
+                    out.println("objects             : " + args[nr]);
+                    break;
+    
+                case 13:
                     owner = args[nr];
                     // owner
                     out.println("owner               : " + args[nr]);
@@ -145,7 +155,7 @@ public class GenerateDDL
             stmt.executeUpdate("alter session set NLS_LANGUAGE = 'AMERICAN'");
             stmt.executeUpdate("alter session set NLS_TERRITORY = 'AMERICA'");
 
-            final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?)}");
+            final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?,?,?)}");
       
             pstmt.setString(1, args[++nr]);
             pstmt.setString(2, args[++nr]);
@@ -166,6 +176,22 @@ public class GenerateDDL
             pstmt.setInt(8, Integer.parseInt(args[++nr])); // never null
             pstmt.setString(9, args[++nr]);
             pstmt.setString(10, args[++nr]);
+            // argument 11 can be empty so setNull must be called explicitly because empty string can not be converted to a null integer
+            try {
+                pstmt.setInt(11, Integer.parseInt(args[++nr]));
+            } catch(Exception e) {
+                if (args[nr] != null && args[nr].toString().trim().length() > 0) {
+                    throw new Exception("Can not convert '" + args[nr]  + "' to an integer");
+                } else {
+                    pstmt.setNull(11, Types.INTEGER);
+                }
+            }
+
+            final Clob objects = conn.createClob();
+
+            objects.setString(1, args[++nr]);
+            pstmt.setClob(12, objects);
+    
             pstmt.registerOutParameter(args_size - 1, Types.CLOB);
             pstmt.executeUpdate();
 

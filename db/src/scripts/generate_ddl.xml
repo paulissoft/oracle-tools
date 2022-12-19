@@ -26,6 +26,10 @@
     A comma separated list of object names (default empty).
     - object.names.include
     Must we include (1), exclude (0) or ignore object.names (empty) (default empty).
+    - objects
+    A newline separated list of objects, i.e. schema object IDs (default empty).
+    - objects.include
+    Must we include (1), exclude (0) or ignore objects (empty) (default empty).
     - compile.classpath
     The compile classpath.
     - runtime.classpath
@@ -124,6 +128,21 @@
     <!-- when property object.names does not contain whitespace
          object.names.trimmed is not set above -->
     <property name="object.names.trimmed" value=""/>
+
+    <!-- remove whitespace in ${objects} -->
+    <loadresource property="objects.trimmed">
+      <propertyresource name="objects"/>
+      <filterchain>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
+        <tokenfilter>
+          <deletecharacters chars=" \t" />
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <!-- when property objects does not contain whitespace
+         objects.trimmed is not set above -->
+    <property name="objects.trimmed" value=""/>
 
     <!-- for GenerateDDL.java -->
     <dirname property="ant.file.dir" file="${ant.file}"/>
@@ -364,6 +383,8 @@ Z       Time zone               RFC 822 time zone   -0800
         <arg value="${quote}@{skip.repeatables}${quote}"/> <!-- skip repeatables -->
         <arg value="${quote}@{interface}${quote}"/>
         <arg value="${quote}@{transform.params}${quote}"/>
+        <arg value="${quote}${objects.include}${quote}"/> <!-- objects include -->
+        <arg value="${quote}${objects.trimmed}${quote}"/> <!-- objects -->
         <!-- owner must be the last -->
         <arg value="${quote}@{owner}${quote}"/>
       </java>
