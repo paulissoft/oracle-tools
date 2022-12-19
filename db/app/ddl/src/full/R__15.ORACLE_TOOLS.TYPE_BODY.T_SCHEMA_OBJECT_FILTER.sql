@@ -220,15 +220,20 @@ $end
           loop
             for i_part_idx in 1 .. 10
             loop
-              l_part_tab(i_part_idx) :=
-                case 
-                  when i_part_idx = i_object_idx * 3 - 1 -- 2: object type / 5: base object type
-                  then nvl(p_object_type, '*')
-                  when i_part_idx = i_object_idx * 3 -- 3: object name / 6: base object name
-                  then l_object_name_tab(i_object_name_idx)
-                  else '*'
-                end;
+              l_part_tab(i_part_idx) := '*';
             end loop;
+            
+            case i_object_idx
+              when 1 -- object
+              then              
+                l_part_tab(2) := nvl(p_object_type, '*');              -- 2: object type
+                l_part_tab(3) := l_object_name_tab(i_object_name_idx); -- 3: object name
+                
+              when 2
+              then
+                l_part_tab(6) := l_object_name_tab(i_object_name_idx); -- 6: base object name
+            end case;
+            
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
           end loop;
         end if;
