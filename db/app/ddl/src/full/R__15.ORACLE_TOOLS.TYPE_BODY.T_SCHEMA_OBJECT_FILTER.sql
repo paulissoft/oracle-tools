@@ -94,32 +94,32 @@ $end
   begin
     if p_object_tab.count > 0
     then
-      for i_item_idx in p_object_tab.first .. p_object_tab.last
+      for i_object_idx in p_object_tab.first .. p_object_tab.last
       loop
-        cleanup_object(p_object_tab(i_item_idx));
+        cleanup_object(p_object_tab(i_object_idx));
 
-        if p_object_tab(i_item_idx) is not null
+        if p_object_tab(i_object_idx) is not null
         then          
           -- O/S wildcards?
-          l_wildcard := sign(instr(p_object_tab(i_item_idx), '*')) + sign(instr(p_object_tab(i_item_idx), '?')) * 2;
+          l_wildcard := sign(instr(p_object_tab(i_object_idx), '*')) + sign(instr(p_object_tab(i_object_idx), '?')) * 2;
 
           -- first character in expression will denote the operator ('=' for equal or '~' for like)
           if l_wildcard != 0
           then
             -- replace _ by \_
-            p_object_tab(i_item_idx) := replace(p_object_tab(i_item_idx), '_', '\_');
+            p_object_tab(i_object_idx) := replace(p_object_tab(i_object_idx), '_', '\_');
             if l_wildcard in (1, 3) -- '*'
             then
-              p_object_tab(i_item_idx) := replace(p_object_tab(i_item_idx), '*', '%');
+              p_object_tab(i_object_idx) := replace(p_object_tab(i_object_idx), '*', '%');
             end if;
             if l_wildcard in (2, 3) -- '?'
             then
-              p_object_tab(i_item_idx) := replace(p_object_tab(i_item_idx), '?', '_');
+              p_object_tab(i_object_idx) := replace(p_object_tab(i_object_idx), '?', '_');
             end if;           
           end if;
 
           self.objects_tab$.extend(1);
-          self.objects_tab$(self.objects_tab$.last) := p_object_tab(i_item_idx);
+          self.objects_tab$(self.objects_tab$.last) := p_object_tab(i_object_idx);
           self.objects_cmp_tab$.extend(1);
           self.objects_cmp_tab$(self.objects_cmp_tab$.last) := case l_wildcard when 0 then '=' else '~' end;
         end if;
@@ -156,62 +156,86 @@ $end
   -- new functionality
   check_objects(p_objects => p_objects, p_objects_include => p_objects_include, p_description => 'objects');
   oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_objects_include, p_description => 'objects include');
-    
+
+  if (p_object_names_include is not null and p_objects_include is not null)
+  then
+    raise_application_error
+    ( oracle_tools.pkg_ddl_error.c_objects_wrong
+    , 'Both the object names include flag (' ||        
+      p_object_names_include ||
+      ') and the objects include flag (' ||
+      p_objects_include ||
+      ' are not empty: at most one can be specified'
+    );
+  elsif (p_object_type is not null and p_objects_include is not null)
+  then
+    raise_application_error
+    ( oracle_tools.pkg_ddl_error.c_objects_wrong
+    , 'Both the object type (' ||        
+      p_object_type ||
+      ') and the objects include flag (' ||
+      p_objects_include ||
+      ' are not empty: at most one can be specified'
+    );
+  end if;
+
   self.schema$ := p_schema;
   self.grantor_is_schema$ := p_grantor_is_schema;
-  self.objects_include$ := p_objects_include;
+  self.objects_include$ := coalesce(p_objects_include, p_object_names_include, case when p_object_type is not null then 1 end);
   
   self.objects_tab$ := oracle_tools.t_text_tab();
   self.objects_cmp_tab$ := oracle_tools.t_text_tab();
 
   if p_objects_include is not null
   then
+    -- new functionality
     -- split by LF
     oracle_tools.pkg_str_util.split(p_str => p_objects, p_delimiter => chr(10), p_str_tab => l_object_tab);
 
     add_items(l_object_tab);
-  end if;
-
-  if p_object_names_include is not null
-  then
-    oracle_tools.pkg_str_util.split
-    ( p_str => p_object_names
-    , p_delimiter => ','
-    , p_str_tab => l_object_name_tab
-    );
-  elsif p_object_type is not null
-  then
-    -- one line with any object name: later on this will translate to two lines
-    l_object_name_tab(l_object_name_tab.count + 1) := '*';
-  end if;
-  
-  if l_object_name_tab.count > 0
-  then
-    for i_item_idx in l_object_name_tab.first .. l_object_name_tab.last
-    loop
-      cleanup_object(l_object_tab(i_item_idx));
-      if l_object_name_tab(i_item_idx) is not null
-      then
-        -- we need to add two objects: one for object and one for base object
-        for i_object_idx in 1 .. 2
-        loop
-          for i_part_idx in 1 .. 10
+  else
+    -- old functionality
+    if p_object_names_include is not null
+    then
+      oracle_tools.pkg_str_util.split
+      ( p_str => p_object_names
+      , p_delimiter => ','
+      , p_str_tab => l_object_name_tab
+      );
+    elsif p_object_type is not null
+    then
+      -- one line with any object name: later on this will translate to two lines
+      l_object_name_tab(l_object_name_tab.count + 1) := '*';
+    end if;
+    
+    if l_object_name_tab.count > 0
+    then
+      for i_object_name_idx in l_object_name_tab.first .. l_object_name_tab.last
+      loop
+        cleanup_object(l_object_name_tab(i_object_name_idx));
+        if l_object_name_tab(i_object_name_idx) is not null
+        then
+          -- we need to add two objects: one for object and one for base object
+          for i_object_idx in 1 .. 2
           loop
-            l_part_tab(i_part_idx) :=
-              case 
-                when i_part_idx = i_object_idx * 3 - 1 -- 2: object type / 5: base object type
-                then nvl(p_object_type, '*')
-                when i_part_idx = i_object_idx * 3 -- 3: object name / 6: base object name
-                then l_object_name_tab(i_item_idx)
-                else '*'
-              end;
+            for i_part_idx in 1 .. 10
+            loop
+              l_part_tab(i_part_idx) :=
+                case 
+                  when i_part_idx = i_object_idx * 3 - 1 -- 2: object type / 5: base object type
+                  then nvl(p_object_type, '*')
+                  when i_part_idx = i_object_idx * 3 -- 3: object name / 6: base object name
+                  then l_object_name_tab(i_object_name_idx)
+                  else '*'
+                end;
+            end loop;
+            l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
           end loop;
-          l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-        end loop;
-      end if;
-    end loop;
+        end if;
+      end loop;
 
-    add_items(l_object_tab);
+      add_items(l_object_tab);
+    end if;
   end if;
   
   -- make the tables null if they are empty
@@ -226,28 +250,21 @@ $end
   end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.print
-  ( dbug."output"
-  , 'schema$: %s; grantor_is_schema$: %s; objects_tab$.count: %s; objects_include$: %s'
-  , self.schema$
-  , self.grantor_is_schema$
-  , cardinality(self.objects_tab$)
-  , self.objects_include$
-  );
-  if cardinality(self.objects_tab$) > 0
+  self.print;
+$end
+
+  -- sanity checks
+  if self.objects_include$ is null and nvl(cardinality(self.objects_tab$), 0) = 0 and nvl(cardinality(self.objects_cmp_tab$), 0) = 0
   then
-    for i_idx in self.objects_tab$.first .. self.objects_tab$.last
-    loop
-      dbug.print
-      ( dbug."output"
-      , '[%s] objects_tab$ element: %s; objects_cmp_tab$ element: "%s"'
-      , i_idx
-      , self.objects_tab$(i_idx)
-      , self.objects_cmp_tab$(i_idx)
-      );
-    end loop;
+    null;
+  elsif self.objects_include$ is not null and cardinality(self.objects_tab$) > 0 and cardinality(self.objects_tab$) = cardinality(self.objects_cmp_tab$)
+  then
+    null;
+  else
+    raise program_error;
   end if;
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -287,10 +304,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   dbug.print
   ( dbug."info"
-  , 'schema$: %s; grantor_is_schema$: %s; objects_tab$.count: %s; objects_include$: %s'
+  , 'schema$: %s; grantor_is_schema$: %s; objects_tab$.count: %s; objects_cmp_tab$.count: %s; objects_include$: %s'
   , self.schema$
   , self.grantor_is_schema$
   , cardinality(self.objects_tab$)
+  , cardinality(self.objects_cmp_tab$)
   , self.objects_include$
   );
   if cardinality(self.objects_tab$) > 0
