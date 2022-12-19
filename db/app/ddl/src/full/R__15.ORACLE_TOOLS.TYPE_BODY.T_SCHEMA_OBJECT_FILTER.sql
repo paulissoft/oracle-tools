@@ -182,7 +182,7 @@ $end
   self.schema$ := p_schema;
   self.grantor_is_schema$ := p_grantor_is_schema;
   self.objects_include$ := coalesce(p_objects_include, p_object_names_include, case when p_object_type is not null then 1 end);
-  
+
   self.objects_tab$ := oracle_tools.t_text_tab();
   self.objects_cmp_tab$ := oracle_tools.t_text_tab();
 
@@ -207,7 +207,7 @@ $end
       -- one line with any object name: later on this will translate to two lines
       l_object_name_tab(l_object_name_tab.count + 1) := '*';
     end if;
-    
+
     if l_object_name_tab.count > 0
     then
       for i_object_name_idx in l_object_name_tab.first .. l_object_name_tab.last
@@ -237,7 +237,7 @@ $end
       add_items(l_object_tab);
     end if;
   end if;
-  
+
   -- make the tables null if they are empty
   if self.objects_tab$.count = 0
   then
@@ -415,7 +415,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
 $end
           exit when l_result != 0;
         end loop;
-        
+
         if self.objects_include$ = 0 -- p_schema_object_id must NOT be part of objects_tab$ (list of exclusions)
         then
           -- a) l_result equal 1 means there was a match which means that p_schema_object_id is part of the exclusions so inverse l_result
