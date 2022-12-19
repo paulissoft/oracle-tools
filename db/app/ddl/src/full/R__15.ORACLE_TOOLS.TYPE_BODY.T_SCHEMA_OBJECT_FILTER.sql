@@ -128,6 +128,25 @@ $end
     p_object_tab := l_empty_tab;
   end add_items;  
 begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CONSTRUCTOR');
+  dbug.print
+  ( dbug."info"
+  , 'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_grantor_is_schema: %s'
+  , p_schema
+  , p_object_type
+  , p_object_names
+  , p_object_names_include
+  , p_grantor_is_schema
+  );
+  dbug.print
+  ( dbug."info"
+  , 'p_objects: %s; p_objects_include: %s'
+  , oracle_tools.pkg_str_util.dbms_lob_substr(p_objects, 100)
+  , p_objects_include
+  );
+$end
+
   -- old functionality
   oracle_tools.pkg_ddl_util.check_schema(p_schema => p_schema, p_network_link => null);
   check_object_type(p_object_type => p_object_type);
@@ -205,6 +224,11 @@ begin
   then
     self.objects_cmp_tab$ := null;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  self.print;
+  dbug.leave;
+$end
 
   return; -- essential
 end;
@@ -333,6 +357,9 @@ $end
             when '=' then l_result := case when p_schema_object_id = self.objects_tab$(i_idx) then 1 else 0 end;
             when '~' then l_result := case when p_schema_object_id like self.objects_tab$(i_idx) escape '\' then 1 else 0 end;
           end case;
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+          dbug.print(dbug."info", '[%s] %s %s %s: %s', i_idx, p_schema_object_id, self.objects_cmp_tab$(i_idx), self.objects_tab$(i_idx), l_result);
+$end
           exit when l_result != 0;
         end loop;
         
