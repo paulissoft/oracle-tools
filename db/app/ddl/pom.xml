@@ -17,7 +17,8 @@
     <flyway.table>schema_version_tools_ddl</flyway.table>
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>F_GENERATE_DDL
+    <db.object.names>F_GENERATE_DDL</db.object.names>
+<!--    
 ,PKG_DDL_ERROR
 ,PKG_DDL_UTIL
 ,PKG_STR_UTIL
@@ -81,7 +82,7 @@
 ,V_DISPLAY_DDL_SCHEMA
 ,V_MY_SCHEMA_DDL_INFO
 ,V_MY_SCHEMA_OBJECT_INFO
-    </db.object.names>
+    </db.object.names-->
     <db.test.phase>test</db.test.phase>
   </properties>
 
