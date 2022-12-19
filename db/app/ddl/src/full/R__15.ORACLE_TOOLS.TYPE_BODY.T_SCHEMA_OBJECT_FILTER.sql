@@ -407,7 +407,7 @@ $end
       end if;
 
     else
-      l_result := 0;
+      l_result := 1; -- nothing to compare is OK
   end case;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
