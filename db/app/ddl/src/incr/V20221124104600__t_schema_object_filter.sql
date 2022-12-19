@@ -35,8 +35,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
    * <li>A schema base object where is_exclude_name_expr() = 1: return 0</li>
    * <li>A schema object where is_exclude_name_expr() = 1: return 0</li>
    * <li>If metadata object type is not member of p_object_types_to_check: return 1</li>
-   * <li>When objects_include$ is null and object_type$ is empty or equal to the metadata (base) object type and object_names_include$ is null or ((base) object name part of object_names$) = (object_names_include$): return 1</li>
-   * <li>When objects_include$ is NOT null and (schema object id part of objects_tab$) = (objects_include$): return 1</li>
+   * <li>When objects_include$ is null: return 1</li>
+   * <li>When (schema object id equals or matches an element of objects_tab$) = (objects_include$): return 1</li>
    * <li>Else: return 0</li>
    * </ol>
    *
