@@ -34,7 +34,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   subtype t_module is varchar2(100);
 
-  /* CONSTANTS */
+  /* CONSTANTS/VARIABLES */
 
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
   c_euro_sign constant varchar2(1 char) := '€';
@@ -242,6 +242,12 @@ $end
   g_chk_tab t_object_natural_tab;
 
   g_transform_param_tab t_transform_param_tab;
+  
+  g_total_matches_ok naturaln := 0;
+
+  g_total_matches_failed naturaln := 0;
+
+  g_total_matches_perc_threshold naturaln := 50;
 
   /* PRIVATE ROUTINES */
 
@@ -357,73 +363,6 @@ $end
       return null;
   end get_db_link;
 
-  procedure check_schema
-  ( p_schema in t_schema
-  , p_network_link in t_network_link
-  , p_description in varchar2 default 'Schema'
-  )
-  is
-  begin
-    if p_schema is null and
-       p_network_link is not null
-    then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_schema_wrong, p_description || ' is empty and the network link not.');
-    elsif p_schema is not null and
-          p_network_link is null and
-          dbms_assert.schema_name(p_schema) is null
-    then
-      raise_application_error
-      ( oracle_tools.pkg_ddl_error.c_schema_does_not_exist
-      , p_description || '"' || p_schema || '"' || ' does not exist.'
-      ); -- hier komt ie niet omdat dbms_assert.schema_name() al een exceptie genereert
-    end if;
-  end check_schema;
-
-  procedure check_numeric_boolean
-  ( p_numeric_boolean in t_numeric_boolean
-  , p_description in varchar2 
-  )
-  is
-  begin
-    if (p_numeric_boolean is not null and p_numeric_boolean not in (0, 1))
-    then
-      raise_application_error(oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong, p_description || ' (' || p_numeric_boolean || ') is not empty and not 0 or 1.');
-    end if;
-  end check_numeric_boolean;
-
-  procedure check_object_names
-  ( p_object_names in t_object_names
-  , p_object_names_include in t_numeric_boolean
-  )
-  is
-  begin
-    if (p_object_names is not null and p_object_names_include is null)
-    then
-      raise_application_error
-      ( oracle_tools.pkg_ddl_error.c_object_names_wrong
-      , 'The include flag (' ||
-        p_object_names_include ||
-        ') is empty and the list of object names is not empty:' ||
-        chr(10) ||
-        '"' ||
-        p_object_names ||
-        '"'
-      );
-    elsif (p_object_names is null and p_object_names_include is not null)
-    then
-      raise_application_error
-      ( oracle_tools.pkg_ddl_error.c_object_names_wrong
-      , 'The include flag (' ||
-        p_object_names_include ||
-        ') is not empty and the list of object names is empty:' ||
-        chr(10) ||
-        '"' ||
-        p_object_names ||
-        '"'
-      );
-    end if;
-  end check_object_names;
-
   procedure check_network_link
   ( p_network_link in t_network_link
   , p_description in varchar2 default 'Database link'
@@ -453,35 +392,6 @@ $end
       raise_application_error(oracle_tools.pkg_ddl_error.c_source_and_target_equal, 'Source and target may not be equal.');
     end if;
   end check_source_target;
-
-  procedure check_object_type
-  ( p_object_type in t_metadata_object_type
-  , p_exclude_allowed in boolean
-  )
-  is
-    l_object_type constant t_metadata_object_type :=
-      case
-        when p_exclude_allowed and substr(p_object_type, 1, 1) = '!'
-        then substr(p_object_type, 2)
-        else p_object_type
-      end;
-  begin
-    if l_object_type is null or
-       l_object_type = 'SCHEMA_EXPORT' or
-$if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
-       l_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
-$end
-       l_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') or
-       l_object_type member of g_schema_md_object_type_tab
-    then
-      null; -- ok
-    else
-      raise_application_error
-      ( oracle_tools.pkg_ddl_error.c_object_type_wrong
-      , 'Object type (' || l_object_type || ') is not one of the metadata schema object types.'
-      );
-    end if;
-  end check_object_type;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 
@@ -3017,11 +2927,7 @@ $end
     -- input checks
     check_schema(p_schema => p_schema, p_network_link => p_network_link);
     -- no checks for new schema: it may be null or any name
-    check_numeric_boolean(p_numeric_boolean => p_sort_objects_by_deps, p_description => 'Sort objects by deps');
-    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
-    check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
-    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
+    check_numeric_boolean(p_numeric_boolean => p_sort_objects_by_deps, p_description => 'sort objects by deps');
     check_network_link(p_network_link => p_network_link);
 
     get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
@@ -3409,9 +3315,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     -- input checks
-    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
-    check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
+    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include');
     check_schema(p_schema => p_schema_source, p_network_link => p_network_link_source, p_description => 'Source schema');
     check_schema(p_schema => p_schema_target, p_network_link => p_network_link_target, p_description => 'Target schema');
     check_source_target
@@ -3422,7 +3326,7 @@ $end
     );
     check_network_link(p_network_link => p_network_link_source, p_description => 'Source database link');
     check_network_link(p_network_link => p_network_link_target, p_description => 'Target database link');
-    check_numeric_boolean(p_numeric_boolean => p_skip_repeatables, p_description => 'Skip repeatables');
+    check_numeric_boolean(p_numeric_boolean => p_skip_repeatables, p_description => 'skip repeatables');
 
     if p_schema_source is null
     then
@@ -3947,26 +3851,10 @@ $end
 
     l_refcursor sys_refcursor;
 
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT');
+    l_longops_match_ok_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT$MATCH_OK');
+    l_longops_match_fail_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT$MATCH_FAIL');
 
-    /*
-      We have two steps in this routine:
-      1) gathering named objects
-      2) gathering dependent objects (sometimes based on the named objects)
-
-      In step 1 we should not check the named objects because they need to be created for step 2, 
-      otherwise we will never gather dependent objects. Or, in other words, if p_object_type
-      is not one of the dependent object types and not INDEX or TRIGGER we can already check in 
-      step 1 which will lead to a better performance.
-
-      If we do not check named objects, we must do it later on, after step 2.
-    */
-    l_object_types_to_check oracle_tools.t_text_tab :=
-      case
-        when p_schema_object_filter.object_type() member of g_dependent_md_object_type_tab
-        then g_dependent_md_object_type_tab -- do not check for example TABLE
-        else g_schema_md_object_type_tab -- check all
-      end;
+    l_object_types_to_check oracle_tools.t_text_tab := g_schema_md_object_type_tab; -- check all
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab)
@@ -4003,15 +3891,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     p_schema_object_filter.print();
 $end
 
-/*
-    -- input checks
-    check_schema(p_schema => p_schema, p_network_link => null);
-    check_object_type(p_object_type => p_object_type, p_exclude_allowed => true);
-    check_object_names(p_object_names => p_object_names, p_object_names_include => p_object_names_include);
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
-    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'Grantor is schema');
-*/
-
     -- queue table
     for r in
     ( select  q.owner
@@ -4020,7 +3899,6 @@ $end
       where   q.owner = l_schema
     )
     loop
-      longops_show(l_longops_rec);
       l_excluded_tables_tab(r.queue_table) := true;
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
       l_named_object_tab.extend(1);
@@ -4034,8 +3912,11 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
       if p_schema_object_filter.matches_schema_object
          ( p_object_types_to_check => l_object_types_to_check
          , p_schema_object => l_named_object_tab(l_named_object_tab.last)
-         ) = 0
+         ) = 1
       then
+        longops_show(l_longops_match_ok_rec);
+      else
+        longops_show(l_longops_match_fail_rec);
         l_named_object_tab.trim();
       end if;
 $else
@@ -4056,7 +3937,6 @@ $end
       where   m.owner = l_schema
     )
     loop
-      longops_show(l_longops_rec);
       if r.build_mode != 'PREBUILT'
       then
         l_excluded_tables_tab(r.mview_name) := true;
@@ -4067,8 +3947,11 @@ $end
       if p_schema_object_filter.matches_schema_object
          ( p_object_types_to_check => l_object_types_to_check
          , p_schema_object => l_named_object_tab(l_named_object_tab.last)
-         ) = 0         
+         ) = 1
       then
+        longops_show(l_longops_match_ok_rec);
+      else
+        longops_show(l_longops_match_fail_rec);
         l_named_object_tab.trim();
       end if;
     end loop;
@@ -4105,7 +3988,6 @@ $end
       and     substr(t.object_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
     )
     loop
-      longops_show(l_longops_rec);
       if r.object_type <> 'TABLE'
       then
         raise program_error;
@@ -4115,13 +3997,14 @@ $end
          ( p_object_types_to_check => l_object_types_to_check
            -- database values
          , p_schema_object => l_schema_object
-         ) = 1
+         ) = 1 and
+         not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
       then
-        if not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
-        then
-          l_named_object_tab.extend(1);
-          l_named_object_tab(l_named_object_tab.last) := l_schema_object;
-        end if;
+        longops_show(l_longops_match_ok_rec);
+        l_named_object_tab.extend(1);
+        l_named_object_tab(l_named_object_tab.last) := l_schema_object;
+      else
+        longops_show(l_longops_match_fail_rec);
       end if;
     end loop;
 
@@ -4171,8 +4054,9 @@ $end
          , p_schema_object => l_named_object_tab(l_named_object_tab.last)
          ) = 1
        then
-         longops_show(l_longops_rec);
+         longops_show(l_longops_match_ok_rec);
        else
+         longops_show(l_longops_match_fail_rec);
          l_named_object_tab.trim();
        end if;
     end loop;
@@ -4233,11 +4117,12 @@ $end
         );
       if p_schema_object_filter.matches_schema_object
          ( p_object_types_to_check => l_object_types_to_check
-           p_schema_object_id => l_schema_object_tab(l_schema_object_tab.last)
+         , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
          ) = 1
       then
-        longops_show(l_longops_rec);
+        longops_show(l_longops_match_ok_rec);
       else
+        longops_show(l_longops_match_fail_rec);
         l_schema_object_tab.trim();
       end if;
     end loop;
@@ -4323,8 +4208,9 @@ $end
          , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
          ) = 1
       then
-        longops_show(l_longops_rec);
+        longops_show(l_longops_match_ok_rec);
       else
+        longops_show(l_longops_match_fail_rec);
         l_schema_object_tab.trim();
       end if;
     end loop;
@@ -4443,8 +4329,9 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
            , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
            ) = 1
         then
-          longops_show(l_longops_rec);
+          longops_show(l_longops_match_ok_rec);
         else
+          longops_show(l_longops_match_fail_rec);
           l_schema_object_tab.trim();
         end if;
 
@@ -4515,8 +4402,9 @@ $end
          , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
          ) = 1
       then
-        longops_show(l_longops_rec);
+        longops_show(l_longops_match_ok_rec);
       else
+        longops_show(l_longops_match_fail_rec);
         l_schema_object_tab.trim();
       end if;
     end loop;
@@ -4571,8 +4459,9 @@ $end
          , p_schema_object => l_schema_object_tab(l_schema_object_tab.last)
          ) = 1
       then
-        longops_show(l_longops_rec);
+        longops_show(l_longops_match_ok_rec);
       else
+        longops_show(l_longops_match_fail_rec);
         l_schema_object_tab.trim();
       end if;
     end loop;
@@ -4598,14 +4487,18 @@ $end
       from    table(l_named_object_tab) obj
       where   p_schema_object_filter.matches_schema_object
               ( p_object_types_to_check => l_object_types_to_check
-                p_schema_object => value(obj)
+              , p_schema_object => value(obj)
               ) = 1
       ;
 
       p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ l_schema_object_tab;
     end if;
 
-    longops_done(l_longops_rec);
+    longops_done(l_longops_match_ok_rec);
+    longops_done(l_longops_match_fail_rec);
+
+    g_total_matches_ok := l_longops_match_ok_rec.totalwork;
+    g_total_matches_failed := l_longops_match_fail_rec.totalwork;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(p_schema_object_tab);
@@ -5506,10 +5399,6 @@ $end
   deterministic
   is
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-    check_object_type(p_object_type => p_object_type, p_exclude_allowed => false);
-$end    
-
     return
       case
         when p_object_type in ('INDEX', 'TRIGGER')
@@ -5668,13 +5557,7 @@ $end
     -- https://github.com/paulissoft/oracle-tools/issues/98
     -- Solve that by adding the individual objects as well but quitting as soon as possible.
 
-    l_use_schema_export constant t_numeric_boolean_nn := 
-      case
-        when p_schema_object_filter.object_type() is not null or
-             p_schema_object_filter.object_names_include() = 1
-        then 0
-        else 1 -- but maybe 0
-      end;
+    l_use_schema_export t_numeric_boolean_nn := 0;
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
@@ -5892,6 +5775,26 @@ $end
       , p_schema_object_tab => l_schema_object_tab
       );
     end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print
+    ( dbug."info"
+    , 'g_total_matches_ok: %s; g_total_matches_failed: %s; g_total_matches_perc: %s; g_total_matches_perc_threshold: %s'
+    , g_total_matches_ok
+    , g_total_matches_failed
+    , case when g_total_matches_ok + g_total_matches_failed > 0 then trunc(g_total_matches_ok * 100 / ( g_total_matches_ok + g_total_matches_failed )) end
+    , g_total_matches_perc_threshold
+    );
+$end
+
+    -- now we can calculate the percentage matches
+    l_use_schema_export :=
+      case
+        when g_total_matches_ok + g_total_matches_failed > 0 and
+             trunc(g_total_matches_ok * 100 / ( g_total_matches_ok + g_total_matches_failed )) >= g_total_matches_perc_threshold
+        then 1
+        else 0
+      end;
 
     init(nvl(p_schema_object_tab, l_schema_object_tab));
 
@@ -6672,6 +6575,55 @@ $end
            end;
   end get_md_object_type_tab;
 
+  procedure check_schema
+  ( p_schema in t_schema
+  , p_network_link in t_network_link
+  , p_description in varchar2 default 'Schema'
+  )
+  is
+  begin
+    if p_schema is null and
+       p_network_link is not null
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_schema_wrong
+      , p_description || ' is empty and the network link not.'
+      );
+    elsif p_schema is not null and
+          p_network_link is null
+    then
+      begin
+        if dbms_assert.schema_name(p_schema) is null
+        then
+          -- will not come here since dbms_assert.schema_name() will raise an exception
+          raise no_data_found;
+        end if;
+      exception
+        when others
+        then
+          raise_application_error
+          ( oracle_tools.pkg_ddl_error.c_schema_does_not_exist
+          , p_description || '"' || p_schema || '"' || ' does not exist.'
+          );
+      end;
+    end if;
+  end check_schema;
+
+  procedure check_numeric_boolean
+  ( p_numeric_boolean in t_numeric_boolean
+  , p_description in varchar2 
+  )
+  is
+  begin
+    if (p_numeric_boolean is not null and p_numeric_boolean not in (0, 1))
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
+      , 'The flag ' || p_description || ' (' || p_numeric_boolean || ') is not empty and not 0 or 1.'
+      );
+    end if;
+  end check_numeric_boolean;
+
 $if oracle_tools.cfg_pkg.c_testing $then
 
   /*
@@ -7290,7 +7242,7 @@ $end
       ( p_description => 'Sort_objects_by_deps (' || r.column_value || ')'
       , p_sqlcode_expected => case
                                  when r.column_value is null then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
-                                 when r.column_value in (0, 1) then oracle_tools.pkg_ddl_error.c_object_names_wrong 
+                                 when r.column_value in (0, 1) then oracle_tools.pkg_ddl_error.c_objects_wrong 
                                  when r.column_value < 0 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
                                  else oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
                                end
@@ -7301,7 +7253,7 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include leeg.'
-    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_object_names_wrong
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => 'ABC'
     );
 
@@ -7321,7 +7273,7 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names leeg is en p_object_names_include niet leeg.'
-    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_object_names_wrong
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => null
     , p_object_names_include => 0
     );
@@ -7729,7 +7681,7 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include leeg.'
-    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_object_names_wrong
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => 'ABC'
     );
 
@@ -7749,7 +7701,7 @@ $end
 
     chk
     ( p_description => 'Indien p_object_names leeg is en p_object_names_include niet leeg.'
-    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_object_names_wrong
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names_include => 1
     );
 
