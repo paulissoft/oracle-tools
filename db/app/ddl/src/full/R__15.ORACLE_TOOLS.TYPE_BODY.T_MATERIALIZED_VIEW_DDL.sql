@@ -35,6 +35,8 @@ $end
             , p_object_names_include => null
             , p_network_link=> l_tgt_materialized_view_object.network_link()
             , p_grantor_is_schema => 0
+            , p_objects => null
+            , p_objects_include => null
             )
           ) t
   ;
