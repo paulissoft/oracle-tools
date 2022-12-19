@@ -7,101 +7,206 @@ constructor function t_schema_object_filter
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
 , p_grantor_is_schema in integer default 0
-, p_schema_object_info in clob default null
-, p_schema_object_info_include in integer default null
+, p_objects in clob default null
+, p_objects_include in integer default null
 )
 return self as result
 is
-  l_item_tab dbms_sql.varchar2a;
+  l_object_tab dbms_sql.varchar2a;
+  l_object_name_tab dbms_sql.varchar2a;
   l_part_tab dbms_sql.varchar2a;
   l_wildcard simple_integer := 0;
-begin
-  self.schema$ := p_schema;
-  self.object_type$ := p_object_type;
-  self.object_names$ := replace(replace(replace(replace(p_object_names, chr(9)), chr(13)), chr(10)), chr(32));
-  self.object_names_include$ := p_object_names_include;
-  self.grantor_is_schema$ := p_grantor_is_schema;
-  self.schema_object_info_include$ := p_schema_object_info_include;
-  
-  self.object_name_tab$ := oracle_tools.t_text_tab();
-  self.schema_object_info_tab$ := oracle_tools.t_text_tab();
 
-  if self.object_names$ is not null
-  then
-    oracle_tools.pkg_str_util.split(p_str => self.object_names$, p_delimiter => ',', p_str_tab => l_item_tab);
-    if l_item_tab.count > 0
+  procedure check_object_type
+  ( p_object_type in oracle_tools.pkg_ddl_util.t_metadata_object_type
+  )
+  is
+  begin
+    if p_object_type is null or
+       p_object_type = 'SCHEMA_EXPORT' or
+$if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
+       p_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
+$end
+       p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') or
+       p_object_type member of oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA')
     then
-      for i_item_idx in l_item_tab.first .. l_item_tab.last
-      loop
-        if l_item_tab(i_item_idx) is null
-        then
-          null;
-        else
-          self.object_name_tab$.extend(1);
-          self.object_name_tab$(self.object_name_tab$.last) := l_item_tab(i_item_idx);
-        end if;
-      end loop;
+      null; -- ok
+    else
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_object_type_wrong
+      , 'Object type (' || p_object_type || ') is not one of the metadata schema object types.'
+      );
     end if;
-    
-    -- for later
-    self.object_names$ := ',' || self.object_names$ || ',';
-  end if;
+  end check_object_type;
 
-  if p_schema_object_info_include is not null
-  then
-    -- split by LF
-    oracle_tools.pkg_str_util.split(p_str => p_schema_object_info, p_delimiter => chr(10), p_str_tab => l_item_tab);
-    
-    if l_item_tab.count > 0
+  procedure check_objects
+  ( p_objects in varchar2
+  , p_objects_include in oracle_tools.pkg_ddl_util.t_numeric_boolean
+  , p_description in varchar2
+  )
+  is
+  begin
+    if (p_objects is not null and p_objects_include is null)
     then
-      for i_item_idx in l_item_tab.first .. l_item_tab.last
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_objects_wrong
+      , 'The ' ||
+        p_description ||
+        ' include flag (' ||        
+        p_objects_include ||
+        ') is empty and the ' ||
+        p_description ||
+        ' list is not empty:' ||
+        chr(10) ||
+        '"' ||
+        p_objects ||
+        '"'
+      );
+    elsif (p_objects is null and p_objects_include is not null)
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_objects_wrong
+      , 'The ' ||
+        p_description ||
+        ' include flag (' ||        
+        p_objects_include ||
+        ') is not empty and the ' ||
+        p_description ||
+        ' list is empty:' ||
+        chr(10) ||
+        '"' ||
+        p_objects ||
+        '"'
+      );
+    end if;
+  end check_objects;
+
+  procedure cleanup_object(p_object in out nocopy varchar2)
+  is
+  begin
+    -- remove TAB, CR and LF and then trim spaces
+    p_object := trim(replace(replace(replace(p_object, chr(9)), chr(13)), chr(10)));
+  end cleanup_object;  
+
+  procedure add_items(p_object_tab in out nocopy dbms_sql.varchar2a)
+  is
+    l_empty_tab dbms_sql.varchar2a;
+  begin
+    if p_object_tab.count > 0
+    then
+      for i_item_idx in p_object_tab.first .. p_object_tab.last
       loop
-        -- remove TAB and CR
-        l_item_tab(i_item_idx) := replace(replace(l_item_tab(i_item_idx), chr(9)), chr(13));
-        
-        if l_item_tab(i_item_idx) is not null
+        cleanup_object(p_object_tab(i_item_idx));
+
+        if p_object_tab(i_item_idx) is not null
         then          
           -- O/S wildcards?
-          l_wildcard := sign(instr(l_item_tab(i_item_idx), '*')) + sign(instr(l_item_tab(i_item_idx), '?')) * 2;
+          l_wildcard := sign(instr(p_object_tab(i_item_idx), '*')) + sign(instr(p_object_tab(i_item_idx), '?')) * 2;
 
           -- first character in expression will denote the operator ('=' for equal or '~' for like)
-          if l_wildcard = 0
+          if l_wildcard != 0
           then
-            l_item_tab(i_item_idx) := '=' || l_item_tab(i_item_idx);
-          else
-            l_item_tab(i_item_idx) := '~' || l_item_tab(i_item_idx);
             -- replace _ by \_
-            l_item_tab(i_item_idx) := replace(l_item_tab(i_item_idx), '_', '\_');
+            p_object_tab(i_item_idx) := replace(p_object_tab(i_item_idx), '_', '\_');
             if l_wildcard in (1, 3) -- '*'
             then
-              l_item_tab(i_item_idx) := replace(l_item_tab(i_item_idx), '*', '%');
+              p_object_tab(i_item_idx) := replace(p_object_tab(i_item_idx), '*', '%');
             end if;
             if l_wildcard in (2, 3) -- '?'
             then
-              l_item_tab(i_item_idx) := replace(l_item_tab(i_item_idx), '?', '_');
+              p_object_tab(i_item_idx) := replace(p_object_tab(i_item_idx), '?', '_');
             end if;           
           end if;
 
-          -- a schema object info item (see t_schema_object.schema_object_info())
-          self.schema_object_info_tab$.extend(1);
-          self.schema_object_info_tab$(self.schema_object_info_tab$.last) := l_item_tab(i_item_idx);
+          self.objects_tab$.extend(1);
+          self.objects_tab$(self.objects_tab$.last) := p_object_tab(i_item_idx);
+          self.objects_cmp_tab$.extend(1);
+          self.objects_cmp_tab$(self.objects_cmp_tab$.last) := case l_wildcard when 0 then '=' else '~' end;
         end if;
       end loop;
     end if;
+    p_object_tab := l_empty_tab;
+  end add_items;  
+begin
+  -- old functionality
+  oracle_tools.pkg_ddl_util.check_schema(p_schema => p_schema, p_network_link => null);
+  check_object_type(p_object_type => p_object_type);
+  check_objects(p_objects => p_object_names, p_objects_include => p_object_names_include, p_description => 'object names');
+  oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include');
+  oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema');
+  -- new functionality
+  check_objects(p_objects => p_objects, p_objects_include => p_objects_include, p_description => 'objects');
+  oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_objects_include, p_description => 'objects include');
+    
+  self.schema$ := p_schema;
+  self.grantor_is_schema$ := p_grantor_is_schema;
+  self.objects_include$ := p_objects_include;
+  
+  self.objects_tab$ := oracle_tools.t_text_tab();
+  self.objects_cmp_tab$ := oracle_tools.t_text_tab();
+
+  if p_objects_include is not null
+  then
+    -- split by LF
+    oracle_tools.pkg_str_util.split(p_str => p_objects, p_delimiter => chr(10), p_str_tab => l_object_tab);
+
+    add_items(l_object_tab);
   end if;
 
+  if p_object_names_include is not null
+  then
+    oracle_tools.pkg_str_util.split
+    ( p_str => p_object_names
+    , p_delimiter => ','
+    , p_str_tab => l_object_name_tab
+    );
+  elsif p_object_type is not null
+  then
+    -- one line with any object name: later on this will translate to two lines
+    l_object_name_tab(l_object_name_tab.count + 1) := '*';
+  end if;
+  
+  if l_object_name_tab.count > 0
+  then
+    for i_item_idx in l_object_name_tab.first .. l_object_name_tab.last
+    loop
+      cleanup_object(l_object_tab(i_item_idx));
+      if l_object_name_tab(i_item_idx) is not null
+      then
+        -- we need to add two objects: one for object and one for base object
+        for i_object_idx in 1 .. 2
+        loop
+          for i_part_idx in 1 .. 10
+          loop
+            l_part_tab(i_part_idx) :=
+              case 
+                when i_part_idx = i_object_idx * 3 - 1 -- 2: object type / 5: base object type
+                then nvl(p_object_type, '*')
+                when i_part_idx = i_object_idx * 3 -- 3: object name / 6: base object name
+                then l_object_name_tab(i_item_idx)
+                else '*'
+              end;
+          end loop;
+          l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
+        end loop;
+      end if;
+    end loop;
+
+    add_items(l_object_tab);
+  end if;
+  
   -- make the tables null if they are empty
-  if self.object_name_tab$.count = 0
+  if self.objects_tab$.count = 0
   then
-    self.object_name_tab$ := null;
+    self.objects_tab$ := null;
   end if;
 
-  if self.schema_object_info_tab$.count = 0
+  if self.objects_cmp_tab$.count = 0
   then
-    self.schema_object_info_tab$ := null;
+    self.objects_cmp_tab$ := null;
   end if;
 
-  return;
+  return; -- essential
 end;
 
 member function schema
@@ -112,60 +217,12 @@ begin
   return self.schema$;
 end;
 
-member function object_type
-return varchar2
-deterministic
-is
-begin
-  return self.object_type$;
-end;
-
-member function object_names
-return varchar2
-deterministic
-is
-begin
-  return self.object_names$;
-end;
-
-member function object_names_include
-return integer
-deterministic
-is
-begin
-  return self.object_names_include$;
-end;
-
 member function grantor_is_schema
 return integer
 deterministic
 is
 begin
   return self.grantor_is_schema$;
-end;
-
-member function schema_object_info_include
-return integer
-deterministic
-is
-begin
-  return self.schema_object_info_include$;
-end;
-
-member function object_name_tab
-return oracle_tools.t_text_tab
-deterministic
-is
-begin
-  return self.object_name_tab$;
-end;
-
-member function schema_object_info_tab
-return oracle_tools.t_text_tab
-deterministic
-is
-begin
-  return self.schema_object_info_tab$;
 end;
 
 member procedure print
@@ -177,24 +234,17 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   dbug.print
   ( dbug."info"
-  , 't_schema_object_filter; schema: %s; object_type: %s; object_names_include: %s; grantor_is_schema: %s; object_names: %s'
+  , 'schema: %s; grantor_is_schema: %s; objects_tab.count: %s; objects_include: %s'
   , self.schema$
-  , self.object_type$
-  , self.object_names_include$
   , self.grantor_is_schema$
-  , self.object_names$
+  , cardinality(self.objects_tab$)
+  , self.objects_include$
   );
-  dbug.print
-  ( dbug."info"
-  , 'schema_object_info_include: %s; schema_object_info_tab.count: %s'
-  , self.schema_object_info_include$
-  , cardinality(self.schema_object_info_tab$)
-  );
-  if cardinality(self.schema_object_info_tab$) > 0
+  if cardinality(self.objects_tab$) > 0
   then
-    for i_idx in self.schema_object_info_tab$.first .. self.schema_object_info_tab$.last
+    for i_idx in self.objects_tab$.first .. self.objects_tab$.last
     loop
-      dbug.print(dbug."info", 'schema_object_info_tab(%s): %s', self.schema_object_info_tab$(i_idx));      
+      dbug.print(dbug."info", 'objects_tab(%s): %s; cmp: "%s"', self.objects_tab$(i_idx), self.objects_cmp_tab$(i_idx));
     end loop;
   end if;
   dbug.leave;
@@ -272,46 +322,21 @@ $end
     then
       l_result := 1; -- anything is fine
 
-    when self.schema_object_info_include$ is null
-    then
-      -- old functionality
-      if -- filter on object type
-         ( self.object_type$ is null or
-           self.object_type$ in ( l_metadata_object_type, l_metadata_base_object_type )
-         )
-         and
-         -- filter on object name
-         ( self.object_names_include$ is null or
-           self.object_names_include$ =
-           case -- found?
-             when l_object_name is not null and l_object_name member of self.object_name_tab$
-             then 1
-             when l_base_object_name is not null and l_base_object_name member of self.object_name_tab$
-             then 1
-             else 0
-           end
-         )
-      then
-        l_result := 1;
-      else
-        l_result := 0;
-      end if;
-
-    when self.schema_object_info_include$ is not null
+    when self.objects_include$ is not null
     then
       -- new functionality
-      if cardinality(self.schema_object_info_tab$) > 0
+      if cardinality(self.objects_tab$) > 0
       then
-        for i_idx in self.schema_object_info_tab$.first .. self.schema_object_info_tab$.last
+        for i_idx in self.objects_tab$.first .. self.objects_tab$.last
         loop
-          case substr(self.schema_object_info_tab$(i_idx), 1, 1)
-            when '=' then l_result := case when p_schema_object_id = substr(self.schema_object_info_tab$(i_idx), 2) then 1 else 0 end;
-            when '~' then l_result := case when p_schema_object_id like substr(self.schema_object_info_tab$(i_idx), 2) escape '\' then 1 else 0 end;
+          case self.objects_cmp_tab$(i_idx)
+            when '=' then l_result := case when p_schema_object_id = self.objects_tab$(i_idx) then 1 else 0 end;
+            when '~' then l_result := case when p_schema_object_id like self.objects_tab$(i_idx) escape '\' then 1 else 0 end;
           end case;
           exit when l_result != 0;
         end loop;
         
-        if self.schema_object_info_include$ = 0 -- p_schema_object_id must NOT be part of schema_object_info_tab$ (list of exclusions)
+        if self.objects_include$ = 0 -- p_schema_object_id must NOT be part of objects_tab$ (list of exclusions)
         then
           -- a) l_result equal 1 means there was a match which means that p_schema_object_id is part of the exclusions so inverse l_result
           -- b) l_result equal 0 means there was no match at all which means that p_schema_object_id is NOT part of the exclusions so inverse l_result
