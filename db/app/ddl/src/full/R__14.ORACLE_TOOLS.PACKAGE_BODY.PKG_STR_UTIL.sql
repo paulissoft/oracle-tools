@@ -252,6 +252,30 @@ exception
 $end
 end split;
 
+function join
+( p_str_tab in dbms_sql.varchar2a
+, p_delimiter in varchar2
+)
+return varchar2
+deterministic
+is
+  l_str varchar2(32767 char) := null;
+begin
+  if p_str_tab.count > 0
+  then
+    for i_idx in p_str_tab.first .. p_str_tab.last
+    loop
+      l_str :=
+        case
+          when i_idx = p_str_tab.first
+          then p_str_tab(i_idx)
+          else l_str || p_delimiter || p_str_tab(i_idx)
+        end;
+    end loop;
+  end if;
+  return l_str;
+end join;
+
 procedure trim
 ( p_str in out nocopy clob
 , p_set in varchar2
