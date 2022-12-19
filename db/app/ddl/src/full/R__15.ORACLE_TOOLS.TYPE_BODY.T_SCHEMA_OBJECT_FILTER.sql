@@ -150,12 +150,12 @@ $end
   -- old functionality
   oracle_tools.pkg_ddl_util.check_schema(p_schema => p_schema, p_network_link => null);
   check_object_type(p_object_type => p_object_type);
-  check_objects(p_objects => p_object_names, p_objects_include => p_object_names_include, p_description => 'object names');
   oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include');
+  check_objects(p_objects => p_object_names, p_objects_include => p_object_names_include, p_description => 'object names');
   oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema');
   -- new functionality
-  check_objects(p_objects => p_objects, p_objects_include => p_objects_include, p_description => 'objects');
   oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_objects_include, p_description => 'objects include');
+  check_objects(p_objects => p_objects, p_objects_include => p_objects_include, p_description => 'objects');
 
   if (p_object_names_include is not null and p_objects_include is not null)
   then

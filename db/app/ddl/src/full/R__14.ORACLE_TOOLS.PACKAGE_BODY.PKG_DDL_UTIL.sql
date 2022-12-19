@@ -6610,7 +6610,7 @@ $end
   end check_schema;
 
   procedure check_numeric_boolean
-  ( p_numeric_boolean in t_numeric_boolean
+  ( p_numeric_boolean in pls_integer
   , p_description in varchar2 
   )
   is

@@ -463,7 +463,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   );
   
   procedure check_numeric_boolean
-  ( p_numeric_boolean in t_numeric_boolean
+  ( p_numeric_boolean in pls_integer
   , p_description in varchar2 
   );
 
