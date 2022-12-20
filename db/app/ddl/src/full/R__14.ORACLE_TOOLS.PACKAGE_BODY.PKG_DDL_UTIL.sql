@@ -2400,7 +2400,6 @@ $end
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
-    p_schema_object_filter.print();
 $end
 
     p_object_key := null;
@@ -3983,10 +3982,11 @@ $end
       end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab)
+    procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab, p_what in varchar2)
     is
       l_object_tab t_object_natural_tab;
     begin
+      dbug.print(dbug."info", 'checking duplicates after retrieving ' || p_what);
       if p_schema_object_tab.count > 0
       then
         for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
@@ -4060,7 +4060,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
+    check_duplicates(l_named_object_tab, 'queue tables');
 $end
 
     -- no MATERIALIZED VIEW tables unless PREBUILT
@@ -4092,7 +4092,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
+    check_duplicates(l_named_object_tab, 'materialized views');
 $end
 
     for r in
@@ -4146,7 +4146,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
+    check_duplicates(l_named_object_tab, 'tables');
 $end
 
     for r in
@@ -4196,7 +4196,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_named_object_tab);
+    check_duplicates(l_named_object_tab, 'base objects');
 $end
 
     /*
@@ -4262,7 +4262,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
+    check_duplicates(l_schema_object_tab, 'dependent objects');
 $end
 
     for r in
@@ -4350,7 +4350,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
+    check_duplicates(l_schema_object_tab, 'public synonyms and comments');
 $end
 
     for r in
@@ -4475,7 +4475,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
+    check_duplicates(l_schema_object_tab, 'constraints');
 $end
 
     for r in
@@ -4542,7 +4542,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
+    check_duplicates(l_schema_object_tab, 'private synonyms and triggers');
 $end
 
     for r in
@@ -4599,7 +4599,7 @@ $end
     end loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(l_schema_object_tab);
+    check_duplicates(l_schema_object_tab, 'indexes');
 $end
 
     if l_object_types_to_check = g_schema_md_object_type_tab
@@ -4631,7 +4631,7 @@ $end
     longops_done(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-    check_duplicates(p_schema_object_tab);
+    check_duplicates(p_schema_object_tab, 'all objects');
 $end
 
     cleanup;
