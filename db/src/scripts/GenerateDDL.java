@@ -34,6 +34,8 @@ public class GenerateDDL
 
                 // load the properties file
                 props.load(input);
+
+                assert props.size() == props_size;
             
                 final Map<String, String> env = System.getenv();
 
@@ -57,7 +59,7 @@ public class GenerateDDL
                 final String owner = props.getProperty("owner");
 
                 assert JDBCUrl != null && !JDBCUrl.toString().equals("");
-                assert sourceSchema != null && !sourceSchema.equals("");
+                assert sourceSchema != null;
                 assert sourceDbLink != null;
                 assert targetSchema != null;
                 assert targetDbLink != null;
@@ -95,8 +97,9 @@ public class GenerateDDL
 
                 // Print the arguments as one multi line comment and every line as a comment too.
                 out.println("/*");
-      
-                for (nr = -1; nr < vars_size; nr++) {
+
+                /* Only JDBC URL, owner and statement input parameters */
+                for (nr = -1; nr < vars_size - 1; nr++) {
 
                     out.print("-- ");
 
@@ -193,17 +196,15 @@ public class GenerateDDL
                         pstmt.setClob(nr, objectsClob);
                         break;
 
-                    case 13:
-                        pstmt.registerOutParameter(nr, Types.CLOB);
-                        pstmt.executeUpdate();
-                        break;
-
                     default:
-                        assert nr >= -1 && nr <= 13;
+                        assert nr >= -1 && nr <= 12;
                     }
                 }
 
                 out.println("*/");
+
+                pstmt.registerOutParameter(vars_size - 1, Types.CLOB);
+                pstmt.executeUpdate();
 
                 // last statement parameter is the output clob
                 final Clob clob = pstmt.getClob(vars_size - 1);
