@@ -180,7 +180,11 @@
     <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
 
     <property name="javac.verbose" value="false"/>
-  </target>
+
+    <tempfile property="property.file" destDir="${build.dir}"/>
+    <echo level="verbose" message="property.file: ${property.file}" />
+    
+  </target> <!-- init-common -->
 
   <target name="init-full" unless="target.db.name">
     <fail message="Properties src.scripts and full.output.directory undefined">
@@ -361,6 +365,29 @@ Z       Time zone               RFC 822 time zone   -0800
       <echo message="Invoke generate schema (@{id})" />
       <echo message="Temporary file: @{temp.file}" />
 
+      <!-- GJP 2022-1220 
+           Use a properties file:
+           1) as a better way to handle large (CLOB) strings;
+           2) for easier development since the Java program 
+              just needs to load properties from a file and
+              adding a property will thus be easier.
+      -->
+      <propertyfile file="${property.file}">
+        <entry key="source.schema" value="@{source.schema}"/>
+        <entry key="source.db.name" value="@{source.db.name}"/>
+        <entry key="target.schema" value="@{target.schema}"/>
+        <entry key="target.db.name" value="@{target.db.name}"/>
+        <entry key="object.type" value="${object.type}"/>
+        <entry key="object.names.include" value="${object.names.include}"/>
+        <entry key="object.names" value="${object.names.trimmed}"/>        
+        <entry key="skip.repeatables" value="@{skip.repeatables}"/>
+        <entry key="interface" value="@{interface}"/>
+        <entry key="transform.params" value="@{transform.params}"/>     
+        <entry key="objects.include" value="${objects.include}"/>
+        <entry key="objects" value="${objects.trimmed}"/>
+        <entry key="owner" value="@{owner}"/>
+      </propertyfile>
+      
       <!-- generate the input for the Perl script -->
       <java fork="true" 
             classname="${main-class}" 
@@ -371,22 +398,12 @@ Z       Time zone               RFC 822 time zone   -0800
           <path refid="runtime.classpath"/>
           <path location="${jar.dir}/${ant.project.name}.jar"/>
         </classpath>
+        <!-- Oracle clients love NLS_LANG -->
         <env key="NLS_LANG" value="American_America.UTF8"/>
-        <arg value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
-        <arg value="${quote}@{source.schema}${quote}"/> <!-- source schema -->
-        <arg value="${quote}@{source.db.name}${quote}"/> <!-- source database link -->
-        <arg value="${quote}@{target.schema}${quote}"/> <!-- target schema -->
-        <arg value="${quote}@{target.db.name}${quote}"/> <!-- target database link -->
-        <arg value="${quote}${object.type}${quote}"/> <!-- object type -->
-        <arg value="${quote}${object.names.include}${quote}"/> <!-- object names include -->
-        <arg value="${quote}${object.names.trimmed}${quote}"/> <!-- object names -->
-        <arg value="${quote}@{skip.repeatables}${quote}"/> <!-- skip repeatables -->
-        <arg value="${quote}@{interface}${quote}"/>
-        <arg value="${quote}@{transform.params}${quote}"/>
-        <arg value="${quote}${objects.include}${quote}"/> <!-- objects include -->
-        <arg value="${quote}${objects.trimmed}${quote}"/> <!-- objects -->
-        <!-- owner must be the last -->
-        <arg value="${quote}@{owner}${quote}"/>
+        <!-- password etcetera via environment variables -->
+        <env key="JDBC_URL" value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
+        <arg value="${quote}${property.file}${quote}"/>
+        <jvmarg value="-enableassertions"/>
       </java>
 
       <!-- Create scripts -->
