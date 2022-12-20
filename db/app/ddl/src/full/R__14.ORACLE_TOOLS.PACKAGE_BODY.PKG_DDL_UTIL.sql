@@ -3892,7 +3892,7 @@ $end
     l_longops_match_ok_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT$MATCH_OK');
     l_longops_match_fail_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT$MATCH_FAIL');
 
-    l_object_types_to_check oracle_tools.t_text_tab := g_schema_md_object_type_tab; -- check all
+    l_object_types_to_check oracle_tools.t_text_tab := null;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab, p_what in varchar2)
@@ -3930,10 +3930,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     p_schema_object_filter.print();
 $end
 
-    l_object_types_to_check.extend(1);
-    l_object_types_to_check(l_object_types_to_check.last) := 'CONSTRAINT'; -- NOT part of g_schema_md_object_type_tab
-    l_object_types_to_check.extend(1);
-    l_object_types_to_check(l_object_types_to_check.last) := 'REF_CONSTRAINT'; -- NOT part of g_schema_md_object_type_tab
+    -- when we are adding to l_named_object_tab: use g_dependent_md_object_type_tab
+    l_object_types_to_check := g_dependent_md_object_type_tab;
 
     -- queue table
     for r in
@@ -4119,6 +4117,9 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab, 'base objects');
 $end
+
+    -- when we are NOT adding to l_named_object_tab: use g_schema_md_object_type_tab
+    l_object_types_to_check := g_schema_md_object_type_tab;
 
     /*
     -- now dependent objects based on the retrieved objects thus far or
@@ -4540,6 +4541,9 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'indexes');
 $end
+
+    -- GJP 2022-12-20 Assign null to l_object_types_to_check so it will take the else branch
+    l_object_types_to_check := null;
 
     if l_object_types_to_check = g_schema_md_object_type_tab
     then

@@ -420,6 +420,9 @@ $end
          p_base_object_name is not null and
          oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_base_object_type, p_base_object_name) = 1
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 1');
+$end
       l_result := 0;
 
     -- exclude certain objects
@@ -427,14 +430,23 @@ $end
          p_object_name is not null and
          oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_object_type, p_object_name) = 1
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 2');
+$end
       l_result := 0;
 
     when p_object_types_to_check is not null and p_metadata_object_type not member of p_object_types_to_check
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 3');
+$end
       l_result := 1; -- anything is fine
 
     when self.objects_include$ is not null
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 4');
+$end
       l_schema_object_id := null;
           
       for i_part_idx in 1..7
@@ -477,6 +489,9 @@ $end
       end if;
 
     else
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 5');
+$end
       l_result := 1; -- nothing to compare is OK
   end case;
 
