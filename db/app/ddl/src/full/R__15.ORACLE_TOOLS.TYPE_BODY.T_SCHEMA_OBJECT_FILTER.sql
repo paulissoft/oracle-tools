@@ -17,6 +17,24 @@ is
   l_part_tab dbms_sql.varchar2a;
   l_wildcard simple_integer := 0;
 
+  l_object_names constant oracle_tools.pkg_ddl_util.t_object_names :=
+    case
+      when p_object_names is not null
+      then p_object_names
+      when p_object_type is not null
+      then '*'
+      else null
+    end;
+
+  l_object_names_include constant oracle_tools.pkg_ddl_util.t_numeric_boolean :=
+    case
+      when p_object_names_include is not null
+      then p_object_names_include
+      when p_object_type is not null
+      then 1
+      else null
+    end;
+
   procedure check_object_type
   ( p_object_type in oracle_tools.pkg_ddl_util.t_metadata_object_type
   )
@@ -96,14 +114,42 @@ $end
     then
       for i_object_idx in p_object_tab.first .. p_object_tab.last
       loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+        dbug.print
+        ( dbug."info"
+        , 'p_object_tab(%s) before: %s'
+        , i_object_idx, p_object_tab(i_object_idx)
+        );
+$end
         cleanup_object(p_object_tab(i_object_idx));
 
         if p_object_tab(i_object_idx) is not null
-        then          
+        then
+          -- make it a string with 7 parts like this ':<object type>:<object name>::<base object type>:<base object name>:*'
+
+          oracle_tools.pkg_str_util.split(p_str => p_object_tab(i_object_idx), p_delimiter => ':', p_str_tab => l_part_tab);
+
+          p_object_tab(i_object_idx) := null;
+          
+          for i_part_idx in 1..7
+          loop
+            p_object_tab(i_object_idx) :=
+              p_object_tab(i_object_idx) ||
+              case
+                when i_part_idx in (1, 4)
+                then null
+                when i_part_idx = 7
+                then '*'
+                when l_part_tab.exists(i_part_idx)
+                then nvl(l_part_tab(i_part_idx), '*')
+                else '*'
+              end ||
+              case when i_part_idx < 7 then ':' end;
+          end loop;
+
           -- O/S wildcards?
           l_wildcard := sign(instr(p_object_tab(i_object_idx), '*')) + sign(instr(p_object_tab(i_object_idx), '?')) * 2;
 
-          -- first character in expression will denote the operator ('=' for equal or '~' for like)
           if l_wildcard != 0
           then
             -- replace _ by \_
@@ -118,10 +164,24 @@ $end
             end if;           
           end if;
 
-          self.objects_tab$.extend(1);
-          self.objects_tab$(self.objects_tab$.last) := p_object_tab(i_object_idx);
-          self.objects_cmp_tab$.extend(1);
-          self.objects_cmp_tab$(self.objects_cmp_tab$.last) := case l_wildcard when 0 then '=' else '~' end;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+          dbug.print
+          ( dbug."info"
+          , 'p_object_tab(%s) after: %s; l_wildcard: %s'
+          , i_object_idx
+          , p_object_tab(i_object_idx)
+          , l_wildcard
+          );
+$end
+
+          -- no duplicates
+          if not(p_object_tab(i_object_idx) member of self.objects_tab$)
+          then
+            self.objects_tab$.extend(1);
+            self.objects_tab$(self.objects_tab$.last) := p_object_tab(i_object_idx);
+            self.objects_cmp_tab$.extend(1);
+            self.objects_cmp_tab$(self.objects_cmp_tab$.last) := case l_wildcard when 0 then '=' else '~' end;
+          end if;
         end if;
       end loop;
     end if;
@@ -181,7 +241,7 @@ $end
 
   self.schema$ := p_schema;
   self.grantor_is_schema$ := p_grantor_is_schema;
-  self.objects_include$ := coalesce(p_objects_include, p_object_names_include, case when p_object_type is not null then 1 end);
+  self.objects_include$ := nvl(p_objects_include, l_object_names_include);
 
   self.objects_tab$ := oracle_tools.t_text_tab();
   self.objects_cmp_tab$ := oracle_tools.t_text_tab();
@@ -195,17 +255,13 @@ $end
     add_items(l_object_tab);
   else
     -- old functionality
-    if p_object_names_include is not null
+    if l_object_names_include is not null
     then
       oracle_tools.pkg_str_util.split
-      ( p_str => p_object_names
+      ( p_str => l_object_names
       , p_delimiter => ','
       , p_str_tab => l_object_name_tab
       );
-    elsif p_object_type is not null
-    then
-      -- one line with any object name: later on this will translate to two lines
-      l_object_name_tab(l_object_name_tab.count + 1) := '*';
     end if;
 
     if l_object_name_tab.count > 0
@@ -218,15 +274,15 @@ $end
           -- we need to add two objects: one for object and one for base object
           for i_object_idx in 1 .. 2
           loop
-            for i_part_idx in 1 .. 10
+            for i_part_idx in 1 .. 7
             loop
               l_part_tab(i_part_idx) :=
                 case 
                   when i_part_idx = i_object_idx * 3 - 1 -- 2: object type / 5: base object type
-                  then nvl(p_object_type, '*')
+                  then p_object_type
                   when i_part_idx = i_object_idx * 3 -- 3: object name / 6: base object name
                   then l_object_name_tab(i_object_name_idx)
-                  else '*'
+                  else null
                 end;
             end loop;
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
@@ -332,94 +388,90 @@ end print;
 
 member function matches_schema_object
 ( p_object_types_to_check in oracle_tools.t_text_tab
-, p_schema_object_id in varchar2
+  -- database values
+, p_metadata_object_type in varchar2
+, p_object_name in varchar2
+, p_metadata_base_object_type in varchar2 default null
+, p_base_object_name in varchar2 default null
 )
 return integer
 deterministic
 is
   l_part_tab dbms_sql.varchar2a;
-  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type := null;
-  l_object_name oracle_tools.pkg_ddl_util.t_object_name := null;
-  l_metadata_base_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type := null;
-  l_base_object_name oracle_tools.pkg_ddl_util.t_object_name := null;
+  l_schema_object_id varchar2(4000 char);
   l_result integer := 0;
 begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
   dbug.print
   ( dbug."input"
-  , 'cardinality(p_object_types_to_check): %s; p_schema_object_id: %s'
+  , 'cardinality(p_object_types_to_check): %s; p_metadata_object_type: %s; p_object_name: %s; p_metadata_base_object_type: %s; p_base_object_name: %s'
   , cardinality(p_object_types_to_check)
-  , p_schema_object_id
-  );
-$end    
-
-  oracle_tools.pkg_str_util.split(p_str => p_schema_object_id, p_delimiter => ':', p_str_tab => l_part_tab);
-  for i_idx in 2 .. 6
-  loop
-    if l_part_tab.exists(i_idx)
-    then
-      case i_idx
-        when 2 then l_metadata_object_type := l_part_tab(i_idx); -- object type
-        when 3 then l_object_name := l_part_tab(i_idx); -- object name
-        when 5 then l_metadata_base_object_type := l_part_tab(i_idx); -- base object type
-        when 6 then l_base_object_name := l_part_tab(i_idx); -- base object name
-        else null;
-      end case;
-    end if;
-  end loop;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.print
-  ( dbug."info"
-  , 'l_metadata_object_type: %s; l_object_name: %s; l_metadata_base_object_type: %s; l_base_object_name: %s'
-  , l_metadata_object_type
-  , l_object_name
-  , l_metadata_base_object_type
-  , l_base_object_name
+  , p_metadata_object_type
+  , p_object_name
+  , p_metadata_base_object_type
+  , p_base_object_name
   );
 $end    
 
   case
     -- exclude certain (semi-)dependent objects
-    when l_metadata_base_object_type is not null and
-         l_base_object_name is not null and
-         oracle_tools.pkg_ddl_util.is_exclude_name_expr(l_metadata_base_object_type, l_base_object_name) = 1
+    when p_metadata_base_object_type is not null and
+         p_base_object_name is not null and
+         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_base_object_type, p_base_object_name) = 1
     then
       l_result := 0;
 
     -- exclude certain objects
-    when l_metadata_object_type is not null and
-         l_object_name is not null and
-         oracle_tools.pkg_ddl_util.is_exclude_name_expr(l_metadata_object_type, l_object_name) = 1
+    when p_metadata_object_type is not null and
+         p_object_name is not null and
+         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_object_type, p_object_name) = 1
     then
       l_result := 0;
 
-    when p_object_types_to_check is not null and l_metadata_object_type not member of p_object_types_to_check
+    when p_object_types_to_check is not null and p_metadata_object_type not member of p_object_types_to_check
     then
       l_result := 1; -- anything is fine
 
     when self.objects_include$ is not null
     then
+      l_schema_object_id := null;
+          
+      for i_part_idx in 1..7
+      loop
+        l_schema_object_id :=
+          l_schema_object_id ||
+          case i_part_idx
+            when 1 then null
+            when 2 then p_metadata_object_type
+            when 3 then p_object_name
+            when 4 then null
+            when 5 then p_metadata_base_object_type
+            when 6 then p_base_object_name 
+            when 7 then '*'
+          end ||
+          case when i_part_idx < 7 then ':' end;
+      end loop;
+          
       -- new functionality
       if cardinality(self.objects_tab$) > 0
       then
         for i_idx in self.objects_tab$.first .. self.objects_tab$.last
         loop
           case self.objects_cmp_tab$(i_idx)
-            when '=' then l_result := case when p_schema_object_id = self.objects_tab$(i_idx) then 1 else 0 end;
-            when '~' then l_result := case when p_schema_object_id like self.objects_tab$(i_idx) escape '\' then 1 else 0 end;
+            when '=' then l_result := case when l_schema_object_id = self.objects_tab$(i_idx) then 1 else 0 end;
+            when '~' then l_result := case when l_schema_object_id like self.objects_tab$(i_idx) escape '\' then 1 else 0 end;
           end case;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-          dbug.print(dbug."info", '[%s] %s "%s" %s: %s', i_idx, p_schema_object_id, self.objects_cmp_tab$(i_idx), self.objects_tab$(i_idx), l_result);
+          dbug.print(dbug."info", '[%s] %s "%s" %s: %s', i_idx, l_schema_object_id, self.objects_cmp_tab$(i_idx), self.objects_tab$(i_idx), l_result);
 $end
           exit when l_result != 0;
         end loop;
 
-        if self.objects_include$ = 0 -- p_schema_object_id must NOT be part of objects_tab$ (list of exclusions)
+        if self.objects_include$ = 0 -- l_schema_object_id must NOT be part of objects_tab$ (list of exclusions)
         then
-          -- a) l_result equal 1 means there was a match which means that p_schema_object_id is part of the exclusions so inverse l_result
-          -- b) l_result equal 0 means there was no match at all which means that p_schema_object_id is NOT part of the exclusions so inverse l_result
+          -- a) l_result equal 1 means there was a match which means that l_schema_object_id is part of the exclusions so inverse l_result
+          -- b) l_result equal 0 means there was no match at all which means that l_schema_object_id is NOT part of the exclusions so inverse l_result
           l_result := 1 - l_result;
         end if;
       end if;
@@ -438,14 +490,57 @@ end matches_schema_object;
 
 member function matches_schema_object
 ( p_object_types_to_check in oracle_tools.t_text_tab
-  -- database values
+, p_schema_object_id in varchar2
+)
+return integer
+deterministic
+is
+  l_part_tab dbms_sql.varchar2a;
+  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type := null;
+  l_object_name oracle_tools.pkg_ddl_util.t_object_name := null;
+  l_metadata_base_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type := null;
+  l_base_object_name oracle_tools.pkg_ddl_util.t_object_name := null;
+begin
+  oracle_tools.pkg_str_util.split(p_str => p_schema_object_id, p_delimiter => ':', p_str_tab => l_part_tab);
+  
+  for i_idx in 2 .. 6
+  loop
+    if l_part_tab.exists(i_idx)
+    then
+      case i_idx
+        when 2 then l_metadata_object_type := l_part_tab(i_idx); -- object type
+        when 3 then l_object_name := l_part_tab(i_idx); -- object name
+        when 5 then l_metadata_base_object_type := l_part_tab(i_idx); -- base object type
+        when 6 then l_base_object_name := l_part_tab(i_idx); -- base object name
+        else null;
+      end case;
+    end if;
+  end loop;
+
+  return self.matches_schema_object
+         ( p_object_types_to_check => p_object_types_to_check
+         , p_metadata_object_type => l_metadata_object_type
+         , p_object_name => l_object_name
+         , p_metadata_base_object_type => l_metadata_base_object_type
+         , p_base_object_name => l_base_object_name
+         );
+end matches_schema_object;
+
+member function matches_schema_object
+( p_object_types_to_check in oracle_tools.t_text_tab
 , p_schema_object in oracle_tools.t_schema_object
 )
 return integer
 deterministic
 is
 begin
-  return self.matches_schema_object(p_object_types_to_check, p_schema_object.id());
+  return self.matches_schema_object
+         ( p_object_types_to_check => p_object_types_to_check
+         , p_metadata_object_type => p_schema_object.object_type()
+         , p_object_name => p_schema_object.object_name()
+         , p_metadata_base_object_type => p_schema_object.base_object_type()
+         , p_base_object_name => p_schema_object.base_object_name()
+         );
 end matches_schema_object;
 
 end;

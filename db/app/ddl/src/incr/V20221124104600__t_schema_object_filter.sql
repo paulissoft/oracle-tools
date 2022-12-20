@@ -46,6 +46,16 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
    */
 , member function matches_schema_object
   ( p_object_types_to_check in oracle_tools.t_text_tab
+    -- database values
+  , p_metadata_object_type in varchar2
+  , p_object_name in varchar2
+  , p_metadata_base_object_type in varchar2 default null
+  , p_base_object_name in varchar2 default null
+  )
+  return integer
+  deterministic
+, member function matches_schema_object
+  ( p_object_types_to_check in oracle_tools.t_text_tab
   , p_schema_object_id in varchar2
   )
   return integer

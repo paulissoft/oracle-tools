@@ -118,6 +118,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   subtype t_object_names is varchar2(4000 char);
   subtype t_object_names_nn is t_object_names not null;
 
+  subtype t_objects is clob;
+
   subtype t_network_link is all_db_links.db_link%type;
   subtype t_network_link_nn is t_network_link not null;
 
@@ -162,7 +164,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in clob default null
+  , p_objects in t_objects default null
   , p_objects_include in t_numeric_boolean default null
   )
   return oracle_tools.t_schema_ddl_tab
@@ -202,7 +204,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link_target in t_network_link default null
   , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Default for Flyway with repeatable migrations
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in clob default null
+  , p_objects in t_objects default null
   , p_objects_include in t_numeric_boolean default null
   )
   return oracle_tools.t_schema_ddl_tab
@@ -248,7 +250,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
   , p_network_link_target in t_network_link default null
-  , p_objects in clob default null
+  , p_objects in t_objects default null
   , p_objects_include in t_numeric_boolean default null
   );
 
@@ -269,7 +271,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_schema_target in t_schema_nn default user
   , p_network_link_target in t_network_link default null
-  , p_objects in clob default null
+  , p_objects in t_objects default null
   , p_objects_include in t_numeric_boolean default null
   );
 
@@ -409,7 +411,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in clob
+  , p_objects in t_objects
   , p_objects_include in t_numeric_boolean
   );
 
