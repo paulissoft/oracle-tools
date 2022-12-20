@@ -112,7 +112,7 @@
               <id>db-debug-before</id>
               <phase>${db.phase.init}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -233,7 +233,7 @@
               <id>db-debug-after</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>

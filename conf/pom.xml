@@ -157,7 +157,7 @@
               <phase>${conf.phase.init}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <!-- also dbUrl, dbUser, dbPass -->
                   <echoproperties prefix="java." />
                   <echoproperties prefix="maven." />
@@ -430,7 +430,7 @@
               <id>conf-debug-after</id>
               <phase>${conf.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="env." />
                   <echoproperties prefix="db." />
                 </target>
