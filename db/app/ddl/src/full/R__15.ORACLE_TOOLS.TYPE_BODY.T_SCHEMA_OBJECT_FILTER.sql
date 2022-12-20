@@ -186,6 +186,9 @@ $end
          p_base_object_name is not null and
          oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_base_object_type, p_base_object_name) = 1
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 1');
+$end
       l_result := 0;
 
     -- exclude certain objects
@@ -193,10 +196,16 @@ $end
          p_object_name is not null and
          oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_object_type, p_object_name) = 1
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 2');
+$end
       l_result := 0;
 
     when p_object_types_to_check is not null and p_metadata_object_type not member of p_object_types_to_check
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 3');
+$end
       l_result := 1; -- anything is fine
 
     when -- filter on object type
@@ -232,9 +241,23 @@ $end
            end
          )
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 4');
+       dbug.print
+       ( dbug."info"
+       , 'object_type$: %s; object_names_include$: %s; object_names$: %s; pkg_ddl_util.c_object_names_plus_type: %s'
+       , object_type$
+       , object_names_include$
+       , object_names$
+       , dbug.cast_to_varchar2(pkg_ddl_util.c_object_names_plus_type)
+       );
+$end
       l_result := 1;
 
     else
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+       dbug.print(dbug."info", 'case 5');
+$end
       l_result := 0;
   end case;
 
