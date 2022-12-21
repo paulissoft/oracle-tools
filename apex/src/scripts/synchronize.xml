@@ -207,12 +207,15 @@ The following properties are only important during export:
       <echo message="(synchronize.xml.sqlcl) inputstring: @{inputstring}"/>
       <ac:trycatch property="@{name}.error">
         <try>
+          <!-- GJP 2022-12-21 https://github.com/paulissoft/oracle-tools/issues/101
+               failonerror="false" => failonerror="true"
+          -->
           <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
                 fork="true"
                 spawn="false"
                 dir="@{dir}"
                 inputstring="@{inputstring}"
-                failonerror="false">
+                failonerror="true">
             <sysproperty key="java.awt.headless" value="true"/>
             <sysproperty key="apple.awt.UIElement" value="true"/>
             <jvmarg value="-Xss10M"/>
