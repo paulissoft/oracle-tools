@@ -9,8 +9,6 @@ CREATE OR REPLACE FUNCTION "ORACLE_TOOLS"."F_GENERATE_DDL"
 , pi_skip_repeatables in naturaln default 1
 , pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
 , pi_interface in varchar2 default null
-, pi_objects_include in natural default null
-, pi_objects in clob default null
 )
 return clob
 authid current_user
@@ -39,12 +37,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , pi_transform_param_list
   , pi_interface
   );
-  dbug.print
-  ( dbug."input"
-  , 'pi_objects_include: %s; pi_objects length: %s'
-  , pi_objects_include
-  , dbms_lob.getlength(lob_loc => pi_objects)
-  );
 $end
 
   oracle_tools.p_generate_ddl
@@ -58,8 +50,6 @@ $end
   , pi_skip_repeatables => pi_skip_repeatables
   , pi_interface => pi_interface
   , pi_transform_param_list => pi_transform_param_list
-  , pi_objects_include => pi_objects_include
-  , pi_objects => pi_objects
   , po_clob => l_clob
   );
 

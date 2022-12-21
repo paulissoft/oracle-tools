@@ -23,9 +23,9 @@ c_source_and_target_equal      constant integer := -20104;
 e_source_and_target_equal      exception;
 pragma exception_init(e_source_and_target_equal, -20104);
 
-c_objects_wrong  constant integer := -20105;
-e_objects_wrong  exception;
-pragma exception_init(e_objects_wrong, -20105);
+c_object_names_wrong  constant integer := -20105;
+e_object_names_wrong  exception;
+pragma exception_init(e_object_names_wrong, -20105);
 
 c_object_type_wrong  constant integer := -20106;
 e_object_type_wrong  exception;

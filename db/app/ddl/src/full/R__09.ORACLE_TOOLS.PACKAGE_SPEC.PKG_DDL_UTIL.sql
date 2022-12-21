@@ -25,9 +25,9 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
   -- 0: none, 1: standard, 2: verbose, 3: even more verbose
-  c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 3 $else 0 $end; -- never change the last value
-  c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
-  c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
+  c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
+  c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then false $else false $end; -- idem
+  c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then false $else false $end; -- idem
 
   /*
   -- Start of bugs/features (oldest first)
@@ -63,6 +63,11 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- DDL generation changes due to sequence start with should be ignored.
   -- https://github.com/paulissoft/oracle-tools/issues/58
   c_set_start_with_to_minvalue constant boolean := true;
+
+  -- GJP 2022-11-23
+  -- It must be possible to specify the object type for object names when generating DDL.
+  -- https://github.com/paulissoft/oracle-tools/issues/89
+  c_object_names_plus_type constant boolean := false;
 
   -- GJP 2022-12-14 The DDL generator does not create a correct constraint script.
   --
@@ -118,8 +123,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   subtype t_object_names is varchar2(4000 char);
   subtype t_object_names_nn is t_object_names not null;
 
-  subtype t_objects is clob;
-
   subtype t_network_link is all_db_links.db_link%type;
   subtype t_network_link_nn is t_network_link not null;
 
@@ -137,6 +140,15 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * </p>
   *
   * <p>
+  * Based on p_object_names and p_object_names_include the filtering is like this:
+  * <ul>
+  * <li>If p_object_names_include is empty then there are no constraints regarding object names (although special objects like Flyway tables and Oracle objects will be ignored).</li>
+  * <li>If p_object_names_include is 1, only names in p_object_names will be included like in DBMS_METADATA.SET_FILTER(name=>'NAME_EXPR', value=>'IN (...)').</li>
+  * <li>If p_object_names_include is 0, only names in p_object_names will be excluded like in DBMS_METADATA.SET_FILTER(name=>'EXCLUDE_NAME_EXPR', value=>'IN (...)').</li>
+  * </ul>
+  * </p>
+  *
+  * <p>
   * NOTE: parameters p_schema and p_object_names will NOT be converted to upper case.
   * </p>
   *
@@ -149,8 +161,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_network_link          The network link.
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
   * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
   *
   * @return A list of DDL text plus information about the object.
   */
@@ -160,12 +170,10 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- >= 0, not null
   , p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -180,32 +188,32 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   /**
   * Display DDL to migrate from source to target.
   *
-  * @param p_object_type           Filter for object type.
-  * @param p_object_names          A comma separated list of (base) object names.
-  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
-  * @param p_schema_source         Source schema (may be empty for uninstall).
-  * @param p_schema_target         Target schema.
-  * @param p_network_link_source   Source network link.
-  * @param p_network_link_target   Target network link.
-  * @param p_skip_repeatables      Skip repeatables objects (1) or check all objects (0)
-  * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * <p>
+  * See display_ddl_schema() for the usage of p_object_type, p_object_names and p_object_names_include.
+  * </p>
+  *
+  * @param p_object_type             Filter for object type.
+  * @param p_object_names            A comma separated list of (base) object names.
+  * @param p_object_names_include    How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_schema_source           Source schema (may be empty for uninstall).
+  * @param p_schema_target           Target schema.
+  * @param p_network_link_source     Source network link.
+  * @param p_network_link_target     Target network link.
+  * @param pi_skip_repeatables       Skip repeatables objects (1) or check all objects (0)
+  * @param p_transform_param_list    A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
   *
   * @return A list of DDL text plus information about the object.
   */
   function display_ddl_schema_diff
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_source in t_schema default user
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
   , p_network_link_target in t_network_link default null
   , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Default for Flyway with repeatable migrations
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -232,47 +240,47 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   /**
   * Synchronize a target schema based on a source schema.
   *
-  * @param p_object_type           Filter for object type.
-  * @param p_object_names          A comma separated list of (base) object names.
-  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
-  * @param p_schema_source         Source schema (may be empty for uninstall).
-  * @param p_schema_target         Target schema.
-  * @param p_network_link_source   Source network link.
-  * @param p_network_link_target   Target network link.
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * <p>
+  * See display_ddl_schema() for the usage of p_object_type, p_object_names and p_object_names_include.
+  * </p>
+  *
+  * @param p_object_type             Filter for object type.
+  * @param p_object_names            A comma separated list of (base) object names.
+  * @param p_object_names_include    How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_schema_source           Source schema (may be empty for uninstall).
+  * @param p_schema_target           Target schema.
+  * @param p_network_link_source     Source network link.
+  * @param p_network_link_target     Target network link.
   */
   procedure synchronize
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_source in t_schema default user
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
   , p_network_link_target in t_network_link default null
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
   );
 
   /**
   * This one uninstalls a target schema.
   *
-  * @param p_object_type           Filter for object type.
-  * @param p_object_names          A comma separated list of (base) object names.
-  * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
-  * @param p_schema_target         Target schema.
-  * @param p_network_link_target   Target network link.
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * <p>
+  * See display_ddl_schema() for the usage of p_object_type, p_object_names and p_object_names_include.
+  * </p>
+  *
+  * @param p_object_type             Filter for object type.
+  * @param p_object_names            A comma separated list of (base) object names.
+  * @param p_object_names_include    How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  * @param p_schema_target           Target schema.
+  * @param p_network_link_target     Target network link.
   */
   procedure uninstall
   ( p_object_type in t_metadata_object_type default null
   , p_object_names in t_object_names default null
-  , p_object_names_include in t_numeric_boolean default null
+  , p_object_names_include in t_numeric_boolean default null /* OK */
   , p_schema_target in t_schema_nn default user
   , p_network_link_target in t_network_link default null
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
   );
 
   /**
@@ -390,7 +398,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
   */
   function get_schema_ddl
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter /* OK */
     -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
   , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
   , p_transform_param_list in varchar2 default c_transform_param_list
@@ -411,8 +419,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
   );
 
   /*
@@ -454,17 +460,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   )
   return oracle_tools.t_text_tab
   deterministic;
-
-  procedure check_schema
-  ( p_schema in t_schema
-  , p_network_link in t_network_link
-  , p_description in varchar2 default 'Schema'
-  );
-  
-  procedure check_numeric_boolean
-  ( p_numeric_boolean in pls_integer
-  , p_description in varchar2 
-  );
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
