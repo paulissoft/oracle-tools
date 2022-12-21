@@ -64,7 +64,7 @@ $end
   
   if p_insert_procedure is not null
   then
-    execute immediate 'begin ' || dbms_assert.sql_object_name(p_insert_procedure) || '; end;';
+    execute immediate 'begin ' || oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_insert_procedure, 'procedure') || '; end;';
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -99,7 +99,7 @@ begin
   data_br_pkg.check_br(p_br_package_tab => p_br_package_tab, p_br_name => '%', p_enable => true);
   if p_delete_procedure is not null
   then
-    execute immediate 'begin ' || dbms_assert.sql_object_name(p_delete_procedure) || '; end;';
+    execute immediate 'begin ' || oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_delete_procedure, 'procedure') || '; end;';
   end if;
 end ut_teardown;
 
@@ -201,7 +201,7 @@ $end
         then
           l_error_code := r.txt;
 
-          execute immediate 'begin :1 := ' || dbms_assert.sql_object_name(p_function) || '(:2); end;' using out l_error_message, in l_error_code;
+          execute immediate 'begin :1 := ' || oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_function, 'function') || '(:2); end;' using out l_error_message, in l_error_code;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
           dbug.print(dbug."info", 'l_error_code: %s; l_error_message: %s', l_error_code, l_error_message); 
@@ -372,13 +372,13 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $
 $end
 
   -- check SQL injection
-  if dbms_assert.simple_sql_name(p_db_link) is null
+  if oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_db_link, 'database link') is null
   then
     raise value_error;
   end if;
 
   execute immediate
-    'call ' || dbms_assert.qualified_sql_name('dbms_output.enable@' || p_db_link) || '(:b1)'
+    'call ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name('dbms_output.enable@' || p_db_link, 'remote procedure') || '(:b1)'
     using p_buffer_size;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -402,7 +402,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $
 $end
 
   -- check SQL injection
-  if dbms_assert.simple_sql_name(p_db_link) is null
+  if oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_db_link, 'database link') is null
   then
     raise value_error;
   end if;
@@ -416,7 +416,7 @@ declare
 begin 
   dbms_output.get_line@%s(l_line, l_status);
 end;'
-    , dbms_assert.simple_sql_name(p_db_link)
+    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_db_link, 'database link')
     );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -440,7 +440,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $
 $end
 
   -- check SQL injection
-  if dbms_assert.simple_sql_name(p_db_link) is null
+  if oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_db_link, 'database link') is null
   then
     raise value_error;
   end if;
@@ -458,7 +458,7 @@ begin
     dbms_output.put_line(l_line);
   end loop;
 end;'
-    , dbms_assert.simple_sql_name(p_db_link)
+    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_db_link, 'databse link')
     );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
@@ -495,7 +495,7 @@ $end
 
   if p_init_procedure is not null
   then
-    execute immediate 'begin ' || dbms_assert.sql_object_name(p_init_procedure) || '; end;';
+    execute immediate 'begin ' || oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_init_procedure, 'procedure') || '; end;';
   end if;
 
   case
@@ -536,7 +536,7 @@ $end
 
   if p_init_procedure is not null
   then
-    execute immediate 'begin ' || dbms_assert.sql_object_name(p_init_procedure) || '; end;';
+    execute immediate 'begin ' || oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_init_procedure, 'procedure') || '; end;';
   end if;
 
   case

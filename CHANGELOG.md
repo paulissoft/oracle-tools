@@ -23,9 +23,11 @@ Types of changes:
 - [In Jenkins it must be possible to use NFS for the Maven local repository and the controller/agent workspace.](https://github.com/paulissoft/oracle-tools/issues/85)
 - [The strip source schema for generating DDL scripts does not work well.](https://github.com/paulissoft/oracle-tools/issues/91)
 - [The DDL generator does not create a correct constraint script.](https://github.com/paulissoft/oracle-tools/issues/92)
+- [The excel upload utility does not work with column names with spaces.](https://github.com/paulissoft/oracle-tools/issues/93)
 - [The DDL generator can not parse a specific ALTER TABLE MODIFY CHECK constraint.](https://github.com/paulissoft/oracle-tools/issues/95)
 - [Error logging must include object concerned for DDL generation.](https://github.com/paulissoft/oracle-tools/issues/97)
 - [DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.](https://github.com/paulissoft/oracle-tools/issues/98)
+
 ## [1.9.0] - 2022-10-05
 
 ### Added
