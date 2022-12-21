@@ -42,6 +42,10 @@
     <db.object.names />
     <!-- db.object.names.include specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include) -->
     <db.object.names.include />
+    <!-- A list of object IDs to include or exclude (or empty to include all) -->
+    <db.objects />
+    <!-- db.objects.include specifies what to do with db.objects: empty (no filter), 0 (exclude) or 1 (include) -->
+    <db.objects.include />
     <!-- must set it here so profile oracle-tools can override it when
          db-generate-ddl-full is also active -->
     <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
@@ -108,7 +112,7 @@
               <id>db-debug-before</id>
               <phase>${db.phase.init}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -229,7 +233,7 @@
               <id>db-debug-after</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -530,6 +534,8 @@
                       <property name="object.type" value="${db.object.type}" />
                       <property name="object.names" value="${db.object.names}" />
                       <property name="object.names.include" value="${db.object.names.include}" />
+                      <property name="objects" value="${db.objects}" />
+                      <property name="objects.include" value="${db.objects.include}" />
                       <property name="full.force.view" value="${db.full.force.view}" />
                       <property name="full.group.constraints" value="${db.full.group.constraints}" />
                       <property name="full.output.directory" value="${db.src.full.scripts}" />
@@ -597,6 +603,8 @@
                       <property name="object.type" value="${db.object.type}" />
                       <property name="object.names" value="${db.object.names}" />
                       <property name="object.names.include" value="${db.object.names.include}" />
+                      <property name="objects" value="${db.objects}" />
+                      <property name="objects.include" value="${db.objects.include}" />
                       <property name="incr.dynamic.sql" value="${db.incr.dynamic.sql}" />
                       <property name="incr.output.directory" value="${db.src.incr.scripts}" />
                       <property name="incr.skip.repeatables" value="${db.incr.skip.repeatables}" />

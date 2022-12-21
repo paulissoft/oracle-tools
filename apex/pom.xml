@@ -83,7 +83,7 @@
               <id>apex-debug-before</id>
               <phase>${apex.phase.init}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="apex." />
                   <echoproperties prefix="sql." />
                 </target>
@@ -163,7 +163,7 @@
               <id>apex-debug-after</id>
               <phase>${apex.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${maven.debug}">
                   <echoproperties prefix="apex." />
                   <echoproperties prefix="sql." />
                   <echoproperties prefix="env." />
