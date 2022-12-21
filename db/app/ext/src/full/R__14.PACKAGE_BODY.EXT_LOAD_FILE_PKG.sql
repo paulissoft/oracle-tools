@@ -496,11 +496,11 @@ begin
   if p_action = 'R'
   then
     begin
-      execute immediate 'truncate table ' || dbms_assert.qualified_sql_name(p_object_name);
+      execute immediate 'truncate table ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(p_object_name, 'table');
     exception
       when others
       then
-        execute immediate 'delete from ' || dbms_assert.qualified_sql_name(p_object_name);
+        execute immediate 'delete from ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(p_object_name, 'table');
     end;
   end if;
 end prepare_load;
@@ -539,7 +539,7 @@ $if cfg_pkg.c_debugging $then
 $end
 
   begin
-    if dbms_assert.sql_object_name(p_table_name) is not null -- raises an exception if not an existing sql object
+    if oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_table_name, 'table') is not null -- raises an exception if not an existing sql object
     then
       l_found := 1;
     end if;
@@ -568,7 +568,7 @@ $end
 
       for i_idx in p_column_info_tab.first .. p_column_info_tab.last
       loop
-        l_column_name := dbms_assert.enquote_name(p_column_info_tab(i_idx).header_row, false);
+        l_column_name := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_column_info_tab(i_idx).header_row, 'column', false);
         l_sql_text(l_sql_text.count + 1) := ', ' || l_column_name || ' ' || p_column_info_tab(i_idx).data_type;
         
         if p_column_info_tab(i_idx).in_key = 1
@@ -633,9 +633,9 @@ return varchar2
 is
 begin
   return
-    dbms_assert.enquote_name(p_owner, false) ||
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_owner, 'owner', false) ||
     '.' ||
-    dbms_assert.enquote_name(p_object_name, false);
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_object_name, 'object', false);
 end get_fq_object_name;
 
 -- GLOBAL
@@ -667,12 +667,13 @@ $end
   dbms_sql.parse
   ( l_cursor
   , 'select * from ' ||
-    dbms_assert.qualified_sql_name
+    oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name
     ( case
         when p_owner is null
         then p_object_name
         else get_fq_object_name(p_owner => p_owner, p_object_name => p_object_name)
       end
+    , 'table/view'
     ) ||
     ' where 1 = 2'
   , dbms_sql.native
@@ -811,7 +812,7 @@ $end
   p_view_name := 'LOAD_FILE_' || to_char(localtimestamp, 'yyyymmddhh24missff4') || '_V';
 
   -- We only create it, not replace
-  l_sql_statement := 'CREATE VIEW ' || dbms_assert.qualified_sql_name(p_view_name);
+  l_sql_statement := 'CREATE VIEW ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(p_view_name, 'view');
 
   -- Use the Excel Column Names (A, B, etcetera) as view column name
   for i_idx in p_column_info_tab.first .. p_column_info_tab.last
@@ -2395,11 +2396,11 @@ declare
 begin
   null;
 end;}'
-    , dbms_assert.simple_sql_name(p_header_row)
+    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_header_row, 'database column')
     , p_data_type
     , p_default_value
-    , dbms_assert.simple_sql_name(p_excel_column_name)
-    , dbms_assert.simple_sql_name(p_header_row)
+    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_excel_column_name, 'excel column')
+    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_header_row, 'database column')
     , case when p_format_mask is not null then q'[, ']' || p_format_mask || q'[']' end
     );
 
@@ -2865,13 +2866,13 @@ $end
     end;
 
   p_object_info_rec.object_name :=
-    dbms_assert.enquote_name(p_owner, false) ||
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_owner, 'owner', false) ||
     '.' ||
-    dbms_assert.enquote_name(p_object_info_rec.object_name, false);
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_object_info_rec.object_name, 'object', false);
 
   p_new_table := 0;
   begin
-    if dbms_assert.sql_object_name(p_object_info_rec.object_name) is not null -- raises an exception if not an existing sql object
+    if oracle_tools.data_api_pkg.dbms_assert$sql_object_name(p_object_info_rec.object_name, 'object') is not null -- raises an exception if not an existing sql object
     then
       null;
     end if;
@@ -2895,14 +2896,14 @@ $end
       )
     );
     
-    if dbms_assert.enquote_name(p_owner, false)
-       != dbms_assert.enquote_name(ext_load_file_pkg.get_load_data_owner, false)
+    if oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_owner, 'owner', false)
+       != oracle_tools.data_api_pkg.dbms_assert$enquote_name(ext_load_file_pkg.get_load_data_owner, 'data owner', false)
     then
       ddl
       ( 'grant select,insert,update,delete on ' ||
-        dbms_assert.qualified_sql_name(p_object_info_rec.object_name) ||
+        oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(p_object_info_rec.object_name, 'object') ||
         ' to ' ||
-        dbms_assert.simple_sql_name(dbms_assert.enquote_name(ext_load_file_pkg.get_load_data_owner, false))
+        oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(oracle_tools.data_api_pkg.dbms_assert$enquote_name(ext_load_file_pkg.get_load_data_owner, 'data owner', false), 'data owner')
       );        
     end if;
   else  
@@ -3004,7 +3005,7 @@ $end
   case p_action
     when 'D'
     then
-      execute immediate 'drop view ' || dbms_assert.qualified_sql_name(p_view_name);
+      execute immediate 'drop view ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(p_view_name, 'view');
   end case;
   
 $if cfg_pkg.c_debugging $then
@@ -3173,7 +3174,7 @@ $end
 
   if get_load_data_owner != get_owner
   then
-    execute immediate 'GRANT INSERT ON "myobject" TO ' || dbms_assert.simple_sql_name(get_load_data_owner);
+    execute immediate 'GRANT INSERT ON "myobject" TO ' || oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(get_load_data_owner, 'data owner');
   end if;  
 
   g_object_info_rec.view_name := 'xyz';
@@ -3227,7 +3228,7 @@ $end
   execute immediate 'drop table "myobject" purge';
   if g_view_name is not null
   then
-    execute immediate 'drop view ' || dbms_assert.qualified_sql_name(g_view_name);
+    execute immediate 'drop view ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(g_view_name, 'view');
   end if;
 
 $if cfg_pkg.c_debugging $then
@@ -3466,10 +3467,10 @@ Expenses:Bank:CreditAgricole:Checking:Compte3:Fine,2020-05-20,STMTTRN - FRAIS VI
   begin
     if l_cursor is not null
     then
-      execute immediate 'drop table ' || dbms_assert.qualified_sql_name(l_object_info_rec.object_name) || ' purge';
+      execute immediate 'drop table ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(l_object_info_rec.object_name, 'table') || ' purge';
       if l_view_name is not null
       then
-        execute immediate 'drop view ' || dbms_assert.qualified_sql_name(l_view_name);
+        execute immediate 'drop view ' || oracle_tools.data_api_pkg.dbms_assert$qualified_sql_name(l_view_name, 'view');
       end if;
       dbms_sql.close_cursor(l_cursor);
     end if;

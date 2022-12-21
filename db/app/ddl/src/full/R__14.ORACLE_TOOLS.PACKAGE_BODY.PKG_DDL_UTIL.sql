@@ -329,7 +329,7 @@ $end
     then
       begin
         -- GPA 2016-12-12 #135952639 When a database link is defined as private and public the private must be chosen during DDL generation.
-        select  dbms_assert.enquote_name(t.db_link)
+        select  oracle_tools.data_api_pkg.dbms_assert$enquote_name(t.db_link, 'database link')
         into    l_db_link
         from    all_db_links t
         where   t.db_link = upper(p_network_link)
@@ -370,12 +370,12 @@ $end
       raise_application_error(oracle_tools.pkg_ddl_error.c_schema_wrong, p_description || ' is empty and the network link not.');
     elsif p_schema is not null and
           p_network_link is null and
-          dbms_assert.schema_name(p_schema) is null
+          oracle_tools.data_api_pkg.dbms_assert$schema_name(p_schema, 'schema') is null
     then
       raise_application_error
       ( oracle_tools.pkg_ddl_error.c_schema_does_not_exist
       , p_description || '"' || p_schema || '"' || ' does not exist.'
-      ); -- hier komt ie niet omdat dbms_assert.schema_name() al een exceptie genereert
+      ); -- hier komt ie niet omdat oracle_tools.data_api_pkg.dbms_assert$schema_name() al een exceptie genereert
     end if;
   end check_schema;
 
@@ -755,9 +755,9 @@ $end
 
     if p_network_link is null
     then
-      select dbms_assert.enquote_name(t.global_name) into l_host from global_name t;
+      select oracle_tools.data_api_pkg.dbms_assert$enquote_name(t.global_name, 'database') into l_host from global_name t;
     else
-      select dbms_assert.enquote_name(t.host) into l_host from all_db_links t where t.db_link = upper(p_network_link);
+      select oracle_tools.data_api_pkg.dbms_assert$enquote_name(t.host, 'host') into l_host from all_db_links t where t.db_link = upper(p_network_link);
     end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
@@ -1799,15 +1799,6 @@ $end
           -- trim tab, linefeed, carriage return and space from the input
           l_object_name := trim(chr(9) from trim(chr(10) from trim(chr(13) from trim(' ' from p_object_name_tab(i_idx)))));
           -- GJP 2021-08-27 Do not check for valid SQL names.
-          /*
-          begin
-            l_object_name := dbms_assert.simple_sql_name(l_object_name);
-          exception
-            when e_invalid_sql_name
-            then l_object_name := dbms_assert.enquote_name(l_object_name); -- "ST00001oyY/EaERZngUwEAAH+t7Q="
-          end;
-          l_in_list := l_in_list || '''' || dbms_assert.simple_sql_name(l_object_name) || ''',';
-          */
           l_in_list := l_in_list || '''' || l_object_name || ''',';
         end loop;
         l_in_list := rtrim(l_in_list, ',');
@@ -1981,7 +1972,7 @@ $end
           ( handle => p_handle
           , name => 'CUSTOM_FILTER'
           , value => q'[/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME AND /* 1b */ KU$.OWNER_NAME = ']' ||
-                     dbms_assert.schema_name(p_base_object_schema) || q'[']'
+                     oracle_tools.data_api_pkg.dbms_assert$schema_name(p_base_object_schema, 'schema') || q'[']'
           );
         end if;
 
@@ -4197,6 +4188,13 @@ $end
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab, 'base objects');
+    if l_named_object_tab.count > 0
+    then
+      for i_named_idx in l_named_object_tab.first .. l_named_object_tab.last
+      loop
+        dbug.print(dbug."info", 'l_named_object_tab(%s).id(): %s', i_named_idx, l_named_object_tab(i_named_idx).id());
+      end loop;
+    end if;
 $end
 
     /*
@@ -6245,7 +6243,7 @@ exception
     :b9 := dbms_utility.format_error_backtrace;
     raise;
 end;'
-          , dbms_assert.simple_sql_name(l_network_link)
+          , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(l_network_link, 'database link')
           );
       begin
         oracle_tools.api_pkg.dbms_output_enable(l_network_link);

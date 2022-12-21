@@ -180,6 +180,102 @@ $end
     raise;
 end show_job_status;
 
+function dbms_assert$enquote_name
+( p_str in varchar2
+, p_what in varchar2
+, p_capitalize in boolean default true
+)
+return varchar2
+is
+begin
+  return dbms_assert.enquote_name(p_str, p_capitalize);
+exception
+  when others
+  then
+    raise_error
+    ( 'DBMS_ASSERT.ENQUOTE_NAME'
+    , p_what
+    , p_str
+    );
+    raise; -- to keep the compiler happy
+end dbms_assert$enquote_name;
+
+function dbms_assert$qualified_sql_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2
+is
+begin
+  return dbms_assert.qualified_sql_name(p_str);
+exception
+  when others
+  then
+    raise_error
+    ( 'DBMS_ASSERT.QUALIFIED_SQL_NAME'
+    , p_what
+    , p_str
+    );
+    raise; -- to keep the compiler happy
+end dbms_assert$qualified_sql_name;
+
+function dbms_assert$schema_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2
+is
+begin
+  return dbms_assert.schema_name(p_str);
+exception
+  when others
+  then
+    raise_error
+    ( 'DBMS_ASSERT.SCHEMA_NAME'
+    , p_what
+    , p_str
+    );
+    raise; -- to keep the compiler happy
+end dbms_assert$schema_name;
+
+function dbms_assert$simple_sql_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2
+is
+begin
+  return dbms_assert.simple_sql_name(p_str);
+exception
+  when others
+  then
+    raise_error
+    ( 'DBMS_ASSERT.SIMPLE_SQL_NAME'
+    , p_what
+    , p_str
+    );
+    raise; -- to keep the compiler happy
+end dbms_assert$simple_sql_name;
+
+function dbms_assert$sql_object_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2
+is
+begin
+  return dbms_assert.sql_object_name(p_str);
+exception
+  when others
+  then
+    raise_error
+    ( 'DBMS_ASSERT.SQL_OBJECT_NAME'
+    , p_what
+    , p_str
+    );
+    raise; -- to keep the compiler happy
+end dbms_assert$sql_object_name;
+
 $if cfg_pkg.c_testing $then
 
 procedure ut_raise_error
