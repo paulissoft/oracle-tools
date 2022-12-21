@@ -2310,7 +2310,9 @@ procedure validate
 , p_default_value in varchar2
 )
 is
-  l_statement varchar2(4000 char) := null;  
+  l_statement varchar2(4000 char) := null;
+  l_database_column_name varchar2(4000 char) := null;
+  l_excel_column_name varchar2(4000 char) := null;
   
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'VALIDATE';
 begin
@@ -2345,6 +2347,10 @@ $end
   then
     raise_application_error(-20000, 'IN KEY should not be empty');
   end if;
+
+  -- enquote the names but no conversion to upper case
+  l_database_column_name := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_header_row, 'database column', false);
+  l_excel_column_name := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_excel_column_name, 'excel column', false);
 
   if number2excel_column_name(excel_column_name2number(p_excel_column_name)) = p_excel_column_name
   then
@@ -2391,16 +2397,16 @@ $end
     utl_lms.format_message
     ( q'{
 declare
-  "%s" %s := q'[%s]';
-  "%s" varchar2(4000 char) := to_char("%s"%s);
+  %s %s := q'[%s]';
+  %s varchar2(4000 char) := to_char(%s%s);
 begin
   null;
 end;}'
-    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_header_row, 'database column')
+    , l_database_column_name
     , p_data_type
     , p_default_value
-    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_excel_column_name, 'excel column')
-    , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_header_row, 'database column')
+    , l_excel_column_name
+    , l_database_column_name
     , case when p_format_mask is not null then q'[, ']' || p_format_mask || q'[']' end
     );
 
