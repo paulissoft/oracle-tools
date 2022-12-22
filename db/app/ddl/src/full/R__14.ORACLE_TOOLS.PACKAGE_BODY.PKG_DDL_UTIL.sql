@@ -3886,7 +3886,13 @@ $end
     -- 9. indexes
     -- 10. all objects
 
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT', p_totalwork => 10, p_op_name => 'what', p_units => 'steps');
+    l_longops_rec t_longops_rec :=
+      longops_init
+      ( p_target_desc => 'procedure ' || 'GET_SCHEMA_OBJECT'
+      , p_totalwork => 10
+      , p_op_name => 'what'
+      , p_units => 'steps'
+      );
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab, p_what in varchar2)
@@ -4539,7 +4545,7 @@ $end
   is
     l_schema_object_filter oracle_tools.t_schema_object_filter := p_schema_object_filter;
     l_schema_object_tab oracle_tools.t_schema_object_tab;
-    l_program constant t_module := 'GET_SCHEMA_OBJECT'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECT'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec :=

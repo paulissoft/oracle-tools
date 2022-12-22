@@ -69,9 +69,10 @@ procedure print
  * Note SWITCH.
  * When the matching result is 0 and both p_metadata_base_object_type and
  * p_base_object_name are empty, the matching is tried again but now with the
- * (base) object names and (base) object types switched.  This switch is
- * necessary to find dependent or granted objects whose base object matches
- * one of the filters. If the switch result is 1, it is marked (by setting
+ * base object name set to the original object name and all other object
+ * parameters null.  This switch is necessary to find dependent or granted
+ * objects whose base object matches one of the filters. If the switch result
+ * is 1, it is marked (by setting
  * p_schema_object_filter.match_partial_eq_complete$ to 0) that the matching
  * for named objects must be re-executed (since it may have just been used to
  * get base objects for dependent/granted objects). That functionality is part

@@ -626,7 +626,7 @@ begin
   -- Note SWITCH.
   -- A) When both the base parameters are empty (named search) we need to both lookup
   --    using the OBJECT info in p_schema_object_filter.objects_tab$ and BASE OBJECT info,
-  --    hence switch OBJECT and BASE OBJECT. If the result for the switch is then 1
+  --    hence switch OBJECT NAME. If the result for the switch is then 1
   --    we need to redo a named object match at the end in combine_named_other_objects().
   -- B) When at least one of the base parameters is not empty: just one partial match.
   
@@ -641,8 +641,7 @@ begin
       l_part_tab("BASE OBJECT TYPE") := p_metadata_base_object_type;
       l_part_tab("BASE OBJECT NAME") := p_base_object_name;
     else
-      -- switch
-      l_part_tab("BASE OBJECT TYPE") := p_metadata_object_type;
+      -- switch only for the name part
       l_part_tab("BASE OBJECT NAME") := p_object_name;
     end if;
 
@@ -650,10 +649,10 @@ begin
                 ( p_schema_object_filter => p_schema_object_filter
                 , p_schema_object_id => oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':')
                 , p_match_partial => true
-                , p_metadata_object_type => p_metadata_object_type
-                , p_object_name => p_object_name
-                , p_metadata_base_object_type => p_metadata_base_object_type
-                , p_base_object_name => p_base_object_name
+                , p_metadata_object_type => l_part_tab("OBJECT TYPE")
+                , p_object_name => l_part_tab("OBJECT NAME")
+                , p_metadata_base_object_type => l_part_tab("BASE OBJECT TYPE")
+                , p_base_object_name => l_part_tab("BASE OBJECT NAME")
                 );
 
     p_schema_object_filter.match_count$ := p_schema_object_filter.match_count$ + 1;
@@ -968,13 +967,26 @@ procedure ut_matches_schema_object
 is
   l_id oracle_tools.pkg_ddl_util.t_object;
   l_cnt pls_integer;
+  l_max_objects constant pls_integer := 1;
 begin
   -- get all
   for r in
-  ( select  a.id() as id
-    from    table(oracle_tools.pkg_ddl_util.get_schema_object) a -- all
-    order by
-            id
+  ( with src as
+    ( select  a.id() as id
+      from    table
+              ( oracle_tools.pkg_ddl_util.get_schema_object
+                ( oracle_tools.t_schema_object_filter
+                  ( p_object_names => 'PKG_*'
+                  , p_object_names_include => 1
+                  )
+                )
+              ) a -- all
+      order by
+              id
+    )
+    select  src.*
+    from    src
+    where   rownum <= l_max_objects
   )
   loop
     -- get the current one
