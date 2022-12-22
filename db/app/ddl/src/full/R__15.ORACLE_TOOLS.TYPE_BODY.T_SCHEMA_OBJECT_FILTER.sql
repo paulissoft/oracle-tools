@@ -50,8 +50,8 @@ is
 begin
   return
     case
-      when match_count > 0
-      then trunc((100 * match_count_ok) / match_count)
+      when match_count$ > 0
+      then trunc((100 * match_count_ok$) / match_count$)
       else null
     end;
 end;

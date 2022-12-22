@@ -4,9 +4,9 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
 , objects_tab$ oracle_tools.t_text_tab
 , objects_include$ integer
 , objects_cmp_tab$ oracle_tools.t_text_tab
-, match_partial_eq_complete integer
-, match_count integer
-, match_count_ok integer
+, match_partial_eq_complete$ integer
+, match_count$ integer
+, match_count_ok$ integer
 , constructor function t_schema_object_filter
   ( self in out nocopy oracle_tools.t_schema_object_filter
   , p_schema in varchar2 default user

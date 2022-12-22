@@ -135,6 +135,54 @@ $end
   return l_result;
 end matches_schema_object;
 
+procedure serialize
+( p_schema_object_filter in t_schema_object_filter
+, p_json_object in out nocopy json_object_t
+)
+is
+  procedure to_json_array(p_attribute in varchar2, p_str_tab in oracle_tools.t_text_tab)
+  is
+    l_json_array json_array_t;
+  begin
+    if p_str_tab is not null and p_str_tab.count > 0
+    then
+      l_json_array := json_array_t();
+      for i_idx in p_str_tab.first .. p_str_tab.last
+      loop
+        l_json_array.append(p_str_tab(i_idx));
+      end loop;
+      p_json_object.put(p_attribute, l_json_array);
+    end if;
+  end to_json_array;
+begin
+  p_json_object.put('SCHEMA$', p_schema_object_filter.schema$);
+  p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
+  to_json_array('OBJECTS_TAB$', p_schema_object_filter.objects_tab$);
+  p_json_object.put('OBJECTS_INCLUDE$', p_schema_object_filter.objects_include$);
+  to_json_array('OBJECTS_CMP_TAB$', p_schema_object_filter.objects_cmp_tab$);
+  p_json_object.put('MATCH_PARTIAL_EQ_COMPLETE$', p_schema_object_filter.match_partial_eq_complete$);
+  p_json_object.put('MATCH_COUNT$', p_schema_object_filter.match_count$);
+  p_json_object.put('MATCH_COUNT_OK$', p_schema_object_filter.match_count_ok$);
+end serialize;
+
+function repr
+( p_schema_object_filter in t_schema_object_filter
+)
+return clob
+is
+  l_json_object json_object_t := json_object_t();
+  l_clob clob;
+begin
+  serialize(p_schema_object_filter, l_json_object);
+  l_clob := l_json_object.to_clob();
+  
+  select  json_serialize(l_clob returning clob pretty)
+  into    l_clob
+  from    dual;
+
+  return l_clob;
+end repr;
+
 -- GLOBAL
 
 procedure construct
@@ -328,16 +376,16 @@ $end
           l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part2_tab, p_delimiter => ':');
           add_item(l_object);
 
-          -- if the COMPLETE and PARTIAL match entries differ, set p_schema_object_filter.match_partial_eq_complete to false (0)
+          -- if the COMPLETE and PARTIAL match entries differ, set p_schema_object_filter.match_partial_eq_complete$ to false (0)
           case
-            when p_schema_object_filter.match_partial_eq_complete = 0
+            when p_schema_object_filter.match_partial_eq_complete$ = 0
             then null;
             when p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last - 1) =
                  p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last) and
                  p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last - 1) =
                  p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last)
             then null;
-            else p_schema_object_filter.match_partial_eq_complete := 0;
+            else p_schema_object_filter.match_partial_eq_complete$ := 0;
           end case;
         end if;
       end loop;
@@ -400,9 +448,9 @@ $end
   p_schema_object_filter.objects_include$ := nvl(p_objects_include, l_object_names_include);
   p_schema_object_filter.objects_tab$ := oracle_tools.t_text_tab();
   p_schema_object_filter.objects_cmp_tab$ := oracle_tools.t_text_tab();
-  p_schema_object_filter.match_partial_eq_complete := 1; -- for the time being
-  p_schema_object_filter.match_count := 0;
-  p_schema_object_filter.match_count_ok := 0;
+  p_schema_object_filter.match_partial_eq_complete$ := 1; -- for the time being
+  p_schema_object_filter.match_count$ := 0;
+  p_schema_object_filter.match_count_ok$ := 0;
 
   if p_objects_include is not null
   then
@@ -582,8 +630,8 @@ begin
                 , p_base_object_name => p_base_object_name
                 );
 
-    p_schema_object_filter.match_count := p_schema_object_filter.match_count + 1;
-    p_schema_object_filter.match_count_ok := p_schema_object_filter.match_count_ok + l_result;
+    p_schema_object_filter.match_count$ := p_schema_object_filter.match_count$ + 1;
+    p_schema_object_filter.match_count_ok$ := p_schema_object_filter.match_count_ok$ + l_result;
     
     if l_result = 1 -- stop when found
     then
@@ -591,7 +639,7 @@ begin
       -- we can not be sure that all named objects match the standard criteria so we have to do that again in combine_named_dependent_objects().
       if i_try = 2
       then
-        p_schema_object_filter.match_partial_eq_complete := 0;
+        p_schema_object_filter.match_partial_eq_complete$ := 0;
       end if;
       exit;
     end if;
@@ -680,7 +728,7 @@ procedure combine_named_dependent_objects
 )
 is
 begin
-  if p_schema_object_filter.match_partial_eq_complete = 1
+  if p_schema_object_filter.match_partial_eq_complete$ = 1
   then
     -- We will not filter out any items from p_named_object_tab since the partial match
     -- is equal to the complete match since all complete filter items are equal to
