@@ -966,8 +966,34 @@ end;
 
 procedure ut_matches_schema_object
 is
+  l_id oracle_tools.pkg_ddl_util.t_object;
+  l_cnt pls_integer;
 begin
-  raise program_error;
+  -- get all
+  for r in
+  ( select  a.id() as id
+    from    table(oracle_tools.pkg_ddl_util.get_schema_object) a -- all
+    order by
+            id
+  )
+  loop
+    -- get the current one
+    select  max(o.id()) as id
+    ,       count(*) as cnt
+    into    l_id
+    ,       l_cnt
+    from    table
+            ( oracle_tools.pkg_ddl_util.get_schema_object
+              ( oracle_tools.t_schema_object_filter
+                ( p_objects => r.id
+                , p_objects_include => 1
+                )
+              )
+            ) o -- one
+    ;
+    ut.expect(l_cnt, r.id).to_equal(1);
+    ut.expect(l_id, r.id).to_equal(r.id);
+  end loop;
 end;
 
 procedure ut_compatible_le_oracle_11g
@@ -985,8 +1011,8 @@ begin
   from    user_arguments;
 
   ut.expect(l_max_length_object_name, 'max_length_object_name').to_be_less_or_equal(30);
-  ut.expect(l_max_length_package_name, 'max_length_object._name').to_be_less_or_equal(30);
-  ut.expect(l_max_length_argument_name, 'max_length_object._name').to_be_less_or_equal(30);
+  ut.expect(l_max_length_package_name, 'max_length_package_name').to_be_less_or_equal(30);
+  ut.expect(l_max_length_argument_name, 'max_length_argument_name').to_be_less_or_equal(30);
 end ut_compatible_le_oracle_11g;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
