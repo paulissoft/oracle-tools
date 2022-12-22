@@ -2,6 +2,7 @@
 
 /*
 -- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl
+-- owner               : ORACLE_TOOLS
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
@@ -12,7 +13,8 @@
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
 -- transform params    : SEGMENT_ATTRIBUTES,TABLESPACE
--- owner               : ORACLE_TOOLS
+-- objects include     : 
+-- objects             : 
 */
 -- pkg_ddl_util v4
 call dbms_application_info.set_module('uninstall.sql', null);
