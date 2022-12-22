@@ -318,6 +318,11 @@ $end
     is
       l_wildcard constant simple_integer := sign(instr(p_object, '*')) + sign(instr(p_object, '?')) * 2;
     begin
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+      dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEMS.ADD_ITEM');
+      dbug.print(dbug."input", 'p_object: %s', p_object);
+$end
+
       if l_wildcard != 0
       then
         -- escape SQL wildcards
@@ -334,14 +339,22 @@ $end
         end if;           
       end if;
 
-      -- no duplicates
-      if not(p_object member of p_schema_object_filter.objects_tab$)
-      then
-        p_schema_object_filter.objects_tab$.extend(1);
-        p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last) := p_object;
-        p_schema_object_filter.objects_cmp_tab$.extend(1);
-        p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last) := case l_wildcard when 0 then '=' else '~' end;
-      end if;
+      -- duplicates allowed: partial versus complete 
+      p_schema_object_filter.objects_tab$.extend(1);
+      p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last) := p_object;
+      p_schema_object_filter.objects_cmp_tab$.extend(1);
+      p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last) := case l_wildcard when 0 then '=' else '~' end;
+
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+      dbug.print
+      ( dbug."output"
+      , 'p_object: %s; cardinality(p_schema_object_filter.objects_tab$): %s; cardinality(p_schema_object_filter.objects_cmp_tab$): %s'
+      , p_object
+      , cardinality(p_schema_object_filter.objects_tab$)
+      , cardinality(p_schema_object_filter.objects_cmp_tab$)
+      );
+      dbug.leave;
+$end
     end add_item;
   begin
     if p_object_tab.count > 0
@@ -787,7 +800,7 @@ begin
   
   ut.expect(serialize(l_schema_object_filter), 'empty').to_equal(l_expected);
 
-  for i_try in 1..1
+  for i_try in 1..4
   loop
     case i_try
       when 1
@@ -803,9 +816,132 @@ begin
   "MATCH_COUNT$" : 0,
   "MATCH_COUNT_OK$" : 0
 }');
-  
+      when 2
+      then
+        l_schema_object_filter := oracle_tools.t_schema_object_filter
+        ( p_schema => 'SYS'
+        , p_object_type => 'PACKAGE_SPEC'
+        , p_object_names => 'DBMS_METADATA,DBMS_VERSION'
+        , p_object_names_include => 1
+        , p_grantor_is_schema => 1
+        , p_objects => null
+        , p_objects_include => null
+        );
+        l_expected := json_element_t.parse('{
+  "SCHEMA$" : "SYS",
+  "GRANTOR_IS_SCHEMA$" : 1,  
+  "OBJECTS_TAB$" :
+            [
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%"
+            ],
+  "OBJECTS_INCLUDE$" : 1,
+  "OBJECTS_CMP_TAB$" :
+            [
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~"
+            ],
+  "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0
+}');
+      when 3
+      then
+        l_schema_object_filter := oracle_tools.t_schema_object_filter
+        ( p_schema => 'SYS'
+        , p_object_type => 'OBJECT_GRANT'
+        , p_object_names => '
+DBMS_OUTPUT,
+DBMS_SQL
+'
+        , p_object_names_include => 1
+        , p_grantor_is_schema => 1
+        , p_objects => null
+        , p_objects_include => null
+        );
+        l_expected := json_element_t.parse('{
+  "SCHEMA$" : "SYS",
+  "GRANTOR_IS_SCHEMA$" : 1,
+  "OBJECTS_TAB$" :
+            [
+              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%",
+              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%"
+            ],
+  "OBJECTS_INCLUDE$" : 1,
+  "OBJECTS_CMP_TAB$" :
+            [
+              "~",
+              "~",
+              "~",
+              "~"
+            ],
+  "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0
+}');
+
+      when 4
+      then
+        l_schema_object_filter := oracle_tools.t_schema_object_filter
+        ( p_schema => 'SYS'
+        , p_object_type => null
+        , p_object_names => '
+DBMS_OUTPUT,
+DBMS_SQL
+'
+        , p_object_names_include => 0
+        , p_grantor_is_schema => 1
+        , p_objects => null
+        , p_objects_include => null
+        );
+        l_expected := json_element_t.parse('{
+  "SCHEMA$" : "SYS",
+  "GRANTOR_IS_SCHEMA$" : 1,
+  "OBJECTS_TAB$" :
+            [
+              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
+              "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_SQL:%:%:%:%"
+            ],
+  "OBJECTS_INCLUDE$" : 0,
+  "OBJECTS_CMP_TAB$" :
+            [
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~"
+            ],
+  "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0
+}');
+
     end case;
-    ut.expect(serialize(l_schema_object_filter), 'empty').to_equal(l_expected);
+    -- ut.expect(repr(l_schema_object_filter), 'test repr ' || i_try).to_equal(l_expected.to_clob());
+    ut.expect(serialize(l_schema_object_filter), 'test serialize ' || i_try).to_equal(l_expected);
   end loop;  
 end;
 
