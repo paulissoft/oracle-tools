@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID DEFINER IS
 
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
+c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
 subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
 
@@ -11,9 +11,9 @@ type t_schema_object_filter is record
 , objects_tab$ oracle_tools.t_text_tab
 , objects_include$ integer
 , objects_cmp_tab$ oracle_tools.t_text_tab
-, match_partial_eq_complete integer
-, match_count integer
-, match_count_ok integer
+, match_partial_eq_complete$ integer
+, match_count$ integer
+, match_count_ok$ integer
 );
 */
 
