@@ -15,6 +15,12 @@ return dbms_sql.varchar2a;
 c_default_empty_part_tab constant dbms_sql.varchar2a := fill_array(null);
 c_default_wildcard_part_tab constant dbms_sql.varchar2a:= fill_array('*');
 
+$if oracle_tools.cfg_pkg.c_testing $then
+
+c_schema_object_filter constant t_schema_object_filter := oracle_tools.t_schema_object_filter(null, null, null, null, null, null, null, null);
+
+$end
+
 -- LOCAL
 
 function fill_array(p_element in varchar2)
@@ -165,17 +171,24 @@ begin
   p_json_object.put('MATCH_COUNT_OK$', p_schema_object_filter.match_count_ok$);
 end serialize;
 
+function serialize
+( p_schema_object_filter in t_schema_object_filter
+)
+return json_object_t
+is
+  l_json_object json_object_t := json_object_t();
+begin
+  serialize(p_schema_object_filter, l_json_object);
+  return l_json_object;
+end serialize;
+
 function repr
 ( p_schema_object_filter in t_schema_object_filter
 )
 return clob
 is
-  l_json_object json_object_t := json_object_t();
-  l_clob clob;
+  l_clob clob := serialize(p_schema_object_filter).to_clob();
 begin
-  serialize(p_schema_object_filter, l_json_object);
-  l_clob := l_json_object.to_clob();
-  
   select  json_serialize(l_clob returning clob pretty)
   into    l_clob
   from    dual;
@@ -760,8 +773,40 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
 procedure ut_construct
 is
+  l_schema_object_filter t_schema_object_filter := c_schema_object_filter;
+  l_expected json_element_t;
 begin
-  raise program_error;
+  l_expected := json_element_t.parse('{
+  "SCHEMA$" : null,
+  "GRANTOR_IS_SCHEMA$" : null,
+  "OBJECTS_INCLUDE$" : null,
+  "MATCH_PARTIAL_EQ_COMPLETE$" : null,
+  "MATCH_COUNT$" : null,
+  "MATCH_COUNT_OK$" : null
+}');
+  
+  ut.expect(serialize(l_schema_object_filter), 'empty').to_equal(l_expected);
+
+  for i_try in 1..1
+  loop
+    case i_try
+      when 1
+      then
+        construct
+        ( p_schema_object_filter => l_schema_object_filter
+        );
+        l_expected := json_element_t.parse('{
+  "SCHEMA$" : "ORACLE_TOOLS",
+  "GRANTOR_IS_SCHEMA$" : 0,
+  "OBJECTS_INCLUDE$" : null,
+  "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0
+}');
+  
+    end case;
+    ut.expect(serialize(l_schema_object_filter), 'empty').to_equal(l_expected);
+  end loop;  
 end;
 
 procedure ut_matches_schema_object
