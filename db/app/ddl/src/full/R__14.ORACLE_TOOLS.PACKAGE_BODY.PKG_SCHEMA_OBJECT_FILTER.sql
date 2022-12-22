@@ -32,9 +32,9 @@ end fill_array;
 
 -- the work horse
 function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema_object_filter in t_schema_object_filter
 , p_schema_object_id in varchar2
-, p_schema_object_id_valid in oracle_tools.pkg_ddl_util.t_numeric_boolean_nn
+, p_match_partial in boolean
 , p_metadata_object_type in varchar2
 , p_object_name in varchar2
 , p_metadata_base_object_type in varchar2
@@ -50,9 +50,9 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
   dbug.print
   ( dbug."input"
-  , 'p_schema_object_id: %s; p_schema_object_id_valid: %s; object: "%s"; base object: "%s"'
+  , 'p_schema_object_id: %s; p_match_partial: %s; object: "%s"; base object: "%s"'
   , p_schema_object_id
-  , p_schema_object_id_valid
+  , dbug.cast_to_varchar2(p_match_partial)
   , p_metadata_object_type || ':' || p_object_name
   , p_metadata_base_object_type || ':' || p_base_object_name
   );
@@ -90,30 +90,39 @@ $end
       -- See also the construct routine.
       */
 
-      for i_object_idx in 1 .. p_schema_object_filter.objects_tab$.count / 2
+      l_idx := case when p_match_partial then 2 else 1 end;
+      while l_idx <= p_schema_object_filter.objects_tab$.count
       loop
-        l_idx := 2 * i_object_idx - p_schema_object_id_valid;
-        
         case p_schema_object_filter.objects_cmp_tab$(l_idx)
           when '=' then l_result := case when p_schema_object_id = p_schema_object_filter.objects_tab$(l_idx) then 1 else 0 end;
           when '~' then l_result := case when p_schema_object_id like p_schema_object_filter.objects_tab$(l_idx) escape '\' then 1 else 0 end;
         end case;
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-        dbug.print(dbug."info", '[%s] %s "%s" %s: %s', l_idx, p_schema_object_id, p_schema_object_filter.objects_cmp_tab$(l_idx), p_schema_object_filter.objects_tab$(l_idx), l_result);
+        dbug.print
+        ( dbug."info"
+        , '[%s] %s "%s" %s: %s'
+        , l_idx
+        , p_schema_object_id
+        , p_schema_object_filter.objects_cmp_tab$(l_idx)
+        , p_schema_object_filter.objects_tab$(l_idx)
+        , l_result
+        );
 $end
         exit when l_result != 0;
+
+        l_idx := l_idx + 2;        
       end loop;
 
-      if p_schema_object_filter.objects_include$ = 0 -- l_schema_object_id must NOT be part of objects_tab$ (list of exclusions)
+      if p_schema_object_filter.objects_include$ = 0 -- p_schema_object_id must NOT be part of objects_tab$ (list of exclusions)
       then
-        -- a) l_result equal 1 means there was a match which means that l_schema_object_id is part of the exclusions so inverse l_result
-        -- b) l_result equal 0 means there was no match at all which means that l_schema_object_id is NOT part of the exclusions so inverse l_result
+        -- a) l_result equal 1 means there was a match which means that p_schema_object_id is part of the exclusions so inverse l_result
+        -- b) l_result equal 0 means there was no match at all which means that p_schema_object_id is NOT part of the exclusions so inverse l_result
         l_result := 1 - l_result;
       end if;
 
     else
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-       dbug.print(dbug."info", 'case 4');
+      dbug.print(dbug."info", 'case 4');
 $end
       l_result := 1; -- nothing to compare is OK
   end case;
@@ -136,7 +145,7 @@ procedure construct
 , p_grantor_is_schema in integer default 0
 , p_objects in clob default null
 , p_objects_include in integer default null
-, p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter
+, p_schema_object_filter in out nocopy t_schema_object_filter
 )
 is
   l_object_tab dbms_sql.varchar2a;
@@ -250,7 +259,7 @@ $end
     begin
       if l_wildcard != 0
       then
-        -- esacpe SQL wildcards
+        -- escape SQL wildcards
         p_object := replace(p_object, '_', '\_');
         p_object := replace(p_object, '%', '\%');
         
@@ -298,26 +307,38 @@ $end
           end if;
 
           -- make two lines:
-          -- 1) with the same info as in l_object but with O/S wildcards replaced and SQL wildcards escaped (odd index)
-          -- 2) with just OBJECT TYPE, OBJECT NAME, BASE OBJECT TYPE and BASE OBJECT NAME copied (even index) and
+          -- 1) COMPLETE match: with the same info as in l_object but with O/S wildcards replaced and SQL wildcards escaped (odd index)
+          -- 2) PARTIAL match: with just OBJECT TYPE, OBJECT NAME, BASE OBJECT TYPE and BASE OBJECT NAME copied (even index) and
           --    empty elements are set to a wildcard so that the cmp entry will be '~' (wildcard)
 
           -- first line
           add_item(l_object);
 
           -- second line
+          l_part2_tab := c_default_wildcard_part_tab; -- see note 2, force wildcard
           for i_part_idx in 1 .. c_nr_parts
           loop
-            l_part2_tab(i_part_idx) := 
-              case 
-                when i_part_idx in("OBJECT TYPE", "OBJECT NAME", "BASE OBJECT TYPE", "BASE OBJECT NAME")
-                then nvl(l_part1_tab(i_part_idx), '*')
-                else '*' -- see note 2, force wildcard
-              end;
+            case 
+              when i_part_idx in("OBJECT TYPE", "OBJECT NAME", "BASE OBJECT TYPE", "BASE OBJECT NAME")
+              then l_part2_tab(i_part_idx) := nvl(l_part1_tab(i_part_idx), '*');
+              else null;
+            end case;
           end loop;
 
           l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part2_tab, p_delimiter => ':');
           add_item(l_object);
+
+          -- if the COMPLETE and PARTIAL match entries differ, set p_schema_object_filter.match_partial_eq_complete to false (0)
+          case
+            when p_schema_object_filter.match_partial_eq_complete = 0
+            then null;
+            when p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last - 1) =
+                 p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last) and
+                 p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last - 1) =
+                 p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last)
+            then null;
+            else p_schema_object_filter.match_partial_eq_complete := 0;
+          end case;
         end if;
       end loop;
     end if;
@@ -377,9 +398,11 @@ $end
   p_schema_object_filter.schema$ := p_schema;
   p_schema_object_filter.grantor_is_schema$ := p_grantor_is_schema;
   p_schema_object_filter.objects_include$ := nvl(p_objects_include, l_object_names_include);
-
   p_schema_object_filter.objects_tab$ := oracle_tools.t_text_tab();
   p_schema_object_filter.objects_cmp_tab$ := oracle_tools.t_text_tab();
+  p_schema_object_filter.match_partial_eq_complete := 1; -- for the time being
+  p_schema_object_filter.match_count := 0;
+  p_schema_object_filter.match_count_ok := 0;
 
   if p_objects_include is not null
   then
@@ -478,7 +501,7 @@ $end
 end construct;
 
 procedure print
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema_object_filter in t_schema_object_filter
 )
 is
 begin
@@ -514,7 +537,7 @@ $end
 end print;
 
 function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema_object_filter in out nocopy t_schema_object_filter
 , p_metadata_object_type in varchar2
 , p_object_name in varchar2
 , p_metadata_base_object_type in varchar2 default null
@@ -526,22 +549,25 @@ is
   l_part_tab dbms_sql.varchar2a;
   l_result pls_integer;
 begin
-  -- A) When both the base parameters are empty we need to both lookup
+  -- Note SWITCH.
+  -- A) When both the base parameters are empty (named search) we need to both lookup
   --    using the OBJECT info in p_schema_object_filter.objects_tab$ and BASE OBJECT info,
-  --    hence switch OBJECT and BASE OBJECT
-  -- b) When at least is not empty just a partial match.
+  --    hence switch OBJECT and BASE OBJECT. If the result for the switch is then 1
+  --    we need to redo a named object match at the end in combine_named_dependent_objects().
+  -- B) When at least one of the base parameters is not empty: just one partial match.
   
-  for i_try_idx in 1 .. case when p_metadata_base_object_type || p_base_object_name is null then 2 else 1 end
+  for i_try in 1 .. case when p_metadata_base_object_type is null and p_base_object_name is null then 2 else 1 end
   loop
-    l_part_tab := c_default_empty_part_tab; -- empty fields match the wildcard %
+    l_part_tab := c_default_empty_part_tab; -- ':::::::::' like '%:%:%:%:%:%:%:%:%:%'
 
-    if i_try_idx = 1
+    if i_try = 1
     then
       l_part_tab("OBJECT TYPE") := p_metadata_object_type;
       l_part_tab("OBJECT NAME") := p_object_name;
       l_part_tab("BASE OBJECT TYPE") := p_metadata_base_object_type;
       l_part_tab("BASE OBJECT NAME") := p_base_object_name;
     else
+      -- switch
       l_part_tab("BASE OBJECT TYPE") := p_metadata_object_type;
       l_part_tab("BASE OBJECT NAME") := p_object_name;
     end if;
@@ -549,20 +575,33 @@ begin
     l_result := matches_schema_object
                 ( p_schema_object_filter => p_schema_object_filter
                 , p_schema_object_id => oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':')
-                , p_schema_object_id_valid => 0 -- since a lot of fields are empty
+                , p_match_partial => true
                 , p_metadata_object_type => p_metadata_object_type
                 , p_object_name => p_object_name
                 , p_metadata_base_object_type => p_metadata_base_object_type
                 , p_base_object_name => p_base_object_name
                 );
-    exit when l_result = 1; -- stop when found
+
+    p_schema_object_filter.match_count := p_schema_object_filter.match_count + 1;
+    p_schema_object_filter.match_count_ok := p_schema_object_filter.match_count_ok + l_result;
+    
+    if l_result = 1 -- stop when found
+    then
+      -- Since we used onbject (p_metadata_object_type, p_object_name) to match against the base object in the filter entries
+      -- we can not be sure that all named objects match the standard criteria so we have to do that again in combine_named_dependent_objects().
+      if i_try = 2
+      then
+        p_schema_object_filter.match_partial_eq_complete := 0;
+      end if;
+      exit;
+    end if;
   end loop;
   
   return l_result;
 end matches_schema_object;
 
 function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema_object_filter in t_schema_object_filter
 , p_schema_object_id in varchar2
 )
 return integer
@@ -594,23 +633,19 @@ begin
   return matches_schema_object
          ( p_schema_object_filter => p_schema_object_filter
          , p_schema_object_id => p_schema_object_id
-         , p_schema_object_id_valid =>
-             case
-               when p_schema_object_id = oracle_tools.t_schema_object.id
-                                         ( p_object_schema => l_part_tab(1)
-                                         , p_object_type => l_part_tab(2)
-                                         , p_object_name => l_part_tab(3)
-                                         , p_base_object_schema => l_part_tab(4)
-                                         , p_base_object_type => l_part_tab(5)
-                                         , p_base_object_name => l_part_tab(6)
-                                         , p_column_name => l_part_tab(7)
-                                         , p_grantee => l_part_tab(8)
-                                         , p_privilege => l_part_tab(9)
-                                         , p_grantable => l_part_tab(10)
-                                         )
-               then 1
-               else 0
-             end  
+         , p_match_partial =>
+             p_schema_object_id != oracle_tools.t_schema_object.id
+                                   ( p_object_schema => l_part_tab(1)
+                                   , p_object_type => l_part_tab(2)
+                                   , p_object_name => l_part_tab(3)
+                                   , p_base_object_schema => l_part_tab(4)
+                                   , p_base_object_type => l_part_tab(5)
+                                   , p_base_object_name => l_part_tab(6)
+                                   , p_column_name => l_part_tab(7)
+                                   , p_grantee => l_part_tab(8)
+                                   , p_privilege => l_part_tab(9)
+                                   , p_grantable => l_part_tab(10)
+                                   )
          , p_metadata_object_type => l_metadata_object_type
          , p_object_name => l_object_name
          , p_metadata_base_object_type => l_metadata_base_object_type
@@ -619,7 +654,7 @@ begin
 end matches_schema_object;
 
 function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema_object_filter in t_schema_object_filter
 , p_schema_object in oracle_tools.t_schema_object
 )
 return integer
@@ -629,14 +664,49 @@ begin
   return matches_schema_object
          ( p_schema_object_filter => p_schema_object_filter
          , p_schema_object_id => p_schema_object.id()
-         , p_schema_object_id_valid => 1
-         , p_metadata_object_type => p_schema_object.object_type()
-         , p_object_name => p_schema_object.object_name()
-         , p_metadata_base_object_type => p_schema_object.base_object_type()
-         , p_base_object_name => p_schema_object.base_object_name()
+         , p_match_partial => false
+         , p_metadata_object_type => null -- no need to use oracle_tools.pkg_ddl_util.is_exclude_name_expr() again
+         , p_object_name => null -- idem
+         , p_metadata_base_object_type => null -- idem
+         , p_base_object_name => null -- idem
          );
 end matches_schema_object;
 
+procedure combine_named_dependent_objects
+( p_schema_object_filter in t_schema_object_filter
+, p_named_object_tab in oracle_tools.t_schema_object_tab
+, p_dependent_object_tab in oracle_tools.t_schema_object_tab
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+)
+is
+begin
+  if p_schema_object_filter.match_partial_eq_complete = 1
+  then
+    -- We will not filter out any items from p_named_object_tab since the partial match
+    -- is equal to the complete match since all complete filter items are equal to
+    -- the partial filter items AND never we did switch object and base object.
+    -- See note SWITCH above.
+
+    -- Combine and filter based on the map function of oracle_tools.t_schema_object and its subtypes.    
+    -- GPA 2017-01-27
+    -- For performance reasons do not use DISTINCT since the sets should be unique and distinct already.
+    p_schema_object_tab := p_named_object_tab multiset union /*distinct*/ p_dependent_object_tab;
+  else
+    -- Perform a complete match for the named objects since we may filter out named objects by that.
+    
+    select  value(obj) as base_object
+    bulk collect
+    into    p_schema_object_tab
+    from    table(p_named_object_tab) obj
+    where   oracle_tools.pkg_schema_object_filter.matches_schema_object
+            ( p_schema_object_filter => p_schema_object_filter
+            , p_schema_object => value(obj)
+            ) = 1
+    ;
+
+    p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ p_dependent_object_tab;
+  end if;
+end combine_named_dependent_objects;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 

@@ -43,6 +43,19 @@ begin
   return self.grantor_is_schema$;
 end;
 
+member function match_perc
+return integer
+deterministic
+is
+begin
+  return
+    case
+      when match_count > 0
+      then trunc((100 * match_count_ok) / match_count)
+      else null
+    end;
+end;
+
 member procedure print
 ( self in oracle_tools.t_schema_object_filter
 )
@@ -54,7 +67,7 @@ begin
 end print;
 
 member function matches_schema_object
-( p_object_types_to_check in oracle_tools.t_text_tab
+( self in out nocopy oracle_tools.t_schema_object_filter
 , p_metadata_object_type in varchar2
 , p_object_name in varchar2
 , p_metadata_base_object_type in varchar2 default null
@@ -74,7 +87,7 @@ begin
 end matches_schema_object;
 
 member function matches_schema_object
-( p_object_types_to_check in oracle_tools.t_text_tab
+( self in oracle_tools.t_schema_object_filter
 , p_schema_object_id in varchar2
 )
 return integer
@@ -87,20 +100,22 @@ begin
          );
 end matches_schema_object;
 
-member function matches_schema_object
-( p_object_types_to_check in oracle_tools.t_text_tab
-, p_schema_object in oracle_tools.t_schema_object
+member procedure combine_named_dependent_objects
+( self in oracle_tools.t_schema_object_filter
+, p_named_object_tab in oracle_tools.t_schema_object_tab
+, p_dependent_object_tab in oracle_tools.t_schema_object_tab
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
-return integer
-deterministic
 is
 begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object
-         ( p_schema_object_filter => self
-         , p_schema_object => p_schema_object
-         );
-end matches_schema_object;
-
+  oracle_tools.pkg_schema_object_filter.combine_named_dependent_objects
+  ( p_schema_object_filter => self
+  , p_named_object_tab => p_named_object_tab
+  , p_dependent_object_tab => p_dependent_object_tab
+  , p_schema_object_tab => p_schema_object_tab
+  );
+end combine_named_dependent_objects;
+  
 end;
 /
 
