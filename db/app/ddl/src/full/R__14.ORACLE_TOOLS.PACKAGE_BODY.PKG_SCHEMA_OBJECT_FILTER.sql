@@ -96,6 +96,24 @@ $end
       -- See also the construct routine.
       */
 
+/*
+|   >ORACLE_TOOLS.PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT
+|   |   input: p_schema_object_id: :PACKAGE_SPEC:PKG_DDL_ERROR:::::::; p_match_partial: TRUE; object: "PACKAGE_SPEC:PKG_DDL_ERROR"; base object: ":"
+|   |   >ORACLE_TOOLS.PKG_DDL_UTIL.IS_EXCLUDE_NAME_EXPR
+|   |   |   input: p_object_type: PACKAGE_SPEC; p_object_name: PKG_DDL_ERROR
+|   |   |   output: return: 0
+|   |   <ORACLE_TOOLS.PKG_DDL_UTIL.IS_EXCLUDE_NAME_EXPR
+|   |   info: case 3
+|   |   info: [2] :PACKAGE_SPEC:PKG_DDL_ERROR::::::: "~" %:OBJECT\_GRANT:%:%:%:PKG\_DDL\_ERROR:%:%:%:%: 0
+|   |   output: return: 0
+|   <ORACLE_TOOLS.PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT
+|   >ORACLE_TOOLS.PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT
+|   |   input: p_schema_object_id: :::::PKG_DDL_ERROR::::; p_match_partial: TRUE; object: ":"; base object: ":PKG_DDL_ERROR"
+|   |   info: case 3
+|   |   info: [2] :::::PKG_DDL_ERROR:::: "~" %:OBJECT\_GRANT:%:%:%:PKG\_DDL\_ERROR:%:%:%:%: 0
+|   |   output: return: 0
+|   <ORACLE_TOOLS.PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT
+*/
       l_idx := case when p_match_partial then 2 else 1 end;
       while l_idx <= p_schema_object_filter.objects_tab$.count
       loop
