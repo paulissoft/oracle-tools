@@ -754,6 +754,16 @@ procedure combine_named_dependent_objects
 )
 is
 begin
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.COMBINE_NAMED_DEPENDENT_OBJECTS');
+  dbug.print
+  ( dbug."input"
+  , 'cardinality(p_named_object_tab): %s; cardinality(p_dependent_object_tab): %s'
+  , cardinality(p_named_object_tab)
+  , cardinality(p_dependent_object_tab)
+  );
+$end
+
   if p_schema_object_filter.match_partial_eq_complete$ = 1
   then
     -- We will not filter out any items from p_named_object_tab since the partial match
@@ -780,6 +790,15 @@ begin
 
     p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ p_dependent_object_tab;
   end if;
+
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'cardinality(p_schema_object_tab): %s'
+  , cardinality(p_schema_object_tab)
+  );
+  dbug.leave;
+$end
 end combine_named_dependent_objects;
 
 $if oracle_tools.cfg_pkg.c_testing $then
