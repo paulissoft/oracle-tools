@@ -1,4 +1,14 @@
 begin
+  for r in
+  ( select  'drop type ' || object_name as cmd
+    from    user_objects
+    where   object_type = 'TYPE'
+    and     object_name = 'T_SCHEMA_OBJECT_FILTER'
+  )
+  loop
+    execute immediate r.cmd;
+  end loop;
+
   execute immediate q'[
 CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as object
 ( schema$ varchar2(30 char)
@@ -41,14 +51,16 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
   )
   return integer
   deterministic
-, member procedure combine_named_dependent_objects
+, member procedure combine_named_other_objects
   ( self in oracle_tools.t_schema_object_filter
   , p_named_object_tab in oracle_tools.t_schema_object_tab
-  , p_dependent_object_tab in oracle_tools.t_schema_object_tab
+  , p_other_object_tab in oracle_tools.t_schema_object_tab
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   )
 )
 instantiable
 final]';
+
+  execute immediate 'GRANT EXECUTE ON T_SCHEMA_OBJECT_FILTER TO PUBLIC';
 end;
 /

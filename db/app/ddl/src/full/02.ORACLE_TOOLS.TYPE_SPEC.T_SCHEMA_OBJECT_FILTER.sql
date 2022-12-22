@@ -39,10 +39,10 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
   )
   return integer
   deterministic
-, member procedure combine_named_dependent_objects
+, member procedure combine_named_other_objects
   ( self in oracle_tools.t_schema_object_filter
   , p_named_object_tab in oracle_tools.t_schema_object_tab
-  , p_dependent_object_tab in oracle_tools.t_schema_object_tab
+  , p_other_object_tab in oracle_tools.t_schema_object_tab
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   )
 )

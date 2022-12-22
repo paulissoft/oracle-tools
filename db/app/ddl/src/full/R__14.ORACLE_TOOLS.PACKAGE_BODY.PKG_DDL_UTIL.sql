@@ -4469,9 +4469,9 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'indexes');
 $end
 
-    p_schema_object_filter.combine_named_dependent_objects
+    p_schema_object_filter.combine_named_other_objects
     ( p_named_object_tab => l_named_object_tab
-    , p_dependent_object_tab => l_schema_object_tab
+    , p_other_object_tab => l_schema_object_tab
     , p_schema_object_tab => p_schema_object_tab
     );
 

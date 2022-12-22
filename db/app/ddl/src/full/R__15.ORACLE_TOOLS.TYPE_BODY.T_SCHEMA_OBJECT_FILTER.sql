@@ -100,21 +100,21 @@ begin
          );
 end matches_schema_object;
 
-member procedure combine_named_dependent_objects
+member procedure combine_named_other_objects
 ( self in oracle_tools.t_schema_object_filter
 , p_named_object_tab in oracle_tools.t_schema_object_tab
-, p_dependent_object_tab in oracle_tools.t_schema_object_tab
+, p_other_object_tab in oracle_tools.t_schema_object_tab
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
 begin
-  oracle_tools.pkg_schema_object_filter.combine_named_dependent_objects
+  oracle_tools.pkg_schema_object_filter.combine_named_other_objects
   ( p_schema_object_filter => self
   , p_named_object_tab => p_named_object_tab
-  , p_dependent_object_tab => p_dependent_object_tab
+  , p_other_object_tab => p_other_object_tab
   , p_schema_object_tab => p_schema_object_tab
   );
-end combine_named_dependent_objects;
+end combine_named_other_objects;
   
 end;
 /

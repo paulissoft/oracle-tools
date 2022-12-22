@@ -627,7 +627,7 @@ begin
   -- A) When both the base parameters are empty (named search) we need to both lookup
   --    using the OBJECT info in p_schema_object_filter.objects_tab$ and BASE OBJECT info,
   --    hence switch OBJECT and BASE OBJECT. If the result for the switch is then 1
-  --    we need to redo a named object match at the end in combine_named_dependent_objects().
+  --    we need to redo a named object match at the end in combine_named_other_objects().
   -- B) When at least one of the base parameters is not empty: just one partial match.
   
   for i_try in 1 .. case when p_metadata_base_object_type is null and p_base_object_name is null then 2 else 1 end
@@ -662,7 +662,7 @@ begin
     if l_result = 1 -- stop when found
     then
       -- Since we used onbject (p_metadata_object_type, p_object_name) to match against the base object in the filter entries
-      -- we can not be sure that all named objects match the standard criteria so we have to do that again in combine_named_dependent_objects().
+      -- we can not be sure that all named objects match the standard criteria so we have to do that again in combine_named_other_objects().
       if i_try = 2
       then
         p_schema_object_filter.match_partial_eq_complete$ := 0;
@@ -746,21 +746,21 @@ begin
          );
 end matches_schema_object;
 
-procedure combine_named_dependent_objects
+procedure combine_named_other_objects
 ( p_schema_object_filter in t_schema_object_filter
 , p_named_object_tab in oracle_tools.t_schema_object_tab
-, p_dependent_object_tab in oracle_tools.t_schema_object_tab
+, p_other_object_tab in oracle_tools.t_schema_object_tab
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.COMBINE_NAMED_DEPENDENT_OBJECTS');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.COMBINE_NAMED_OTHER_OBJECTS');
   dbug.print
   ( dbug."input"
-  , 'cardinality(p_named_object_tab): %s; cardinality(p_dependent_object_tab): %s'
+  , 'cardinality(p_named_object_tab): %s; cardinality(p_other_object_tab): %s'
   , cardinality(p_named_object_tab)
-  , cardinality(p_dependent_object_tab)
+  , cardinality(p_other_object_tab)
   );
 $end
 
@@ -774,7 +774,7 @@ $end
     -- Combine and filter based on the map function of oracle_tools.t_schema_object and its subtypes.    
     -- GPA 2017-01-27
     -- For performance reasons do not use DISTINCT since the sets should be unique and distinct already.
-    p_schema_object_tab := p_named_object_tab multiset union /*distinct*/ p_dependent_object_tab;
+    p_schema_object_tab := p_named_object_tab multiset union /*distinct*/ p_other_object_tab;
   else
     -- Perform a complete match for the named objects since we may filter out named objects by that.
     
@@ -788,7 +788,7 @@ $end
             ) = 1
     ;
 
-    p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ p_dependent_object_tab;
+    p_schema_object_tab := p_schema_object_tab multiset union /*distinct*/ p_other_object_tab;
   end if;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -799,7 +799,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   );
   dbug.leave;
 $end
-end combine_named_dependent_objects;
+end combine_named_other_objects;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
@@ -969,6 +969,25 @@ is
 begin
   raise program_error;
 end;
+
+procedure ut_compatible_le_oracle_11g
+is
+  l_max_length_object_name pls_integer;
+  l_max_length_package_name pls_integer;
+  l_max_length_argument_name pls_integer;  
+begin
+  select  max(length(object_name))
+  ,       max(length(package_name))
+  ,       max(length(argument_name))
+  into    l_max_length_object_name
+  ,       l_max_length_package_name
+  ,       l_max_length_argument_name
+  from    user_arguments;
+
+  ut.expect(l_max_length_object_name, 'max_length_object_name').to_be_less_or_equal(30);
+  ut.expect(l_max_length_package_name, 'max_length_object._name').to_be_less_or_equal(30);
+  ut.expect(l_max_length_argument_name, 'max_length_object._name').to_be_less_or_equal(30);
+end ut_compatible_le_oracle_11g;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
