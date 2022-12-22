@@ -245,6 +245,8 @@ $end
   
   g_match_perc_threshold naturaln := 50;
 
+  g_longops_counter positiven := 1;
+
   /* PRIVATE ROUTINES */
 
   type t_longops_rec is record (
@@ -290,9 +292,11 @@ $end
     l_longops_rec.totalwork := p_totalwork;
     l_longops_rec.op_name := p_op_name;
     l_longops_rec.units := p_units;
-    l_longops_rec.target_desc := p_target_desc;
+    l_longops_rec.target_desc := p_target_desc || '@' || g_longops_counter;
 
     longops_show(l_longops_rec, 0);
+
+    g_longops_counter := g_longops_counter + 1;
 
     return l_longops_rec;
   end longops_init;
@@ -3870,7 +3874,19 @@ $end
 
     l_refcursor sys_refcursor;
 
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT');
+    -- steps:
+    -- 1. queue tables
+    -- 2. materialized views
+    -- 3. tables
+    -- 4. base objects
+    -- 5. dependent objects
+    -- 6. public synonyms and comments
+    -- 7. constraints
+    -- 8. private synonyms and triggers
+    -- 9. indexes
+    -- 10. all objects
+
+    l_longops_rec t_longops_rec := longops_init(p_target_desc => 'GET_SCHEMA_OBJECT', p_totalwork => 10, p_op_name => 'what', p_units => 'steps');
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     procedure check_duplicates(p_schema_object_tab in oracle_tools.t_schema_object_tab, p_what in varchar2)
@@ -3901,6 +3917,7 @@ $end
       then
         close l_refcursor;
       end if;
+      longops_done(l_longops_rec);
     end cleanup;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3924,7 +3941,6 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
          , p_object_name => r.queue_table
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_named_object_tab.extend(1);
         oracle_tools.t_named_object.create_named_object
         ( p_object_type => 'AQ_QUEUE_TABLE'
@@ -3937,6 +3953,8 @@ $else
       /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
 $end
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab, 'queue tables');
@@ -3961,11 +3979,12 @@ $end
          , p_object_name => r.mview_name
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_named_object_tab.extend(1);
         l_named_object_tab(l_named_object_tab.last) := oracle_tools.t_materialized_view_object(r.owner, r.mview_name);
       end if;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab, 'materialized views');
@@ -4011,12 +4030,13 @@ $end
         l_schema_object := oracle_tools.t_table_object(r.owner, r.table_name, r.tablespace_name);
         if not(l_excluded_tables_tab.exists(l_schema_object.object_name()))
         then
-          longops_show(l_longops_rec);
           l_named_object_tab.extend(1);
           l_named_object_tab(l_named_object_tab.last) := l_schema_object;
         end if;
       end if;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab, 'tables');
@@ -4056,7 +4076,6 @@ $end
          , p_object_name => r.object_name
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_named_object_tab.extend(1);
         oracle_tools.t_named_object.create_named_object
         ( p_object_type => r.object_type
@@ -4066,6 +4085,8 @@ $end
         );
       end if;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_named_object_tab, 'base objects');
@@ -4121,7 +4142,6 @@ $end
          , p_base_object_name => r.base_object.object_name
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_schema_object_tab.extend(1);
         l_schema_object_tab(l_schema_object_tab.last) :=
           oracle_tools.t_object_grant_object
@@ -4133,6 +4153,8 @@ $end
           );
       end if;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'dependent objects');
@@ -4198,7 +4220,6 @@ $end
          , p_base_object_name => r.base_object.object_name()
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_schema_object_tab.extend(1);
         case r.object_type
           when 'SYNONYM'
@@ -4220,6 +4241,8 @@ $end
         end case;
       end if;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'public synonyms and comments');
@@ -4316,7 +4339,6 @@ $end
       end if;
 $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
 
-      longops_show(l_longops_rec);
       l_schema_object_tab.extend(1);
       case r.object_type
         when 'REF_CONSTRAINT'
@@ -4342,6 +4364,8 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
             );
       end case;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'constraints');
@@ -4394,7 +4418,6 @@ $end
          , p_base_object_name => r.base_object_name
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_schema_object_tab.extend(1);
         oracle_tools.t_schema_object.create_schema_object
         ( p_object_schema => r.object_schema
@@ -4408,6 +4431,8 @@ $end
         );
       end if;
     end loop;
+
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'private synonyms and triggers');
@@ -4448,7 +4473,6 @@ $end
          , p_base_object_name => r.base_object_name
          ) = 1
       then
-        longops_show(l_longops_rec);
         l_schema_object_tab.extend(1);
         l_schema_object_tab(l_schema_object_tab.last) :=
           oracle_tools.t_index_object
@@ -4465,6 +4489,8 @@ $end
       end if;
     end loop;
 
+    longops_show(l_longops_rec);
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(l_schema_object_tab, 'indexes');
 $end
@@ -4475,7 +4501,7 @@ $end
     , p_schema_object_tab => p_schema_object_tab
     );
 
-    longops_done(l_longops_rec);
+    longops_show(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     check_duplicates(p_schema_object_tab, 'all objects');
@@ -4489,6 +4515,13 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
   exception
+    when no_data_needed
+    then
+      cleanup;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+    
     when others
     then
       cleanup;
@@ -4509,12 +4542,24 @@ $end
     l_program constant t_module := 'GET_SCHEMA_OBJECT'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
+    l_longops_rec t_longops_rec :=
+      longops_init
+      ( p_target_desc => l_program
+      , p_op_name => 'fetch'
+      , p_units => 'objects'
+      );
+
+    procedure cleanup
+    is
+    begin
+      longops_done(l_longops_rec);
+    end cleanup;
   begin
     oracle_tools.pkg_ddl_util.get_schema_object
     ( p_schema_object_filter => l_schema_object_filter
     , p_schema_object_tab => l_schema_object_tab
     );
+
     if l_schema_object_tab is not null and l_schema_object_tab.count > 0
     then
       for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
@@ -4523,16 +4568,26 @@ $end
         longops_show(l_longops_rec);
       end loop;
     end if;
-    longops_done(l_longops_rec);
-    return;
+
+    cleanup;
+
+    return; -- essential for pipelined functions
   exception
     when no_data_needed
     then
-      null; -- not a real error, just a way to some cleanup
-
+      -- not a real error, just a way to some cleanup
+      cleanup;
+      
     when no_data_found
     then
+      cleanup;
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
+      raise; -- to keep the compiler happy
+      
+    when others
+    then
+      cleanup;
+      raise;
   end get_schema_object;
 
   procedure get_member_ddl
