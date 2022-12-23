@@ -36,6 +36,13 @@ begin
   return l_part_tab;
 end fill_array;
 
+procedure cleanup_object(p_object in out nocopy varchar2)
+is
+begin
+  -- remove TAB, CR and LF and then trim spaces
+  p_object := trim(replace(replace(replace(p_object, chr(9)), chr(13)), chr(10)));
+end cleanup_object;  
+
 -- the two work horses
 function matches_schema_object_partial
 ( p_schema_object_filter in t_schema_object_filter
@@ -119,7 +126,7 @@ $end
       for i_complete_idx in 1 .. l_count
       loop
         <<what_loop>>
-        for i_what_idx in case when p_switch then /*2*/ 1 else 1 end .. 2 -- ignore object on SWITCH
+        for i_what_idx in case when p_switch then /* GJP 2 */ 2 else 1 end .. 2 -- ignore object on SWITCH
         loop
           l_idx := l_count + 2 * (i_complete_idx-1) + i_what_idx;
           
@@ -129,8 +136,8 @@ $end
               when 2 then p_metadata_base_object_type || ':' || p_base_object_name
             end;
 
-          -- GJP 2022-12-23 We should be able to skip this item when bot parts of schema object id are empty
-          --/*
+          -- GJP 2022-12-23 We should be able to skip this item when both parts of schema object id are empty
+          /*
           if l_schema_object_id = ':'
           then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -138,7 +145,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
             continue;
           end if;
-          --*/
+          */
 
           l_result := case
                         when l_schema_object_id like p_schema_object_filter.objects_tab$(l_idx) escape '\'
@@ -158,6 +165,18 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
 
           exit what_loop when l_result = 0; -- if any of the named and other object is not found the result for this index is 0 (false)
+
+          -- GJP 2022-12-23 Dependent objects can quit the loop when the result was okay
+          /*
+          if i_what_idx = 1 and
+             p_metadata_object_type member of oracle_tools.pkg_ddl_util.get_md_object_type_tab('DEPENDENT')
+          then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+            dbug.print(dbug."info", '[%s] matching dependent schema object id "%s" need not test its base fields', l_idx, l_schema_object_id);
+$end         
+            exit what_loop;
+          end if;
+          */
         end loop what_loop;
         
         exit search_loop when l_result != 0;
@@ -420,13 +439,6 @@ $end
     end if;
   end check_objects;
 
-  procedure cleanup_object(p_object in out nocopy varchar2)
-  is
-  begin
-    -- remove TAB, CR and LF and then trim spaces
-    p_object := trim(replace(replace(replace(p_object, chr(9)), chr(13)), chr(10)));
-  end cleanup_object;  
-
   procedure add_complete_items
   ( p_object_tab in dbms_sql.varchar2a
   )
@@ -642,18 +654,21 @@ $end
             l_part_tab := c_default_wildcard_part_tab;
             l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
             l_part_tab("OBJECT NAME") := l_object_name_tab(i_object_name_idx);
+            -- GJP 2022-12-23
+            --/*
             l_part_tab("BASE OBJECT TYPE") := null; -- this is supposed to be named object hence base fields empty
             l_part_tab("BASE OBJECT NAME") := null; -- idem
+            --*/
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
 
             -- GJP 2022-12-23 This does not seem to be necessary.
-            /*
+            --/*
             -- object 2
             l_part_tab := c_default_wildcard_part_tab;
             l_part_tab("BASE OBJECT TYPE") := nvl(p_object_type, '*');
             l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            */
+            --*/
           end if;
         end if;
       end loop;
@@ -1123,6 +1138,8 @@ begin
 
     for i_idx in l_object_tab.first .. l_object_tab.last
     loop
+      cleanup_object(l_object_tab(i_idx));
+
       if l_object_tab(i_idx) is not null
       then
         -- complete match but only for i_try 1
