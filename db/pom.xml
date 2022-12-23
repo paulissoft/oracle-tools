@@ -64,6 +64,7 @@
     <!-- ======================== -->    
     <db.phase.init>validate</db.phase.init>
     <db.phase.process>compile</db.phase.process>
+    <db.show.properties>false</db.show.properties>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -112,7 +113,7 @@
               <id>db-debug-before</id>
               <phase>${db.phase.init}</phase>
               <configuration>
-                <target if="${maven.debug}">
+                <target if="${db.show.properties}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -233,7 +234,7 @@
               <id>db-debug-after</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target if="${maven.debug}">
+                <target if="${db.show.properties}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -635,7 +636,7 @@
         <conf.connect.skip>false</conf.connect.skip>
         <!-- do not read flyway properties -->
         <db.install.skip>false</db.install.skip>
-        <maven.debug>true</maven.debug>
+        <db.show.properties>true</db.show.properties>
       </properties>
       <build>
         <plugins>
