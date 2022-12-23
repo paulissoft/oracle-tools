@@ -4420,8 +4420,8 @@ $end
       if p_schema_object_filter.matches_schema_object
          ( p_metadata_object_type => r.object_type
          , p_object_name => r.object_name
-         , p_metadata_base_object_type => /*null -- GJP 2022-12-23*/ r.base_object_type
-         , p_base_object_name => /*null -- GJP 2022-12-23*/ r.base_object_name
+         , p_metadata_base_object_type => null -- GJP 2022-12-23 r.base_object_type
+         , p_base_object_name => null -- GJP 2022-12-23 r.base_object_name
          ) = 1
       then
         l_schema_object_tab.extend(1);
@@ -4475,8 +4475,8 @@ $end
       if p_schema_object_filter.matches_schema_object
          ( p_metadata_object_type => 'INDEX'
          , p_object_name => r.object_name
-         , p_metadata_base_object_type => /*null -- GJP 2022-12-23*/ r.base_object_type
-         , p_base_object_name => /*null -- GJP 2022-12-23*/ r.base_object_name
+         , p_metadata_base_object_type => null -- GJP 2022-12-23 r.base_object_type
+         , p_base_object_name => null -- GJP 2022-12-23 r.base_object_name
          ) = 1
       then
         l_schema_object_tab.extend(1);
