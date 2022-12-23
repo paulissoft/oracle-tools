@@ -119,7 +119,7 @@ $end
       for i_complete_idx in 1 .. l_count
       loop
         <<what_loop>>
-        for i_what_idx in case when p_switch then 2 else 1 end .. 2 -- ignore object on SWITCH
+        for i_what_idx in case when p_switch then /*2*/ 1 else 1 end .. 2 -- ignore object on SWITCH
         loop
           l_idx := l_count + 2 * (i_complete_idx-1) + i_what_idx;
           
@@ -129,7 +129,8 @@ $end
               when 2 then p_metadata_base_object_type || ':' || p_base_object_name
             end;
 
-          /*
+          -- GJP 2022-12-23 We should be able to skip this item when bot parts of schema object id are empty
+          --/*
           if l_schema_object_id = ':'
           then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -137,7 +138,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
             continue;
           end if;
-          */
+          --*/
 
           l_result := case
                         when l_schema_object_id like p_schema_object_filter.objects_tab$(l_idx) escape '\'
@@ -645,11 +646,14 @@ $end
             l_part_tab("BASE OBJECT NAME") := null; -- idem
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
 
+            -- GJP 2022-12-23 This does not seem to be necessary.
+            /*
             -- object 2
             l_part_tab := c_default_wildcard_part_tab;
             l_part_tab("BASE OBJECT TYPE") := nvl(p_object_type, '*');
             l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
+            */
           end if;
         end if;
       end loop;
@@ -949,29 +953,17 @@ begin
   "OBJECTS_TAB$" :
             [
               "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:::%:%:%:%",
-              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%",
               "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:::%:%:%:%",
-              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%",
               "PACKAGE\\_SPEC:DBMS\\_METADATA",
               ":",
-              "%:%",
-              "PACKAGE\\_SPEC:DBMS\\_METADATA",
               "PACKAGE\\_SPEC:DBMS\\_VERSION",
-              ":",
-              "%:%",
-              "PACKAGE\\_SPEC:DBMS\\_VERSION"
+              ":"
             ],
   "OBJECTS_INCLUDE$" : 1,
   "OBJECTS_CMP_TAB$" :
             [
               "~",
               "~",
-              "~",
-              "~",
-              null,
-              null,
-              null,
-              null,
               null,
               null,
               null,
@@ -1046,29 +1038,17 @@ DBMS_SQL
   "OBJECTS_TAB$" :
             [
               "%:%:DBMS\\_OUTPUT:%:::%:%:%:%",
-              "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
               "%:%:DBMS\\_SQL:%:::%:%:%:%",
-              "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
               "%:DBMS\\_OUTPUT",
               ":",
-              "%:%",
-              "%:DBMS\\_OUTPUT",
               "%:DBMS\\_SQL",
-              ":",
-              "%:%",
-              "%:DBMS\\_SQL"
+              ":"
             ],
   "OBJECTS_INCLUDE$" : 0,
   "OBJECTS_CMP_TAB$" :
             [
               "~",
               "~",
-              "~",
-              "~",
-              null,
-              null,
-              null,
-              null,
               null,
               null,
               null,
