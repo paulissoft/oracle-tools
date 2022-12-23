@@ -39,6 +39,7 @@ end fill_array;
 -- the two work horses
 function matches_schema_object_partial
 ( p_schema_object_filter in t_schema_object_filter
+, p_switch in boolean
 , p_metadata_object_type in varchar2
 , p_object_name in varchar2
 , p_metadata_base_object_type in varchar2
@@ -56,7 +57,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT_PARTIAL');
   dbug.print
   ( dbug."input"
-  , 'object: "%s"; base object: "%s"'
+  , 'switch: %s; object: "%s"; base object: "%s"'
+  , dbug.cast_to_varchar2(p_switch)
   , p_metadata_object_type || ':' || p_object_name
   , p_metadata_base_object_type || ':' || p_base_object_name
   );
@@ -117,7 +119,7 @@ $end
       for i_complete_idx in 1 .. l_count
       loop
         <<what_loop>>
-        for i_what_idx in 1..2
+        for i_what_idx in case when p_switch then 2 else 1 end .. 2 -- ignore object on SWITCH
         loop
           l_idx := l_count + 2 * (i_complete_idx-1) + i_what_idx;
           
@@ -126,6 +128,16 @@ $end
               when 1 then p_metadata_object_type || ':' || p_object_name
               when 2 then p_metadata_base_object_type || ':' || p_base_object_name
             end;
+
+          /*
+          if l_schema_object_id = ':'
+          then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+            dbug.print(dbug."info", '[%s] skipping schema object id "%s"', l_idx, l_schema_object_id);
+$end
+            continue;
+          end if;
+          */
 
           l_result := case
                         when l_schema_object_id like p_schema_object_filter.objects_tab$(l_idx) escape '\'
@@ -260,7 +272,7 @@ is
     if p_str_tab is not null and p_str_tab.count > 0
     then
       l_json_array := json_array_t();
-      for i_idx in 1 .. p_str_tab.count / 3 -- show only complete items
+      for i_idx in 1 .. p_str_tab.count -- show all items
       loop
         l_json_array.append(p_str_tab(i_idx));
       end loop;
@@ -629,8 +641,10 @@ $end
             l_part_tab := c_default_wildcard_part_tab;
             l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
             l_part_tab("OBJECT NAME") := l_object_name_tab(i_object_name_idx);
+            l_part_tab("BASE OBJECT TYPE") := null; -- this is supposed to be named object hence base fields empty
+            l_part_tab("BASE OBJECT NAME") := null; -- idem
             l_object_tab(l_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            
+
             -- object 2
             l_part_tab := c_default_wildcard_part_tab;
             l_part_tab("BASE OBJECT TYPE") := nvl(p_object_type, '*');
@@ -736,6 +750,7 @@ begin
   loop
     l_result := matches_schema_object_partial
                 ( p_schema_object_filter => p_schema_object_filter
+                , p_switch => (i_try = 2)
                 , p_metadata_object_type => case i_try when 1 then p_metadata_object_type else p_metadata_base_object_type end
                 , p_object_name => case i_try when 1 then p_object_name else p_base_object_name end
                 , p_metadata_base_object_type => case i_try when 1 then p_metadata_base_object_type else p_metadata_object_type end
@@ -805,6 +820,7 @@ begin
         -- partial match
         matches_schema_object_partial
         ( p_schema_object_filter => p_schema_object_filter
+        , p_switch => false
         , p_metadata_object_type => l_part_tab("OBJECT TYPE")
         , p_object_name => l_part_tab("OBJECT NAME")
         , p_metadata_base_object_type => l_part_tab("BASE OBJECT TYPE")
@@ -932,10 +948,18 @@ begin
   "GRANTOR_IS_SCHEMA$" : 1,  
   "OBJECTS_TAB$" :
             [
-              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:::%:%:%:%",
               "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%",
-              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%",
-              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%"
+              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:::%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%",
+              "PACKAGE\\_SPEC:DBMS\\_METADATA",
+              ":",
+              "%:%",
+              "PACKAGE\\_SPEC:DBMS\\_METADATA",
+              "PACKAGE\\_SPEC:DBMS\\_VERSION",
+              ":",
+              "%:%",
+              "PACKAGE\\_SPEC:DBMS\\_VERSION"
             ],
   "OBJECTS_INCLUDE$" : 1,
   "OBJECTS_CMP_TAB$" :
@@ -943,12 +967,21 @@ begin
               "~",
               "~",
               "~",
-              "~"
+              "~",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
             ],
   "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
   "MATCH_COUNT$" : 0,
   "MATCH_COUNT_OK$" : 0
 }');
+
       when 3
       then
         -- duplicate objects are ignored
@@ -972,13 +1005,21 @@ DBMS_SQL
   "OBJECTS_TAB$" :
             [
               "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%"
+              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%",
+              "OBJECT\\_GRANT:%",
+              "%:DBMS\\_OUTPUT",
+              "OBJECT\\_GRANT:%",
+              "%:DBMS\\_SQL"
             ],
   "OBJECTS_INCLUDE$" : 1,
   "OBJECTS_CMP_TAB$" :
             [
               "~",
-              "~"
+              "~",
+              null,
+              null,
+              null,
+              null
             ],
   "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
   "MATCH_COUNT$" : 0,
@@ -1004,10 +1045,18 @@ DBMS_SQL
   "GRANTOR_IS_SCHEMA$" : 1,
   "OBJECTS_TAB$" :
             [
-              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:DBMS\\_OUTPUT:%:::%:%:%:%",
               "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-              "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
-              "%:%:%:%:%:DBMS\\_SQL:%:%:%:%"
+              "%:%:DBMS\\_SQL:%:::%:%:%:%",
+              "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
+              "%:DBMS\\_OUTPUT",
+              ":",
+              "%:%",
+              "%:DBMS\\_OUTPUT",
+              "%:DBMS\\_SQL",
+              ":",
+              "%:%",
+              "%:DBMS\\_SQL"
             ],
   "OBJECTS_INCLUDE$" : 0,
   "OBJECTS_CMP_TAB$" :
@@ -1015,7 +1064,15 @@ DBMS_SQL
               "~",
               "~",
               "~",
-              "~"
+              "~",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
             ],
   "MATCH_PARTIAL_EQ_COMPLETE$" : 1,
   "MATCH_COUNT$" : 0,
@@ -1023,7 +1080,8 @@ DBMS_SQL
 }');
 
     end case;
-    -- ut.expect(repr(l_schema_object_filter), 'test repr ' || i_try).to_equal(l_expected.to_clob());
+    -- GJP 2022-12-23 Only uncomment the next line when you have JSON differences
+    -- ut.expect(repr(l_schema_object_filter), 'test repr ' || i_try).to_equal(l_expected.to_clob()); 
     ut.expect(serialize(l_schema_object_filter), 'test serialize ' || i_try).to_equal(l_expected);
   end loop;  
 end;
@@ -1033,6 +1091,7 @@ is
   l_id oracle_tools.pkg_ddl_util.t_object;
   l_cnt pls_integer;
   l_max_objects constant pls_integer := 1;
+  l_object_names constant varchar2(4000 char) := 'PKG_SCHEMA_OBJECT_FILTER,PKG_DDL_UTIL';
   l_objects constant clob :=
     to_clob
     ('
@@ -1057,40 +1116,94 @@ ORACLE_TOOLS:VIEW:V_MY_SCHEMA_OBJECT_INFO:::::::
   l_object_tab dbms_sql.varchar2a;
   l_part_tab dbms_sql.varchar2a;
 begin
-  oracle_tools.pkg_str_util.split(p_str => l_objects, p_delimiter => chr(10), p_str_tab => l_object_tab);
-
-  l_schema_object_filter :=
-    oracle_tools.t_schema_object_filter
-    ( p_objects => l_objects
-    , p_objects_include => 1
-    );
-
-  for i_idx in l_object_tab.first .. l_object_tab.last
+  <<try_loop>>
+  for i_try in 1..4
   loop
-    if l_object_tab(i_idx) is not null
-    then
-      -- complete match
-      ut.expect
-      ( l_schema_object_filter.matches_schema_object(l_object_tab(i_idx))
-      , 'complete match for object ' || i_idx || ': ' || l_object_tab(i_idx)
-      ).to_equal(1);
+    case i_try
+      when 1
+      then
+        oracle_tools.pkg_str_util.split(p_str => l_objects, p_delimiter => chr(10), p_str_tab => l_object_tab);
 
+        l_schema_object_filter :=
+          oracle_tools.t_schema_object_filter
+          ( p_objects => l_objects
+          , p_objects_include => 1
+          );
+          
+      else
+        oracle_tools.pkg_str_util.split(p_str => l_object_names, p_delimiter => ',', p_str_tab => l_object_tab);
 
-      -- partial match now
+        l_schema_object_filter :=
+          oracle_tools.t_schema_object_filter
+          ( p_object_type => case i_try when 2 then 'OBJECT_GRANT' when 3 then 'PACKAGE_BODY' when 4 then null end
+          , p_object_names => l_object_names
+          , p_object_names_include => 1
+          );
+    end case;
 
-      oracle_tools.pkg_str_util.split(p_str => l_object_tab(i_idx), p_delimiter => ':', p_str_tab => l_part_tab);
-      
-      ut.expect
-      ( l_schema_object_filter.matches_schema_object
-        ( p_metadata_object_type => l_part_tab("OBJECT TYPE")
-        , p_object_name => l_part_tab("OBJECT NAME")
-        , p_metadata_base_object_type => l_part_tab("BASE OBJECT TYPE")
-        , p_base_object_name => l_part_tab("BASE OBJECT NAME")
-        )
-      , 'partial match for object ' || i_idx || ': ' || l_object_tab(i_idx)
-      ).to_equal(case when l_object_tab(i_idx) = 'ORACLE_TOOLS:TABLE:schema_version_tools_ui:::::::' then 0 else 1 end);
-    end if;
-  end loop;
+    for i_idx in l_object_tab.first .. l_object_tab.last
+    loop
+      if l_object_tab(i_idx) is not null
+      then
+        -- complete match but only for i_try 1
+        if i_try = 1
+        then
+          ut.expect
+          ( l_schema_object_filter.matches_schema_object(l_object_tab(i_idx))
+          , utl_lms.format_message
+            ( 'try: %s; object index: %s; complete match for object "%s"'
+            , to_char(i_try)
+            , to_char(i_idx)
+            , l_object_tab(i_idx)
+            )
+          ).to_equal(1);
+        end if;
+
+        -- partial match now
+
+        case 
+          when i_try = 1
+          then
+            oracle_tools.pkg_str_util.split(p_str => l_object_tab(i_idx), p_delimiter => ':', p_str_tab => l_part_tab);
+          when i_try in (2, 3)
+          then
+            l_part_tab("OBJECT TYPE") := 'PACKAGE_SPEC';
+            l_part_tab("OBJECT NAME") := l_object_tab(i_idx);
+            l_part_tab("BASE OBJECT TYPE") := null;
+            l_part_tab("BASE OBJECT NAME") := null;
+            
+          when i_try = 4
+          then
+            l_part_tab("OBJECT TYPE") := 'PACKAGE_BODY';
+            l_part_tab("OBJECT NAME") := l_object_tab(i_idx);
+            l_part_tab("BASE OBJECT TYPE") := null;
+            l_part_tab("BASE OBJECT NAME") := null;
+        end case;    
+
+        ut.expect
+        ( l_schema_object_filter.matches_schema_object
+          ( p_metadata_object_type => l_part_tab("OBJECT TYPE")
+          , p_object_name => l_part_tab("OBJECT NAME")
+          , p_metadata_base_object_type => l_part_tab("BASE OBJECT TYPE")
+          , p_base_object_name => l_part_tab("BASE OBJECT NAME")
+          )
+        , utl_lms.format_message
+          ( 'try: %s; object index: %s; partial match for object "%s"'
+          , to_char(i_try)
+          , to_char(i_idx)
+          , l_object_tab(i_idx)
+          )
+        ).to_equal
+          ( case i_try
+              when 1 then case when l_object_tab(i_idx) = 'ORACLE_TOOLS:TABLE:schema_version_tools_ui:::::::' then 0 else 1 end
+              when 2 then 1
+              when 3 then 0
+              when 4 then 1
+            end
+          );
+      end if;
+    end loop;
+  end loop try_loop;
 
   return;
 
