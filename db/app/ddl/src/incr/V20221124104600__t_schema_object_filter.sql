@@ -10,8 +10,11 @@ begin
   end loop;
 
   execute immediate q'[
-CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as object
+create type oracle_tools.t_schema_object_filter authid current_user as object
 ( schema$ varchar2(30 char)
+, object_type$ varchar2(30 char)
+, object_names$ varchar2(4000 char)
+, object_names_include$ integer
 , grantor_is_schema$ integer
 , objects_tab$ oracle_tools.t_text_tab
 , objects_include$ integer
@@ -26,11 +29,12 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
   , p_object_names in varchar2 default null
   , p_object_names_include in integer default null
   , p_grantor_is_schema in integer default 0
-  , p_objects in clob default null
-  , p_objects_include in integer default null
   )
   return self as result
 , member function schema return varchar2 deterministic
+, member function object_type return varchar2 deterministic
+, member function object_names return varchar2 deterministic
+, member function object_names_include return integer deterministic
 , member function grantor_is_schema return integer deterministic
 , member function match_perc return integer deterministic
 , member procedure print

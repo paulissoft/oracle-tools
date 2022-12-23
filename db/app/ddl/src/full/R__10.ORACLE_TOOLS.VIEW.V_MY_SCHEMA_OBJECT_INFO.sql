@@ -18,8 +18,6 @@ from    table
             , p_object_names => null
             , p_object_names_include => null
             , p_grantor_is_schema => 0
-            , p_objects => null
-            , p_objects_include => null
             )
           )
         ) t;

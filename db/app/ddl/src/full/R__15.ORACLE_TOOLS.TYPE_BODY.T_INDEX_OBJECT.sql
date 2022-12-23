@@ -10,7 +10,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR' || ' (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || ' (1)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s'
@@ -52,7 +52,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR' || ' (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || ' (2)');
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'

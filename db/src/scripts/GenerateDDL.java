@@ -1,107 +1,56 @@
-import java.io.FileInputStream;
+import java.sql.*;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
 
-import java.sql.*;
-
 import java.util.Map;
-import java.util.Properties;
-
 
 public class GenerateDDL
 {
+    // args[0]: JDBC url
+    // args[1]: source schema
+    // args[2]: source database link
+    // args[3]: target schema
+    // args[4]: target database link
+    // args[5]: object type
+    // args[6]: object names include (0, 1 or empty)
+    // args[7]: object names (comma separated list)
+    // args[8]: skip repeatables (0 or 1)
+    // args[9]: interface
+    // args[10]: a list of DBMS_METADATA transformation parameters
+    // args[11]: owner of pkg_ddl_util package (MUST BE THE LAST PARAMETER)
     public static void main(String[] args) throws SQLException, IOException, Exception
     {
-        final int args_size = 1;
-        final int props_size = 13;
-        final int vars_size = props_size + 1; /* JDBC URL passed as environment variable */
+        final int args_size = 12;
         int nr;
         final PrintStream out = new PrintStream(System.out, true, "UTF-8");
         Connection conn = null;
-        CallableStatement pstmt = null;
-    
+
         try {
-            if (args.length != args_size) {
-                throw new Exception("Usage: GenerateDDL <property file>");
+            if (args.length == 1) {
+                args = args[0].split("\\s+");
             }
 
-            // strip " and ' at the beginning and end
-            args[0] = args[0].replaceAll("^\"|^'|'$|\"$", "");
+            if (args.length != args_size) {
+                throw new Exception("Usage: GenerateDDL <JDBC url> " +
+                                                       "<source schema> <source database link> " +
+                                                       "<target schema> <target database link> " +
+                                                       "<object type> <object names include> <object names> " +
+                                                       "<skip repeatables> <interface> <transform params> <owner>");
+            }
 
-            try (InputStream input = new FileInputStream(args[0])) {
-                final Properties props = new Properties();
+            final Map<String, String> env = System.getenv();
 
-                // load the properties file
-                props.load(input);
+            if (!env.get("NLS_LANG").endsWith(".UTF8")) {
+                throw new Exception("NLS_LANG environment variable must end with .UTF8");
+            }
 
-                assert props.size() == props_size;
-            
-                final Map<String, String> env = System.getenv();
-
-                if (!env.get("NLS_LANG").endsWith(".UTF8")) {
-                    throw new Exception("NLS_LANG environment variable must end with .UTF8");
-                }
-
-                final StringBuffer JDBCUrl = new StringBuffer(env.get("JDBC_URL"));
-                final String sourceSchema = props.getProperty("source.schema");
-                final String sourceDbLink = props.getProperty("source.db.name");
-                final String targetSchema = props.getProperty("target.schema");
-                final String targetDbLink = props.getProperty("target.db.name");
-                final String objectType = props.getProperty("object.type");
-                final String objectNamesInclude = props.getProperty("object.names.include");
-                final String objectNames = props.getProperty("object.names");
-                final String skipRepeatables = props.getProperty("skip.repeatables");
-                final String interfaceName = props.getProperty("interface");
-                final String transformParams = props.getProperty("transform.params");
-                final String objectsInclude = props.getProperty("objects.include");
-                final String objects = props.getProperty("objects");
-                final String owner = props.getProperty("owner");
-
-                assert JDBCUrl != null && !JDBCUrl.toString().equals("");
-                assert sourceSchema != null;
-                assert sourceDbLink != null;
-                assert targetSchema != null;
-                assert targetDbLink != null;
-                assert objectType != null;
-                assert objectNamesInclude != null;
-                assert objectNames != null;
-                assert skipRepeatables != null && !skipRepeatables.equals("");
-                assert interfaceName != null && !interfaceName.equals("");
-                assert transformParams != null;
-                assert objectsInclude != null;
-                assert objects != null;
-                assert owner != null;
-
-                // Load and register Oracle driver
-                System.setProperty("oracle.jdbc.fanEnabled", "false");
-                DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-                // Establish a connection
-
-                conn = DriverManager.getConnection(JDBCUrl.toString());
-
-                final Statement stmt = conn.createStatement();
-
-                // GJP 2022-09-28
-                // DDL generation changes due to timestamp format for dbms_scheduler jobs should be ignored.
-                // https://github.com/paulissoft/oracle-tools/issues/59
-            
-                // Try to set up a common environment to ensure that the local radix character X in 'DD-MON-RRRR HH.MI.SSXFF AM TZR' is the same everywhere.
-            
-                stmt.executeUpdate("alter session set NLS_LANGUAGE = 'AMERICAN'");
-                stmt.executeUpdate("alter session set NLS_TERRITORY = 'AMERICA'");
-
-                pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?,?,?)}");
-
-                final Clob objectsClob = conn.createClob();
-
-                // Print the arguments as one multi line comment and every line as a comment too.
-                out.println("/*");
+            // Print the arguments as one multi line comment and every line as a comment too.
+            out.println("/*");
 
                 /* Only JDBC URL, owner and statement input parameters */
                 for (nr = 0; nr < vars_size; nr++) {
 
-                    out.print("-- ");
+                out.print("-- ");
 
                     /* 0 and 13 are not statement parameters (?) but owner can be part of the statement */
                     switch (nr) {
@@ -110,67 +59,58 @@ public class GenerateDDL
                         final String str1 = JDBCUrl.substring(0, JDBCUrl.indexOf("/"));
                         final String str2 = JDBCUrl.substring(JDBCUrl.lastIndexOf("@"));
 
-                        out.println("JDBC url            : " + str1 + str2);
-                        break;
+                    out.println("JDBC url            : " + str1 + str2);
+                    break;
     
                     case 1:
                         out.println("source schema       : " + sourceSchema);
                         pstmt.setString(nr, sourceSchema);
                         break;
     
-                    case 2:
-                        out.println("source database link: " + sourceDbLink);
-                        pstmt.setString(nr, sourceDbLink);
-                        break;
+                case 2:
+                    // source database link
+                    out.println("source database link: " + args[nr]);
+                    break;
     
-                    case 3:
-                        out.println("target schema       : " + targetSchema);
-                        pstmt.setString(nr, targetSchema);
-                        break;
+                case 3:
+                    // target schema
+                    out.println("target schema       : " + args[nr]);
+                    break;
         
-                    case 4:
-                        out.println("target database link: " + targetDbLink);
-                        pstmt.setString(nr, targetDbLink);
-                        break;
+                case 4:
+                    // target database link
+                    out.println("target database link: " + args[nr]);
+                    break;
 
-                    case 5:
-                        out.println("object type         : " + objectType);
-                        pstmt.setString(nr, objectType);
-                        break;
+                case 5:
+                    // object type
+                    out.println("object type         : " + args[nr]);
+                    break;
     
-                    case 6:
-                        out.println("object names include: " + objectNamesInclude);
-                        // this argument can be empty so setNull must be called explicitly because empty string can not be converted to a null integer
-                        try {
-                            pstmt.setInt(nr, Integer.parseInt(objectNamesInclude));
-                        } catch(Exception e) {
-                            if (objectNamesInclude != null && objectNamesInclude.toString().trim().length() > 0) {
-                                throw new Exception("Can not convert '" + objectNamesInclude  + "' to an integer");
-                            } else {
-                                pstmt.setNull(nr, Types.INTEGER);
-                            }
-                        }
-                        break;
+                case 6:
+                    // object names include
+                    out.println("object names include: " + args[nr]);
+                    break;
     
-                    case 7:
-                        out.println("object names        : " + objectNames);
-                        pstmt.setString(nr, objectNames);
-                        break;
+                case 7:
+                    // object names
+                    out.println("object names        : " + args[nr]);
+                    break;
     
-                    case 8:
-                        out.println("skip repeatables    : " + skipRepeatables);
-                        pstmt.setInt(nr, Integer.parseInt(skipRepeatables)); // never null
-                        break;
+                case 8:
+                    // skip repeatables
+                    out.println("skip repeatables    : " + args[nr]);
+                    break;
 
-                    case 9:
-                        out.println("interface           : " + interfaceName);
-                        pstmt.setString(nr, interfaceName);
-                        break;
+                case 9:
+                    // interface
+                    out.println("interface           : " + args[nr]);
+                    break;
 
-                    case 10:
-                        out.println("transform params    : " + transformParams);
-                        pstmt.setString(nr, transformParams);
-                        break;
+                case 10:
+                    // interface
+                    out.println("transform params    : " + args[nr]);
+                    break;
                     
                     case 11:
                         out.println("objects include     : " + objectsInclude);
@@ -200,24 +140,66 @@ public class GenerateDDL
                         assert nr >= 0 && nr <= 13;
                     }
                 }
+            }
 
-                out.println("*/");
+            out.println("*/");
+  
+            //Load and register Oracle driver
+            System.setProperty("oracle.jdbc.fanEnabled", "false");
+            DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+            //Establish a connection
 
-                pstmt.registerOutParameter(vars_size - 1, Types.CLOB);
-                pstmt.executeUpdate();
+            nr = -1;
 
-                // last statement parameter is the output clob
-                final Clob clob = pstmt.getClob(vars_size - 1);
+            conn = DriverManager.getConnection(args[++nr]);
 
-                // Print all at once
-                final long len = clob.length();
+            final Statement stmt = conn.createStatement();
 
-                if (len < Integer.MIN_VALUE || len > Integer.MAX_VALUE) {
-                    throw new Exception(String.format("CLOB length %d is not between %d and %d", len, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            // GJP 2022-09-28
+            // DDL generation changes due to timestamp format for dbms_scheduler jobs should be ignored.
+            // https://github.com/paulissoft/oracle-tools/issues/59
+            
+            // Try to set up a common environment to ensure that the local radix character X in 'DD-MON-RRRR HH.MI.SSXFF AM TZR' is the same everywhere.
+            
+            stmt.executeUpdate("alter session set NLS_LANGUAGE = 'AMERICAN'");
+            stmt.executeUpdate("alter session set NLS_TERRITORY = 'AMERICA'");
+
+            final CallableStatement pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?)}");
+      
+            pstmt.setString(1, args[++nr]);
+            pstmt.setString(2, args[++nr]);
+            pstmt.setString(3, args[++nr]);
+            pstmt.setString(4, args[++nr]);
+            pstmt.setString(5, args[++nr]);
+            // argument 6 can be empty so setNull must be called explicitly because empty string can not be converted to a null integer
+            try {
+                pstmt.setInt(6, Integer.parseInt(args[++nr]));
+            } catch(Exception e) {
+                if (args[nr] != null && args[nr].toString().trim().length() > 0) {
+                    throw new Exception("Can not convert '" + args[nr]  + "' to an integer");
                 } else {
-                    out.print(clob.getSubString(1, (int) len));
+                    pstmt.setNull(6, Types.INTEGER);
                 }
             }
+            pstmt.setString(7, args[++nr]);
+            pstmt.setInt(8, Integer.parseInt(args[++nr])); // never null
+            pstmt.setString(9, args[++nr]);
+            pstmt.setString(10, args[++nr]);
+            pstmt.registerOutParameter(args_size - 1, Types.CLOB);
+            pstmt.executeUpdate();
+
+            final Clob clob = pstmt.getClob(args_size - 1);
+
+            // Print all at once
+            final long len = clob.length();
+
+            if (len < Integer.MIN_VALUE || len > Integer.MAX_VALUE) {
+                throw new Exception(String.format("CLOB length %d is not between %d and %d", len, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            } else {
+                out.print(clob.getSubString(1, (int) len));
+            }
+
+            pstmt.close();
         } catch (Exception e) {
             System.err.println("Number of arguments expected: " + args_size + "; actual: " + args.length);
       
@@ -226,9 +208,6 @@ public class GenerateDDL
 
             throw e;
         } finally {
-            if (pstmt != null) {
-                pstmt.close();
-            }
             if (conn != null) {
                 conn.close();
             }

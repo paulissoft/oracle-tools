@@ -17,7 +17,7 @@ return self as result
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
   dbug.print
   ( dbug."input"
   , 'p_base_object.id(): %s; p_member#: %s; p_member_name: %s'

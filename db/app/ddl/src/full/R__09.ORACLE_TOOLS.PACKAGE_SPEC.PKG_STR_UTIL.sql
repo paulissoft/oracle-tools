@@ -63,20 +63,6 @@ procedure split
 );
 
 /**
- * Join a string separated by a delimiter string.
- *
- * @param p_str        The input string to split.
- * @param p_delimiter  The separator string.
- * @param p_str_tab    The output table.
- */
-function join
-( p_str_tab in dbms_sql.varchar2a
-, p_delimiter in varchar2 := ','
-)
-return varchar2
-deterministic;
-
-/**
  * Removes left and right from the input string all characters in a set.
  *
  * @param p_str  The input string. If it consists only of characters from the set it will become empty.
