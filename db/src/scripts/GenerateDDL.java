@@ -99,13 +99,13 @@ public class GenerateDDL
                 out.println("/*");
 
                 /* Only JDBC URL, owner and statement input parameters */
-                for (nr = -1; nr < vars_size - 1; nr++) {
+                for (nr = 0; nr < vars_size; nr++) {
 
                     out.print("-- ");
 
-                    /* -1 and 0 are not statement parameters (?) but owner can be part of the statement */
+                    /* 0 and 13 are not statement parameters (?) but owner can be part of the statement */
                     switch (nr) {
-                    case -1:
+                    case 0:
                         // JDBC url, includes password (jdbc:oracle:thin:<user>/<password>@<db>) so strip it
                         final String str1 = JDBCUrl.substring(0, JDBCUrl.indexOf("/"));
                         final String str2 = JDBCUrl.substring(JDBCUrl.lastIndexOf("@"));
@@ -113,10 +113,6 @@ public class GenerateDDL
                         out.println("JDBC url            : " + str1 + str2);
                         break;
     
-                    case 0:
-                        out.println("owner               : " + owner);
-                        break;
-
                     case 1:
                         out.println("source schema       : " + sourceSchema);
                         pstmt.setString(nr, sourceSchema);
@@ -196,8 +192,12 @@ public class GenerateDDL
                         pstmt.setClob(nr, objectsClob);
                         break;
 
+                    case 13:
+                        out.println("owner               : " + owner);
+                        break;
+
                     default:
-                        assert nr >= -1 && nr <= 12;
+                        assert nr >= 0 && nr <= 13;
                     }
                 }
 
