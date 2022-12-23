@@ -1,4 +1,4 @@
-<project name="generate_ddl" default="generate-ddl-full-help" basedir=".">
+<project name="generate_ddl" default="generate-ddl-full-help" basedir="." xmlns:ac="antlib:net.sf.antcontrib">
 
   <description>
     Generate database scripts for a fresh (full) and incremental installation.
@@ -38,6 +38,8 @@
     The owner of the pkg_ddl_util package.
     - build.dir
     The build directory.
+    - show.properties
+    Show properties using task echoproperties.
 
     The following properties are used for generate-ddl-full:
     - full.force.view
@@ -183,7 +185,8 @@
 
     <tempfile property="property.file" destDir="${build.dir}"/>
     <echo level="verbose" message="property.file: ${property.file}" />
-    
+
+    <property name="show.properties" value="false" />
   </target> <!-- init-common -->
 
   <target name="init-full" unless="target.db.name">
@@ -225,10 +228,15 @@
         <equals arg1="${perl.full.skip.install.sql}" arg2="no"/>
       </not>
     </condition>
-    <echoproperties prefix="perl." />
-    <echoproperties prefix="full." />
-  </target>
-  
+    <ac:if>
+      <equals arg1="${show.properties}" arg2="true" />
+      <then>
+        <echoproperties prefix="perl." />
+        <echoproperties prefix="full." />
+      </then>
+    </ac:if>
+  </target> <!-- init-full -->
+
   <target name="init-incr" if="target.db.name">
     <!--
 
@@ -284,10 +292,14 @@ Z       Time zone               RFC 822 time zone   -0800
 
     <property name="incr.interface" value="pkg_ddl_util v5"/>
     <property name="incr.transform.params" value="SEGMENT_ATTRIBUTES,TABLESPACE"/>
-
-    <echoproperties prefix="perl." />
-    <echoproperties prefix="incr." />
-  </target>
+    <ac:if>
+      <equals arg1="${show.properties}" arg2="true" />
+      <then>
+        <echoproperties prefix="perl." />
+        <echoproperties prefix="incr." />
+      </then>
+    </ac:if>
+  </target> <!-- init-incr -->
 
   <target name="init-schema" depends="init">
     <!-- set source.db properties -->
@@ -348,6 +360,7 @@ Z       Time zone               RFC 822 time zone   -0800
 
   <macrodef name="generate-ddl" description="Generate schema ddl">
     <!-- Java (and maybe Perl) -->
+    <attribute name="type" default="full"/>
     <attribute name="source.schema" default=""/>
     <attribute name="source.db.name" default=""/>
     <attribute name="target.schema" default=""/>
@@ -387,24 +400,36 @@ Z       Time zone               RFC 822 time zone   -0800
         <entry key="objects" value="${objects.trimmed}"/>
         <entry key="owner" value="@{owner}"/>
       </propertyfile>
-      
-      <!-- generate the input for the Perl script -->
-      <java fork="true" 
-            classname="${main-class}" 
-            failonerror="true"
-            logError="true">
-        <redirector output="@{temp.file}"/>
-        <classpath>
-          <path refid="runtime.classpath"/>
-          <path location="${jar.dir}/${ant.project.name}.jar"/>
-        </classpath>
-        <!-- Oracle clients love NLS_LANG -->
-        <env key="NLS_LANG" value="American_America.UTF8"/>
-        <!-- password etcetera via environment variables -->
-        <env key="JDBC_URL" value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
-        <arg value="${quote}${property.file}${quote}"/>
-        <jvmarg value="-enableassertions"/>
-      </java>
+
+      <ac:trycatch property="@{id}.error">
+        <try>
+          <!-- generate the input for the Perl script -->
+          <java fork="true" 
+                classname="${main-class}" 
+                failonerror="true"
+                logError="true">
+            <redirector output="@{temp.file}"/>
+            <classpath>
+              <path refid="runtime.classpath"/>
+              <path location="${jar.dir}/${ant.project.name}.jar"/>
+            </classpath>
+            <!-- Oracle clients love NLS_LANG -->
+            <env key="NLS_LANG" value="American_America.UTF8"/>
+            <!-- password etcetera via environment variables -->
+            <env key="JDBC_URL" value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
+            <arg value="${quote}${property.file}${quote}"/>
+            <jvmarg value="-enableassertions"/>
+          </java>
+        </try>
+        <catch>
+          <echoproperties prefix="perl." />
+          <echoproperties prefix="@{type}." />
+          <loadfile property="@{id}.properties" srcFile="${property.file}" />
+          <echo message="generator properties: ${@{id}.properties}" />
+          <!-- fail anyhow -->
+          <fail message="${@{id}.error}"/>
+        </catch>
+      </ac:trycatch>
 
       <!-- Create scripts -->
       <exec executable="perl" failonerror="false" resultproperty="result.@{id}">
@@ -444,7 +469,8 @@ Z       Time zone               RFC 822 time zone   -0800
     <!-- generate the input for the Perl script -->
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.install.file" destDir="${log.dir}" suffix=".sql" prefix="install"/>
-    <generate-ddl source.schema="${schema}"
+    <generate-ddl type="full"
+                  source.schema="${schema}"
                   source.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
@@ -470,7 +496,8 @@ Z       Time zone               RFC 822 time zone   -0800
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
-    <generate-ddl target.schema="${schema}"
+    <generate-ddl type="full"
+                  arget.schema="${schema}"
                   target.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
@@ -529,7 +556,8 @@ Z       Time zone               RFC 822 time zone   -0800
     </condition>
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.incr.file" destDir="${log.dir}" suffix=".sql" prefix="incr"/>
-    <generate-ddl source.schema="${schema}"
+    <generate-ddl type="incr"
+                  source.schema="${schema}"
                   source.db.name="${source.db.name}"
                   target.schema="${schema}"
                   target.db.name="${target.db.name}"

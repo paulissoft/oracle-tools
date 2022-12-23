@@ -529,6 +529,7 @@
                          target="generate-ddl-full"
                          inheritAll="false"
                          dir=".">
+                      <property name="show.properties" value="${db.show.properties}" />
                       <property name="source.db.name" value="" />
                       <property name="schema" value="${db.schema}" />
                       <property name="userid" value="${db.userid}" />
@@ -597,6 +598,7 @@
                       <!-- GPA 2017-02-07 #137711209 We connect to the target
                            and use database links on the target connection to
                            the source. -->
+                      <property name="show.properties" value="${db.show.properties}" />
                       <property name="userid" value="${db.userid}" />
                       <property name="source.db.name" value="${db.prev.database.link}" />
                       <property name="target.db.name" value="" />
