@@ -26,8 +26,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   -- 0: none, 1: standard, 2: verbose, 3: even more verbose
   c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
-  c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then false $else false $end; -- idem
-  c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then false $else false $end; -- idem
+  c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
+  c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
   /*
   -- Start of bugs/features (oldest first)
@@ -310,7 +310,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
   */
   procedure get_schema_object
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
+  ( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter 
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
   );
 

@@ -1,4 +1,14 @@
 begin
+  for r in
+  ( select  'drop type ' || object_name as cmd
+    from    user_objects
+    where   object_type = 'TYPE'
+    and     object_name = 'T_SCHEMA_OBJECT_FILTER'
+  )
+  loop
+    execute immediate r.cmd;
+  end loop;
+
   execute immediate q'[
 create type oracle_tools.t_schema_object_filter authid current_user as object
 ( schema$ varchar2(30 char)
@@ -6,9 +16,12 @@ create type oracle_tools.t_schema_object_filter authid current_user as object
 , object_names$ varchar2(4000 char)
 , object_names_include$ integer
 , grantor_is_schema$ integer
--- set in constructor
-, object_name_tab$ oracle_tools.t_text_tab
-, schema_object_info_tab$ oracle_tools.t_text_tab
+, objects_tab$ oracle_tools.t_text_tab
+, objects_include$ integer
+, objects_cmp_tab$ oracle_tools.t_text_tab
+, match_partial_eq_complete$ integer
+, match_count$ integer
+, match_count_ok$ integer
 , constructor function t_schema_object_filter
   ( self in out nocopy oracle_tools.t_schema_object_filter
   , p_schema in varchar2 default user
@@ -23,33 +36,12 @@ create type oracle_tools.t_schema_object_filter authid current_user as object
 , member function object_names return varchar2 deterministic
 , member function object_names_include return integer deterministic
 , member function grantor_is_schema return integer deterministic
-, member function object_name_tab return oracle_tools.t_text_tab deterministic
-, member function schema_object_info_tab return oracle_tools.t_text_tab deterministic
+, member function match_perc return integer deterministic
 , member procedure print
   ( self in oracle_tools.t_schema_object_filter
   )
-  /**
-   * Determine whether a schema object matches a filter.
-   *
-   * Rules:
-   * <ol>
-   * <li>A schema base object where is_exclude_name_expr() = 1: return 0</li>
-   * <li>A schema object where is_exclude_name_expr() = 1: return 0</li>
-   * <li>If p_metadata_object_type is not member of p_object_types_to_check: return 1</li>
-   * <li>When object_type$ is empty or equal to the (base) object type and the combination of p_object_name and object_names_include$ matches object_names$: return 1</li>
-   * <li>Else: return 0</li>
-   * </ol>
-   *
-   * @param p_object_types_to_check       A list of metadata object types to check for (null = check all).
-   * @param p_metadata_object_type        The schema object type (metadata).
-   * @param p_object_name                 The schema object name.
-   * @param p_metadata_base_object_type   The schema base object type (metadata).
-   * @param p_base_object_name            The schema base object name.
-   *
-   */
 , member function matches_schema_object
-  ( p_object_types_to_check in oracle_tools.t_text_tab
-    -- database values
+  ( self in out nocopy oracle_tools.t_schema_object_filter
   , p_metadata_object_type in varchar2
   , p_object_name in varchar2
   , p_metadata_base_object_type in varchar2 default null
@@ -58,14 +50,21 @@ create type oracle_tools.t_schema_object_filter authid current_user as object
   return integer
   deterministic
 , member function matches_schema_object
-  ( p_object_types_to_check in oracle_tools.t_text_tab
-    -- database values
-  , p_schema_object in oracle_tools.t_schema_object
+  ( self in oracle_tools.t_schema_object_filter
+  , p_schema_object_id in varchar2
   )
   return integer
   deterministic
+, member procedure combine_named_other_objects
+  ( self in oracle_tools.t_schema_object_filter
+  , p_named_object_tab in oracle_tools.t_schema_object_tab
+  , p_other_object_tab in oracle_tools.t_schema_object_tab
+  , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+  )
 )
 instantiable
 final]';
+
+  execute immediate 'GRANT EXECUTE ON T_SCHEMA_OBJECT_FILTER TO PUBLIC';
 end;
 /

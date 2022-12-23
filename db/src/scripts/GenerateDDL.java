@@ -47,28 +47,25 @@ public class GenerateDDL
             // Print the arguments as one multi line comment and every line as a comment too.
             out.println("/*");
 
-            String owner = "";
-      
-            for (nr = 0; nr < args.length; nr++) {
-                // strip " and ' at the beginning and end
-                args[nr] = args[nr].replaceAll("^\"|^'|'$|\"$", "");
+                /* Only JDBC URL, owner and statement input parameters */
+                for (nr = 0; nr < vars_size; nr++) {
 
                 out.print("-- ");
 
-                switch (nr) {
-                case 0:
-                    // JDBC url, includes password (jdbc:oracle:thin:<user>/<password>@<db>) so strip it
-                    StringBuffer JDBCUrl = new StringBuffer(args[0]);
-                    String str1 = JDBCUrl.substring(0, JDBCUrl.indexOf("/"));
-                    String str2 = JDBCUrl.substring(JDBCUrl.lastIndexOf("@"));
+                    /* 0 and 13 are not statement parameters (?) but owner can be part of the statement */
+                    switch (nr) {
+                    case 0:
+                        // JDBC url, includes password (jdbc:oracle:thin:<user>/<password>@<db>) so strip it
+                        final String str1 = JDBCUrl.substring(0, JDBCUrl.indexOf("/"));
+                        final String str2 = JDBCUrl.substring(JDBCUrl.lastIndexOf("@"));
 
                     out.println("JDBC url            : " + str1 + str2);
                     break;
     
-                case 1:
-                    // source schema
-                    out.println("source schema       : " + args[nr]);
-                    break;
+                    case 1:
+                        out.println("source schema       : " + sourceSchema);
+                        pstmt.setString(nr, sourceSchema);
+                        break;
     
                 case 2:
                     // source database link
@@ -115,11 +112,33 @@ public class GenerateDDL
                     out.println("transform params    : " + args[nr]);
                     break;
                     
-                case 11:
-                    owner = args[nr];
-                    // owner
-                    out.println("owner               : " + args[nr]);
-                    break;
+                    case 11:
+                        out.println("objects include     : " + objectsInclude);
+                        // this argument can be empty so setNull must be called explicitly because empty string can not be converted to a null integer
+                        try {
+                            pstmt.setInt(nr, Integer.parseInt(objectsInclude));
+                        } catch(Exception e) {
+                            if (objectsInclude != null && objectsInclude.toString().trim().length() > 0) {
+                                throw new Exception("Can not convert '" + objectsInclude  + "' to an integer");
+                            } else {
+                                pstmt.setNull(nr, Types.INTEGER);
+                            }
+                        }
+                        break;
+    
+                    case 12:
+                        out.println("objects             : " + objects);
+                        objectsClob.setString(1, objects);
+                        pstmt.setClob(nr, objectsClob);
+                        break;
+
+                    case 13:
+                        out.println("owner               : " + owner);
+                        break;
+
+                    default:
+                        assert nr >= 0 && nr <= 13;
+                    }
                 }
             }
 

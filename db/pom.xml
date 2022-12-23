@@ -64,6 +64,7 @@
     <!-- ======================== -->    
     <db.phase.init>validate</db.phase.init>
     <db.phase.process>compile</db.phase.process>
+    <db.show.properties>false</db.show.properties>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -112,7 +113,7 @@
               <id>db-debug-before</id>
               <phase>${db.phase.init}</phase>
               <configuration>
-                <target if="${maven.debug}">
+                <target if="${db.show.properties}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -233,7 +234,7 @@
               <id>db-debug-after</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target if="${maven.debug}">
+                <target if="${db.show.properties}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -528,6 +529,7 @@
                          target="generate-ddl-full"
                          inheritAll="false"
                          dir=".">
+                      <property name="show.properties" value="${db.show.properties}" />
                       <property name="source.db.name" value="" />
                       <property name="schema" value="${db.schema}" />
                       <property name="userid" value="${db.userid}" />
@@ -596,6 +598,7 @@
                       <!-- GPA 2017-02-07 #137711209 We connect to the target
                            and use database links on the target connection to
                            the source. -->
+                      <property name="show.properties" value="${db.show.properties}" />
                       <property name="userid" value="${db.userid}" />
                       <property name="source.db.name" value="${db.prev.database.link}" />
                       <property name="target.db.name" value="" />
@@ -635,7 +638,7 @@
         <conf.connect.skip>false</conf.connect.skip>
         <!-- do not read flyway properties -->
         <db.install.skip>false</db.install.skip>
-        <maven.debug>true</maven.debug>
+        <db.show.properties>true</db.show.properties>
       </properties>
       <build>
         <plugins>
