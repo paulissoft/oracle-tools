@@ -7,6 +7,8 @@ constructor function t_schema_object_filter
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
 , p_grantor_is_schema in integer default 0
+, p_objects in clob default null
+, p_objects_include in integer default null
 )
 return self as result
 is
@@ -31,30 +33,6 @@ deterministic
 is
 begin
   return self.schema$;
-end;
-
-member function object_type
-return varchar2
-deterministic
-is
-begin
-  return self.object_type$;
-end;
-
-member function object_names
-return varchar2
-deterministic
-is
-begin
-  return self.object_names$;
-end;
-
-member function object_names_include
-return integer
-deterministic
-is
-begin
-  return self.object_names_include$;
 end;
 
 member function grantor_is_schema
@@ -137,7 +115,7 @@ begin
   , p_schema_object_tab => p_schema_object_tab
   );
 end combine_named_other_objects;
-
+  
 end;
 /
 
