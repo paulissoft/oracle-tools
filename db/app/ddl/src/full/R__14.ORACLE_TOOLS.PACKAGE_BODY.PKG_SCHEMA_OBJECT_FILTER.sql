@@ -414,6 +414,14 @@ $end
     then
       l_schema_object := oracle_tools.t_table_object(p_object_schema, p_object_name, p_tablespace_name);
 
+    when "base objects"
+    then
+    oracle_tools.t_named_object.create_named_object
+      ( p_object_type => r.object_type
+      , p_object_schema => r.owner
+      , p_object_name => r.object_name
+      , p_named_object => l_named_object_tab(l_named_object_tab.last)
+      );
   end case;
 
   if l_schema_object is not null and p_schema_object_filter.matches_schema_object(l_schema_object) = 0
@@ -1176,6 +1184,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   check_duplicates(l_named_object_tab, 'tables');
 $end
 
+  l_step := "base objects";
+
   for r in
   ( /*
     -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
@@ -1205,19 +1215,14 @@ $end
     and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
   )
   loop
-    if p_schema_object_filter.matches_schema_object
-       ( p_metadata_object_type => r.object_type
-       , p_object_name => r.object_name
-       ) = 1
-    then
-      l_named_object_tab.extend(1);
-      oracle_tools.t_named_object.create_named_object
-      ( p_object_type => r.object_type
-      , p_object_schema => r.owner
-      , p_object_name => r.object_name
-      , p_named_object => l_named_object_tab(l_named_object_tab.last)
-      );
-    end if;
+    process_schema_object
+    ( p_step => l_step
+    , p_object_type => r.object_type
+    , p_object_schema => r.owner
+    , p_object_name => r.object_name
+    , p_schema_object_filter => l_schema_object_filter
+    , p_schema_object_tab => l_schema_object_tab
+    );
   end loop;
 
   longops_show(l_longops_rec);
