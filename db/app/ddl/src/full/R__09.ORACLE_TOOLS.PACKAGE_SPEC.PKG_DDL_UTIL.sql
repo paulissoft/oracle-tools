@@ -149,8 +149,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_network_link          The network link.
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
   * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   *
   * @return A list of DDL text plus information about the object.
   */
@@ -164,8 +164,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -189,8 +189,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_network_link_target   Target network link.
   * @param p_skip_repeatables      Skip repeatables objects (1) or check all objects (0)
   * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   *
   * @return A list of DDL text plus information about the object.
   */
@@ -204,8 +204,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link_target in t_network_link default null
   , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Default for Flyway with repeatable migrations
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -239,8 +239,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_schema_target         Target schema.
   * @param p_network_link_source   Source network link.
   * @param p_network_link_target   Target network link.
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   */
   procedure synchronize
   ( p_object_type in t_metadata_object_type default null
@@ -250,8 +250,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
   , p_network_link_target in t_network_link default null
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   );
 
   /**
@@ -262,8 +262,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
   * @param p_schema_target         Target schema.
   * @param p_network_link_target   Target network link.
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   */
   procedure uninstall
   ( p_object_type in t_metadata_object_type default null
@@ -271,8 +271,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_schema_target in t_schema_nn default user
   , p_network_link_target in t_network_link default null
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   );
 
   /**
@@ -411,8 +411,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
   );
 
   /*

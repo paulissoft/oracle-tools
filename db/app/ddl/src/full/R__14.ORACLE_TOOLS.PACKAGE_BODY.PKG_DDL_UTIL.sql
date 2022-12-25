@@ -2871,8 +2871,8 @@ $end
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined
@@ -2884,8 +2884,8 @@ $end
       , p_object_names => p_object_names
       , p_object_names_include => p_object_names_include
       , p_grantor_is_schema => 0
-      , p_objects => p_objects
-      , p_objects_include => p_objects_include
+      , p_exclude_objects => p_exclude_objects
+      , p_include_objects => p_include_objects
       );
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
@@ -2915,9 +2915,9 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                ,p_transform_param_list
                );
     dbug.print(dbug."input"
-               ,'p_objects_include: %s; p_objects length: %s'
-               ,p_objects_include
-               ,dbms_lob.getlength(p_objects)
+               ,'p_exclude_objects length: %s; p_include_objects length: %s'
+               ,dbms_lob.getlength(p_exclude_objects)
+               ,dbms_lob.getlength(p_include_objects)
                );
 $end
 
@@ -2948,8 +2948,8 @@ $end
       , p_network_link => p_network_link
       , p_grantor_is_schema => p_grantor_is_schema
       , p_transform_param_list => p_transform_param_list
-      , p_objects => p_objects
-      , p_objects_include => p_objects_include
+      , p_exclude_objects => p_exclude_objects
+      , p_include_objects => p_include_objects
       );
 
       open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema@' || l_network_link || ' t';
@@ -3257,8 +3257,8 @@ $end
   , p_network_link_target in t_network_link
   , p_skip_repeatables in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined
@@ -3314,9 +3314,9 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                ,p_skip_repeatables
                ,p_transform_param_list);
     dbug.print(dbug."input"
-               ,'p_objects_include: %s; p_objects length: %s'
-               ,p_objects_include
-               ,dbms_lob.getlength(p_objects)
+               ,'p_exclude_objects length: %s; p_include_objects length: %s'
+               ,dbms_lob.getlength(p_exclude_objects)
+               ,dbms_lob.getlength(p_include_objects)
                );
 $end
 
@@ -3333,7 +3333,6 @@ $end
     check_network_link(p_network_link => p_network_link_source, p_description => 'Source database link');
     check_network_link(p_network_link => p_network_link_target, p_description => 'Target database link');
     check_numeric_boolean(p_numeric_boolean => p_skip_repeatables, p_description => 'skip repeatables');
-    check_numeric_boolean(p_numeric_boolean => p_objects_include, p_description => 'objects include');
 
     if p_schema_source is null
     then
@@ -3353,8 +3352,8 @@ $end
                 , p_network_link => p_network_link_source
                 , p_grantor_is_schema => 0 -- any grantor
                 , p_transform_param_list => p_transform_param_list
-                , p_objects => p_objects
-                , p_objects_include => p_objects_include
+                , p_exclude_objects => p_exclude_objects
+                , p_include_objects => p_include_objects
                 )
               ) s
       ;
@@ -3399,8 +3398,8 @@ $end
                 , p_network_link => p_network_link_target
                 , p_grantor_is_schema => 1 -- only grantor equal to p_schema_target so we can revoke the grant if necessary
                 , p_transform_param_list => p_transform_param_list
-                , p_objects => case when p_objects_include = 1 then p_objects end
-                , p_objects_include => case when p_objects_include = 1 then p_objects_include end
+                , p_exclude_objects => p_exclude_objects
+                , p_include_objects => p_include_objects
                 )
               ) t
       ;
@@ -3761,8 +3760,8 @@ $end
   , p_schema_target in t_schema_nn
   , p_network_link_source in t_network_link
   , p_network_link_target in t_network_link
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
   )
   is
     l_diff_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
@@ -3790,8 +3789,8 @@ $end
              , p_network_link_source => p_network_link_source
              , p_network_link_target => p_network_link_target
              , p_skip_repeatables => 0
-             , p_objects => p_objects
-             , p_objects_include => p_objects_include
+             , p_exclude_objects => p_exclude_objects
+             , p_include_objects => p_include_objects
              )
            ) t
     ;
@@ -3820,8 +3819,8 @@ $end
   , p_object_names_include in t_numeric_boolean
   , p_schema_target in t_schema_nn
   , p_network_link_target in t_network_link
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
   )
   is
     l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
@@ -3842,8 +3841,8 @@ $end
     , p_schema_target => p_schema_target
     , p_network_link_source => null
     , p_network_link_target => p_network_link_target
-    , p_objects => p_objects
-    , p_objects_include => p_objects_include
+    , p_exclude_objects => p_exclude_objects
+    , p_include_objects => p_include_objects
     );
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -6085,8 +6084,8 @@ $end
   , p_network_link in t_network_link
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
   )
   is
     l_cursor sys_refcursor;
@@ -6109,9 +6108,9 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                ,p_grantor_is_schema
                ,p_transform_param_list);
     dbug.print(dbug."input"
-               ,'p_objects_include: %s; p_objects length: %s'
-               ,p_objects_include
-               ,dbms_lob.getlength(p_objects)
+               ,'p_exclude_objects length: %s; p_include_objects length: %s'
+               ,dbms_lob.getlength(p_exclude_objects)
+               ,dbms_lob.getlength(p_include_objects)
                );
 $end
 
@@ -6130,8 +6129,8 @@ $end
                   , p_network_link => null -- p_network_link
                   , p_grantor_is_schema => p_grantor_is_schema
                   , p_transform_param_list => p_transform_param_list
-                  , p_objects => p_objects
-                  , p_objects_include => p_objects_include
+                  , p_exclude_objects => p_exclude_objects
+                  , p_include_objects => p_include_objects
                   )
                 ) t;
       -- PLS-00994: Cursor Variables cannot be declared as part of a package
@@ -6164,8 +6163,8 @@ begin
   , p_network_link => null
   , p_grantor_is_schema => :b7
   , p_transform_param_list => :b8
-  , p_objects => :b9
-  , p_objects_include => :b10
+  , p_exclude_objects => :b9
+  , p_include_objects => :b10
   );
 exception
   when others
@@ -6187,8 +6186,8 @@ end;'
               , p_object_names_include
               , p_grantor_is_schema
               , p_transform_param_list
-              , p_objects
-              , p_objects_include              
+              , p_exclude_objects              
+              , p_include_objects
               , out l_error_backtrace;
         oracle_tools.api_pkg.dbms_output_flush(l_network_link);
       exception
@@ -7157,8 +7156,8 @@ $end
                , p_object_names_include => b_object_names_include
                , p_network_link => b_network_link
                , p_grantor_is_schema => b_grantor_is_schema
-               , p_objects => null
-               , p_objects_include => null
+               , p_exclude_objects => null
+               , p_include_objects => null
                )
              ) t
       ;
@@ -7383,8 +7382,8 @@ $end
                  , p_object_names_include => 1
                  , p_network_link => null
                  , p_grantor_is_schema => 0
-                 , p_objects => null
-                 , p_objects_include => null
+                 , p_exclude_objects => null
+                 , p_include_objects => null
                  )
                ) t
         ,      table(t.ddl_tab) u
@@ -7411,8 +7410,8 @@ $end
                  , p_object_names_include => 1
                  , p_network_link => null
                  , p_grantor_is_schema => 0
-                 , p_objects => null
-                 , p_objects_include => null
+                 , p_exclude_objects => null
+                 , p_include_objects => null
                  )
                ) t
         ,      table(t.ddl_tab) u
@@ -7528,8 +7527,8 @@ $end
                    , p_object_names_include => 1
                    , p_network_link=> case when i_try = 2 then g_loopback end
                    , p_grantor_is_schema => 0
-                   , p_objects => null
-                   , p_objects_include => null
+                   , p_exclude_objects => null
+                   , p_include_objects => null
                    )
                  ) t
           ,      table(t.ddl_tab) u
@@ -7661,8 +7660,8 @@ $end
                , p_network_link_source => b_network_link_source
                , p_network_link_target => b_network_link_target
                , p_skip_repeatables => b_skip_repeatables
-               , p_objects => null
-               , p_objects_include => null
+               , p_exclude_objects => null
+               , p_include_objects => null
                )
              ) t
       ;
@@ -7938,8 +7937,8 @@ $end
                    , p_network_link_source => case when i_try = 2 then g_loopback end
                    , p_network_link_target => case when i_try = 2 then g_loopback end
                    , p_skip_repeatables => 0
-                   , p_objects => null
-                   , p_objects_include => null
+                   , p_exclude_objects => null
+                   , p_include_objects => null
                    )
                  ) t
           ,      table(t.ddl_tab) u                                                          
@@ -8390,8 +8389,8 @@ $end
                , p_network_link_source => b_network_link_source
                , p_network_link_target => b_network_link_target
                , p_skip_repeatables => b_skip_repeatables
-               , p_objects => null
-               , p_objects_include => null
+               , p_exclude_objects => null
+               , p_include_objects => null
                )
              ) t
       ,      table(t.ddl_tab) u
@@ -8505,8 +8504,8 @@ $end
       , p_schema_target => g_empty
       , p_network_link_source => l_network_link_source
       , p_network_link_target => l_network_link_target
-      , p_objects => null
-      , p_objects_include => null
+      , p_exclude_objects => null
+      , p_include_objects => null
       );
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
@@ -8626,8 +8625,8 @@ $end
         , p_object_type => null
         , p_object_names => case i_test when 1 then 'PKG_DDL_UTIL,PKG_STR_UTIL' when 2 then 'T_NAMED_OBJECT,T_DEPENDENT_OR_GRANTED_OBJECT,T_SCHEMA_OBJECT' END
         , p_object_names_include => 1
-        , p_objects => null
-        , p_objects_include => null
+        , p_exclude_objects => null
+        , p_include_objects => null
         );
       get_schema_object
       ( p_schema_object_filter => l_schema_object_filter          
@@ -8800,8 +8799,8 @@ $end
                 , p_object_names => null
                 , p_object_names_include => null
                 , p_grantor_is_schema => 0
-                , p_objects => null
-                , p_objects_include => null
+                , p_exclude_objects => null
+                , p_include_objects => null
                 )
               )
             ) t
@@ -8851,8 +8850,8 @@ $end
                         end 
                     , p_object_names_include => 1
                     , p_grantor_is_schema => 0
-                    , p_objects => null
-                    , p_objects_include => null
+                    , p_exclude_objects => null
+                    , p_include_objects => null
                     )
                   )
                 ) t;

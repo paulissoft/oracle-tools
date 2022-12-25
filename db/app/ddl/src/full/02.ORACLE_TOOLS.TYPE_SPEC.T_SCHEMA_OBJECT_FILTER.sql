@@ -14,8 +14,8 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
   , p_object_names in varchar2 default null
   , p_object_names_include in integer default null
   , p_grantor_is_schema in integer default 0
-  , p_objects in clob default null
-  , p_objects_include in integer default null
+  , p_exclude_objects in clob default null
+  , p_include_objects in clob default null
   )
   return self as result
 , member function schema return varchar2 deterministic

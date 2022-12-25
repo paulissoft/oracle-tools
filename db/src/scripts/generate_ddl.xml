@@ -26,10 +26,10 @@
     A comma separated list of object names (default empty).
     - object.names.include
     Must we include (1), exclude (0) or ignore object.names (empty) (default empty).
-    - objects
-    A newline separated list of objects, i.e. schema object IDs (default empty).
-    - objects.include
-    Must we include (1), exclude (0) or ignore objects (empty) (default empty).
+    - exclude.objects
+    A newline separated list of objects to exclude, i.e. schema object IDs (default empty).
+    - include.objects
+    A newline separated list of objects to include, i.e. schema object IDs (default empty).
     - compile.classpath
     The compile classpath.
     - runtime.classpath
@@ -131,9 +131,9 @@
          object.names.trimmed is not set above -->
     <property name="object.names.trimmed" value=""/>
 
-    <!-- remove whitespace in ${objects} -->
-    <loadresource property="objects.trimmed">
-      <propertyresource name="objects"/>
+    <!-- remove whitespace in ${include.objects} -->
+    <loadresource property="include.objects.trimmed">
+      <propertyresource name="include.objects"/>
       <filterchain>
         <!-- do not replace end of line characters, just ordinary whitespace -->
         <tokenfilter>
@@ -142,9 +142,24 @@
       </filterchain>
     </loadresource>
 
-    <!-- when property objects does not contain whitespace
-         objects.trimmed is not set above -->
-    <property name="objects.trimmed" value=""/>
+    <!-- when property include.objects does not contain whitespace
+         include.objects.trimmed is not set above -->
+    <property name="include.objects.trimmed" value=""/>
+
+    <!-- remove whitespace in ${exclude.objects} -->
+    <loadresource property="exclude.objects.trimmed">
+      <propertyresource name="exclude.objects"/>
+      <filterchain>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
+        <tokenfilter>
+          <deletecharacters chars=" \t" />
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <!-- when property exclude.objects does not contain whitespace
+         exclude.objects.trimmed is not set above -->
+    <property name="exclude.objects.trimmed" value=""/>
 
     <!-- for GenerateDDL.java -->
     <dirname property="ant.file.dir" file="${ant.file}"/>
@@ -396,8 +411,8 @@ Z       Time zone               RFC 822 time zone   -0800
         <entry key="skip.repeatables" value="@{skip.repeatables}"/>
         <entry key="interface" value="@{interface}"/>
         <entry key="transform.params" value="@{transform.params}"/>     
-        <entry key="objects.include" value="${objects.include}"/>
-        <entry key="objects" value="${objects.trimmed}"/>
+        <entry key="exclude.objects" value="${exclude.objects.trimmed}"/>
+        <entry key="include.objects" value="${include.objects.trimmed}"/>
         <entry key="owner" value="@{owner}"/>
       </propertyfile>
 

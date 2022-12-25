@@ -7,8 +7,8 @@ constructor function t_schema_object_filter
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
 , p_grantor_is_schema in integer default 0
-, p_objects in clob default null
-, p_objects_include in integer default null
+, p_exclude_objects in clob default null
+, p_include_objects in clob default null
 )
 return self as result
 is
@@ -19,8 +19,8 @@ begin
   , p_object_names => p_object_names
   , p_object_names_include => p_object_names_include
   , p_grantor_is_schema => p_grantor_is_schema
-  , p_objects => p_objects
-  , p_objects_include => p_objects_include
+  , p_exclude_objects => p_exclude_objects
+  , p_include_objects => p_include_objects
   , p_schema_object_filter => self
   );
 
@@ -67,26 +67,6 @@ begin
 end print;
 
 member function matches_schema_object
-( self in out nocopy oracle_tools.t_schema_object_filter
-, p_metadata_object_type in varchar2
-, p_object_name in varchar2
-, p_metadata_base_object_type in varchar2 default null
-, p_base_object_name in varchar2 default null
-)
-return integer
-deterministic
-is
-begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object
-         ( p_schema_object_filter => self
-         , p_metadata_object_type => p_metadata_object_type
-         , p_object_name => p_object_name 
-         , p_metadata_base_object_type => p_metadata_base_object_type
-         , p_base_object_name => p_base_object_name
-         );
-end matches_schema_object;
-
-member function matches_schema_object
 ( self in oracle_tools.t_schema_object_filter
 , p_schema_object_id in varchar2
 )
@@ -100,22 +80,18 @@ begin
          );
 end matches_schema_object;
 
-member procedure combine_named_other_objects
-( self in oracle_tools.t_schema_object_filter
-, p_named_object_tab in oracle_tools.t_schema_object_tab
-, p_other_object_tab in oracle_tools.t_schema_object_tab
+member procedure get_schema_objects
+( self in out nocopy oracle_tools.t_schema_object_filter 
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
 begin
-  oracle_tools.pkg_schema_object_filter.combine_named_other_objects
-  ( p_schema_object_filter => self
-  , p_named_object_tab => p_named_object_tab
-  , p_other_object_tab => p_other_object_tab
-  , p_schema_object_tab => p_schema_object_tab
-  );
-end combine_named_other_objects;
-  
+  return oracle_tools.pkg_schema_object_filter.get_schema_objects
+         ( p_schema_object_filter => self
+         , p_schema_object_tab => p_schema_object_tab
+         );
+end get_schema_objects;
+
 end;
 /
 

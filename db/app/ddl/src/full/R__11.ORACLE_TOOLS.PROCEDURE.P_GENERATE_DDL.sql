@@ -9,8 +9,8 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 , pi_skip_repeatables in naturaln default 1
 , pi_interface in varchar2 default null
 , pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
-, pi_objects_include in natural default null
-, pi_objects in clob default null
+, pi_exclude_objects in clob default null
+, pi_include_objects in clob default null
 , po_clob out nocopy clob
 )
 authid current_user
@@ -68,9 +68,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'pi_objects_include: %s; pi_objects length: %s'
-  , pi_objects_include
-  , dbms_lob.getlength(lob_loc => pi_objects)
+  , 'pi_exclude_objects length: %s; pi_include_objects length: %s'
+  , dbms_lob.getlength(lob_loc => pi_exclude_objects)
+  , dbms_lob.getlength(lob_loc => pi_include_objects)
   );
 $end
 
@@ -108,8 +108,8 @@ $end
                       , p_network_link => pi_source_database_link
                       , p_grantor_is_schema => 0
                       , p_transform_param_list => pi_transform_param_list
-                      , p_objects => pi_objects
-                      , p_objects_include => pi_objects_include
+                      , p_exclude_objects => pi_exclude_objects
+                      , p_include_objects => pi_include_objects
                       )
                     ) t
           ,         table(t.ddl_tab) u
@@ -133,8 +133,8 @@ $end
                       , p_network_link_target => pi_target_database_link
                       , p_skip_repeatables => pi_skip_repeatables
                       , p_transform_param_list => pi_transform_param_list
-                      , p_objects => pi_objects
-                      , p_objects_include => pi_objects_include
+                      , p_exclude_objects => pi_exclude_objects
+                      , p_include_objects => pi_include_objects
                       )
                     ) t
           ,         table(t.ddl_tab) u

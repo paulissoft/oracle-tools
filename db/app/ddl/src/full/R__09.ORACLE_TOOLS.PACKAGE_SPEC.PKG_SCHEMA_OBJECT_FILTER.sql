@@ -32,9 +32,9 @@ subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
  * @param p_object_names_include  Do we include (1) or exclude (0) objects for PARTIAL filtering? 
  *                                Must be NULL when there is no PARTIAL filtering.
  * @param p_grantor_is_schema     Must the grantor be equal to the schema, yes (1) or no (0)?
- * @param p_objects               A list of unique identification expressions where you can use O/S wild cards (* and ?).
+ * @param p_include_objects               A list of unique identification expressions where you can use O/S wild cards (* and ?).
  *                                To be used by COMPLETE matching.
- * @param p_objects_include       Do we include (1) or exclude (0) objects for COMPLETE filtering? 
+ * @param p_exclude_objects       Do we include (1) or exclude (0) objects for COMPLETE filtering? 
  * @param p_schema_object_filter  The object that stores all relevant info.
  */
 procedure construct
@@ -43,8 +43,8 @@ procedure construct
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
 , p_grantor_is_schema in integer default 0
-, p_objects in clob default null
-, p_objects_include in integer default null
+, p_include_objects in clob default null
+, p_exclude_objects in clob default null
 , p_schema_object_filter in out nocopy t_schema_object_filter
 );
 

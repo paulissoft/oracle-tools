@@ -444,8 +444,8 @@ procedure construct
 , p_object_names in varchar2
 , p_object_names_include in integer
 , p_grantor_is_schema in integer
-, p_objects in clob
-, p_objects_include in integer
+, p_exclude_objects in clob
+, p_include_objects in clob
 , p_schema_object_filter in out nocopy t_schema_object_filter
 )
 is
@@ -499,42 +499,42 @@ $end
   end check_object_type;
 
   procedure check_objects
-  ( p_objects in varchar2
-  , p_objects_include in oracle_tools.pkg_ddl_util.t_numeric_boolean
+  ( p_object_names in varchar2
+  , p_object_names_include in oracle_tools.pkg_ddl_util.t_numeric_boolean
   , p_description in varchar2
   )
   is
   begin
-    if (p_objects is not null and p_objects_include is null)
+    if (p_object_names is not null and p_object_names_include is null)
     then
       raise_application_error
       ( oracle_tools.pkg_ddl_error.c_objects_wrong
       , 'The ' ||
         p_description ||
         ' include flag (' ||        
-        p_objects_include ||
+        p_object_names_include ||
         ') is empty and the ' ||
         p_description ||
-        ' list is not empty:' ||
+        ' list is NOT empty:' ||
         chr(10) ||
         '"' ||
-        p_objects ||
+        p_object_names ||
         '"'
       );
-    elsif (p_objects is null and p_objects_include is not null)
+    elsif (p_object_names is null and p_object_names_include is not null)
     then
       raise_application_error
       ( oracle_tools.pkg_ddl_error.c_objects_wrong
       , 'The ' ||
         p_description ||
         ' include flag (' ||        
-        p_objects_include ||
-        ') is not empty and the ' ||
+        p_object_names_include ||
+        ') is NOT empty and the ' ||
         p_description ||
         ' list is empty:' ||
         chr(10) ||
         '"' ||
-        p_objects ||
+        p_object_names ||
         '"'
       );
     end if;
@@ -666,9 +666,9 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'p_objects: %s; p_objects_include: %s'
-  , oracle_tools.pkg_str_util.dbms_lob_substr(p_objects, 100)
-  , p_objects_include
+  , 'p_exclude_objects length: %s; p_include_objects length: %s'
+  , dbms_lob.getlength(p_exclude_objects)
+  , dbms_lob.getlength(p_include_objects)
   );
 $end
 
@@ -676,48 +676,21 @@ $end
   oracle_tools.pkg_ddl_util.check_schema(p_schema => p_schema, p_network_link => null);
   check_object_type(p_object_type => p_object_type);
   oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include');
-  check_objects(p_objects => p_object_names, p_objects_include => p_object_names_include, p_description => 'object names');
+  check_objects(p_object_names => p_object_names, p_object_names_include => p_object_names_include, p_description => 'object names');
   oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema');
-  -- new functionality
-  oracle_tools.pkg_ddl_util.check_numeric_boolean(p_numeric_boolean => p_objects_include, p_description => 'objects include');
-  check_objects(p_objects => p_objects, p_objects_include => p_objects_include, p_description => 'objects');
 
-  if (p_object_names_include is not null and p_objects_include is not null)
-  then
-    raise_application_error
-    ( oracle_tools.pkg_ddl_error.c_objects_wrong
-    , 'Both the object names include flag (' ||        
-      p_object_names_include ||
-      ') and the objects include flag (' ||
-      p_objects_include ||
-      ' are not empty: at most one can be specified'
-    );
-  elsif (p_object_type is not null and p_objects_include is not null)
-  then
-    raise_application_error
-    ( oracle_tools.pkg_ddl_error.c_objects_wrong
-    , 'Both the object type (' ||        
-      p_object_type ||
-      ') and the objects include flag (' ||
-      p_objects_include ||
-      ' are not empty: at most one can be specified'
-    );
-  end if;
-  
   p_schema_object_filter.schema$ := p_schema;
   p_schema_object_filter.grantor_is_schema$ := p_grantor_is_schema;
-  p_schema_object_filter.objects_include$ := nvl(p_objects_include, l_object_names_include);
   p_schema_object_filter.objects_tab$ := oracle_tools.t_text_tab();
   p_schema_object_filter.objects_cmp_tab$ := oracle_tools.t_text_tab();
-  p_schema_object_filter.match_partial_eq_complete$ := 1; -- for the time being
   p_schema_object_filter.match_count$ := 0;
   p_schema_object_filter.match_count_ok$ := 0;
 
-  if p_objects_include is not null
+  if p_exclude_objects is not null
   then
     -- new functionality
     -- split by LF
-    oracle_tools.pkg_str_util.split(p_str => p_objects, p_delimiter => chr(10), p_str_tab => l_object_tab);
+    oracle_tools.pkg_str_util.split(p_str => p_include_objects, p_delimiter => chr(10), p_str_tab => l_object_tab);
 
     p_schema_object_filter.match_partial_eq_complete$ := 0; -- always re-evaluate named objects in combine_named_other_objects()
     add_complete_items(l_object_tab);
@@ -1712,8 +1685,8 @@ begin
         , p_object_names => 'DBMS_METADATA,DBMS_VERSION'
         , p_object_names_include => 1
         , p_grantor_is_schema => 1
-        , p_objects => null
-        , p_objects_include => null
+        , p_exclude_objects => null
+        , p_include_objects => null
         );
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "SYS",
@@ -1756,8 +1729,8 @@ DBMS_SQL
 '
         , p_object_names_include => 1
         , p_grantor_is_schema => 1
-        , p_objects => null
-        , p_objects_include => null
+        , p_exclude_objects => null
+        , p_include_objects => null
         );
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "SYS",
@@ -1797,8 +1770,8 @@ DBMS_SQL
 '
         , p_object_names_include => 0
         , p_grantor_is_schema => 1
-        , p_objects => null
-        , p_objects_include => null
+        , p_exclude_objects => null
+        , p_include_objects => null
         );
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "SYS",
@@ -1874,8 +1847,8 @@ begin
 
         l_schema_object_filter :=
           oracle_tools.t_schema_object_filter
-          ( p_objects => l_objects
-          , p_objects_include => 1
+          ( p_exclude_objects => null
+          , p_include_objects => l_objects
           );
           
       else
@@ -1985,8 +1958,8 @@ begin
     from    table
             ( oracle_tools.pkg_ddl_util.get_schema_object
               ( oracle_tools.t_schema_object_filter
-                ( p_objects => r.id
-                , p_objects_include => 1
+                ( p_exclude_objects => null
+                , p_include_objects => r.id
                 )
               )
             ) o -- one
