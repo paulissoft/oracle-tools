@@ -275,43 +275,6 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_include_objects in t_objects default null
   );
 
-  /**
-  * Get all the object info from several dictionary views.
-  * 
-  * These are the dictionary views:
-  * <ul>
-  * <li>ALL_QUEUE_TABLES</li>
-  * <li>ALL_MVIEWS</li>
-  * <li>ALL_TABLES</li>
-  * <li>ALL_OBJECTS</li>
-  * <li>ALL_TAB_PRIVS</li>
-  * <li>ALL_SYNONYMS</li>
-  * <li>ALL_TAB_COMMENTS</li>
-  * <li>ALL_MVIEW_COMMENTS</li>
-  * <li>ALL_COL_COMMENTS</li>
-  * <li>ALL_CONS_COLUMNS</li>
-  * <li>ALL_CONSTRAINTS</li>
-  * <li>ALL_TAB_COLUMNS</li>
-  * <li>ALL_TRIGGERS</li>
-  * <li>ALL_INDEXES</li>
-  * </ul>
-  *
-  * @param p_schema_object_filter  The schema object filter.
-  * @param p_schema_object_tab     Only applicable for the procedure variant. See the description for return.
-  *
-  * @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
-  */
-  procedure get_schema_object
-  ( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter 
-  , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-  );
-
-  function get_schema_object
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
-  )
-  return oracle_tools.t_schema_object_tab
-  pipelined;
-
   procedure get_member_ddl
   ( p_schema_ddl in oracle_tools.t_schema_ddl
   , p_member_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
@@ -373,7 +336,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   deterministic;
 
   /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
+  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
   function fetch_ddl
   ( p_object_type in varchar2
@@ -387,11 +350,11 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   pipelined;
 
   /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
+  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
   function get_schema_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-    -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
+    -- if null use oracle_tools.pkg_schema_object_filter.get_schema_objects(p_schema_object_filter)
   , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
   , p_transform_param_list in varchar2 default c_transform_param_list
   )
@@ -500,9 +463,6 @@ $if oracle_tools.cfg_pkg.c_testing $then
   procedure ut_is_a_repeatable;
 
   --%test
-  procedure ut_get_schema_object;
-
-  --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
   procedure ut_synchronize;
 
@@ -511,9 +471,6 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   procedure ut_modify_ddl_text;
-
-  --%test
-  procedure ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

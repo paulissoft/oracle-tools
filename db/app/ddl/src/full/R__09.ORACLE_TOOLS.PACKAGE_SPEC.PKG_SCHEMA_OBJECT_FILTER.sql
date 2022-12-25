@@ -136,30 +136,39 @@ return integer
 deterministic;
 
 /**
- * Combine named and other (dependent/granted) objects.
- *
- * In ORACLE_TOOLS.PKG_DDL_UTIL.GET_SCHEMA_OBJECT() there are two phases:
- * <ol>
- * <li>getting named objects that match the criteria (1a) or that can be used as base objects for dependent/granted objects (1b)</li>
- * <li>getting dependent/granted objects based on the named objects found</li>
- * </ol>
- *
- * In certain situations (1b for instance) but also when the filters for
- * COMPLETE matching are different from those for PARTIAL matching, we need to
- * re-evaluate the filtering for NAMED objects.
- * 
- * The union of the (re-evaluated) named objects and dependent/granted objects
- * is written to the output parameter.
- *
- * @param p_schema_object_filter
- * @param p_named_object_tab
- * @param p_other_object_tab
- * @param p_schema_object_tab
- */
-procedure combine_named_other_objects
-( p_schema_object_filter in t_schema_object_filter
-, p_named_object_tab in oracle_tools.t_schema_object_tab
-, p_other_object_tab in oracle_tools.t_schema_object_tab
+* Get all the object info from several dictionary views.
+* 
+* These are the dictionary views:
+* <ul>
+* <li>ALL_QUEUE_TABLES</li>
+* <li>ALL_MVIEWS</li>
+* <li>ALL_TABLES</li>
+* <li>ALL_OBJECTS</li>
+* <li>ALL_TAB_PRIVS</li>
+* <li>ALL_SYNONYMS</li>
+* <li>ALL_TAB_COMMENTS</li>
+* <li>ALL_MVIEW_COMMENTS</li>
+* <li>ALL_COL_COMMENTS</li>
+* <li>ALL_CONS_COLUMNS</li>
+* <li>ALL_CONSTRAINTS</li>
+* <li>ALL_TAB_COLUMNS</li>
+* <li>ALL_TRIGGERS</li>
+* <li>ALL_INDEXES</li>
+* </ul>
+*
+* @param p_schema_object_filter  The schema object filter.
+* @param p_schema_object_tab     Only applicable for the procedure variant. See the description for return.
+*
+* @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
+*/
+function get_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
+)
+return oracle_tools.t_schema_object_tab
+pipelined;
+
+procedure get_schema_objects
+( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter 
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
 
@@ -175,6 +184,12 @@ procedure ut_construct;
 
 --%test
 procedure ut_matches_schema_object;
+
+--%test
+procedure ut_get_schema_objects;
+
+--%test
+procedure ut_get_schema_object_filter;
 
 --%test
 procedure ut_compatible_le_oracle_11g;

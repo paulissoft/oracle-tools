@@ -56,6 +56,14 @@ begin
     end;
 end;
 
+member function match_perc_threshold
+return integer
+deterministic
+is
+begin
+  return match_perc_threshold$;
+end match_perc_threshold;
+
 member procedure print
 ( self in oracle_tools.t_schema_object_filter
 )
