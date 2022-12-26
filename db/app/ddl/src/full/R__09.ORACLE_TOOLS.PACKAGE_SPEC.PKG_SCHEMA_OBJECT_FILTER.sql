@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID DEFINER IS
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER IS
 
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
@@ -23,6 +23,12 @@ subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
  * Currently the two methods can not be combined, although in principle it should be possible provided the include flags have the same value (when not empty).
  */
 
+function get_named_objects
+( p_schema in varchar2
+)
+return oracle_tools.t_schema_object_tab
+pipelined;
+
 /**
  * The constructor for an oracle_tools.t_schema_object_filter object.
  *
@@ -32,9 +38,8 @@ subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
  * @param p_object_names_include  Do we include (1) or exclude (0) objects for PARTIAL filtering? 
  *                                Must be NULL when there is no PARTIAL filtering.
  * @param p_grantor_is_schema     Must the grantor be equal to the schema, yes (1) or no (0)?
- * @param p_include_objects               A list of unique identification expressions where you can use O/S wild cards (* and ?).
- *                                To be used by COMPLETE matching.
- * @param p_exclude_objects       Do we include (1) or exclude (0) objects for COMPLETE filtering? 
+ * @param p_exclude_objects       A list of unique identification expressions to exclude where you can use O/S wild cards (* and ?).
+ * @param p_include_objects       A list of unique identification expressions to include where you can use O/S wild cards (* and ?).
  * @param p_schema_object_filter  The object that stores all relevant info.
  */
 procedure construct
@@ -43,62 +48,14 @@ procedure construct
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
 , p_grantor_is_schema in integer default 0
-, p_include_objects in clob default null
 , p_exclude_objects in clob default null
+, p_include_objects in clob default null
 , p_schema_object_filter in out nocopy t_schema_object_filter
 );
 
 procedure print
 ( p_schema_object_filter in t_schema_object_filter
 );
-
-/**
- * Determine whether a schema object matches a filter (1).
- *
- * This is only used for PARTIALLY matching.
- *
- * Rules:
- * <ol>
- * <li>A schema base object where ORACLE_TOOLS.PKG_DDL_UTIL.IS_EXCLUDE_NAME_EXPR() = 1: result is 0 (but see SWITCH below)</li>
- * <li>A schema object where ORACLE_TOOLS.PKG_DDL_UTIL.IS_EXCLUDE_NAME_EXPR() = 1: result is 0 (but see SWITCH below)</li>
- * <li>When p_schema_object_filter.objects_include$ is null: result is 1</li>
- * <li>When (the schema object id constructed from its four object parameters matches an element of p_schema_object_filter.objects_tab$) = (p_schema_object_filter.objects_include$): result is 1</li>
- * <li>Else: result is 0 (but see SWITCH below)</li>
- * </ol>
- *
- * Note SWITCH.
- * When the matching result is 0 and both p_metadata_base_object_type and
- * p_base_object_name are empty, the matching is tried again but now with the
- * base object name set to the original object name and all other object
- * parameters null.  This switch is necessary to find dependent or granted
- * objects whose base object matches one of the filters. If the switch result
- * is 1, it is marked (by setting
- * p_schema_object_filter.match_partial_eq_complete$ to 0) that the matching
- * for named objects must be re-executed (since it may have just been used to
- * get base objects for dependent/granted objects). That functionality is part
- * of COMBINE_NAMED_OTHER_OBJECTS().
- *
- * Please note that when the filter rules for PARTIAL and COMPLETE differ,
- * p_schema_object_filter.match_partial_eq_complete$ is already set to 0 in
- * the constructor. That implicates that all named objects in
- * COMBINE_NAMED_OTHER_OBJECTS() will be re-evaluated.
- *
- * @param p_schema_object_filter       The object that stores all relevant info.
- * @param p_metadata_object_type       The metadata object type (PACKAGE_BODY instead of PACKAGE BODY).
- * @param p_object_name                The object name.
- * @param p_metadata_base_object_type  The metadata base object type (PACKAGE_BODY instead of PACKAGE BODY).
- * @param p_base_object_name           The base object name.
- *
- */
-function matches_schema_object
-( p_schema_object_filter in out nocopy t_schema_object_filter
-, p_metadata_object_type in varchar2
-, p_object_name in varchar2
-, p_metadata_base_object_type in varchar2 default null
-, p_base_object_name in varchar2 default null
-)
-return integer
-deterministic;
 
 /**
  * Determine whether a schema object matches a filter (2).
@@ -115,22 +72,6 @@ deterministic;
 function matches_schema_object
 ( p_schema_object_filter in t_schema_object_filter
 , p_schema_object_id in varchar2
-)
-return integer
-deterministic;
-
-/**
- * Determine whether a schema object matches a filter (3).
- *
- * For a further description see the first overloaded function (but no SWITCH,
- * nor checks for ORACLE_TOOLS.PKG_DDL_UTIL.IS_EXCLUDE_NAME_EXPR()).
- *
- * @param p_schema_object_filter
- * @param p_schema_object            The schema object
- */
-function matches_schema_object
-( p_schema_object_filter in t_schema_object_filter
-, p_schema_object in oracle_tools.t_schema_object
 )
 return integer
 deterministic;
@@ -161,16 +102,17 @@ deterministic;
 *
 * @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
 */
+procedure get_schema_objects
+( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter 
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+);
+
 function get_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
 )
 return oracle_tools.t_schema_object_tab
 pipelined;
 
-procedure get_schema_objects
-( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter 
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-);
 
 $if oracle_tools.cfg_pkg.c_testing $then
 

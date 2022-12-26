@@ -34,6 +34,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   subtype t_module is varchar2(100);
 
+  subtype t_longops_rec is oracle_tools.api_longops_pkg.t_longops_rec;
+
   /* CONSTANTS/VARIABLES */
 
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
@@ -243,83 +245,7 @@ $end
 
   g_transform_param_tab t_transform_param_tab;
   
-  g_longops_counter positiven := 1;
-
   /* PRIVATE ROUTINES */
-
-  type t_longops_rec is record (
-    rindex binary_integer
-  , slno binary_integer
-  , sofar binary_integer
-  , totalwork binary_integer
-  , op_name varchar2(64 char)
-  , units varchar2(10 char)
-  , target_desc varchar2(32 char)
-  );
-
-  procedure longops_show
-  ( p_longops_rec in out nocopy t_longops_rec
-  , p_increment in naturaln default 1
-  )
-  is
-  begin
-    p_longops_rec.sofar := p_longops_rec.sofar + p_increment;
-    dbms_application_info.set_session_longops( rindex => p_longops_rec.rindex
-                                             , slno => p_longops_rec.slno
-                                             , op_name => p_longops_rec.op_name
-                                             , sofar => p_longops_rec.sofar
-                                             , totalwork => p_longops_rec.totalwork
-                                             , target_desc => p_longops_rec.target_desc
-                                             , units => p_longops_rec.units
-                                             );
-  end longops_show;                                             
-
-  function longops_init
-  ( p_target_desc in varchar2
-  , p_totalwork in binary_integer default 0
-  , p_op_name in varchar2 default 'fetch'
-  , p_units in varchar2 default 'rows'
-  )
-  return t_longops_rec
-  is
-    l_longops_rec t_longops_rec;
-  begin
-    l_longops_rec.rindex := dbms_application_info.set_session_longops_nohint;
-    l_longops_rec.slno := null;
-    l_longops_rec.sofar := 0;
-    l_longops_rec.totalwork := p_totalwork;
-    l_longops_rec.op_name := p_op_name;
-    l_longops_rec.units := p_units;
-    l_longops_rec.target_desc := p_target_desc || '@' || g_longops_counter;
-
-    longops_show(l_longops_rec, 0);
-
-    g_longops_counter := g_longops_counter + 1;
-
-    return l_longops_rec;
-  end longops_init;
-
-  procedure longops_done
-  ( p_longops_rec in out nocopy t_longops_rec
-  )
-  is
-  begin
-    if p_longops_rec.totalwork = p_longops_rec.sofar
-    then
-      null; -- nothing has changed and dbms_application_info.set_session_longops() would show a duplicate
-    else
-      p_longops_rec.totalwork := p_longops_rec.sofar;
-      longops_show(p_longops_rec, 0);
-    end if;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print
-    ( dbug."info"
-    , 'p_longops_rec.target_desc: %s; p_longops_rec.totalwork: %s'
-    , p_longops_rec.target_desc
-    , p_longops_rec.totalwork
-    );
-$end
-  end longops_done;
 
   function get_db_link
   ( p_network_link in t_network_link
@@ -2894,7 +2820,12 @@ $end
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
+    l_longops_rec t_longops_rec :=
+      oracle_tools.api_longops_pkg.longops_init
+      ( p_target_desc => l_program
+      , p_op_name => 'fetch'
+      , p_units => 'objects'
+      );
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DISPLAY_DDL_SCHEMA');
@@ -3041,14 +2972,14 @@ $end
 
           pipe row(l_schema_ddl_tab(i_idx));
 
-          longops_show(l_longops_rec);
+          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
         end loop;
       end if;
       exit fetch_loop when l_schema_ddl_tab.count < c_fetch_limit;
     end loop fetch_loop;
     close l_cursor;
 
-    longops_done(l_longops_rec);
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -3270,7 +3201,12 @@ $end
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA_DIFF';
 
     -- dbms_application_info stuff
-    l_longops_rec t_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program);
+    l_longops_rec t_longops_rec :=
+      oracle_tools.api_longops_pkg.longops_init
+      ( p_op_name => 'fetch'
+      , p_units => 'objects'
+      , p_target_desc => l_program
+      );
 
     procedure free_memory
     ( p_schema_ddl_tab in out nocopy oracle_tools.t_schema_ddl_tab
@@ -3490,10 +3426,10 @@ $end
 
       pipe row(l_schema_ddl);
 
-      longops_show(l_longops_rec);
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop schema_source_loop;
 
-    longops_done(l_longops_rec);
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5092,7 +5028,12 @@ $end
 
     init(nvl(p_schema_object_tab, l_schema_object_tab));
 
-    l_longops_rec := longops_init(p_op_name => 'fetch', p_units => 'objects', p_target_desc => l_program, p_totalwork => l_object_lookup_tab.count);
+    l_longops_rec := oracle_tools.api_longops_pkg.longops_init
+                     ( p_op_name => 'fetch'
+                     , p_units => 'objects'
+                     , p_target_desc => l_program
+                     , p_totalwork => l_object_lookup_tab.count
+                     );
 
     -- GJP 2022-12-17 Note SCHEMA_EXPORT.
     -- Under some circumstances just a SCHEMA_EXPORT does not do the job,
@@ -5220,7 +5161,7 @@ $end
                 end if;
               end if;
 
-              longops_show(l_longops_rec, 0);
+              oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
             exception
               when oracle_tools.pkg_ddl_error.e_object_not_found
               then
@@ -5294,7 +5235,7 @@ $end
     end loop outer_loop;
     
     -- overall
-    longops_done(l_longops_rec);
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5484,7 +5425,7 @@ $end
     l_program constant t_module := 'GET_DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
+    l_longops_rec t_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -5504,11 +5445,11 @@ $end
       fetch l_cursor into l_schema_ddl;
       exit when l_cursor%notfound;
       pipe row (l_schema_ddl);
-      longops_show(l_longops_rec);
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop;
     close l_cursor;
 
-    longops_done(l_longops_rec);
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5686,7 +5627,7 @@ $end
     l_program constant t_module := 'SORT_OBJECTS_BY_DEPS';
 
     -- dbms_application_info stuff
-    l_longops_rec t_longops_rec := longops_init(p_target_desc => l_program, p_units => 'objects');
+    l_longops_rec t_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_target_desc => l_program, p_units => 'objects');
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || l_program);
@@ -5767,7 +5708,7 @@ $end
 
           pipe row(l_schema_object);
 
-          longops_show(l_longops_rec);
+          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
         exception
           when no_data_found
           then
@@ -5783,7 +5724,7 @@ $end
     -- TO DO: rest of objects
 
     -- 100%
-    longops_done(l_longops_rec);
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.leave;
@@ -6749,7 +6690,7 @@ $end
     loop
       if l_longops_rec.totalwork is null
       then
-        l_longops_rec := longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
+        l_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
       end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -6862,7 +6803,7 @@ $end
         ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq').to_be_true();
       end loop try_loop;
 
-      longops_show(l_longops_rec);
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop;
 
     cleanup;
@@ -7155,7 +7096,7 @@ $end
     loop
       if l_longops_rec.totalwork is null
       then
-        l_longops_rec := longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
+        l_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
       end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -7302,7 +7243,7 @@ $end
         ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq').to_be_true();
       end loop try_loop;
 
-      longops_show(l_longops_rec);
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop;
 
     commit;
