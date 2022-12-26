@@ -94,10 +94,10 @@ member procedure get_schema_objects
 )
 is
 begin
-  return oracle_tools.pkg_schema_object_filter.get_schema_objects
-         ( p_schema_object_filter => self
-         , p_schema_object_tab => p_schema_object_tab
-         );
+  oracle_tools.pkg_schema_object_filter.get_schema_objects
+  ( p_schema_object_filter => self
+  , p_schema_object_tab => p_schema_object_tab
+  );
 end get_schema_objects;
 
 end;
