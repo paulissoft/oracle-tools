@@ -38,13 +38,15 @@ as
 
   l_buffer varchar2(32767 char) := null;
 
-  -- dbms_application_info stuff
-  l_rindex binary_integer := dbms_application_info.set_session_longops_nohint;
-  l_slno   binary_integer := null;
-  l_sofar  binary_integer := 0;
-  l_op_name constant varchar2(10 char) := 'processed';
-  l_units   constant varchar2(10 char) := 'rows';
   l_program constant varchar2(61 char) := $$PLSQL_UNIT; -- no schema because l_program is used in dbms_application_info
+  
+  -- dbms_application_info stuff
+  l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
+    oracle_tools.api_longops_pkg.longops_init
+    ( p_op_name => 'processed'
+    , p_units => 'rows'
+    , p_target_desc => l_program
+    );
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
@@ -142,13 +144,6 @@ $end
         end if;
         dbms_lob.trim(po_clob, 0);
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
-        dbms_application_info.set_session_longops(rindex => l_rindex
-                                                 ,slno => l_slno
-                                                 ,op_name => l_op_name
-                                                 ,sofar => l_sofar
-                                                 ,totalwork => 0
-                                                 ,target_desc => l_program
-                                                 ,units => l_units);
 
         loop
           -- just a simple fetch due to all the temporary clobs
@@ -158,26 +153,12 @@ $end
           -- the text column does not end with an empty newline so we do it here
           oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
           oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
-          l_sofar := l_sofar + 1;
-          dbms_application_info.set_session_longops(rindex => l_rindex
-                                                   ,slno => l_slno
-                                                   ,op_name => l_op_name
-                                                   ,sofar => l_sofar
-                                                   ,totalwork => 0
-                                                   ,target_desc => l_program
-                                                   ,units => l_units);
+          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
         end loop;
 
         close l_cursor;
         -- 100%
-        dbms_application_info.set_session_longops(rindex => l_rindex
-                                                 ,slno => l_slno
-                                                 ,op_name => l_op_name
-                                                 ,sofar => l_sofar
-                                                 ,totalwork => l_sofar
-                                                 ,target_desc => l_program
-                                                 ,units => l_units);
-
+        oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
       else
         raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || l_interface_tab(i_interface_idx));
       end if;
