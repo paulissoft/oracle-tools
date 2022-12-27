@@ -37,7 +37,7 @@ c_default_wildcard_part_tab constant dbms_sql.varchar2a:= fill_array('*');
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
-c_schema_object_filter constant t_schema_object_filter := new oracle_tools.t_schema_object_filter(null);
+c_schema_object_filter constant t_schema_object_filter := oracle_tools.t_schema_object_filter(p_schema => null);
 
 $end
 
@@ -190,6 +190,14 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
 
   return l_result;
+
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end matches_schema_object;
 
 procedure serialize
@@ -216,6 +224,7 @@ begin
   p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
   to_json_array('OBJECT_TAB$', p_schema_object_filter.object_tab$);
   to_json_array('OBJECT_CMP_TAB$', p_schema_object_filter.object_cmp_tab$);
+  -- do not display named_object_tab$
   p_json_object.put('NR_EXCLUDED_OBJECTS$', p_schema_object_filter.nr_excluded_objects$);
   p_json_object.put('MATCH_COUNT$', p_schema_object_filter.match_count$);
   p_json_object.put('MATCH_COUNT_OK$', p_schema_object_filter.match_count_ok$);
@@ -433,7 +442,19 @@ $end
     end case;
   end loop;
 
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+  dbug.leave;
+$end
+
   return; -- essential
+
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end get_named_objects;
 
 procedure construct
@@ -577,6 +598,25 @@ $end
     end if;
   end check_objects;
 
+  procedure add_item
+  ( p_object_tab in out nocopy dbms_sql.varchar2a
+  , p_id in varchar2
+  )
+  is
+  begin
+    if instr(p_id, ':', 1, 9) > 0 and instr(p_id, ':', 1, 10) = 0
+    then
+      p_object_tab(p_object_tab.count + 1) := p_id;
+    else
+      oracle_tools.pkg_ddl_error.raise_error
+      ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
+      , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
+      , p_context_info => p_id
+      , p_context_label => 'schema object id'
+      );
+    end if;
+  end add_item;
+  
   procedure add_items
   ( p_object_tab in dbms_sql.varchar2a
   , p_exclude in boolean default false
@@ -592,6 +632,17 @@ $end
         l_object_tab(l_object_tab.last) := p_object_tab(i_object_idx);
         for r in c_objects(l_object_tab, case when p_exclude then '!' end)
         loop
+          if instr(r.id, ':', 1, 9) > 0 and instr(r.id, ':', 1, 10) = 0
+          then
+            null;
+          else
+            oracle_tools.pkg_ddl_error.raise_error
+            ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
+            , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
+            , p_context_info => r.id
+            , p_context_label => 'schema object id ' || to_char(i_object_idx)
+            );
+          end if;
           p_schema_object_filter.object_tab$.extend(1);
           p_schema_object_filter.object_tab$(p_schema_object_filter.object_tab$.last) := r.id;
           p_schema_object_filter.object_cmp_tab$.extend(1);
@@ -722,8 +773,57 @@ $end
         cleanup_object(l_object_name_tab(i_object_name_idx));
         if l_object_name_tab(i_object_name_idx) is not null
         then
-          if l_object_type_exists = 0 
+          if l_object_type_exists = 1
           then
+            -- We need to add two objects: one for object and one for base object since either may be a NAMED object
+
+            -- object 1
+            l_part_tab := c_default_wildcard_part_tab;
+            l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
+            l_part_tab("OBJECT NAME") := l_object_name_tab(i_object_name_idx);
+
+            l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
+            
+            if l_case in (3, 4)
+            then
+              add_item(l_exclude_object_tab, l_object);
+            end if;
+            
+            if l_case in (5, 6)
+            then
+              add_item(l_include_object_tab, l_object);
+            elsif l_case = 4
+            then
+              -- include all objects with the object type
+              l_part_tab("OBJECT NAME") := '*';
+              add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
+            end if;            
+
+            -- object 2
+            l_part_tab := c_default_wildcard_part_tab;
+            l_part_tab("BASE OBJECT TYPE") := nvl(p_object_type, '*');
+            l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
+
+            l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
+            
+            if l_case in (3, 4)
+            then
+              add_item(l_exclude_object_tab, l_object);
+            end if;
+            
+            if l_case in (5, 6)
+            then
+              add_item(l_include_object_tab, l_object);
+            elsif l_case = 4
+            then
+              -- include all objects with the object type
+              l_part_tab("BASE OBJECT NAME") := '*';
+              add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
+            end if;            
+          elsif p_object_type is null
+          then
+            raise program_error;
+          else
             -- p_object_type not found in named_object_tab$ so either
             -- a) a non named object
             -- b) an object type for a named object but there are none in this schema so it will never found them
@@ -732,73 +832,24 @@ $end
             -- since only the BASE OBJECT will be a NAMED object.
             -- Please note that l_object_name_tab(i_object_name_idx) is a NAMED object (e.g. part of ALL_OBJECTS).
             l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
-            l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
-
-            l_object_name_tab(i_object_name_idx) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            
-            if l_case in (3, 4)
-            then
-              l_exclude_object_tab(l_exclude_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
-            end if;
-            
-            if l_case in (5, 6)
-            then
-              l_include_object_tab(l_include_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
-            elsif l_case = 4
-            then
-              -- include all objects with the object type
-              l_part_tab("BASE OBJECT NAME") := '*';
-              l_include_object_tab(l_include_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            end if;            
-          elsif p_object_type is null
-          then
-            raise program_error;
-          else
-            -- We need to add two objects: one for object and one for base object since either may be a NAMED object
-
-            -- object 1
-            l_part_tab := c_default_wildcard_part_tab;
             l_part_tab("OBJECT TYPE") := p_object_type;
-            l_part_tab("OBJECT NAME") := l_object_name_tab(i_object_name_idx);
-
-            l_object_name_tab(i_object_name_idx) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            
-            if l_case in (3, 4)
-            then
-              l_exclude_object_tab(l_exclude_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
-            end if;
-            
-            if l_case in (5, 6)
-            then
-              l_include_object_tab(l_include_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
-            elsif l_case = 4
-            then
-              -- include all objects with the object type
-              l_part_tab("OBJECT NAME") := '*';
-              l_include_object_tab(l_include_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            end if;            
-
-            -- object 2
-            l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("BASE OBJECT TYPE") := p_object_type;
             l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
 
             l_object_name_tab(i_object_name_idx) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
             
             if l_case in (3, 4)
             then
-              l_exclude_object_tab(l_exclude_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
+              add_item(l_exclude_object_tab, l_object_name_tab(i_object_name_idx));
             end if;
             
             if l_case in (5, 6)
             then
-              l_include_object_tab(l_include_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
+              add_item(l_include_object_tab, l_object_name_tab(i_object_name_idx));
             elsif l_case = 4
             then
               -- include all objects with the object type
               l_part_tab("BASE OBJECT NAME") := '*';
-              l_include_object_tab(l_include_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
+              add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
             end if;            
           end if;
         end if;
@@ -856,6 +907,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   end if;
 
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $else
   null;
 $end
@@ -1427,12 +1483,14 @@ is
 begin
   l_expected := json_element_t.parse('{
   "SCHEMA$" : null,
-  "GRANTOR_IS_SCHEMA$" : null,
-  "OBJECTS_INCLUDE$" : null,
-  "MATCH_COUNT$" : null,
-  "MATCH_COUNT_OK$" : null
+  "GRANTOR_IS_SCHEMA$" : 0,
+  "NR_EXCLUDED_OBJECTS$" : 0,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0,
+  "MATCH_PERC_THRESHOLD$" : 50
 }');
   
+  ut.expect(repr(l_schema_object_filter), 'empty repr').to_equal(l_expected.to_clob()); 
   ut.expect(serialize(l_schema_object_filter), 'empty').to_equal(l_expected);
 
   for i_try in 1..4
@@ -1446,9 +1504,10 @@ begin
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "ORACLE_TOOLS",
   "GRANTOR_IS_SCHEMA$" : 0,
-  "OBJECTS_INCLUDE$" : null,
+  "NR_EXCLUDED_OBJECTS$": 0,
   "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0
+  "MATCH_COUNT_OK$" : 0,
+  "MATCH_PERC_THRESHOLD$" : 50
 }');
       when 2
       then
@@ -1462,30 +1521,39 @@ begin
         , p_include_objects => null
         );
         l_expected := json_element_t.parse('{
-  "SCHEMA$" : "SYS",
-  "GRANTOR_IS_SCHEMA$" : 1,  
-  "OBJECT_TAB$" :
+            "SCHEMA$" : "SYS",
+            "GRANTOR_IS_SCHEMA$" : 1,
+            "OBJECT_TAB$" :
             [
-              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:::%:%:%:%",
-              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:::%:%:%:%",
-              "PACKAGE\\_SPEC:DBMS\\_METADATA",
-              ":",
-              "PACKAGE\\_SPEC:DBMS\\_VERSION",
-              ":"
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%:%:%:%:%",
+              "%:%:%:%:PACKAGE\\_SPEC:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
+              "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%"
             ],
-  "OBJECTS_INCLUDE$" : 1,
-  "OBJECT_CMP_TAB$" :
+            "OBJECT_CMP_TAB$" :
             [
               "~",
               "~",
-              null,
-              null,
-              null,
-              null
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~",
+              "~"
             ],
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0
-}');
+            "NR_EXCLUDED_OBJECTS$" : 0,
+            "MATCH_COUNT$" : 0,
+            "MATCH_COUNT_OK$" : 0,
+            "MATCH_PERC_THRESHOLD$" : 50
+          }');
 
       when 3
       then
@@ -1504,31 +1572,7 @@ DBMS_SQL
         , p_exclude_objects => null
         , p_include_objects => null
         );
-        l_expected := json_element_t.parse('{
-  "SCHEMA$" : "SYS",
-  "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECT_TAB$" :
-            [
-              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-              "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%",
-              "OBJECT\\_GRANT:%",
-              "%:DBMS\\_OUTPUT",
-              "OBJECT\\_GRANT:%",
-              "%:DBMS\\_SQL"
-            ],
-  "OBJECTS_INCLUDE$" : 1,
-  "OBJECT_CMP_TAB$" :
-            [
-              "~",
-              "~",
-              null,
-              null,
-              null,
-              null
-            ],
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0
-}');
+        l_expected := json_element_t.parse('{"SCHEMA$":"SYS","GRANTOR_IS_SCHEMA$":1,"OBJECT_TAB$":["%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%","%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%","OBJECT\\_GRANT:%","%:DBMS\\_OUTPUT","OBJECT\\_GRANT:%","%:DBMS\\_SQL"],"OBJECTS_INCLUDE$":1,"OBJECT_CMP_TAB$":["~","~",null,null,null,null],"MATCH_COUNT$":0,"MATCH_COUNT_OK$":0}');
 
       when 4
       then
@@ -1545,34 +1589,43 @@ DBMS_SQL
         , p_include_objects => null
         );
         l_expected := json_element_t.parse('{
-  "SCHEMA$" : "SYS",
-  "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECT_TAB$" :
+            "SCHEMA$" : "SYS",
+            "GRANTOR_IS_SCHEMA$" : 1,
+            "OBJECT_TAB$" :
             [
-              "%:%:DBMS\\_OUTPUT:%:::%:%:%:%",
-              "%:%:DBMS\\_SQL:%:::%:%:%:%",
-              "%:DBMS\\_OUTPUT",
-              ":",
-              "%:DBMS\\_SQL",
-              ":"
+              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+              "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
+              "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+              "%:%:DBMS\\_SQL:%:%:%:%:%:%:%"
             ],
-  "OBJECTS_INCLUDE$" : 0,
-  "OBJECT_CMP_TAB$" :
+            "OBJECT_CMP_TAB$" :
             [
-              "~",
-              "~",
-              null,
-              null,
-              null,
-              null
+              "!~",
+              "!~",
+              "!~",
+              "!~",
+              "!~",
+              "!~",
+              "!~",
+              "!~",
+              "!~",
+              "!~"
             ],
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0
-}');
+            "NR_EXCLUDED_OBJECTS$" : 10,
+            "MATCH_COUNT$" : 0,
+            "MATCH_COUNT_OK$" : 0,
+            "MATCH_PERC_THRESHOLD$" : 50
+          }');
 
     end case;
     -- GJP 2022-12-23 Only uncomment the next line when you have JSON differences
-    -- ut.expect(repr(l_schema_object_filter), 'test repr ' || i_try).to_equal(l_expected.to_clob()); 
+    ut.expect(repr(l_schema_object_filter), 'test repr ' || i_try).to_equal(l_expected.to_clob()); 
     ut.expect(serialize(l_schema_object_filter), 'test serialize ' || i_try).to_equal(l_expected);
   end loop;  
 end;
