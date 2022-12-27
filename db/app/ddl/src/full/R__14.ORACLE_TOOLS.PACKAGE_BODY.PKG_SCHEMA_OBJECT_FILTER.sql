@@ -924,8 +924,8 @@ is
   )
   is
   begin
-    if p_schema_object is not null and
-       matches_schema_object
+    p_schema_object_filter.match_count$ := p_schema_object_filter.match_count$ + 1;
+    if matches_schema_object
        ( p_object_type => p_object_type
        , p_object_name => p_object_name
        , p_base_object_type => p_base_object_type
@@ -936,6 +936,7 @@ is
     then
       p_schema_object_tab.extend(1);
       p_schema_object_tab(p_schema_object_tab.last) := p_schema_object;
+      p_schema_object_filter.match_count_ok$ := p_schema_object_filter.match_count_ok$ + 1;
     end if;
   end process_schema_object;
 
