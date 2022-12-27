@@ -13,8 +13,9 @@ begin
 CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as object
 ( schema$ varchar2(30 char)
 , grantor_is_schema$ integer
-, objects_tab$ oracle_tools.t_text_tab
-, objects_cmp_tab$ oracle_tools.t_text_tab
+, object_tab$ oracle_tools.t_text_tab
+, object_cmp_tab$ oracle_tools.t_text_tab
+, named_object_tab$ oracle_tools.t_schema_object_tab
 , nr_excluded_objects$ integer
 , match_count$ integer
 , match_count_ok$ integer

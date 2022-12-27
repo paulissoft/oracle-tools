@@ -108,7 +108,13 @@ procedure get_schema_objects
 );
 
 function get_schema_objects
-( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
+( p_schema in varchar2 default user
+, p_object_type in varchar2 default null
+, p_object_names in varchar2 default null
+, p_object_names_include in integer default null
+, p_grantor_is_schema in integer default 0
+, p_exclude_objects in clob default null
+, p_include_objects in clob default null
 )
 return oracle_tools.t_schema_object_tab
 pipelined;

@@ -37,7 +37,7 @@ c_default_wildcard_part_tab constant dbms_sql.varchar2a:= fill_array('*');
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
-c_schema_object_filter constant t_schema_object_filter := oracle_tools.t_schema_object_filter(null, null, null, null, null, null, null, null);
+c_schema_object_filter constant t_schema_object_filter := new oracle_tools.t_schema_object_filter(null);
 
 $end
 
@@ -63,66 +63,13 @@ begin
   p_object := trim(replace(replace(replace(p_object, chr(9)), chr(13)), chr(10)));
 end cleanup_object;  
 
-function is_exclude_name_expr
-( p_metadata_object_type in varchar2
+function matches_schema_object
+( p_object_type in varchar2
 , p_object_name in varchar2
-, p_metadata_base_object_type in varchar2
-, p_base_object_name in varchar2
-)
-return integer
-deterministic
-is
-  l_result integer := 0;
-begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'IS_EXCLUDE_NAME_EXPR');
-  dbug.print
-  ( dbug."input"
-  , 'object: "%s"; base object: "%s"'
-  , p_metadata_object_type || ':' || p_object_name
-  , p_metadata_base_object_type || ':' || p_base_object_name
-  );
-$end    
-
-  case
-    -- exclude certain (semi-)dependent objects
-    when p_metadata_base_object_type is not null and
-         p_base_object_name is not null and
-         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_base_object_type, p_base_object_name) = 1
-    then
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-       dbug.print(dbug."info", 'case 1');
-$end
-      l_result := 1;
-
-    -- exclude certain named objects
-    when p_metadata_object_type is not null and
-         p_object_name is not null and
-         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_metadata_object_type, p_object_name) = 1
-    then
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-       dbug.print(dbug."info", 'case 2');
-$end
-      l_result := 1;
-
-    else
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-      dbug.print(dbug."info", 'case 3');
-$end
-      l_result := 0; -- no exclusion
-  end case;
-
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.print(dbug."output", 'return: %s', l_result);
-  dbug.leave;
-$end
-
-  return l_result;
-end is_exclude_name_expr;
-
-function matches_schema_object_complete
-( p_schema_object_filter in t_schema_object_filter
-, p_schema_object_id in oracle_tools.pkg_ddl_util.t_object_nn -- not null
+, p_base_object_type in varchar2 default null
+, p_base_object_name in varchar2 default null
+, p_schema_object_filter in t_schema_object_filter default null
+, p_schema_object_id in varchar2 default null
 )
 return integer
 deterministic
@@ -134,75 +81,108 @@ is
   l_result simple_integer := 0;
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT_COMPLETE');
-  dbug.print(dbug."input", 'p_schema_object_id: %s', p_schema_object_id);
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
+  dbug.print
+  ( dbug."input"
+  , 'object: "%s"; base object: "%s"; p_schema_object_id: %s'
+  , p_object_type || ':' || p_object_name
+  , p_base_object_type || ':' || p_base_object_name
+  , p_schema_object_id
+  );
 $end    
 
-  <<try_loop>>
-  while l_try <= 1 -- first excluded objects then included objects
-  loop
-    case l_try
-      when 0
-      then
-        l_lwb := 1;
-        l_upb := nvl(p_schema_object_filter.nr_excluded_objects$, 0);
-      when 1
-      then
-        l_lwb := p_schema_object_filter.nr_excluded_objects$ + 1;
-        l_upb := nvl(cardinality(p_schema_object_filter.objects_tab$), 0);
-    end case;
+  case
+    -- exclude certain (semi-)dependent objects
+    when p_base_object_type is not null and
+         p_base_object_name is not null and
+         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_base_object_type, p_base_object_name) = 1
+    then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+       dbug.print(dbug."info", 'case 1');
+$end
+      l_result := 0;
 
-    continue when l_lwb > l_upb;
+    -- exclude certain named objects
+    when p_object_type is not null and
+         p_object_name is not null and
+         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_object_type, p_object_name) = 1
+    then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+       dbug.print(dbug."info", 'case 2');
+$end
+      l_result := 0;
+      
+    when p_schema_object_filter is null or p_schema_object_id is null
+    then
+      l_result := 1;
 
-    <<search_loop>>
-    for i_idx in l_lwb .. l_upb
-    loop      
-      l_cmp := 
-        case substr(p_schema_object_filter.objects_cmp_tab$(i_idx), -1)
-          when '~'
+    else
+      <<try_loop>>
+      while l_try <= 1 -- first excluded objects then included objects
+      loop
+        case l_try
+          when 0
           then
-            case
-              when p_schema_object_id like p_schema_object_filter.objects_tab$(i_idx) escape '\'
-              then 0 -- found
-              else -1 -- try further
-            end
-            
-          when '='
+            l_lwb := 1;
+            l_upb := nvl(p_schema_object_filter.nr_excluded_objects$, 0);
+          when 1
           then
-            case
-              when p_schema_object_id < p_schema_object_filter.objects_tab$(i_idx)
-              then -1 -- try further
-              when p_schema_object_id = p_schema_object_filter.objects_tab$(i_idx)
-              then 0 -- found
-              else 1 -- will never find it since ordered (first objects_cmp_tab$ !?~, then objects_cmp_tab$ !?= and in ascending objects_tab$ order)
-            end
-        end;
+            l_lwb := p_schema_object_filter.nr_excluded_objects$ + 1;
+            l_upb := nvl(cardinality(p_schema_object_filter.object_tab$), 0);
+        end case;
+
+        continue when l_lwb > l_upb;
+
+        <<search_loop>>
+        for i_idx in l_lwb .. l_upb
+        loop      
+          l_cmp := 
+            case substr(p_schema_object_filter.object_cmp_tab$(i_idx), -1)
+              when '~'
+              then
+                case
+                  when p_schema_object_id like p_schema_object_filter.object_tab$(i_idx) escape '\'
+                  then 0 -- found
+                  else 1 -- try further
+                end
+                
+              when '='
+              then
+                case
+                  when p_schema_object_id = p_schema_object_filter.object_tab$(i_idx)
+                  then 0 -- found
+                  when p_schema_object_id > p_schema_object_filter.object_tab$(i_idx)
+                  then 1 -- try further: p_schema_object_filter.object_tab$(i_idx+1) > p_schema_object_filter.object_tab$(i_idx)
+                  else -1 -- will never find it since ordered (first object_cmp_tab$ !?~, then object_cmp_tab$ !?= and in ascending object_tab$ order)
+                end
+            end;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , '[%s] compare "%s" "%s" "%s": %s'
-      , i_idx
-      , p_schema_object_id
-      , p_schema_object_filter.objects_cmp_tab$(i_idx)
-      , p_schema_object_filter.objects_tab$(i_idx)
-      , l_cmp
-      );
+          dbug.print
+          ( dbug."info"
+          , '[%s] compare "%s" "%s" "%s": %s'
+          , i_idx
+          , p_schema_object_id
+          , p_schema_object_filter.object_cmp_tab$(i_idx)
+          , p_schema_object_filter.object_tab$(i_idx)
+          , l_cmp
+          );
 $end
 
-      exit try_loop when l_cmp = 0; -- found: stop
-      exit search_loop when l_cmp > 0; -- try includes now
-    end loop search_loop;
+          exit try_loop when l_cmp = 0; -- found: stop
+          exit search_loop when l_cmp < 0; -- try includes now
+        end loop search_loop;
 
-    l_try := l_try + 1;
-  end loop try_loop;
+        l_try := l_try + 1;
+      end loop try_loop;
 
-  l_result :=
-    case l_try
-      when 0
-      then case l_cmp when 0 then 0 else 1 end -- inverse result while searching for exclusions
-      else case l_cmp when 0 then 1 else 0 end
-    end;
+      l_result :=
+        case l_try
+          when 0
+          then case l_cmp when 0 then 0 else 1 end -- inverse result while searching for exclusions
+          else case l_cmp when 0 then 1 else 0 end
+        end;
+  end case;  
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print(dbug."output", 'return: %s', l_result);
@@ -210,7 +190,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
 
   return l_result;
-end matches_schema_object_complete;
+end matches_schema_object;
 
 procedure serialize
 ( p_schema_object_filter in t_schema_object_filter
@@ -234,8 +214,8 @@ is
 begin
   p_json_object.put('SCHEMA$', p_schema_object_filter.schema$);
   p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
-  to_json_array('OBJECTS_TAB$', p_schema_object_filter.objects_tab$);
-  to_json_array('OBJECTS_CMP_TAB$', p_schema_object_filter.objects_cmp_tab$);
+  to_json_array('OBJECT_TAB$', p_schema_object_filter.object_tab$);
+  to_json_array('OBJECT_CMP_TAB$', p_schema_object_filter.object_cmp_tab$);
   p_json_object.put('NR_EXCLUDED_OBJECTS$', p_schema_object_filter.nr_excluded_objects$);
   p_json_object.put('MATCH_COUNT$', p_schema_object_filter.match_count$);
   p_json_object.put('MATCH_COUNT_OK$', p_schema_object_filter.match_count_ok$);
@@ -318,18 +298,23 @@ $end
       then
         -- queue tables
         for r in
-        ( select  q.owner
-          ,       q.queue_table
+        ( select  q.owner as object_schema
+          ,       'AQ_QUEUE_TABLE' as object_type
+          ,       q.queue_table as object_name
           from    all_queue_tables q
           where   q.owner = p_schema
         )
         loop
-          l_excluded_tables_tab(r.queue_table) := true;
+          l_excluded_tables_tab(r.object_name) := true;
+
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+
+          continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
+
           pipe row ( oracle_tools.t_named_object.create_named_object
-                     ( p_object_type => 'AQ_QUEUE_TABLE'
-                     , p_object_schema => r.owner
-                     , p_object_name => r.queue_table
+                     ( p_object_schema => r.object_schema
+                     , p_object_type => r.object_type
+                     , p_object_name => r.object_name
                      )
                    );
 $else
@@ -342,8 +327,9 @@ $end
       then
         -- no MATERIALIZED VIEW tables unless PREBUILT
         for r in
-        ( select  m.owner
-          ,       m.mview_name
+        ( select  m.owner as object_schema
+          ,       'MATERIALIZED_VIEW' as object_type
+          ,       m.mview_name as object_name
           ,       m.build_mode
           from    all_mviews m
           where   m.owner = p_schema
@@ -351,18 +337,21 @@ $end
         loop
           if r.build_mode != 'PREBUILT'
           then
-            l_excluded_tables_tab(r.mview_name) := true;
+            l_excluded_tables_tab(r.object_name) := true;
           end if;
+          
+          continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
+          
           -- this is a special case since we need to exclude first
-          pipe row (oracle_tools.t_materialized_view_object(r.owner, r.mview_name));
+          pipe row (oracle_tools.t_materialized_view_object(r.object_schema, r.object_name));
         end loop;
 
       when 3
       then
         -- tables
         for r in
-        ( select  t.owner
-          ,       t.table_name
+        ( select  t.owner as object_schema
+          ,       t.table_name as object_name
           ,       t.tablespace_name
           ,       'TABLE' as object_type
           from    all_tables t
@@ -373,8 +362,8 @@ $end
           and     substr(t.table_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
           union -- not union all because since Oracle 12, temporary tables are also shown in all_tables
           -- temporary tables
-          select  t.owner
-          ,       t.object_name as table_name
+          select  t.owner as object_schema
+          ,       t.object_name
           ,       null as tablespace_name
           ,       t.object_type
           from    all_objects t
@@ -393,9 +382,11 @@ $end
             raise program_error;
           end if;
 
-          if not(l_excluded_tables_tab.exists(r.table_name))
+          if not(l_excluded_tables_tab.exists(r.object_name))
           then
-            pipe row (oracle_tools.t_table_object(r.owner, r.table_name, r.tablespace_name));
+            continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
+            
+            pipe row (oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name));
           end if; 
         end loop;
 
@@ -405,7 +396,7 @@ $end
         ( /*
           -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
           */
-          select  o.owner
+          select  o.owner as object_schema
           ,       o.object_type
           ,       o.object_name
           from    ( select  o.owner
@@ -430,9 +421,11 @@ $end
           and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
         )
         loop
+          continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
+          
           pipe row ( oracle_tools.t_named_object.create_named_object
-                     ( p_object_type => r.object_type
-                     , p_object_schema => r.owner
+                     ( p_object_schema => r.object_schema
+                     , p_object_type => r.object_type
                      , p_object_name => r.object_name
                      )
                    );
@@ -599,16 +592,16 @@ $end
         l_object_tab(l_object_tab.last) := p_object_tab(i_object_idx);
         for r in c_objects(l_object_tab, case when p_exclude then '!' end)
         loop
-          p_schema_object_filter.objects_tab$.extend(1);
-          p_schema_object_filter.objects_tab$(p_schema_object_filter.objects_tab$.last) := r.id;
-          p_schema_object_filter.objects_cmp_tab$.extend(1);
-          p_schema_object_filter.objects_cmp_tab$(p_schema_object_filter.objects_cmp_tab$.last) := r.cmp;
+          p_schema_object_filter.object_tab$.extend(1);
+          p_schema_object_filter.object_tab$(p_schema_object_filter.object_tab$.last) := r.id;
+          p_schema_object_filter.object_cmp_tab$.extend(1);
+          p_schema_object_filter.object_cmp_tab$(p_schema_object_filter.object_cmp_tab$.last) := r.cmp;
         end loop;
       end loop;
     end if;
     if p_exclude
     then
-      p_schema_object_filter.nr_excluded_objects$ := p_schema_object_filter.objects_tab$.count;
+      p_schema_object_filter.nr_excluded_objects$ := p_schema_object_filter.object_tab$.count;
     end if;
   end add_items;
 begin
@@ -640,8 +633,14 @@ $end
 
   p_schema_object_filter.schema$ := p_schema;
   p_schema_object_filter.grantor_is_schema$ := p_grantor_is_schema;
-  p_schema_object_filter.objects_tab$ := oracle_tools.t_text_tab();
-  p_schema_object_filter.objects_cmp_tab$ := oracle_tools.t_text_tab();
+  p_schema_object_filter.object_tab$ := oracle_tools.t_text_tab();
+  p_schema_object_filter.object_cmp_tab$ := oracle_tools.t_text_tab();
+  
+  select  value(obj)
+  bulk collect
+  into    p_schema_object_filter.named_object_tab$
+  from    table(oracle_tools.pkg_schema_object_filter.get_named_objects(p_schema)) obj;
+  
   p_schema_object_filter.nr_excluded_objects$ := 0;
   p_schema_object_filter.match_count$ := 0;
   p_schema_object_filter.match_count_ok$ := 0;
@@ -650,13 +649,20 @@ $end
   if p_exclude_objects is not null
   then
     oracle_tools.pkg_str_util.split(p_str => p_exclude_objects, p_delimiter => chr(10), p_str_tab => l_exclude_object_tab);
-    add_items(l_exclude_object_tab, true);
+  end if;
+
+  if p_include_objects is not null
+  then
     oracle_tools.pkg_str_util.split(p_str => p_include_objects, p_delimiter => chr(10), p_str_tab => l_include_object_tab);
-    add_items(l_include_object_tab);
-  else
+  end if;
+
+  if p_object_type is not null or p_object_names is not null
+  then
+    -- old functionality
+    
     /*
     -- 1) p_object_names_include is null and p_object_type is null:
-    --    nothing
+    --    impossible here
     -- 2) p_object_names_include is null and p_object_type is not null:
     --    include search with object names * and object type
     -- 3) p_object_names_include = 0 and p_object_type is null:
@@ -685,7 +691,6 @@ $end
       then l_case := 6;
     end case;
     
-    -- old functionality
     if l_object_names_include is not null
     then
       oracle_tools.pkg_str_util.split
@@ -699,10 +704,17 @@ $end
     then
       if p_object_type is not null
       then
-        select  sign(count(*))
-        into    l_object_type_exists
-        from    table(oracle_tools.pkg_schema_object_filter.get_named_objects(p_schema)) obj
-        where   obj.object_type() = p_object_type;
+        begin
+          select  1
+          into    l_object_type_exists
+          from    table(p_schema_object_filter.named_object_tab$) obj
+          where   obj.object_type() = p_object_type
+          and     rownum = 1;
+        exception
+          when no_data_found
+          then
+            l_object_type_exists := 0;
+        end;
       end if;
 
       for i_object_name_idx in l_object_name_tab.first .. l_object_name_tab.last
@@ -712,7 +724,7 @@ $end
         then
           if l_object_type_exists = 0 
           then
-            -- p_object_type not found in get_named_objects so either
+            -- p_object_type not found in named_object_tab$ so either
             -- a) a non named object
             -- b) an object type for a named object but there are none in this schema so it will never found them
             
@@ -720,7 +732,7 @@ $end
             -- since only the BASE OBJECT will be a NAMED object.
             -- Please note that l_object_name_tab(i_object_name_idx) is a NAMED object (e.g. part of ALL_OBJECTS).
             l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("OBJECT TYPE") := p_object_type;
+            l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
             l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
 
             l_object_name_tab(i_object_name_idx) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
@@ -729,16 +741,25 @@ $end
             then
               l_exclude_object_tab(l_exclude_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
             end if;
-            if l_case in (4, 5, 6)
+            
+            if l_case in (5, 6)
             then
               l_include_object_tab(l_include_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
+            elsif l_case = 4
+            then
+              -- include all objects with the object type
+              l_part_tab("BASE OBJECT NAME") := '*';
+              l_include_object_tab(l_include_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
             end if;            
+          elsif p_object_type is null
+          then
+            raise program_error;
           else
             -- We need to add two objects: one for object and one for base object since either may be a NAMED object
 
             -- object 1
             l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
+            l_part_tab("OBJECT TYPE") := p_object_type;
             l_part_tab("OBJECT NAME") := l_object_name_tab(i_object_name_idx);
 
             l_object_name_tab(i_object_name_idx) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
@@ -747,14 +768,20 @@ $end
             then
               l_exclude_object_tab(l_exclude_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
             end if;
-            if l_case in (4, 5, 6)
+            
+            if l_case in (5, 6)
             then
               l_include_object_tab(l_include_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
+            elsif l_case = 4
+            then
+              -- include all objects with the object type
+              l_part_tab("OBJECT NAME") := '*';
+              l_include_object_tab(l_include_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
             end if;            
 
             -- object 2
             l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("BASE OBJECT TYPE") := nvl(p_object_type, '*');
+            l_part_tab("BASE OBJECT TYPE") := p_object_type;
             l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
 
             l_object_name_tab(i_object_name_idx) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
@@ -763,24 +790,31 @@ $end
             then
               l_exclude_object_tab(l_exclude_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
             end if;
-            if l_case in (4, 5, 6)
+            
+            if l_case in (5, 6)
             then
               l_include_object_tab(l_include_object_tab.count + 1) := l_object_name_tab(i_object_name_idx);
+            elsif l_case = 4
+            then
+              -- include all objects with the object type
+              l_part_tab("BASE OBJECT NAME") := '*';
+              l_include_object_tab(l_include_object_tab.count + 1) := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
             end if;            
           end if;
         end if;
       end loop;
-
-      add_items(l_exclude_object_tab, true);
-      add_items(l_include_object_tab);
     end if;
   end if;
 
+  -- old and new functionality combined
+  add_items(l_exclude_object_tab, true);
+  add_items(l_include_object_tab);
+
   -- make the tables null if they are empty
-  if p_schema_object_filter.objects_tab$.count = 0
+  if p_schema_object_filter.object_tab$.count = 0
   then
-    p_schema_object_filter.objects_tab$ := null;
-    p_schema_object_filter.objects_cmp_tab$ := null;
+    p_schema_object_filter.object_tab$ := null;
+    p_schema_object_filter.object_cmp_tab$ := null;
   end if;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -849,19 +883,14 @@ begin
   end if;
 
   return
-    case
-      when is_exclude_name_expr
-           ( p_metadata_object_type => l_part_tab("OBJECT TYPE")
-           , p_object_name => l_part_tab("OBJECT NAME")
-           , p_metadata_base_object_type => l_part_tab("BASE OBJECT TYPE")
-           , p_base_object_name => l_part_tab("BASE OBJECT NAME")
-           ) = 1
-      then 0
-      else matches_schema_object_complete
-           ( p_schema_object_filter => p_schema_object_filter
-           , p_schema_object_id => p_schema_object_id
-           )
-    end;
+    matches_schema_object
+    ( p_object_type => l_part_tab("OBJECT TYPE")
+    , p_object_name => l_part_tab("OBJECT NAME")
+    , p_base_object_type => l_part_tab("BASE OBJECT TYPE")
+    , p_base_object_name => l_part_tab("BASE OBJECT NAME")
+    , p_schema_object_filter => p_schema_object_filter
+    , p_schema_object_id => p_schema_object_id
+    );
 end matches_schema_object;
 
 procedure get_schema_objects
@@ -871,7 +900,6 @@ procedure get_schema_objects
 is
   l_schema constant oracle_tools.pkg_ddl_util.t_schema_nn := p_schema_object_filter.schema();
   l_grantor_is_schema constant oracle_tools.pkg_ddl_util.t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
-  l_named_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -888,30 +916,41 @@ is
     );
 
   procedure process_schema_object
-  ( p_step in varchar2
-  , p_schema_object in oracle_tools.t_schema_object
+  ( p_schema_object in oracle_tools.t_schema_object
+  , p_object_type in varchar2
+  , p_object_name in varchar2
+  , p_base_object_type in varchar2 default null
+  , p_base_object_name in varchar2 default null
   )
   is
   begin
     if p_schema_object is not null and
-       is_exclude_name_expr
-       ( p_metadata_object_type => p_schema_object.object_type()
-       , p_object_name => p_schema_object.object_name()
-       , p_metadata_base_object_type => p_schema_object.base_object_type()
-       , p_base_object_name => p_schema_object.base_object_name()
-       ) = 0
+       matches_schema_object
+       ( p_object_type => p_object_type
+       , p_object_name => p_object_name
+       , p_base_object_type => p_base_object_type
+       , p_base_object_name => p_base_object_name
+       , p_schema_object_filter => p_schema_object_filter
+       , p_schema_object_id => p_schema_object.id()
+       ) = 1
     then
-      if p_step = "named objects"
-      then
-        l_named_object_tab.extend(1);
-        l_named_object_tab(l_named_object_tab.last) := p_schema_object;
-      end if;
-      if p_schema_object_filter.matches_schema_object(p_schema_object.id()) != 0
-      then
-        p_schema_object_tab.extend(1);
-        p_schema_object_tab(p_schema_object_tab.last) := p_schema_object;
-      end if;
+      p_schema_object_tab.extend(1);
+      p_schema_object_tab(p_schema_object_tab.last) := p_schema_object;
     end if;
+  end process_schema_object;
+
+  procedure process_schema_object
+  ( p_schema_object in oracle_tools.t_schema_object
+  )
+  is
+  begin
+    process_schema_object
+    ( p_schema_object => p_schema_object
+    , p_object_type => p_schema_object.object_type()
+    , p_object_name => p_schema_object.object_name()
+    , p_base_object_type => p_schema_object.base_object_type()
+    , p_base_object_name => p_schema_object.base_object_name()
+    );
   end process_schema_object;
 
   procedure cleanup
@@ -937,13 +976,12 @@ $end
         -- queue table
         for r in
         ( select  value(obj) as obj
-          from    table(oracle_tools.pkg_schema_object_filter.get_named_objects(l_schema)) obj
+          from    table(p_schema_object_filter.named_object_tab$) obj
         )
         loop
-          process_schema_object(l_step, r.obj);
+          process_schema_object(r.obj, null, null); -- object_type and object_name have already been tested for exclusions
         end loop;
 
-      -- from here one we may use l_named_object_tab
       when "dependent objects"
       then
         for r in
@@ -974,7 +1012,7 @@ $end
                     ,       obj.object_schema() as object_schema
                     ,       obj.object_name() as object_name
                     ,       value(obj) as obj
-                    from    table(l_named_object_tab) obj
+                    from    table(p_schema_object_filter.named_object_tab$) obj
                   ) obj
                   inner join prv p
                   on p.table_schema = obj.object_schema and p.table_name = obj.object_name
@@ -983,8 +1021,7 @@ $end
         )
         loop
           process_schema_object
-          ( l_step
-          , oracle_tools.t_object_grant_object
+          ( oracle_tools.t_object_grant_object
             ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
             , p_object_schema => r.object_schema
             , p_grantee => r.grantee
@@ -1004,7 +1041,7 @@ $end
                     ,       'SYNONYM'      as object_type
                     ,       s.synonym_name as object_name
                     ,       null           as column_name
-                    from    table(l_named_object_tab) obj
+                    from    table(p_schema_object_filter.named_object_tab$) obj
                             inner join all_synonyms s
                             on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
                     where   obj.object_type() not like '%BODY'
@@ -1017,7 +1054,7 @@ $end
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       null           as column_name
-                    from    table(l_named_object_tab) obj
+                    from    table(p_schema_object_filter.named_object_tab$) obj
                             inner join all_tab_comments t
                             on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
                     where   obj.object_type() in ('TABLE', 'VIEW')
@@ -1029,7 +1066,7 @@ $end
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       null           as column_name
-                    from    table(l_named_object_tab) obj
+                    from    table(p_schema_object_filter.named_object_tab$) obj
                             inner join all_mview_comments m
                             on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
                     where   obj.object_type() = 'MATERIALIZED_VIEW'
@@ -1041,7 +1078,7 @@ $end
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       c.column_name  as column_name
-                    from    table(l_named_object_tab) obj
+                    from    table(p_schema_object_filter.named_object_tab$) obj
                             inner join all_col_comments c
                             on c.owner = obj.object_schema() and c.table_name = obj.object_name()
                     where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
@@ -1053,8 +1090,7 @@ $end
             when 'SYNONYM'
             then
               process_schema_object
-              ( l_step
-              , oracle_tools.t_synonym_object
+              ( oracle_tools.t_synonym_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
                 , p_object_name => r.object_name
@@ -1063,8 +1099,7 @@ $end
             when 'COMMENT'
             then
               process_schema_object
-              ( l_step
-              , oracle_tools.t_comment_object
+              ( oracle_tools.t_comment_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
                 , p_column_name => r.column_name
@@ -1097,7 +1132,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
                               else null
                             end as any_column_name
 $end                          
-                    from    table(l_named_object_tab) obj
+                    from    table(p_schema_object_filter.named_object_tab$) obj
                             inner join all_constraints c /* this is where we are interested in */
                             on c.owner = obj.object_schema() and c.table_name = obj.object_name()
                     where   obj.object_type() in ('TABLE', 'VIEW')
@@ -1160,8 +1195,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
             when 'REF_CONSTRAINT'
             then
               process_schema_object
-              ( l_step
-              , oracle_tools.t_ref_constraint_object
+              ( oracle_tools.t_ref_constraint_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
                 , p_object_name => r.object_name
@@ -1173,8 +1207,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
             when 'CONSTRAINT'
             then
               process_schema_object
-              ( l_step
-              , oracle_tools.t_constraint_object
+              ( oracle_tools.t_constraint_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
                 , p_object_name => r.object_name
@@ -1228,8 +1261,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
         )
         loop
           process_schema_object
-          ( l_step
-          , oracle_tools.t_schema_object.create_schema_object
+          ( oracle_tools.t_schema_object.create_schema_object
             ( p_object_schema => r.object_schema
             , p_object_type => r.object_type
             , p_object_name => r.object_name
@@ -1272,8 +1304,7 @@ $end
         )
         loop
           process_schema_object
-          ( l_step
-          , oracle_tools.t_index_object
+          ( oracle_tools.t_index_object
             ( p_base_object =>
                 oracle_tools.t_named_object.create_named_object
                 ( p_object_schema => r.base_object_schema
@@ -1313,12 +1344,27 @@ $end
 end get_schema_objects;
 
 function get_schema_objects
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema in varchar2 default user
+, p_object_type in varchar2 default null
+, p_object_names in varchar2 default null
+, p_object_names_include in integer default null
+, p_grantor_is_schema in integer default 0
+, p_exclude_objects in clob default null
+, p_include_objects in clob default null
 )
 return oracle_tools.t_schema_object_tab
 pipelined
 is
-  l_schema_object_filter oracle_tools.t_schema_object_filter := p_schema_object_filter;
+  l_schema_object_filter oracle_tools.t_schema_object_filter :=
+    new oracle_tools.t_schema_object_filter
+        ( p_schema => p_schema
+        , p_object_type => p_object_type
+        , p_object_names => p_object_names
+        , p_object_names_include => p_object_names_include 
+        , p_grantor_is_schema => p_grantor_is_schema 
+        , p_exclude_objects => p_exclude_objects 
+        , p_include_objects => p_include_objects 
+        );
   l_schema_object_tab oracle_tools.t_schema_object_tab;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
@@ -1417,7 +1463,7 @@ begin
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "SYS",
   "GRANTOR_IS_SCHEMA$" : 1,  
-  "OBJECTS_TAB$" :
+  "OBJECT_TAB$" :
             [
               "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:::%:%:%:%",
               "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:::%:%:%:%",
@@ -1427,7 +1473,7 @@ begin
               ":"
             ],
   "OBJECTS_INCLUDE$" : 1,
-  "OBJECTS_CMP_TAB$" :
+  "OBJECT_CMP_TAB$" :
             [
               "~",
               "~",
@@ -1460,7 +1506,7 @@ DBMS_SQL
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "SYS",
   "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECTS_TAB$" :
+  "OBJECT_TAB$" :
             [
               "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
               "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%",
@@ -1470,7 +1516,7 @@ DBMS_SQL
               "%:DBMS\\_SQL"
             ],
   "OBJECTS_INCLUDE$" : 1,
-  "OBJECTS_CMP_TAB$" :
+  "OBJECT_CMP_TAB$" :
             [
               "~",
               "~",
@@ -1500,7 +1546,7 @@ DBMS_SQL
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "SYS",
   "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECTS_TAB$" :
+  "OBJECT_TAB$" :
             [
               "%:%:DBMS\\_OUTPUT:%:::%:%:%:%",
               "%:%:DBMS\\_SQL:%:::%:%:%:%",
@@ -1510,7 +1556,7 @@ DBMS_SQL
               ":"
             ],
   "OBJECTS_INCLUDE$" : 0,
-  "OBJECTS_CMP_TAB$" :
+  "OBJECT_CMP_TAB$" :
             [
               "~",
               "~",
@@ -1616,10 +1662,8 @@ begin
     ( select  a.id() as id
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-                ( oracle_tools.t_schema_object_filter
-                  ( p_object_names => 'PKG_*'
-                  , p_object_names_include => 1
-                  )
+                ( p_object_names => 'PKG_*'
+                , p_object_names_include => 1
                 )
               ) a -- all
       order by
@@ -1637,10 +1681,8 @@ begin
     ,       l_cnt
     from    table
             ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-              ( oracle_tools.t_schema_object_filter
-                ( p_exclude_objects => null
-                , p_include_objects => r.id
-                )
+              ( p_exclude_objects => null
+              , p_include_objects => r.id
               )
             ) o -- one
     ;
@@ -1719,12 +1761,10 @@ $end
         into    l_count
         from    table
                 ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-                  ( oracle_tools.t_schema_object_filter
-                    ( substr(r.mview_name, 1, instr(r.mview_name, '.')-1)
-                    , case i_test when 1 then null when 2 then 'MATERIALIZED_VIEW' when 3 then 'TABLE' end
-                    , substr(r.mview_name, instr(r.mview_name, '.')+1)
-                    , 1
-                    )
+                  ( substr(r.mview_name, 1, instr(r.mview_name, '.')-1)
+                  , case i_test when 1 then null when 2 then 'MATERIALIZED_VIEW' when 3 then 'TABLE' end
+                  , substr(r.mview_name, instr(r.mview_name, '.')+1)
+                  , 1
                   )
                 ) t
         where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW');
@@ -1781,12 +1821,10 @@ $end
         into    l_count
         from    table
                 ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-                  ( oracle_tools.t_schema_object_filter
-                    ( substr(r.fq_object_name, 1, instr(r.fq_object_name, '.')-1)
-                    , r.object_type
-                    , substr(r.fq_object_name, instr(r.fq_object_name, '.')+1)
-                    , 1
-                    )
+                  ( substr(r.fq_object_name, 1, instr(r.fq_object_name, '.')-1)
+                  , r.object_type
+                  , substr(r.fq_object_name, instr(r.fq_object_name, '.')+1)
+                  , 1
                   )
                 ) t;
 
@@ -1826,15 +1864,13 @@ $end
     into    l_schema_object_tab
     from    table
             ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-              ( oracle_tools.t_schema_object_filter
-                ( p_schema => user
-                , p_object_type => null
-                , p_object_names => null
-                , p_object_names_include => null
-                , p_grantor_is_schema => 0
-                , p_exclude_objects => null
-                , p_include_objects => null
-                )
+              ( p_schema => user
+              , p_object_type => null
+              , p_object_names => null
+              , p_object_names_include => null
+              , p_grantor_is_schema => 0
+              , p_exclude_objects => null
+              , p_include_objects => null
               )
             ) t
             /*
@@ -1859,33 +1895,31 @@ $end
         select  t.id() as id
         from    table
                 ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-                  ( oracle_tools.t_schema_object_filter
-                    ( p_schema => user
-                    , p_object_type => l_schema_object_tab(i_idx).object_type()
-                    , p_object_names =>
-                        case l_schema_object_tab(i_idx).object_type()
-                          -- dependent object types
-                          when 'OBJECT_GRANT'
-                          then l_schema_object_tab(i_idx).base_object_name()
-                          when 'SYNONYM'
-                          then l_schema_object_tab(i_idx).object_name()
-                          when 'COMMENT'
-                          then l_schema_object_tab(i_idx).base_object_name()
-                          when 'CONSTRAINT'
-                          then l_schema_object_tab(i_idx).base_object_name()
-                          when 'REF_CONSTRAINT'
-                          then l_schema_object_tab(i_idx).base_object_name()
-                          when 'INDEX'
-                          then l_schema_object_tab(i_idx).object_name()
-                          when 'TRIGGER'
-                          then l_schema_object_tab(i_idx).object_name()
-                          else l_schema_object_tab(i_idx).object_name()
-                        end 
-                    , p_object_names_include => 1
-                    , p_grantor_is_schema => 0
-                    , p_exclude_objects => null
-                    , p_include_objects => null
-                    )
+                  ( p_schema => user
+                  , p_object_type => l_schema_object_tab(i_idx).object_type()
+                  , p_object_names =>
+                      case l_schema_object_tab(i_idx).object_type()
+                        -- dependent object types
+                        when 'OBJECT_GRANT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'SYNONYM'
+                        then l_schema_object_tab(i_idx).object_name()
+                        when 'COMMENT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'CONSTRAINT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'REF_CONSTRAINT'
+                        then l_schema_object_tab(i_idx).base_object_name()
+                        when 'INDEX'
+                        then l_schema_object_tab(i_idx).object_name()
+                        when 'TRIGGER'
+                        then l_schema_object_tab(i_idx).object_name()
+                        else l_schema_object_tab(i_idx).object_name()
+                      end 
+                  , p_object_names_include => 1
+                  , p_grantor_is_schema => 0
+                  , p_exclude_objects => null
+                  , p_include_objects => null
                   )
                 ) t;
       ut.expect(l_actual, l_schema_object_tab(i_idx).id()).to_equal(l_expected);
