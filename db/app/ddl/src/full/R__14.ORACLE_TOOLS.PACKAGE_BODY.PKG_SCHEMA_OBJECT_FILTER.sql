@@ -16,13 +16,11 @@ c_nr_parts constant simple_integer := 10;
 "BASE OBJECT TYPE" constant simple_integer := 5;
 "BASE OBJECT NAME" constant simple_integer := 6;
 
--- steps in get_schema_objects
+-- steps in get_all_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
 "object grants" constant varchar2(30 char) := 'object grants';
 "public synonyms and comments" constant varchar2(30 char) := 'public synonyms and comments';
 "constraints" constant varchar2(30 char) := 'constraints';
-"private synonyms and triggers" constant varchar2(30 char) := 'private synonyms and triggers';
-"indexes" constant varchar2(30 char) := 'indexes';
 
 c_steps constant sys.odcivarchar2list :=
   sys.odcivarchar2list
@@ -30,8 +28,6 @@ c_steps constant sys.odcivarchar2list :=
   , "object grants"
   , "public synonyms and comments"
   , "constraints"
-  , "private synonyms and triggers"
-  , "indexes"
   );
 
 -- forward declaration
@@ -226,7 +222,7 @@ begin
   p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
   to_json_array('OBJECT_TAB$', p_schema_object_filter.object_tab$);
   to_json_array('OBJECT_CMP_TAB$', p_schema_object_filter.object_cmp_tab$);
-  -- do not display named_object_tab$
+  -- do not display schema_object_tab$
   p_json_object.put('NR_EXCLUDED_OBJECTS$', p_schema_object_filter.nr_excluded_objects$);
   p_json_object.put('MATCH_COUNT$', p_schema_object_filter.match_count$);
   p_json_object.put('MATCH_COUNT_OK$', p_schema_object_filter.match_count_ok$);
@@ -286,7 +282,7 @@ $end
 
 -- GLOBAL
 
-function get_named_objects
+function get_all_schema_objects
 ( p_schema in varchar2
 )
 return oracle_tools.t_schema_object_tab
@@ -300,11 +296,11 @@ is
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_NAMED_OBJECTS');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_ALL_SCHEMA_OBJECTS');
   dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-  for i_idx in 1 .. 4
+  for i_idx in 1 .. 6
   loop
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print(dbug."info", 'i_idx: %s', i_idx);
@@ -460,6 +456,124 @@ $end
                      )
                    );
         end loop;
+        
+      -- these are not dependent on p_schema_object_filter.schema_object_tab$:
+      -- * private synonyms from this schema pointing to a base object in ANY schema possible
+      -- * triggers from this schema pointing to a base object in ANY schema possible
+      when 5
+      then
+        for r in
+        ( select  t.*
+          from    ( -- private synonyms for this schema which may point to another schema
+                    select  s.owner as object_schema
+                    ,       'SYNONYM' as object_type
+                    ,       s.synonym_name as object_name
+                    ,       obj.owner as base_object_schema
+                            -- use scalar subquery cache
+                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type) from dual) as base_object_type
+                    ,       obj.object_name as base_object_name
+                    ,       null as column_name
+                    from    all_synonyms s
+                            inner join all_objects obj
+                            on obj.owner = s.table_owner and obj.object_name = s.table_name
+                    where   obj.object_type not like '%BODY'
+                    and     obj.object_type <> 'MATERIALIZED VIEW'
+                    and     s.owner = p_schema
+                    -- no need to check on s.generated since we are interested in synonyms, not objects
+                    union all
+                    -- triggers for this schema which may point to another schema
+                    select  t.owner as object_schema
+                    ,       'TRIGGER' as object_type
+                    ,       t.trigger_name as object_name
+/* GJP 20170106 see oracle_tools.t_schema_object.chk()
+                    -- when the trigger is based on an object in another schema, no base info
+                    ,       case when t.owner = t.table_owner then t.table_owner end as base_object_schema
+                    ,       case when t.owner = t.table_owner then t.base_object_type end as base_object_type
+                    ,       case when t.owner = t.table_owner then t.table_name end as base_object_name
+*/
+                    ,       t.table_owner as base_object_schema
+                            -- use scalar subquery cache
+                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(t.base_object_type) from dual) as base_object_type
+                    ,       t.table_name as base_object_name
+                    ,       null as column_name
+                    from    all_triggers t
+                    where   t.owner = p_schema
+                    and     t.base_object_type in ('TABLE', 'VIEW')
+                  ) t
+        )
+        loop
+          continue when matches_schema_object
+                        ( p_object_type => r.object_type
+                        , p_object_name => r.object_name
+                        , p_base_object_type => r.base_object_type
+                        , p_base_object_name => r.base_object_name
+                        ) = 0;
+          
+          pipe row ( oracle_tools.t_schema_object.create_schema_object
+                     ( p_object_schema => r.object_schema
+                     , p_object_type => r.object_type
+                     , p_object_name => r.object_name
+                     , p_base_object_schema => r.base_object_schema
+                     , p_base_object_type => r.base_object_type
+                     , p_base_object_name => r.base_object_name
+                     , p_column_name => r.column_name
+                     )
+                   );
+        end loop;
+
+      -- these are not dependent on p_schema_object_filter.schema_object_tab$:
+      -- * indexes from this schema pointing to a base object in ANY schema possible
+      when 6
+      then
+        for r in
+        ( -- indexes
+          select  i.owner as object_schema
+          ,       'INDEX' as object_type
+          ,       i.index_name as object_name
+/* GJP 20170106 see oracle_tools.t_schema_object.chk()
+          -- when the index is based on an object in another schema, no base info
+          ,       case when i.owner = i.table_owner then i.table_owner end as base_object_schema
+          ,       case when i.owner = i.table_owner then i.table_type end as base_object_type
+          ,       case when i.owner = i.table_owner then i.table_name end as base_object_name
+*/
+          ,       i.table_owner as base_object_schema
+                  -- use scalar subquery cache
+          ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) from dual) as base_object_type
+          ,       i.table_name as base_object_name
+          ,       i.tablespace_name
+          from    all_indexes i
+          where   i.owner = p_schema
+                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+          and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
+                  -- GJP 2022-08-22
+                  -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
+                  -- so it will not be listed as a separate DDL statement.
+          and     not(i.constraint_index = 'YES')
+$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
+          and     i.generated = 'N'
+$end      
+        )
+        loop
+          continue when matches_schema_object
+                        ( p_object_type => r.object_type
+                        , p_object_name => r.object_name
+                        , p_base_object_type => r.base_object_type
+                        , p_base_object_name => r.base_object_name
+                        ) = 0;
+          
+          pipe row ( oracle_tools.t_index_object
+                     ( p_base_object =>
+                         oracle_tools.t_named_object.create_named_object
+                         ( p_object_schema => r.base_object_schema
+                         , p_object_type => r.base_object_type
+                         , p_object_name => r.base_object_name
+                         )
+                     , p_object_schema => r.object_schema
+                     , p_object_name => r.object_name
+                     , p_tablespace_name => r.tablespace_name
+                     )
+                   );
+        end loop;
     end case;
   end loop;
 
@@ -476,7 +590,7 @@ exception
     dbug.leave_on_error;
     raise;
 $end
-end get_named_objects;
+end get_all_schema_objects;
 
 procedure construct
 ( p_schema in varchar2
@@ -775,8 +889,8 @@ $end
   
   select  value(obj)
   bulk collect
-  into    p_schema_object_filter.named_object_tab$
-  from    table(oracle_tools.pkg_schema_object_filter.get_named_objects(p_schema)) obj;
+  into    p_schema_object_filter.schema_object_tab$
+  from    table(oracle_tools.pkg_schema_object_filter.get_all_schema_objects(p_schema)) obj;
   
   p_schema_object_filter.nr_excluded_objects$ := 0;
   p_schema_object_filter.match_count$ := 0;
@@ -842,9 +956,9 @@ $end
       if p_object_type is not null
       then
         l_object_type_exists := 0;      
-        for i_idx in 1 .. p_schema_object_filter.named_object_tab$.count
+        for i_idx in 1 .. p_schema_object_filter.schema_object_tab$.count
         loop
-          if p_schema_object_filter.named_object_tab$(i_idx).object_type() = p_object_type
+          if p_schema_object_filter.schema_object_tab$(i_idx).object_type() = p_object_type
           then
             l_object_type_exists := 1;
             exit;
@@ -908,7 +1022,7 @@ $end
           then
             raise program_error;
           else
-            -- p_object_type not found in named_object_tab$ so either
+            -- p_object_type not found in schema_object_tab$ so either
             -- a) a non named object
             -- b) an object type for a named object but there are none in this schema so it will never found them
             
@@ -1117,13 +1231,13 @@ $end
         -- queue table
         for r in
         ( select  value(obj) as obj
-          from    table(p_schema_object_filter.named_object_tab$) obj
+          from    table(p_schema_object_filter.schema_object_tab$) obj
         )
         loop
           process_schema_object(r.obj, null, null); -- object_type and object_name have already been tested for exclusions
         end loop;
 
-      -- object grants must depend on a base object already gathered, i.e. p_schema_object_filter.named_object_tab$
+      -- object grants must depend on a base object already gathered, i.e. p_schema_object_filter.schema_object_tab$
       when "object grants"
       then
         for r in
@@ -1154,7 +1268,7 @@ $end
                     ,       obj.object_schema() as object_schema
                     ,       obj.object_name() as object_name
                     ,       value(obj) as obj
-                    from    table(p_schema_object_filter.named_object_tab$) obj
+                    from    table(p_schema_object_filter.schema_object_tab$) obj
                   ) obj
                   inner join prv p
                   on p.table_schema = obj.object_schema and p.table_name = obj.object_name
@@ -1173,7 +1287,7 @@ $end
           );
         end loop;
 
-      -- public synonyms and comments must depend on a base object already gathered, i.e. p_schema_object_filter.named_object_tab$
+      -- public synonyms and comments must depend on a base object already gathered, i.e. p_schema_object_filter.schema_object_tab$
       when "public synonyms and comments"
       then
         for r in
@@ -1184,7 +1298,7 @@ $end
                     ,       'SYNONYM'      as object_type
                     ,       s.synonym_name as object_name
                     ,       null           as column_name
-                    from    table(p_schema_object_filter.named_object_tab$) obj
+                    from    table(p_schema_object_filter.schema_object_tab$) obj
                             inner join all_synonyms s
                             on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
                     where   obj.object_type() not like '%BODY'
@@ -1197,7 +1311,7 @@ $end
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       null           as column_name
-                    from    table(p_schema_object_filter.named_object_tab$) obj
+                    from    table(p_schema_object_filter.schema_object_tab$) obj
                             inner join all_tab_comments t
                             on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
                     where   obj.object_type() in ('TABLE', 'VIEW')
@@ -1209,7 +1323,7 @@ $end
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       null           as column_name
-                    from    table(p_schema_object_filter.named_object_tab$) obj
+                    from    table(p_schema_object_filter.schema_object_tab$) obj
                             inner join all_mview_comments m
                             on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
                     where   obj.object_type() = 'MATERIALIZED_VIEW'
@@ -1221,7 +1335,7 @@ $end
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       c.column_name  as column_name
-                    from    table(p_schema_object_filter.named_object_tab$) obj
+                    from    table(p_schema_object_filter.schema_object_tab$) obj
                             inner join all_col_comments c
                             on c.owner = obj.object_schema() and c.table_name = obj.object_name()
                     where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
@@ -1251,7 +1365,7 @@ $end
           end case;
         end loop;
 
-      -- constraints must depend on a base object already gathered, i.e. p_schema_object_filter.named_object_tab$
+      -- constraints must depend on a base object already gathered, i.e. p_schema_object_filter.schema_object_tab$
       when "constraints"
       then
         for r in
@@ -1276,7 +1390,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
                               else null
                             end as any_column_name
 $end                          
-                    from    table(p_schema_object_filter.named_object_tab$) obj
+                    from    table(p_schema_object_filter.schema_object_tab$) obj
                             inner join all_constraints c /* this is where we are interested in */
                             on c.owner = obj.object_schema() and c.table_name = obj.object_name()
                     where   obj.object_type() in ('TABLE', 'VIEW')
@@ -1360,111 +1474,6 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                 )
               );
           end case;
-        end loop;
-
-      -- these are not dependent on p_schema_object_filter.named_object_tab$:
-      -- * private synonyms from this schema pointing to a base object in ANY schema possible
-      -- * triggers from this schema pointing to a base object in ANY schema possible
-      when "private synonyms and triggers"
-      then
-        for r in
-        ( select  t.*
-          from    ( -- private synonyms for this schema which may point to another schema
-                    select  s.owner as object_schema
-                    ,       'SYNONYM' as object_type
-                    ,       s.synonym_name as object_name
-                    ,       obj.owner as base_object_schema
-                            -- use scalar subquery cache
-                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type) from dual) as base_object_type
-                    ,       obj.object_name as base_object_name
-                    ,       null as column_name
-                    from    all_synonyms s
-                            inner join all_objects obj
-                            on obj.owner = s.table_owner and obj.object_name = s.table_name
-                    where   obj.object_type not like '%BODY'
-                    and     obj.object_type <> 'MATERIALIZED VIEW'
-                    and     s.owner = l_schema
-                    -- no need to check on s.generated since we are interested in synonyms, not objects
-                    union all
-                    -- triggers for this schema which may point to another schema
-                    select  t.owner as object_schema
-                    ,       'TRIGGER' as object_type
-                    ,       t.trigger_name as object_name
-/* GJP 20170106 see oracle_tools.t_schema_object.chk()
-                    -- when the trigger is based on an object in another schema, no base info
-                    ,       case when t.owner = t.table_owner then t.table_owner end as base_object_schema
-                    ,       case when t.owner = t.table_owner then t.base_object_type end as base_object_type
-                    ,       case when t.owner = t.table_owner then t.table_name end as base_object_name
-*/
-                    ,       t.table_owner as base_object_schema
-                            -- use scalar subquery cache
-                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(t.base_object_type) from dual) as base_object_type
-                    ,       t.table_name as base_object_name
-                    ,       null as column_name
-                    from    all_triggers t
-                    where   t.owner = l_schema
-                    and     t.base_object_type in ('TABLE', 'VIEW')
-                  ) t
-        )
-        loop
-          process_schema_object
-          ( oracle_tools.t_schema_object.create_schema_object
-            ( p_object_schema => r.object_schema
-            , p_object_type => r.object_type
-            , p_object_name => r.object_name
-            , p_base_object_schema => r.base_object_schema
-            , p_base_object_type => r.base_object_type
-            , p_base_object_name => r.base_object_name
-            , p_column_name => r.column_name
-            )
-          );
-        end loop;
-
-      -- these are not dependent on p_schema_object_filter.named_object_tab$:
-      -- * indexes from this schema pointing to a base object in ANY schema possible
-      when "indexes"
-      then
-        for r in
-        ( -- indexes
-          select  i.owner as object_schema
-          ,       i.index_name as object_name
-/* GJP 20170106 see oracle_tools.t_schema_object.chk()
-          -- when the index is based on an object in another schema, no base info
-          ,       case when i.owner = i.table_owner then i.table_owner end as base_object_schema
-          ,       case when i.owner = i.table_owner then i.table_type end as base_object_type
-          ,       case when i.owner = i.table_owner then i.table_name end as base_object_name
-*/
-          ,       i.table_owner as base_object_schema
-                  -- use scalar subquery cache
-          ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) from dual) as base_object_type
-          ,       i.table_name as base_object_name
-          ,       i.tablespace_name
-          from    all_indexes i
-          where   i.owner = l_schema
-                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-          and     not(/*substr(i.index_name, 1, 5) = 'APEX$' or */substr(i.index_name, 1, 7) = 'I_MLOG$')
-                  -- GJP 2022-08-22
-                  -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
-                  -- so it will not be listed as a separate DDL statement.
-          and     not(i.constraint_index = 'YES')
-$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
-          and     i.generated = 'N'
-$end      
-        )
-        loop
-          process_schema_object
-          ( oracle_tools.t_index_object
-            ( p_base_object =>
-                oracle_tools.t_named_object.create_named_object
-                ( p_object_schema => r.base_object_schema
-                , p_object_type => r.base_object_type
-                , p_object_name => r.base_object_name
-                )
-            , p_object_schema => r.object_schema
-            , p_object_name => r.object_name
-            , p_tablespace_name => r.tablespace_name
-            )
-          );
         end loop;
     end case;
 
