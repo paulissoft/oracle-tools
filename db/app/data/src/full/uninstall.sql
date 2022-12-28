@@ -12,8 +12,8 @@
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
 -- transform params    : SEGMENT_ATTRIBUTES,TABLESPACE
--- objects include     : 
--- objects             : 
+-- exclude objects     : 
+-- include objects     : 
 -- owner               : ORACLE_TOOLS
 */
 -- pkg_ddl_util v4

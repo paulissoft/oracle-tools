@@ -512,7 +512,7 @@ Z       Time zone               RFC 822 time zone   -0800
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
     <generate-ddl type="full"
-                  arget.schema="${schema}"
+                  target.schema="${schema}"
                   target.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
