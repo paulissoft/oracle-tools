@@ -76,7 +76,7 @@ deterministic
 is
   l_result simple_integer := 0;
 
-  function search(p_lwb in positiven, p_upb in positiven)
+  function search(p_lwb in naturaln, p_upb in naturaln)
   return natural
   is
     l_cmp simple_integer := -1;
@@ -134,6 +134,12 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   , p_object_type || ':' || p_object_name
   , p_base_object_type || ':' || p_base_object_name
   , p_schema_object_id
+  );
+  dbug.print
+  ( dbug."input"
+  , 'cardinality(p_schema_object_filter.object_tab$): %s; p_schema_object_filter.nr_excluded_objects$: %s'
+  , case when p_schema_object_filter is not null then cardinality(p_schema_object_filter.object_tab$) end
+  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_excluded_objects$ end
   );
 $end    
 
@@ -776,7 +782,7 @@ $end
     
     /*
     -- 1) p_object_names_include is null and p_object_type is null:
-    --    impossible here
+    --    impossible here since p_object_type is not null or p_object_names is not null
     -- 2) p_object_names_include is null and p_object_type is not null:
     --    include search with object names * and object type
     -- 3) p_object_names_include = 0 and p_object_type is null:
@@ -1839,7 +1845,7 @@ begin
             , to_char(i_idx)
             , l_object_tab(i_idx)
             )
-          ).to_equal(1);
+          ).to_equal(case when l_object_tab(i_idx) = 'ORACLE_TOOLS:TABLE:schema_version_tools_ui:::::::' then 0 else 1 end);
         end if;
       end if;
     end loop;
