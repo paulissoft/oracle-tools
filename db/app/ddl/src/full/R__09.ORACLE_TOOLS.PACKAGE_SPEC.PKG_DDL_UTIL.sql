@@ -350,12 +350,24 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   pipelined;
 
   /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
+  -- Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
   function get_schema_ddl
+  ( p_schema in varchar2 default user
+  , p_object_type in varchar2 default null
+  , p_object_names in varchar2 default null
+  , p_object_names_include in integer default null
+  , p_grantor_is_schema in integer default 0
+  , p_exclude_objects in clob default null
+  , p_include_objects in clob default null
+  , p_transform_param_list in varchar2 default c_transform_param_list
+  )
+  return oracle_tools.t_schema_ddl_tab  
+  pipelined;
+  
+  function get_schema_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-    -- if null use oracle_tools.pkg_schema_object_filter.get_schema_objects(p_schema_object_filter)
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return oracle_tools.t_schema_ddl_tab

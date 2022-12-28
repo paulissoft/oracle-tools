@@ -4773,8 +4773,54 @@ $end
   end fetch_ddl;
 
   /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
+  -- Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
+  function get_schema_ddl
+  ( p_schema in varchar2 default user
+  , p_object_type in varchar2 default null
+  , p_object_names in varchar2 default null
+  , p_object_names_include in integer default null
+  , p_grantor_is_schema in integer default 0
+  , p_exclude_objects in clob default null
+  , p_include_objects in clob default null
+  , p_transform_param_list in varchar2 default c_transform_param_list
+  )
+  return oracle_tools.t_schema_ddl_tab  
+  pipelined
+  is
+    l_schema_object_filter oracle_tools.t_schema_object_filter;
+    l_schema_object_tab oracle_tools.t_schema_object_tab;
+  begin
+    l_schema_object_filter :=
+      oracle_tools.t_schema_object_filter
+      ( p_schema => p_schema
+      , p_object_type => p_object_type
+      , p_object_names => p_object_names
+      , p_object_names_include => p_object_names_include
+      , p_grantor_is_schema => p_grantor_is_schema
+      , p_exclude_objects => p_exclude_objects
+      , p_include_objects => p_include_objects
+      );
+    oracle_tools.pkg_schema_object_filter.get_schema_objects
+    ( p_schema_object_filter => l_schema_object_filter
+    , p_schema_object_tab => l_schema_object_tab
+    );
+    for r in
+    ( select  value(t) as obj
+      from    table
+              ( oracle_tools.pkg_ddl_util.get_schema_ddl
+                ( p_schema_object_filter => l_schema_object_filter
+                , p_schema_object_tab => l_schema_object_tab
+                , p_transform_param_list => p_transform_param_list
+                )
+              ) t
+    )
+    loop
+      pipe row (r.obj);
+    end loop;
+    return;
+  end get_schema_ddl;
+  
   function get_schema_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
@@ -4789,7 +4835,6 @@ $end
     -- https://github.com/paulissoft/oracle-tools/issues/98
     -- Solve that by adding the individual objects as well but quitting as soon as possible.
 
-    l_schema_object_filter oracle_tools.t_schema_object_filter := p_schema_object_filter;
     l_use_schema_export t_numeric_boolean_nn := 0;
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
@@ -5001,14 +5046,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     );
 $end
 
-    if p_schema_object_tab is null
-    then
-      oracle_tools.pkg_schema_object_filter.get_schema_objects
-      ( p_schema_object_filter => l_schema_object_filter
-      , p_schema_object_tab => l_schema_object_tab
-      );
-    end if;
-
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
     ( dbug."info"
@@ -5026,7 +5063,7 @@ $end
         else 0
       end;
 
-    init(nvl(p_schema_object_tab, l_schema_object_tab));
+    init(p_schema_object_tab);
 
     l_longops_rec := oracle_tools.api_longops_pkg.longops_init
                      ( p_op_name => 'fetch'
