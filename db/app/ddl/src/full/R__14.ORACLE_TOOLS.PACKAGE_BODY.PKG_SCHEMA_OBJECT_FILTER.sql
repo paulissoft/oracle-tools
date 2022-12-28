@@ -41,12 +41,6 @@ return dbms_sql.varchar2a;
 c_default_empty_part_tab constant dbms_sql.varchar2a := fill_array(null);
 c_default_wildcard_part_tab constant dbms_sql.varchar2a:= fill_array('*');
 
-$if oracle_tools.cfg_pkg.c_testing $then
-
-c_schema_object_filter constant t_schema_object_filter := oracle_tools.t_schema_object_filter(p_schema => null);
-
-$end
-
 -- LOCAL
 
 function fill_array(p_element in varchar2)
@@ -1564,34 +1558,47 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
 procedure ut_construct
 is
-  l_schema_object_filter t_schema_object_filter := c_schema_object_filter;
+  l_schema_object_filter t_schema_object_filter;
   l_expected json_element_t;
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (2)');
-  dbug.print(dbug."info", 'empty schema object filter');
-  l_schema_object_filter.print();
 $end
 
-  l_expected := json_element_t.parse('{
+  /*
+  -- 1) p_object_names_include is null and p_object_type is null:
+  --    impossible here
+  -- 2) p_object_names_include is null and p_object_type is not null:
+  --    include search with object names * and object type
+  -- 3) p_object_names_include = 0 and p_object_type is null:
+  --    exclude search for object names with object type *
+  -- 4) p_object_names_include = 0 and p_object_type is not null:
+  --    exclude search for object names with object type
+  --    include search for object names * with object type
+  -- 5) p_object_names_include = 1 and p_object_type is null:
+  --    include search for object names with object type *
+  -- 6) p_object_names_include = 1 and p_object_type is not null:
+  --    include search for object names with object type
+  */
+
+  for i_try in 1..6
+  loop
+    case i_try
+      when 1
+      then
+        l_schema_object_filter := oracle_tools.t_schema_object_filter(p_schema => null);
+        l_expected := json_element_t.parse('{
   "SCHEMA$" : null,
   "GRANTOR_IS_SCHEMA$" : 0,
   "NR_EXCLUDED_OBJECTS$" : 0,
   "MATCH_COUNT$" : 0,
   "MATCH_COUNT_OK$" : 0,
   "MATCH_PERC_THRESHOLD$" : 50
-}');
-  
-  ut.expect(serialize(l_schema_object_filter), 'empty').to_equal(l_expected);
+}');  
 
-  for i_try in 1..4
-  loop
-    case i_try
-      when 1
+      when 2
       then
-        construct
-        ( p_schema_object_filter => l_schema_object_filter
-        );
+        l_schema_object_filter := oracle_tools.t_schema_object_filter(p_object_type => 'TABLE');
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "ORACLE_TOOLS",
   "GRANTOR_IS_SCHEMA$" : 0,
@@ -1600,87 +1607,21 @@ $end
   "MATCH_COUNT_OK$" : 0,
   "MATCH_PERC_THRESHOLD$" : 50
 }');
-      when 2
-      then
-        l_schema_object_filter := oracle_tools.t_schema_object_filter
-        ( p_schema => 'HR'
-        , p_object_type => 'PACKAGE_SPEC'
-        , p_object_names => 'DBMS_METADATA,DBMS_VERSION'
-        , p_object_names_include => 1
-        , p_grantor_is_schema => 1
-        , p_exclude_objects => null
-        , p_include_objects => null
-        );
-        l_expected := json_element_t.parse('{
-  "SCHEMA$" : "HR",
-  "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECT_TAB$" :
-  [
-    "%:PACKAGE\\_SPEC:%:%:%:DBMS\\_METADATA:%:%:%:%",
-    "%:PACKAGE\\_SPEC:%:%:%:DBMS\\_VERSION:%:%:%:%"
-  ],
-  "OBJECT_CMP_TAB$" :
-  [
-    "~",
-    "~"
-  ],
-  "NR_EXCLUDED_OBJECTS$" : 0,
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0,
-  "MATCH_PERC_THRESHOLD$" : 50
-}');
 
       when 3
       then
-        -- duplicate objects should be ignored
         l_schema_object_filter := oracle_tools.t_schema_object_filter
-        ( p_schema => 'HR'
-        , p_object_type => 'OBJECT_GRANT'
-        , p_object_names => '
-DBMS_OUTPUT,
-DBMS_OUTPUT,
-DBMS_SQL,
-DBMS_SQL
-'
-        , p_object_names_include => 1
-        , p_grantor_is_schema => 1
-        , p_exclude_objects => null
-        , p_include_objects => null
-        );
-        l_expected := json_element_t.parse('
-{
-  "SCHEMA$" : "HR",
-  "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECT_TAB$" :
-  [
-    "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-    "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%"
-  ],
-  "OBJECT_CMP_TAB$" :
-  [
-    "~",
-    "~"
-  ],
-  "NR_EXCLUDED_OBJECTS$" : 0,
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0,
-  "MATCH_PERC_THRESHOLD$" : 50
-}');
-
-      when 4
-      then
-        l_schema_object_filter := oracle_tools.t_schema_object_filter
-        ( p_schema => 'HR'
-        , p_object_type => null
-        , p_object_names => '
+                                  ( p_schema => 'HR'
+                                  , p_object_type => null
+                                  , p_object_names => '
 DBMS_OUTPUT,
 DBMS_SQL
 '
-        , p_object_names_include => 0
-        , p_grantor_is_schema => 1
-        , p_exclude_objects => null
-        , p_include_objects => null
-        );
+                                  , p_object_names_include => 0
+                                  , p_grantor_is_schema => 1
+                                  , p_exclude_objects => null
+                                  , p_include_objects => null
+                                  );
         l_expected := json_element_t.parse('{
    "SCHEMA$" : "HR",
    "GRANTOR_IS_SCHEMA$" : 1,
@@ -1704,7 +1645,111 @@ DBMS_SQL
    "MATCH_PERC_THRESHOLD$" : 50
  }');
 
+      when 4
+      then
+        -- duplicate objects should be ignored
+        l_schema_object_filter := oracle_tools.t_schema_object_filter
+                                  ( p_schema => 'HR'
+                                  , p_object_type => 'OBJECT_GRANT'
+                                  , p_object_names => 'DBMS_OUTPUT,DBMS_OUTPUT,DBMS_SQL,DBMS_SQL'
+                                  , p_object_names_include => 0
+                                  , p_grantor_is_schema => 1
+                                  , p_exclude_objects => null
+                                  , p_include_objects => null
+                                  );
+        l_expected := json_element_t.parse('
+{
+  "SCHEMA$" : "HR",
+  "GRANTOR_IS_SCHEMA$" : 1,
+  "OBJECT_TAB$" :
+  [
+    "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+    "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%",
+    "%:OBJECT\\_GRANT:%:%:%:%:%:%:%:%"
+  ],
+  "OBJECT_CMP_TAB$" :
+  [
+    "!~",
+    "!~",
+    "~"
+  ],
+  "NR_EXCLUDED_OBJECTS$" : 2,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0,
+  "MATCH_PERC_THRESHOLD$" : 50
+}');
+
+      when 5
+      then
+        l_schema_object_filter := oracle_tools.t_schema_object_filter
+                                  ( p_schema => 'HR'
+                                  , p_object_type => null
+                                  , p_object_names => '
+DBMS_OUTPUT,
+DBMS_SQL
+'
+                                  , p_object_names_include => 1
+                                  , p_grantor_is_schema => 1
+                                  , p_exclude_objects => null
+                                  , p_include_objects => null
+                                  );
+        l_expected := json_element_t.parse('{
+   "SCHEMA$" : "HR",
+   "GRANTOR_IS_SCHEMA$" : 1,
+   "OBJECT_TAB$" :
+   [
+     "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
+     "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
+     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%"
+   ],
+   "OBJECT_CMP_TAB$" :
+   [
+     "~",
+     "~",
+     "~",
+     "~"
+   ],
+   "NR_EXCLUDED_OBJECTS$" : 0,
+   "MATCH_COUNT$" : 0,
+   "MATCH_COUNT_OK$" : 0,
+   "MATCH_PERC_THRESHOLD$" : 50
+ }');
+
+      when 6
+      then
+        l_schema_object_filter := oracle_tools.t_schema_object_filter
+                                  ( p_schema => 'HR'
+                                  , p_object_type => 'PACKAGE_SPEC'
+                                  , p_object_names => 'DBMS_METADATA,DBMS_VERSION'
+                                  , p_object_names_include => 1
+                                  , p_grantor_is_schema => 1
+                                  , p_exclude_objects => null
+                                  , p_include_objects => null
+                                  );
+        l_expected := json_element_t.parse('{
+  "SCHEMA$" : "HR",
+  "GRANTOR_IS_SCHEMA$" : 1,
+  "OBJECT_TAB$" :
+  [
+    "%:PACKAGE\\_SPEC:%:%:%:DBMS\\_METADATA:%:%:%:%",
+    "%:PACKAGE\\_SPEC:%:%:%:DBMS\\_VERSION:%:%:%:%"
+  ],
+  "OBJECT_CMP_TAB$" :
+  [
+    "~",
+    "~"
+  ],
+  "NR_EXCLUDED_OBJECTS$" : 0,
+  "MATCH_COUNT$" : 0,
+  "MATCH_COUNT_OK$" : 0,
+  "MATCH_PERC_THRESHOLD$" : 50
+}');
+
+
+
     end case;
+
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print(dbug."info", 'schema object filter try ' || i_try);
     l_schema_object_filter.print();
