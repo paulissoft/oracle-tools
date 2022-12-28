@@ -1686,10 +1686,10 @@ DBMS_SQL
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
-     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
      "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
-     "%:%:%:%:%:DBMS\\_SQL:%:%:%:%"
+     "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
+     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%"
    ],
    "OBJECT_CMP_TAB$" :
    [
