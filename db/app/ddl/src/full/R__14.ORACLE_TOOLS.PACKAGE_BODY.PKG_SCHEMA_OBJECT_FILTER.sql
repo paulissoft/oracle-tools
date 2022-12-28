@@ -2085,7 +2085,8 @@ procedure ut_get_schema_object_filter
 is
   l_schema_object_tab oracle_tools.t_schema_object_tab;
   l_expected sys_refcursor;
-  l_actual   sys_refcursor;
+  l_actual sys_refcursor;
+  l_nr_tab sys.odcinumberlist;
 
   l_program constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UT_GET_SCHEMA_OBJECT_FILTER';
 begin
@@ -2094,8 +2095,10 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
 
   select  value(t)
+  ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
   bulk collect
   into    l_schema_object_tab
+  ,       l_nr_tab
   from    table
           ( oracle_tools.pkg_schema_object_filter.get_schema_objects
             ( p_schema => user
@@ -2107,6 +2110,9 @@ $end
             , p_include_objects => null
             )
           ) t
+  order by
+          t.object_schema()
+  ,       t.object_type()
           /*
           inner join select all_dependencies d
           on d.owner = user and
@@ -2118,6 +2124,8 @@ $end
 
   for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
   loop
+    continue when l_nr_tab(i_idx) > 2; -- check at most two items of each category
+
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print(dbug."info", 'id: %s', l_schema_object_tab(i_idx).id());
 $end
