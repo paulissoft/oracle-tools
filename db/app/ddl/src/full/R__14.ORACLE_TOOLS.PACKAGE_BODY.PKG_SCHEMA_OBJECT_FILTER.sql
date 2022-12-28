@@ -1884,43 +1884,7 @@ begin
       end if;
     end loop;
   end loop try_loop;
-
-  return;
-
-  -- get all
-  for r in
-  ( with src as
-    ( select  a.id() as id
-      from    table
-              ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-                ( p_object_names => 'PKG_*'
-                , p_object_names_include => 1
-                )
-              ) a -- all
-      order by
-              id
-    )
-    select  src.*
-    from    src
-    where   rownum <= l_max_objects
-  )
-  loop
-    -- get the current one
-    select  max(o.id()) as id
-    ,       count(*) as cnt
-    into    l_id
-    ,       l_cnt
-    from    table
-            ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-              ( p_exclude_objects => null
-              , p_include_objects => r.id
-              )
-            ) o -- one
-    ;
-    ut.expect(l_cnt, r.id).to_equal(1);
-    ut.expect(l_id, r.id).to_equal(r.id);
-  end loop;
-end;
+end ut_matches_schema_object;
 
 procedure ut_get_schema_objects
 is
@@ -2124,7 +2088,7 @@ $end
 
   for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
   loop
-    continue when l_nr_tab(i_idx) > 2; -- check at most two items of each category
+    continue when l_nr_tab(i_idx) > 1; -- check one item of each category
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print(dbug."info", 'id: %s', l_schema_object_tab(i_idx).id());
@@ -2138,30 +2102,7 @@ $end
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                 ( p_schema => user
-                , p_object_type => l_schema_object_tab(i_idx).object_type()
-                , p_object_names =>
-                    case l_schema_object_tab(i_idx).object_type()
-                      -- dependent object types
-                      when 'OBJECT_GRANT'
-                      then l_schema_object_tab(i_idx).base_object_name()
-                      when 'SYNONYM'
-                      then l_schema_object_tab(i_idx).object_name()
-                      when 'COMMENT'
-                      then l_schema_object_tab(i_idx).base_object_name()
-                      when 'CONSTRAINT'
-                      then l_schema_object_tab(i_idx).base_object_name()
-                      when 'REF_CONSTRAINT'
-                      then l_schema_object_tab(i_idx).base_object_name()
-                      when 'INDEX'
-                      then l_schema_object_tab(i_idx).object_name()
-                      when 'TRIGGER'
-                      then l_schema_object_tab(i_idx).object_name()
-                      else l_schema_object_tab(i_idx).object_name()
-                    end 
-                , p_object_names_include => 1
-                , p_grantor_is_schema => 0
-                , p_exclude_objects => null
-                , p_include_objects => null
+                , p_include_objects => to_clob(l_schema_object_tab(i_idx).id())
                 )
               ) t;
     ut.expect(l_actual, l_schema_object_tab(i_idx).id()).to_equal(l_expected);
