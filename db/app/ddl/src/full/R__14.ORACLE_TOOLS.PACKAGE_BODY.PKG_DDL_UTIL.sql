@@ -3079,16 +3079,16 @@ $end
         end if;
 
         /*
-        -- Toon originele DDL als
-        -- a) indien het een object type is dat kan worden vervangen EN
-        --    1) het object in target schema niet bestaat OF
-        --    2) er een verschil is
-        -- b) indien het een object type is dat niet kan worden vervangen EN
-        --    het object niet in target schema bestaat
+        -- Show original DDL if:
+        -- a) it is an object type that can be replaced AND
+        --    1) the object in target schema does not exist OR
+        --    2) there is a difference
+        -- b) it is an object type that can NOT be replaced AND
+        --    the object does not exist in the target schema
         --
-        -- Anders,
-        -- c1) toon een invalid ALTER statement indien DBMS_METADATA_DIFF niet gelicentieerd is en er een verschil is
-        -- c2) toon dan de door DBMS_METADATA_DIFF berekende DDL als dit het eerste voorkomen van dat object is
+        -- Else:
+        -- c1) show an invalid ALTER statement if DBMS_METADATA_DIFF is not licensed and there is a difference
+        -- c2) show the by DBMS_METADATA_DIFF calculated DDL if this is the first occurrence of the object
         */
 
         if p_source_schema_ddl.obj.is_a_repeatable() = 1
@@ -6503,8 +6503,8 @@ $end
     );
 
     chk
-    ( 'Invalid schema indien p_network_link leeg is en p_schema geen correct schema.'
-    , p_sqlcode_expected => -44001
+    ( 'Invalid schema when p_network_link is empty and p_schema is not correct.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_does_not_exist
     , p_schema => 'ABC'
     );
 
@@ -6547,27 +6547,27 @@ $end
     end loop;
 
     chk
-    ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include leeg.'
+    ( p_description => 'When p_object_names is not empty and p_object_names_include empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => 'ABC'
     );
 
     chk
-    ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include niet leeg en niet in (0, 1).'
+    ( p_description => 'When p_object_names is not empty and p_object_names_include not empty and not in (0, 1).'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
     , p_object_names => 'ABC'
     , p_object_names_include => 2
     );
 
     chk
-    ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include niet leeg en niet in (0, 1).'
+    ( p_description => 'When p_object_names is not empty and p_object_names_include not empty and not in (0, 1).'
     , p_sqlcode_expected => -6502 -- VALUE_ERROR want NATURAL staat alleen null, 0 of positieve gehele getallen toe.
     , p_object_names => 'ABC'
     , p_object_names_include => -1
     );
 
     chk
-    ( p_description => 'Indien p_object_names leeg is en p_object_names_include niet leeg.'
+    ( p_description => 'When p_object_names is empty and p_object_names_include not empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => null
     , p_object_names_include => 0
@@ -6983,71 +6983,71 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     chk
-    ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include leeg.'
+    ( p_description => 'When p_object_names is not empty and p_object_names_include empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => 'ABC'
     );
 
     chk
-    ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include niet leeg en niet in (0, 1).'
+    ( p_description => 'When p_object_names is not empty and p_object_names_include not empty and not in (0, 1).'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
     , p_object_names => 'ABC'
     , p_object_names_include => 2
     );
 
     chk
-    ( p_description => 'Indien p_object_names niet leeg is en p_object_names_include niet leeg en niet in (0, 1).'
+    ( p_description => 'When p_object_names is not empty and p_object_names_include not empty and not in (0, 1).'
     , p_sqlcode_expected => -6502 -- VALUE_ERROR vanwege NATURAL datatype
     , p_object_names => 'ABC'
     , p_object_names_include => -1
     );
 
     chk
-    ( p_description => 'Indien p_object_names leeg is en p_object_names_include niet leeg.'
+    ( p_description => 'When p_object_names is empty and p_object_names_include not empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names_include => 1
     );
 
     chk
-    ( p_description => 'Indien p_schema_source leeg is en p_network_link_source niet leeg.'
+    ( p_description => 'When p_schema_source is empty and p_network_link_source not empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_wrong
     , p_schema_source => null
     , p_network_link_source => g_dbname
     );
 
     chk
-    ( p_description => 'Indien p_schema_target leeg is.'
+    ( p_description => 'When p_schema_target is empty.'
     , p_sqlcode_expected => -6502 -- VALUE_ERROR vanwege NATURAL datatype
     , p_schema_target => null
     );
 
     chk
-    ( p_description => 'Indien p_network_link_source leeg is, p_schema_source niet leeg en niet bestaand.'
-    , p_sqlcode_expected => -44001
+    ( p_description => 'When p_network_link_source is empty, p_schema_source not empty and non-existing.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_does_not_exist
     , p_schema_source => 'ABC'
     );
 
     chk
-    ( p_description => 'Indien p_network_link_target leeg is, p_schema_target niet leeg en niet bestaand.'
-    , p_sqlcode_expected => -44001
+    ( p_description => 'When p_network_link_target is empty, p_schema_target not empty and non-existing.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_does_not_exist
     , p_schema_target => 'ABC'
     );
 
     chk
-    ( p_description => 'source en target zijn gelijk.'
+    ( p_description => 'source equals target.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_source_and_target_equal
     , p_schema_source => g_owner
     , p_schema_target => g_owner
     );
 
     chk
-    ( p_description => 'p_network_link_source niet leeg en onbekend.'
+    ( p_description => 'p_network_link_source not empty and unknown.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_database_link_does_not_exist
     , p_network_link_source => 'ABC'
     );
 
     chk
-    ( p_description => 'p_network_link_target niet leeg en onbekend.'
+    ( p_description => 'p_network_link_target not empty and unknown.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_database_link_does_not_exist
     , p_network_link_target => 'ABC'
     );
