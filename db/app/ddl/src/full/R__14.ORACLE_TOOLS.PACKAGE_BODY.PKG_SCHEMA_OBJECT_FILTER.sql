@@ -18,7 +18,7 @@ c_nr_parts constant simple_integer := 10;
 
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
-"dependent objects" constant varchar2(30 char) := 'dependent objects';
+"object grants" constant varchar2(30 char) := 'object grants';
 "public synonyms and comments" constant varchar2(30 char) := 'public synonyms and comments';
 "constraints" constant varchar2(30 char) := 'constraints';
 "private synonyms and triggers" constant varchar2(30 char) := 'private synonyms and triggers';
@@ -27,7 +27,7 @@ c_nr_parts constant simple_integer := 10;
 c_steps constant sys.odcivarchar2list :=
   sys.odcivarchar2list
   ( "named objects"
-  , "dependent objects"
+  , "object grants"
   , "public synonyms and comments"
   , "constraints"
   , "private synonyms and triggers"
@@ -306,6 +306,10 @@ $end
 
   for i_idx in 1 .. 4
   loop
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+    dbug.print(dbug."info", 'i_idx: %s', i_idx);
+$end
+
     case i_idx
       when 1
       then
@@ -319,6 +323,10 @@ $end
         )
         loop
           l_excluded_tables_tab(r.object_name) := true;
+
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+          dbug.print(dbug."info", 'excluding queue table: %s', r.object_name);
+$end
 
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
 
@@ -351,6 +359,10 @@ $end
           if r.build_mode != 'PREBUILT'
           then
             l_excluded_tables_tab(r.object_name) := true;
+            
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+            dbug.print(dbug."info", 'excluding materialized view table: %s', r.object_name);
+$end
           end if;
           
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
@@ -400,6 +412,11 @@ $end
             continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
             
             pipe row (oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name));
+            
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+          else  
+            dbug.print(dbug."info", 'not checking since table was excluded: %s', r.object_name);
+$end
           end if; 
         end loop;
 
@@ -1106,7 +1123,8 @@ $end
           process_schema_object(r.obj, null, null); -- object_type and object_name have already been tested for exclusions
         end loop;
 
-      when "dependent objects"
+      -- object grants must depend on a base object already gathered, i.e. p_schema_object_filter.named_object_tab$
+      when "object grants"
       then
         for r in
         ( -- before Oracle 12 there was no type column in all_tab_privs
@@ -1155,6 +1173,7 @@ $end
           );
         end loop;
 
+      -- public synonyms and comments must depend on a base object already gathered, i.e. p_schema_object_filter.named_object_tab$
       when "public synonyms and comments"
       then
         for r in
@@ -1232,6 +1251,7 @@ $end
           end case;
         end loop;
 
+      -- constraints must depend on a base object already gathered, i.e. p_schema_object_filter.named_object_tab$
       when "constraints"
       then
         for r in
@@ -1342,6 +1362,9 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
           end case;
         end loop;
 
+      -- these are not dependent on p_schema_object_filter.named_object_tab$:
+      -- * private synonyms from this schema pointing to a base object in ANY schema possible
+      -- * triggers from this schema pointing to a base object in ANY schema possible
       when "private synonyms and triggers"
       then
         for r in
@@ -1397,6 +1420,8 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
           );
         end loop;
 
+      -- these are not dependent on p_schema_object_filter.named_object_tab$:
+      -- * indexes from this schema pointing to a base object in ANY schema possible
       when "indexes"
       then
         for r in
@@ -1988,24 +2013,27 @@ $end
     end loop;
   end loop;
 
-  -- check synonyms, indexes and triggers based on object from another schema
+  -- check synonyms, indexes and triggers from this schema base on on abject from another schema
   for r in
   ( select  min(s.owner||'.'||s.synonym_name) as fq_object_name
     ,       'SYNONYM' as object_type
     from    all_synonyms s
     where   s.owner <> s.table_owner
+    and     s.owner = user
     and     s.table_name is not null
     union
     select  min(t.owner||'.'||t.trigger_name) as fq_object_name
     ,       'TRIGGER' as object_type
     from    all_triggers t
     where   t.owner <> t.table_owner
+    and     t.owner = user
     and     t.table_name is not null
     union
     select  min(i.owner||'.'||i.index_name) as fq_object_name
     ,       'INDEX' as object_type
     from    all_indexes i
     where   i.owner <> i.table_owner
+    and     i.owner = user
     and     i.table_name is not null
 $if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
     and     i.generated = 'N'
