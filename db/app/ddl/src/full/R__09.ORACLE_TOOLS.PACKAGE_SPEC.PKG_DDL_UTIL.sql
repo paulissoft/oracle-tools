@@ -484,8 +484,14 @@ $if oracle_tools.cfg_pkg.c_testing $then
   procedure ut_teardown;
 
   --%test
+  procedure ut_display_ddl_schema_chk;
+  
+  --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
   procedure ut_display_ddl_schema;
+
+  --%test
+  procedure ut_display_ddl_schema_diff_chk;
 
   --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)

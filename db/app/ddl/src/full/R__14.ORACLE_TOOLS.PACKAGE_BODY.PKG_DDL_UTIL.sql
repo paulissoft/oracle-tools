@@ -5373,10 +5373,22 @@ $end
   )
   is
     l_network_link all_db_links.db_link%type := null;
+    l_cursor integer := dbms_sql.open_cursor;
     l_statement varchar2(4000 char) := null;
+    l_dummy integer;
     l_sqlcode integer := null;
     l_sqlerrm varchar2(32767 char) := null;
     l_error_backtrace varchar2(32767 char) := null;
+
+    procedure cleanup
+    is
+    begin
+      if l_cursor is not null
+      then
+        dbms_sql.close_cursor(l_cursor);
+        l_cursor := null;
+      end if;
+    end cleanup;
   begin
     -- check whether database link exists
     check_network_link(p_network_link);
@@ -5447,19 +5459,32 @@ end;'
       );
     oracle_tools.api_pkg.dbms_output_enable(l_network_link);
     oracle_tools.api_pkg.dbms_output_clear(l_network_link);
-    execute immediate l_statement
-      using p_schema
-          , p_new_schema
-          , p_sort_objects_by_deps
-          , p_object_type
-          , p_object_names
-          , p_object_names_include
-          , p_grantor_is_schema
-          , p_transform_param_list
-          , out l_sqlcode
-          , out l_sqlerrm
-          , out l_error_backtrace;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print(dbug."info", 'l_statement: %', l_statement);
+$end
+
+    dbms_sql.parse(l_cursor, l_statement, dbms_sql.native);
+
+    dbms_sql.bind_variable(l_cursor, ':b01', p_schema);
+    dbms_sql.bind_variable(l_cursor, ':b02', p_new_schema);
+    dbms_sql.bind_variable(l_cursor, ':b03', p_sort_objects_by_deps);
+    dbms_sql.bind_variable(l_cursor, ':b04', p_object_type);
+    dbms_sql.bind_variable(l_cursor, ':b05', p_object_names);
+    dbms_sql.bind_variable(l_cursor, ':b06', p_object_names_include);
+    dbms_sql.bind_variable(l_cursor, ':b07', p_grantor_is_schema);
+    dbms_sql.bind_variable(l_cursor, ':b08', p_transform_param_list);
+    -- output bind variables must be bound as well
+    dbms_sql.bind_variable(l_cursor, ':b09', l_sqlcode);
+    dbms_sql.bind_variable(l_cursor, ':b10', l_sqlerrm);
+    dbms_sql.bind_variable(l_cursor, ':b11', l_error_backtrace);
+    l_dummy := dbms_sql.execute(l_cursor);
+    dbms_sql.variable_value(l_cursor, ':b09', l_sqlcode);
+    dbms_sql.variable_value(l_cursor, ':b10', l_sqlerrm);
+    dbms_sql.variable_value(l_cursor, ':b11', l_error_backtrace);
+    
     oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+    cleanup;
     
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5468,12 +5493,15 @@ $end
     when others
     then    
       oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+      cleanup;
+      
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."error", 'remote error: %s', l_sqlcode);
       dbug.print(dbug."error", 'remote error message: %s', l_sqlerrm);
       dbug.print(dbug."error", 'remote error backtrace: %s', l_error_backtrace);
       dbug.leave_on_error;
 $end
+
       raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       raise; -- to keep the compiler happy
   end set_display_ddl_schema_args;
@@ -6455,56 +6483,10 @@ $end
     commit;
   end ut_teardown;
 
-  procedure ut_display_ddl_schema
+  procedure ut_display_ddl_schema_chk
   is
-    pragma autonomous_transaction;
-
-    l_line1_tab    dbms_sql.varchar2a;
-    l_clob1        clob := null;
-    l_first1       pls_integer := null;
-    l_last1        pls_integer := null;
-    l_line2_tab    dbms_sql.varchar2a;
-    l_clob2        clob := null;
-    l_first2       pls_integer := null;
-    l_last2        pls_integer := null;
-
-    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
-
-    l_schema t_schema;
-    l_object_names_include t_numeric_boolean;
-    l_object_names t_object_names;
-
-    cursor c_display_ddl_schema
-    ( b_schema in varchar2
-    , b_new_schema in varchar2
-    , b_sort_objects_by_deps in number
-    , b_object_type in varchar2
-    , b_object_names in varchar2
-    , b_object_names_include in number
-    , b_network_link in varchar2
-    , b_grantor_is_schema in number
-    )
-    is
-      select value(t)
-      from   table
-             ( oracle_tools.pkg_ddl_util.display_ddl_schema
-               ( p_schema => b_schema
-               , p_new_schema => b_new_schema
-               , p_sort_objects_by_deps => b_sort_objects_by_deps
-               , p_object_type => b_object_type
-               , p_object_names => b_object_names
-               , p_object_names_include => b_object_names_include
-               , p_network_link => b_network_link
-               , p_grantor_is_schema => b_grantor_is_schema
-               , p_exclude_objects => null
-               , p_include_objects => null
-               )
-             ) t
-      ;
-
     -- dbms_application_info stuff
-    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA';
-    l_longops_rec t_longops_rec;
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_CHK';
 
     c_no_exception_raised constant integer := -20001;
 
@@ -6521,6 +6503,34 @@ $end
     , p_grantor_is_schema in number default 0
     )
     is
+      cursor c_display_ddl_schema
+      ( b_schema in varchar2
+      , b_new_schema in varchar2
+      , b_sort_objects_by_deps in number
+      , b_object_type in varchar2
+      , b_object_names in varchar2
+      , b_object_names_include in number
+      , b_network_link in varchar2
+      , b_grantor_is_schema in number
+      )
+      is
+        select value(t)
+        from   table
+               ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                 ( p_schema => b_schema
+                 , p_new_schema => b_new_schema
+                 , p_sort_objects_by_deps => b_sort_objects_by_deps
+                 , p_object_type => b_object_type
+                 , p_object_names => b_object_names
+                 , p_object_names_include => b_object_names_include
+                 , p_network_link => b_network_link
+                 , p_grantor_is_schema => b_grantor_is_schema
+                 , p_exclude_objects => null
+                 , p_include_objects => null
+                 )
+               ) t
+        ;
+      l_schema_ddl oracle_tools.t_schema_ddl;
     begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.enter(g_package_prefix || l_program || '.CHK');
@@ -6553,7 +6563,7 @@ $end
            , p_network_link
            , p_grantor_is_schema
            );
-      fetch c_display_ddl_schema bulk collect into l_schema_ddl_tab limit g_max_fetch;
+      fetch c_display_ddl_schema into l_schema_ddl;
       close c_display_ddl_schema;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -6566,35 +6576,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end        
         ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
     end chk;
-
-    procedure replace_sequence_start_with(p_line_tab in out nocopy dbms_sql.varchar2a)
-    is
-      "CREATE SEQUENCE " constant varchar2(100) := 'CREATE SEQUENCE ';
-    begin
-      for i_idx in p_line_tab.first .. p_line_tab.last
-      loop
-        if substr(p_line_tab(i_idx), 1, length("CREATE SEQUENCE ")) = "CREATE SEQUENCE "
-        then
-          -- CREATE SEQUENCE  "<owner>"."<sequence>"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 13849101
-          p_line_tab(i_idx) := regexp_replace(p_line_tab(i_idx), '( START WITH )(\d+)', '\1 1');
-        end if;
-      end loop;
-    end replace_sequence_start_with;
-
-    procedure cleanup
-    is
-    begin
-      if l_clob1 is not null
-      then
-        dbms_lob.freetemporary(l_clob1);
-        l_clob1 := null;
-      end if;
-      if l_clob2 is not null
-      then
-        dbms_lob.freetemporary(l_clob2);
-        l_clob2 := null;
-      end if;
-    end cleanup;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -6703,6 +6684,72 @@ $end
       , p_object_names_include => 1
       );
     end loop;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ut_display_ddl_schema_chk;
+
+  procedure ut_display_ddl_schema
+  is
+    pragma autonomous_transaction;
+
+    l_line1_tab    dbms_sql.varchar2a;
+    l_clob1        clob := null;
+    l_first1       pls_integer := null;
+    l_last1        pls_integer := null;
+    l_line2_tab    dbms_sql.varchar2a;
+    l_clob2        clob := null;
+    l_first2       pls_integer := null;
+    l_last2        pls_integer := null;
+
+    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+    l_schema t_schema;
+    l_object_names_include t_numeric_boolean;
+    l_object_names t_object_names;
+
+    -- dbms_application_info stuff
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA';
+    l_longops_rec t_longops_rec;
+
+    procedure replace_sequence_start_with(p_line_tab in out nocopy dbms_sql.varchar2a)
+    is
+      "CREATE SEQUENCE " constant varchar2(100) := 'CREATE SEQUENCE ';
+    begin
+      for i_idx in p_line_tab.first .. p_line_tab.last
+      loop
+        if substr(p_line_tab(i_idx), 1, length("CREATE SEQUENCE ")) = "CREATE SEQUENCE "
+        then
+          -- CREATE SEQUENCE  "<owner>"."<sequence>"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 13849101
+          p_line_tab(i_idx) := regexp_replace(p_line_tab(i_idx), '( START WITH )(\d+)', '\1 1');
+        end if;
+      end loop;
+    end replace_sequence_start_with;
+
+    procedure cleanup
+    is
+    begin
+      if l_clob1 is not null
+      then
+        dbms_lob.freetemporary(l_clob1);
+        l_clob1 := null;
+      end if;
+      if l_clob2 is not null
+      then
+        dbms_lob.freetemporary(l_clob2);
+        l_clob2 := null;
+      end if;
+    end cleanup;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+$end
 
     -- The oracle_tools.pkg_ddl_util PACKAGE_SPEC must be created first for an empty schema
     begin
@@ -6964,51 +7011,10 @@ $end
       raise;
   end ut_display_ddl_schema;
 
-  procedure ut_display_ddl_schema_diff
+  procedure ut_display_ddl_schema_diff_chk
   is
-    pragma autonomous_transaction;
-
-    l_line1_tab    dbms_sql.varchar2a;
-    l_clob1        clob := null;
-    l_first1       pls_integer := null;
-    l_last1        pls_integer := null;
-    l_line2_tab    dbms_sql.varchar2a;
-    l_first2       pls_integer := null;
-    l_last2        pls_integer := null;
-
-    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
-
-    cursor c_display_ddl_schema_diff
-    ( b_object_type in varchar2
-    , b_object_names in varchar2
-    , b_object_names_include in number
-    , b_schema_source in varchar2
-    , b_schema_target in varchar2
-    , b_network_link_source in varchar2
-    , b_network_link_target in varchar2
-    , b_skip_repeatables in number
-    )
-    is
-      select value(t)
-      from   table
-             ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
-               ( p_object_type => b_object_type
-               , p_object_names => b_object_names
-               , p_object_names_include => b_object_names_include
-               , p_schema_source => b_schema_source
-               , p_schema_target => b_schema_target
-               , p_network_link_source => b_network_link_source
-               , p_network_link_target => b_network_link_target
-               , p_skip_repeatables => b_skip_repeatables
-               , p_exclude_objects => null
-               , p_include_objects => null
-               )
-             ) t
-      ;
-
     -- dbms_application_info stuff
-    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_DIFF';
-    l_longops_rec t_longops_rec;
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_DIFF_CHK';
 
     c_no_exception_raised constant integer := -20001;
 
@@ -7025,6 +7031,35 @@ $end
     , p_skip_repeatables in number default 1
     )
     is
+      cursor c_display_ddl_schema_diff
+      ( b_object_type in varchar2
+      , b_object_names in varchar2
+      , b_object_names_include in number
+      , b_schema_source in varchar2
+      , b_schema_target in varchar2
+      , b_network_link_source in varchar2
+      , b_network_link_target in varchar2
+      , b_skip_repeatables in number
+      )
+      is
+        select value(t)
+        from   table
+               ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
+                 ( p_object_type => b_object_type
+                 , p_object_names => b_object_names
+                 , p_object_names_include => b_object_names_include
+                 , p_schema_source => b_schema_source
+                 , p_schema_target => b_schema_target
+                 , p_network_link_source => b_network_link_source
+                 , p_network_link_target => b_network_link_target
+                 , p_skip_repeatables => b_skip_repeatables
+                 , p_exclude_objects => null
+                 , p_include_objects => null
+                 )
+               ) t
+        ;
+
+      l_schema_ddl oracle_tools.t_schema_ddl;
     begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.enter(g_package_prefix || l_program || '.CHK');
@@ -7058,7 +7093,7 @@ $end
            , p_network_link_target
            , p_skip_repeatables
            );
-      fetch c_display_ddl_schema_diff bulk collect into l_schema_ddl_tab limit g_max_fetch;
+      fetch c_display_ddl_schema_diff into l_schema_ddl;
       close c_display_ddl_schema_diff;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -7071,16 +7106,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end        
         ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
     end chk;
-
-    procedure cleanup
-    is
-    begin
-      if l_clob1 is not null
-      then
-        dbms_lob.freetemporary(l_clob1);
-        l_clob1 := null;
-      end if;
-    end cleanup;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -7196,6 +7221,48 @@ $end
     , p_schema_target => g_empty
     , p_schema_source => null
     );
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ut_display_ddl_schema_diff_chk;
+
+  procedure ut_display_ddl_schema_diff
+  is
+    pragma autonomous_transaction;
+
+    l_line1_tab    dbms_sql.varchar2a;
+    l_clob1        clob := null;
+    l_first1       pls_integer := null;
+    l_last1        pls_integer := null;
+    l_line2_tab    dbms_sql.varchar2a;
+    l_first2       pls_integer := null;
+    l_last2        pls_integer := null;
+
+    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+    -- dbms_application_info stuff
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_DIFF';
+    l_longops_rec t_longops_rec;
+
+    procedure cleanup
+    is
+    begin
+      if l_clob1 is not null
+      then
+        dbms_lob.freetemporary(l_clob1);
+        l_clob1 := null;
+      end if;
+    end cleanup;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+$end
 
     -- Check this schema
     for r in (select t.owner
