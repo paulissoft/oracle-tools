@@ -606,8 +606,6 @@ is
   l_exclude_object_tab dbms_sql.varchar2a;
   l_include_object_tab dbms_sql.varchar2a;
   l_object_name_tab dbms_sql.varchar2a;
-  l_object varchar2(4000 char);
-  l_part_tab dbms_sql.varchar2a;
   l_object_type_exists simple_integer := 1;
   l_case simple_integer := 0;
 
@@ -756,7 +754,7 @@ $end
     else
       oracle_tools.pkg_ddl_error.raise_error
       ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
-      , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
+      , p_error_message => 'number of parts must be ' || c_nr_parts
       , p_context_info => p_id
       , p_context_label => 'schema object id'
       );
@@ -798,7 +796,7 @@ $end
     else
       oracle_tools.pkg_ddl_error.raise_error
       ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
-      , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
+      , p_error_message => 'number of parts must be ' || c_nr_parts
       , p_context_info => p_id
       , p_context_label => 'schema object id'
       );
@@ -813,7 +811,41 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.leave;
 $end
   end add_item;
-  
+
+  procedure add_item
+  ( p_case in positiven
+  , p_object_type_idx in positiven
+  , p_object_type in varchar2
+  , p_object_name_idx in positiven
+  , p_object_name in varchar2
+  )
+  is
+    l_part_tab dbms_sql.varchar2a;
+    l_object varchar2(4000 char);
+  begin
+    -- object 1
+    l_part_tab := c_default_wildcard_part_tab;
+    l_part_tab(p_object_type_idx) := p_object_type;
+    l_part_tab(p_object_name_idx) := p_object_name;
+
+    l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
+    
+    if p_case in (3, 4)
+    then
+      add_item(l_exclude_object_tab, l_object);
+    end if;
+    
+    if p_case in (5, 6)
+    then
+      add_item(l_include_object_tab, l_object);
+    elsif p_case = 4
+    then
+      -- include all objects with the object type
+      l_part_tab(p_object_name_idx) := '*';
+      add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
+    end if;
+  end add_item;  
+
   procedure add_items
   ( p_object_tab in dbms_sql.varchar2a
   , p_exclude in boolean default false
@@ -974,50 +1006,10 @@ $end
           if l_object_type_exists = 1
           then
             -- We need to add two objects: one for object and one for base object since either may be a NAMED object
-
             -- object 1
-            l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("OBJECT TYPE") := nvl(p_object_type, '*');
-            l_part_tab("OBJECT NAME") := l_object_name_tab(i_object_name_idx);
-
-            l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            
-            if l_case in (3, 4)
-            then
-              add_item(l_exclude_object_tab, l_object);
-            end if;
-            
-            if l_case in (5, 6)
-            then
-              add_item(l_include_object_tab, l_object);
-            elsif l_case = 4
-            then
-              -- include all objects with the object type
-              l_part_tab("OBJECT NAME") := '*';
-              add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
-            end if;            
-
+            add_item(l_case, "OBJECT TYPE", nvl(p_object_type, '*'), "OBJECT NAME", l_object_name_tab(i_object_name_idx));
             -- object 2
-            l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("BASE OBJECT TYPE") := nvl(p_object_type, '*');
-            l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
-
-            l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            
-            if l_case in (3, 4)
-            then
-              add_item(l_exclude_object_tab, l_object);
-            end if;
-            
-            if l_case in (5, 6)
-            then
-              add_item(l_include_object_tab, l_object);
-            elsif l_case = 4
-            then
-              -- include all objects with the object type
-              l_part_tab("BASE OBJECT NAME") := '*';
-              add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
-            end if;            
+            add_item(l_case, "BASE OBJECT TYPE", nvl(p_object_type, '*'), "BASE OBJECT NAME", l_object_name_tab(i_object_name_idx));
           elsif p_object_type is null
           then
             raise program_error;
@@ -1029,26 +1021,7 @@ $end
             -- Just set OBJECT TYPE and BASE OBJECT NAME
             -- since only the BASE OBJECT will be a NAMED object.
             -- Please note that l_object_name_tab(i_object_name_idx) is a NAMED object (e.g. part of ALL_OBJECTS).
-            l_part_tab := c_default_wildcard_part_tab;
-            l_part_tab("OBJECT TYPE") := p_object_type;
-            l_part_tab("BASE OBJECT NAME") := l_object_name_tab(i_object_name_idx);
-
-            l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-            
-            if l_case in (3, 4)
-            then
-              add_item(l_exclude_object_tab, l_object);
-            end if;
-            
-            if l_case in (5, 6)
-            then
-              add_item(l_include_object_tab, l_object);
-            elsif l_case = 4
-            then
-              -- include all objects with the object type
-              l_part_tab("BASE OBJECT NAME") := '*';
-              add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
-            end if;            
+            add_item(l_case, "OBJECT TYPE", p_object_type, "BASE OBJECT NAME", l_object_name_tab(i_object_name_idx));
           end if;
         end if;
       end loop;
@@ -2047,10 +2020,9 @@ end ut_get_schema_objects;
 
 procedure ut_get_schema_object_filter
 is
-  l_schema_object_tab oracle_tools.t_schema_object_tab;
+  l_schema_object_id_tab sys.odcivarchar2list;
   l_expected sys_refcursor;
   l_actual sys_refcursor;
-  l_nr_tab sys.odcinumberlist;
 
   l_program constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UT_GET_SCHEMA_OBJECT_FILTER';
 begin
@@ -2058,55 +2030,63 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter(l_program);
 $end
 
-  select  value(t)
-  ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
+  select  id
   bulk collect
-  into    l_schema_object_tab
-  ,       l_nr_tab
-  from    table
-          ( oracle_tools.pkg_schema_object_filter.get_schema_objects
-            ( p_schema => user
-            , p_object_type => null
-            , p_object_names => null
-            , p_object_names_include => null
-            , p_grantor_is_schema => 0
-            , p_exclude_objects => null
-            , p_include_objects => null
-            )
-          ) t
-  order by
-          t.object_schema()
-  ,       t.object_type()
-          /*
-          inner join select all_dependencies d
-          on d.owner = user and
-             d.name = 'PKG_DDL_UTIL' and
-             d.referenced_owner = d.owner and
-             d.referenced_name = t.object_name()
-          */
+  into    l_schema_object_id_tab
+  from    ( select  t.id() as id
+            ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
+            from    table
+                    ( oracle_tools.pkg_schema_object_filter.get_schema_objects
+                      ( p_schema => user
+                      , p_object_type => null
+                      , p_object_names => null
+                      , p_object_names_include => null
+                      , p_grantor_is_schema => 0
+                      , p_exclude_objects => null
+                      , p_include_objects => null
+                      )
+                    ) t
+            order by
+                    t.object_schema()
+            ,       t.object_type()
+          )
+  where   nr = 1  
   ;
 
-  for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
+  for i_idx in l_schema_object_id_tab.first .. l_schema_object_id_tab.last
   loop
-    continue when l_nr_tab(i_idx) > 1; -- check one item of each category
-
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-    dbug.print(dbug."info", 'id: %s', l_schema_object_tab(i_idx).id());
+    dbug.print(dbug."info", 'id: %s', l_schema_object_tab.(i_idx));
 $end
 
     open l_expected for
-      select  l_schema_object_tab(i_idx).id() as id
+      select  l_schema_object_id_tab(i_idx) as id
       from    dual;
     open l_actual for
       select  t.id() as id
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                 ( p_schema => user
-                , p_include_objects => to_clob(l_schema_object_tab(i_idx).id())
+                , p_include_objects => to_clob(l_schema_object_id_tab(i_idx))
                 )
               ) t;
-    ut.expect(l_actual, l_schema_object_tab(i_idx).id()).to_equal(l_expected);
-  end loop;
+    ut.expect(l_actual, 'include ' || l_schema_object_id_tab(i_idx)).to_equal(l_expected);
+
+    open l_expected for
+      select  l_schema_object_id_tab(i_idx) as id
+      from    dual
+      where   0 = 1;
+    open l_actual for
+      select  t.id() as id
+      from    table
+              ( oracle_tools.pkg_schema_object_filter.get_schema_objects
+                ( p_schema => user
+                , p_exclude_objects => to_clob(l_schema_object_id_tab(i_idx))
+                , p_include_objects => to_clob(l_schema_object_id_tab(i_idx))
+                )
+              ) t;
+    ut.expect(l_actual, 'exclude and include ' || l_schema_object_id_tab(i_idx)).to_equal(l_expected);
+end loop;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.leave;
