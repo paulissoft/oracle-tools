@@ -1132,6 +1132,7 @@ is
   l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
   l_step varchar2(30 char);
   l_schema_object oracle_tools.t_schema_object;
+  l_named_object oracle_tools.t_named_object;
   l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
     oracle_tools.api_longops_pkg.longops_init
     ( p_target_desc => 'procedure ' || 'GET_SCHEMA_OBJECTS'
@@ -1318,12 +1319,12 @@ $end
             when 'SYNONYM'
             then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-              r.base_object.print;
-              dbug.print(dbug."info", 'just printed base object');
+              dbug.print(dbug."info", 'base object id: %s', case when r.base_object is not null then r.base_object.id() end);
 $end
+              l_named_object := treat(r.base_object as oracle_tools.t_named_object);
               l_schema_object :=
                 oracle_tools.t_synonym_object
-                ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                ( p_base_object => l_named_object
                 , p_object_schema => r.object_schema
                 , p_object_name => r.object_name
                 );
