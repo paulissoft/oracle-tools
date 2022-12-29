@@ -2859,7 +2859,9 @@ $end
     check_schema(p_schema => p_schema, p_network_link => p_network_link);
     -- no checks for new schema: it may be null or any name
     check_numeric_boolean(p_numeric_boolean => p_sort_objects_by_deps, p_description => 'sort objects by deps');
+    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include'); -- duplicate but for unit testing
     check_network_link(p_network_link => p_network_link);
+    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema'); -- duplicate but for unit testing
 
     get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
 
@@ -6493,7 +6495,7 @@ $end
     procedure chk
     ( p_description in varchar2
     , p_sqlcode_expected in integer
-    , p_schema in varchar2 default g_owner
+    , p_schema in varchar2 default 'HR' -- just a few objects
     , p_new_schema in varchar2 default null
     , p_sort_objects_by_deps in number default 0
     , p_object_type in varchar2 default null
@@ -6563,7 +6565,7 @@ $end
            , p_network_link
            , p_grantor_is_schema
            );
-      fetch c_display_ddl_schema into l_schema_ddl;
+--      fetch c_display_ddl_schema into l_schema_ddl;
       close c_display_ddl_schema;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -6572,7 +6574,7 @@ $end
       then
         if c_display_ddl_schema%isopen then close c_display_ddl_schema; end if;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.leave;
+        dbug.leave_on_error;
 $end        
         ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
     end chk;
@@ -6621,13 +6623,15 @@ $end
       chk
       ( p_description => 'Sort_objects_by_deps (' || r.column_value || ')'
       , p_sqlcode_expected => case
-                                 when r.column_value is null then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
-                                 when r.column_value in (0, 1) then oracle_tools.pkg_ddl_error.c_objects_wrong 
-                                 when r.column_value < 0 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
+                                 when r.column_value is null
+                                 then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
+                                 when r.column_value in (0, 1)
+                                 then c_no_exception_raised
+                                 when r.column_value < 0
+                                 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
                                  else oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
                                end
       , p_sort_objects_by_deps => r.column_value
-      , p_object_names => 'ABC'
       );
     end loop;
 
@@ -7024,8 +7028,8 @@ $end
     , p_object_type in varchar2 default null
     , p_object_names in varchar2 default null
     , p_object_names_include in number default null
-    , p_schema_source in varchar2 default g_owner
-    , p_schema_target in varchar2 default g_owner
+    , p_schema_source in varchar2 default 'HR' -- just a few objects
+    , p_schema_target in varchar2 default 'HR'
     , p_network_link_source in varchar2 default null
     , p_network_link_target in varchar2 default null
     , p_skip_repeatables in number default 1
@@ -7093,7 +7097,7 @@ $end
            , p_network_link_target
            , p_skip_repeatables
            );
-      fetch c_display_ddl_schema_diff into l_schema_ddl;
+--      fetch c_display_ddl_schema_diff into l_schema_ddl;
       close c_display_ddl_schema_diff;
 
       raise_application_error(c_no_exception_raised, 'OK');
@@ -7102,7 +7106,7 @@ $end
       then
         if c_display_ddl_schema_diff%isopen then close c_display_ddl_schema_diff; end if;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.leave;
+        dbug.leave_on_error;
 $end        
         ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
     end chk;
@@ -7203,7 +7207,7 @@ $end
                                 when r.column_value is null
                                 then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
                                 when r.column_value in (0, 1)
-                                then c_no_exception_raised -- oracle_tools.pkg_ddl_error.c_no_schema_objects
+                                then c_no_exception_raised
                                 when r.column_value < 0
                                 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
                                 else oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
