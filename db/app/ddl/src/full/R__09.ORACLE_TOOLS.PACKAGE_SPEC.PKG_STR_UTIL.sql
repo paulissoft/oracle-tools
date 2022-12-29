@@ -65,9 +65,10 @@ procedure split
 /**
  * Join a string separated by a delimiter string.
  *
- * @param p_str        The input string to split.
+ * @param p_str_tab    The input table.
  * @param p_delimiter  The separator string.
- * @param p_str_tab    The output table.
+ *
+ * @return The joined input table.
  */
 function join
 ( p_str_tab in dbms_sql.varchar2a
@@ -75,6 +76,19 @@ function join
 )
 return varchar2
 deterministic;
+
+/**
+ * Join a string separated by a delimiter string.
+ *
+ * @param p_str_tab    The input table.
+ * @param p_delimiter  The separator string.
+ * @param p_str        The joined input table.
+ */
+procedure join
+( p_str_tab in dbms_sql.varchar2a
+, p_delimiter in varchar2 := ','
+, p_str out nocopy clob
+);
 
 /**
  * Removes left and right from the input string all characters in a set.

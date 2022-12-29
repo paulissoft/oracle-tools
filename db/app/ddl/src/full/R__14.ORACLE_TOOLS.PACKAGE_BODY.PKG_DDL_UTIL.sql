@@ -153,6 +153,11 @@ $else
   -- So store a dbms_sql cursor (integer) and convert to sys_refcursor whenever necessary.
   -- Only available in Oracle 11g and above.
   g_cursor integer := null;
+
+  -- to be used to transfer CLOBs via remote link
+  g_exclude_objects dbms_sql.varchar2a;
+  g_include_objects dbms_sql.varchar2a;
+
 $end
 
   g_clob clob := null;
@@ -2995,12 +3000,17 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
       null; -- not a real error, just a way to some cleanup
 
-    when no_data_found -- disappears otherwise
+    when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
     then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
@@ -3255,7 +3265,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     -- input checks
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include');
+    -- by display_ddl_schema: check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
     check_schema(p_schema => p_schema_source, p_network_link => p_network_link_source, p_description => 'Source schema');
     check_schema(p_schema => p_schema_target, p_network_link => p_network_link_target, p_description => 'Target schema');
     check_source_target
@@ -3266,7 +3276,7 @@ $end
     );
     check_network_link(p_network_link => p_network_link_source, p_description => 'Source database link');
     check_network_link(p_network_link => p_network_link_target, p_description => 'Target database link');
-    check_numeric_boolean(p_numeric_boolean => p_skip_repeatables, p_description => 'skip repeatables');
+    check_numeric_boolean(p_numeric_boolean => p_skip_repeatables, p_description => 'Skip repeatables');
 
     if p_schema_source is null
     then
@@ -3445,12 +3455,17 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
       null; -- not a real error, just a way to some cleanup
 
-    when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
+    when no_data_found -- will otherwise get lost due to pipelined function (GJP 2022-12-29 as it should)
     then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
 
     when others
     then
@@ -5296,7 +5311,12 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
 
     when others
     then
@@ -5311,25 +5331,172 @@ $end
   -- Help procedure to store the results of display_ddl_schema on a remote database.
   */
   procedure set_display_ddl_schema_args
+  ( p_exclude_objects in clob
+  , p_include_objects in clob
+  )
+  is
+  begin
+    oracle_tools.pkg_str_util.split
+    ( p_str => p_exclude_objects
+    , p_delimiter => chr(10)
+    , p_str_tab => g_exclude_objects
+    );
+    oracle_tools.pkg_str_util.split
+    ( p_str => p_include_objects
+    , p_delimiter => chr(10)
+    , p_str_tab => g_include_objects
+    );
+  end set_display_ddl_schema_args;
+  
+  procedure get_display_ddl_schema_args
+  ( p_exclude_objects out nocopy dbms_sql.varchar2a
+  , p_include_objects out nocopy dbms_sql.varchar2a
+  )
+  is
+  begin
+    p_exclude_objects := g_exclude_objects;
+    p_include_objects := g_include_objects;
+  end get_display_ddl_schema_args;
+  
+  procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
   , p_object_names_include in t_numeric_boolean
-  , p_network_link in t_network_link
+  , p_network_link in t_network_link_nn
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_exclude_objects in t_objects
-  , p_include_objects in t_objects
+  , p_exclude_objects in clob
+  , p_include_objects in clob
   )
   is
-    l_cursor sys_refcursor;
     l_network_link all_db_links.db_link%type := null;
+    l_statement varchar2(4000 char) := null;
+    l_sqlcode integer := null;
+    l_sqlerrm varchar2(32767 char) := null;
     l_error_backtrace varchar2(32767 char) := null;
   begin
+    -- check whether database link exists
+    check_network_link(p_network_link);
+    l_network_link := get_db_link(p_network_link);
+
+    if l_network_link is null
+    then
+      raise program_error;
+    end if;
+
+    l_network_link := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(l_network_link, 'database link');
+
+    set_display_ddl_schema_args
+    ( p_exclude_objects => p_exclude_objects
+    , p_include_objects => p_include_objects
+    );
+ 
+    l_statement :=
+      utl_lms.format_message
+      ( '
+declare
+  l_exclude_objects dbms_sql.varchar2a;
+  l_include_objects dbms_sql.varchar2a;
+  l_exclude_objects_r dbms_sql.varchar2a@%s;
+  l_include_objects_r dbms_sql.varchar2a@%s;
+begin
+  oracle_tools.pkg_ddl_util.get_display_ddl_schema_args
+  ( p_exclude_objects => l_exclude_objects
+  , p_include_objects => l_include_objects
+  );
+  if l_exclude_objects.count > 0
+  then
+    for i_idx in l_exclude_objects.first .. l_exclude_objects.last
+    loop
+      l_exclude_objects_r(i_idx) := l_exclude_objects(i_idx);
+    end loop;
+  end if;
+  if l_include_objects.count > 0
+  then
+    for i_idx in l_include_objects.first .. l_include_objects.last
+    loop
+      l_include_objects_r(i_idx) := l_include_objects(i_idx);
+    end loop;
+  end if;
+  oracle_tools.pkg_ddl_util.set_display_ddl_schema_args_r@%s
+  ( p_schema => :b01
+  , p_new_schema => :b02
+  , p_sort_objects_by_deps => :b03
+  , p_object_type => :b04
+  , p_object_names => :b05
+  , p_object_names_include => :b06
+  , p_grantor_is_schema => :b07
+  , p_transform_param_list => :b08
+  , p_exclude_objects => l_exclude_objects_r
+  , p_include_objects => l_include_objects_r
+  );
+exception
+  when others
+  then
+    :b09 := sqlcode;
+    :b10 := sqlerrm;
+    :b11 := dbms_utility.format_error_backtrace;
+    raise;
+end;'
+      , l_network_link
+      , l_network_link
+      , l_network_link
+      );
+    oracle_tools.api_pkg.dbms_output_enable(l_network_link);
+    oracle_tools.api_pkg.dbms_output_clear(l_network_link);
+    execute immediate l_statement
+      using p_schema
+          , p_new_schema
+          , p_sort_objects_by_deps
+          , p_object_type
+          , p_object_names
+          , p_object_names_include
+          , p_grantor_is_schema
+          , p_transform_param_list
+          , out l_sqlcode
+          , out l_sqlerrm
+          , out l_error_backtrace;
+    oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+    
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS');
+    dbug.leave;
+$end
+  exception
+    when others
+    then    
+      oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."error", 'remote error: %s', l_sqlcode);
+      dbug.print(dbug."error", 'remote error message: %s', l_sqlerrm);
+      dbug.print(dbug."error", 'remote error backtrace: %s', l_error_backtrace);
+      dbug.leave_on_error;
+$end
+      raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
+      raise; -- to keep the compiler happy
+  end set_display_ddl_schema_args;
+
+  procedure set_display_ddl_schema_args_r
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
+  , p_sort_objects_by_deps in t_numeric_boolean_nn
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
+  , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
+  , p_exclude_objects in dbms_sql.varchar2a
+  , p_include_objects in dbms_sql.varchar2a
+  )
+  is
+    l_exclude_objects clob;
+    l_include_objects clob;
+    l_cursor sys_refcursor;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS_R');
     dbug.print(dbug."input"
                ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
@@ -5338,114 +5505,41 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                ,p_object_type
                ,p_object_names);
     dbug.print(dbug."input"
-               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_transform_param_list: %s'
+               ,'p_object_names_include: %s; p_grantor_is_schema: %s; p_transform_param_list: %s; p_exclude_objects size: %s; p_include_objects size: %s'
                ,p_object_names_include
-               ,p_network_link
                ,p_grantor_is_schema
-               ,p_transform_param_list);
-    dbug.print(dbug."input"
-               ,'p_exclude_objects length: %s; p_include_objects length: %s'
-               ,dbms_lob.getlength(p_exclude_objects)
-               ,dbms_lob.getlength(p_include_objects)
+               ,p_transform_param_list
+               ,p_exclude_objects.count
+               ,p_include_objects.count
                );
 $end
 
-    if p_network_link is null
-    then
-      open l_cursor for
-        select  value(t) as schema_ddl
-        from    table
-                ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                  ( p_schema => p_schema
-                  , p_new_schema => p_new_schema
-                  , p_sort_objects_by_deps => p_sort_objects_by_deps
-                  , p_object_type => p_object_type
-                  , p_object_names => p_object_names
-                  , p_object_names_include => p_object_names_include
-                  , p_network_link => null -- p_network_link
-                  , p_grantor_is_schema => p_grantor_is_schema
-                  , p_transform_param_list => p_transform_param_list
-                  , p_exclude_objects => p_exclude_objects
-                  , p_include_objects => p_include_objects
-                  )
-                ) t;
-      -- PLS-00994: Cursor Variables cannot be declared as part of a package
-      g_cursor := dbms_sql.to_cursor_number(l_cursor);  
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
-$end
-    else
-      -- check whether database link exists
-      check_network_link(p_network_link);
-      l_network_link := get_db_link(p_network_link);
+    oracle_tools.pkg_str_util.join(p_exclude_objects, chr(10), l_exclude_objects);
+    oracle_tools.pkg_str_util.join(p_include_objects, chr(10), l_include_objects);
 
-      if l_network_link is null
-      then
-        raise program_error;
-      end if;
-
-      declare
-        l_statement constant varchar2(4000 char) :=
-          utl_lms.format_message
-          ( '
-begin  
-  oracle_tools.pkg_ddl_util.set_display_ddl_schema_args@%s
-  ( p_schema => :b1
-  , p_new_schema => :b2
-  , p_sort_objects_by_deps => :b3
-  , p_object_type => :b4
-  , p_object_names => :b5
-  , p_object_names_include => :b6
-  , p_network_link => null
-  , p_grantor_is_schema => :b7
-  , p_transform_param_list => :b8
-  , p_exclude_objects => :b9
-  , p_include_objects => :b10
-  );
-exception
-  when others
-  then
-    :b11 := dbms_utility.format_error_backtrace;
-    raise;
-end;'
-          , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(l_network_link, 'database link')
-          );
-      begin
-        oracle_tools.api_pkg.dbms_output_enable(l_network_link);
-        oracle_tools.api_pkg.dbms_output_clear(l_network_link);
-        execute immediate l_statement
-          using p_schema
-              , p_new_schema
-              , p_sort_objects_by_deps
-              , p_object_type
-              , p_object_names
-              , p_object_names_include
-              , p_grantor_is_schema
-              , p_transform_param_list
-              , p_exclude_objects              
-              , p_include_objects
-              , out l_error_backtrace;
-        oracle_tools.api_pkg.dbms_output_flush(l_network_link);
-      exception
-        when others
-        then
-          oracle_tools.api_pkg.dbms_output_flush(l_network_link);
+    open l_cursor for
+      select  value(t) as schema_ddl
+      from    table
+              ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                ( p_schema => p_schema
+                , p_new_schema => p_new_schema
+                , p_sort_objects_by_deps => p_sort_objects_by_deps
+                , p_object_type => p_object_type
+                , p_object_names => p_object_names
+                , p_object_names_include => p_object_names_include
+                , p_network_link => null
+                , p_grantor_is_schema => p_grantor_is_schema
+                , p_transform_param_list => p_transform_param_list
+                , p_exclude_objects => l_exclude_objects
+                , p_include_objects => l_include_objects
+                )
+              ) t;
+    -- PLS-00994: Cursor Variables cannot be declared as part of a package
+    g_cursor := dbms_sql.to_cursor_number(l_cursor);  
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."error", 'error backtrace: %s', l_error_backtrace);
+    dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
 $end
-          raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
-      end;
-    end if;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end set_display_ddl_schema_args;
+  end set_display_ddl_schema_args_r;
 
   /*
   -- Help procedure to retrieve the results of display_ddl_schema on a remote database.
@@ -5497,7 +5591,12 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
   end get_display_ddl_schema;
 
   /*
@@ -5782,7 +5881,12 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       dbug.leave_on_error;
 $end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     when others
@@ -6982,10 +7086,12 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
 
+/*
     chk
     ( p_description => 'When p_object_names is not empty and p_object_names_include empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names => 'ABC'
+    , p_schema_source => 'SYS' -- need to add it since
     );
 
     chk
@@ -7007,7 +7113,7 @@ $end
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_object_names_include => 1
     );
-
+*/
     chk
     ( p_description => 'When p_schema_source is empty and p_network_link_source not empty.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_wrong
@@ -7034,20 +7140,20 @@ $end
     );
 
     chk
-    ( p_description => 'source equals target.'
+    ( p_description => 'When source equals target.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_source_and_target_equal
     , p_schema_source => g_owner
     , p_schema_target => g_owner
     );
 
     chk
-    ( p_description => 'p_network_link_source not empty and unknown.'
+    ( p_description => 'When p_network_link_source not empty and unknown.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_database_link_does_not_exist
     , p_network_link_source => 'ABC'
     );
 
     chk
-    ( p_description => 'p_network_link_target not empty and unknown.'
+    ( p_description => 'When p_network_link_target not empty and unknown.'
     , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_database_link_does_not_exist
     , p_network_link_target => 'ABC'
     );
@@ -7069,9 +7175,12 @@ $end
       chk
       ( p_description => 'skip_repeatables: ' || r.column_value
       , p_sqlcode_expected => case
-                                when r.column_value is null then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
-                                when r.column_value in (0, 1) then c_no_exception_raised
-                                when r.column_value < 0 then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
+                                when r.column_value is null
+                                then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
+                                when r.column_value in (0, 1)
+                                then c_no_exception_raised -- oracle_tools.pkg_ddl_error.c_no_schema_objects
+                                when r.column_value < 0
+                                then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
                                 else oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
                               end
       , p_skip_repeatables => r.column_value
@@ -7083,7 +7192,7 @@ $end
 
     chk
     ( p_description => 'Running against empty source schema should work'
-    , p_sqlcode_expected => c_no_exception_raised
+    , p_sqlcode_expected => c_no_exception_raised -- oracle_tools.pkg_ddl_error.c_no_schema_objects
     , p_schema_target => g_empty
     , p_schema_source => null
     );

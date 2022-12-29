@@ -80,6 +80,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
   c_exclude_not_null_constraints constant boolean := false;
 
+  c_err_pipelined_no_data_found constant boolean := false; -- false: no exception for no_data_found in  pipelined functions
+
   /*
   -- End of bugs/features
   */
@@ -375,7 +377,18 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   /*
   -- Help procedure to store the results of display_ddl_schema on a remote database.
+  -- Must convert clob into dbms_sql.varchar2a since lobs can not be transferred via a database link.
   */
+  procedure set_display_ddl_schema_args
+  ( p_exclude_objects in clob
+  , p_include_objects in clob
+  );
+
+  procedure get_display_ddl_schema_args
+  ( p_exclude_objects out nocopy dbms_sql.varchar2a
+  , p_include_objects out nocopy dbms_sql.varchar2a
+  );
+
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
@@ -383,11 +396,24 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
   , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
-  , p_network_link in t_network_link
+  , p_network_link in t_network_link_nn
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_exclude_objects in t_objects
-  , p_include_objects in t_objects
+  , p_exclude_objects in clob
+  , p_include_objects in clob
+  );
+
+  procedure set_display_ddl_schema_args_r
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
+  , p_sort_objects_by_deps in t_numeric_boolean_nn
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
+  , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
+  , p_exclude_objects in dbms_sql.varchar2a
+  , p_include_objects in dbms_sql.varchar2a
   );
 
   /*
