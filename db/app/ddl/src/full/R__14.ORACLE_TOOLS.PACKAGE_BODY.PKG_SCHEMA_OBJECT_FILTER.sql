@@ -1125,15 +1125,13 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
-  l_schema constant t_schema_nn := p_schema_object_filter.schema();
-  l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
-
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
   l_excluded_tables_tab t_excluded_tables_tab;
-
+  l_schema constant t_schema_nn := p_schema_object_filter.schema();
+  l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
   l_step varchar2(30 char);
-
+  l_schema_object oracle_tools.t_schema_object;
   l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
     oracle_tools.api_longops_pkg.longops_init
     ( p_target_desc => 'procedure ' || 'GET_SCHEMA_OBJECTS'
@@ -1321,13 +1319,16 @@ $end
             then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
               r.base_object.print;
-$end              
-              process_schema_object
-              ( oracle_tools.t_synonym_object
+              dbug.print(dbug."info", 'just printed base object');
+$end
+              l_schema_object :=
+                oracle_tools.t_synonym_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
                 , p_object_name => r.object_name
-                )
+                );
+              process_schema_object
+              ( l_schema_object
               );
             when 'COMMENT'
             then
