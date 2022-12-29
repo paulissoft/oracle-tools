@@ -1319,6 +1319,9 @@ $end
           case r.object_type
             when 'SYNONYM'
             then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+              r.base_object.print;
+$end              
               process_schema_object
               ( oracle_tools.t_synonym_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
@@ -1328,6 +1331,9 @@ $end
               );
             when 'COMMENT'
             then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+              r.base_object.print;
+$end              
               process_schema_object
               ( oracle_tools.t_comment_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
