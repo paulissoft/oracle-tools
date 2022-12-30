@@ -22,6 +22,10 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
 , member function grantor_is_schema return integer deterministic
 , member function match_perc return integer deterministic
 , member function match_perc_threshold return integer deterministic
+, member procedure match_perc_threshold
+  ( self in out nocopy oracle_tools.t_schema_object_filter 
+  , p_match_perc_threshold in integer
+  )
 , member procedure print
   ( self in oracle_tools.t_schema_object_filter
   )
