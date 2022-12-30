@@ -24,7 +24,7 @@ subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
  */
 
 -- return objects like dbms_metadata.get_ddl would
-function get_all_schema_objects
+function get_named_objects
 ( p_schema in varchar2
 )
 return oracle_tools.t_schema_object_tab

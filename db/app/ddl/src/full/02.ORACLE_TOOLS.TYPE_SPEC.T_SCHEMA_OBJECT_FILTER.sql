@@ -3,7 +3,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
 , grantor_is_schema$ integer
 , object_tab$ oracle_tools.t_text_tab
 , object_cmp_tab$ oracle_tools.t_text_tab
-, schema_object_tab$ oracle_tools.t_schema_object_tab
 , nr_excluded_objects$ integer
 , match_count$ integer
 , match_count_ok$ integer

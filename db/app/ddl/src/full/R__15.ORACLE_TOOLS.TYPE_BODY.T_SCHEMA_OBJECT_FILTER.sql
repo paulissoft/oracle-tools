@@ -64,6 +64,15 @@ begin
   return match_perc_threshold$;
 end match_perc_threshold;
 
+member procedure match_perc_threshold
+( self in out nocopy oracle_tools.t_schema_object_filter 
+, p_match_perc_threshold in integer
+)
+is
+begin
+  self.match_perc_threshold$ := p_match_perc_threshold;
+end match_perc_threshold;
+
 member procedure print
 ( self in oracle_tools.t_schema_object_filter
 )
