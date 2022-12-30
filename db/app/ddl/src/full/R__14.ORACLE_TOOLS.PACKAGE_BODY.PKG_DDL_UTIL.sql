@@ -6258,12 +6258,18 @@ $end
       -- GJP 2021-08-27 Ignore this special case
       -- 1: <NULL>
       -- 2: ALTER TRIGGER "ORACLE_TOOLS"."UI_APEX_MESSAGES_TRG" ENABLE
+
+      -- USING INDEX "ORACLE_TOOLS"."EBA_INTRACK_ERROR_LOOKUP_PK"
       
       return
         case
           when p_line like 'PCTFREE %' 
           then null
           when p_line like 'ALTER TRIGGER % ENABLE'
+          then null
+          when p_line like 'USING INDEX%'
+          then null
+          when p_line like 'TABLESPACE %'
           then null
           else rtrim(rtrim(p_line), ' ENABLE')
         end;        
