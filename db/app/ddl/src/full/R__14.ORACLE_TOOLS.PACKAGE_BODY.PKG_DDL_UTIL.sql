@@ -6053,6 +6053,27 @@ $end
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
+  function metadata_object_type2dict
+  ( p_metadata_object_type in varchar2
+  )
+  return varchar2
+  deterministic
+  is
+  begin
+    return
+      case p_metadata_object_type
+        when 'DB_LINK'               then 'DATABASE LINK'
+        when 'JAVA_SOURCE'           then 'JAVA SOURCE'
+        when 'MATERIALIZED_VIEW'     then 'MATERIALIZED VIEW'
+        when 'PACKAGE_BODY'          then 'PACKAGE BODY'
+        when 'PACKAGE_SPEC'          then 'PACKAGE'
+        when 'TYPE_BODY'             then 'TYPE BODY'
+        when 'TYPE_SPEC'             then 'TYPE'
+        when 'XMLSCHEMA'             then 'XML SCHEMA'
+        else p_metadata_object_type
+      end;
+  end metadata_object_type2dict;  
+
   /*
   -- GPA 2015-12-22
   --
@@ -6226,6 +6247,27 @@ $end
     l_idx2 pls_integer := p_first2;
     l_line1 varchar2(32767 char);
     l_line2 varchar2(32767 char);
+
+    function normalize(p_line in varchar2)
+    return varchar2
+    is
+    begin
+      -- 1: ALTER TABLE "ORACLE_TOOLS"."DEMO_CONSTRAINT_LOOKUP" ADD CONSTRAINT "DEMO_CONSTRAINT_LOOKUP_PK" PRIMARY KEY ("CONSTRAINT_NAME") ENABLE
+      -- 2: ALTER TABLE "ORACLE_TOOLS"."DEMO_CONSTRAINT_LOOKUP" ADD CONSTRAINT "DEMO_CONSTRAINT_LOOKUP_PK" PRIMARY KEY ("CONSTRAINT_NAME")
+      
+      -- GJP 2021-08-27 Ignore this special case
+      -- 1: <NULL>
+      -- 2: ALTER TRIGGER "ORACLE_TOOLS"."UI_APEX_MESSAGES_TRG" ENABLE
+      
+      return
+        case
+          when p_line like 'PCTFREE %' 
+          then null
+          when p_line like 'ALTER TRIGGER % ENABLE'
+          then null
+          else rtrim(rtrim(p_line), ' ENABLE')
+        end;        
+    end normalize;
   begin
     if (p_first1 is null and p_line1_tab.first is null and p_line1_tab.last is null and p_last1 is null) or
        (p_first1 >= p_line1_tab.first and p_line1_tab.last >= p_last1 and p_first1 <= p_last1)
@@ -6254,20 +6296,12 @@ $end
     <<line_loop>>
     while (l_idx1 <= p_last1 or l_idx2 <= p_last2)
     loop
-      l_line1 := case when l_idx1 <= p_last1 and p_line1_tab.exists(l_idx1) then p_line1_tab(l_idx1) else null end;
-      l_line2 := case when l_idx2 <= p_last2 and p_line2_tab.exists(l_idx2) then p_line2_tab(l_idx2) else null end;
+      l_line1 := case when l_idx1 <= p_last1 and p_line1_tab.exists(l_idx1) then normalize(p_line1_tab(l_idx1)) else null end;
+      l_line2 := case when l_idx2 <= p_last2 and p_line2_tab.exists(l_idx2) then normalize(p_line2_tab(l_idx2)) else null end;
+      
       if ( l_line1 is null and l_line2 is null ) or l_line1 = l_line2
       then
         null; -- lines equal
-      elsif l_line1 is null and l_line2 like 'ALTER TRIGGER % ENABLE' or
-            l_line2 is null and l_line1 like 'ALTER TRIGGER % ENABLE'
-      then
-        -- GJP 2021-08-27 Ignore this special case
-        --
-        -- warning: difference found:
-        -- warning: p_line1_tab(38): "<NULL>"
-        -- warning: p_line2_tab(39): "ALTER TRIGGER "ORACLE_TOOLS"."UI_APEX_MESSAGES_TRG" ENABLE"
-        null;
       else
         -- one line does not exist or the lines are not equal
         return l_idx1 || chr(10) || l_line1 || chr(10) || l_idx2 || chr(10) || l_line2;
@@ -6736,6 +6770,12 @@ $end
     l_clob2        clob := null;
     l_first2       pls_integer := null;
     l_last2        pls_integer := null;
+    l_lwb          pls_integer := 1;
+    l_upb          pls_integer := 1;
+
+    l_prev_object_schema t_schema := null;
+    l_prev_object_name t_object_name := null;
+    l_prev_object_type t_metadata_object_type := null;
 
     l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 
@@ -6774,7 +6814,7 @@ $end
       end if;
       l_longops_rec :=
         oracle_tools.api_longops_pkg.longops_init
-        ( p_op_name => 'Read DDL'
+        ( p_op_name => 'Read DDL ' || p_new_schema
         , p_units => 'DDL'
         , p_target_desc => l_program
         , p_totalwork => 0
@@ -6785,11 +6825,11 @@ $end
           ,      row_number() over (partition by t.obj.object_schema(), t.obj.object_type() order by t.obj.object_name()) as seq
           from   table
                  ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                   ( p_schema => g_owner
+                   ( p_schema => $$PLSQL_UNIT_OWNER
                    , p_new_schema => p_new_schema
                    , p_sort_objects_by_deps => 1
                    , p_object_type => null
-                   , p_object_names => g_package
+                   , p_object_names => $$PLSQL_UNIT
                    , p_object_names_include => 1
                    , p_network_link => null
                    , p_grantor_is_schema => 0
@@ -6808,10 +6848,70 @@ $end
         oracle_tools.pkg_str_util.text2clob(r.text, p_clob, true); -- append to p_clob
         oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
       end loop;
+      if l_longops_rec.sofar = 0
+      then
+        raise program_error;
+      end if;
       oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
       l_longops_rec.totalwork := null;
       oracle_tools.pkg_str_util.split(p_str => p_clob, p_str_tab => p_line_tab, p_delimiter => chr(10));
     end read_ddl;
+
+    procedure compare_source
+    ( p_try in pls_integer
+    , p_owner in varchar2
+    , p_object_type in varchar2
+    , p_object_name in varchar2
+    , p_clob in out nocopy clob
+    )
+    is
+    begin
+      -- Copy all lines from p_clob to l_line1_tab but skip empty lines for comments.
+      -- So we use an intermediary l_line2_tab first.
+      oracle_tools.pkg_str_util.split(p_str => p_clob, p_str_tab => l_line2_tab, p_delimiter => chr(10));
+      l_line1_tab.delete;
+      for i_idx in l_line2_tab.first .. l_line2_tab.last
+      loop
+        if p_object_type <> 'COMMENT' or trim(l_line2_tab(i_idx)) is not null
+        then
+          l_line1_tab(l_line1_tab.count+1) := l_line2_tab(i_idx);
+        end if;
+      end loop;
+
+      skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
+
+      -- Skip line 1 (create ...) because it may differ
+      if l_first1 between l_line1_tab.first and l_line1_tab.last and
+         ltrim(l_line1_tab(l_first1)) like 'CREATE %'
+      then
+        l_line1_tab.delete(l_first1);
+        l_first1 := l_first1 + 1;
+        skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
+      end if;
+
+      get_source(p_owner => p_owner
+                ,p_object_type => p_object_type
+                ,p_object_name => p_object_name
+                ,p_line_tab => l_line2_tab
+                ,p_first => l_first2
+                ,p_last => l_last2);
+
+      -- Skip line 1 (create ...) because it may differ
+      if l_first2 between l_line2_tab.first and l_line2_tab.last and
+         ltrim(l_line2_tab(l_first2)) like 'CREATE %'
+      then
+        l_line2_tab.delete(l_first2);
+        l_first2 := l_first2 + 1;
+        skip_ws_lines_around(l_line2_tab, l_first2, l_last2);
+      end if;
+
+      ut.expect
+      ( show_diff(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
+      , l_program || '#' || p_owner || '#' || p_object_type || '#' || p_object_name || '#' || p_try || '#eq'
+      ).to_be_null();
+      
+      dbms_lob.trim(p_clob, 0);
+    end compare_source;
 
     procedure cleanup
     is
@@ -6871,9 +6971,25 @@ $end
       end loop;
     end;
 
+    -- Create an include object CLOB
+    if l_clob1 is null
+    then
+      raise program_error;
+    end if;
+    if l_clob2 is null
+    then
+      raise program_error;
+    end if;
+
+    dbms_lob.trim(l_clob2, 0);
+
     -- Check objects in this schema
     for r in (select t.owner
-                    ,case t.object_type when 'TABLE' then 'COMMENT' else t.object_type end as object_type
+                    ,case t.object_type
+                       when 'TABLE'
+                       then 'COMMENT'
+                       else t.object_type
+                     end as object_type
                     ,t.object_name
                     ,count(*) over () as total
               from   ( select  t.*
@@ -6883,7 +6999,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end                       
                      ) t
-              where  t.owner in (g_owner, g_owner_utplsql)
+              where  t.owner = g_owner -- g_owner_utplsql
               and    t.orderseq <= 3 -- reduce the time
               and    (oracle_tools.t_schema_object.is_a_repeatable(t.object_type) = 1 or /* for comments */ t.object_type = 'TABLE')
               and    t.object_type not in ('EVALUATION CONTEXT','JOB','PROGRAM','RULE','RULE SET','JAVA CLASS','JAVA SOURCE')
@@ -6913,132 +7029,129 @@ $end
                        ,t.object_type
                        ,t.object_name)
     loop
-      if l_longops_rec.totalwork is null
-      then
-        l_longops_rec :=
-          oracle_tools.api_longops_pkg.longops_init
-          ( p_op_name => 'Test source'
-          , p_units => 'objects'
-          , p_target_desc => l_program
-          , p_totalwork => r.total
+      oracle_tools.pkg_str_util.text2clob
+      ( oracle_tools.t_text_tab
+        ( r.owner || ':' || oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type) || ':' || r.object_name || ':*:*:*:*:*:*:*'
+        , chr(10)
+        )
+      , l_clob2
+      , true
+      );
+      l_longops_rec.totalwork := r.total;
+    end loop;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print(dbug."info", 'l_clob2: %s', oracle_tools.pkg_str_util.dbms_lob_substr(l_clob2, 255, 1));
+$end
+
+    l_upb := case when g_loopback is not null then 2 else 1 end;
+
+    l_longops_rec :=
+      oracle_tools.api_longops_pkg.longops_init
+      ( p_op_name => 'Test source'
+      , p_units => 'objects'
+      , p_target_desc => l_program
+      , p_totalwork => l_longops_rec.totalwork * l_upb
+      );
+
+    <<try_loop>>
+    for i_try in l_lwb .. l_upb
+    loop
+      dbms_lob.trim(l_clob1, 0);
+      
+      -- ddl for all objects
+      for r_text in
+      ( select t.obj.object_schema() as object_schema
+        ,      t.obj.object_name() as object_name
+        ,      t.obj.object_type() as object_type
+        ,      u.text
+        from   table
+               ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                 ( p_schema => g_owner
+                 , p_new_schema => null
+                 , p_sort_objects_by_deps => 0
+                 , p_object_type => null
+                 , p_object_names => null
+                 , p_object_names_include => null
+                 , p_network_link => case when i_try = 2 then g_loopback end
+                 , p_grantor_is_schema => 0
+                 , p_exclude_objects => null
+                 , p_include_objects => l_clob2
+                 )
+               ) t
+        ,      table(t.ddl_tab) u
+        where  u.ddl#() = 1
+        order by
+               u.verb()
+        ,      t.obj.object_schema()
+        ,      t.obj.object_type()
+        ,      t.obj.object_name()
+        ,      t.obj.base_object_schema()
+        ,      t.obj.base_object_type()
+        ,      t.obj.base_object_name()
+        ,      t.obj.column_name()
+        ,      t.obj.grantee()
+        ,      t.obj.privilege()
+        ,      t.obj.grantable()
+        ,      u.ddl#()
+      )
+      loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print
+        ( dbug."info"
+        , 'r_text.object_schema: %s; r_text.object_type: %s; r_text.object_name: %s'
+        , r_text.object_schema
+        , r_text.object_type
+        , r_text.object_name
+        );
+$end
+
+        if l_prev_object_schema = r_text.object_schema and
+           l_prev_object_type = r_text.object_type and
+           l_prev_object_name = r_text.object_name
+        then
+          null;
+        elsif l_prev_object_schema is not null and
+              l_prev_object_type is not null and
+              l_prev_object_name is not null and
+              dbms_lob.getlength(l_clob1) > 0
+        then
+          -- compare old
+          compare_source
+          ( i_try
+          , l_prev_object_schema
+          , metadata_object_type2dict(l_prev_object_type)
+          , l_prev_object_name
+          , l_clob1
           );
+        end if;
+
+        oracle_tools.pkg_str_util.text2clob(r_text.text, l_clob1, true);
+
+        l_prev_object_schema := r_text.object_schema;
+        l_prev_object_type := r_text.object_type;
+        l_prev_object_name := r_text.object_name;
+      end loop;
+
+      -- do not forget the last one
+      if l_prev_object_schema is not null and
+         l_prev_object_type is not null and
+         l_prev_object_name is not null and
+         dbms_lob.getlength(l_clob1) > 0
+      then
+        compare_source
+        ( l_upb
+        , l_prev_object_schema
+        , metadata_object_type2dict(l_prev_object_type)
+        , l_prev_object_name
+        , l_clob1
+        );      
       end if;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'r.owner: %s; r.object_type: %s; r.object_name: %s'
-      , r.owner
-      , r.object_type
-      , r.object_name
-      );
-$end
-
-      <<try_loop>>
-      for i_try in 1 .. case when g_loopback is not null then 2 else 1 end
-      loop
-        if l_clob1 is not null
-        then
-          dbms_lob.trim(l_clob1, 0);
-        end if;
-
-        for r_text in
-        ( select t.obj.object_schema() as object_schema
-          ,      t.obj.object_name() as object_name
-          ,      t.obj.object_type() as object_type
-          ,      u.text
-          from   table
-                 ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                   ( p_schema => r.owner
-                   , p_new_schema => null
-                   , p_sort_objects_by_deps => 0
-                   , p_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
-                   , p_object_names => r.object_name
-                   , p_object_names_include => 1
-                   , p_network_link=> case when i_try = 2 then g_loopback end
-                   , p_grantor_is_schema => 0
-                   , p_exclude_objects => null
-                   , p_include_objects => null
-                   )
-                 ) t
-          ,      table(t.ddl_tab) u
-          where  u.ddl#() = 1
-          and    t.obj.object_type() = oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
-          order by
-                 u.verb()
-          ,      t.obj.object_schema()
-          ,      t.obj.object_type()
-          ,      t.obj.object_name()
-          ,      t.obj.base_object_schema()
-          ,      t.obj.base_object_type()
-          ,      t.obj.base_object_name()
-          ,      t.obj.column_name()
-          ,      t.obj.grantee()
-          ,      t.obj.privilege()
-          ,      t.obj.grantable()
-          ,      u.ddl#()
-        )
-        loop
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print
-          ( dbug."info"
-          , 'r_text.object_schema: %s; r_text.object_type: %s; r_text.object_name: %s'
-          , r_text.object_schema
-          , r_text.object_type
-          , r_text.object_name
-          );
-$end
-
-          oracle_tools.pkg_str_util.text2clob(r_text.text, l_clob1, true);
-        end loop;
-
-        -- Copy all lines from l_clob1 to l_line1_tab but skip empty lines for comments.
-        -- So we use an intermediary l_line2_tab first.
-        oracle_tools.pkg_str_util.split(p_str => l_clob1, p_str_tab => l_line2_tab, p_delimiter => chr(10));
-        l_line1_tab.delete;
-        for i_idx in l_line2_tab.first .. l_line2_tab.last
-        loop
-          if r.object_type <> 'COMMENT' or trim(l_line2_tab(i_idx)) is not null
-          then
-            l_line1_tab(l_line1_tab.count+1) := l_line2_tab(i_idx);
-          end if;
-        end loop;
-
-        skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
-
-        -- Skip line 1 (create ...) because it may differ
-        if l_first1 between l_line1_tab.first and l_line1_tab.last and
-           ltrim(l_line1_tab(l_first1)) like 'CREATE %'
-        then
-          l_line1_tab.delete(l_first1);
-          l_first1 := l_first1 + 1;
-          skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
-        end if;
-
-        get_source(p_owner => r.owner
-                  ,p_object_type => r.object_type
-                  ,p_object_name => r.object_name
-                  ,p_line_tab => l_line2_tab
-                  ,p_first => l_first2
-                  ,p_last => l_last2);
-
-        -- Skip line 1 (create ...) because it may differ
-        if l_first2 between l_line2_tab.first and l_line2_tab.last and
-           ltrim(l_line2_tab(l_first2)) like 'CREATE %'
-        then
-          l_line2_tab.delete(l_first2);
-          l_first2 := l_first2 + 1;
-          skip_ws_lines_around(l_line2_tab, l_first2, l_last2);
-        end if;
-
-        ut.expect
-        ( show_diff(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
-        , l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq'
-        ).to_be_null();
-      end loop try_loop;
-
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-    end loop;
+    end loop try_loop;
+
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
     cleanup;
 
