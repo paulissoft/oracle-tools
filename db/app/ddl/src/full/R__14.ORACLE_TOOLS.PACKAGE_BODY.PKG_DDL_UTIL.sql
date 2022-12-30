@@ -6212,7 +6212,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 $end
   end get_source;
 
-  function eq
+  function show_diff
   ( p_line1_tab in dbms_sql.varchar2a
   , p_first1 in pls_integer
   , p_last1 in pls_integer
@@ -6220,20 +6220,13 @@ $end
   , p_first2 in pls_integer
   , p_last2 in pls_integer
   )
-  return boolean
+  return varchar2
   is
     l_idx1 pls_integer := p_first1;
     l_idx2 pls_integer := p_first2;
     l_line1 varchar2(32767 char);
     l_line2 varchar2(32767 char);
-    l_result boolean := true;
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'EQ');
-    dbug.print(dbug."input", 'p_line1_tab.count: %s; p_first1: %s; p_last1: %s', p_line1_tab.count, p_first1, p_last1);
-    dbug.print(dbug."input", 'p_line2_tab.count: %s; p_first2: %s; p_last2: %s', p_line2_tab.count, p_first2, p_last2);
-$end
-
     if (p_first1 is null and p_line1_tab.first is null and p_line1_tab.last is null and p_last1 is null) or
        (p_first1 >= p_line1_tab.first and p_line1_tab.last >= p_last1 and p_first1 <= p_last1)
     then
@@ -6259,7 +6252,7 @@ $end
     end if;
 
     <<line_loop>>
-    while l_result and (l_idx1 <= p_last1 or l_idx2 <= p_last2)
+    while (l_idx1 <= p_last1 or l_idx2 <= p_last2)
     loop
       l_line1 := case when l_idx1 <= p_last1 and p_line1_tab.exists(l_idx1) then p_line1_tab(l_idx1) else null end;
       l_line2 := case when l_idx2 <= p_last2 and p_line2_tab.exists(l_idx2) then p_line2_tab(l_idx2) else null end;
@@ -6277,8 +6270,42 @@ $end
         null;
       else
         -- one line does not exist or the lines are not equal
-        l_result := false;
+        return l_idx1 || chr(10) || l_line1 || chr(10) || l_idx2 || chr(10) || l_line2;
+      end if;
+      l_idx1 := l_idx1 + 1;
+      l_idx2 := l_idx2 + 1;
+    end loop line_loop;
+    
+    return null; -- ok
+  end show_diff;
+
+  function eq
+  ( p_line1_tab in dbms_sql.varchar2a
+  , p_first1 in pls_integer
+  , p_last1 in pls_integer
+  , p_line2_tab in dbms_sql.varchar2a
+  , p_first2 in pls_integer
+  , p_last2 in pls_integer
+  )
+  return boolean
+  is
+    l_result varchar2(32767 char) := null;
+  begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || 'EQ');
+    dbug.print(dbug."input", 'p_line1_tab.count: %s; p_first1: %s; p_last1: %s', p_line1_tab.count, p_first1, p_last1);
+    dbug.print(dbug."input", 'p_line2_tab.count: %s; p_first2: %s; p_last2: %s', p_line2_tab.count, p_first2, p_last2);
+$end
+
+    l_result := show_diff(p_line1_tab, p_first1, p_last1, p_line2_tab, p_first2, p_last2);
+    
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    if l_result is not null
+    then
+      declare
+        l_part_tab dbms_sql.varchar2a;
+      begin
+        oracle_tools.pkg_str_util.split(l_result, chr(10), l_part_tab);
         dbug.print
         ( dbug."warning"
         , 'difference found:'
@@ -6286,27 +6313,25 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print
         ( dbug."warning"
         , 'p_line1_tab(%s): "%s"'
-        , l_idx1
-        , l_line1
+        , l_part_tab(1)
+        , l_part_tab(2)
         );
         dbug.print
         ( dbug."warning"
         , 'p_line2_tab(%s): "%s"'
-        , l_idx2
-        , l_line2
+        , l_part_tab(3)
+        , l_part_tab(4)
         );
+      end;
+    end if;
 $end
-      end if;
-      l_idx1 := l_idx1 + 1;
-      l_idx2 := l_idx2 + 1;
-    end loop line_loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."output", 'return: %s', l_result);
+    dbug.print(dbug."output", 'return: %s', l_result is null);
     dbug.leave;
 $end
 
-   return l_result;
+   return l_result is null;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   exception
@@ -6736,6 +6761,58 @@ $end
       end loop;
     end replace_sequence_start_with;
 
+    procedure read_ddl
+    ( p_new_schema in varchar2
+    , p_clob in out nocopy clob
+    , p_line_tab out nocopy dbms_sql.varchar2a
+    )
+    is
+    begin      
+      if p_clob is not null
+      then
+        dbms_lob.trim(p_clob, 0);
+      end if;
+      l_longops_rec :=
+        oracle_tools.api_longops_pkg.longops_init
+        ( p_op_name => 'Read DDL'
+        , p_units => 'DDL'
+        , p_target_desc => l_program
+        , p_totalwork => 0
+        );
+      for r in
+      ( with src as
+        (        select u.text
+          ,      row_number() over (partition by t.obj.object_schema(), t.obj.object_type() order by t.obj.object_name()) as seq
+          from   table
+                 ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                   ( p_schema => g_owner
+                   , p_new_schema => p_new_schema
+                   , p_sort_objects_by_deps => 1
+                   , p_object_type => null
+                   , p_object_names => g_package
+                   , p_object_names_include => 1
+                   , p_network_link => null
+                   , p_grantor_is_schema => 0
+                   , p_exclude_objects => null
+                   , p_include_objects => null
+                   )
+                 ) t
+          ,      table(t.ddl_tab) u
+          where  t.obj.object_type() <> 'OBJECT_GRANT'
+        )
+        select  src.text
+        from    src
+        where   src.seq = 1
+      )
+      loop
+        oracle_tools.pkg_str_util.text2clob(r.text, p_clob, true); -- append to p_clob
+        oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+      end loop;
+      oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
+      l_longops_rec.totalwork := null;
+      oracle_tools.pkg_str_util.split(p_str => p_clob, p_str_tab => p_line_tab, p_delimiter => chr(10));
+    end read_ddl;
+
     procedure cleanup
     is
     begin
@@ -6757,61 +6834,8 @@ $end
 
     -- The oracle_tools.pkg_ddl_util PACKAGE_SPEC must be created first for an empty schema
     begin
-      if l_clob1 is not null
-      then
-        dbms_lob.trim(l_clob1, 0);
-      end if;
-      for r in
-      ( select u.text
-        from   table
-               ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                 ( p_schema => g_owner
-                 , p_new_schema => null
-                 , p_sort_objects_by_deps => 1
-                 , p_object_type => null
-                 , p_object_names => g_package
-                 , p_object_names_include => 1
-                 , p_network_link => null
-                 , p_grantor_is_schema => 0
-                 , p_exclude_objects => null
-                 , p_include_objects => null
-                 )
-               ) t
-        ,      table(t.ddl_tab) u
-        where  t.obj.object_type() <> 'OBJECT_GRANT'
-      )
-      loop
-        oracle_tools.pkg_str_util.text2clob(r.text, l_clob1, true);
-      end loop;
-      oracle_tools.pkg_str_util.split(p_str => l_clob1, p_str_tab => l_line1_tab, p_delimiter => chr(10));
-
-      if l_clob2 is not null
-      then
-        dbms_lob.trim(l_clob2, 0);
-      end if;
-      for r in
-      ( select u.text
-        from   table
-               ( oracle_tools.pkg_ddl_util.display_ddl_schema
-                 ( p_schema => g_owner
-                 , p_new_schema => g_empty
-                 , p_sort_objects_by_deps => 1
-                 , p_object_type => null
-                 , p_object_names => g_package
-                 , p_object_names_include => 1
-                 , p_network_link => null
-                 , p_grantor_is_schema => 0
-                 , p_exclude_objects => null
-                 , p_include_objects => null
-                 )
-               ) t
-        ,      table(t.ddl_tab) u
-        where  t.obj.object_type() <> 'OBJECT_GRANT'
-      )
-      loop
-        oracle_tools.pkg_str_util.text2clob(r.text, l_clob2, true);
-      end loop;
-      oracle_tools.pkg_str_util.split(p_str => l_clob2, p_str_tab => l_line2_tab, p_delimiter => chr(10));
+      read_ddl(null, l_clob1, l_line1_tab);
+      read_ddl(g_empty, l_clob2, l_line2_tab);
 
       if (l_line1_tab.first is null and l_line2_tab.first is null) or l_line1_tab.first = l_line2_tab.first
       then
@@ -6827,13 +6851,22 @@ $end
         then
           l_line1_tab(i_line_idx) := modify_ddl_text(p_ddl_text => l_line1_tab(i_line_idx), p_schema => g_owner, p_new_schema => g_empty);
 
-          ut.expect(l_line1_tab(i_line_idx), l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx).to_equal(l_line2_tab(i_line_idx));
+          ut.expect
+          ( l_line1_tab(i_line_idx)
+          , l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx
+          ).to_equal(l_line2_tab(i_line_idx));
         elsif l_line1_tab.exists(i_line_idx)
         then
-          ut.expect(l_line1_tab(i_line_idx), l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx).to_be_null();
+          ut.expect
+          ( l_line1_tab(i_line_idx)
+          , l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx
+          ).to_be_null();
         elsif l_line2_tab.exists(i_line_idx)
         then
-          ut.expect(l_line2_tab(i_line_idx), l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx).to_be_null();
+          ut.expect
+          ( l_line2_tab(i_line_idx)
+          , l_program || '#' || g_owner || '#' || g_package || '#line ' || i_line_idx
+          ).to_be_null();
         end if;
       end loop;
     end;
@@ -6882,7 +6915,13 @@ $end
     loop
       if l_longops_rec.totalwork is null
       then
-        l_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
+        l_longops_rec :=
+          oracle_tools.api_longops_pkg.longops_init
+          ( p_op_name => 'Test source'
+          , p_units => 'objects'
+          , p_target_desc => l_program
+          , p_totalwork => r.total
+          );
       end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -6992,7 +7031,10 @@ $end
           skip_ws_lines_around(l_line2_tab, l_first2, l_last2);
         end if;
 
-        ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq').to_be_true();
+        ut.expect
+        ( show_diff(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
+        , l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq'
+        ).to_be_null();
       end loop try_loop;
 
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
@@ -7457,7 +7499,10 @@ $end
           end loop;
         end if;
 
-        ut.expect(eq(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2), l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq').to_be_true();
+        ut.expect
+        ( show_diff(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
+        , l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq'
+        ).to_be_null();
       end loop try_loop;
 
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
