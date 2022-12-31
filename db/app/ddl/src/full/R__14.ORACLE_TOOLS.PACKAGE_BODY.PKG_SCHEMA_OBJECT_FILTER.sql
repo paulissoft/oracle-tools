@@ -42,6 +42,8 @@ return dbms_sql.varchar2a;
 c_default_empty_part_tab constant dbms_sql.varchar2a := fill_array(null);
 c_default_wildcard_part_tab constant dbms_sql.varchar2a:= fill_array('*');
 
+g_default_match_perc_threshold integer := 50;
+
 -- LOCAL
 
 function fill_array(p_element in varchar2)
@@ -478,6 +480,14 @@ exception
 $end
 end get_named_objects;
 
+procedure default_match_perc_threshold
+( p_match_perc_threshold in integer
+)
+is
+begin
+  g_default_match_perc_threshold := p_match_perc_threshold;
+end default_match_perc_threshold;
+
 procedure construct
 ( p_schema in varchar2
 , p_object_type in varchar2
@@ -803,7 +813,7 @@ $end
   p_schema_object_filter.nr_excluded_objects$ := 0;
   p_schema_object_filter.match_count$ := 0;
   p_schema_object_filter.match_count_ok$ := 0;
-  p_schema_object_filter.match_perc_threshold$ := 50;
+  p_schema_object_filter.match_perc_threshold$ := g_default_match_perc_threshold;
 
   if p_exclude_objects is not null
   then

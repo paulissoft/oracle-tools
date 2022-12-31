@@ -472,6 +472,8 @@ $if oracle_tools.cfg_pkg.c_testing $then
   -- test functions
 
   procedure ut_cleanup_empty;
+  procedure ut_disable_schema_export;
+  procedure ut_enable_schema_export;
 
   --%suitepath(DDL)
   --%suite
@@ -488,6 +490,8 @@ $if oracle_tools.cfg_pkg.c_testing $then
   
   --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+  --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
   procedure ut_display_ddl_schema;
 
   --%test
@@ -495,6 +499,8 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+  --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
   procedure ut_display_ddl_schema_diff;
 
   --%test
@@ -508,6 +514,8 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+  --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
   procedure ut_synchronize;
 
   --%test

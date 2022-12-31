@@ -30,6 +30,10 @@ function get_named_objects
 return oracle_tools.t_schema_object_tab
 pipelined;
 
+procedure default_match_perc_threshold
+( p_match_perc_threshold in integer default 50
+);
+
 /**
  * The constructor for an oracle_tools.t_schema_object_filter object.
  *

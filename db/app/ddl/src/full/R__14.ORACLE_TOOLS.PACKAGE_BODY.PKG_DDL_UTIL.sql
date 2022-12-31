@@ -2819,7 +2819,8 @@ $end
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
     l_schema_object_tab oracle_tools.t_schema_object_tab;
-    l_transform_param_tab t_transform_param_tab;
+    -- GJP 2022-12-31 Not used
+    -- l_transform_param_tab t_transform_param_tab;
     l_line_tab dbms_sql.varchar2a;
     l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
@@ -2863,7 +2864,8 @@ $end
     check_network_link(p_network_link => p_network_link);
     check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema'); -- duplicate but for unit testing
 
-    get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
+    -- GJP 2022-12-31 Not used
+    -- get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
 
     if p_network_link is not null
     then
@@ -6209,16 +6211,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."input", 'p_owner: %s; p_object_type: %s; p_object_name: %s', p_owner, p_object_type, p_object_name);
 $end
 
-    -- set transformation parameters for the dbms_metadata.get_xxx functions
-    md_set_transform_param;
-
     oracle_tools.pkg_str_util.split
     ( p_str => get_ddl
     , p_delimiter => chr(10)
     , p_str_tab => p_line_tab
     );
-
-    dbms_metadata#set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
 
     skip_ws_lines_around(p_line_tab, p_first, p_last);
 
@@ -6489,6 +6486,21 @@ $end
 
     commit;
   end ut_cleanup_empty;
+
+  procedure ut_disable_schema_export
+  is
+  begin
+    md_set_transform_param; -- for get_source
+    -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false
+    oracle_tools.pkg_schema_object_filter.default_match_perc_threshold(null);
+  end ut_disable_schema_export;
+  
+  procedure ut_enable_schema_export
+  is
+  begin
+    dbms_metadata#set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
+    oracle_tools.pkg_schema_object_filter.default_match_perc_threshold; -- back to the defaults
+  end ut_enable_schema_export;
 
   -- test functions
   procedure ut_setup
@@ -6841,6 +6853,7 @@ $end
                    , p_grantor_is_schema => 0
                    , p_exclude_objects => null
                    , p_include_objects => null
+                   , p_transform_param_list => null
                    )
                  ) t
           ,      table(t.ddl_tab) u
@@ -7083,6 +7096,7 @@ $end
                  , p_grantor_is_schema => 0
                  , p_exclude_objects => null
                  , p_include_objects => l_clob2
+                 , p_transform_param_list => null
                  )
                ) t
         ,      table(t.ddl_tab) u
@@ -7516,6 +7530,7 @@ $end
                    , p_skip_repeatables => 0
                    , p_exclude_objects => null
                    , p_include_objects => null
+                   , p_transform_param_list => null
                    )
                  ) t
           ,      table(t.ddl_tab) u                                                          
