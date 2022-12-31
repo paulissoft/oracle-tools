@@ -6260,13 +6260,13 @@ $end
       
       return
         case
-          when p_line like 'PCTFREE %' 
+          when ltrim(p_line) like 'PCTFREE %' 
           then null
-          when p_line like 'ALTER TRIGGER % ENABLE'
+          when ltrim(p_line) like 'ALTER TRIGGER % ENABLE'
           then null
-          when p_line like 'USING INDEX%'
+          when ltrim(p_line) like 'USING INDEX%'
           then null
-          when p_line like 'TABLESPACE %'
+          when ltrim(p_line) like 'TABLESPACE %'
           then null
           else rtrim(rtrim(p_line), ' ENABLE')
         end;        
