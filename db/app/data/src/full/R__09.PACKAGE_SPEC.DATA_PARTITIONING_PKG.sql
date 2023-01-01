@@ -13,9 +13,22 @@ any schema issueing partitioning ddl.
 
 **/
 
+subtype timestamp_tz is timestamp with time zone;
+subtype timestamp_ltz is timestamp with local time zone;
+
+subtype t_value is varchar2(4000 char);
+
+type t_value_rec is record
+( partition_name all_tab_partitions.partition_name%type
+, value_lwb_incl t_value
+, value_upb_excl t_value
+);
+
+type t_value_tab is table of t_value_rec;
+
 function alter_table_range_partitioning
-( p_table in varchar2  -- checked by DBMS_ASSERT.SIMPLE_SQL_NAME()
-, p_column in varchar2 -- checked by DBMS_ASSERT.SIMPLE_SQL_NAME()
+( p_table in varchar2  -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_column in varchar2 -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_interval in varchar2 default null -- to undo the interval partitioning
 , p_partition_clause in varchar2 default null -- when you just want to undo interval partitioning
 , p_online in boolean default true
@@ -36,18 +49,19 @@ ALTER TABLE <p_table> PARTITION BY RANGE (<p_column>) INTERVAL (<p_interval>) [ 
 
 **/
 
+function show_partitions
+( p_table in varchar2  -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+)
+return t_value_tab
+pipelined;
 
-procedure drop_partition
-( p_table in varchar2  -- checked by DBMS_ASSERT.SIMPLE_SQL_NAME()
-, p_column in varchar2 -- checked by DBMS_ASSERT.SIMPLE_SQL_NAME()
-, p_maximal_high_value_to_purge in varchar2
-);
+/**
+ 
+Return the partitions and their lowest and highest value as storedin USER_TAB_PARTITIONS.
 
-procedure drop_partition
-( p_table in varchar2  -- checked by DBMS_ASSERT.SIMPLE_SQL_NAME()
-, p_column in varchar2 -- checked by DBMS_ASSERT.SIMPLE_SQL_NAME()
-, p_last_day_to_purge in date
-);
+The table must be in the USERs schema.
+
+**/
 
 end data_partitioning_pkg;
 /
