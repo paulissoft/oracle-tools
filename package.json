@@ -1,0 +1,9 @@
+{
+  "name": "PATO - Paulissoft Application Tools for Oracle",
+  "scripts": {
+      "build:docs": "npx ploc --debug --in db/app/data/src/full/R__09.PACKAGE_SPEC.DATA_PARTITIONING_PKG.sql --out api.md"
+  },
+  "dependencies": {
+    "ploc": "^0.6.1"
+  }
+}

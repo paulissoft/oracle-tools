@@ -28,6 +28,7 @@ Types of changes:
 - [Error logging must include object concerned for DDL generation.](https://github.com/paulissoft/oracle-tools/issues/97)
 - [DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.](https://github.com/paulissoft/oracle-tools/issues/98)
 - [When a wrong APEX export file is imported, the import fails but that error is displayed as a warning by Maven.](https://github.com/paulissoft/oracle-tools/issues/101)
+- [Online interval partitioning support needed.](https://github.com/paulissoft/oracle-tools/issues/105)
 
 ## [1.9.0] - 2022-10-05
 
