@@ -6268,6 +6268,8 @@ $end
           then null
           when ltrim(p_line) like 'TABLESPACE %'
           then null
+          when ltrim(p_line) like 'NOCOMPRESS LOGGING%'
+          then null
           else rtrim(rtrim(p_line), ' ENABLE')
         end;        
     end normalize;
