@@ -13,24 +13,23 @@ any schema issueing partitioning ddl.
 
 **/
 
-subtype timestamp_tz is timestamp with time zone;
-subtype timestamp_ltz is timestamp with local time zone;
-
 subtype t_value is varchar2(4000 char);
 
-type t_value_rec is record
+type t_range_rec is record
 ( partition_name all_tab_partitions.partition_name%type
-, value_lwb_incl t_value
-, value_upb_excl t_value
+, partition_position all_tab_partitions.partition_position%type
+, lwb_incl t_value
+, upb_excl t_value
 );
 
-type t_value_tab is table of t_value_rec;
+type t_range_tab is table of t_range_rec;
 
 function alter_table_range_partitioning
 ( p_table in varchar2  -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
-, p_column in varchar2 -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
-, p_interval in varchar2 default null -- to undo the interval partitioning
-, p_partition_clause in varchar2 default null -- when you just want to undo interval partitioning
+, p_partition_by in varchar2 default null
+, p_interval in varchar2 default null
+, p_subpartition_by in varchar2 default null
+, p_partition_clause in varchar2 default null
 , p_online in boolean default true
 )
 return varchar2;
@@ -44,20 +43,22 @@ The table must be in the USERs schema.
 It returns something like:
 
 ```sql
-ALTER TABLE <p_table> PARTITION BY RANGE (<p_column>) INTERVAL (<p_interval>) [ (<p_partition_clause>) ] [ ONLINE ]
+ALTER TABLE <p_table> MODIFY [ <p_partition_by> ] [ <p_interval> ] [ <p_subpartition_by> ] [ (<p_partition_clause>) ] [ ONLINE ]
 ```
 
 **/
 
-function show_partitions
+function show_partitions_range
 ( p_table in varchar2  -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 )
-return t_value_tab
+return t_range_tab
 pipelined;
 
 /**
  
-Return the partitions and their lowest and highest value as storedin USER_TAB_PARTITIONS.
+Return the partitions and their range as stored in USER_TAB_PARTITIONS.
+
+The high_value in that dictionary view is a long like TIMESTAMP' 2021-08-26 00:00:00'.
 
 The table must be in the USERs schema.
 
