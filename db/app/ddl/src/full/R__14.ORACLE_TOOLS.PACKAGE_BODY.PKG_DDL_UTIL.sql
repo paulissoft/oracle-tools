@@ -6170,13 +6170,12 @@ $end
   end skip_ws_lines_around;
 
   procedure get_source
-  (
-    p_owner in varchar2
-   ,p_object_type in varchar2
-   ,p_object_name in varchar2
-   ,p_line_tab out nocopy dbms_sql.varchar2a
-   ,p_first out pls_integer
-   ,p_last out pls_integer
+  ( p_owner in varchar2
+  , p_object_type in varchar2
+  , p_object_name in varchar2
+  , p_line_tab out nocopy dbms_sql.varchar2a
+  , p_first out pls_integer
+  , p_last out pls_integer
   )
   is
     function get_ddl

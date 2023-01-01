@@ -25,7 +25,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
   -- 0: none, 1: standard, 2: verbose, 3: even more verbose
-  c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
+  c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 2 $else 0 $end; -- never change the last value
   c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
   c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
@@ -470,6 +470,14 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 $if oracle_tools.cfg_pkg.c_testing $then
 
   -- test functions
+  procedure get_source
+  ( p_owner in varchar2
+  , p_object_type in varchar2
+  , p_object_name in varchar2
+  , p_line_tab out nocopy dbms_sql.varchar2a
+  , p_first out pls_integer
+  , p_last out pls_integer
+  );
 
   procedure ut_cleanup_empty;
   procedure ut_disable_schema_export;
