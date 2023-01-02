@@ -226,7 +226,21 @@ is
   l_table_name constant user_tab_partitions.table_name%type :=
     oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table');
   l_partition_lt_reference_tab t_range_tab := t_range_tab();
-  l_ddl varchar2(32767 char);
+  l_ddl varchar2(32767 char) := null;
+
+  procedure cleanup
+  is
+  begin
+    if l_ddl is not null
+    then
+      oracle_tools.data_table_mgmt_pkg.rebuild_indexes
+      ( p_table_owner => user
+      , p_table_name => l_table_name
+      , p_index_name => null
+      , p_index_status => 'UNUSABLE'
+      );
+    end if;
+  end cleanup;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_OLD_PARTITIONS');
@@ -266,14 +280,19 @@ $end
     end loop;
   end if;
 
+  cleanup;
+
 $if cfg_pkg.c_debugging $then
   dbug.leave;
+$end
 exception
   when others
   then
+    cleanup;
+$if cfg_pkg.c_debugging $then
     dbug.leave_on_error;
+$end    
     raise;
-$end
 end drop_old_partitions;
 
 end DATA_PARTITIONING_PKG;
