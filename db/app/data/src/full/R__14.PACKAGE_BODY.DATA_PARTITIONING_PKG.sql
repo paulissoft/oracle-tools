@@ -30,6 +30,7 @@ function alter_table_range_partitioning
 , p_subpartition_by in varchar2
 , p_partition_clause in varchar2
 , p_online in boolean
+, p_update_indexes in varchar2
 )
 return varchar2
 is
@@ -48,19 +49,21 @@ $if cfg_pkg.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'p_online: %s'
-  , p_online
+  , 'p_online: %s; p_update_indexes: %s'
+  , dbug.cast_to_varchar2(p_online)
+  , p_update_indexes
   );
 $end
 
   l_ddl := utl_lms.format_message
-           ( 'ALTER TABLE %s MODIFY %s %s %s %s %s'
+           ( 'ALTER TABLE %s MODIFY %s%s%s%s%s%s'
            , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_table_name, 'table')
-           , case when p_partition_by is not null then 'PARTITION BY ' || p_partition_by end
-           , case when p_interval is not null then 'INTERVAL ' || p_interval end
-           , case when p_subpartition_by is not null then 'SUBPARTITION BY ' || p_subpartition_by end
-           , case when p_partition_clause is not null then '(' || p_partition_clause || ')' end
-           , case when p_online then 'ONLINE' end
+           , case when p_partition_by is not null then chr(10) || 'PARTITION BY ' || p_partition_by end
+           , case when p_interval is not null then chr(10) || 'INTERVAL ' || p_interval end
+           , case when p_subpartition_by is not null then chr(10) || 'SUBPARTITION BY ' || p_subpartition_by end
+           , case when p_partition_clause is not null then chr(10) || p_partition_clause end
+           , case when p_online then chr(10) || 'ONLINE' end
+           , case when p_update_indexes is not null then chr(10) || 'UPDATE INDEXES ' || p_update_indexes end
            );
 
 $if cfg_pkg.c_debugging $then

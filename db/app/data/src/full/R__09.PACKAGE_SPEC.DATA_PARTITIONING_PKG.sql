@@ -52,6 +52,7 @@ function alter_table_range_partitioning
 , p_subpartition_by in varchar2 default null  -- SUBPARTITION BY <p_subpartition_by> (if not NULL)
 , p_partition_clause in varchar2 default null -- describes how partitions are created
 , p_online in boolean default true            -- ONLINE (if TRUE)
+, p_update_indexes in varchar2 default null   -- UPDATE INDEXES <p_update_indexes> (if not NULL)
 )
 return varchar2;
 
@@ -70,7 +71,10 @@ ALTER TABLE <p_table_name> MODIFY
 [ SUBPARTITION BY <p_subpartition_by> ]
 [ <p_partition_clause> ]
 [ ONLINE ]
+[ UPDATE INDEXES <p_update_indexes> ]
 ```
+
+See also [Converting a Non-Partitioned Table to a Partitioned Table](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/vldbg/evolve-nopartition-table.html#GUID-5FDB7D59-DD05-40E4-8AB4-AF82EA0D0FE5).
 
 **/
 
