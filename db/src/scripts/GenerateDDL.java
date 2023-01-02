@@ -54,8 +54,8 @@ public class GenerateDDL
                 final String skipRepeatables = props.getProperty("skip.repeatables");
                 final String interfaceName = props.getProperty("interface");
                 final String transformParams = props.getProperty("transform.params");
-                final String objectsInclude = props.getProperty("objects.include");
-                final String objects = props.getProperty("objects");
+                final String excludeObjects = props.getProperty("exclude.objects");
+                final String includeObjects = props.getProperty("include.objects");
                 final String owner = props.getProperty("owner");
 
                 assert JDBCUrl != null && !JDBCUrl.toString().equals("");
@@ -69,8 +69,8 @@ public class GenerateDDL
                 assert skipRepeatables != null && !skipRepeatables.equals("");
                 assert interfaceName != null && !interfaceName.equals("");
                 assert transformParams != null;
-                assert objectsInclude != null;
-                assert objects != null;
+                assert excludeObjects != null;
+                assert includeObjects != null;
                 assert owner != null;
 
                 // Load and register Oracle driver
@@ -93,7 +93,8 @@ public class GenerateDDL
 
                 pstmt = conn.prepareCall("{call " + owner + (owner.equals("") ? "" : ".") + "p_generate_ddl(?,?,?,?,?,?,?,?,?,?,?,?,?)}");
 
-                final Clob objectsClob = conn.createClob();
+                final Clob excludeObjectsClob = conn.createClob();
+                final Clob includeObjectsClob = conn.createClob();
 
                 // Print the arguments as one multi line comment and every line as a comment too.
                 out.println("/*");
@@ -173,23 +174,15 @@ public class GenerateDDL
                         break;
                     
                     case 11:
-                        out.println("objects include     : " + objectsInclude);
-                        // this argument can be empty so setNull must be called explicitly because empty string can not be converted to a null integer
-                        try {
-                            pstmt.setInt(nr, Integer.parseInt(objectsInclude));
-                        } catch(Exception e) {
-                            if (objectsInclude != null && objectsInclude.toString().trim().length() > 0) {
-                                throw new Exception("Can not convert '" + objectsInclude  + "' to an integer");
-                            } else {
-                                pstmt.setNull(nr, Types.INTEGER);
-                            }
-                        }
+                        out.println("exclude objects     : " + excludeObjects);
+                        excludeObjectsClob.setString(1, excludeObjects);
+                        pstmt.setClob(nr, excludeObjectsClob);
                         break;
     
                     case 12:
-                        out.println("objects             : " + objects);
-                        objectsClob.setString(1, objects);
-                        pstmt.setClob(nr, objectsClob);
+                        out.println("include objects     : " + includeObjects);
+                        includeObjectsClob.setString(1, includeObjects);
+                        pstmt.setClob(nr, includeObjectsClob);
                         break;
 
                     case 13:

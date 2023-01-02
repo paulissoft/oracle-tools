@@ -99,6 +99,10 @@ c_not_implemented              constant pls_integer := -20122;
 e_not_implemented              exception;
 pragma exception_init(e_not_implemented, -20122);
 
+c_no_schema_objects            constant pls_integer := -20123;
+e_no_schema_objects            exception;
+pragma exception_init(e_no_schema_objects, -20123);
+
 /**
  * Raise an error.
  *

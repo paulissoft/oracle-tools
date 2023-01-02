@@ -51,6 +51,7 @@ begin
   then
     execute immediate 'create user EMPTY identified by "EMPTY" default tablespace &&tablespace_users temporary tablespace &&tablespace_temp';
     execute immediate 'alter user EMPTY quota unlimited on &&tablespace_users';
+    execute immediate 'grant create procedure, create type, create view, create session to EMPTY';
   end if;
 end;
 /

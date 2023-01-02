@@ -276,6 +276,23 @@ begin
   return l_str;
 end join;
 
+procedure join
+( p_str_tab in dbms_sql.varchar2a
+, p_delimiter in varchar2 := ','
+, p_str out nocopy clob
+)
+is
+begin
+  p_str := null;
+  if p_str_tab.count > 0
+  then
+    for i_idx in p_str_tab.first .. p_str_tab.last
+    loop
+      append_text(case when i_idx > p_str_tab.first then p_delimiter end || p_str_tab(i_idx), p_str);
+    end loop;
+  end if;
+end join;  
+
 procedure trim
 ( p_str in out nocopy clob
 , p_set in varchar2

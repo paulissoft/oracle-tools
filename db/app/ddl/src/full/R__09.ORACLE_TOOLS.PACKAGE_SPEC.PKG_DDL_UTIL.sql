@@ -80,6 +80,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   -- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
   c_exclude_not_null_constraints constant boolean := false;
 
+  c_err_pipelined_no_data_found constant boolean := false; -- false: no exception for no_data_found in  pipelined functions
+
   /*
   -- End of bugs/features
   */
@@ -149,8 +151,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_network_link          The network link.
   * @param p_grantor_is_schema     An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
   * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   *
   * @return A list of DDL text plus information about the object.
   */
@@ -164,8 +166,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link in t_network_link default null
   , p_grantor_is_schema in t_numeric_boolean_nn default 0
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -189,8 +191,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_network_link_target   Target network link.
   * @param p_skip_repeatables      Skip repeatables objects (1) or check all objects (0)
   * @param p_transform_param_list  A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   *
   * @return A list of DDL text plus information about the object.
   */
@@ -204,8 +206,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_network_link_target in t_network_link default null
   , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Default for Flyway with repeatable migrations
   , p_transform_param_list in varchar2 default c_transform_param_list
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined;
@@ -239,8 +241,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_schema_target         Target schema.
   * @param p_network_link_source   Source network link.
   * @param p_network_link_target   Target network link.
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   */
   procedure synchronize
   ( p_object_type in t_metadata_object_type default null
@@ -250,8 +252,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_schema_target in t_schema_nn default user
   , p_network_link_source in t_network_link default null
   , p_network_link_target in t_network_link default null
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   );
 
   /**
@@ -262,8 +264,8 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
   * @param p_schema_target         Target schema.
   * @param p_network_link_target   Target network link.
-  * @param p_objects               A newline separated list of objects (their schema object id actually).
-  * @param p_objects_include       How to treat the object list: include (1), exclude (0) or don't care (null)?
+  * @param p_exclude_objects       A newline separated list of objects to exclude (their schema object id actually).
+  * @param p_include_objects       A newline separated list of objects to include (their schema object id actually).
   */
   procedure uninstall
   ( p_object_type in t_metadata_object_type default null
@@ -271,46 +273,9 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_names_include in t_numeric_boolean default null
   , p_schema_target in t_schema_nn default user
   , p_network_link_target in t_network_link default null
-  , p_objects in t_objects default null
-  , p_objects_include in t_numeric_boolean default null
+  , p_exclude_objects in t_objects default null
+  , p_include_objects in t_objects default null
   );
-
-  /**
-  * Get all the object info from several dictionary views.
-  * 
-  * These are the dictionary views:
-  * <ul>
-  * <li>ALL_QUEUE_TABLES</li>
-  * <li>ALL_MVIEWS</li>
-  * <li>ALL_TABLES</li>
-  * <li>ALL_OBJECTS</li>
-  * <li>ALL_TAB_PRIVS</li>
-  * <li>ALL_SYNONYMS</li>
-  * <li>ALL_TAB_COMMENTS</li>
-  * <li>ALL_MVIEW_COMMENTS</li>
-  * <li>ALL_COL_COMMENTS</li>
-  * <li>ALL_CONS_COLUMNS</li>
-  * <li>ALL_CONSTRAINTS</li>
-  * <li>ALL_TAB_COLUMNS</li>
-  * <li>ALL_TRIGGERS</li>
-  * <li>ALL_INDEXES</li>
-  * </ul>
-  *
-  * @param p_schema_object_filter  The schema object filter.
-  * @param p_schema_object_tab     Only applicable for the procedure variant. See the description for return.
-  *
-  * @return A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
-  */
-  procedure get_schema_object
-  ( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter 
-  , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-  );
-
-  function get_schema_object
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter default oracle_tools.t_schema_object_filter()
-  )
-  return oracle_tools.t_schema_object_tab
-  pipelined;
 
   procedure get_member_ddl
   ( p_schema_ddl in oracle_tools.t_schema_ddl
@@ -373,7 +338,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   deterministic;
 
   /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
+  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
   function fetch_ddl
   ( p_object_type in varchar2
@@ -387,12 +352,24 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   pipelined;
 
   /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_object()
+  -- Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
   function get_schema_ddl
+  ( p_schema in varchar2 default user
+  , p_object_type in varchar2 default null
+  , p_object_names in varchar2 default null
+  , p_object_names_include in integer default null
+  , p_grantor_is_schema in integer default 0
+  , p_exclude_objects in clob default null
+  , p_include_objects in clob default null
+  , p_transform_param_list in varchar2 default c_transform_param_list
+  )
+  return oracle_tools.t_schema_ddl_tab  
+  pipelined;
+  
+  function get_schema_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-    -- if null use oracle_tools.pkg_ddl_util.get_schema_object(p_schema_object_filter)
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab default null
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_transform_param_list in varchar2 default c_transform_param_list
   )
   return oracle_tools.t_schema_ddl_tab
@@ -400,7 +377,18 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
   /*
   -- Help procedure to store the results of display_ddl_schema on a remote database.
+  -- Must convert clob into dbms_sql.varchar2a since lobs can not be transferred via a database link.
   */
+  procedure set_display_ddl_schema_args
+  ( p_exclude_objects in clob
+  , p_include_objects in clob
+  );
+
+  procedure get_display_ddl_schema_args
+  ( p_exclude_objects out nocopy dbms_sql.varchar2a
+  , p_include_objects out nocopy dbms_sql.varchar2a
+  );
+
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
@@ -408,11 +396,24 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
   , p_object_type in t_metadata_object_type
   , p_object_names in t_object_names
   , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
-  , p_network_link in t_network_link
+  , p_network_link in t_network_link_nn
   , p_grantor_is_schema in t_numeric_boolean_nn
   , p_transform_param_list in varchar2
-  , p_objects in t_objects
-  , p_objects_include in t_numeric_boolean
+  , p_exclude_objects in clob
+  , p_include_objects in clob
+  );
+
+  procedure set_display_ddl_schema_args_r
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
+  , p_sort_objects_by_deps in t_numeric_boolean_nn
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean /* OK (remote no copying of types) */
+  , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
+  , p_exclude_objects in dbms_sql.varchar2a
+  , p_include_objects in dbms_sql.varchar2a
   );
 
   /*
@@ -469,8 +470,18 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 $if oracle_tools.cfg_pkg.c_testing $then
 
   -- test functions
+  procedure get_source
+  ( p_owner in varchar2
+  , p_object_type in varchar2
+  , p_object_name in varchar2
+  , p_line_tab out nocopy dbms_sql.varchar2a
+  , p_first out pls_integer
+  , p_last out pls_integer
+  );
 
   procedure ut_cleanup_empty;
+  procedure ut_disable_schema_export;
+  procedure ut_enable_schema_export;
 
   --%suitepath(DDL)
   --%suite
@@ -483,11 +494,21 @@ $if oracle_tools.cfg_pkg.c_testing $then
   procedure ut_teardown;
 
   --%test
+  procedure ut_display_ddl_schema_chk;
+  
+  --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+  --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
   procedure ut_display_ddl_schema;
 
   --%test
+  procedure ut_display_ddl_schema_diff_chk;
+
+  --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+  --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
   procedure ut_display_ddl_schema_diff;
 
   --%test
@@ -500,10 +521,9 @@ $if oracle_tools.cfg_pkg.c_testing $then
   procedure ut_is_a_repeatable;
 
   --%test
-  procedure ut_get_schema_object;
-
-  --%test
   --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+  --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+  --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
   procedure ut_synchronize;
 
   --%test
@@ -511,9 +531,6 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   --%test
   procedure ut_modify_ddl_text;
-
-  --%test
-  procedure ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
