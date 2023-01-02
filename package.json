@@ -1,7 +1,7 @@
 {
   "name": "PATO - Paulissoft Application Tools for Oracle",
   "scripts": {
-      "build:docs": "npx ploc --debug --in db/app/*/src/full/*.PACKAGE_SPEC.*.sql --out docs/ploc/{folder}{file}.md"
+      "build:docs": "npx ploc --in db/app/*/src/full/*.PACKAGE_SPEC.*.sql --out docs/ploc/{folder}{file}.md"
   },
   "dependencies": {
     "ploc": "^0.6.1"
