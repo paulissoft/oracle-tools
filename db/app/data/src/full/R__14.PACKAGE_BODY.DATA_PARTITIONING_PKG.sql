@@ -223,7 +223,8 @@ end find_partitions_range;
 
 procedure drop_old_partitions 
 ( p_table_name in varchar2
-, p_reference_timestamp in timestamp -- the reference timestamp to find the reference partition (that will NOT be dropped)
+, p_reference_timestamp in timestamp
+, p_update_index_clauses in varchar2
 )
 is
   l_table_name constant user_tab_partitions.table_name%type :=
@@ -234,8 +235,16 @@ is
   procedure cleanup
   is
   begin
-    if l_ddl is not null
+    if l_ddl is not null -- something has been dropped?
     then
+      -- See also Asynchronous Global Index Maintenance for Dropping and Truncating Partitions
+      dbms_part.cleanup_gidx
+      ( schema_name_in => user
+      , table_name_in => trim('"' from l_table_name)
+      , options => 'COALESCE'
+      );
+
+      -- As a last resort rebuild unusable indexes
       oracle_tools.data_table_mgmt_pkg.rebuild_indexes
       ( p_table_owner => user
       , p_table_name => l_table_name
@@ -249,9 +258,10 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_OLD_PARTITIONS');
   dbug.print
   ( dbug."input"
-  , 'p_table_name: %s; p_reference_timestamp: %s'
+  , 'p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s'
   , p_table_name
   , to_char(p_reference_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff9')
+  , p_update_index_clauses
   );
 $end
 
@@ -259,7 +269,13 @@ $end
   select  t.*
   bulk collect
   into    l_partition_lt_reference_tab
-  from    table(oracle_tools.data_partitioning_pkg.find_partitions_range(l_table_name, p_reference_timestamp, '<')) t
+  from    table
+          ( oracle_tools.data_partitioning_pkg.find_partitions_range
+            ( l_table_name
+            , p_reference_timestamp
+            , '<'
+            )
+          ) t
   where   t.interval = 'YES';
 
   if l_partition_lt_reference_tab.count > 0
@@ -267,12 +283,13 @@ $end
     for i_idx in l_partition_lt_reference_tab.first .. l_partition_lt_reference_tab.last
     loop
       l_ddl := utl_lms.format_message
-               ( 'alter table %s drop partition %s'
+               ( 'ALTER TABLE %s DROP PARTITION %s %s'
                , l_table_name
                , oracle_tools.data_api_pkg.dbms_assert$enquote_name
                  ( l_partition_lt_reference_tab(i_idx).partition_name
                  , 'partition'
                  )
+               , p_update_index_clauses
                );
                
 $if cfg_pkg.c_debugging $then

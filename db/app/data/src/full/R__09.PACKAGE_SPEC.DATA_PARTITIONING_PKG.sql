@@ -120,23 +120,38 @@ The table must be in the USERs schema.
 **/
 
 procedure drop_old_partitions 
-( p_table_name in varchar2           -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
-, p_reference_timestamp in timestamp -- the reference timestamp to find the reference partition (that will NOT be dropped)
+( p_table_name in varchar2                                    -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_reference_timestamp in timestamp                          -- the reference timestamp to find the reference partition (that will NOT be dropped)
+, p_update_index_clauses in varchar2 default 'UPDATE INDEXES' -- can be empty or UPDATE GLOBAL INDEXES as well
 );
 
 /**
  
-Drop partitions before the partition found by the reference timestamp.
+Drop interval partitions before the partition found by the reference timestamp.
 
-This query will be used to drop the old partitions:
+This query will be used to find the old partitions:
 
 ```sql
 select  t.* 
-from    table(oracle_tools.data_partitioning_pkg.find_partitions_range(p_table_name, p_reference_timestamp, '<')) t
+from    table
+        ( oracle_tools.data_partitioning_pkg.find_partitions_range
+          ( p_table_name
+          , p_reference_timestamp
+          , '<'
+          )
+        ) t
 where   t.interval = 'YES'
 ```
 
+The statement to drop: 
+
+```sql
+ALTER TABLE <p_table_name> DROP PARTITION <old partition> <p_update_index_clauses>
+```
+
 The table must be in the USERs schema.
+
+See also [Updating indexes with partition maintenance](https://connor-mcdonald.com/2017/09/20/updating-indexes-with-partition-maintenance/).
 
 **/
                            
