@@ -48,6 +48,73 @@ wwv_flow_api.component_begin (
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53359072665018404)
+,p_name=>'DBMS_ASSERT.ENQUOTE_NAME'
+,p_message_text=>'Can not enclose this "<p1>" name with quotes: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53358920666018386)
+,p_name=>'DBMS_ASSERT.ENQUOTE_NAME'
+,p_message_language=>'nl'
+,p_message_text=>'Kan geen quotes om deze "<p1>" naam zetten: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53358642778018386)
+,p_name=>'DBMS_ASSERT.QUALIFIED_SQL_NAME'
+,p_message_text=>'This is no qualified SQL "<p1>" name: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53358359222018385)
+,p_name=>'DBMS_ASSERT.QUALIFIED_SQL_NAME'
+,p_message_language=>'nl'
+,p_message_text=>'Dit is geen gekwalificeerde SQL "<p1>" naam: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53358069312018385)
+,p_name=>'DBMS_ASSERT.SCHEMA_NAME'
+,p_message_text=>'This is no "<p1>" schema name: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53357708109018384)
+,p_name=>'DBMS_ASSERT.SCHEMA_NAME'
+,p_message_language=>'nl'
+,p_message_text=>'Dit is geen "<p1>" schemanaam: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53357422142018383)
+,p_name=>'DBMS_ASSERT.SIMPLE_SQL_NAME'
+,p_message_text=>'This is no simple SQL "<p1>" name: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53357124915018383)
+,p_name=>'DBMS_ASSERT.SIMPLE_SQL_NAME'
+,p_message_language=>'nl'
+,p_message_text=>'Dit is geen simpele SQL "<p1>" naam: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53356772910018383)
+,p_name=>'DBMS_ASSERT.SQL_OBJECT_NAME'
+,p_message_text=>'This is no SQL "<p1>" object name: <p2>'
+);
+wwv_flow_api.create_message(
+ p_id=>wwv_flow_api.id(53356554836018382)
+,p_name=>'DBMS_ASSERT.SQL_OBJECT_NAME'
+,p_message_language=>'nl'
+,p_message_text=>'Dit is geen SQL "<p1>" objectnaam: <p2>'
+);
+wwv_flow_api.component_end;
+end;
+/
+begin
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.10.01'
+,p_release=>'20.2.0.00.20'
+,p_default_workspace_id=>2601326064169245
+,p_default_application_id=>138
+,p_default_id_offset=>67978470344966559
+,p_default_owner=>'ORACLE_TOOLS'
+);
+wwv_flow_api.create_message(
  p_id=>wwv_flow_api.id(30544349742291907)
 ,p_name=>'ORACLE_TOOLS.FINISH_LOAD_FILE'
 ,p_message_text=>'This will load just one sheet (the first) from the spreadsheet file. The first row of that sheet must be the only header row. Do you want to continue?'
