@@ -1457,7 +1457,7 @@ $end
     end if;
   end get_transform_param_tab;
 
-  procedure dbms_metadata#set_transform_param
+  procedure dbms_metadata$set_transform_param
   ( transform_handle   in number
   , name               in varchar2
   , value              in varchar2
@@ -1483,7 +1483,7 @@ $end
     );
   end;
 
-  procedure dbms_metadata#set_transform_param
+  procedure dbms_metadata$set_transform_param
   ( transform_handle   in number
   , name               in varchar2
   , value              in boolean default true
@@ -1509,7 +1509,7 @@ $end
     );
   end;
 
-  procedure dbms_metadata#set_transform_param
+  procedure dbms_metadata$set_transform_param
   ( transform_handle   in number
   , name               in varchar2
   , value              in number
@@ -1535,32 +1535,32 @@ $end
     );
   end;
     
-  procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in varchar2)
+  procedure dbms_metadata$set_filter(handle in number, name in varchar2, value in varchar2)
   is
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
 $end
     dbms_metadata.set_filter(handle, name, value);
-  end dbms_metadata#set_filter;
+  end dbms_metadata$set_filter;
 
-  procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in boolean default true)
+  procedure dbms_metadata$set_filter(handle in number, name in varchar2, value in boolean default true)
   is
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, dbug.cast_to_varchar2(value));
 $end
     dbms_metadata.set_filter(handle, name, value);
-  end dbms_metadata#set_filter;
+  end dbms_metadata$set_filter;
 
-  procedure dbms_metadata#set_filter(handle in number, name in varchar2, value in number)
+  procedure dbms_metadata$set_filter(handle in number, name in varchar2, value in number)
   is
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.print(dbug."info", 'dbms_metadata.set_filter(%s, %s, %s)', handle, name, value);
 $end
     dbms_metadata.set_filter(handle, name, value);
-  end dbms_metadata#set_filter;
+  end dbms_metadata$set_filter;
 
   procedure md_set_transform_param
   ( p_transform_handle in number default dbms_metadata.session_transform
@@ -1575,8 +1575,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.print(dbug."input", 'p_use_object_type_param: %s', p_use_object_type_param);
 $end
 
-    dbms_metadata#set_transform_param(p_transform_handle, 'PRETTY'              , true );
-    dbms_metadata#set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
+    dbms_metadata$set_transform_param(p_transform_handle, 'PRETTY'              , true );
+    dbms_metadata$set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
 
     for i_idx in p_object_type_tab.first .. p_object_type_tab.last
     loop
@@ -1585,29 +1585,29 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
 $end
       if p_object_type_tab(i_idx) in ('TABLE', 'INDEX', 'CLUSTER', 'CONSTRAINT', 'ROLLBACK_SEGMENT', 'TABLESPACE')
       then
-        dbms_metadata#set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata#set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata#set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       -- GJP 2022-12-15 Maybe setting CONSTRAINTS before CONSTRAINTS_AS_ALTER may generate this command:
       -- ALTER TABLE "BC_BO"."BC_CONSUMPTION_PREDICTIONS" MODIFY ("GRD_ID" CONSTRAINT "NNC_CPN_GRD_ID" NOT NULL ENABLE)
       if p_object_type_tab(i_idx) in ('TABLE', 'VIEW')
       then
-        dbms_metadata#set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TABLE'
       then
-        dbms_metadata#set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata#set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'VIEW'
       then
         -- GPA 2016-12-01 The FORCE keyword may be removed by the generate_ddl.pl script, depending on an option.
-        dbms_metadata#set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TYPE_SPEC'
       then
-        dbms_metadata#set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        dbms_metadata$set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
     end loop;
 
@@ -1656,7 +1656,7 @@ $end
       then
         for i_idx in l_exclude_name_expr_tab.first .. l_exclude_name_expr_tab.last
         loop
-          dbms_metadata#set_filter(handle => p_handle, name => p_name, value => q'[LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']');
+          dbms_metadata$set_filter(handle => p_handle, name => p_name, value => q'[LIKE ']' || l_exclude_name_expr_tab(i_idx) || q'[' ESCAPE '\']');
         end loop;
       end if;
     end set_exclude_name_expr;
@@ -1673,9 +1673,9 @@ $end
     if p_object_type = 'SCHEMA_EXPORT'
     then
       -- Use filters to specify the schema. See SCHEMA_EXPORT_OBJECTS for a complete overview.
-      dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
-      -- dbms_metadata#set_filter(handle => p_handle, name => 'INCLUDE_USER', value => true);
-      dbms_metadata#set_filter
+      dbms_metadata$set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+      -- dbms_metadata$set_filter(handle => p_handle, name => 'INCLUDE_USER', value => true);
+      dbms_metadata$set_filter
       ( handle => p_handle
       , name =>  'EXCLUDE_PATH_EXPR'
       , value => 'in ('   ||
@@ -1731,13 +1731,13 @@ $end
             raise program_error;
           end if;
 
-          dbms_metadata#set_filter(handle => p_handle, name => 'SYSTEM_GENERATED', value => false);
-          dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+          dbms_metadata$set_filter(handle => p_handle, name => 'SYSTEM_GENERATED', value => false);
+          dbms_metadata$set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
 
           if p_object_name_tab is not null and
              p_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata#set_filter
+            dbms_metadata$set_filter
             ( handle => p_handle
             , name => 'NAME_EXPR'
             , value => in_list_expr(p_object_name_tab)
@@ -1747,14 +1747,14 @@ $end
           if p_base_object_name_tab is not null and
              p_base_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata#set_filter
+            dbms_metadata$set_filter
             ( handle => p_handle
             , name => 'BASE_OBJECT_NAME_EXPR'
             , value => in_list_expr(p_base_object_name_tab)
             );
           end if;
 
-          dbms_metadata#set_filter
+          dbms_metadata$set_filter
           ( handle => p_handle
           , name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
           , value => in_list_expr(c_object_to_ignore_tab)
@@ -1767,19 +1767,19 @@ $end
             raise program_error;
           end if;
 
-          dbms_metadata#set_filter(handle => p_handle, name => 'BASE_OBJECT_SCHEMA', value => p_base_object_schema);
+          dbms_metadata$set_filter(handle => p_handle, name => 'BASE_OBJECT_SCHEMA', value => p_base_object_schema);
 
           if p_base_object_name_tab is not null and
              p_base_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata#set_filter
+            dbms_metadata$set_filter
             ( handle => p_handle
             , name => 'BASE_OBJECT_NAME_EXPR'
             , value => in_list_expr(p_base_object_name_tab)
             );
           end if;
 
-          dbms_metadata#set_filter
+          dbms_metadata$set_filter
           ( handle => p_handle
           , name => 'EXCLUDE_BASE_OBJECT_NAME_EXPR'
           , value => in_list_expr(c_object_to_ignore_tab)
@@ -1792,7 +1792,7 @@ $end
         end if;
       elsif p_object_type = 'SYNONYM'
       then
-        dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+        dbms_metadata$set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
 
         -- Voor synoniemen moet gelden:
         -- 1a) lange naam van synonym moet gelijk zijn aan korte naam EN
@@ -1800,14 +1800,14 @@ $end
         if p_object_schema != 'PUBLIC'
         then
           -- simple custom filter: always allowed
-          dbms_metadata#set_filter
+          dbms_metadata$set_filter
           ( handle => p_handle
           , name => 'CUSTOM_FILTER'
           , value => '/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME'
           );
         else
           -- simple custom filter: always allowed
-          dbms_metadata#set_filter
+          dbms_metadata$set_filter
           ( handle => p_handle
           , name => 'CUSTOM_FILTER'
           , value => q'[/* 1a */ KU$.SYN_LONG_NAME = KU$.SCHEMA_OBJ.NAME AND /* 1b */ KU$.OWNER_NAME = ']' ||
@@ -1818,7 +1818,7 @@ $end
         if p_object_name_tab is not null and
            p_object_name_tab.count between 1 and c_max_object_name_tab_count
         then
-          dbms_metadata#set_filter
+          dbms_metadata$set_filter
           ( handle => p_handle
           , name => 'NAME_EXPR'
           , value => in_list_expr(p_object_name_tab)
@@ -1827,7 +1827,7 @@ $end
       else
         if p_object_schema != 'DBA'
         then
-          dbms_metadata#set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
+          dbms_metadata$set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
         end if;
 
         if p_object_type not in ('DEFAULT_ROLE', 'FGA_POLICY', 'ROLE_GRANT')
@@ -1835,14 +1835,14 @@ $end
           if p_object_name_tab is not null and
              p_object_name_tab.count between 1 and c_max_object_name_tab_count
           then
-            dbms_metadata#set_filter
+            dbms_metadata$set_filter
             ( handle => p_handle
             , name => 'NAME_EXPR'
             , value => in_list_expr(p_object_name_tab)
             );
           end if;
 
-          dbms_metadata#set_filter
+          dbms_metadata$set_filter
           ( handle => p_handle
           , name => 'EXCLUDE_NAME_EXPR'
           , value => in_list_expr(c_object_to_ignore_tab)
@@ -1851,7 +1851,7 @@ $end
 
         if p_object_type = 'TABLE'
         then
-          dbms_metadata#set_filter(handle => p_handle, name => 'SECONDARY', value => false);
+          dbms_metadata$set_filter(handle => p_handle, name => 'SECONDARY', value => false);
         end if;
       end if;
 
@@ -6492,6 +6492,8 @@ $end
   is
   begin
     md_set_transform_param; -- for get_source
+    -- no constraints
+    dbms_metadata$set_transform_param(dbms_metadata.session_transform, 'CONSTRAINTS', false);
     -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false
     oracle_tools.pkg_schema_object_filter.default_match_perc_threshold(null);
   end ut_disable_schema_export;
@@ -6499,7 +6501,7 @@ $end
   procedure ut_enable_schema_export
   is
   begin
-    dbms_metadata#set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
+    dbms_metadata$set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
     oracle_tools.pkg_schema_object_filter.default_match_perc_threshold; -- back to the defaults
   end ut_enable_schema_export;
 
