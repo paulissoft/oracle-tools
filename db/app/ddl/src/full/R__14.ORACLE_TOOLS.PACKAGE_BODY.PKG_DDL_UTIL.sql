@@ -274,6 +274,8 @@ $end
     l_transform_param_tab('SQLTERMINATOR') := false;
     l_transform_param_tab('STORAGE') := false;
     l_transform_param_tab('TABLESPACE') := false;
+
+    return l_transform_param_tab;
   end default_transform_param_tab;
 
   function get_db_link
