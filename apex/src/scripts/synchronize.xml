@@ -81,9 +81,14 @@ The following properties are only important during export:
     <condition property="my.sql.home" value="${env.SQL_HOME}">
       <available file="${env.SQL_HOME}/bin/sql" type="file" />
     </condition>
+    <condition property="my.sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
+      <available file="${my.sql.home}/bin/sql.exe" type="file" />
+    </condition>
+    <property name="sql.executable" location="${my.sql.executable}" />
     <echo message="(synchronize.xml.init) $${sql.home}: ${sql.home}" />
     <echo message="(synchronize.xml.init) $${env.SQL_HOME}: ${env.SQL_HOME}" />
     <echo message="(synchronize.xml.init) $${my.sql.home}: ${my.sql.home}" />
+    <echo message="(synchronize.xml.init) $${sql.executable}: ${sql.executable}" />
 
     <property name="runtime.classpath" refid="runtime.classpath" />
 
@@ -198,7 +203,7 @@ The following properties are only important during export:
              inputstring='@${basedir}/import.sql "${workspace}" "${application}" "${input.file}"'/>
   </target>
 
-  <macrodef name="sqlcl" description="Run Java Sql Client">
+  <macrodef name="sqlcl-obsolete" description="Run Java Sql Client">
     <attribute name="name"/> <!-- unique name -->
     <attribute name="dir"/>
     <attribute name="inputstring"/>
@@ -336,6 +341,38 @@ The following properties are only important during export:
             <!-- finally the arguments for the class -->
             <arg value="-V" /> <!-- show version -->
           </java>
+          <!-- fail anyhow -->
+          <fail message="${@{name}.error}"/>
+        </catch>
+      </ac:trycatch>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="sqlcl" description="Run Java Sql Client">
+    <attribute name="name"/> <!-- unique name -->
+    <attribute name="dir"/>
+    <attribute name="inputstring"/>
+    <sequential>
+      <echo message="(synchronize.xml.sqlcl) dir: @{dir}"/>
+      <echo message="(synchronize.xml.sqlcl) inputstring: @{inputstring}"/>
+      <ac:trycatch property="@{name}.error">
+        <try>
+          <!-- GJP 2022-12-21 https://github.com/paulissoft/oracle-tools/issues/101
+               failonerror="false" => failonerror="true"
+          -->
+          <exec executable="${sql.executable}"
+                dir="@{dir}"
+                inputstring="@{inputstring}"
+                failonerror="true">
+            <!--sysproperty key="java.awt.headless" value="true"/-->
+            <!--sysproperty key="apple.awt.UIElement" value="true"/-->
+            <!--jvmarg value="-Xss10M"/-->
+            <!-- finally the arguments for the class -->
+            <arg value="-S" /> <!-- silent -->
+            <arg value="${quote}${userid}${quote}" />
+          </exec>
+        </try>
+        <catch>
           <!-- fail anyhow -->
           <fail message="${@{name}.error}"/>
         </catch>
