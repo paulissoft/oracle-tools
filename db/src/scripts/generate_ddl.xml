@@ -116,6 +116,54 @@
 
     <available property="generate_ddl.pl.exists" file="${generate_ddl.pl}"/>
 
+    <!-- for GenerateDDL.java -->
+    <dirname property="ant.file.dir" file="${ant.file}"/>
+    <property name="src.dir" location="${ant.file.dir}/../java"/>
+    <echo message="src.dir: ${src.dir}"/>
+    <property name="build.dir" location="${basedir}"/>
+    <echo message="build.dir: ${build.dir}"/>
+    <property name="classes.dir" location="${build.dir}/classes"/>
+    <property name="jar.dir" location="${build.dir}/jar"/>
+    <property name="main-class" value="GenerateDDL"/>
+    <property name="log.dir" location="target"/> <!-- Use maven target directory -->
+    <mkdir dir="${log.dir}"/>
+    
+    <property environment="env"/>
+    <!-- trick to set env.USER on Windows. On Unix it is already set (because
+         environment variable USER is known on Unix and USERNAME is known on
+         Windows -->
+    <property name="env.USER" value="${env.USERNAME}"/>
+
+    <echo message="env.JAVA_HOME: ${env.JAVA_HOME}" />
+    <echo message="java.home: ${java.home}" />
+
+    <!-- GPA 2016-12-09
+         The Windows shell is invoked if fork is used so we must quote empty
+         arguments on Windows.
+    -->
+    <condition property="quote" value="&quot;" else="'">
+      <os family="windows"/>
+    </condition>
+
+    <property name="compile.classpath" refid="compile.classpath" />
+    <property name="runtime.classpath" refid="runtime.classpath" />
+
+    <echo level="verbose" message="compile.classpath: ${compile.classpath}" />
+    <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
+
+    <property name="javac.verbose" value="false"/>
+
+    <tempfile property="property.file" destDir="${build.dir}"/>
+    <echo level="verbose" message="property.file: ${property.file}" />
+
+    <property name="show.properties" value="false" />
+  </target> <!-- init-common -->
+
+  <!-- GJP 2023-01-04 
+       This target is obsolete: let the database do the trimming.
+       See also https://github.com/paulissoft/oracle-tools/issues/103
+  -->
+  <target name="init-common-trimmed">
     <!-- remove whitespace in ${object.names} -->
     <loadresource property="object.names.trimmed">
       <propertyresource name="object.names"/>
@@ -160,49 +208,7 @@
     <!-- when property exclude.objects does not contain whitespace
          exclude.objects.trimmed is not set above -->
     <property name="exclude.objects.trimmed" value=""/>
-
-    <!-- for GenerateDDL.java -->
-    <dirname property="ant.file.dir" file="${ant.file}"/>
-    <property name="src.dir" location="${ant.file.dir}/../java"/>
-    <echo message="src.dir: ${src.dir}"/>
-    <property name="build.dir" location="${basedir}"/>
-    <echo message="build.dir: ${build.dir}"/>
-    <property name="classes.dir" location="${build.dir}/classes"/>
-    <property name="jar.dir" location="${build.dir}/jar"/>
-    <property name="main-class" value="GenerateDDL"/>
-    <property name="log.dir" location="target"/> <!-- Use maven target directory -->
-    <mkdir dir="${log.dir}"/>
-    
-    <property environment="env"/>
-    <!-- trick to set env.USER on Windows. On Unix it is already set (because
-         environment variable USER is known on Unix and USERNAME is known on
-         Windows -->
-    <property name="env.USER" value="${env.USERNAME}"/>
-
-    <echo message="env.JAVA_HOME: ${env.JAVA_HOME}" />
-    <echo message="java.home: ${java.home}" />
-
-    <!-- GPA 2016-12-09
-         The Windows shell is invoked if fork is used so we must quote empty
-         arguments on Windows.
-    -->
-    <condition property="quote" value="&quot;" else="'">
-      <os family="windows"/>
-    </condition>
-
-    <property name="compile.classpath" refid="compile.classpath" />
-    <property name="runtime.classpath" refid="runtime.classpath" />
-
-    <echo level="verbose" message="compile.classpath: ${compile.classpath}" />
-    <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
-
-    <property name="javac.verbose" value="false"/>
-
-    <tempfile property="property.file" destDir="${build.dir}"/>
-    <echo level="verbose" message="property.file: ${property.file}" />
-
-    <property name="show.properties" value="false" />
-  </target> <!-- init-common -->
+  </target> <!-- init-common-trimmed -->
 
   <target name="init-full" unless="target.db.name">
     <fail message="Properties src.scripts and full.output.directory undefined">
@@ -407,12 +413,23 @@ Z       Time zone               RFC 822 time zone   -0800
         <entry key="target.db.name" value="@{target.db.name}"/>
         <entry key="object.type" value="${object.type}"/>
         <entry key="object.names.include" value="${object.names.include}"/>
-        <entry key="object.names" value="${object.names.trimmed}"/>        
+        <!-- GJP 2023-01-04 
+             Trimming is not necessary here: let the database do it.
+             See also https://github.com/paulissoft/oracle-tools/issues/103.
+        -->
+        <!--entry key="object.names" value="${object.names.trimmed}"/-->
+        <entry key="object.names" value="${object.names}"/>        
         <entry key="skip.repeatables" value="@{skip.repeatables}"/>
         <entry key="interface" value="@{interface}"/>
         <entry key="transform.params" value="@{transform.params}"/>     
-        <entry key="exclude.objects" value="${exclude.objects.trimmed}"/>
-        <entry key="include.objects" value="${include.objects.trimmed}"/>
+        <!-- GJP 2023-01-04 
+             Trimming is not necessary here: let the database do it.
+             See also https://github.com/paulissoft/oracle-tools/issues/103.
+        -->
+        <!--entry key="exclude.objects" value="${exclude.objects.trimmed}"/-->
+        <!--entry key="include.objects" value="${include.objects.trimmed}"/-->
+        <entry key="exclude.objects" value="${exclude.objects}"/>
+        <entry key="include.objects" value="${include.objects}"/>
         <entry key="owner" value="@{owner}"/>
       </propertyfile>
 
