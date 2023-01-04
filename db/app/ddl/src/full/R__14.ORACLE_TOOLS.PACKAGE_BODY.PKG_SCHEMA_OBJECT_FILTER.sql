@@ -499,6 +499,9 @@ procedure construct
 , p_schema_object_filter in out nocopy t_schema_object_filter
 )
 is
+  l_dependent_md_object_type_tab constant oracle_tools.t_text_tab :=
+    oracle_tools.pkg_ddl_util.get_md_object_type_tab('DEPENDENT');
+
   l_exclude_object_tab dbms_sql.varchar2a;
   l_include_object_tab dbms_sql.varchar2a;
   l_object_name_tab dbms_sql.varchar2a;
@@ -687,50 +690,134 @@ $end
 
   procedure add_item
   ( p_case in positiven
-  , p_object_type_idx in positiven
-  , p_object_type in varchar2
-  , p_object_name_idx in positiven
-  , p_object_name in varchar2
+  , p_base_object in boolean default false
   , p_object_schema in varchar2 default '*'
+  , p_object_type in varchar2 default '*'
+  , p_object_name in varchar2 default '*'
+  , p_base_object_type in varchar2 default '*'
+  , p_base_object_name in varchar2 default '*'
   )
   is
-    l_part_tab dbms_sql.varchar2a;
     l_object varchar2(4000 char);
+
+    function must_skip_object
+    ( p_object in varchar2
+    )
+    return boolean
+    is
+      l_part_tab dbms_sql.varchar2a;
+      l_result boolean := false;
+    begin
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+      dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEM (3).MUST_SKIP_OBJECT');
+      dbug.print(dbug."input", 'p_object: %s', p_object);
+$end
+      if p_base_object
+      then
+        oracle_tools.pkg_str_util.split(p_str => p_object, p_delimiter => ':', p_str_tab => l_part_tab);
+        if nvl(l_part_tab("BASE OBJECT TYPE"), '*') = '*' and
+           nvl(l_part_tab("BASE OBJECT NAME"), '*') = '*' and
+           -- one exception since an INDEX can only depend on a TABLE, see NOTE dependent or granted objects below
+           not(p_object_type = 'INDEX' and p_base_object_type = 'TABLE')
+        then
+          -- There is no need add expressions where both base object type and base object name are empty or wildcard.
+          --
+          -- Consider construct(p_object_type => 'TABLE', p_object_names => 'X', p_object_names_include => 1) as an example.
+          --
+          -- Without this check this would lead to these items being added:
+          --
+          -- OBJECT MATCH
+          --
+          -- 1. "*:TABLE:X:*:*:*::*:*:*"
+          --
+          -- BASE OBJECT MATCH
+          --
+          -- 2. "*:CONSTRAINT:*:*:TABLE:X::*:*:*"
+          -- 3. "*:INDEX:*:*::X::::"
+          -- 4. "*:REF_CONSTRAINT:*:*:TABLE:X::*:*:*"
+          -- 5. "*:SYNONYM:*:::::::"
+          -- 6. "*:TRIGGER:*:::::::"
+          -- 7. ":COMMENT::*:TABLE:X:*:::"
+          -- 8. ":OBJECT_GRANT::*::X::*:*:*"
+          --
+          -- Clearly cases 5 and 6 where the base object info got lost should not be added to the list of inclusions/exclusions.
+          l_result := true;
+        end if;
+      end if;
+      
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+      dbug.print(dbug."output", 'return: %s', l_result);
+      dbug.leave;
+$end
+
+      return l_result;
+    end must_skip_object;
   begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEM (2)');
+    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEM (3)');
     dbug.print
     ( dbug."input"
-    , 'p_object_type_idx: %s; p_object_type: %s; p_object_name_idx: %s; p_object_name: %s; p_object_schema: %s'
-    , p_object_type_idx
-    , p_object_type
-    , p_object_name_idx
-    , p_object_name
+    , 'p_case: %s; p_base_object: %s'
+    , p_case
+    , dbug.cast_to_varchar2(p_base_object)
+    );
+    dbug.print
+    ( dbug."input"
+    , 'p_object_schema: %s; p_object_type: %s; p_object_name: %s; p_base_object_type: %s; p_base_object_name: %s'
     , p_object_schema
+    , p_object_type
+    , p_object_name
+    , p_base_object_type
+    , p_base_object_name
     );
 $end
 
-    -- object 1
-    l_part_tab := c_default_wildcard_part_tab;
-    l_part_tab("OBJECT SCHEMA") := p_object_schema;
-    l_part_tab(p_object_type_idx) := p_object_type;
-    l_part_tab(p_object_name_idx) := p_object_name;
-
-    l_object := oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':');
-    
-    if p_case in (3, 4)
+    l_object := oracle_tools.t_schema_object.id
+                ( p_object_schema => p_object_schema
+                , p_object_type => p_object_type
+                , p_object_name => p_object_name
+                , p_base_object_schema => '*'
+                , p_base_object_type => p_base_object_type
+                , p_base_object_name => p_base_object_name
+                , p_column_name => '*'
+                , p_grantee => '*'
+                , p_privilege => '*'
+                , p_grantable => '*'
+                );
+                
+    if not(must_skip_object(l_object))
     then
-      add_item(l_exclude_object_tab, l_object);
+      if p_case in (3, 4)
+      then
+        add_item(l_exclude_object_tab, l_object);
+      end if;
+      
+      if p_case in (2, 5, 6)
+      then
+        add_item(l_include_object_tab, l_object);
+      end if;
     end if;
-    
-    if p_case in (2, 5, 6)
+
+    -- do something extra for case 4
+    if p_case = 4
     then
-      add_item(l_include_object_tab, l_object);
-    elsif p_case = 4
-    then
-      -- include all objects with the object type
-      l_part_tab(p_object_name_idx) := '*';
-      add_item(l_include_object_tab, oracle_tools.pkg_str_util.join(p_str_tab => l_part_tab, p_delimiter => ':'));
+      -- include all objects (object name and base object name *) with the same object type
+      l_object := oracle_tools.t_schema_object.id
+                  ( p_object_schema => p_object_schema
+                  , p_object_type => p_object_type
+                  , p_object_name => '*'
+                  , p_base_object_schema => '*'
+                  , p_base_object_type => p_base_object_type
+                  , p_base_object_name => '*'
+                  , p_column_name => '*'
+                  , p_grantee => '*'
+                  , p_privilege => '*'
+                  , p_grantable => '*'
+                  );
+      if not(must_skip_object(l_object))
+      then
+        add_item(l_include_object_tab, l_object);
+      end if;
     end if;
     
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -894,28 +981,156 @@ $end
           if p_object_type = 'SYNONYM'
           then
             -- 1. SYNONYM <OBJECT>
-            add_item(l_case, "OBJECT TYPE", p_object_type, "OBJECT NAME", l_object_name_tab(i_object_name_idx));
+            add_item
+            ( p_case => l_case
+            , p_object_type => p_object_type
+            , p_object_name => l_object_name_tab(i_object_name_idx)
+            );
             -- 2. PUBLIC SYNONYM X FOR <BASE OBJECT>
-            add_item(l_case, "OBJECT TYPE", p_object_type, "BASE OBJECT NAME", l_object_name_tab(i_object_name_idx), 'PUBLIC');
+            add_item
+            ( p_case => l_case
+            , p_object_schema => 'PUBLIC'
+            , p_object_type => p_object_type
+            , p_base_object_type => '*' -- we have no information about the base object type
+            , p_base_object_name => l_object_name_tab(i_object_name_idx)
+            );
           elsif p_object_type in ( 'OBJECT_GRANT'
                                  , 'COMMENT'
                                  , 'REF_CONSTRAINT'
                                  , 'CONSTRAINT'
                                  )
           then
-            add_item(l_case, "OBJECT TYPE", p_object_type, "BASE OBJECT NAME", l_object_name_tab(i_object_name_idx));
-          elsif p_object_type in ( 'INDEX'
-                                 , 'TRIGGER'
-                                 )
-          then
-            -- There are no objects that depent on an index or trigger so just one case here.
-            add_item(l_case, "OBJECT TYPE", p_object_type, "OBJECT NAME", l_object_name_tab(i_object_name_idx));
+            add_item
+            ( p_case => l_case
+            , p_object_type => p_object_type
+            , p_base_object_type => '*' -- we have no information about the base object type
+            , p_base_object_name => l_object_name_tab(i_object_name_idx)
+            );
           else
-            -- We need to add two objects: one for object and one for base object since either may be a NAMED object.
-            -- object 1
-            add_item(l_case, "OBJECT TYPE", nvl(p_object_type, '*'), "OBJECT NAME", l_object_name_tab(i_object_name_idx));
-            -- object 2
-            add_item(l_case, "BASE OBJECT TYPE", nvl(p_object_type, '*'), "BASE OBJECT NAME", l_object_name_tab(i_object_name_idx));
+            add_item
+            ( p_case => l_case
+            , p_object_type => nvl(p_object_type, '*')
+            , p_object_name => l_object_name_tab(i_object_name_idx)
+            );
+          end if;
+
+          /* 
+
+             NOTE dependent or granted objects
+
+             To get the dependent or granted objects using a named object these are the rules.
+
+             A) Object grants.
+
+                The query 'select distinct type from dba_tab_privs order by 1' returns this:
+
+                ANALYTIC VIEW
+                DIRECTORY
+                EDITION
+                FUNCTION
+                HIERARCHY
+                INDEXTYPE
+                JOB CLASS
+                LIBRARY
+                OPERATOR
+                PACKAGE
+                PROCEDURE
+                QUEUE
+                RESOURCE CONSUMER GROUP
+                SEQUENCE
+                TABLE
+                TYPE
+                UNKNOWN
+                USER
+                VIEW
+
+             B) Synonyms.
+
+                From the Oracle 19c documentation:
+
+                Use the CREATE SYNONYM statement to create a synonym, which is
+                an alternative name for a table, view, sequence, operator,
+                procedure, stored function, package, materialized view, Java
+                class schema object, user-defined object type, or another
+                synonym.
+
+                FUNCTION
+                JAVA CLASS
+                JAVA SOURCE
+                MATERIALIZED VIEW
+                OPERATOR
+                PACKAGE
+                PROCEDURE
+                SEQUENCE
+                SYNONYM
+                TABLE
+                TYPE
+                VIEW
+
+             C) Constraints.
+
+                TABLE
+                VIEW
+
+             D) Comments.   
+
+                MATERIALIZED VIEW
+                TABLE
+                VIEW
+
+             E) Indexes.
+
+                TABLE
+
+             F) Triggers.
+
+                TABLE
+                VIEW
+
+             So when p_object_type is one of those listed above (be careful to convert to a metadata object type)   
+             you may add an expression for a base object.
+          */
+          if p_object_type in ( -- this list is reduced since not all object types mentioned in the NOTE are relevant
+                                'FUNCTION'
+                              , 'MATERIALIZED_VIEW'
+                              , 'PACKAGE_SPEC'
+                              , 'PROCEDURE'
+                              , 'QUEUE'
+                              , 'SEQUENCE'
+                              , 'SYNONYM'
+                              , 'TABLE'
+                              , 'TYPE_SPEC'
+                              , 'VIEW'
+                              ) or
+             p_object_type is null -- can be any of the above                 
+          then
+            -- Add entries for each dependent object type and
+            -- let oracle_tools.t_schema_object.id() decide about setting the base object type
+            -- inside add_item().
+            for i_object_type_idx in l_dependent_md_object_type_tab.first .. l_dependent_md_object_type_tab.last
+            loop
+              -- skip these combinations
+              continue when ( l_dependent_md_object_type_tab(i_object_type_idx) = 'OBJECT_GRANT' and
+                              p_object_type in ( 'MATERIALIZED_VIEW' ) ) or
+                            ( l_dependent_md_object_type_tab(i_object_type_idx) = 'SYNONYM' and
+                              p_object_type in ( 'QUEUE' ) ) or
+                            ( l_dependent_md_object_type_tab(i_object_type_idx) in ( 'CONSTRAINT', 'REF_CONSTRAINT' ) and
+                              not(p_object_type is null or p_object_type in ( 'TABLE', 'VIEW' )) )  or
+                            ( l_dependent_md_object_type_tab(i_object_type_idx) = 'COMMENT' and
+                              not(p_object_type is null or p_object_type in ( 'MATERIALIZED_VIEW', 'TABLE', 'VIEW' )) )  or
+                            ( l_dependent_md_object_type_tab(i_object_type_idx) = 'INDEX' and
+                              not(p_object_type is null or p_object_type in ( 'TABLE' )) )  or
+                            ( l_dependent_md_object_type_tab(i_object_type_idx) = 'TRIGGER' and
+                              not(p_object_type is null or p_object_type in ( 'TABLE', 'VIEW' )) );
+
+              add_item
+              ( p_case => l_case
+              , p_object_type => l_dependent_md_object_type_tab(i_object_type_idx)
+              , p_base_object_type => nvl(p_object_type, '*')
+              , p_base_object_name => l_object_name_tab(i_object_name_idx)
+              , p_base_object => true
+              );
+            end loop;
           end if;
         end if;
       end loop;
@@ -1623,11 +1838,17 @@ $end
   "GRANTOR_IS_SCHEMA$" : 0,
   "OBJECT_TAB$" :
   [
-    "%:%:%:%:TABLE:%:%:%:%:%",
-    "%:TABLE:%:%:%:%:%:%:%:%"
+    "%:CONSTRAINT:%:%:TABLE:%::%:%:%",
+    "%:INDEX:%:%::%::::",
+    "%:REF\\_CONSTRAINT:%:%:TABLE:%::%:%:%",
+    "%:TABLE:%:%:%:%::%:%:%",
+    ":COMMENT::%:TABLE:%:%:::"
   ],
   "OBJECT_CMP_TAB$" :
   [
+    "~",
+    "~",
+    "~",
     "~",
     "~"
   ],
@@ -1656,19 +1877,35 @@ DBMS_SQL
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
-     "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-     "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
-     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%"
+     "%:%:DBMS\\_OUTPUT:%:%:%::%:%:%",
+     "%:%:DBMS\\_SQL:%:%:%::%:%:%",
+     "%:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     "%:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     "%:INDEX:%:%::DBMS\\_OUTPUT::::",
+     "%:INDEX:%:%::DBMS\\_SQL::::",
+     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     ":COMMENT::%:%:DBMS\\_OUTPUT:%:::",
+     ":COMMENT::%:%:DBMS\\_SQL:%:::",
+     ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
+     ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
    ],
    "OBJECT_CMP_TAB$" :
    [
      "!~",
      "!~",
      "!~",
+     "!~",
+     "!~",
+     "!~",
+     "!~",
+     "!~",
+     "!~",
+     "!~",
+     "!~",
      "!~"
    ],
-   "NR_EXCLUDED_OBJECTS$" : 4,
+   "NR_EXCLUDED_OBJECTS$" : 12,
    "MATCH_COUNT$" : 0,
    "MATCH_COUNT_OK$" : 0,
    "MATCH_PERC_THRESHOLD$" : 50
@@ -1692,9 +1929,9 @@ DBMS_SQL
   "GRANTOR_IS_SCHEMA$" : 1,
   "OBJECT_TAB$" :
   [
-    "%:OBJECT\\_GRANT:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-    "%:OBJECT\\_GRANT:%:%:%:DBMS\\_SQL:%:%:%:%",
-    "%:OBJECT\\_GRANT:%:%:%:%:%:%:%:%"
+    ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
+    ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%",
+    ":OBJECT\\_GRANT::%::%::%:%:%"
   ],
   "OBJECT_CMP_TAB$" :
   [
@@ -1727,13 +1964,29 @@ DBMS_SQL
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
-     "%:%:%:%:%:DBMS\\_OUTPUT:%:%:%:%",
-     "%:%:%:%:%:DBMS\\_SQL:%:%:%:%",
-     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%"
+     "%:%:DBMS\\_OUTPUT:%:%:%::%:%:%",
+     "%:%:DBMS\\_SQL:%:%:%::%:%:%",
+     "%:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     "%:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     "%:INDEX:%:%::DBMS\\_OUTPUT::::",
+     "%:INDEX:%:%::DBMS\\_SQL::::",
+     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     ":COMMENT::%:%:DBMS\\_OUTPUT:%:::",
+     ":COMMENT::%:%:DBMS\\_SQL:%:::",
+     ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
+     ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
    ],
    "OBJECT_CMP_TAB$" :
    [
+     "~",
+     "~",
+     "~",
+     "~",
+     "~",
+     "~",
+     "~",
+     "~",
      "~",
      "~",
      "~",
@@ -1761,10 +2014,10 @@ DBMS_SQL
   "GRANTOR_IS_SCHEMA$" : 1,
   "OBJECT_TAB$" :
   [
-    "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%",
-    "%:%:%:%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%",
-    "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%:%:%:%:%",
-    "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%:%:%:%:%"
+    "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%::%:%:%",
+    "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%::%:%:%",
+    ":OBJECT\\_GRANT::%::DBMS\\_METADATA::%:%:%",
+    ":OBJECT\\_GRANT::%::DBMS\\_VERSION::%:%:%"
   ],
   "OBJECT_CMP_TAB$" :
   [
