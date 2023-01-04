@@ -1877,8 +1877,8 @@ DBMS_SQL
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
-     "%:%:DBMS\\_OUTPUT:%:%:%::%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%::%:%:%",
+     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
      "%:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
      "%:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
      "%:INDEX:%:%::DBMS\\_OUTPUT::::",
@@ -1964,8 +1964,8 @@ DBMS_SQL
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
-     "%:%:DBMS\\_OUTPUT:%:%:%::%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%::%:%:%",
+     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
      "%:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
      "%:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
      "%:INDEX:%:%::DBMS\\_OUTPUT::::",

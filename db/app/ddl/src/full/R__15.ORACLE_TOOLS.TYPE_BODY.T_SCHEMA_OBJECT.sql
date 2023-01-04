@@ -304,7 +304,12 @@ $end
       -- grantable
       null
       ;
-  else
+  elsif p_object_type is not null and
+        ( p_object_type in ( 'CONSTRAINT', 'REF_CONSTRAINT' ) -- NOT part of g_schema_md_object_type_tab
+          or
+          p_object_type member of oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA')
+        )
+  then
     l_id :=
       -- object
       p_object_schema || ':' ||
@@ -316,6 +321,25 @@ $end
       p_base_object_name || ':' ||
       -- column name
       null || ':' ||
+      -- grantee
+      p_grantee || ':' ||
+      -- privilege
+      p_privilege || ':' ||
+      -- grantable
+      p_grantable
+      ;
+  else
+    l_id :=
+      -- object
+      p_object_schema || ':' ||
+      p_object_type || ':' ||
+      p_object_name || ':' ||
+      -- base object
+      p_base_object_schema || ':' ||
+      p_base_object_type || ':' ||
+      p_base_object_name || ':' ||
+      -- column name
+      p_column_name || ':' ||
       -- grantee
       p_grantee || ':' ||
       -- privilege
