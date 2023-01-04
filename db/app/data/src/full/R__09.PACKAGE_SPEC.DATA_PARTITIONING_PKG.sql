@@ -46,7 +46,7 @@ The table information returned by various pipelined functions.
 **/
 
 function alter_table_range_partitioning
-( p_table_name in varchar2                    -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_name in varchar2                    -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_partition_by in varchar2 default null     -- PARTITION BY <p_partition_by> (if not NULL)
 , p_interval in varchar2 default null         -- INTERVAL <p_interval> (if not NULL)
 , p_subpartition_by in varchar2 default null  -- SUBPARTITION BY <p_subpartition_by> (if not NULL)
@@ -79,7 +79,7 @@ See also [Converting a Non-Partitioned Table to a Partitioned Table](https://doc
 **/
 
 function show_partitions_range
-( p_table_name in varchar2  -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_name in varchar2  -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 )
 return t_range_tab
 pipelined;
@@ -95,7 +95,7 @@ The table must be in the USERs schema.
 **/
 
 function find_partitions_range
-( p_table_name in varchar2           -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_name in varchar2           -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp -- the reference timestamp to find the reference partition
 , p_operator in varchar2 default '=' -- '<', '=' or '>'
 )
@@ -120,7 +120,7 @@ The table must be in the USERs schema.
 **/
 
 procedure drop_old_partitions 
-( p_table_name in varchar2                                    -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_name in varchar2                                    -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp                          -- the reference timestamp to find the reference partition (that will NOT be dropped)
 , p_update_index_clauses in varchar2 default 'UPDATE INDEXES' -- can be empty or UPDATE GLOBAL INDEXES as well
 );

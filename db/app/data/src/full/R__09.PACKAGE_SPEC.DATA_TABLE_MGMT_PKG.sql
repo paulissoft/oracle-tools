@@ -13,9 +13,9 @@ any schema issueing DDL.
 **/
 
 procedure rebuild_indexes
-( p_table_owner in all_indexes.table_owner%type default user   -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
-, p_table_name in all_indexes.table_name%type default null     -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
-, p_index_name in all_indexes.index_name%type default null     -- checked by ORACLE_TOOLS.DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_owner in all_indexes.table_owner%type default user   -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in all_indexes.table_name%type default null     -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_index_name in all_indexes.index_name%type default null     -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_index_status in all_indexes.status%type default 'UNUSABLE' -- a wildcard status
 );
 
