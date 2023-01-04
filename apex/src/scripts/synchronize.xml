@@ -1,7 +1,10 @@
 <project name="synchronize" default="help" basedir="." xmlns:ac="antlib:net.sf.antcontrib">
 
   <description>
-Generate Apex scripts (export) or import them.
+Functionality:
+- Generate APEX scripts (target=export)
+- Import APEX scripts (target=import)
+- Seed and publish (target=seed-publish)
 
 The following properties must be set before:
 - application: an Apex application id
@@ -470,6 +473,29 @@ The following properties are only important during export:
                    match=",p_flow_version=>'.*'"
                    replace=",p_flow_version=>'Version ${application.version}'"
                    byline="true"/>
+  </target>
+
+  <target name="seed-publish"
+          depends="init,seed-publish-sqlplus,seed-publish-sqlcl"
+          description="Seed and publish">
+    <echo message="(synchronize.xml.seed-publish)" />
+  </target>
+
+  <!-- seed and publish with SQL*Plus -->
+  <target name="seed-publish-sqlplus"
+          unless="my.sql.home">
+    <sqlplus name="seed-publish"
+             dir=""
+             inputstring='@${basedir}/pre_export.sql "${workspace}" "${application}"' />
+  </target>
+
+  <!-- seed and publish with Java SqlCli class -->
+  <target name="seed-publish-sqlcl"
+          if="my.sql.home">
+    <sqlcl name="seed-publish"
+           dir=""
+           inputstring='@${basedir}/pre_export.sql "${workspace}" "${application}"'>
+    </sqlcl>
   </target>
 
 </project>

@@ -123,12 +123,13 @@
                 <target unless="${apex.skip}">
                   <property name="apex.application.dir.abs"
                             location="${apex.application.dir}" />
-                  <fail message="Property apex.operation must be export or import">
+                  <fail message="Property apex.operation must be export, import or seed-publish">
                     <condition>
                       <not>
                         <or>
                           <equals arg1="${apex.operation}" arg2="export" />
                           <equals arg1="${apex.operation}" arg2="import" />
+                          <equals arg1="${apex.operation}" arg2="seed-publish" />
                         </or>
                       </not>
                     </condition>
@@ -217,6 +218,21 @@
       <properties>
         <default.goal>compile</default.goal>
         <apex.operation>import</apex.operation>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
+      <id>apex-seed-publish</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <apex.operation>seed-publish</apex.operation>
       </properties>
       <build>
         <plugins>
