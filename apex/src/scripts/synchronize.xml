@@ -96,6 +96,9 @@ The following properties are only important during export:
     <property name="runtime.classpath" refid="runtime.classpath" />
 
     <echo message="(synchronize.xml.init) $${runtime.classpath}: ${runtime.classpath}" />
+
+    <!-- There are environments where you can not launch SQLcl from the command line but only thru Java (Citrix for example). -->
+    <property name="launch-sqlcl-java" value="false" />
   </target>
 
   <target name="init-split-userid">
@@ -206,151 +209,6 @@ The following properties are only important during export:
              inputstring='@${basedir}/import.sql "${workspace}" "${application}" "${input.file}"'/>
   </target>
 
-  <macrodef name="sqlcl-obsolete" description="Run Java Sql Client">
-    <attribute name="name"/> <!-- unique name -->
-    <attribute name="dir"/>
-    <attribute name="inputstring"/>
-    <sequential>
-      <echo message="(synchronize.xml.sqlcl) dir: @{dir}"/>
-      <echo message="(synchronize.xml.sqlcl) inputstring: @{inputstring}"/>
-      <ac:trycatch property="@{name}.error">
-        <try>
-          <!-- GJP 2022-12-21 https://github.com/paulissoft/oracle-tools/issues/101
-               failonerror="false" => failonerror="true"
-          -->
-          <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
-                fork="true"
-                spawn="false"
-                dir="@{dir}"
-                inputstring="@{inputstring}"
-                failonerror="true">
-            <sysproperty key="java.awt.headless" value="true"/>
-            <sysproperty key="apple.awt.UIElement" value="true"/>
-            <jvmarg value="-Xss10M"/>
-            <classpath id="sqlcl.classpath">
-              <!-- from file ${my.sql.home}/bin/sql -->
-
-              <pathelement location="${my.sql.home}/lib/dbtools-sqlcl.jar"/>
-              
-              <!-- please note that in the script they are built up in a reversed -->
-              
-              <fileset dir="${my.sql.home}/lib">
-                <include name="jansi.jar"/>
-                <include name="drivers/*"/>
-                <include name="ext/*"/>
-                <include name="javax.json.jar"/>
-                <include name="javax.json-api.jar"/>
-                <include name="xmlparserv2.jar"/>
-                <include name="commons-logging.jar"/>
-                <include name="orai18n.jar"/>
-                <include name="xmlparserv2-sans-jaxp-services.jar"/>
-                <include name="orai18n-collation.jar"/>
-                <include name="jackson-databind.jar"/>
-                <include name="xdb6.jar"/>
-                <include name="jackson-core.jar"/>
-                <include name="stringtemplate.jar"/>
-                <include name="oraclepki.jar"/>
-                <include name="jackson-annotations.jar"/>
-                <include name="osdt_core.jar"/>
-                <include name="httpmime.jar"/>
-                <include name="osdt_cert.jar"/>
-                <include name="httpcore.jar"/>
-                <include name="orajsoda.jar"/>
-                <include name="httpclient.jar"/>
-                <include name="orai18n-utility.jar"/>
-                <include name="ojdbc8.jar"/>
-                <include name="dbtools-net.jar"/>
-                <include name="dbtools-http.jar"/>
-                <include name="dbtools-common.jar"/>
-                <include name="orai18n-servlet.jar"/>
-                <include name="jsch.jar"/>
-                <include name="commons-codec.jar"/>
-                <include name="jdbcrest.jar"/>
-                <include name="orai18n-mapping.jar"/>
-                <include name="jline.jar"/>
-                <include name="antlr-runtime.jar"/>
-                <!--include name="jansi.jar"/-->
-                <!-- version 20 on Mac OS X -->
-                <include name="dbtools-data.jar"/>
-                <include name="guava.jar"/>
-                <!-- version 21 on Mac OS X -->
-                <include name="jline3.jar"/>
-                <include name="dbtools-datapump.jar"/>
-                <include name="xmlparserv2_sans_jaxp_services.jar"/>
-                <include name="httpcore5.jar"/>
-                <include name="jackson-jr-stree.jar"/>
-                <include name="guava-with-lf.jar"/>
-                <include name="xdb.jar"/>
-              </fileset>
-              
-              <!-- Start of #Sql file locations (when embedded) -->
-              <fileset dir="${my.sql.home}/..">
-                <include name="rdbms/jlib/xdb6.jar"/>
-                <include name="jdbc/lib/ojdbc8.jar"/>
-                <include name="jlib/orai18n-utility.jar"/>
-                <include name="jlib/orai18n-mapping.jar"/>
-                <include name="jlib/orai18n.jar"/>
-                <include name="modules/oracle.xdk/xmlparserv2.jar"/>
-              </fileset>
-
-              <!-- For Dataxion -->
-              <fileset dir="${my.sql.home}">
-                <include name="rdbms/jlib/xdb6.jar"/>
-                <include name="jdbc/lib/ojdbc8.jar"/>
-                <include name="jlib/orai18n-utility.jar"/>
-                <include name="jlib/orai18n-mapping.jar"/>
-                <include name="jlib/orai18n.jar"/>
-                <include name="modules/oracle.xdk/xmlparserv2.jar"/>
-              </fileset>
-              <!-- End of #Sql file locations (when embedded) -->          
-            </classpath>
-            <!-- for Unix -->
-            <env key="LD_LIBRARY_PATH"
-                 value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
-            <!-- finally the arguments for the class -->
-            <arg value="-S" /> <!-- silent -->
-            <arg value="${quote}${userid}${quote}" />
-          </java>
-        </try>
-        <catch>
-          <!-- show classpath -->
-          <pathconvert property="sqlcl.classpath.property"
-                       refid="sqlcl.classpath"/>
-          <ac:var name="index" value="1"/>
-          <ac:for list="${sqlcl.classpath.property}"
-               delimiter="${path.separator}"
-               param="file">
-            <sequential>
-              <echo message="(synchronize.xml.sqlcl) classpath #${index}: @{file}"/>
-              <ac:math result="index"
-                       operand1="${index}"
-                       operation="+"
-                       operand2="1"
-                       datatype="int"/>
-            </sequential>
-          </ac:for>
-          <!-- show version of sqlcl -->
-          <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
-                fork="true"
-                spawn="false"
-                failonerror="false">
-            <sysproperty key="java.awt.headless" value="true"/>
-            <sysproperty key="apple.awt.UIElement" value="true"/>
-            <jvmarg value="-Xss10M"/>
-            <classpath refid="sqlcl.classpath" />
-            <!-- for Unix -->
-            <env key="LD_LIBRARY_PATH"
-                 value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
-            <!-- finally the arguments for the class -->
-            <arg value="-V" /> <!-- show version -->
-          </java>
-          <!-- fail anyhow -->
-          <fail message="${@{name}.error}"/>
-        </catch>
-      </ac:trycatch>
-    </sequential>
-  </macrodef>
-
   <macrodef name="sqlcl" description="Run Java Sql Client">
     <attribute name="name"/> <!-- unique name -->
     <attribute name="dir"/>
@@ -360,22 +218,155 @@ The following properties are only important during export:
       <echo message="(synchronize.xml.sqlcl) inputstring: @{inputstring}"/>
       <ac:trycatch property="@{name}.error">
         <try>
-          <!-- GJP 2022-12-21 https://github.com/paulissoft/oracle-tools/issues/101
-               failonerror="false" => failonerror="true"
-          -->
-          <exec executable="${sql.executable}"
-                dir="@{dir}"
-                inputstring="@{inputstring}"
-                failonerror="true">
-            <!--sysproperty key="java.awt.headless" value="true"/-->
-            <!--sysproperty key="apple.awt.UIElement" value="true"/-->
-            <!--jvmarg value="-Xss10M"/-->
-            <!-- finally the arguments for the class -->
-            <arg value="-S" /> <!-- silent -->
-            <arg value="${quote}${userid}${quote}" />
-          </exec>
+          <ac:if>
+            <!-- GJP 2022-12-21 https://github.com/paulissoft/oracle-tools/issues/101
+                 failonerror="false" => failonerror="true"
+            -->
+            <!-- There are environments where you can not launch SQLcl from the command line but only thru Java (Citrix for example). -->
+            <istrue value="${launch-sqlcl-java}"/>
+            <then>
+              <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
+                    fork="true"
+                    spawn="false"
+                    dir="@{dir}"
+                    inputstring="@{inputstring}"
+                    failonerror="true">
+                <sysproperty key="java.awt.headless" value="true"/>
+                <sysproperty key="apple.awt.UIElement" value="true"/>
+                <jvmarg value="-Xss10M"/>
+                <classpath id="sqlcl.classpath">
+                  <!-- from file ${my.sql.home}/bin/sql -->
+
+                  <pathelement location="${my.sql.home}/lib/dbtools-sqlcl.jar"/>
+                  
+                  <!-- please note that in the script they are built up in a reversed -->
+                  
+                  <fileset dir="${my.sql.home}/lib">
+                    <include name="jansi.jar"/>
+                    <include name="drivers/*"/>
+                    <include name="ext/*"/>
+                    <include name="javax.json.jar"/>
+                    <include name="javax.json-api.jar"/>
+                    <include name="xmlparserv2.jar"/>
+                    <include name="commons-logging.jar"/>
+                    <include name="orai18n.jar"/>
+                    <include name="xmlparserv2-sans-jaxp-services.jar"/>
+                    <include name="orai18n-collation.jar"/>
+                    <include name="jackson-databind.jar"/>
+                    <include name="xdb6.jar"/>
+                    <include name="jackson-core.jar"/>
+                    <include name="stringtemplate.jar"/>
+                    <include name="oraclepki.jar"/>
+                    <include name="jackson-annotations.jar"/>
+                    <include name="osdt_core.jar"/>
+                    <include name="httpmime.jar"/>
+                    <include name="osdt_cert.jar"/>
+                    <include name="httpcore.jar"/>
+                    <include name="orajsoda.jar"/>
+                    <include name="httpclient.jar"/>
+                    <include name="orai18n-utility.jar"/>
+                    <include name="ojdbc8.jar"/>
+                    <include name="dbtools-net.jar"/>
+                    <include name="dbtools-http.jar"/>
+                    <include name="dbtools-common.jar"/>
+                    <include name="orai18n-servlet.jar"/>
+                    <include name="jsch.jar"/>
+                    <include name="commons-codec.jar"/>
+                    <include name="jdbcrest.jar"/>
+                    <include name="orai18n-mapping.jar"/>
+                    <include name="jline.jar"/>
+                    <include name="antlr-runtime.jar"/>
+                    <!--include name="jansi.jar"/-->
+                    <!-- version 20 on Mac OS X -->
+                    <include name="dbtools-data.jar"/>
+                    <include name="guava.jar"/>
+                    <!-- version 21 on Mac OS X -->
+                    <include name="jline3.jar"/>
+                    <include name="dbtools-datapump.jar"/>
+                    <include name="xmlparserv2_sans_jaxp_services.jar"/>
+                    <include name="httpcore5.jar"/>
+                    <include name="jackson-jr-stree.jar"/>
+                    <include name="guava-with-lf.jar"/>
+                    <include name="xdb.jar"/>
+                  </fileset>
+                  
+                  <!-- Start of #Sql file locations (when embedded) -->
+                  <fileset dir="${my.sql.home}/..">
+                    <include name="rdbms/jlib/xdb6.jar"/>
+                    <include name="jdbc/lib/ojdbc8.jar"/>
+                    <include name="jlib/orai18n-utility.jar"/>
+                    <include name="jlib/orai18n-mapping.jar"/>
+                    <include name="jlib/orai18n.jar"/>
+                    <include name="modules/oracle.xdk/xmlparserv2.jar"/>
+                  </fileset>
+
+                  <!-- For Dataxion -->
+                  <fileset dir="${my.sql.home}">
+                    <include name="rdbms/jlib/xdb6.jar"/>
+                    <include name="jdbc/lib/ojdbc8.jar"/>
+                    <include name="jlib/orai18n-utility.jar"/>
+                    <include name="jlib/orai18n-mapping.jar"/>
+                    <include name="jlib/orai18n.jar"/>
+                    <include name="modules/oracle.xdk/xmlparserv2.jar"/>
+                  </fileset>
+                  <!-- End of #Sql file locations (when embedded) -->          
+                </classpath>
+                <!-- for Unix -->
+                <env key="LD_LIBRARY_PATH"
+                     value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
+                <!-- finally the arguments for the class -->
+                <arg value="-S" /> <!-- silent -->
+                <arg value="${quote}${userid}${quote}" />
+              </java>
+            </then>
+            <else>
+              <exec executable="${sql.executable}"
+                    dir="@{dir}"
+                    inputstring="@{inputstring}"
+                    failonerror="true">
+                <arg value="-S" /> <!-- silent -->
+                <arg value="${quote}${userid}${quote}" />
+              </exec>
+            </else>
+          </ac:if>        
         </try>
         <catch>
+          <ac:if>
+            <istrue value="${launch-sqlcl-java}"/>
+            <then>
+              <!-- show classpath -->
+              <pathconvert property="sqlcl.classpath.property"
+                           refid="sqlcl.classpath"/>
+              <ac:var name="index" value="1"/>
+              <ac:for list="${sqlcl.classpath.property}"
+                      delimiter="${path.separator}"
+                      param="file">
+                <sequential>
+                  <echo message="(synchronize.xml.sqlcl) classpath #${index}: @{file}"/>
+                  <ac:math result="index"
+                           operand1="${index}"
+                           operation="+"
+                           operand2="1"
+                           datatype="int"/>
+                </sequential>
+              </ac:for>
+              <!-- show version of sqlcl -->
+              <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
+                    fork="true"
+                    spawn="false"
+                    failonerror="false">
+                <sysproperty key="java.awt.headless" value="true"/>
+                <sysproperty key="apple.awt.UIElement" value="true"/>
+                <jvmarg value="-Xss10M"/>
+                <classpath refid="sqlcl.classpath" />
+                <!-- for Unix -->
+                <env key="LD_LIBRARY_PATH"
+                     value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
+                <!-- finally the arguments for the class -->
+                <arg value="-V" /> <!-- show version -->
+              </java>
+            </then>
+          </ac:if>        
           <!-- fail anyhow -->
           <fail message="${@{name}.error}"/>
         </catch>
