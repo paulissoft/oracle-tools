@@ -2,13 +2,37 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_DDL_UTIL" AUTHID CURRENT_USER IS
 
 /**
 
-This package contains DDL utilities based on DBMS_METADATA and DBMS_METADATA_DIFF.
+This package contains DDL utilities based on `DBMS_METADATA` and `DBMS_METADATA_DIFF`.
 
 The idea is to be able to easily extract DDL from schemas and only for the objects you want.
 
 The output can then be written to DDL scripts.
 
-To get to know more about filtering works please consult the PKG_SCHEMA_OBJECT_FILTER documentation.
+To get to know more about filtering works please consult the `PKG_SCHEMA_OBJECT_FILTER` documentation.
+
+It is possible to change the way the DDL is extracted by `DBMS_METADATA` by using transformations as set by `DBMS_METADATA.SET_TRANSFORM_PARAM()`.
+
+This is the table of possible transformations used by this package:
+
+|NAME|OBJECT TYPE|
+|:---|:----------| 
+|CONSTRAINTS_AS_ALTER|TABLE|
+|CONSTRAINTS|TABLE, VIEW|
+|FORCE|VIEW|
+|OID|TYPE_SPEC|
+|PRETTY||
+|REF_CONSTRAINTS|TABLE|
+|SEGMENT_ATTRIBUTES|TABLE, INDEX, CLUSTER, CONSTRAINT, ROLLBACK_SEGMENT, TABLESPACE|
+|SIZE_BYTE_KEYWORD|TABLE|
+|SQLTERMINATOR||
+|STORAGE|TABLE, INDEX, CLUSTER, CONSTRAINT, ROLLBACK_SEGMENT, TABLESPACE|
+|TABLESPACE|TABLE, INDEX, CLUSTER, CONSTRAINT, ROLLBACK_SEGMENT, TABLESPACE|
+
+They will all be set to FALSE unless you specify names in parameter `p_transform_param_list` from the various routines below. 
+
+That parameter often defaults to constant `c_transform_param_list` which includes:
+- SEGMENT_ATTRIBUTES
+- TABLESPACE
 
 **/
 
@@ -88,6 +112,8 @@ c_get_operator_ddl constant boolean := false;
 c_get_xmlschema_ddl constant boolean := false;
 
 c_transform_param_list constant varchar2(4000 char) := 'SEGMENT_ATTRIBUTES,TABLESPACE';
+
+/* A list of dbms_metadata transformation parameters that will be set to TRUE. */
 
 /* TYPES */
 subtype t_dict_object_type is all_objects.object_type%type;
