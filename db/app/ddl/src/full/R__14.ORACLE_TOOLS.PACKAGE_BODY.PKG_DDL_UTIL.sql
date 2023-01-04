@@ -36,6 +36,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   subtype t_longops_rec is oracle_tools.api_longops_pkg.t_longops_rec;
 
+  type t_transform_param_tab is table of boolean index by varchar2(4000 char);
+
   /* CONSTANTS/VARIABLES */
 
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
