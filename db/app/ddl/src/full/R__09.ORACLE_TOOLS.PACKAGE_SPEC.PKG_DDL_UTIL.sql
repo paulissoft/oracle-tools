@@ -24,7 +24,6 @@ This is the table of possible transformations used by this package:
 |REF_CONSTRAINTS|TABLE|
 |SEGMENT_ATTRIBUTES|TABLE, INDEX, CLUSTER, CONSTRAINT, ROLLBACK_SEGMENT, TABLESPACE|
 |SIZE_BYTE_KEYWORD|TABLE|
-|SQLTERMINATOR||
 |STORAGE|TABLE, INDEX, CLUSTER, CONSTRAINT, ROLLBACK_SEGMENT, TABLESPACE|
 |TABLESPACE|TABLE, INDEX, CLUSTER, CONSTRAINT, ROLLBACK_SEGMENT, TABLESPACE|
 
@@ -38,7 +37,6 @@ That parameter often defaults to constant `c_transform_param_list` which include
 - REF_CONSTRAINTS
 - SEGMENT_ATTRIBUTES
 - TABLESPACE
-- SQLTERMINATOR (when c_use_sqlterminator is true)
 
 **/
 
@@ -118,7 +116,7 @@ c_get_operator_ddl constant boolean := false;
 c_get_xmlschema_ddl constant boolean := false;
 
 c_transform_param_list constant varchar2(4000 char) :=
-  'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE' || case when c_use_sqlterminator then ',SQLTERMINATOR' end;
+  'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE';
 
 /* A list of dbms_metadata transformation parameters that will be set to TRUE. */
 

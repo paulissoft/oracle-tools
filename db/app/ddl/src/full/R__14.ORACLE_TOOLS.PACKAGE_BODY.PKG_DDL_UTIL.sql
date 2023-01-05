@@ -271,7 +271,6 @@ $end
     l_transform_param_tab('REF_CONSTRAINTS') := false;
     l_transform_param_tab('SEGMENT_ATTRIBUTES') := false;
     l_transform_param_tab('SIZE_BYTE_KEYWORD') := false;
-    l_transform_param_tab('SQLTERMINATOR') := false;
     l_transform_param_tab('STORAGE') := false;
     l_transform_param_tab('TABLESPACE') := false;
 
@@ -1616,7 +1615,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
 $end
 
     set_transform_param(p_transform_handle, 'PRETTY');
-    set_transform_param(p_transform_handle, 'SQLTERMINATOR');
+    -- this one is fixed
+    dbms_metadata$set_transform_param(p_transform_handle, 'SQLTERMINATOR', c_use_sqlterminator);
 
     for i_idx in p_object_type_tab.first .. p_object_type_tab.last
     loop
