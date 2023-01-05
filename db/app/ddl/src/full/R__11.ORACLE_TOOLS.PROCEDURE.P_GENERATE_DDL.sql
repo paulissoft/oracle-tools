@@ -134,7 +134,7 @@ $end
                       , p_network_link_source => pi_source_database_link
                       , p_network_link_target => pi_target_database_link
                       , p_skip_repeatables => pi_skip_repeatables
-                      , p_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list
+                      , p_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list)
                       , p_exclude_objects => pi_exclude_objects
                       , p_include_objects => pi_include_objects
                       )
