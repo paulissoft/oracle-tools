@@ -1625,7 +1625,7 @@ sub beautify_line ($$$$$$) {
         # CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_DISPLAY_DDL_SCHEMA" ("SCHEMA_DDL")  BEQUEATH CURRENT_USER  AS select  value(t) as schema_ddl
         #
         # in two lines, one till the AS (non-greedy) and the rest after without leading spaces
-        if ($line =~ m/^(\s*create\s+or\s+replace\s+(force\s+)?view\s+.+?\b(?:as|is))\s+(.*)$/i) {
+        if ($line =~ m/^(\s*create\s+or\s+replace\s+(force\s+)?view\s+.+?\b(?:as|is))\s+(\S+.*)$/i) {
             # split this in two lines
             @lines = ($1, $3);
         }
