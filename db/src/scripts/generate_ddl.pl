@@ -314,7 +314,8 @@ use Pod::Usage;
 use strict;
 use utf8;
 use warnings;
- 
+use warnings FATAL => qw[uninitialized];
+
 # CONSTANTS
 use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
@@ -664,7 +665,7 @@ sub process () {
                     }
 
                     my $next_line;
-                    
+
                     ($line, $next_line) = beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no == 1, $line);
 
                     add_sql_statement(\$line, \%sql_statements, $object, $ddl_no, $ddl_info);
@@ -1047,6 +1048,9 @@ sub add_sql_statement ($$$$;$) {
     trace((caller(0))[3]);
 
     my ($r_sql_line, $r_sql_statements, $object, $ddl_no, $ddl_info) = @_;
+
+    error("SQL line undefined")
+        if (!defined($r_sql_line) || !defined($$r_sql_line));
 
     debug("Adding '$$r_sql_line' for object $object and statement $ddl_no");
 
@@ -1573,10 +1577,10 @@ sub beautify_line ($$$$$$) {
 
     my ($matched_object, $object_schema, $object_name, $object_type, $first_line, $line) = @_;
 
-    return
+    return ($line)
         unless defined($line) && $line ne '';
 
-    debug("\$line: $line");
+    debug("before beautify line; \$line[0]: $line");
     
     if ($first_line) {
         if ($object_type eq 'VIEW') {
@@ -1617,7 +1621,7 @@ sub beautify_line ($$$$$$) {
         $line =~ s/\b$source_schema\.//g;
     }
 
-    my @lines = ($line);
+    my @line = ($line);
 
     if ($first_line && $object_type eq 'VIEW') {    
         # We need to split something like
@@ -1627,15 +1631,15 @@ sub beautify_line ($$$$$$) {
         # in two lines, one till the AS (non-greedy) and the rest after without leading spaces
         if ($line =~ m/^(\s*create\s+or\s+replace\s+(force\s+)?view\s+.+?\b(?:as|is))\s+(\S+.*)$/i) {
             # split this in two lines
-            @lines = ($1, $3);
+            @line = ($1, $3);
         }
     }
 
-    for (my $nr = 0; $nr < @lines; ++$nr) {
-        debug("\$lines[$nr]: $lines[$nr]");
+    for (my $nr = 0; $nr < @line; ++$nr) {
+        debug("after beautify line; \$line[$nr]: $line[$nr]");
     }
 
-    return @lines;
+    return @line;
 }
 
 sub split_single_output_file ($) {
