@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION "ORACLE_TOOLS"."F_GENERATE_DDL"
 , pi_object_names_include in natural default null
 , pi_object_names in varchar2 default null
 , pi_skip_repeatables in naturaln default 1
-, pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
+, pi_transform_param_list in varchar2 default null
 , pi_interface in varchar2 default null
 , pi_exclude_objects in clob default null
 , pi_include_objects in clob default null
@@ -57,7 +57,7 @@ $end
   , pi_object_names => pi_object_names
   , pi_skip_repeatables => pi_skip_repeatables
   , pi_interface => pi_interface
-  , pi_transform_param_list => pi_transform_param_list
+  , pi_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list)
   , pi_exclude_objects => pi_exclude_objects
   , pi_include_objects => pi_include_objects
   , po_clob => l_clob

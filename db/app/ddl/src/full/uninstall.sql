@@ -1,4 +1,4 @@
-/* perl generate_ddl.pl (version 2022-12-02) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --nostrip-source-schema */
+/* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --nostrip-source-schema */
 
 /*
 -- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl

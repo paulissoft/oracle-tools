@@ -1,5 +1,5 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDL_INFO" ("OBJECT_SCHEMA", "OBJECT_TYPE", "OBJECT_NAME", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "BASE_OBJECT_NAME", "COLUMN_NAME", "GRANTEE", "PRIVILEGE", "GRANTABLE", "DDL#", "VERB", "DDL_TEXT")  BEQUEATH CURRENT_USER AS 
-  select  t.obj.object_schema() as object_schema
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDL_INFO" ("OBJECT_SCHEMA", "OBJECT_TYPE", "OBJECT_NAME", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "BASE_OBJECT_NAME", "COLUMN_NAME", "GRANTEE", "PRIVILEGE", "GRANTABLE", "DDL#", "VERB", "DDL_TEXT")  BEQUEATH CURRENT_USER  AS
+select  t.obj.object_schema() as object_schema
 ,       t.obj.object_type() as object_type
 ,       t.obj.object_name() as object_name
 ,       t.obj.base_object_schema() as base_object_schema

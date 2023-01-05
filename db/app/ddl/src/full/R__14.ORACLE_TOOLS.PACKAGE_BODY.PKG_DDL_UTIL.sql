@@ -250,9 +250,32 @@ $end
 
   g_chk_tab t_object_natural_tab;
 
-  g_transform_param_tab t_transform_param_tab;
+  -- forward declaration to be able to use it in a constant assignment
+  function default_transform_param_tab
+  return t_transform_param_tab;
+
+  c_transform_param_tab constant t_transform_param_tab := default_transform_param_tab;
   
   /* PRIVATE ROUTINES */
+
+  function default_transform_param_tab
+  return t_transform_param_tab
+  is
+    l_transform_param_tab t_transform_param_tab;
+  begin
+    l_transform_param_tab('CONSTRAINTS_AS_ALTER') := false;
+    l_transform_param_tab('CONSTRAINTS') := false;
+    l_transform_param_tab('FORCE') := false;
+    l_transform_param_tab('OID') := false;
+    l_transform_param_tab('PRETTY') := false;
+    l_transform_param_tab('REF_CONSTRAINTS') := false;
+    l_transform_param_tab('SEGMENT_ATTRIBUTES') := false;
+    l_transform_param_tab('SIZE_BYTE_KEYWORD') := false;
+    l_transform_param_tab('STORAGE') := false;
+    l_transform_param_tab('TABLESPACE') := false;
+
+    return l_transform_param_tab;
+  end default_transform_param_tab;
 
   function get_db_link
   ( p_network_link in t_network_link
@@ -1444,7 +1467,7 @@ $end
   is
     l_line_tab dbms_sql.varchar2a;
   begin
-    p_transform_param_tab := g_transform_param_tab;
+    p_transform_param_tab := c_transform_param_tab;
 
     if p_transform_param_list is not null
     then
@@ -1453,7 +1476,11 @@ $end
       then
         for i_idx in l_line_tab.first .. l_line_tab.last
         loop
-          p_transform_param_tab(upper(trim(l_line_tab(i_idx)))) := true;
+          l_line_tab(i_idx) := upper(trim(l_line_tab(i_idx)));
+          if p_transform_param_tab.exists(l_line_tab(i_idx))
+          then
+            p_transform_param_tab(l_line_tab(i_idx)) := true;
+          end if;
         end loop;
       end if;
     end if;
@@ -1568,17 +1595,32 @@ $end
   ( p_transform_handle in number default dbms_metadata.session_transform
   , p_object_type_tab in oracle_tools.t_text_tab default oracle_tools.t_text_tab('INDEX', 'TABLE', 'CLUSTER', 'CONSTRAINT', 'VIEW', 'TYPE_SPEC')
   , p_use_object_type_param in boolean default false
-  , p_transform_param_tab in t_transform_param_tab default g_transform_param_tab
+  , p_transform_param_tab in t_transform_param_tab default c_transform_param_tab
   )
   is
+    procedure set_transform_param
+    ( transform_handle   in number
+    , name               in varchar2
+    , object_type        in varchar2 default null
+    )
+    is
+    begin
+      dbms_metadata$set_transform_param
+      ( transform_handle 
+      , name
+      , p_transform_param_tab(name)
+      , object_type
+      );
+    end set_transform_param;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.enter($$PLSQL_UNIT_OWNER||'.'||$$PLSQL_UNIT||'.MD_SET_TRANSFORM_PARAM');
     dbug.print(dbug."input", 'p_use_object_type_param: %s', p_use_object_type_param);
 $end
 
-    dbms_metadata$set_transform_param(p_transform_handle, 'PRETTY'              , true );
-    dbms_metadata$set_transform_param(p_transform_handle, 'SQLTERMINATOR'       , c_use_sqlterminator );
+    set_transform_param(p_transform_handle, 'PRETTY');
+    -- this one is fixed
+    dbms_metadata$set_transform_param(p_transform_handle, 'SQLTERMINATOR', c_use_sqlterminator);
 
     for i_idx in p_object_type_tab.first .. p_object_type_tab.last
     loop
@@ -1587,29 +1629,29 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
 $end
       if p_object_type_tab(i_idx) in ('TABLE', 'INDEX', 'CLUSTER', 'CONSTRAINT', 'ROLLBACK_SEGMENT', 'TABLESPACE')
       then
-        dbms_metadata$set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , p_transform_param_tab('SEGMENT_ATTRIBUTES'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata$set_transform_param(p_transform_handle, 'STORAGE'             , p_transform_param_tab('STORAGE'           ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata$set_transform_param(p_transform_handle, 'TABLESPACE'          , p_transform_param_tab('TABLESPACE'        ), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'SEGMENT_ATTRIBUTES'  , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'STORAGE'             , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'TABLESPACE'          , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       -- GJP 2022-12-15 Maybe setting CONSTRAINTS before CONSTRAINTS_AS_ALTER may generate this command:
       -- ALTER TABLE "BC_BO"."BC_CONSUMPTION_PREDICTIONS" MODIFY ("GRD_ID" CONSTRAINT "NNC_CPN_GRD_ID" NOT NULL ENABLE)
       if p_object_type_tab(i_idx) in ('TABLE', 'VIEW')
       then
-        dbms_metadata$set_transform_param(p_transform_handle, 'CONSTRAINTS'         , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'CONSTRAINTS'         , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TABLE'
       then
-        dbms_metadata$set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
-        dbms_metadata$set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'REF_CONSTRAINTS'     , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'CONSTRAINTS_AS_ALTER', case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'VIEW'
       then
         -- GPA 2016-12-01 The FORCE keyword may be removed by the generate_ddl.pl script, depending on an option.
-        dbms_metadata$set_transform_param(p_transform_handle, 'FORCE'               , true , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'FORCE'               , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
       if p_object_type_tab(i_idx) = 'TYPE_SPEC'
       then
-        dbms_metadata$set_transform_param(p_transform_handle, 'OID'                 , p_transform_param_tab('OID'), case when p_use_object_type_param then p_object_type_tab(i_idx) end);
+        set_transform_param(p_transform_handle, 'OID'                 , case when p_use_object_type_param then p_object_type_tab(i_idx) end);
       end if;
     end loop;
 
@@ -8230,15 +8272,6 @@ begin
   select global_name.global_name into g_dbname from global_name;
 
   i_object_exclude_name_expr_tab;
-
-  g_transform_param_tab('SEGMENT_ATTRIBUTES'  ) := false;
-  g_transform_param_tab('STORAGE'             ) := false;
-  g_transform_param_tab('TABLESPACE'          ) := false;
-  -- g_transform_param_tab('REF_CONSTRAINTS'     ) := false;
-  -- g_transform_param_tab('CONSTRAINTS_AS_ALTER') := false;
-  -- g_transform_param_tab('CONSTRAINTS'         ) := false;
-  -- g_transform_param_tab('FORCE'               ) := false;
-  g_transform_param_tab('OID'                 ) := false;
 end pkg_ddl_util;
 /
 
