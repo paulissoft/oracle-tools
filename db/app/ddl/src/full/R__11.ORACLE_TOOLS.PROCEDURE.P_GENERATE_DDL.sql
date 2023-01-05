@@ -8,7 +8,7 @@ CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL"
 , pi_object_names in varchar2 default null
 , pi_skip_repeatables in naturaln default 1
 , pi_interface in varchar2 default null
-, pi_transform_param_list in varchar2 default oracle_tools.pkg_ddl_util.c_transform_param_list
+, pi_transform_param_list in varchar2 default null
 , pi_exclude_objects in clob default null
 , pi_include_objects in clob default null
 , po_clob out nocopy clob
@@ -109,7 +109,7 @@ $end
                       , p_object_names_include => pi_object_names_include
                       , p_network_link => pi_source_database_link
                       , p_grantor_is_schema => 0
-                      , p_transform_param_list => pi_transform_param_list
+                      , p_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list)
                       , p_exclude_objects => pi_exclude_objects
                       , p_include_objects => pi_include_objects
                       )
@@ -134,7 +134,7 @@ $end
                       , p_network_link_source => pi_source_database_link
                       , p_network_link_target => pi_target_database_link
                       , p_skip_repeatables => pi_skip_repeatables
-                      , p_transform_param_list => pi_transform_param_list
+                      , p_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list
                       , p_exclude_objects => pi_exclude_objects
                       , p_include_objects => pi_include_objects
                       )
