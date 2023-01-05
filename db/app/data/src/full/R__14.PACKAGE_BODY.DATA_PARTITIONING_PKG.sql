@@ -24,7 +24,8 @@ $end
 -- PUBLIC routines
 
 function alter_table_range_partitioning
-( p_table_name in varchar2
+( p_table_owner in varchar2
+, p_table_name in varchar2
 , p_partition_by in varchar2
 , p_interval in varchar2
 , p_subpartition_by in varchar2
@@ -40,24 +41,26 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ALTER_TABLE_RANGE_PARTITIONING');
   dbug.print
   ( dbug."input"
-  , 'p_table_name: %s; p_partition_by: %s; p_interval: %s; p_subpartition_by: %s; p_partition_clause: %s'
+  , 'p_table_owner: %s; p_table_name: %s; p_partition_by: %s; p_interval: %s; p_subpartition_by: %s'
+  , p_table_owner
   , p_table_name
   , p_partition_by
   , p_interval
   , p_subpartition_by
-  , p_partition_clause
   );
   dbug.print
   ( dbug."input"
-  , 'p_online: %s; p_update_indexes: %s'
+  , 'p_partition_clause: %s; p_online: %s; p_update_indexes: %s'
+  , p_partition_clause
   , dbug.cast_to_varchar2(p_online)
   , p_update_indexes
   );
 $end
 
   l_ddl := utl_lms.format_message
-           ( 'ALTER TABLE %s MODIFY %s%s%s%s%s%s'
-           , oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_table_name, 'table')
+           ( 'ALTER TABLE %s.%s MODIFY %s%s%s%s%s%s'
+           , oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'owner')
+           , oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table')
            , case when p_partition_by is not null then chr(10) || 'PARTITION BY ' || p_partition_by end
            , case when p_interval is not null then chr(10) || 'INTERVAL ' || p_interval end
            , case when p_subpartition_by is not null then chr(10) || 'SUBPARTITION BY ' || p_subpartition_by end
@@ -75,23 +78,27 @@ $end
 end alter_table_range_partitioning;
 
 function show_partitions_range
-( p_table_name in varchar2
+( p_table_owner in varchar2
+, p_table_name in varchar2
 )
 return t_range_tab
 pipelined
 is
-  l_table_name constant user_tab_partitions.table_name%type :=
+  l_table_owner constant all_tab_partitions.table_owner%type :=
+    trim('"' from oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'owner'));
+  l_table_name constant all_tab_partitions.table_name%type :=
     trim('"' from oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table'));
   l_query constant varchar2(4000 char) :=
     utl_lms.format_message
-    ( q'[select p.high_value, p.partition_name, p.partition_position, p.interval from user_tab_partitions p where p.table_name = '%s']'
+    ( q'[select p.high_value, p.partition_name, p.partition_position, p.interval from all_tab_partitions p where p.table_owner = '%s' and p.table_name = '%s']'
+    , l_table_owner
     , l_table_name
     );
   l_cnt simple_integer := 0;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SHOW_PARTITIONS_RANGE');
-  dbug.print(dbug."input", 'p_table_name: %s', p_table_name);
+  dbug.print(dbug."input", 'p_table_owner: %s; p_table_name: %s', p_table_owner, p_table_name);
   dbug.print(dbug."info", 'l_query: %s', l_query);
 $end
 
@@ -134,7 +141,8 @@ $end
 end show_partitions_range;
 
 function find_partitions_range
-( p_table_name in varchar2
+( p_table_owner in varchar2
+, p_table_name in varchar2
 , p_reference_timestamp in timestamp
 , p_operator in varchar2
 )
@@ -159,7 +167,7 @@ $end
   <<find_loop>>
   for r in
   ( select  t.*
-    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_name)) t
+    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner, p_table_name)) t
   )
   loop
     -- r.lwb_incl and r.upb_excl are something like TIMESTAMP' 2000-01-01 00:00:00'
@@ -222,12 +230,15 @@ $end
 end find_partitions_range;
 
 procedure drop_old_partitions 
-( p_table_name in varchar2
+( p_table_owner in varchar2
+, p_table_name in varchar2
 , p_reference_timestamp in timestamp
 , p_update_index_clauses in varchar2
 )
 is
-  l_table_name constant user_tab_partitions.table_name%type :=
+  l_table_owner constant all_tab_partitions.table_owner%type :=
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'owner');
+  l_table_name constant all_tab_partitions.table_name%type :=
     oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table');
   l_partition_lt_reference_tab t_range_tab := t_range_tab();
   l_ddl varchar2(32767 char) := null;
@@ -239,14 +250,14 @@ is
     then
       -- See also Asynchronous Global Index Maintenance for Dropping and Truncating Partitions
       dbms_part.cleanup_gidx
-      ( schema_name_in => user
+      ( schema_name_in => trim('"' from l_table_owner)
       , table_name_in => trim('"' from l_table_name)
       , options => 'COALESCE'
       );
 
       -- As a last resort rebuild unusable indexes
       oracle_tools.data_table_mgmt_pkg.rebuild_indexes
-      ( p_table_owner => user
+      ( p_table_owner => l_table_owner
       , p_table_name => l_table_name
       , p_index_name => null
       , p_index_status => 'UNUSABLE'
@@ -258,7 +269,8 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_OLD_PARTITIONS');
   dbug.print
   ( dbug."input"
-  , 'p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s'
+  , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s'
+  , p_table_owner
   , p_table_name
   , to_char(p_reference_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff9')
   , p_update_index_clauses
@@ -271,7 +283,8 @@ $end
   into    l_partition_lt_reference_tab
   from    table
           ( oracle_tools.data_partitioning_pkg.find_partitions_range
-            ( l_table_name
+            ( l_table_owner
+            , l_table_name
             , p_reference_timestamp
             , '<'
             )
@@ -283,7 +296,8 @@ $end
     for i_idx in l_partition_lt_reference_tab.first .. l_partition_lt_reference_tab.last
     loop
       l_ddl := utl_lms.format_message
-               ( 'ALTER TABLE %s DROP PARTITION %s %s'
+               ( 'ALTER TABLE %s.%s DROP PARTITION %s %s'
+               , l_table_owner
                , l_table_name
                , oracle_tools.data_api_pkg.dbms_assert$enquote_name
                  ( l_partition_lt_reference_tab(i_idx).partition_name

@@ -46,7 +46,8 @@ The table information returned by various pipelined functions.
 **/
 
 function alter_table_range_partitioning
-( p_table_name in varchar2                    -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_owner in varchar2                   -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2                    -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_partition_by in varchar2 default null     -- PARTITION BY <p_partition_by> (if not NULL)
 , p_interval in varchar2 default null         -- INTERVAL <p_interval> (if not NULL)
 , p_subpartition_by in varchar2 default null  -- SUBPARTITION BY <p_subpartition_by> (if not NULL)
@@ -60,12 +61,10 @@ return varchar2;
  
 Return the DDL for turning a non-partitioned table into a range (interval) partitioned one.
 
-The table must be in the USERs schema.
-
 It returns something like:
 
 ```sql
-ALTER TABLE <p_table_name> MODIFY
+ALTER TABLE "<p_table_owner>"."<p_table_name>" MODIFY
 [ PARTITION BY <p_partition_by> ]
 [ INTERVAL <p_interval> ]
 [ SUBPARTITION BY <p_subpartition_by> ]
@@ -79,23 +78,23 @@ See also [Converting a Non-Partitioned Table to a Partitioned Table](https://doc
 **/
 
 function show_partitions_range
-( p_table_name in varchar2  -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2  -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 )
 return t_range_tab
 pipelined;
 
 /**
  
-Return the partitions and their range as stored in USER_TAB_PARTITIONS.
+Return the partitions and their range as stored in ALL_TAB_PARTITIONS.
 
 The HIGH_VALUE in that dictionary view is a LONG like TIMESTAMP' 2021-08-26 00:00:00'.
-
-The table must be in the USERs schema.
 
 **/
 
 function find_partitions_range
-( p_table_name in varchar2           -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_owner in varchar2          -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2           -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp -- the reference timestamp to find the reference partition
 , p_operator in varchar2 default '=' -- '<', '=' or '>'
 )
@@ -115,12 +114,11 @@ Else if such a reference partition exists:
 - for operator '<' we will return all partitions before the reference partition
 - for operator '>' we will return all partitions after the reference partition
 
-The table must be in the USERs schema.
-
 **/
 
 procedure drop_old_partitions 
-( p_table_name in varchar2                                    -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+( p_table_owner in varchar2          -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2                                    -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp                          -- the reference timestamp to find the reference partition (that will NOT be dropped)
 , p_update_index_clauses in varchar2 default 'UPDATE INDEXES' -- can be empty or UPDATE GLOBAL INDEXES as well
 );
@@ -148,8 +146,6 @@ The statement to drop:
 ```sql
 ALTER TABLE <p_table_name> DROP PARTITION <old partition> <p_update_index_clauses>
 ```
-
-The table must be in the USERs schema.
 
 See also [Updating indexes with partition maintenance](https://connor-mcdonald.com/2017/09/20/updating-indexes-with-partition-maintenance/).
 
