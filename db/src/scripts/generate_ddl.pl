@@ -172,6 +172,19 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2023-01-05
+
+This DDL:
+
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_DISPLAY_DDL_SCHEMA" ("SCHEMA_DDL")  BEQUEATH CURRENT_USER  AS select  value(t) as schema_ddl
+from  table(oracle_tools.pkg_ddl_util.display_ddl_schema) t;
+
+should transform into:
+
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_DISPLAY_DDL_SCHEMA" ("SCHEMA_DDL")  BEQUEATH CURRENT_USER  AS 
+select  value(t) as schema_ddl
+from  table(oracle_tools.pkg_ddl_util.display_ddl_schema) t;
+
 =item 2022-12-02
 
 The strip source schema functionality did not work well: reading existing
@@ -310,7 +323,7 @@ use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 
 # VARIABLES
 
-my $VERSION = "2022-12-02";
+my $VERSION = "2023-01-05";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -649,9 +662,14 @@ sub process () {
                         error("\$object_name undefined")
                             unless (defined($object_name));
                     }
-                    beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no, \$line);
+
+                    my $next_line;
+                    
+                    ($line, $next_line) = beautify_line("\"$object_schema\".\"$object_name\"", $object_schema, $object_name, $object_type, $line_no == 1, $line);
 
                     add_sql_statement(\$line, \%sql_statements, $object, $ddl_no, $ddl_info);
+                    add_sql_statement(\$next_line, \%sql_statements, $object, $ddl_no, $ddl_info)
+                        if (defined($next_line));
                 }
             }
         }
@@ -751,11 +769,19 @@ sub process_object_type ($$$$) {
 
                 $ddl_no = $r_ddl_no->{$object}++;
                         
-                beautify_line($matched_object, $object_schema, $object_name, $object_type, 1, \$line);
-                
+                my $next_line;
+                    
+                ($line, $next_line) = beautify_line($matched_object, $object_schema, $object_name, $object_type, 1, $line);
+
                 $last_line = $line;
                 $line =~ s/^\s+//; # strip leading space
                 add_sql_statement(\$line, $r_sql_statements, $object, $ddl_no);
+                
+                if (defined($next_line)) {
+                    $last_line = $next_line;
+                    $next_line =~ s/^\s+//; # strip leading space
+                    add_sql_statement(\$next_line, $r_sql_statements, $object, $ddl_no);
+                }
             } elsif (!defined($object)) {
                 warning("skipping '$line'")
                     if ($line =~ m/\S/);
@@ -1545,37 +1571,37 @@ sub remove_trailing_empty_lines ($) {
 sub beautify_line ($$$$$$) {
     trace((caller(0))[3]);
 
-    my ($matched_object, $object_schema, $object_name, $object_type, $line_no, $r_line) = @_;
+    my ($matched_object, $object_schema, $object_name, $object_type, $first_line, $line) = @_;
 
     return
-        unless defined($$r_line) && $$r_line ne '';
-        
-    debug("\$\$r_line before: $$r_line");
+        unless defined($line) && $line ne '';
 
-    if ($line_no == 1) {
+    debug("\$line: $line");
+    
+    if ($first_line) {
         if ($object_type eq 'VIEW') {
-            $$r_line =~ s/\s+DEFAULT COLLATION "USING_NLS_COMP"//g;
-            $$r_line =~ s/\s+FORCE\s+/ /i
+            $line =~ s/\s+DEFAULT COLLATION "USING_NLS_COMP"//g;
+            $line =~ s/\s+FORCE\s+/ /i
                 if (!$force_view); 
-            $$r_line =~ s/\s+(as\s*)$/' ' . $1/ie;
+            $line =~ s/\s+(as\s*)$/' ' . $1/ie;
         } elsif ($object_type_info{$object_type}->{'repeatable'}) {
             # create => create or replace
-            $$r_line =~ s/^\s*CREATE\s+/CREATE OR REPLACE /i
-                unless $$r_line =~ m/^\s*CREATE\s+OR\s+REPLACE\b/i;
+            $line =~ s/^\s*CREATE\s+/CREATE OR REPLACE /i
+                unless $line =~ m/^\s*CREATE\s+OR\s+REPLACE\b/i;
         } elsif ($object_type eq 'TYPE_SPEC') {
             # create or replace => create (TYPE)
-            $$r_line =~ s/^\s*CREATE\s+OR\s+REPLACE\s+/CREATE /i;
+            $line =~ s/^\s*CREATE\s+OR\s+REPLACE\s+/CREATE /i;
         }
             
         # Do not change NONEDITIONABLE since some views may need it (APEX views for instance)
-        $$r_line =~ s/\bEDITIONABLE\s+//i; # Flyway does not like CREATE OR REPLACE EDITIONABLE PACKAGE 
+        $line =~ s/\bEDITIONABLE\s+//i; # Flyway does not like CREATE OR REPLACE EDITIONABLE PACKAGE 
 
         my $object_fq_name = ($strip_source_schema && $object_schema eq $source_schema ? '' : "\"$object_schema\".");
 
         $object_fq_name .= "\"$object_name\"";
 
         # beautify the name
-        $$r_line =~ s/(.*\S)\s+$matched_object(\s+(?:AS|IS)\b)?(\s+OBJECT\b)?/uc($1).' '.$object_fq_name.(defined($2)?uc($2):'').(defined($3)?uc($3):'')/ie;
+        $line =~ s/(.*\S)\s+$matched_object(\s+(?:AS|IS)\b)?(\s+OBJECT\b)?/uc($1).' '.$object_fq_name.(defined($2)?uc($2):'').(defined($3)?uc($3):'')/ie;
     }
 
     if ($object_type eq 'TABLE') {
@@ -1583,15 +1609,35 @@ sub beautify_line ($$$$$$) {
         # =>
         # "ADDRESS_TYPE" VARCHAR2(30),
         
-        $$r_line =~ s/\s+COLLATE "USING_NLS_COMP"//g;
+        $line =~ s/\s+COLLATE "USING_NLS_COMP"//g;
     }        
 
     if ($strip_source_schema && defined($source_schema)) {
-        $$r_line =~ s/"$source_schema"\.//g;
-        $$r_line =~ s/\b$source_schema\.//g;
+        $line =~ s/"$source_schema"\.//g;
+        $line =~ s/\b$source_schema\.//g;
     }
 
-    debug("\$\$r_line after : $$r_line");
+    my @lines = ($line);
+
+    if ($first_line && $object_type eq 'VIEW') {    
+        # We need to split something like
+        #
+        # CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_DISPLAY_DDL_SCHEMA" ("SCHEMA_DDL")  BEQUEATH CURRENT_USER  AS select  value(t) as schema_ddl
+        #
+        # in two lines, one till the AS (non-greedy) and the rest after without leading spaces
+        if ($line =~ m/^(\s*create\s+or\s+replace\s+(force\s+)?view\s+.+?\b(?:as|is))\s+(.*)$/i) {
+            # split this in two lines
+            @lines = ($1, $3);
+        } else {
+            error("Could not split this into two lines: $line");
+        }
+    }
+
+    for (my $nr = 0; $nr < @lines; ++$nr) {
+        debug("\$lines[$nr]: $lines[$nr]");
+    }
+
+    return @lines;
 }
 
 sub split_single_output_file ($) {
