@@ -307,7 +307,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
   dbug.print(dbug."input", 'p_str length: %s; p_set: %s', dbms_lob.getlength(p_str), p_set);
 $end
 
-  -- een dummy loop om er snel uit te springen en niet teveel if statements te hebben
+  -- a dummy loop so you can quit fast without too many if statements
   loop
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
     dbug.print(dbug."debug", 'l_str_length: %s', l_str_length);
@@ -1198,7 +1198,32 @@ end;
 procedure ut_trim1
 is
 begin
-  raise program_error;
+/*
+trim
+( p_str in out nocopy clob
+, p_set in varchar2 := ' '
+);
+*/
+  dbms_lob.trim(g_clob, 0);
+
+  trim(g_clob, null);
+  ut.expect(dbms_lob.getlength(g_clob), 'test 1').to_equal(0);
+  
+  trim(g_clob, 'a');
+  ut.expect(dbms_lob.getlength(g_clob), 'test 2').to_equal(0);
+
+  dbms_lob.trim(g_clob, 0);
+  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob('abcd'));
+  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob('dcba'));
+  trim(g_clob, 'abcd');
+  ut.expect(g_clob, 'test 3').to_equal(to_clob("crlf" || 'dcba'));
+
+  trim(g_clob, 'a');
+  ut.expect(g_clob, 'test 4').to_equal(to_clob("crlf" || 'dcb'));
+  
+  trim(g_clob, 'd');
+  ut.expect(g_clob, 'test 5').to_equal(to_clob("crlf" || 'dcb'));
 end;
 
 --%test
