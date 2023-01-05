@@ -1628,8 +1628,6 @@ sub beautify_line ($$$$$$) {
         if ($line =~ m/^(\s*create\s+or\s+replace\s+(force\s+)?view\s+.+?\b(?:as|is))\s+(.*)$/i) {
             # split this in two lines
             @lines = ($1, $3);
-        } else {
-            error("Could not split this into two lines: $line");
         }
     }
 
