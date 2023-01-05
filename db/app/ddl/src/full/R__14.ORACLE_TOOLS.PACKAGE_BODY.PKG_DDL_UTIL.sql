@@ -1476,7 +1476,11 @@ $end
       then
         for i_idx in l_line_tab.first .. l_line_tab.last
         loop
-          p_transform_param_tab(upper(trim(l_line_tab(i_idx)))) := true;
+          l_line_tab(i_idx) := upper(trim(l_line_tab(i_idx)));
+          if p_transform_param_tab.exists(l_line_tab(i_idx))
+          then
+            p_transform_param_tab(l_line_tab(i_idx)) := true;
+          end if;
         end loop;
       end if;
     end if;
