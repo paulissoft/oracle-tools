@@ -84,10 +84,10 @@ The following properties are only important during export:
     <condition property="my.sql.home" value="${env.SQL_HOME}">
       <available file="${env.SQL_HOME}/bin/sql" type="file" />
     </condition>
-    <condition property="my.sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
-      <available file="${my.sql.home}/bin/sql.exe" type="file" />
+    <condition property="sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
+      <os family="windows"/>
     </condition>
-    <property name="sql.executable" location="${my.sql.executable}" />
+    <!--property name="sql.executable" location="${my.sql.executable}" /-->
     <echo message="(synchronize.xml.init) $${sql.home}: ${sql.home}" />
     <echo message="(synchronize.xml.init) $${env.SQL_HOME}: ${env.SQL_HOME}" />
     <echo message="(synchronize.xml.init) $${my.sql.home}: ${my.sql.home}" />
