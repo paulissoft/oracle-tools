@@ -2450,7 +2450,9 @@ $end
          oracle_tools.pkg_ddl_error.e_object_not_found or
          oracle_tools.pkg_ddl_error.e_could_not_parse or
          -- GJP 2023-01-06 An error occurred for object with object type/schema/name: POST_TABLE_ACTION//
-         oracle_tools.pkg_ddl_error.e_object_type_wrong
+         oracle_tools.pkg_ddl_error.e_object_type_wrong or
+         -- ORA-20110: Object name should not be empty. An error occurred for object with object schema info: :MATERIALIZED_VIEW_LOG::::::::
+         oracle_tools.pkg_ddl_error.e_object_not_valid
     then
       p_object_key := null;
       cleanup;
@@ -4445,13 +4447,17 @@ $end
 
     if p_schema_object.object_type() is null
     then
-      oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Object type should not be empty', p_schema_object.schema_object_info());
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Object type should not be empty'
+      , p_schema_object.schema_object_info()
+      );
     elsif p_schema_object.dict2metadata_object_type() = p_schema_object.object_type()
     then
       null; -- ok
     else
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Object type (' ||
         p_schema_object.object_type() ||
         ') should be equal to this DBMS_METADATA object type (' ||
@@ -4464,7 +4470,7 @@ $end
     if (p_schema_object.base_object_type() is null) != (p_schema_object.base_object_schema() is null)
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object type (' ||
         p_schema_object.base_object_type() ||
         ') and base object schema (' ||
@@ -4477,7 +4483,7 @@ $end
     if (p_schema_object.base_object_name() is null) != (p_schema_object.base_object_schema() is null)
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object name (' ||
         p_schema_object.base_object_name() ||
         ') and base object schema (' ||
@@ -4514,7 +4520,7 @@ $end
       null; -- ok
     else
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Object schema should be empty or ' || p_schema
       , p_dependent_or_granted_object.schema_object_info()
       );
@@ -4523,7 +4529,7 @@ $end
     if p_dependent_or_granted_object.base_object$ is null
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object should not be empty.'
       , p_dependent_or_granted_object.schema_object_info()
       );
@@ -4542,7 +4548,7 @@ $end
     if p_dependent_or_granted_object.base_object_schema() is null
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object schema should not be empty'
       , p_dependent_or_granted_object.schema_object_info()
       );
@@ -4551,7 +4557,7 @@ $end
     if p_dependent_or_granted_object.base_object_type() is null
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object type should not be empty'
       , p_dependent_or_granted_object.schema_object_info()
       );
@@ -4560,7 +4566,7 @@ $end
     if p_dependent_or_granted_object.base_object_name() is null
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Base object name should not be empty'
       , p_dependent_or_granted_object.schema_object_info()
       );
@@ -4595,7 +4601,7 @@ $end
     if p_named_object.object_name() is null
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Object name should not be empty'
       , p_named_object.schema_object_info()
       );
@@ -4605,7 +4611,7 @@ $end
       null; -- ok
     else
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , 'Object schema (' ||
         p_named_object.object_schema() ||
         ') must be ' ||
@@ -4720,7 +4726,7 @@ $end
     if l_error_message is not null
     then
       oracle_tools.pkg_ddl_error.raise_error
-      ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
       , l_error_message
       , p_constraint_object.schema_object_info()
       );
