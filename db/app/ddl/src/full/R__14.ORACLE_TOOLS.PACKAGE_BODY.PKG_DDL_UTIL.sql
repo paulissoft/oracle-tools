@@ -85,6 +85,11 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   g_loopback constant varchar2(10 char) := 'LOOPBACK';
 
+  c_transform_param_list_testing constant varchar2(4000 char) :=
+    -- c_transform_param_list = 'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE'
+    '-CONSTRAINTS_AS_ALTER';
+
+
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
   /* EXCEPTIONS */
@@ -1466,6 +1471,19 @@ $end
   )
   is
     l_line_tab dbms_sql.varchar2a;
+    "+-" boolean := null;
+
+    procedure set_transform_param
+    ( p_transform_param in varchar2
+    , p_value in boolean
+    )
+    is
+    begin
+      if p_transform_param is not null and p_transform_param_tab.exists(p_transform_param)
+      then
+        p_transform_param_tab(p_transform_param) := p_value;
+      end if;
+    end set_transform_param;
   begin
     p_transform_param_tab := c_transform_param_tab;
 
@@ -1477,10 +1495,39 @@ $end
         for i_idx in l_line_tab.first .. l_line_tab.last
         loop
           l_line_tab(i_idx) := upper(trim(l_line_tab(i_idx)));
-          if p_transform_param_tab.exists(l_line_tab(i_idx))
+          
+          continue when l_line_tab(i_idx) is null;
+
+          if "+-" is null
           then
-            p_transform_param_tab(l_line_tab(i_idx)) := true;
+            "+-" := substr(l_line_tab(i_idx), 1, 1) in ('+', '-');
+            if "+-"
+            then
+              -- Apply the default c_transform_param_list first.
+              -- There will be no recursion since the default list does not contain +/-.
+              get_transform_param_tab
+              ( p_transform_param_list => c_transform_param_list
+              , p_transform_param_tab => p_transform_param_tab
+              );
+            end if;
+          elsif "+-" != (substr(l_line_tab(i_idx), 1, 1) in ('+', '-'))
+          then
+            -- either all entries start with a +/- or none
+            oracle_tools.pkg_ddl_error.raise_error
+            ( p_error_number => oracle_tools.pkg_ddl_error.c_transform_parameter_wrong
+            , p_error_message => 'Either every transform parameter starts with a +/- or none'
+            , p_context_info => p_transform_param_list
+            , p_context_label => 'transform parameter list'
+            );
           end if;
+
+          case substr(l_line_tab(i_idx), 1, 1)
+            when '+'
+            then set_transform_param(substr(l_line_tab(i_idx), 2), true);
+            when '-'
+            then set_transform_param(substr(l_line_tab(i_idx), 2), false);
+            else set_transform_param(l_line_tab(i_idx), true);
+          end case;
         end loop;
       end if;
     end if;
@@ -6534,12 +6581,20 @@ $end
 
   procedure ut_disable_schema_export
   is
+    l_transform_param_tab t_transform_param_tab;
   begin
-    md_set_transform_param; -- for get_source
-    -- no constraints
-    dbms_metadata$set_transform_param(dbms_metadata.session_transform, 'CONSTRAINTS', false);
-    -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false
+    -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false meaning no SCHEMA_EXPORT will be used
     oracle_tools.pkg_schema_object_filter.default_match_perc_threshold(null);
+    
+    get_transform_param_tab
+    ( p_transform_param_list => c_transform_param_list_testing
+    , p_transform_param_tab => l_transform_param_tab
+    );
+
+    md_set_transform_param
+    ( p_use_object_type_param => false -- no SCHEMA_EXPORT
+    , p_transform_param_tab => l_transform_param_tab
+    ); -- for get_source    
   end ut_disable_schema_export;
   
   procedure ut_enable_schema_export
@@ -6900,7 +6955,7 @@ $end
                    , p_grantor_is_schema => 0
                    , p_exclude_objects => null
                    , p_include_objects => null
-                   , p_transform_param_list => null
+                   , p_transform_param_list => c_transform_param_list_testing
                    )
                  ) t
           ,      table(t.ddl_tab) u
@@ -7143,7 +7198,7 @@ $end
                  , p_grantor_is_schema => 0
                  , p_exclude_objects => null
                  , p_include_objects => l_clob2
-                 , p_transform_param_list => null
+                 , p_transform_param_list => c_transform_param_list_testing
                  )
                ) t
         ,      table(t.ddl_tab) u
@@ -7577,7 +7632,7 @@ $end
                    , p_skip_repeatables => 0
                    , p_exclude_objects => null
                    , p_include_objects => null
-                   , p_transform_param_list => null
+                   , p_transform_param_list => c_transform_param_list_testing
                    )
                  ) t
           ,      table(t.ddl_tab) u                                                          

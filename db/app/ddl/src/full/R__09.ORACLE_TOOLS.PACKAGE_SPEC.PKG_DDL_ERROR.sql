@@ -103,6 +103,10 @@ c_no_schema_objects            constant pls_integer := -20123;
 e_no_schema_objects            exception;
 pragma exception_init(e_no_schema_objects, -20123);
 
+c_transform_parameter_wrong    constant pls_integer := -20124;
+e_transform_parameter_wrong    exception;
+pragma exception_init(e_transform_parameter_wrong, -20124);
+
 /**
  * Raise an error.
  *
