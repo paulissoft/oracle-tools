@@ -80,8 +80,9 @@ $end
     when 'JAVA_SOURCE'           then p_named_object := oracle_tools.t_java_source_object(p_object_schema, p_object_name);
     when 'REFRESH_GROUP'         then p_named_object := oracle_tools.t_refresh_group_object(p_object_schema, p_object_name);
     when 'PROCOBJ'               then p_named_object := oracle_tools.t_procobj_object(p_object_schema, p_object_name);
-    else oracle_tools.pkg_ddl_error.raise_error
-         ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+    else -- GJP 2023-01-06 An error occurred for object with object type/schema/name: POST_TABLE_ACTION//
+         oracle_tools.pkg_ddl_error.raise_error
+         ( oracle_tools.pkg_ddl_error.c_object_type_wrong -- oracle_tools.pkg_ddl_error.c_invalid_parameters
          , 'Object type "' || l_object_type || '" is not listed here.'
          , utl_lms.format_message
            ( '%s/%s/%s'

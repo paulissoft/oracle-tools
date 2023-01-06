@@ -2448,7 +2448,9 @@ $end
     -- GJP 2021-08-30 Ignore this always.
     when oracle_tools.pkg_ddl_error.e_object_not_correct or
          oracle_tools.pkg_ddl_error.e_object_not_found or
-         oracle_tools.pkg_ddl_error.e_could_not_parse
+         oracle_tools.pkg_ddl_error.e_could_not_parse or
+         -- GJP 2023-01-06 An error occurred for object with object type/schema/name: POST_TABLE_ACTION//
+         oracle_tools.pkg_ddl_error.e_object_type_wrong
     then
       p_object_key := null;
       cleanup;
