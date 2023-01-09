@@ -11,7 +11,7 @@
 -- object names        : CFG_INSTALL_PKG,CFG_PKG,UT_CODE_CHECK_PKG
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
--- transform params    : SEGMENT_ATTRIBUTES,TABLESPACE
+-- transform params    : 
 -- exclude objects     : 
 -- include objects     : 
 -- owner               : ORACLE_TOOLS

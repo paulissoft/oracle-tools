@@ -75,7 +75,7 @@
 ,V_MY_SCHEMA_OBJECT_INFO
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
--- transform params    : SEGMENT_ATTRIBUTES,TABLESPACE
+-- transform params    : 
 -- exclude objects     : 
 -- include objects     : 
 -- owner               : ORACLE_TOOLS
