@@ -149,9 +149,8 @@ function find_partitions_range
 return t_range_tab
 pipelined
 is
-  l_partition_lt_reference_tab t_range_tab := t_range_tab();
-  l_reference_found boolean := false;
-  l_cnt simple_integer := 0;
+  l_lwb_incl_timestamp timestamp;
+  l_upb_excl_timestamp timestamp;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.FIND_PARTITIONS_RANGE');
@@ -171,58 +170,42 @@ $end
   )
   loop
     -- r.lwb_incl and r.upb_excl are something like TIMESTAMP' 2000-01-01 00:00:00'
-    if ( r.lwb_incl is null or to_timestamp(substr(r.lwb_incl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') <= p_reference_timestamp ) and
-       ( r.upb_excl is null or p_reference_timestamp < to_timestamp(substr(r.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') )
-    then
-      l_reference_found := true;
-      case p_operator
-        when '='
-        then
-$if cfg_pkg.c_debugging $then
-          print(r);
-$end
-          pipe row (r);
-          l_cnt := l_cnt + 1;
-          exit find_loop;
-          
-        when '<'
-        then
-          for i_idx in 1 .. l_partition_lt_reference_tab.count
-          loop
-$if cfg_pkg.c_debugging $then
-            print(l_partition_lt_reference_tab(i_idx));
-$end
-            pipe row (l_partition_lt_reference_tab(i_idx));
-            l_cnt := l_cnt + 1;
-          end loop;
-          exit find_loop;
-          
-        when '>'
-        then
-          null;
-      end case;
-    elsif p_operator = '<' and not(l_reference_found)
-    then
-      -- save the partitions
-      l_partition_lt_reference_tab.extend(1);
-      l_partition_lt_reference_tab(l_partition_lt_reference_tab.last) := r;    
-    elsif p_operator = '>' and l_reference_found
+    l_lwb_incl_timestamp := case when r.lwb_incl is not null then to_timestamp(substr(r.lwb_incl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
+    l_upb_excl_timestamp := case when r.upb_excl is not null then to_timestamp(substr(r.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
+
+    -- Possible ranges with respect to R (reference date). [] means a closed range (both ends not null)
+    -- 1a. (]R
+    -- 1b. []R
+    -- 2a. (R)
+    -- 2b. [R]
+    -- 2c. (R]
+    -- 2d. [R)
+    -- 3a. R[)
+    -- 3b. R[]
+    if ( p_operator = '<' and
+         -- 1a. and 1b.
+         ( l_upb_excl_timestamp is not null and l_upb_excl_timestamp <= p_reference_timestamp ) 
+       ) or
+       ( p_operator = '=' and
+         -- 2a. 2b. 2c. and 2d.
+         ( l_lwb_incl_timestamp is null or l_lwb_incl_timestamp <= p_reference_timestamp ) and
+         ( l_upb_excl_timestamp is null or l_upb_excl_timestamp  > p_reference_timestamp )
+       ) or
+       ( p_operator = '>' and
+         -- 3a. and 3b.
+         ( l_lwb_incl_timestamp is not null and l_lwb_incl_timestamp > p_reference_timestamp )
+       )
     then
 $if cfg_pkg.c_debugging $then
       print(r);
 $end
       pipe row (r);
-      l_cnt := l_cnt + 1;
+
+      exit find_loop when p_operator = '='; -- small optimalization
     end if;
   end loop find_loop;
 
 $if cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , 'l_reference_found: %s; l_cnt: %s'
-  , dbug.cast_to_varchar2(l_reference_found)
-  , l_cnt
-  );
   dbug.leave;
 $end
 
@@ -261,6 +244,13 @@ is
       , p_table_name => l_table_name
       , p_index_name => null
       , p_index_status => 'UNUSABLE'
+      );
+
+      -- Recalculate statistics for table, indexes and (sub)partitions
+      dbms_stats.gather_table_stats
+      ( ownname => l_table_owner
+      , tabname => l_table_name
+      , granularity => 'ALL'
       );
     end if;
   end cleanup;

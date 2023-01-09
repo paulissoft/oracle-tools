@@ -1234,6 +1234,9 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
+  l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
+    oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
+    
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
   l_excluded_tables_tab t_excluded_tables_tab;
@@ -1580,6 +1583,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                             inner join all_objects obj
                             on obj.owner = s.table_owner and obj.object_name = s.table_name
                     where   obj.object_type not like '%BODY'
+                    and     obj.object_type member of l_schema_md_object_type_tab
                     and     obj.object_type <> 'MATERIALIZED VIEW'
                     and     s.owner = l_schema
                     -- no need to check on s.generated since we are interested in synonyms, not objects
