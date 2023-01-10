@@ -73,13 +73,13 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
-  "EMPTY"                    constant oracle_tools.v_all_objects.owner%type := 'EMPTY';
+  "EMPTY"                    constant all_objects.owner%type := 'EMPTY';
 
-  g_owner constant oracle_tools.v_all_objects.owner%type := $$PLSQL_UNIT_OWNER;
+  g_owner constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
-  g_owner_utplsql oracle_tools.v_all_objects.owner%type; -- not a real constant but set only once
+  g_owner_utplsql all_objects.owner%type; -- not a real constant but set only once
 
-  g_empty constant oracle_tools.v_all_objects.owner%type := "EMPTY";
+  g_empty constant all_objects.owner%type := "EMPTY";
 
   g_raise_exc constant boolean := true;
 
@@ -1147,7 +1147,7 @@ $end
             -- Oracle returns COMMENT ON TABLE for a VIEW, :(
             select  min(obj.object_type)
             into    p_base_object_type
-            from    oracle_tools.v_all_objects obj
+            from    all_objects obj
             where   obj.owner = p_schema
             and     obj.object_name = p_base_object_name
             and     obj.object_type in ( 'TABLE', 'VIEW' )
@@ -1164,7 +1164,7 @@ $end
           then
             select  min(obj.object_type)
             into    p_base_object_type
-            from    oracle_tools.v_all_objects obj
+            from    all_objects obj
             where   obj.owner = p_schema
             and     obj.object_name = p_base_object_name
             and     obj.object_type in ( 'TABLE', 'MATERIALIZED VIEW', 'VIEW' )
@@ -4589,7 +4589,7 @@ $end
   is
 $if oracle_tools.pkg_ddl_util.c_#140920801 $then
     -- Capture invalid objects before releasing to next enviroment.
-    l_status oracle_tools.v_all_objects.status%type := null;
+    l_status all_objects.status%type := null;
 $end  
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
@@ -4628,7 +4628,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
       begin
         select  obj.status
         into    l_status
-        from    oracle_tools.v_all_objects obj
+        from    all_objects obj
         where   obj.owner = p_named_object.object_schema()
         and     obj.object_type = p_named_object.dict_object_type()
         and     obj.object_name = p_named_object.object_name()
@@ -5744,6 +5744,20 @@ $end
       with allowed_types as
       ( select  t.column_value as type
         from    table(g_schema_md_object_type_tab) t
+      ), obj as
+      ( select  obj.owner
+        ,       obj.object_type
+        ,       obj.object_name
+        ,       obj.status
+        ,       obj.generated
+        ,       obj.temporary
+        ,       obj.subobject_name
+                -- use scalar subqueries for a (possible) better performance
+        ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
+        ,       ( select oracle_tools.t_schema_object.is_a_repeatable(obj.object_type) from dual ) as is_a_repeatable
+        ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), obj.object_name) from dual ) as is_exclude_name_expr
+        ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
+        from    all_objects obj
       ), deps as
       ( select  oracle_tools.t_schema_object.create_schema_object
                 ( d.owner
@@ -5811,11 +5825,11 @@ $else -- GJP 2022-07-16 TRUE
                 , tr.object_name
                 ) as ref_obj -- belongs to a base table/mv
         from    all_constraints c
-                inner join oracle_tools.v_all_objects tc
+                inner join obj tc
                 on tc.owner = c.owner and tc.object_name = c.table_name
                 inner join all_constraints r
                 on r.owner = c.r_owner and r.constraint_name = c.r_constraint_name
-                inner join oracle_tools.v_all_objects tr
+                inner join obj tr
                 on tr.owner = r.owner and tr.object_name = r.table_name
         where   c.owner = p_schema
         and     c.constraint_type = 'R'
@@ -5861,7 +5875,7 @@ $end
                 , i.table_name
                 ) as ref_obj -- a named object
         from    all_constraints c
-                inner join oracle_tools.v_all_objects tc
+                inner join obj tc
                 on tc.owner = c.owner and tc.object_name = c.table_name and tc.object_type in ('TABLE', 'VIEW') /* GJP 2021-12-15 A table name can be the same as an index or materialized view name but the base object must be a table/view */
                 inner join all_indexes i
                 on i.owner = c.index_owner and i.index_name = c.index_name
@@ -6511,15 +6525,18 @@ $end
               , p_ddl_tab => oracle_tools.t_ddl_tab()
               ) as obj
       from    ( select  o.owner as object_schema
-                ,       o.md_object_type as object_type
                 ,       o.object_name
-                from    oracle_tools.v_all_objects o
+                        -- use scalar subqueries for a (possible) better performance
+                ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(o.object_type), 1, 23) from dual ) as object_type
+                ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(o.object_type) from dual ) as is_dependent_object_type
+
+                from    all_objects o
                 where   o.owner = g_empty
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                 and     o.generated = 'N' -- GPA 2016-12-19 #136334705
 $end                
               ) o
-      where   (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
+      where   o.is_dependent_object_type = 0
     )
     loop
       l_drop_schema_ddl_tab.extend(1);
@@ -6574,7 +6591,7 @@ $end
     begin
       select  1
       into    l_found
-      from    oracle_tools.v_all_objects o
+      from    all_objects o
       where   o.owner = g_empty
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       and     o.generated = 'N' -- GPA 2016-12-19 #136334705
@@ -7127,8 +7144,11 @@ $end
                     ,t.object_name
                     ,count(*) over () as total
               from   ( select  t.*
+                               -- use scalar subqueries for a (possible) better performance
+                       ,       ( select oracle_tools.t_schema_object.is_a_repeatable(t.object_type) from dual ) as is_a_repeatable
+                       ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) from dual ) as is_exclude_name_expr              
                        ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
-                       from    oracle_tools.v_all_objects t
+                       from    all_objects t
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end                       
@@ -7559,8 +7579,11 @@ $end
                     ,t.object_name
                     ,count(*) over () as total
               from   ( select  t.*
+                               -- use scalar subqueries for a (possible) better performance
+                       ,       ( select oracle_tools.t_schema_object.is_a_repeatable(t.object_type) from dual ) as is_a_repeatable
+                       ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) from dual ) as is_exclude_name_expr
                        ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
-                       from    oracle_tools.v_all_objects t
+                       from    all_objects t
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
                        where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end                       
@@ -7790,7 +7813,7 @@ $end
     for r in
     ( select  distinct
               t.object_type
-      from    oracle_tools.v_all_objects t
+      from    all_objects t
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
 $end      
@@ -7986,12 +8009,12 @@ $end
 
       select  count(*)
       into    l_count
-      from    oracle_tools.v_all_objects t
+      from    all_objects t
       where   t.owner = g_empty
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
       and     t.generated = 'N' -- GPA 2016-12-19 #136334705
 $end      
-      and     t.is_exclude_name_expr = 0;
+      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) from dual ) = 0;
 
       ut.expect(l_count, l_program || '#cleanup' || '#' || i_try).to_equal(0);
 
@@ -8002,7 +8025,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         for r in
         ( select  o.object_type
           ,       o.object_name
-          from    oracle_tools.v_all_objects o
+          from    all_objects o
           where   o.owner = g_empty
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
           and     o.generated = 'N' -- GPA 2016-12-19 #136334705

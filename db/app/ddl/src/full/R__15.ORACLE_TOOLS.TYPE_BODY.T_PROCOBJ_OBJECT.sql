@@ -23,7 +23,7 @@ $end
 
   select  obj.object_type
   into    self.dict_object_type$
-  from    oracle_tools.v_all_objects obj
+  from    all_objects obj
   where   obj.owner = p_object_schema
   and     obj.object_name = p_object_name
   ;

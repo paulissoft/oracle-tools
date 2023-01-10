@@ -34,7 +34,7 @@ $end
       select  distinct
               o.object_type
       into    l_object_type
-      from    oracle_tools.v_all_objects o
+      from    all_objects o
       where   o.owner = p_object_schema
       and     o.object_name = p_object_name
       and     o.object_type not in ( 'INDEX'

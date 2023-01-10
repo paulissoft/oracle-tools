@@ -130,7 +130,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
       into    l_statement
       from    all_tab_privs grt
 $if dbms_db_version.version < 12 $then
-              inner join oracle_tools.v_all_objects obj
+              inner join all_objects obj
               on obj.owner = grt.table_schema and obj.object_name = grt.table_name
 $end
       where   grt.table_schema = self.base_object_schema()

@@ -393,7 +393,7 @@ $end
           ,       t.object_name
           ,       null as tablespace_name
           ,       t.object_type
-          from    oracle_tools.v_all_objects t
+          from    all_objects t
           where   t.owner = p_schema
           and     t.object_type = 'TABLE'
           and     t.temporary = 'Y'
@@ -428,10 +428,25 @@ $end
         ( /*
           -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
           */
+          with obj as
+          ( select  obj.owner
+            ,       obj.object_type
+            ,       obj.object_name
+            ,       obj.status
+            ,       obj.generated
+            ,       obj.temporary
+            ,       obj.subobject_name
+                    -- use scalar subqueries for a (possible) better performance
+            ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
+--            ,       ( select oracle_tools.t_schema_object.is_a_repeatable(obj.object_type) from dual ) as is_a_repeatable
+--            ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), obj.object_name) from dual ) as is_exclude_name_expr
+            ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
+            from    all_objects obj
+          )
           select  o.owner as object_schema
           ,       o.md_object_type as object_type
           ,       o.object_name
-          from    oracle_tools.v_all_objects o
+          from    obj o
           where   o.owner = p_schema
           and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
           and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
@@ -1565,6 +1580,18 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
         for r in
         ( select  t.*
           from    ( -- private synonyms for this schema which may point to another schema
+                    with obj as
+                    ( select  obj.owner
+                      ,       obj.object_type
+                      ,       obj.object_name
+                      ,       obj.status
+                      ,       obj.generated
+                      ,       obj.temporary
+                      ,       obj.subobject_name
+                              -- use scalar subqueries for a (possible) better performance
+                      ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
+                      from    all_objects obj
+                    )
                     select  s.owner as object_schema
                     ,       'SYNONYM' as object_type
                     ,       s.synonym_name as object_name
@@ -1573,7 +1600,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                     ,       obj.object_name as base_object_name
                     ,       null as column_name
                     from    all_synonyms s
-                            inner join oracle_tools.v_all_objects obj
+                            inner join obj
                             on obj.owner = s.table_owner and obj.object_name = s.table_name
                     where   obj.object_type not like '%BODY'
                     and     obj.md_object_type member of l_schema_md_object_type_tab
