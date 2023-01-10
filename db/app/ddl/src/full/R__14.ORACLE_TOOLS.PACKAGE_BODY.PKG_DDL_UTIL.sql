@@ -3699,6 +3699,9 @@ $end
     -- ORA-04045: errors during recompilation/revalidation of EMPTY.T_TRIGGER_DDL
     e_errors_during_recompilation exception;
     pragma exception_init(e_errors_during_recompilation, -4045);
+    -- ORA-01442: column to be modified to NOT NULL is already NOT NULL
+    e_column_already_null exception;
+    pragma exception_init(e_column_already_null, -1442);
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'EXECUTE_DDL (3)');
@@ -3726,7 +3729,8 @@ $end
          e_view_has_errors or
          e_grant_option_does_not_exist or
          e_cannot_revoke or
-         e_errors_during_recompilation
+         e_errors_during_recompilation or
+         e_column_already_null
     then 
       dbms_sql.close_cursor(l_cursor);
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
