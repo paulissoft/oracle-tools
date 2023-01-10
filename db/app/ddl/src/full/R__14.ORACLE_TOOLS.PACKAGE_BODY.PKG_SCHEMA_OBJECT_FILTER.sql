@@ -1576,7 +1576,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                             inner join oracle_tools.v_all_objects obj
                             on obj.owner = s.table_owner and obj.object_name = s.table_name
                     where   obj.object_type not like '%BODY'
-                    and     obj.object_type member of l_schema_md_object_type_tab
+                    and     obj.md_object_type member of l_schema_md_object_type_tab
                     and     obj.object_type <> 'MATERIALIZED VIEW'
                     and     s.owner = l_schema
                     -- no need to check on s.generated since we are interested in synonyms, not objects

@@ -87,7 +87,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   c_transform_param_list_testing constant varchar2(4000 char) :=
     -- c_transform_param_list = 'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE'
-    '-CONSTRAINTS_AS_ALTER';
+    '-CONSTRAINTS_AS_ALTER,-SEGMENT_ATTRIBUTES';
 
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
@@ -1523,9 +1523,9 @@ $end
 
           case substr(l_line_tab(i_idx), 1, 1)
             when '+'
-            then set_transform_param(substr(l_line_tab(i_idx), 2), true);
+            then set_transform_param(ltrim(substr(l_line_tab(i_idx), 2)), true);
             when '-'
-            then set_transform_param(substr(l_line_tab(i_idx), 2), false);
+            then set_transform_param(ltrim(substr(l_line_tab(i_idx), 2)), false);
             else set_transform_param(l_line_tab(i_idx), true);
           end case;
         end loop;
@@ -5747,24 +5747,29 @@ $end
       ), deps as
       ( select  oracle_tools.t_schema_object.create_schema_object
                 ( d.owner
-                , oracle_tools.t_schema_object.dict2metadata_object_type(d.type)
+                , d.md_type
                 , d.name
                 ) as obj -- a named object
         ,       oracle_tools.t_schema_object.create_schema_object
                 ( d.referenced_owner
-                , oracle_tools.t_schema_object.dict2metadata_object_type(d.referenced_type)
+                , d.md_referenced_type
                 , d.referenced_name
                 ) as ref_obj -- a named object
-        from    all_dependencies d
-        where   d.owner = p_schema
-        and     d.referenced_owner = p_schema
-                -- ignore database links
-        and     d.referenced_link_name is null
-                -- GJP 2021-08-30 Ignore synonyms: they will be created early like this (no dependencies hence dsort will put them in front)
-        and     d.type != 'SYNONYM'
-        and     d.referenced_type != 'SYNONYM'
-        and     oracle_tools.t_schema_object.dict2metadata_object_type(d.type) in ( select t.type from allowed_types t )
-        and     oracle_tools.t_schema_object.dict2metadata_object_type(d.referenced_type) in ( select t.type from allowed_types t )
+        from    ( select  d.*
+                          -- scalar subqueries for a better performance
+                  ,       ( select oracle_tools.t_schema_object.dict2metadata_object_type(d.type) from dual ) as md_type
+                  ,       ( select oracle_tools.t_schema_object.dict2metadata_object_type(d.referenced_type) from dual ) as md_referenced_type
+                  from    all_dependencies d
+                  where   d.owner = p_schema
+                  and     d.referenced_owner = p_schema
+                          -- ignore database links
+                  and     d.referenced_link_name is null
+                          -- GJP 2021-08-30 Ignore synonyms: they will be created early like this (no dependencies hence dsort will put them in front)
+                  and     d.type != 'SYNONYM'
+                  and     d.referenced_type != 'SYNONYM'
+                ) d
+        where   d.md_type in ( select t.type from allowed_types t )
+        and     d.md_referenced_type in ( select t.type from allowed_types t )
         union all
 $if not(oracle_tools.pkg_ddl_util.c_#138707615_2) $then -- GJP 2022-07-16 FALSE
         -- dependencies based on foreign key constraints
@@ -5852,7 +5857,7 @@ $end
                 , 'INDEX'
                 , c.index_name
                 , i.table_owner
-                , oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type)
+                , i.table_type
                 , i.table_name
                 ) as ref_obj -- a named object
         from    all_constraints c
@@ -5863,8 +5868,8 @@ $end
         where   c.owner = p_schema
         and     c.index_owner is not null
         and     c.index_name is not null
-        and     oracle_tools.t_schema_object.dict2metadata_object_type(tc.object_type) in ( select t.type from allowed_types t )
-        and     oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) in ( select t.type from allowed_types t )
+        and     tc.md_object_type in ( select t.type from allowed_types t )
+        and     i.table_type in ( select t.type from allowed_types t )
 $if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
         -- no need to exclude since this is dependency checking not object selection
 $end

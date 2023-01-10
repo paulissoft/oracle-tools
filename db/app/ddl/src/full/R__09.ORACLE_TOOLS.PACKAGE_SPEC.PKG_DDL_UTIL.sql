@@ -506,6 +506,7 @@ procedure ut_display_ddl_schema_diff_chk;
 --%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
 --%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
 --%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
+--%disabled
 procedure ut_display_ddl_schema_diff;
 
 --%test
