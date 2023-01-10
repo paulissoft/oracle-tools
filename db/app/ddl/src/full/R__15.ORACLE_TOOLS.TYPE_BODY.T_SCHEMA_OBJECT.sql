@@ -451,8 +451,8 @@ static procedure create_schema_object
 , p_schema_object out nocopy oracle_tools.t_schema_object
 )
 is
-  l_base_object_schema all_objects.owner%type := p_base_object_schema;
-  l_base_object_name all_objects.object_name%type := p_base_object_name;
+  l_base_object_schema oracle_tools.v_all_objects.owner%type := p_base_object_schema;
+  l_base_object_name oracle_tools.v_all_objects.object_name%type := p_base_object_name;
   
   function create_base_object
   ( p_base_object_schema in varchar2

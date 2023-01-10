@@ -393,7 +393,7 @@ $end
           ,       t.object_name
           ,       null as tablespace_name
           ,       t.object_type
-          from    all_objects t
+          from    oracle_tools.v_all_objects t
           where   t.owner = p_schema
           and     t.object_type = 'TABLE'
           and     t.temporary = 'Y'
@@ -429,28 +429,22 @@ $end
           -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
           */
           select  o.owner as object_schema
-          ,       o.object_type
+          ,       o.md_object_type as object_type
           ,       o.object_name
-          from    ( select  o.owner
-                            -- use scalar subquery cache
-                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(o.object_type) from dual) as object_type
-                    ,       o.object_name
-                    from    all_objects o
-                    where   o.owner = p_schema
-                    and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+          from    oracle_tools.v_all_objects o
+          where   o.owner = p_schema
+          and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+          and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
+          and     o.md_object_type member of l_schema_md_object_type_tab
 $if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
-                    and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
 $end                
-                            -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
-                            -- =====         ===========                      ==============
-                            -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
-                    and     o.subobject_name is null
-                            -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-                    and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
-                  ) o
-          where   o.object_type member of l_schema_md_object_type_tab
-                  -- use scalar subquery cache
-          and     (select oracle_tools.pkg_ddl_util.is_dependent_object_type(p_object_type => o.object_type) from dual) = 0
+                  -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
+                  -- =====         ===========                      ==============
+                  -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
+          and     o.subobject_name is null
+                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+          and     o.is_dependent_object_type = 0
         )
         loop
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
@@ -1575,12 +1569,11 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                     ,       'SYNONYM' as object_type
                     ,       s.synonym_name as object_name
                     ,       obj.owner as base_object_schema
-                            -- use scalar subquery cache
-                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type) from dual) as base_object_type
+                    ,       obj.md_object_type as base_object_type
                     ,       obj.object_name as base_object_name
                     ,       null as column_name
                     from    all_synonyms s
-                            inner join all_objects obj
+                            inner join oracle_tools.v_all_objects obj
                             on obj.owner = s.table_owner and obj.object_name = s.table_name
                     where   obj.object_type not like '%BODY'
                     and     obj.object_type member of l_schema_md_object_type_tab
@@ -1599,8 +1592,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                     ,       case when t.owner = t.table_owner then t.table_name end as base_object_name
 */
                     ,       t.table_owner as base_object_schema
-                            -- use scalar subquery cache
-                    ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(t.base_object_type) from dual) as base_object_type
+                    ,       t.base_object_type as base_object_type
                     ,       t.table_name as base_object_name
                     ,       null as column_name
                     from    all_triggers t
@@ -1638,8 +1630,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
           ,       case when i.owner = i.table_owner then i.table_name end as base_object_name
 */
           ,       i.table_owner as base_object_schema
-                  -- use scalar subquery cache
-          ,       (select oracle_tools.t_schema_object.dict2metadata_object_type(i.table_type) from dual) as base_object_type
+          ,       i.table_type as base_object_type
           ,       i.table_name as base_object_name
           ,       i.tablespace_name
           from    all_indexes i
