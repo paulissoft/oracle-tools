@@ -5,7 +5,11 @@ subtype t_id_tab is utl_call_stack.unit_qualified_name; -- a table type allowing
 
 /**
 
-This package is a layer on top of UTL_CALL_STACK. It reverses the direction of a stack compared to UTL_CALL_STACK which has the newest call entries at the lowest index entries. For instance the call with dynamic depth equal to UTL_CALL_STACK.DYNAMIC_DEPTH is the oldest (first) call. In this package it is the reverse which has as advantage that an entry in the call stack with dynamic depth equal to X will still have the same dynamic depth when another call is made. The same is true for the error nd backtrace stack.
+This package is a layer on top of UTL_CALL_STACK. It reverses the direction of a call stack compared to UTL_CALL_STACK which has the newest call entries at the lowest index entries. For instance the call with dynamic depth equal to UTL_CALL_STACK.DYNAMIC_DEPTH is the oldest (first) call. In this package it is the reverse which has as advantage that an entry in the call stack with dynamic depth equal to X will still have the same dynamic depth when another call is made. 
+
+The same is true for the error stack: originating error first but that was already the case for UTL_CALL_STACK.
+
+The same is true for the backtrace stack: originating call first unlike UTL_CALL_STACK.
 
 **/
 
@@ -75,7 +79,7 @@ The backtrace stack table type.
 **/
 
 function get_call_stack
-( p_nr_items_to_skip in pls_integer default 1 -- You normally want to skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
+( p_nr_items_to_skip in naturaln default 1 -- You normally want to skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 )
 return t_call_stack_tab;
 
@@ -117,7 +121,7 @@ Get the unique id of each call and return those IDs.
 **/
 
 function get_error_stack
-( p_nr_items_to_skip in pls_integer default 0
+( p_nr_items_to_skip in naturaln default 0
 )
 return t_error_stack_tab;
 
@@ -156,7 +160,7 @@ Get the unique id of each error call and return those IDs.
 **/
 
 function get_backtrace_stack
-( p_nr_items_to_skip in pls_integer default 0
+( p_nr_items_to_skip in naturaln default 0
 )
 return t_backtrace_stack_tab;
 

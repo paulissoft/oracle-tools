@@ -2,7 +2,7 @@ CREATE OR REPLACE PACKAGE BODY "API_CALL_STACK_PKG" -- -*-coding: utf-8-*-
 is
 
 function get_call_stack
-( p_nr_items_to_skip in pls_integer
+( p_nr_items_to_skip in naturaln
 )
 return t_call_stack_tab
 is
@@ -64,7 +64,7 @@ begin
 end id;
 
 function get_error_stack
-( p_nr_items_to_skip in pls_integer
+( p_nr_items_to_skip in naturaln
 )
 return t_error_stack_tab
 is
@@ -73,9 +73,9 @@ is
   l_lwb constant binary_integer := 1 + p_nr_items_to_skip;
   l_upb constant binary_integer := utl_call_stack.error_depth;
 begin
-  for depth in reverse l_lwb .. l_upb
+  for depth in l_lwb .. l_upb
   loop
-    l_error_stack_rec.error_depth := l_upb  - depth + 1;
+    l_error_stack_rec.error_depth := depth;
     l_error_stack_rec.error_msg := utl_call_stack.error_msg(depth);
     l_error_stack_rec.error_number := utl_call_stack.error_number(depth);
     l_error_stack_tab(l_error_stack_tab.count + 1) := l_error_stack_rec;
@@ -119,7 +119,7 @@ begin
 end id;
 
 function get_backtrace_stack 
-( p_nr_items_to_skip in pls_integer
+( p_nr_items_to_skip in naturaln
 )
 return t_backtrace_stack_tab
 is
@@ -177,13 +177,13 @@ procedure show_stack
 ( p_where_am_i in varchar2
 )
 is
-  l_call_stack_tab constant t_call_stack_tab := get_call_stack;
+  l_call_stack_tab constant t_call_stack_tab := get_call_stack(2); -- skip this call and get_call_stack
   l_error_stack_tab constant t_error_stack_tab := get_error_stack;
   l_backtrace_stack_tab constant t_backtrace_stack_tab := get_backtrace_stack;
 begin
   dbms_output.new_line;
   dbms_output.put_line('Current stack for  ' || p_where_am_i);
-  dbms_output.put_line('  dynamic depth:   ' || utl_call_stack.dynamic_depth);
+  dbms_output.put_line('  dynamic depth:   ' || to_char(utl_call_stack.dynamic_depth - 1)); -- skip this call
   dbms_output.put_line('  error depth:     ' || utl_call_stack.error_depth);
   dbms_output.put_line('  backtrace depth: ' || utl_call_stack.backtrace_depth);
   dbms_output.new_line;
@@ -206,7 +206,7 @@ begin
     lpad   ('====', 6) || ' ' ||
             '===='                      
   );
-  for depth in /*reverse*/ 1 .. l_call_stack_tab.count
+  for depth in 1 .. l_call_stack_tab.count
   loop
     dbms_output.put_line
     ( to_char(l_call_stack_tab(depth).dynamic_depth,    '999999999990') || ' ' ||
@@ -222,50 +222,49 @@ begin
   if utl_call_stack.error_depth > 0
   then
     dbms_output.new_line;
-  end if;
-  
-  dbms_output.put_line
-  ( lpad   ('ERROR DEPTH', 11)    || ' ' ||
-    rpad   ('ERROR MESSAGE'   , 100)    || ' ' ||
-    rpad   ('ERROR', 9)
-  );
-  dbms_output.put_line
-  ( lpad   ('===========', 11)    || ' ' ||
-    rpad   ('============='   , 100)    || ' ' ||
-    rpad   ('=====', 9)
-  );
-  for error in 1 ..  l_error_stack_tab.count
-  loop
     dbms_output.put_line
-    ( to_char(l_error_stack_tab(error).error_depth, '9999999990') || ' ' ||
-      rpad   (l_error_stack_tab(error).error_msg   , 100)    || ' ' ||
-      'ORA-' || to_char(l_error_stack_tab(error).error_number, 'FM00000')
+    ( lpad   ('ERROR DEPTH', 11)    || ' ' ||
+      rpad   ('ERROR MESSAGE'   , 100)    || ' ' ||
+      rpad   ('ERROR', 9)
     );
-  end loop;
+    dbms_output.put_line
+    ( lpad   ('===========', 11)    || ' ' ||
+      rpad   ('============='   , 100)    || ' ' ||
+      rpad   ('=====', 9)
+    );
+    for error in 1 ..  l_error_stack_tab.count
+    loop
+      dbms_output.put_line
+      ( to_char(l_error_stack_tab(error).error_depth, '9999999990') || ' ' ||
+        rpad   (l_error_stack_tab(error).error_msg   , 100)    || ' ' ||
+        'ORA-' || to_char(l_error_stack_tab(error).error_number, 'FM00000')
+      );
+    end loop;
+  end if;
 
   if utl_call_stack.backtrace_depth > 0
   then
     dbms_output.new_line;
-  end if;
 
-  dbms_output.put_line
-  ( lpad   ('BACKTRACE DEPTH', 15)    || ' ' ||
-    rpad   ('BACKTRACE UNIT', 61) || ' ' ||
-    lpad   ('LINE', 6)
-  );
-  dbms_output.put_line
-  ( lpad   ('===============', 15)    || ' ' ||
-    rpad   ('==============', 61) || ' ' ||
-    lpad   ('====', 6)
-  );
-  for backtrace in 1 ..  l_backtrace_stack_tab.count
-  loop
     dbms_output.put_line
-    ( to_char(l_backtrace_stack_tab(backtrace).backtrace_depth, '99999999999990') || ' ' ||
-      rpad   (l_backtrace_stack_tab(backtrace).backtrace_unit, 61) || ' ' ||
-      to_char(l_backtrace_stack_tab(backtrace).backtrace_line, '99990')
+    ( lpad   ('BACKTRACE DEPTH', 15)    || ' ' ||
+      rpad   ('BACKTRACE UNIT', 61) || ' ' ||
+      lpad   ('LINE', 6)
     );
-  end loop;
+    dbms_output.put_line
+    ( lpad   ('===============', 15)    || ' ' ||
+      rpad   ('==============', 61) || ' ' ||
+      lpad   ('====', 6)
+    );
+    for backtrace in 1 ..  l_backtrace_stack_tab.count
+    loop
+      dbms_output.put_line
+      ( to_char(l_backtrace_stack_tab(backtrace).backtrace_depth, '99999999999990') || ' ' ||
+        rpad   (l_backtrace_stack_tab(backtrace).backtrace_unit, 61) || ' ' ||
+        to_char(l_backtrace_stack_tab(backtrace).backtrace_line, '99990')
+      );
+    end loop;
+  end if;
 end show_stack;
 
 end API_CALL_STACK_PKG;
