@@ -113,66 +113,66 @@ The .../projects/YOUR-PROJECT/apex/pom.xml may have as parent:
 </parent>
 ```
 
-### Using Maven dependencies
-
-#### Database POM
-
-The .../projects/YOUR-PROJECT/db/pom.xml may have as parent:
-Add this to the Database POM:
-
-```
-  <parent>
-    <groupId>com.paulissoft.oracle-tools</groupId>
-    <artifactId>db</artifactId>
-    <version>YOUR VERSION</version>
-    <relativePath></relativePath>
-  </parent>
-
-  <properties>
-    <oracle-tools.db.version>YOUR VERSION</oracle-tools.db.version>
-    <db.dependency>true</db.dependency>
-  </properties>
-```
-
-If you want to use the ORCL database from the Oracle Tools conf/src directory
-you have to add this dependency as well:
-
-```
-    <conf.dependency>true</conf.dependency>
-```
-
-Then you can run for instance:
-
-```
-$ mvn -Pdb-install -Ddb=orcl -Ddb.password=...
-```
-
-to get a connection to the local database with service name ORCL on port 1521,
-the Oracle default.
-
-
-#### Apex POM
-
-Add this to the Apex POM:
-
-```
-  <parent>
-    <groupId>com.paulissoft.oracle-tools</groupId>
-    <artifactId>apex</artifactId>
-    <version>YOUR VERSION</version>
-    <relativePath></relativePath>
-  </parent>
-
-  <properties>
-    <oracle-tools.apex.version>YOUR VERSION</oracle-tools.apex.version>
-    <apex.dependency>true</apex.dependency>
-  </properties>
-```
-
-If you want to use the ORCL database from the Oracle Tools conf/src directory
-you have to add this dependency as well:
-
-```
-    <conf.dependency>true</conf.dependency>
-```
+[//]: # (### Using Maven dependencies)
+[//]: # ()
+[//]: # (#### Database POM)
+[//]: # ()
+[//]: # (The .../projects/YOUR-PROJECT/db/pom.xml may have as parent:)
+[//]: # (Add this to the Database POM:)
+[//]: # ()
+[//]: # (```)
+[//]: # (  <parent>)
+[//]: # (    <groupId>com.paulissoft.oracle-tools</groupId>)
+[//]: # (    <artifactId>db</artifactId>)
+[//]: # (    <version>YOUR VERSION</version>)
+[//]: # (    <relativePath></relativePath>)
+[//]: # (  </parent>)
+[//]: # ()
+[//]: # (  <properties>)
+[//]: # (    <oracle-tools.db.version>YOUR VERSION</oracle-tools.db.version>)
+[//]: # (    <db.dependency>true</db.dependency>)
+[//]: # (  </properties>)
+[//]: # (```)
+[//]: # ()
+[//]: # (If you want to use the ORCL database from the Oracle Tools conf/src directory)
+[//]: # (you have to add this dependency as well:)
+[//]: # ()
+[//]: # (```)
+[//]: # (    <conf.dependency>true</conf.dependency>)
+[//]: # (```)
+[//]: # ()
+[//]: # (Then you can run for instance:)
+[//]: # ()
+[//]: # (```)
+[//]: # ($ mvn -Pdb-install -Ddb=orcl -Ddb.password=...)
+[//]: # (```)
+[//]: # ()
+[//]: # (to get a connection to the local database with service name ORCL on port 1521,)
+[//]: # (the Oracle default.)
+[//]: # ()
+[//]: # ()
+[//]: # (#### Apex POM)
+[//]: # ()
+[//]: # (Add this to the Apex POM:)
+[//]: # ()
+[//]: # (```)
+[//]: # (  <parent>)
+[//]: # (    <groupId>com.paulissoft.oracle-tools</groupId>)
+[//]: # (    <artifactId>apex</artifactId>)
+[//]: # (    <version>YOUR VERSION</version>)
+[//]: # (    <relativePath></relativePath>)
+[//]: # (  </parent>)
+[//]: # ()
+[//]: # (  <properties>)
+[//]: # (    <oracle-tools.apex.version>YOUR VERSION</oracle-tools.apex.version>)
+[//]: # (    <apex.dependency>true</apex.dependency>)
+[//]: # (  </properties>)
+[//]: # (```)
+[//]: # ()
+[//]: # (If you want to use the ORCL database from the Oracle Tools conf/src directory)
+[//]: # (you have to add this dependency as well:)
+[//]: # ()
+[//]: # (```)
+[//]: # (    <conf.dependency>true</conf.dependency>)
+[//]: # (```)
 
