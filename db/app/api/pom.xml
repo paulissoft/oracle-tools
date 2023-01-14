@@ -16,7 +16,7 @@
   <properties>
     <flyway.table>schema_version_tools_api</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>API_PKG,API_LONGOPS_PKG</db.object.names>
+    <db.object.names>API_PKG,API_LONGOPS_PKG,API_CALL_STACK_PKG</db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
 
