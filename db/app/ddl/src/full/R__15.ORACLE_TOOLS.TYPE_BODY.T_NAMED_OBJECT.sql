@@ -30,15 +30,37 @@ $end
 
   if l_object_type is null
   then
-    select  distinct
-            o.object_type
-    into    l_object_type
-    from    all_objects o
-    where   o.owner = p_object_schema
-    and     o.object_name = p_object_name
-    and     o.object_type not in ('INDEX', 'TRIGGER', 'PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW', 'TABLE PARTITION') -- only primary objects
-    ;
-
+    begin
+      select  distinct
+              o.object_type
+      into    l_object_type
+      from    all_objects o
+      where   o.owner = p_object_schema
+      and     o.object_name = p_object_name
+      and     o.object_type not in ( 'INDEX'
+                                   , 'TRIGGER'
+                                   , 'PACKAGE BODY'
+                                   , 'TYPE BODY'
+                                   , 'MATERIALIZED VIEW'
+                                   , 'TABLE PARTITION'
+                                   , 'TABLE SUBPARTITION'
+                                   ); -- only primary objects
+    exception
+      when no_data_found
+      then oracle_tools.pkg_ddl_error.raise_error
+           ( p_error_number => oracle_tools.pkg_ddl_error.c_object_type_wrong
+           , p_error_message => 'Object type not found for this object.'
+           , p_context_info => p_object_schema || '.' || p_object_name
+           , p_context_label => 'object owner and name'
+           );
+      when too_many_rows
+      then oracle_tools.pkg_ddl_error.raise_error
+           ( p_error_number => oracle_tools.pkg_ddl_error.c_object_type_wrong
+           , p_error_message => 'Too many object types found for this object.'
+           , p_context_info => p_object_schema || '.' || p_object_name
+           , p_context_label => 'object owner and name'
+           );
+    end;
     l_object_type := oracle_tools.t_schema_object.dict2metadata_object_type(l_object_type);
   end if;
 
@@ -58,8 +80,9 @@ $end
     when 'JAVA_SOURCE'           then p_named_object := oracle_tools.t_java_source_object(p_object_schema, p_object_name);
     when 'REFRESH_GROUP'         then p_named_object := oracle_tools.t_refresh_group_object(p_object_schema, p_object_name);
     when 'PROCOBJ'               then p_named_object := oracle_tools.t_procobj_object(p_object_schema, p_object_name);
-    else oracle_tools.pkg_ddl_error.raise_error
-         ( oracle_tools.pkg_ddl_error.c_invalid_parameters
+    else -- GJP 2023-01-06 An error occurred for object with object type/schema/name: POST_TABLE_ACTION//
+         oracle_tools.pkg_ddl_error.raise_error
+         ( oracle_tools.pkg_ddl_error.c_object_type_wrong -- oracle_tools.pkg_ddl_error.c_invalid_parameters
          , 'Object type "' || l_object_type || '" is not listed here.'
          , utl_lms.format_message
            ( '%s/%s/%s'

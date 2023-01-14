@@ -1,4 +1,4 @@
-/* perl generate_ddl.pl (version 2022-12-02) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
+/* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
 -- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl
@@ -11,7 +11,9 @@
 -- object names        : CFG_INSTALL_PKG,CFG_PKG,UT_CODE_CHECK_PKG
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
--- transform params    : SEGMENT_ATTRIBUTES,TABLESPACE
+-- transform params    : 
+-- exclude objects     : 
+-- include objects     : 
 -- owner               : ORACLE_TOOLS
 */
 -- pkg_ddl_util v4

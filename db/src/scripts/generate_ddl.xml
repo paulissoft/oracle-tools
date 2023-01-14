@@ -1,4 +1,4 @@
-<project name="generate_ddl" default="generate-ddl-full-help" basedir=".">
+<project name="generate_ddl" default="generate-ddl-full-help" basedir="." xmlns:ac="antlib:net.sf.antcontrib">
 
   <description>
     Generate database scripts for a fresh (full) and incremental installation.
@@ -26,6 +26,10 @@
     A comma separated list of object names (default empty).
     - object.names.include
     Must we include (1), exclude (0) or ignore object.names (empty) (default empty).
+    - exclude.objects
+    A newline separated list of objects to exclude, i.e. schema object IDs (default empty).
+    - include.objects
+    A newline separated list of objects to include, i.e. schema object IDs (default empty).
     - compile.classpath
     The compile classpath.
     - runtime.classpath
@@ -34,6 +38,8 @@
     The owner of the pkg_ddl_util package.
     - build.dir
     The build directory.
+    - show.properties
+    Show properties using task echoproperties.
 
     The following properties are used for generate-ddl-full:
     - full.force.view
@@ -110,21 +116,6 @@
 
     <available property="generate_ddl.pl.exists" file="${generate_ddl.pl}"/>
 
-    <!-- remove whitespace in ${object.names} -->
-    <loadresource property="object.names.trimmed">
-      <propertyresource name="object.names"/>
-      <filterchain>
-        <!-- do not replace end of line characters, just ordinary whitespace -->
-        <tokenfilter>
-          <deletecharacters chars=" \t" />
-        </tokenfilter>
-      </filterchain>
-    </loadresource>
-
-    <!-- when property object.names does not contain whitespace
-         object.names.trimmed is not set above -->
-    <property name="object.names.trimmed" value=""/>
-
     <!-- for GenerateDDL.java -->
     <dirname property="ant.file.dir" file="${ant.file}"/>
     <property name="src.dir" location="${ant.file.dir}/../java"/>
@@ -161,7 +152,63 @@
     <echo level="verbose" message="runtime.classpath: ${runtime.classpath}" />
 
     <property name="javac.verbose" value="false"/>
-  </target>
+
+    <tempfile property="property.file" destDir="${build.dir}"/>
+    <echo level="verbose" message="property.file: ${property.file}" />
+
+    <property name="show.properties" value="false" />
+  </target> <!-- init-common -->
+
+  <!-- GJP 2023-01-04 
+       This target is obsolete: let the database do the trimming.
+       See also https://github.com/paulissoft/oracle-tools/issues/103
+  -->
+  <target name="init-common-trimmed">
+    <!-- remove whitespace in ${object.names} -->
+    <loadresource property="object.names.trimmed">
+      <propertyresource name="object.names"/>
+      <filterchain>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
+        <tokenfilter>
+          <deletecharacters chars=" \t" />
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <!-- when property object.names does not contain whitespace
+         object.names.trimmed is not set above -->
+    <property name="object.names.trimmed" value=""/>
+
+    <!-- remove whitespace in ${include.objects} -->
+    <loadresource property="include.objects.trimmed">
+      <propertyresource name="include.objects"/>
+      <filterchain>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
+        <tokenfilter>
+          <deletecharacters chars=" \t" />
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <!-- when property include.objects does not contain whitespace
+         include.objects.trimmed is not set above -->
+    <property name="include.objects.trimmed" value=""/>
+
+    <!-- remove whitespace in ${exclude.objects} -->
+    <loadresource property="exclude.objects.trimmed">
+      <propertyresource name="exclude.objects"/>
+      <filterchain>
+        <!-- do not replace end of line characters, just ordinary whitespace -->
+        <tokenfilter>
+          <deletecharacters chars=" \t" />
+        </tokenfilter>
+      </filterchain>
+    </loadresource>
+
+    <!-- when property exclude.objects does not contain whitespace
+         exclude.objects.trimmed is not set above -->
+    <property name="exclude.objects.trimmed" value=""/>
+  </target> <!-- init-common-trimmed -->
 
   <target name="init-full" unless="target.db.name">
     <fail message="Properties src.scripts and full.output.directory undefined">
@@ -202,10 +249,15 @@
         <equals arg1="${perl.full.skip.install.sql}" arg2="no"/>
       </not>
     </condition>
-    <echoproperties prefix="perl." />
-    <echoproperties prefix="full." />
-  </target>
-  
+    <ac:if>
+      <equals arg1="${show.properties}" arg2="true" />
+      <then>
+        <echoproperties prefix="perl." />
+        <echoproperties prefix="full." />
+      </then>
+    </ac:if>
+  </target> <!-- init-full -->
+
   <target name="init-incr" if="target.db.name">
     <!--
 
@@ -261,10 +313,14 @@ Z       Time zone               RFC 822 time zone   -0800
 
     <property name="incr.interface" value="pkg_ddl_util v5"/>
     <property name="incr.transform.params" value="SEGMENT_ATTRIBUTES,TABLESPACE"/>
-
-    <echoproperties prefix="perl." />
-    <echoproperties prefix="incr." />
-  </target>
+    <ac:if>
+      <equals arg1="${show.properties}" arg2="true" />
+      <then>
+        <echoproperties prefix="perl." />
+        <echoproperties prefix="incr." />
+      </then>
+    </ac:if>
+  </target> <!-- init-incr -->
 
   <target name="init-schema" depends="init">
     <!-- set source.db properties -->
@@ -325,6 +381,7 @@ Z       Time zone               RFC 822 time zone   -0800
 
   <macrodef name="generate-ddl" description="Generate schema ddl">
     <!-- Java (and maybe Perl) -->
+    <attribute name="type" default="full"/>
     <attribute name="source.schema" default=""/>
     <attribute name="source.db.name" default=""/>
     <attribute name="target.schema" default=""/>
@@ -342,31 +399,69 @@ Z       Time zone               RFC 822 time zone   -0800
       <echo message="Invoke generate schema (@{id})" />
       <echo message="Temporary file: @{temp.file}" />
 
-      <!-- generate the input for the Perl script -->
-      <java fork="true" 
-            classname="${main-class}" 
-            failonerror="true"
-            logError="true">
-        <redirector output="@{temp.file}"/>
-        <classpath>
-          <path refid="runtime.classpath"/>
-          <path location="${jar.dir}/${ant.project.name}.jar"/>
-        </classpath>
-        <env key="NLS_LANG" value="American_America.UTF8"/>
-        <arg value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
-        <arg value="${quote}@{source.schema}${quote}"/> <!-- source schema -->
-        <arg value="${quote}@{source.db.name}${quote}"/> <!-- source database link -->
-        <arg value="${quote}@{target.schema}${quote}"/> <!-- target schema -->
-        <arg value="${quote}@{target.db.name}${quote}"/> <!-- target database link -->
-        <arg value="${quote}${object.type}${quote}"/> <!-- object type -->
-        <arg value="${quote}${object.names.include}${quote}"/> <!-- object names include -->
-        <arg value="${quote}${object.names.trimmed}${quote}"/> <!-- object names -->
-        <arg value="${quote}@{skip.repeatables}${quote}"/> <!-- skip repeatables -->
-        <arg value="${quote}@{interface}${quote}"/>
-        <arg value="${quote}@{transform.params}${quote}"/>
-        <!-- owner must be the last -->
-        <arg value="${quote}@{owner}${quote}"/>
-      </java>
+      <!-- GJP 2022-1220 
+           Use a properties file:
+           1) as a better way to handle large (CLOB) strings;
+           2) for easier development since the Java program 
+              just needs to load properties from a file and
+              adding a property will thus be easier.
+      -->
+      <propertyfile file="${property.file}">
+        <entry key="source.schema" value="@{source.schema}"/>
+        <entry key="source.db.name" value="@{source.db.name}"/>
+        <entry key="target.schema" value="@{target.schema}"/>
+        <entry key="target.db.name" value="@{target.db.name}"/>
+        <entry key="object.type" value="${object.type}"/>
+        <entry key="object.names.include" value="${object.names.include}"/>
+        <!-- GJP 2023-01-04 
+             Trimming is not necessary here: let the database do it.
+             See also https://github.com/paulissoft/oracle-tools/issues/103.
+        -->
+        <!--entry key="object.names" value="${object.names.trimmed}"/-->
+        <entry key="object.names" value="${object.names}"/>        
+        <entry key="skip.repeatables" value="@{skip.repeatables}"/>
+        <entry key="interface" value="@{interface}"/>
+        <entry key="transform.params" value="@{transform.params}"/>     
+        <!-- GJP 2023-01-04 
+             Trimming is not necessary here: let the database do it.
+             See also https://github.com/paulissoft/oracle-tools/issues/103.
+        -->
+        <!--entry key="exclude.objects" value="${exclude.objects.trimmed}"/-->
+        <!--entry key="include.objects" value="${include.objects.trimmed}"/-->
+        <entry key="exclude.objects" value="${exclude.objects}"/>
+        <entry key="include.objects" value="${include.objects}"/>
+        <entry key="owner" value="@{owner}"/>
+      </propertyfile>
+
+      <ac:trycatch property="@{id}.error">
+        <try>
+          <!-- generate the input for the Perl script -->
+          <java fork="true" 
+                classname="${main-class}" 
+                failonerror="true"
+                logError="true">
+            <redirector output="@{temp.file}"/>
+            <classpath>
+              <path refid="runtime.classpath"/>
+              <path location="${jar.dir}/${ant.project.name}.jar"/>
+            </classpath>
+            <!-- Oracle clients love NLS_LANG -->
+            <env key="NLS_LANG" value="American_America.UTF8"/>
+            <!-- password etcetera via environment variables -->
+            <env key="JDBC_URL" value="jdbc:oracle:thin:${userid}"/> <!-- JDBC url -->
+            <arg value="${quote}${property.file}${quote}"/>
+            <jvmarg value="-enableassertions"/>
+          </java>
+        </try>
+        <catch>
+          <echoproperties prefix="perl." />
+          <echoproperties prefix="@{type}." />
+          <loadfile property="@{id}.properties" srcFile="${property.file}" />
+          <echo message="generator properties: ${@{id}.properties}" />
+          <!-- fail anyhow -->
+          <fail message="${@{id}.error}"/>
+        </catch>
+      </ac:trycatch>
 
       <!-- Create scripts -->
       <exec executable="perl" failonerror="false" resultproperty="result.@{id}">
@@ -406,7 +501,8 @@ Z       Time zone               RFC 822 time zone   -0800
     <!-- generate the input for the Perl script -->
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.install.file" destDir="${log.dir}" suffix=".sql" prefix="install"/>
-    <generate-ddl source.schema="${schema}"
+    <generate-ddl type="full"
+                  source.schema="${schema}"
                   source.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
@@ -432,7 +528,8 @@ Z       Time zone               RFC 822 time zone   -0800
     <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
-    <generate-ddl target.schema="${schema}"
+    <generate-ddl type="full"
+                  target.schema="${schema}"
                   target.db.name="${source.db.name}"
                   interface="${full.interface}"
                   transform.params="${full.transform.params}"
@@ -491,7 +588,8 @@ Z       Time zone               RFC 822 time zone   -0800
     </condition>
     <!-- GJP When generating DDL the temporary file should be kept. -->
     <tempfile property="temp.incr.file" destDir="${log.dir}" suffix=".sql" prefix="incr"/>
-    <generate-ddl source.schema="${schema}"
+    <generate-ddl type="incr"
+                  source.schema="${schema}"
                   source.db.name="${source.db.name}"
                   target.schema="${schema}"
                   target.db.name="${target.db.name}"

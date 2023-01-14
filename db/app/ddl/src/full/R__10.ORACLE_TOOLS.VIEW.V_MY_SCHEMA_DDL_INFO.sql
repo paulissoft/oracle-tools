@@ -22,6 +22,8 @@ from    table
           , p_object_names_include => null
           , p_network_link => null
           , p_grantor_is_schema => 0
+          , p_exclude_objects => null
+          , p_include_objects => null
           )
         ) t
 ,       table(t.ddl_tab) u;

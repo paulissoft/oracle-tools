@@ -5,3 +5,6 @@ target
 .flattened-pom.xml
 *.tmp
 jenkins/.initrd
+node_modules/
+\.DS_Store
+package-lock.json

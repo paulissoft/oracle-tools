@@ -42,6 +42,10 @@
     <db.object.names />
     <!-- db.object.names.include specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include) -->
     <db.object.names.include />
+    <!-- A list of object IDs to exclude (empty means exclude none) -->
+    <db.exclude.objects />
+    <!-- A list of object IDs to include (empty means include all) -->
+    <db.include.objects />
     <!-- must set it here so profile oracle-tools can override it when
          db-generate-ddl-full is also active -->
     <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
@@ -60,6 +64,7 @@
     <!-- ======================== -->    
     <db.phase.init>validate</db.phase.init>
     <db.phase.process>compile</db.phase.process>
+    <db.show.properties>false</db.show.properties>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -108,7 +113,7 @@
               <id>db-debug-before</id>
               <phase>${db.phase.init}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${db.show.properties}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -229,7 +234,7 @@
               <id>db-debug-after</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${db.show.properties}">
                   <echoproperties prefix="flyway." />
                 </target>
               </configuration>
@@ -498,8 +503,7 @@
         <!-- pkg_ddl_util v4: sequence number depends on object type -->
         <!-- pkg_ddl_util v5: sequence number depends on install_sequence.txt (initially created ordered on object dependencies) -->
         <db.full.interface>pkg_ddl_util v5</db.full.interface>
-        <!-- a comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links) -->
-        <db.full.transform.params>SEGMENT_ATTRIBUTES,TABLESPACE</db.full.transform.params>
+        <db.full.transform.params></db.full.transform.params>
         <db.generate.ddl.full.skip>${db.install.skip}</db.generate.ddl.full.skip>
         <!-- create or replace "source schema"."source name" 
              =>
@@ -524,12 +528,15 @@
                          target="generate-ddl-full"
                          inheritAll="false"
                          dir=".">
+                      <property name="show.properties" value="${db.show.properties}" />
                       <property name="source.db.name" value="" />
                       <property name="schema" value="${db.schema}" />
                       <property name="userid" value="${db.userid}" />
                       <property name="object.type" value="${db.object.type}" />
                       <property name="object.names" value="${db.object.names}" />
                       <property name="object.names.include" value="${db.object.names.include}" />
+                      <property name="exclude.objects" value="${db.exclude.objects}" />
+                      <property name="include.objects" value="${db.include.objects}" />
                       <property name="full.force.view" value="${db.full.force.view}" />
                       <property name="full.group.constraints" value="${db.full.group.constraints}" />
                       <property name="full.output.directory" value="${db.src.full.scripts}" />
@@ -565,8 +572,7 @@
         <db.incr.skip.repeatables>yes</db.incr.skip.repeatables>
         <!-- see above (db-generate-ddl-full) -->
         <db.incr.interface>pkg_ddl_util v5</db.incr.interface>
-        <!-- a comma separated list of SEGMENT_ATTRIBUTES, STORAGE, TABLESPACE (all table related) and OID (needed for object types used with database links) -->
-        <db.incr.transform.params>SEGMENT_ATTRIBUTES,TABLESPACE</db.incr.transform.params>
+        <db.incr.transform.params></db.incr.transform.params>
         <db.generate.ddl.incr.skip>${db.install.skip}</db.generate.ddl.incr.skip>
       </properties>
       <build>
@@ -590,6 +596,7 @@
                       <!-- GPA 2017-02-07 #137711209 We connect to the target
                            and use database links on the target connection to
                            the source. -->
+                      <property name="show.properties" value="${db.show.properties}" />
                       <property name="userid" value="${db.userid}" />
                       <property name="source.db.name" value="${db.prev.database.link}" />
                       <property name="target.db.name" value="" />
@@ -597,6 +604,8 @@
                       <property name="object.type" value="${db.object.type}" />
                       <property name="object.names" value="${db.object.names}" />
                       <property name="object.names.include" value="${db.object.names.include}" />
+                      <property name="exclude.objects" value="${db.exclude.objects}" />
+                      <property name="include.objects" value="${db.include.objects}" />
                       <property name="incr.dynamic.sql" value="${db.incr.dynamic.sql}" />
                       <property name="incr.output.directory" value="${db.src.incr.scripts}" />
                       <property name="incr.skip.repeatables" value="${db.incr.skip.repeatables}" />
@@ -627,7 +636,7 @@
         <conf.connect.skip>false</conf.connect.skip>
         <!-- do not read flyway properties -->
         <db.install.skip>false</db.install.skip>
-        <maven.debug>true</maven.debug>
+        <db.show.properties>true</db.show.properties>
       </properties>
       <build>
         <plugins>

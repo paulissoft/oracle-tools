@@ -130,6 +130,37 @@ function show_job_status
 return t_job_status_tab
 pipelined;
 
+function dbms_assert$enquote_name
+( p_str in varchar2
+, p_what in varchar2
+, p_capitalize in boolean default true
+)
+return varchar2;
+
+function dbms_assert$qualified_sql_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2;
+
+function dbms_assert$schema_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2;
+
+function dbms_assert$simple_sql_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2;
+
+function dbms_assert$sql_object_name
+( p_str in varchar2
+, p_what in varchar2
+)
+return varchar2;
+ 
 $if cfg_pkg.c_testing $then
 
 --%suitepath(DATA)

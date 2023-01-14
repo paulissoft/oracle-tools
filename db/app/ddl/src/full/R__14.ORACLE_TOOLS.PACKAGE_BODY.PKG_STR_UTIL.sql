@@ -12,6 +12,8 @@ $if oracle_tools.cfg_pkg.c_testing $then
 "cr" constant varchar2(1) := chr(13);
 "crlf" constant varchar2(2) := "cr" || "lf";
 
+g_clob_test clob;
+
 $end
 
 -- GLOBAL
@@ -252,6 +254,47 @@ exception
 $end
 end split;
 
+function join
+( p_str_tab in dbms_sql.varchar2a
+, p_delimiter in varchar2
+)
+return varchar2
+deterministic
+is
+  l_str varchar2(32767 char) := null;
+begin
+  if p_str_tab.count > 0
+  then
+    for i_idx in p_str_tab.first .. p_str_tab.last
+    loop
+      l_str :=
+        case
+          when i_idx = p_str_tab.first
+          then p_str_tab(i_idx)
+          else l_str || p_delimiter || p_str_tab(i_idx)
+        end;
+    end loop;
+  end if;
+  return l_str;
+end join;
+
+procedure join
+( p_str_tab in dbms_sql.varchar2a
+, p_delimiter in varchar2 := ','
+, p_str out nocopy clob
+)
+is
+begin
+  p_str := null;
+  if p_str_tab.count > 0
+  then
+    for i_idx in p_str_tab.first .. p_str_tab.last
+    loop
+      append_text(case when i_idx > p_str_tab.first then p_delimiter end || p_str_tab(i_idx), p_str);
+    end loop;
+  end if;
+end join;  
+
 procedure trim
 ( p_str in out nocopy clob
 , p_set in varchar2
@@ -266,7 +309,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
   dbug.print(dbug."input", 'p_str length: %s; p_set: %s', dbms_lob.getlength(p_str), p_set);
 $end
 
-  -- een dummy loop om er snel uit te springen en niet teveel if statements te hebben
+  -- a dummy loop so you can quit fast without too many if statements
   loop
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
     dbug.print(dbug."debug", 'l_str_length: %s', l_str_length);
@@ -1028,14 +1071,14 @@ procedure split
 , p_str_tab out nocopy dbms_sql.varchar2a
 );
 */
-  dbms_lob.trim(g_clob, 0);
+  dbms_lob.trim(g_clob_test, 0);
 
   split("null clob", null, l_str_tab);
 
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 1.2').to_be_null();
 
-  split(g_clob, "lf", l_str_tab);
+  split(g_clob_test, "lf", l_str_tab);
 
   ut.expect(l_str_tab.count, 'test 2.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 2.2').to_be_null();
@@ -1061,25 +1104,25 @@ procedure split
   ut.expect(l_str_tab(1), 'test 5.2').to_equal('abcd');
   ut.expect(l_str_tab(2), 'test 5.3').to_equal('efgh');
 
-  dbms_lob.trim(g_clob, 0);
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('a', 32767, 'a')));
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob("crlf"));
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('b', 32767, 'b')));
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', 32767, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', 32767, 'b')));
 
-  split(g_clob, "crlf", l_str_tab);
+  split(g_clob_test, "crlf", l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob), 'test 6.0').to_equal(32767 * 2 + 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 6.0').to_equal(32767 * 2 + 2);
   ut.expect(l_str_tab.count, 'test 6.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 6.2').to_equal(rpad('a', 32767, 'a'));
   ut.expect(l_str_tab(2), 'test 6.3').to_equal(rpad('b', 32767, 'b'));
 
-  dbms_lob.trim(g_clob, 0);
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('a', 32767, 'a')));
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('b', 32767, 'b')));
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', 32767, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', 32767, 'b')));
 
-  split(g_clob, null, l_str_tab);
+  split(g_clob_test, null, l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob), 'test 7.0').to_equal(32767 * 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 7.0').to_equal(32767 * 2);
   ut.expect(l_str_tab.count, 'test 7.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 7.2').to_equal(rpad('a', 32767, 'a'));
   ut.expect(l_str_tab(2), 'test 7.3').to_equal(rpad('b', 32767, 'b'));
@@ -1097,14 +1140,14 @@ procedure split
 , p_str_tab out nocopy t_clob_tab
 );
 */
-  dbms_lob.trim(g_clob, 0);
+  dbms_lob.trim(g_clob_test, 0);
 
   split("null clob", null, l_str_tab);
 
   ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
   ut.expect(dbms_lob.getlength(l_str_tab(1)), 'test 1.2').to_be_null();
 
-  split(g_clob, "lf", l_str_tab);
+  split(g_clob_test, "lf", l_str_tab);
 
   ut.expect(l_str_tab.count, 'test 2.1').to_equal(1);
   ut.expect(dbms_lob.getlength(l_str_tab(1)), 'test 2.2').to_be_null();
@@ -1130,34 +1173,74 @@ procedure split
   ut.expect(l_str_tab(1), 'test 5.2').to_equal(to_clob('abcd'));
   ut.expect(l_str_tab(2), 'test 5.3').to_equal(to_clob('efgh'));
 
-  dbms_lob.trim(g_clob, 0);
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('a', 32767, 'a')));
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob("crlf"));
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('b', 32767, 'b')));
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', 32767, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', 32767, 'b')));
 
-  split(g_clob, "crlf", l_str_tab);
+  split(g_clob_test, "crlf", l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob), 'test 6.0').to_equal(32767 * 2 + 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 6.0').to_equal(32767 * 2 + 2);
   ut.expect(l_str_tab.count, 'test 6.1').to_equal(2);
   ut.expect(l_str_tab(1), 'test 6.2').to_equal(to_clob(rpad('a', 32767, 'a')));
   ut.expect(l_str_tab(2), 'test 6.3').to_equal(to_clob(rpad('b', 32767, 'b')));
 
-  dbms_lob.trim(g_clob, 0);
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('a', 32767, 'a')));
-  dbms_lob.append(dest_lob => g_clob, src_lob => to_clob(rpad('b', 32767, 'b')));
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', 32767, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', 32767, 'b')));
 
-  split(g_clob, null, l_str_tab);
+  split(g_clob_test, null, l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob), 'test 7.0').to_equal(32767 * 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 7.0').to_equal(32767 * 2);
   ut.expect(l_str_tab.count, 'test 7.1').to_equal(1);
-  ut.expect(l_str_tab(1), 'test 7.2').to_equal(g_clob);
+  ut.expect(l_str_tab(1), 'test 7.2').to_equal(g_clob_test);
 end;
 
 --%test
 procedure ut_trim1
 is
 begin
-  raise program_error;
+/*
+trim
+( p_str in out nocopy clob
+, p_set in varchar2 := ' '
+);
+*/
+  dbms_lob.trim(g_clob_test, 0);
+
+  trim(g_clob_test, null);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 1').to_equal(0);
+  
+  trim(g_clob_test, 'a');
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 2').to_equal(0);
+
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('abcd'));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('dcba'));
+  trim(g_clob_test, 'abcd');
+  ut.expect(g_clob_test, 'test 3').to_equal(to_clob("crlf"));
+
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('abcd'));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('dcba'));
+  trim(g_clob_test, 'a');
+  ut.expect(g_clob_test, 'test 4').to_equal(to_clob('bcd' || "crlf" || 'dcb'));
+  
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('abcd'));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('dcba'));
+  trim(g_clob_test, 'ab');
+  ut.expect(g_clob_test, 'test 5').to_equal(to_clob('cd' || "crlf" || 'dc'));
+  
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('abcd'));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('dcba'));
+  trim(g_clob_test, 'b');
+  ut.expect(g_clob_test, 'test 5').to_equal(to_clob('abcd' || "crlf" || 'dcba'));
 end;
 
 --%test
@@ -1220,6 +1303,9 @@ $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 begin
   dbms_lob.createtemporary(g_clob, true);
+$if oracle_tools.cfg_pkg.c_testing $then
+  dbms_lob.createtemporary(g_clob_test, true);
+$end  
 end pkg_str_util;
 /
 

@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>84978882401008962
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_flow_item(
- p_id=>wwv_flow_api.id(18488205517669577)
+ p_id=>wwv_flow_api.id(49490264827296982)
 ,p_name=>'FILE_ID'
 ,p_protection_level=>'N'
 ,p_item_comment=>'The temporary file id (APEX_APPLICATION_TEMP_FILES).'

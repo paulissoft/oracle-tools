@@ -17,7 +17,7 @@ nav_order: 6
 
 ## Project setup
 
-See [Using Oracle Tools in other Maven
+See [Using PATO in other Maven
 projects](https://github.com/paulissoft/oracle-tools#using-oracle-tools-in-other-maven-projects)
 for how to setup your project layout.
 
@@ -27,7 +27,7 @@ See [Configuration](./configuration.html).
 
 ## Examples
 
-Have a look at the following Oracle Tools POM files:
+Have a look at the following PATO POM files:
 
 - [oracle-tools/apex/app/pom.xml](https://github.com/paulissoft/oracle-tools/blob/master/apex/app/pom.xml)
 - [oracle-tools/db/app/pom.xml](https://github.com/paulissoft/oracle-tools/blob/master/db/app/pom.xml)

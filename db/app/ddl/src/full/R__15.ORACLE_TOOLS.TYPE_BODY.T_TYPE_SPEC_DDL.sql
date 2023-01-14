@@ -111,6 +111,27 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end migrate;
 
+overriding member procedure uninstall
+( self in out nocopy oracle_tools.t_type_spec_ddl
+, p_target in oracle_tools.t_schema_ddl
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
+$end
+
+  self.add_ddl
+  ( p_verb => 'DROP'
+  , p_text => 'DROP ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name() || ' FORCE'
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  );
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+end uninstall;
+
 end;
 /
 

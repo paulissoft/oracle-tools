@@ -9,7 +9,7 @@
   <groupId>com.paulissoft.oracle-tools.apex</groupId>
   <artifactId>app</artifactId>
   <packaging>pom</packaging>
-  <description>Oracle Tools Apex application POM</description>
+  <description>PATO Apex application POM</description>
   
   <properties>
     <apex.application>138</apex.application>

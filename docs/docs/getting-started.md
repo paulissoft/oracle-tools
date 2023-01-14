@@ -40,7 +40,7 @@ that the reader is familiar with (and will use) the command line.
 |Perl   |perl --version            |5.16.0         |
 |SQLcl  |sql -V                    |18.1.0.0       |
 
-### Checking out Oracle Tools
+### Checking out PATO
 
 I usually create a dev directory where I put all my development stuff:
 
@@ -49,7 +49,7 @@ $ mkdir dev
 $ cd dev
 ```
 
-Clone Oracle Tools:
+Clone PATO:
 
 ```
 $ git clone https://github.com/paulissoft/oracle-tools.git

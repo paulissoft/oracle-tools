@@ -8,12 +8,22 @@ procedure raise_error
 )
 is
 begin
-  raise_application_error(p_error_number, p_error_message);
+  raise_application_error
+  ( p_error_number
+  , case
+      when substr(p_error_message, -1) = '.'
+      then p_error_message || ' '
+      else p_error_message || '. '
+    end || 'An error occurred for object with ' || p_context_label || ': ' || p_context_info
+  );
+-- GJP 2023-01-06
+/*
 exception
   when others
   then
     reraise_error('An error occurred for object with ' || p_context_label || ': ' || p_context_info);
     raise; -- to keep the compiler happy
+*/
 end raise_error;
 
 procedure reraise_error

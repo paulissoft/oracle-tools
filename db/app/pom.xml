@@ -11,7 +11,7 @@
   <groupId>com.paulissoft.oracle-tools.db</groupId>
   <artifactId>app</artifactId>
   <packaging>pom</packaging>
-  <description>Oracle Tools database application POM</description>
+  <description>PATO database application POM</description>
 
   <properties>
     <db.schema>${oracle-tools.db.schema}</db.schema>

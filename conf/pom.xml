@@ -81,12 +81,13 @@
          So it can not be overridden in one of the property files since it
          already set. 
          Please note that the environment variable DB_PASSWORD is used in the
-         Oracle Tools GUI so passwords need not be transferred on the command
+         PATO GUI so passwords need not be transferred on the command
          line, i.e. more security.
     -->
     <db.password>${env.DB_PASSWORD}</db.password>
     <!-- GJP 2021-09-06 For the time being display this only in debug mode-->
     <ant.log.level>info</ant.log.level>
+    <conf.show.properties>false</conf.show.properties>
   </properties>
 
   <!-- Needed for Db Generate DDL scripts in child projects -->
@@ -157,7 +158,7 @@
               <phase>${conf.phase.init}</phase>
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
-                <target if="maven.debug">
+                <target if="${conf.show.properties}">
                   <!-- also dbUrl, dbUser, dbPass -->
                   <echoproperties prefix="java." />
                   <echoproperties prefix="maven." />
@@ -430,7 +431,7 @@
               <id>conf-debug-after</id>
               <phase>${conf.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${conf.show.properties}">
                   <echoproperties prefix="env." />
                   <echoproperties prefix="db." />
                 </target>
@@ -490,7 +491,7 @@
         <conf.test.connection>false</conf.test.connection>
         <db.install.skip>true</db.install.skip>
         <apex.skip>true</apex.skip>
-        <maven.debug>true</maven.debug>
+        <conf.show.properties>true</conf.show.properties>
       </properties>
       <build>
         <plugins>

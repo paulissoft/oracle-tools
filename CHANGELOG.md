@@ -15,17 +15,33 @@ Types of changes:
 
 [Unreleased]
 
-- [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
-- [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
+## [1.10.0] - 2023-01-14
+
+### Added
+
 - [It must be possible to use the Maven daemon in Jenkins.](https://github.com/paulissoft/oracle-tools/issues/82)
 - [It must be possible to run actions for different application environments or actions in parallel on Jenkins.](https://github.com/paulissoft/oracle-tools/issues/83)
 - [It must be possible to have a dry run for Jenkins.](https://github.com/paulissoft/oracle-tools/issues/84)
-- [In Jenkins it must be possible to use NFS for the Maven local repository and the controller/agent workspace.](https://github.com/paulissoft/oracle-tools/issues/85)
+- [It must be possible to use a schema object id for specifying the object to (NOT) generate DDL for.](https://github.com/paulissoft/oracle-tools/issues/89)
+- [Error logging must include object concerned for DDL generation.](https://github.com/paulissoft/oracle-tools/issues/97)
+- [Online interval partitioning support needed.](https://github.com/paulissoft/oracle-tools/issues/105)
+- [APEX seed and publish.](https://github.com/paulissoft/oracle-tools/issues/107)
+
+### Deprecated
+
+- [Remove Maven dependency mechanism for use in other projects from the documentation.](https://github.com/paulissoft/oracle-tools/issues/41)
+
+### Fixed
+
+- [It should be possible to exclude (temporary) database jobs while generating DDL.](https://github.com/paulissoft/oracle-tools/issues/22)
 - [The strip source schema for generating DDL scripts does not work well.](https://github.com/paulissoft/oracle-tools/issues/91)
 - [The DDL generator does not create a correct constraint script.](https://github.com/paulissoft/oracle-tools/issues/92)
+- [The excel upload utility does not work with column names with spaces.](https://github.com/paulissoft/oracle-tools/issues/93)
 - [The DDL generator can not parse a specific ALTER TABLE MODIFY CHECK constraint.](https://github.com/paulissoft/oracle-tools/issues/95)
-- [Error logging must include object concerned for DDL generation.](https://github.com/paulissoft/oracle-tools/issues/97)
 - [DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.](https://github.com/paulissoft/oracle-tools/issues/98)
+- [When a wrong APEX export file is imported, the import fails but that error is displayed as a warning by Maven.](https://github.com/paulissoft/oracle-tools/issues/101)
+- [Can not create DDL for synonym.](https://github.com/paulissoft/oracle-tools/issues/103)
+
 ## [1.9.0] - 2022-10-05
 
 ### Added

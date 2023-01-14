@@ -27,6 +27,7 @@
     <!-- ======================== -->    
     <apex.phase.init>validate</apex.phase.init>
     <apex.phase.process>compile</apex.phase.process>
+    <apex.show.properties>false</apex.show.properties>
   </properties>
 
   <!-- Needed for Apex Export/Import scripts in child projects -->
@@ -83,7 +84,7 @@
               <id>apex-debug-before</id>
               <phase>${apex.phase.init}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${apex.show.properties}">
                   <echoproperties prefix="apex." />
                   <echoproperties prefix="sql." />
                 </target>
@@ -122,12 +123,13 @@
                 <target unless="${apex.skip}">
                   <property name="apex.application.dir.abs"
                             location="${apex.application.dir}" />
-                  <fail message="Property apex.operation must be export or import">
+                  <fail message="Property apex.operation must be export, import or seed-publish">
                     <condition>
                       <not>
                         <or>
                           <equals arg1="${apex.operation}" arg2="export" />
                           <equals arg1="${apex.operation}" arg2="import" />
+                          <equals arg1="${apex.operation}" arg2="seed-publish" />
                         </or>
                       </not>
                     </condition>
@@ -163,7 +165,7 @@
               <id>apex-debug-after</id>
               <phase>${apex.phase.process}</phase>
               <configuration>
-                <target if="maven.debug">
+                <target if="${apex.show.properties}">
                   <echoproperties prefix="apex." />
                   <echoproperties prefix="sql." />
                   <echoproperties prefix="env." />
@@ -227,12 +229,27 @@
     </profile>
     <!-- profile to be called by the user -->
     <profile>
+      <id>apex-seed-publish</id>
+      <properties>
+        <default.goal>compile</default.goal>
+        <apex.operation>seed-publish</apex.operation>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to be called by the user -->
+    <profile>
       <id>apex-inquiry</id>
       <properties>
         <default.goal>compile</default.goal>
         <conf.connect.skip>false</conf.connect.skip>
         <apex.skip>false</apex.skip>
-        <maven.debug>true</maven.debug>
+        <apex.show.properties>true</apex.show.properties>
       </properties>
       <build>
         <plugins>

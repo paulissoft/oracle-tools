@@ -8,13 +8,13 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>84978882401008962
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_flow(
  p_id=>wwv_flow.g_flow_id
 ,p_owner=>nvl(wwv_flow_application_install.get_schema,'ORACLE_TOOLS')
-,p_name=>nvl(wwv_flow_application_install.get_application_name,'Oracle Tools')
+,p_name=>nvl(wwv_flow_application_install.get_application_name,'PATO')
 ,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'ORACLE-TOOLS')
 ,p_page_view_logging=>'YES'
 ,p_page_protection_enabled_y_n=>'Y'
@@ -29,22 +29,22 @@ wwv_flow_api.create_flow(
 ,p_flow_image_prefix => nvl(wwv_flow_application_install.get_image_prefix,'')
 ,p_documentation_banner=>'Application created from create application wizard 2020.04.16.'
 ,p_authentication=>'PLUGIN'
-,p_authentication_id=>wwv_flow_api.id(18299462718600093)
+,p_authentication_id=>wwv_flow_api.id(49679007626366466)
 ,p_application_tab_set=>1
 ,p_logo_type=>'T'
-,p_logo_text=>'Oracle Tools'
+,p_logo_text=>'PATO'
 ,p_app_builder_icon_name=>'app-icon.svg'
 ,p_public_user=>'APEX_PUBLIC_USER'
 ,p_proxy_server=>nvl(wwv_flow_application_install.get_proxy,'')
 ,p_no_proxy_domains=>nvl(wwv_flow_application_install.get_no_proxy_domains,'')
-,p_flow_version=>'Version 2022-11-04 10:51:19'
+,p_flow_version=>'Version 2023-01-14 05:35:41'
 ,p_flow_status=>'AVAILABLE_W_EDIT_LINK'
 ,p_flow_unavailable_text=>'This application is currently unavailable at this time.'
 ,p_exact_substitutions_only=>'Y'
 ,p_browser_cache=>'N'
 ,p_browser_frame=>'D'
 ,p_runtime_api_usage=>'T'
-,p_security_scheme=>wwv_flow_api.id(35825411224644017)
+,p_security_scheme=>wwv_flow_api.id(32153059120322542)
 ,p_authorize_batch_job=>'N'
 ,p_rejoin_existing_sessions=>'N'
 ,p_csv_encoding=>'Y'
@@ -53,11 +53,11 @@ wwv_flow_api.create_flow(
 ,p_default_error_display_loc=>'INLINE_IN_NOTIFICATION'
 ,p_friendly_url=>'N'
 ,p_substitution_string_01=>'APP_NAME'
-,p_substitution_value_01=>'Oracle Tools'
+,p_substitution_value_01=>'PATO'
 ,p_last_updated_by=>'ADMIN'
-,p_last_upd_yyyymmddhh24miss=>'20211219090330'
+,p_last_upd_yyyymmddhh24miss=>'20230114113430'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
-,p_files_version=>9
+,p_files_version=>10
 ,p_ui_type_name => null
 ,p_print_server_type=>'INSTANCE'
 );

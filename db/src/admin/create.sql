@@ -4,11 +4,11 @@ whenever sqlerror exit failure
 
 define oracle_tools_username = ORACLE_TOOLS
 
-accept oracle_tools_username prompt "Oracle tools username [&&oracle_tools_username] ? " default "&&oracle_tools_username"
+accept oracle_tools_username prompt "PATO username [&&oracle_tools_username] ? " default "&&oracle_tools_username"
 
 define oracle_tools_password = &&oracle_tools_username
 
-accept oracle_tools_password prompt "Oracle tools password [&&oracle_tools_password] ? " default "&&oracle_tools_password" hide
+accept oracle_tools_password prompt "PATO password [&&oracle_tools_password] ? " default "&&oracle_tools_password" hide
 
 define tablespace_users = USERS
 
@@ -51,6 +51,7 @@ begin
   then
     execute immediate 'create user EMPTY identified by "EMPTY" default tablespace &&tablespace_users temporary tablespace &&tablespace_temp';
     execute immediate 'alter user EMPTY quota unlimited on &&tablespace_users';
+    execute immediate 'grant create procedure, create type, create view, create session to EMPTY';
   end if;
 end;
 /

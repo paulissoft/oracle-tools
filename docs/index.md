@@ -2,7 +2,7 @@
 layout: default
 title: Home
 nav_order: 1
-description: "Oracle Tools is framework for building Oracle database applications."
+description: "PATO is a framework for building Oracle database applications."
 permalink: /
 ---
 
@@ -20,11 +20,11 @@ improve the quality of your applications.
 
 ## About the project
 
-Oracle Tools is &copy; {{ "now" | date: "%Y" }} by Paulissoft.
+PATO is &copy; {{ "now" | date: "%Y" }} by Paulissoft.
 
 ### License
 
-Oracle Tools is distributed by a [MIT license](https://github.com/paulissoft/oracle-tools/master/LICENSE.txt).
+PATO is distributed by a [MIT license](https://github.com/paulissoft/oracle-tools/master/LICENSE.txt).
 
 ### Contributing
 
