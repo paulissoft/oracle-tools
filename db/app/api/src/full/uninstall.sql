@@ -8,7 +8,7 @@
 -- target database link: 
 -- object type         : 
 -- object names include: 1
--- object names        : API_PKG,API_LONGOPS_PKG
+-- object names        : API_PKG,API_LONGOPS_PKG,API_CALL_STACK_PKG
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
 -- transform params    : 
@@ -18,27 +18,39 @@
 */
 -- pkg_ddl_util v4
 call dbms_application_info.set_module('uninstall.sql', null);
-/* SQL statement 1 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_LONGOPS_PKG;;PUBLIC;EXECUTE;NO;2) */
+/* SQL statement 1 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_CALL_STACK_PKG;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 1');
+REVOKE EXECUTE ON "API_CALL_STACK_PKG" FROM "PUBLIC";
+
+/* SQL statement 2 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_LONGOPS_PKG;;PUBLIC;EXECUTE;NO;2) */
+call dbms_application_info.set_action('SQL statement 2');
 REVOKE EXECUTE ON "API_LONGOPS_PKG" FROM "PUBLIC";
 
-/* SQL statement 2 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_PKG;;PUBLIC;EXECUTE;NO;2) */
-call dbms_application_info.set_action('SQL statement 2');
+/* SQL statement 3 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_PKG;;PUBLIC;EXECUTE;NO;2) */
+call dbms_application_info.set_action('SQL statement 3');
 REVOKE EXECUTE ON "API_PKG" FROM "PUBLIC";
 
-/* SQL statement 3 (DROP;ORACLE_TOOLS;PACKAGE_BODY;API_LONGOPS_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 3');
+/* SQL statement 4 (DROP;ORACLE_TOOLS;PACKAGE_BODY;API_CALL_STACK_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 4');
+DROP PACKAGE BODY API_CALL_STACK_PKG;
+
+/* SQL statement 5 (DROP;ORACLE_TOOLS;PACKAGE_BODY;API_LONGOPS_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 5');
 DROP PACKAGE BODY API_LONGOPS_PKG;
 
-/* SQL statement 4 (DROP;ORACLE_TOOLS;PACKAGE_BODY;API_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 4');
+/* SQL statement 6 (DROP;ORACLE_TOOLS;PACKAGE_BODY;API_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 6');
 DROP PACKAGE BODY API_PKG;
 
-/* SQL statement 5 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;API_LONGOPS_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 5');
+/* SQL statement 7 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;API_CALL_STACK_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 7');
+DROP PACKAGE API_CALL_STACK_PKG;
+
+/* SQL statement 8 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;API_LONGOPS_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 8');
 DROP PACKAGE API_LONGOPS_PKG;
 
-/* SQL statement 6 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;API_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 6');
+/* SQL statement 9 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;API_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 9');
 DROP PACKAGE API_PKG;
 
