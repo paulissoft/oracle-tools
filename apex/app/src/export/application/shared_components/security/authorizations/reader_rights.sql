@@ -8,11 +8,11 @@ wwv_flow_api.component_begin (
 ,p_release=>'20.2.0.00.20'
 ,p_default_workspace_id=>2601326064169245
 ,p_default_application_id=>138
-,p_default_id_offset=>67978470344966559
+,p_default_id_offset=>84978882401008962
 ,p_default_owner=>'ORACLE_TOOLS'
 );
 wwv_flow_api.create_security_scheme(
- p_id=>wwv_flow_api.id(35825411224644017)
+ p_id=>wwv_flow_api.id(32153059120322542)
 ,p_name=>'Reader Rights'
 ,p_scheme_type=>'NATIVE_FUNCTION_BODY'
 ,p_attribute_01=>'return oracle_tools.ui_user_management_pkg.has_role(sys.odcivarchar2list(''OT Administrators'', ''OT Contributors'', ''OT Readers'')) != 0;'
