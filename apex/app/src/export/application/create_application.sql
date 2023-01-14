@@ -14,7 +14,7 @@ wwv_flow_api.component_begin (
 wwv_flow_api.create_flow(
  p_id=>wwv_flow.g_flow_id
 ,p_owner=>nvl(wwv_flow_application_install.get_schema,'ORACLE_TOOLS')
-,p_name=>nvl(wwv_flow_application_install.get_application_name,'Oracle Tools')
+,p_name=>nvl(wwv_flow_application_install.get_application_name,'PATO')
 ,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'ORACLE-TOOLS')
 ,p_page_view_logging=>'YES'
 ,p_page_protection_enabled_y_n=>'Y'
@@ -32,7 +32,7 @@ wwv_flow_api.create_flow(
 ,p_authentication_id=>wwv_flow_api.id(18299462718600093)
 ,p_application_tab_set=>1
 ,p_logo_type=>'T'
-,p_logo_text=>'Oracle Tools'
+,p_logo_text=>'PATO'
 ,p_app_builder_icon_name=>'app-icon.svg'
 ,p_public_user=>'APEX_PUBLIC_USER'
 ,p_proxy_server=>nvl(wwv_flow_application_install.get_proxy,'')
@@ -53,7 +53,7 @@ wwv_flow_api.create_flow(
 ,p_default_error_display_loc=>'INLINE_IN_NOTIFICATION'
 ,p_friendly_url=>'N'
 ,p_substitution_string_01=>'APP_NAME'
-,p_substitution_value_01=>'Oracle Tools'
+,p_substitution_value_01=>'PATO'
 ,p_last_updated_by=>'ADMIN'
 ,p_last_upd_yyyymmddhh24miss=>'20221222061350'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')

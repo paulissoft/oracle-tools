@@ -49,12 +49,12 @@
     <target>À propos</target>
   </trans-unit>
   <trans-unit>
-    <source>Oracle Tools</source>
-    <target>Outils Oracle</target>
+    <source>PATO</source>
+    <target>PATO</target>
   </trans-unit>
   <trans-unit>
-    <source>Oracle Tools - Sign In</source>
-    <target>Outils Oracle - Connexion</target>
+    <source>PATO - Sign In</source>
+    <target>PATO - Connexion</target>
   </trans-unit>
   <trans-unit>
     <source>&lt;p>
@@ -946,10 +946,10 @@ If false, no such verification is made yet but only when loading. This is useful
   </trans-unit>
   <trans-unit>
     <source>&lt;div>
-	The Select2 plugin is a jQuery based replacement for select lists in Oracle Application Express. It supports searching, multiselection, tagging, lazy loading and infinite scrolling of results.&lt;/div>
+  The Select2 plugin is a jQuery based replacement for select lists in Oracle Application Express. It supports searching, multiselection, tagging, lazy loading and infinite scrolling of results.&lt;/div>
 </source>
     <target>&lt;div>
-	The Select2 plugin is a jQuery based replacement for select lists in Oracle Application Express. It supports searching, multiselection, tagging, lazy loading and infinite scrolling of results.&lt;/div>
+  The Select2 plugin is a jQuery based replacement for select lists in Oracle Application Express. It supports searching, multiselection, tagging, lazy loading and infinite scrolling of results.&lt;/div>
 </target>
   </trans-unit>
   <trans-unit>
@@ -980,14 +980,14 @@ If false, no such verification is made yet but only when loading. This is useful
   </trans-unit>
   <trans-unit>
     <source>&lt;span class="dm-Logo app-sample-universal-theme">&lt;/span>
-&lt;h1>&lt;span>Oracle Application Express &lt;/span>Oracle Tools&lt;/h1>
-&lt;p class="margin-top-lg">This is a set of Oracle Tools including:
+&lt;h1>&lt;span>Oracle Application Express &lt;/span>PATO&lt;/h1>
+&lt;p class="margin-top-lg">This is a set of tools including:
 &lt;ul>
 &lt;li>the Load File Wizard&lt;/li>
 &lt;/ul>&lt;/p></source>
     <target>&lt;span class="dm-Logo app-sample-universal-theme">&lt;/span>
-&lt;h1>&lt;span>Oracle Application Express &lt;/span>Oracle Tools&lt;/h1>
-&lt;p class="margin-top-lg">This is a set of Oracle Tools including:
+&lt;h1>&lt;span>Oracle Application Express &lt;/span>PATO&lt;/h1>
+&lt;p class="margin-top-lg">This is a set of tools including:
 &lt;ul>
 &lt;li>the Load File Wizard&lt;/li>
 &lt;/ul>&lt;/p></target>

@@ -27,10 +27,10 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: The Oracle Tools web site
+title: The PATO (Paulissoft Application Tools for Oracle) web site
 email: paulissoft@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  This site describes the Oracle Tools suite designed to help you to build your
+  This site describes the PATO suite designed to help you to build your
   Oracle database application quick but NOT dirty.
 baseurl: "/oracle-tools" # the subpath of your site, e.g. /blog
 url: "https://paulissoft.github.io" # the base hostname & protocol for your site, e.g. http://example.com
@@ -64,7 +64,7 @@ timezone             : CET
 
 # Aux links for the upper right navigation
 aux_links:
-  "Oracle Tools on GitHub":
+  "PATO on GitHub":
     - "//github.com/paulissoft/oracle-tools"
 
 # Makes Aux links open in a new tab. Default is false

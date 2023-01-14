@@ -8,7 +8,7 @@ nav_order: 5
 {: .no_toc }
 
 
-This chapter describes how to install Oracle Tools.
+This chapter describes how to install PATO.
 {: .fs-6 .fw-300 }
 
 ## Table of contents

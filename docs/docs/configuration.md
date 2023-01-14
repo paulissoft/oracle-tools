@@ -8,7 +8,7 @@ nav_order: 4
 {: .no_toc }
 
 
-This chapter describes the configuration you can define for Oracle Tools.
+This chapter describes the configuration you can define for PATO.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -59,14 +59,14 @@ In oracle-tools there is a directory conf/src that contains the configuration fi
 
 Here orcl is the logical name for a database.
 
-The property db.config.dir in Oracle Tools by defaults points to the directory conf/src.
+The property db.config.dir in PATO by default points to the directory conf/src.
 
 However you can set db.config.dir to another directory anywhere provided you
 have a file called env.properties there and other database directories below.
 
 ### env.properties
 
-It currently just contains the name of the the Oracle Tools schema:
+It currently just contains the name of the PATO schema:
 
 ```
 oracle_tools_schema=ORACLE_TOOLS
@@ -113,7 +113,7 @@ flyway.placeholders.oracle_tools_schema=${oracle_tools_schema}
 flyway.placeholders.oracle_wallet_path=
 ```
 
-This allows you to have a different Oracle Tools schema or Oracle wallet on every database.
+This allows you to have a different PATO schema or Oracle wallet on every database.
 
 ## Oracle Connections
 
@@ -164,7 +164,7 @@ Tool is used, this TNS entry has to be in the tnsnames.ora.
 
 ## Properties used
 
-This is a list of the Maven properties used by Oracle Tools along with their
+This is a list of the Maven properties used by PATO along with their
 defaults:
 
 ### oracle-tools/conf/pom.xml

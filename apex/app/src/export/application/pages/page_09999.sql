@@ -16,7 +16,7 @@ wwv_flow_api.create_page(
 ,p_user_interface_id=>wwv_flow_api.id(18420547356600209)
 ,p_name=>'Login Page'
 ,p_alias=>'LOGIN_DESKTOP'
-,p_step_title=>'Oracle Tools - Sign In'
+,p_step_title=>'PATO - Sign In'
 ,p_warn_on_unsaved_changes=>'N'
 ,p_first_item=>'AUTO_FIRST_ITEM'
 ,p_autocomplete_on_off=>'OFF'
@@ -28,7 +28,7 @@ wwv_flow_api.create_page(
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(18425216582600273)
-,p_plug_name=>'Oracle Tools'
+,p_plug_name=>'PATO'
 ,p_icon_css_classes=>'app-icon'
 ,p_region_template_options=>'#DEFAULT#'
 ,p_plug_template=>wwv_flow_api.id(18345792061600141)

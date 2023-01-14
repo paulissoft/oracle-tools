@@ -81,7 +81,7 @@
          So it can not be overridden in one of the property files since it
          already set. 
          Please note that the environment variable DB_PASSWORD is used in the
-         Oracle Tools GUI so passwords need not be transferred on the command
+         PATO GUI so passwords need not be transferred on the command
          line, i.e. more security.
     -->
     <db.password>${env.DB_PASSWORD}</db.password>

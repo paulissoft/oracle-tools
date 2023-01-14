@@ -1,15 +1,15 @@
-// The Oracle tools namespace.
+// The PATO namespace.
 var oracleTools = {
-	//	
-	// Return the version of this namespace	.
-	//
-	version: function () {
-		return '2020-12-16 13:05'; // yyy-mm-dd hh24:mi
-	},
+  //  
+  // Return the version of this namespace .
+  //
+  version: function () {
+    return '2020-12-16 13:05'; // yyy-mm-dd hh24:mi
+  },
 
-	//	
-	// Set the active tab of a tab container.
-	//	
+  //  
+  // Set the active tab of a tab container.
+  //  
   setActiveTab: function (tabsContainerId, tabId) {
     const href = '#SR_' + tabId
     const sessionStorage = apex.storage.getScopedSessionStorage({ usePageId: true, useAppId: true })
@@ -18,9 +18,9 @@ var oracleTools = {
     sessionStorage.setItem(tabsContainerId + '.activeTab', href)
   },
 
-	//	
-	// Get the activa tab of a tab container.
-	//
+  //  
+  // Get the activa tab of a tab container.
+  //
   getActiveTab: function (tabsContainerId) {
     const sessionStorage = apex.storage.getScopedSessionStorage({ usePageId: true, useAppId: true })
     // just cache the new region to go to but do not switch to it yet (too many screen changes)
@@ -29,9 +29,9 @@ var oracleTools = {
     return href.slice(4)
   },
 
-	//
-	// Initialise a logger using the loglevel plugin.
-	//
+  //
+  // Initialise a logger using the loglevel plugin.
+  //
   initLogger: function () {
     const logger = log.noConflict()
     const prefixer = prefix.noConflict()
@@ -42,9 +42,9 @@ var oracleTools = {
     return logger
   },
 
-	//	
+  //  
   //  Remove the footer with number of records from an Interactive Grid configuration.
-	//
+  //
   noFooterIG: function (config) {
     config.defaultGridViewOptions = {
       footer: false
@@ -52,20 +52,20 @@ var oracleTools = {
     return config
   },
 
-	//	
+  //  
   //  Turn an input field to initials capitalized like the Oracle function INITCAP.
-	//
-	//  Usage:
-	//  * Javascript code:
-	//   
-	// 		$('input[id="FIRST_NAME"]').val (function () {
+  //
+  //  Usage:
+  //  * Javascript code:
+  //   
+  //    $('input[id="FIRST_NAME"]').val (function () {
   //      return oracleTools.initCap(this.value)
-	//    })
-	//	
-	//  * Affected Elements:
-	//    - Selection Type: jQuery Selector
-	//    -	jQuery Selector: .text_field
-	//
+  //    })
+  //  
+  //  * Affected Elements:
+  //    - Selection Type: jQuery Selector
+  //    - jQuery Selector: .text_field
+  //
   initCap: function (str) {
     var str1 = str.toLowerCase().split(' ').map(function (word) {
       // replace first letter of each word in a string separated by spaces (Jan Hendrik)
@@ -85,7 +85,7 @@ var oracleTools = {
   // <i id="PASSWORD_STATUS_P2_PASSWORD" class="fa fa-eye field-icon" aria-hidden="true" onClick="oracle_tools.toggleViewPassword('P2_PASSWORD')"></i>
   //
   // See also https://www.javainhand.com/2020/04/show-hide-password-mask-in-oracle-apex.html.
-	//
+  //
   toggleViewPassword: function (item) {
     const passwordInput = document.getElementById(item)
     const passStatus = document.getElementById('PASSWORD_STATUS_' + item)
@@ -99,9 +99,9 @@ var oracleTools = {
     }
   },
 
-	//
-	// Initialise an Interactve Grid configuration.
-	//
+  //
+  // Initialise an Interactve Grid configuration.
+  //
   initialiseIG: function (config, standardToolbar = false) {
     if (standardToolbar) {
       return config
@@ -130,7 +130,7 @@ var oracleTools = {
             iconBeforeLabel: true,
             hot: true
           },
-					{
+          {
             type: "BUTTON",
             action: "reset-report",
             iconBeforeLabel: true

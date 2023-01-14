@@ -4,11 +4,11 @@ whenever sqlerror exit failure
 
 define oracle_tools_username = ORACLE_TOOLS
 
-accept oracle_tools_username prompt "Oracle tools username [&&oracle_tools_username] ? " default "&&oracle_tools_username"
+accept oracle_tools_username prompt "PATO username [&&oracle_tools_username] ? " default "&&oracle_tools_username"
 
 define oracle_tools_password = &&oracle_tools_username
 
-accept oracle_tools_password prompt "Oracle tools password [&&oracle_tools_password] ? " default "&&oracle_tools_password" hide
+accept oracle_tools_password prompt "PATO password [&&oracle_tools_password] ? " default "&&oracle_tools_password" hide
 
 define tablespace_users = USERS
 

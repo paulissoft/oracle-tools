@@ -16,7 +16,7 @@ wwv_flow_api.create_page(
 ,p_user_interface_id=>wwv_flow_api.id(18420547356600209)
 ,p_name=>'Home'
 ,p_alias=>'HOME'
-,p_step_title=>'Oracle Tools'
+,p_step_title=>'PATO'
 ,p_autocomplete_on_off=>'OFF'
 ,p_page_template_options=>'#DEFAULT#'
 ,p_last_updated_by=>'ADMIN'
@@ -38,7 +38,7 @@ wwv_flow_api.create_page_plug(
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(1970645346310029930)
-,p_plug_name=>'Oracle Tools'
+,p_plug_name=>'PATO'
 ,p_icon_css_classes=>'fa-dynamic-content'
 ,p_region_template_options=>'#DEFAULT#'
 ,p_plug_template=>wwv_flow_api.id(18333257185600133)
@@ -47,8 +47,8 @@ wwv_flow_api.create_page_plug(
 ,p_plug_item_display_point=>'BELOW'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<span class="dm-Logo app-sample-universal-theme"></span>',
-'<h1><span>Oracle Application Express </span>Oracle Tools</h1>',
-'<p class="margin-top-lg">This is a set of Oracle Tools including:',
+'<h1><span>Oracle Application Express </span>PATO</h1>',
+'<p class="margin-top-lg">This is a set of tools including:',
 '<ul>',
 '<li>the Load File Wizard</li>',
 '</ul></p>'))

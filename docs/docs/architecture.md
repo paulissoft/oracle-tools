@@ -92,11 +92,10 @@ anymore to use constant version numbers, **provided** you do not use POM
 artifacts neither.
 
 So my approach is to:
-- checkout Oracle Tools (to directory dev for instance)
-- checkout any project that uses Oracle Tools on the same level (also to dev)
+- checkout PATO (to directory dev for instance)
+- checkout any project that uses PATO on the same level (also to dev)
 
-Now another project POM in <project>/db, can have as parent one of the Oracle
-Tools POMs like this:
+Now another project POM in <project>/db, can have as parent one of the PATO POMs like this:
 
 ```
 <parent>
