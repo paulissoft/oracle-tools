@@ -2,15 +2,25 @@ CREATE OR REPLACE PACKAGE BODY "API_CALL_STACK_PKG" -- -*-coding: utf-8-*-
 is
 
 function get_call_stack
-( p_nr_items_to_skip in naturaln
+( p_start in simple_integer
+, p_size in naturaln
 )
 return t_call_stack_tab
 is
+  -- we will return entries between 2 and utl_call_stack.dynamic_depth since we skipp this call at entry 1
+  l_upb constant binary_integer :=
+    case
+      when p_start > 0 -- start to count from the beginning which is actually the end (index utl_call_stack.dynamic_depth is first call)
+      then utl_call_stack.dynamic_depth - p_start + 1
+      when p_start < 0 -- start to count from the end
+      then 2 - (p_start + 1)
+    end;
+  l_lwb constant binary_integer := greatest(l_upb - p_size + 1, 1);
   l_call_stack_rec t_call_stack_rec;
   l_call_stack_tab t_call_stack_tab;
-  l_lwb constant binary_integer := 1 + p_nr_items_to_skip;
-  l_upb constant binary_integer := utl_call_stack.dynamic_depth;
 begin
+--dbms_output.put_line('get_call_stack('||p_start||','||p_size||')');
+--dbms_output.put_line('l_lwb: '||l_lwb||'; l_upb: '||l_upb);
   for depth in reverse l_lwb .. l_upb
   loop
     l_call_stack_rec.dynamic_depth := l_upb - depth + 1;
@@ -64,14 +74,16 @@ begin
 end id;
 
 function get_error_stack
-( p_nr_items_to_skip in naturaln
+( p_start in simple_integer
+, p_size in naturaln
 )
 return t_error_stack_tab
 is
+  l_error_depth constant naturaln := utl_call_stack.error_depth;
+  l_lwb constant binary_integer := case when p_start > 0 then p_start when p_start < 0 then l_error_depth + p_start + 1 end;
+  l_upb constant binary_integer := least(l_lwb + p_size - 1, l_error_depth);
   l_error_stack_rec t_error_stack_rec;
   l_error_stack_tab t_error_stack_tab;
-  l_lwb constant binary_integer := 1 + p_nr_items_to_skip;
-  l_upb constant binary_integer := utl_call_stack.error_depth;
 begin
   for depth in l_lwb .. l_upb
   loop
@@ -119,14 +131,21 @@ begin
 end id;
 
 function get_backtrace_stack 
-( p_nr_items_to_skip in naturaln
+( p_start in simple_integer
+, p_size in naturaln
 )
 return t_backtrace_stack_tab
 is
+  l_upb constant binary_integer :=
+    case
+      when p_start > 0 -- start to count from the beginning which is actually the end (index utl_call_stack.backtrace_depth is first call)
+      then utl_call_stack.backtrace_depth - p_start + 1
+      when p_start < 0 -- start to count from the end
+      then 1 - (p_start + 1)
+    end;
+  l_lwb constant binary_integer := greatest(l_upb - p_size + 1, 1);
   l_backtrace_stack_rec t_backtrace_stack_rec;
   l_backtrace_stack_tab t_backtrace_stack_tab;
-  l_lwb constant binary_integer := 1 + p_nr_items_to_skip;
-  l_upb constant binary_integer := utl_call_stack.backtrace_depth;
 begin
   for depth in reverse l_lwb .. l_upb
   loop
@@ -177,13 +196,14 @@ procedure show_stack
 ( p_where_am_i in varchar2
 )
 is
-  l_call_stack_tab constant t_call_stack_tab := get_call_stack(2); -- skip this call and get_call_stack
+  l_dynamic_depth constant naturaln := utl_call_stack.dynamic_depth - 1;
+  l_call_stack_tab constant t_call_stack_tab := get_call_stack(p_size => l_dynamic_depth); -- skip this call and the call to get_call_stack too
   l_error_stack_tab constant t_error_stack_tab := get_error_stack;
   l_backtrace_stack_tab constant t_backtrace_stack_tab := get_backtrace_stack;
 begin
   dbms_output.new_line;
   dbms_output.put_line('Current stack for  ' || p_where_am_i);
-  dbms_output.put_line('  dynamic depth:   ' || to_char(utl_call_stack.dynamic_depth - 1)); -- skip this call
+  dbms_output.put_line('  dynamic depth:   ' || l_dynamic_depth); -- skip this call
   dbms_output.put_line('  error depth:     ' || utl_call_stack.error_depth);
   dbms_output.put_line('  backtrace depth: ' || utl_call_stack.backtrace_depth);
   dbms_output.new_line;
@@ -265,6 +285,9 @@ begin
       );
     end loop;
   end if;
+exception
+  when others
+  then null;
 end show_stack;
 
 end API_CALL_STACK_PKG;

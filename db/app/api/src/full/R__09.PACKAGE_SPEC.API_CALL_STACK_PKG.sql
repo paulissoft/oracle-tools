@@ -79,7 +79,8 @@ The backtrace stack table type.
 **/
 
 function get_call_stack
-( p_nr_items_to_skip in naturaln default 1 -- You normally want to skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
+( p_start in simple_integer default 1                      -- You can use -1 like the POSITION parameter in the SUBSTR() function
+, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 )
 return t_call_stack_tab;
 
@@ -87,6 +88,11 @@ return t_call_stack_tab;
 
 Get the call stack as defined by UTL_CALL_STACK but with the oldest call first. 
 The dynamic_depth field will be the same as the index in the output array.
+
+The default invocation get_call_stack will return an array of length
+utl_call_stack.dynamic_depth with the first entry having field dynamic_depth
+equal to 1 and the last entry has dynamic_depth equal to
+utl_call_stack.dynamic_depth.
 
 **/
 
@@ -121,7 +127,8 @@ Get the unique id of each call and return those IDs.
 **/
 
 function get_error_stack
-( p_nr_items_to_skip in naturaln default 0
+( p_start in simple_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
+, p_size in naturaln default utl_call_stack.error_depth
 )
 return t_error_stack_tab;
 
@@ -160,7 +167,8 @@ Get the unique id of each error call and return those IDs.
 **/
 
 function get_backtrace_stack
-( p_nr_items_to_skip in naturaln default 0
+( p_start in simple_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
+, p_size in naturaln default utl_call_stack.backtrace_depth
 )
 return t_backtrace_stack_tab;
 
