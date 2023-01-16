@@ -435,8 +435,10 @@ is
     then
       l_error_stack_tab := get_error_stack(-3);
       ut.expect(l_error_stack_tab.count, 'count2').to_equal(3);
-      l_repr_tab(2) := '2|6512|at "ORACLE_TOOLS.API_CALL_STACK_PKG", line ' || l_line_tab(2);
-      l_repr_tab(3) := '3|6512|at "ORACLE_TOOLS.API_CALL_STACK_PKG", line ' || l_line_tab(3);
+      for i_idx in 2..3
+      loop
+        l_repr_tab(i_idx) := utl_lms.format_message('%s|6512|at "%s.%s", line %s', to_char(i_idx), $$PLSQL_UNIT_OWNER, $$PLSQL_UNIT, l_line_tab(i_idx));
+      end loop;
       for i_idx in 1 .. l_error_stack_tab.count
       loop
         ut.expect(repr(l_error_stack_tab(i_idx)), 'id2-'||i_idx).to_equal(l_repr_tab(i_idx));

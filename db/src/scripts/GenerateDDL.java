@@ -5,6 +5,7 @@ import java.io.PrintStream;
 
 import java.sql.*;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
 
@@ -174,13 +175,13 @@ public class GenerateDDL
                         break;
                     
                     case 11:
-                        out.println("exclude objects     : " + excludeObjects);
+                        out.println("exclude objects     : " + String.join(System.getProperty("line.separator"), Arrays.stream(excludeObjects.split("\n")).map(String::trim).toArray(String[]::new)));
                         excludeObjectsClob.setString(1, excludeObjects);
                         pstmt.setClob(nr, excludeObjectsClob);
                         break;
     
                     case 12:
-                        out.println("include objects     : " + includeObjects);
+                        out.println("include objects     : " + String.join(System.getProperty("line.separator"), Arrays.stream(includeObjects.split("\n")).map(String::trim).toArray(String[]::new)));
                         includeObjectsClob.setString(1, includeObjects);
                         pstmt.setClob(nr, includeObjectsClob);
                         break;
