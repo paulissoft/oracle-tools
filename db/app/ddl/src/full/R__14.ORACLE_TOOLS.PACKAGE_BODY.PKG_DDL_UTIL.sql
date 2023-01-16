@@ -765,6 +765,9 @@ $end
       procedure add_system_constraint
       is
       begin
+        /*
+        -- l_constraint_expr_idx between 2 and 4  
+        */
         -- get the column names (without spaces)
         l_pos1 := instr(l_constraint, '(');
         l_pos2 := instr(l_constraint, ')');
@@ -888,6 +891,8 @@ $end
                 from    all_constraints c
                 where   c.owner = p_schema
                 and     c.table_name = p_base_object_name
+                        -- GJP 2023-01-16 We know the constraint type so use it.
+                and     c.constraint_type = case l_constraint_expr_idx when 2 then 'P' when 3 then 'U' when 4 then 'R' end
               )
               loop
 $if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
