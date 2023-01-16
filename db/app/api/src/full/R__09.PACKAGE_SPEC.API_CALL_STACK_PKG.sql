@@ -1,7 +1,7 @@
 CREATE OR REPLACE PACKAGE "API_CALL_STACK_PKG" authid definer
 is
 
-subtype t_id_tab is utl_call_stack.unit_qualified_name; -- a table type allowing us to use member of
+subtype t_repr_tab is utl_call_stack.unit_qualified_name; -- a table type allowing us to use member of
 
 /**
 
@@ -79,7 +79,7 @@ The backtrace stack table type.
 **/
 
 function get_call_stack
-( p_start in simple_integer default 1                      -- You can use -1 like the POSITION parameter in the SUBSTR() function
+( p_start in pls_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
 , p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 )
 return t_call_stack_tab;
@@ -96,7 +96,7 @@ utl_call_stack.dynamic_depth.
 
 **/
 
-function id
+function repr
 ( p_call_stack_rec in t_call_stack_rec
 )
 return varchar2
@@ -104,7 +104,7 @@ deterministic;
 
 /**
 
-Get the unique id of a call that is a string with these fields separated by a bar (|):
+Get the representation of a call that is a string with these fields separated by a bar (|):
 - dynamic_depth
 - lexical_depth
 - owner
@@ -114,20 +114,20 @@ Get the unique id of a call that is a string with these fields separated by a ba
 
 **/
 
-function id
+function repr
 ( p_call_stack_tab in t_call_stack_tab
 )
-return t_id_tab
+return t_repr_tab
 deterministic;
 
 /**
 
-Get the unique id of each call and return those IDs.
+Get the representation of each call and return those representations.
 
 **/
 
 function get_error_stack
-( p_start in simple_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
+( p_start in pls_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
 , p_size in naturaln default utl_call_stack.error_depth
 )
 return t_error_stack_tab;
@@ -139,7 +139,7 @@ The error_depth field will be the same as the index in the output array.
 
 **/
 
-function id
+function repr
 ( p_error_stack_rec in t_error_stack_rec
 )
 return varchar2
@@ -147,27 +147,27 @@ deterministic;
 
 /**
 
-Get the unique id of an error call that is a string with these fields separated by a bar (|):
+Get the representation of an error call that is a string with these fields separated by a bar (|):
 - error_depth
 - error_number
 - error_msg
 
 **/
 
-function id
+function repr
 ( p_error_stack_tab in t_error_stack_tab
 )
-return t_id_tab
+return t_repr_tab
 deterministic;
 
 /**
 
-Get the unique id of each error call and return those IDs.
+Get the representation of each error call and return those representations.
 
 **/
 
 function get_backtrace_stack
-( p_start in simple_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
+( p_start in pls_integer default 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
 , p_size in naturaln default utl_call_stack.backtrace_depth
 )
 return t_backtrace_stack_tab;
@@ -179,7 +179,7 @@ The backtrace_depth field will be the same as the index in the output array.
 
 **/
 
-function id
+function repr
 ( p_backtrace_stack_rec in t_backtrace_stack_rec
 )
 return varchar2
@@ -187,22 +187,22 @@ deterministic;
 
 /**
 
-Get the unique id of a backtrace call that is a string with these fields separated by a bar (|):
+Get the representation of a backtrace call that is a string with these fields separated by a bar (|):
 - backtrace_depth
 - backtrace_line
 - backtrace_unit
 
 **/
 
-function id
+function repr
 ( p_backtrace_stack_tab in t_backtrace_stack_tab
 )
-return t_id_tab
+return t_repr_tab
 deterministic;
 
 /**
 
-Get the unique id of each backtrace call and return those IDs.
+Get the representation of each backtrace call and return those representations.
 
 **/
 
@@ -215,6 +215,22 @@ procedure show_stack
 Show the current call, error and backtrace stack using DBMS_OUTPUT.
 
 **/
+
+$if cfg_pkg.c_testing $then
+
+--%suitepath(API)
+--%suite
+
+--%test
+procedure ut_get_call_stack;
+
+--%test
+procedure ut_get_error_stack;
+
+--%test
+procedure ut_get_backtrace_stack;
+
+$end
 
 end API_CALL_STACK_PKG;
 /
