@@ -22,11 +22,11 @@ is
       and     ( b_table_name is null or i.table_name = b_table_name )
       and     ( b_index_name is null or i.index_name = b_index_name )
     )
-    select  'ALTER INDEX "' || i.index_name || '" REBUILD' as DDL
+    select  'ALTER INDEX "' || i.index_name || '" REBUILD ONLINE PARALLEL' as DDL
     from    ind i
     where   i.status like b_index_status escape '\'
     union all
-    select  'ALTER INDEX "' || t.index_name || '" MODIFY ' || t.ddl_type || ' "' || t.partition_name || '" REBUILD' as DDL
+    select  'ALTER INDEX "' || t.index_name || '" MODIFY ' || t.ddl_type || ' "' || t.partition_name || '" REBUILD ONLINE PARALLEL' as DDL
     from    ( select  p.index_name
               ,       p.partition_name
               ,       'PARTITION' as ddl_type
