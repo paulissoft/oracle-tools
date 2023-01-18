@@ -114,6 +114,7 @@ procedure create_new_partitions
 ( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp -- create partitions where the last one created will includes this timestamp
+, p_update_index_clauses in varchar2 default 'UPDATE GLOBAL INDEXES' -- can be empty or UPDATE GLOBAL INDEXES
 , p_nr_days_per_partition in positiven default 1 -- the number of days per partition
 );
 
@@ -123,10 +124,10 @@ Create new range partitions until the reference timestamp lies inside the last c
 
 Only meant for a range partitioned table without an interval (ALL_PART_TABLES.PARTITIONING_TYPE = 'RANGE' and ALL_PART_TABLES.INTERVAL is null).
 
-The statement to create a partition: 
+One of the statements to create a partition: 
 
 ```sql
-ALTER TABLE "<p_table_owner>"."<p_table_name>" ADD PARTITION "<new partition>" VALUES LESS THAN (TIMESTAMP '<timestamp>')
+ALTER TABLE "<p_table_owner>"."<p_table_name>" ADD PARTITION "<new partition>" VALUES LESS THAN (TIMESTAMP '<timestamp>') <p_update_index_clauses>
 ```
 
 **/

@@ -4,6 +4,9 @@ is
 -- PRIVATE section
 
 c_high_value_timestamp_expr constant varchar2(100 char) := q'[TIMESTAMP' ____-__-__ __:__:__']' ;
+"yyyy-mm-dd hh24:mi:ss" constant varchar2(100) := 'yyyy-mm-dd hh24:mi:ss';
+"yyyy-mm-dd hh24:mi:ss.ff9" constant varchar2(100) := 'yyyy-mm-dd hh24:mi:ss.ff9';
+"yyyymmdd" constant varchar2(100) := 'yyyymmdd';
 
 $if cfg_pkg.c_debugging $then
 
@@ -22,6 +25,18 @@ begin
 end print;  
 
 $end
+
+procedure execute_immediate
+( p_ddl in varchar2
+)
+is
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'p_ddl: %s', p_ddl);
+$end
+
+  execute immediate p_ddl;  
+end execute_immediate;
 
 -- PUBLIC routines
 
@@ -172,7 +187,7 @@ $if cfg_pkg.c_debugging $then
   ( dbug."input"
   , 'p_table_name: %s; p_reference_timestamp: %s; p_operator: %s'
   , p_table_name
-  , to_char(p_reference_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff9')
+  , to_char(p_reference_timestamp, "yyyy-mm-dd hh24:mi:ss.ff9")
   , p_operator
   );
 $end
@@ -184,8 +199,8 @@ $end
   )
   loop
     -- Both r.lwb_incl and r.upb_excl can be empty, MAXVALUE or something like TIMESTAMP' 2000-01-01 00:00:00'.
-    l_lwb_incl_timestamp := case when r.lwb_incl like c_high_value_timestamp_expr then to_timestamp(substr(r.lwb_incl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
-    l_upb_excl_timestamp := case when r.upb_excl like c_high_value_timestamp_expr then to_timestamp(substr(r.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
+    l_lwb_incl_timestamp := case when r.lwb_incl like c_high_value_timestamp_expr then to_timestamp(substr(r.lwb_incl, 12, 19), "yyyy-mm-dd hh24:mi:ss") end;
+    l_upb_excl_timestamp := case when r.upb_excl like c_high_value_timestamp_expr then to_timestamp(substr(r.upb_excl, 12, 19), "yyyy-mm-dd hh24:mi:ss") end;
 
     -- Possible ranges with respect to R (reference date). [] means a closed range (both ends not null)
     -- 1a. (]R
@@ -230,16 +245,22 @@ procedure create_new_partitions
 ( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp -- create partitions where the last one created will includes this timestamp
-, p_nr_days_per_partition in positiven default 1 -- the number of days per partition
+, p_update_index_clauses in varchar2 -- can be empty or UPDATE GLOBAL INDEXES
+, p_nr_days_per_partition in positiven -- the number of days per partition
 )
 is
   l_table_owner constant all_tab_partitions.table_owner%type :=
     oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'owner');
   l_table_name constant all_tab_partitions.table_name%type :=
     oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table');
+  l_found pls_integer;
   l_partition_last_rec t_range_rec;
   l_upb_excl_timestamp timestamp;
   l_ddl varchar2(32767 char) := null;
+
+  -- ORA-14074: partition bound must collate higher than that of the last partition
+  -- See also https://community.oracle.com/tech/developers/discussion/2194501/ora-14074-partition-bound-must-collate-higher-than-that-of-the-last-partit
+  e_partition_must_be_split exception;
 
   procedure cleanup
   is
@@ -264,66 +285,157 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_NEW_PARTITIONS');
   dbug.print
   ( dbug."input"
-  , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_nr_days_per_partition: %s'
+  , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s; p_nr_days_per_partition: %s'
   , p_table_owner
   , p_table_name
-  , to_char(p_reference_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff9')
+  , to_char(p_reference_timestamp, "yyyy-mm-dd hh24:mi:ss.ff9")
+  , p_update_index_clauses
   , p_nr_days_per_partition
   );
 $end
 
   -- We must only add partitions if it is a table without an interval range partition.
-  -- Get the last high_value (upb_excl) that resembles a TIMESTAMP.
-  select  p.* 
-  into    l_partition_last_rec
-  from    ( select  p.*
-            from    table
-                    ( oracle_tools.data_partitioning_pkg.show_partitions_range
-                      ( p_table_owner
-                      , p_table_name
-                      )
-                    ) p
-                    cross join all_part_tables t
-            where   t.owner = p_table_owner
-            and     t.table_name = p_table_name
-            and     t.partitioning_type = 'RANGE'
-            and     t.interval is null -- partitioned table but no interval
-            and     p.upb_excl like c_high_value_timestamp_expr -- skip MAXVALUE since we need to create before that partition
-            order by
-                    p.partition_position desc
-          ) P
-  where   rownum = 1 -- get the last
+  select  1
+  into    l_found
+  from    all_part_tables t
+  where   t.owner = trim('"' from l_table_owner)
+  and     t.table_name = trim('"' from l_table_name)
+  and     t.partitioning_type = 'RANGE'
+  and     t.interval is null -- partitioned table but no interval
   ;
 
-$if cfg_pkg.c_debugging $then
-  print(l_partition_last_rec);
-$end
+  -- There are three cases:
+  -- 1) there is a partition with a range where the reference date lies inside
+  --    a) if the upper bound is MAXVALUE: we have to split since MAXVALUE is only meant as last resort
+  --    b) else, we are done since there is a bounded upper bound
+  -- 2) there is a partition with a range higher than the reference date: we are done
+  -- 3) there are no partitions with a range equal or higher
+  --    a) there is a partition with a range less then the reference date: we must create partitions upwards starting from the last found
+  --    b) there are no partitions at all: create a MAXVALUE partition
 
-  -- upb_excl is something like TIMESTAMP' 2000-01-01 00:00:00'.
-  l_upb_excl_timestamp := to_timestamp(substr(l_partition_last_rec.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss');
-
+  <<case_loop>>
+  for i_case in 1..3
   loop
-    l_upb_excl_timestamp := l_upb_excl_timestamp + numtodsinterval(p_nr_days_per_partition, 'DAY');
+    begin
+      select  p.* 
+      into    l_partition_last_rec
+      from    ( select  p.*
+                from    table
+                        ( oracle_tools.data_partitioning_pkg.find_partitions_range
+                          ( l_table_owner
+                          , l_table_name
+                          , p_reference_timestamp
+                          , case i_case
+                              when 1 then '='
+                              when 2 then '>'
+                              when 3 then '<'
+                            end
+                          )
+                        ) p
+                order by
+                        case i_case
+                          when 3
+                          then -1 -- order by decreasing p.partition_position for <
+                          else +1 -- order by increasing p.partition_position for = and >
+                        end * p.partition_position asc
+              ) p
+      where   rownum = 1
+      ;
 
-    exit when l_upb_excl_timestamp > p_reference_timestamp;
 
-    l_ddl := utl_lms.format_message
-             ( q'[ALTER TABLE %s.%s ADD PARTITION %s VALUES LESS THAN (TIMESTAMP '%s')]'
-             , l_table_owner
-             , l_table_name
-             , oracle_tools.data_api_pkg.dbms_assert$enquote_name
-               ( 'P_LT_' || to_char(l_upb_excl_timestamp, 'YYYYMMDD')
-               , 'partition'
-               )
-             , to_char(l_upb_excl_timestamp, 'YYYY-MM-DD HH24:MI:SS')
-             );
-               
 $if cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'l_ddl: %s', l_ddl);
+      print(l_partition_last_rec);
 $end
 
-    execute immediate l_ddl;
-  end loop;
+      case i_case
+        when 1
+        then
+          case
+            when l_partition_last_rec.upb_excl = 'MAXVALUE' -- case 1a
+            then
+              -- remove time info
+              l_upb_excl_timestamp :=
+                to_timestamp
+                ( to_char
+                  ( p_reference_timestamp + numtodsinterval(p_nr_days_per_partition, 'DAY')
+                  , "yyyymmdd"
+                  )
+                , "yyyymmdd"
+                );
+              l_ddl :=
+                utl_lms.format_message
+                ( q'[ALTER TABLE %s.%s SPLIT PARTITION "%s" AT (TIMESTAMP '%s') INTO (PARTITION %s, PARTITION "%s") %s]'
+                , l_table_owner
+                , l_table_name
+                , l_partition_last_rec.partition_name
+                , to_char(l_upb_excl_timestamp, "yyyy-mm-dd hh24:mi:ss")
+                , oracle_tools.data_api_pkg.dbms_assert$enquote_name
+                  ( 'P_LT_' || to_char(l_upb_excl_timestamp, "yyyymmdd")
+                  , 'partition'
+                  )
+                , l_partition_last_rec.partition_name
+                , p_update_index_clauses
+                );
+              execute_immediate(l_ddl);
+              
+            when l_partition_last_rec.upb_excl like c_high_value_timestamp_expr -- case 1b
+            then
+              null;
+              
+          end case;
+          
+        when 2
+        then
+          null;
+        
+        when 3
+        then
+          -- 3a
+          -- upb_excl is something like TIMESTAMP' 2000-01-01 00:00:00'.
+          l_upb_excl_timestamp := to_timestamp(substr(l_partition_last_rec.upb_excl, 12, 19), "yyyy-mm-dd hh24:mi:ss");
+
+          loop
+            l_upb_excl_timestamp := l_upb_excl_timestamp + numtodsinterval(p_nr_days_per_partition, 'DAY');
+
+$if cfg_pkg.c_debugging $then
+            dbug.print(dbug."info", 'partition high value: %s', to_char(l_upb_excl_timestamp, "yyyy-mm-dd hh24:mi:ss.ff9"));
+$end
+
+            exit when l_upb_excl_timestamp > p_reference_timestamp;
+
+            l_ddl := utl_lms.format_message
+                     ( q'[ALTER TABLE %s.%s ADD PARTITION %s VALUES LESS THAN (TIMESTAMP '%s') %s]'
+                     , l_table_owner
+                     , l_table_name
+                     , oracle_tools.data_api_pkg.dbms_assert$enquote_name
+                       ( 'P_LT_' || to_char(l_upb_excl_timestamp, "yyyymmdd")
+                       , 'partition'
+                       )
+                     , to_char(l_upb_excl_timestamp, "yyyy-mm-dd hh24:mi:ss")
+                     , p_update_index_clauses
+                     );
+                      
+            execute_immediate(l_ddl);
+          end loop;
+      end case;
+      
+      exit case_loop; -- case found: stop
+    exception
+      when no_data_found
+      then
+        if i_case = 3
+        then
+          -- 3b        
+          l_ddl := utl_lms.format_message
+                   ( q'[ALTER TABLE %s.%s ADD PARTITION P_LAST VALUES LESS THAN (MAXVALUE) %s]'
+                   , l_table_owner
+                   , l_table_name
+                   , p_update_index_clauses
+                   );
+          execute_immediate(l_ddl);
+        end if;
+    end;    
+  end loop case_loop;
 
   cleanup;
 
@@ -360,11 +472,25 @@ is
     if l_ddl is not null -- something has been dropped?
     then
       -- See also Asynchronous Global Index Maintenance for Dropping and Truncating Partitions
+      begin
       dbms_part.cleanup_gidx
       ( schema_name_in => trim('"' from l_table_owner)
       , table_name_in => trim('"' from l_table_name)
       , options => 'COALESCE'
       );
+      exception
+        when others
+        then
+          -- Misspelling, see https://www.morganslibrary.org/reference/pkgs/dbms_part.html
+          if sqlerrm in ( 'ORA-20000: No global index segments were cleaned'
+                        , 'ORA-20000: No gloabl index segments were cleaned'
+                        )
+          then
+            null;
+          else
+            raise;
+          end if;
+      end;
 
       -- As a last resort rebuild unusable indexes
       oracle_tools.data_table_mgmt_pkg.rebuild_indexes
@@ -390,7 +516,7 @@ $if cfg_pkg.c_debugging $then
   , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s'
   , p_table_owner
   , p_table_name
-  , to_char(p_reference_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff9')
+  , to_char(p_reference_timestamp, "yyyy-mm-dd hh24:mi:ss.ff9")
   , p_update_index_clauses
   );
 $end
@@ -408,8 +534,8 @@ $end
             )
           ) p
           cross join all_part_tables t
-  where   t.owner = l_table_owner
-  and     t.table_name = l_table_name
+  where   t.owner = trim('"' from l_table_owner)
+  and     t.table_name = trim('"' from l_table_name)
   and     t.partitioning_type = 'RANGE'
   and     (t.interval is null or p.interval = 'YES')
   ;
@@ -428,12 +554,7 @@ $end
                  )
                , p_update_index_clauses
                );
-               
-$if cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'l_ddl: %s', l_ddl);
-$end
-
-      execute immediate l_ddl;
+      execute_immediate(l_ddl);
     end loop;
   end if;
 
