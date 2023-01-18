@@ -1,7 +1,9 @@
 CREATE OR REPLACE PACKAGE BODY "DATA_PARTITIONING_PKG" 
 is
 
--- PRIVATE routines
+-- PRIVATE section
+
+c_high_value_timestamp_expr constant varchar2(100 char) := q'[TIMESTAMP' ____-__-__ __:__:__']' ;
 
 $if cfg_pkg.c_debugging $then
 
@@ -90,7 +92,19 @@ is
     trim('"' from oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table'));
   l_query constant varchar2(4000 char) :=
     utl_lms.format_message
-    ( q'[select p.high_value, p.partition_name, p.partition_position, p.interval from all_tab_partitions p where p.table_owner = '%s' and p.table_name = '%s']'
+    ( q'[
+select  p.high_value
+,       p.partition_name
+,       p.partition_position
+,       p.interval
+from    all_tab_partitions p
+        inner join all_part_tables t
+        on t.owner = p.table_owner and 
+           t.table_name = p.table_name and
+           t.partitioning_type = 'RANGE'
+where   p.table_owner = '%s'
+and     p.table_name = '%s'
+]'
     , l_table_owner
     , l_table_name
     );
@@ -169,9 +183,9 @@ $end
     from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner, p_table_name)) t
   )
   loop
-    -- r.lwb_incl and r.upb_excl are something like TIMESTAMP' 2000-01-01 00:00:00'
-    l_lwb_incl_timestamp := case when r.lwb_incl is not null then to_timestamp(substr(r.lwb_incl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
-    l_upb_excl_timestamp := case when r.upb_excl is not null then to_timestamp(substr(r.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
+    -- Both r.lwb_incl and r.upb_excl can be empty, MAXVALUE or something like TIMESTAMP' 2000-01-01 00:00:00'.
+    l_lwb_incl_timestamp := case when r.lwb_incl like c_high_value_timestamp_expr then to_timestamp(substr(r.lwb_incl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
+    l_upb_excl_timestamp := case when r.upb_excl like c_high_value_timestamp_expr then to_timestamp(substr(r.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss') end;
 
     -- Possible ranges with respect to R (reference date). [] means a closed range (both ends not null)
     -- 1a. (]R
@@ -211,6 +225,120 @@ $end
 
   return; -- essential
 end find_partitions_range;
+
+procedure create_new_partitions 
+( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_reference_timestamp in timestamp -- create partitions where the last one created will includes this timestamp
+, p_nr_days_per_partition in positiven default 1 -- the number of days per partition
+)
+is
+  l_table_owner constant all_tab_partitions.table_owner%type :=
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'owner');
+  l_table_name constant all_tab_partitions.table_name%type :=
+    oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table');
+  l_partition_last_rec t_range_rec;
+  l_upb_excl_timestamp timestamp;
+  l_ddl varchar2(32767 char) := null;
+
+  procedure cleanup
+  is
+  begin
+    if l_ddl is not null -- something has been dropped?
+    then
+      -- Recalculate statistics for (sub)partitions
+      dbms_stats.gather_table_stats
+      ( ownname => l_table_owner
+      , tabname => l_table_name
+      , granularity => 'PARTITION'
+      );
+      dbms_stats.gather_table_stats
+      ( ownname => l_table_owner
+      , tabname => l_table_name
+      , granularity => 'SUBPARTITION'
+      );
+    end if;
+  end cleanup;
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_NEW_PARTITIONS');
+  dbug.print
+  ( dbug."input"
+  , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_nr_days_per_partition: %s'
+  , p_table_owner
+  , p_table_name
+  , to_char(p_reference_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff9')
+  , p_nr_days_per_partition
+  );
+$end
+
+  -- We must only add partitions if it is a table without an interval range partition.
+  -- Get the last high_value (upb_excl) that resembles a TIMESTAMP.
+  select  p.* 
+  into    l_partition_last_rec
+  from    ( select  p.*
+            from    table
+                    ( oracle_tools.data_partitioning_pkg.show_partitions_range
+                      ( p_table_owner
+                      , p_table_name
+                      )
+                    ) p
+                    cross join all_part_tables t
+            where   t.owner = p_table_owner
+            and     t.table_name = p_table_name
+            and     t.partitioning_type = 'RANGE'
+            and     t.interval is null -- partitioned table but no interval
+            and     p.upb_excl like c_high_value_timestamp_expr -- skip MAXVALUE since we need to create before that partition
+            order by
+                    p.partition_position desc
+          ) P
+  where   rownum = 1 -- get the last
+  ;
+
+$if cfg_pkg.c_debugging $then
+  print(l_partition_last_rec);
+$end
+
+  -- upb_excl is something like TIMESTAMP' 2000-01-01 00:00:00'.
+  l_upb_excl_timestamp := to_timestamp(substr(l_partition_last_rec.upb_excl, 12, 19), 'yyyy-mm-dd hh24:mi:ss');
+
+  loop
+    l_upb_excl_timestamp := l_upb_excl_timestamp + numtodsinterval(p_nr_days_per_partition, 'DAY');
+
+    exit when l_upb_excl_timestamp > p_reference_timestamp;
+
+    l_ddl := utl_lms.format_message
+             ( q'[ALTER TABLE %s.%s ADD PARTITION %s VALUES LESS THAN (TIMESTAMP '%s')]'
+             , l_table_owner
+             , l_table_name
+             , oracle_tools.data_api_pkg.dbms_assert$enquote_name
+               ( 'P_LT_' || to_char(l_upb_excl_timestamp, 'YYYYMMDD')
+               , 'partition'
+               )
+             , to_char(l_upb_excl_timestamp, 'YYYY-MM-DD HH24:MI:SS')
+             );
+               
+$if cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'l_ddl: %s', l_ddl);
+$end
+
+    execute immediate l_ddl;
+  end loop;
+
+  cleanup;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+exception
+  when others
+  then
+    cleanup;
+$if cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end    
+    raise;
+end create_new_partitions;
 
 procedure drop_old_partitions 
 ( p_table_owner in varchar2
@@ -268,7 +396,7 @@ $if cfg_pkg.c_debugging $then
 $end
 
   -- retrieve the partition list before dropping them so we are 100% sure the list won't change while dropping
-  select  t.*
+  select  p.* 
   bulk collect
   into    l_partition_lt_reference_tab
   from    table
@@ -278,8 +406,13 @@ $end
             , p_reference_timestamp
             , '<'
             )
-          ) t
-  where   t.interval = 'YES';
+          ) p
+          cross join all_part_tables t
+  where   t.owner = l_table_owner
+  and     t.table_name = l_table_name
+  and     t.partitioning_type = 'RANGE'
+  and     (t.interval is null or p.interval = 'YES')
+  ;
 
   if l_partition_lt_reference_tab.count > 0
   then
