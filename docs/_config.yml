@@ -46,6 +46,7 @@ logo: "https://github.com/gpaulissen/paulissoft/raw/main/Paulissoft.png"
 # Build settings
 # theme: minima
 remote_theme: "pmarsceill/just-the-docs"
+# remote_theme: MichaelCurrin/fractal
 
 # Build settings
 markdown             : kramdown

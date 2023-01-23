@@ -1,7 +1,13 @@
 {
   "name": "PATO - Paulissoft Application Tools for Oracle",
   "scripts": {
-    "build:docs": "npx ploc --in db/app/*/src/full/*.PACKAGE_SPEC.*.sql --out docs/ploc/{folder}{file}.md"
+      "build:docs:api": "npx ploc --in db/app/api/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/api/{file}.md",
+      "build:docs:cfg": "npx ploc --in db/app/cfg/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/cfg/{file}.md",
+      "build:docs:data": "npx ploc --in db/app/data/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/data/{file}.md",
+      "build:docs:ddl": "npx ploc --in db/app/ddl/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/ddl/{file}.md",
+      "build:docs:ext": "npx ploc --in db/app/ext/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/ext/{file}.md",
+      "build:docs:ui": "npx ploc --in db/app/ui/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/ui/{file}.md",
+      "build:docs": "npm run build:docs:api && npm run build:docs:cfg && npm run build:docs:data && npm run build:docs:ddl && npm run build:docs:ext && npm run build:docs:ui"
   },
   "dependencies": {
     "ploc": "^0.6.3"
