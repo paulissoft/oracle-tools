@@ -1,7 +1,8 @@
 ---
 layout: default
 title: CFG packages
-nav_order: 8
+parent: PL/SQL objects
+nav_order: 2
 has_toc: false
 ---
 

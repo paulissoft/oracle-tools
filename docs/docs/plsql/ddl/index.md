@@ -1,7 +1,8 @@
 ---
 layout: default
 title: DDL packages
-nav_order: 10
+parent: PL/SQL objects
+nav_order: 4
 has_toc: false
 ---
 <!--

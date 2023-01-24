@@ -8,5 +8,5 @@ task :test do
 end
 
 task :serve do
-  sh "bundle exec jekyll serve --incremental --config _config.yml,_config_development.yml"
+  sh "bundle exec jekyll serve --watch --incremental --config _config.yml,_config_development.yml"
 end
