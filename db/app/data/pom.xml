@@ -16,7 +16,7 @@
   <properties>
     <flyway.table>schema_version_tools_data</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>DATA_SESSION_USERNAME,DATA_TIMESTAMP,DATA_API_PKG,DATA_BR_PKG,DATA_PARTITIONING_PKG,DATA_TABLE_MGMT_PKG,DATA_ROW_T</db.object.names>
+    <db.object.names>DATA_SESSION_USERNAME,DATA_TIMESTAMP,DATA_API_PKG,DATA_BR_PKG,DATA_PARTITIONING_PKG,DATA_TABLE_MGMT_PKG,DATA_ROW_T,DATA_ROW_ID_T</db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
 
