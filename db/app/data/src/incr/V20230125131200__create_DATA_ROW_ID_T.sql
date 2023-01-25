@@ -1,4 +1,4 @@
-CREATE OR REPLACE TYPE DATA_ROW_ID_T AUTHID DEFINER UNDER DATA_ROW_T (
+CREATE OR REPLACE TYPE DATA_ROW_ID_T AUTHID CURRENT_USER UNDER DATA_ROW_T (
   final member procedure construct
   ( self in out nocopy data_row_id_t
   , p_table_owner in varchar2

@@ -1,4 +1,4 @@
-CREATE OR REPLACE TYPE DATA_ROW_T AUTHID DEFINER AS OBJECT (
+CREATE OR REPLACE TYPE DATA_ROW_T AUTHID CURRENT_USER AS OBJECT (
   table_owner varchar2(128 char)
 , table_name varchar2(128 char)
 , dml_operation varchar2(1 byte) -- (I)nsert/(U)pdate/(D)elete
