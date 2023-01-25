@@ -86,7 +86,11 @@ DROP PACKAGE DATA_PARTITIONING_PKG;
 call dbms_application_info.set_action('SQL statement 17');
 DROP PACKAGE DATA_TABLE_MGMT_PKG;
 
-/* SQL statement 18 (DROP;ORACLE_TOOLS;TYPE_SPEC;DATA_ROW_T;;;;;;;;2) */
+/* SQL statement 18 (DROP;ORACLE_TOOLS;TYPE_BODY;DATA_ROW_T;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 18');
+DROP TYPE BODY DATA_ROW_T;
+
+/* SQL statement 19 (DROP;ORACLE_TOOLS;TYPE_SPEC;DATA_ROW_T;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 19');
 DROP TYPE DATA_ROW_T FORCE;
 

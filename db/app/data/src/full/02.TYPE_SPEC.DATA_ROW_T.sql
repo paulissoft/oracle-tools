@@ -1,9 +1,16 @@
-CREATE TYPE "DATA_ROW_T" AS OBJECT (
+CREATE TYPE "DATA_ROW_T" AUTHID DEFINER AS OBJECT (
   table_owner varchar2(128 char)
 , table_name varchar2(128 char)
-, operation varchar2(1 byte) -- (I)nsert/(U)pdate/(D)elete
+, dml_operation varchar2(1 byte) -- (I)nsert/(U)pdate/(D)elete
 , key anydata
-, scn number -- DBMS_FLASHBACK.GET_SYSTEM_CHANGE_NUMBER
+, dml_timestamp timestamp
+, final member procedure construct
+  ( self in out nocopy DATA_ROW_T
+  , p_table_owner in varchar2
+  , p_table_name in varchar2
+  , p_dml_operation in varchar2
+  , p_key in anydata
+  )
 )
 not instantiable
 not final;
