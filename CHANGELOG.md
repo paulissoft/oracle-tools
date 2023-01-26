@@ -15,6 +15,8 @@ Types of changes:
 
 [Unreleased]
 
+- [The Jenkins pipeline does not merge correctly development into the next branch.](https://github.com/paulissoft/oracle-tools/issues/111)
+
 ## [1.10.0] - 2023-01-14
 
 ### Added
