@@ -1,4 +1,4 @@
-CREATE TYPE DATA_ROW_ID_T AUTHID CURRENT_USER UNDER DATA_ROW_T
+CREATE TYPE "DATA_ROW_ID_T" AUTHID CURRENT_USER UNDER DATA_ROW_T
 (
 /**
 An object type meant for all tables having ID as the primary key.
