@@ -1,6 +1,6 @@
 ---
 layout: default
-title: EXT packages
+title: EXT database objects
 parent: PL/SQL objects
 nav_order: 5
 has_toc: false

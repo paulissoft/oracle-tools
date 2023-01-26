@@ -1,6 +1,6 @@
 ---
 layout: default
-title: UI packages
+title: UI database objects
 parent: PL/SQL objects
 nav_order: 6
 has_toc: false

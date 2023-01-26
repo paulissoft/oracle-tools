@@ -1,6 +1,6 @@
 ---
 layout: default
-title: DATA packages
+title: DATA database objects
 parent: PL/SQL objects
 nav_order: 3
 has_toc: false
@@ -12,3 +12,6 @@ has_toc: false
 
 - [package DATA_PARTITIONING_PKG](R__09.PACKAGE_SPEC.DATA_PARTITIONING_PKG.html)
 - [package DATA_TABLE_MGMT_PKG](R__09.PACKAGE_SPEC.DATA_TABLE_MGMT_PKG.html)
+- [type DATA_ROW_T](02.TYPE_SPEC.DATA_ROW_T.html)
+- [type DATA_ROW_ID_T](02.TYPE_SPEC.DATA_ROW_ID_T.html)
+

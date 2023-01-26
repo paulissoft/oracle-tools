@@ -1,6 +1,6 @@
 ---
 layout: default
-title: CFG packages
+title: CFG database objects
 parent: PL/SQL objects
 nav_order: 2
 has_toc: false

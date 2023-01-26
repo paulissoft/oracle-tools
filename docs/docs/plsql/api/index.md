@@ -1,6 +1,6 @@
 ---
 layout: default
-title: API packages
+title: API database objects
 parent: PL/SQL objects
 nav_order: 1
 has_toc: false
