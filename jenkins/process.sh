@@ -338,7 +338,8 @@ main() {
     then
         # GJP 2023-01-26 https://github.com/paulissoft/oracle-tools/issues/111
         x ${GIT} config pull.ff only
-        x ${GIT} pull
+        x ${GIT} pull origin "$SCM_BRANCH_PREV"
+        x ${GIT} pull origin "$SCM_BRANCH"
         x ${GIT} checkout "$SCM_BRANCH_PREV"
         x ${GIT} checkout "$SCM_BRANCH"
         x ${GIT} merge "$SCM_BRANCH_PREV"
