@@ -1,15 +1,21 @@
 {
-  "name": "PATO - Paulissoft Application Tools for Oracle",
-  "scripts": {
-      "build:docs:api" : "npx ploc --in db/app/api/src/full/*.PACKAGE_SPEC.*.sql  --out docs/docs/plsql/api/{file}.md",
-      "build:docs:cfg" : "npx ploc --in db/app/cfg/src/full/*.PACKAGE_SPEC.*.sql  --out docs/docs/plsql/cfg/{file}.md",
-      "build:docs:data": "npx ploc --in db/app/data/src/full/*.PACKAGE_SPEC.*.sql --out docs/docs/plsql/data/{file}.md",
-      "build:docs:ddl" : "npx ploc --in db/app/ddl/src/full/*.PACKAGE_SPEC.*.sql  --out docs/docs/plsql/ddl/{file}.md",
-      "build:docs:ext" : "npx ploc --in db/app/ext/src/full/*.PACKAGE_SPEC.*.sql  --out docs/docs/plsql/ext/{file}.md",
-      "build:docs:ui"  : "npx ploc --in db/app/ui/src/full/*.PACKAGE_SPEC.*.sql   --out docs/docs/plsql/ui/{file}.md",
-      "build:docs"     : "npm run build:docs:api && npm run build:docs:cfg && npm run build:docs:data && npm run build:docs:ddl && npm run build:docs:ext && npm run build:docs:ui"
-  },
-  "dependencies": {
-    "ploc": "^0.6.3"
-  }
+    "name": "PATO - Paulissoft Application Tools for Oracle",
+    "scripts": {
+        "build:docs:api": "npx ploc --in db/app/api/src/full/R__*.*_SPEC.*.sql --out docs/docs/plsql/api/{file}.md",
+        "build:docs:cfg": "npx ploc --in db/app/cfg/src/full/R__*.*_SPEC.*.sql --out docs/docs/plsql/cfg/{file}.md",
+        "build:docs:data:spec": "npx ploc --in db/app/data/src/full/R__*.*_SPEC.*.sql --out docs/docs/plsql/data/{file}.md",
+        "build:docs:data": "npm run build:docs:data:spec",
+        "build:docs:ddl:spec": "npx ploc --in db/app/ddl/src/full/R__*.PACKAGE_SPEC.*.sql --out docs/docs/plsql/ddl/{file}.md",
+        "build:docs:ddl:func": "npx ploc --in db/app/ddl/src/full/R__*.FUNCTION.*.sql --out docs/docs/plsql/ddl/{file}.md",
+        "build:docs:ddl:proc": "npx ploc --in db/app/ddl/src/full/R__*.PROCEDURE.*.sql --out docs/docs/plsql/ddl/{file}.md",
+        "build:docs:ddl": "npm run build:docs:ddl:spec && npm run build:docs:ddl:func && npm run build:docs:ddl:proc",
+        "build:docs:ext": "npx ploc --in db/app/ext/src/full/R__*.*_SPEC.*.sql --out docs/docs/plsql/ext/{file}.md",
+        "build:docs:ui": "npx ploc --in db/app/ui/src/full/R__*.*_SPEC.*.sql --out docs/docs/plsql/ui/{file}.md",
+        "build:docs": "npm run build:docs:api && npm run build:docs:cfg && npm run build:docs:data && npm run build:docs:ddl && npm run build:docs:ext && npm run build:docs:ui",
+        "watch:docs": "chokidar package.json db/app/*/src/full/R__*.*_SPEC.*.sql db/app/ddl/src/full/R__*.FUNCTION.*.sql db/app/ddl/src/full/R__*.PROCEDURE.*.sql --initial -c \"npm run build:docs\""
+    },
+    "dependencies": {
+        "chokidar-cli": "^3.0.0",
+        "ploc": "^0.6.3"
+    }
 }
