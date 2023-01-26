@@ -337,6 +337,7 @@ main() {
     if [ -n "$SCM_BRANCH_PREV" -a "$SCM_BRANCH_PREV" != "$SCM_BRANCH" ]
     then
         # GJP 2023-01-26 https://github.com/paulissoft/oracle-tools/issues/111
+        x ${GIT} config pull.ff only
         x ${GIT} pull
         x ${GIT} checkout "$SCM_BRANCH_PREV"
         x ${GIT} checkout "$SCM_BRANCH"
