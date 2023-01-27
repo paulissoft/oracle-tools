@@ -8,6 +8,9 @@ define privileges = "create job, create materialized view, create procedure, cre
 
 grant &&privileges to &&oracle_tools_username;
 
+grant execute on dbms_aqadm to &&oracle_tools_username;
+grant execute on dbms_aq to &&oracle_tools_username;
+
 declare
   l_found pls_integer;
 begin
