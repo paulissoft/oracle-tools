@@ -2,6 +2,16 @@ CREATE OR REPLACE PACKAGE BODY "DATA_DML_EVENT_MGR_PKG" AS
 
 -- private stuff
 
+function sql_object_name
+( p_schema in varchar2
+, p_object_name in varchar2
+)
+return varchar2
+is
+begin
+  return p_schema || '.' || p_object_name;
+end sql_object_name;
+
 procedure create_queue_table_at
 ( p_schema in varchar2
 )
@@ -64,7 +74,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   dbms_aqadm.create_queue_table
-  ( queue_table => l_schema || '.' || c_queue_table
+  ( queue_table => sql_object_name(l_schema, c_queue_table)
   , queue_payload_type => 'DATA_ROW_T'
 --, storage_clause       IN      VARCHAR2        DEFAULT NULL
 --, sort_list            IN      VARCHAR2        DEFAULT NULL
@@ -97,7 +107,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   dbms_aqadm.drop_queue_table
-  ( queue_table => l_schema || '.' || c_queue_table
+  ( queue_table => sql_object_name(l_schema, c_queue_table)
   , force => p_force
   );
 
@@ -125,8 +135,8 @@ $end
   loop
     begin
       dbms_aqadm.create_queue
-      ( queue_name => l_schema || '.' || l_queue_name
-      , queue_table => l_schema || '.' || c_queue_table
+      ( queue_name => sql_object_name(l_schema, l_queue_name)
+      , queue_table => sql_object_name(l_schema, c_queue_table)
       , queue_type => dbms_aqadm.normal_queue
       , max_retries => 0 -- no retries
       , retry_delay => 0
@@ -186,7 +196,7 @@ $end
   end if;
 
   dbms_aqadm.drop_queue
-  ( queue_name => l_schema || '.' || l_queue_name
+  ( queue_name => sql_object_name(l_schema, l_queue_name)
   );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -208,7 +218,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   dbms_aqadm.start_queue
-  ( queue_name => l_schema || '.' || l_queue_name
+  ( queue_name => sql_object_name(l_schema, l_queue_name)
   , enqueue => true
   , dequeue => true
   );
@@ -239,7 +249,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   dbms_aqadm.stop_queue
-  ( queue_name => l_schema || '.' || l_queue_name
+  ( queue_name => sql_object_name(l_schema, l_queue_name)
   , enqueue => true
   , dequeue => true
   , wait => p_wait
@@ -294,7 +304,7 @@ $end
   loop
     begin
       dbms_aq.enqueue
-      ( queue_name => l_queue_name
+      ( queue_name => sql_object_name(l_schema, l_queue_name)
       , enqueue_options => l_enqueue_options
       , message_properties => l_message_properties
       , payload => p_data_row
