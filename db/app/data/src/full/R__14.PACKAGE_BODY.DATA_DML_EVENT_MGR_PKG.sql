@@ -75,7 +75,7 @@ $end
 
   dbms_aqadm.create_queue_table
   ( queue_table => sql_object_name(l_schema, c_queue_table)
-  , queue_payload_type => 'DATA_ROW_T'
+  , queue_payload_type => sql_object_name($$PLSQL_UNIT_OWNER, 'DATA_ROW_T')
 --, storage_clause       IN      VARCHAR2        DEFAULT NULL
 --, sort_list            IN      VARCHAR2        DEFAULT NULL
   , multiple_consumers => true
