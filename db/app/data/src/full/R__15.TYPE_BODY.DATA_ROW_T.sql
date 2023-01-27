@@ -106,6 +106,49 @@ $else
 $end  
 end print;
 
+final
+member function lob_attribute_list
+( self in data_row_t
+)
+return varchar2
+is
+  l_lob_attribute_list varchar2(4000 char) := null;
+  l_fq_type constant varchar2(4000 char) := self.get_type();
+  l_point constant positiven := instr(l_fq_type, '.'); -- test at the same time it is > 0
+  l_owner constant all_type_attrs.owner%type := substr(l_fq_type, 1, l_point - 1);
+  l_type_name constant all_type_attrs.type_name%type := substr(l_fq_type, l_point + 1);
+begin
+  select  listagg(case when a.attr_type_name in ('CLOB', 'BLOB') then a.attr_name end, ',') within group (order by a.attr_name) as lob_attribute_list
+  into    l_lob_attribute_list
+  from    all_type_attrs a
+  where   a.owner = l_owner
+  and     a.type_name = l_type_name
+  group by
+          a.owner
+  ,       a.type_name;
+
+  return l_lob_attribute_list;
+end lob_attribute_list;
+
+final
+member function may_have_non_empty_lob
+( self in data_row_t
+)
+return integer
+is
+begin
+  return case when self.lob_attribute_list() is not null then 1 else 0 end;
+end may_have_non_empty_lob;
+
+member function has_non_empty_lob
+( self in data_row_t
+)
+return integer
+is
+begin
+  return 0; -- key can not store a LOB
+end has_non_empty_lob;
+
 end;
 /
 

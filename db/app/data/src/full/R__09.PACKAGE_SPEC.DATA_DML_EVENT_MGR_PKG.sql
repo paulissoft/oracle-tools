@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "DATA_DML_EVENT_MGR_PKG" AUTHID DEFINER AS 
 
-c_queue_table constant user_queues.queue_table%type := 'DML_EVENTS_QT';
+c_queue_table constant user_queues.queue_table%type := '"DML_EVENTS_QT"';
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -32,53 +32,46 @@ The default functionality is:
 
 **/
 
-function queue_table_name
-( p_schema in varchar2
-)
-return varchar2;
-/** Returns the fully qualified queue table name, i.e. p_schema || '.' || c_queue_table (enquoted via DBMS_ASSERT). **/
-
 function queue_name
-( p_schema in varchar2
-, p_data_row in oracle_tools.data_row_t
+( p_data_row in oracle_tools.data_row_t
 )
 return varchar2;
-/** Returns the fully qualified queue name, i.e. p_schema || '.' || p_data_row.table_owner || '$' || p_data_row.table_name (enquoted via DBMS_ASSERT). **/
+/** Returns the enquoted simple SQL queue name, i.e. p_data_row.table_owner || '$' || p_data_row.table_name (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
 
 procedure create_queue_table
 ( p_schema in varchar2
 );
-/** Create the queue table queue_table_name(p_schema). **/
+/** Create the queue table c_queue_table in schema p_schema. **/
 
 procedure drop_queue_table
 ( p_schema in varchar2
 , p_force in boolean default false -- Must we drop queues first?
 );
-/** Drop the queue table queue_table_name(p_schema). **/
+/** Drop the queue table c_queue_table in schema p_schema. **/
 
 procedure create_queue
 ( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a qualified SQL name
+, p_queue_name in varchar2 -- Must be a simple SQL name
 , p_comment in varchar2
 );
-/** Create the queue with a comment with queue table queue_table_name(p_schema). When the queue table does not exist, it is created. **/
+/** Create the queue with queue table c_queue_table in schema p_schema. When the queue table does not exist, it is created too. **/
 
 procedure drop_queue
 ( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a qualified SQL name
+, p_queue_name in varchar2 -- Must be a simple SQL name
 , p_force in boolean default false -- Must we stop enqueueing / dequeueing first?
 );
-/** Drop the queue. **/
+/** Drop the queue. Does not drop the queue table. **/
 
 procedure start_queue
 ( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a qualified SQL name
+, p_queue_name in varchar2 -- Must be a simple SQL name
 );
 /** Start the queue with enqueue and dequeue enabled. **/
 
 procedure stop_queue
 ( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a qualified SQL name
+, p_queue_name in varchar2 -- Must be a simple SQL name
 , p_wait in boolean default true
 );
 /** Stop the queue with enqueue and dequeue disabled. **/
@@ -86,9 +79,9 @@ procedure stop_queue
 procedure dml
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t
-, p_force in boolean default true -- Must we create/start queues if the operation fails due to such and event?
+, p_force in boolean default true -- Must we create/start queues if the operation fails due to such an event?
 );
-/** Add the data row to the queue queue_name(p_schema, p_data_row). **/
+/** Add the data row to the queue queue_name(p_data_row) in schema p_schema. **/
 
 end data_dml_event_mgr_pkg;
 /
