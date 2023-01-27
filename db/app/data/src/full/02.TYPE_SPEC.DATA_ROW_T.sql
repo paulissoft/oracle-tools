@@ -66,6 +66,26 @@ This procedure also sets dml_timestamp to the sytem timestamp using the systimes
 Print the object type and representation using dbug.print() or dbms_output.put_line().
 At most 2000 characters are printed for the representation.
 */
+
+, final
+  member function lob_attribute_list
+  ( self in data_row_t
+  )
+  return varchar2
+/* Returns the comma separated list of LOB attribute names for this type (self.get_type()). The list is empty when there are no LOB attributes. */
+
+, final
+  member function may_have_non_empty_lob
+  ( self in data_row_t
+  )
+  return integer
+/* Returns 1 (Yes) when self.lob_attribute_list() is not empty, else 0 (No). */
+  
+, member function has_non_empty_lob
+  ( self in data_row_t
+  )
+  return integer
+/* Has this data row a non empty LOB (BLOB or CLOB)? 0 for No, 1 for Yes. */  
 )
 not instantiable
 not final;
