@@ -12,12 +12,12 @@ function init {
 
     # container-registry.oracle.com/database/express:latest
     echo ${DB_IMAGE=oracle-xe-21.3}
-    echo ${DB_CONTAINER:=db-container}
+    echo ${DB_CONTAINER:=oracle-xe}
     # container-registry.oracle.com/database/ords:latest
     echo ${ORDS_IMAGE:=ords-21.4}
     echo ${ORDS_CONTAINER:=ords}
-    echo ${NETWORK:=demo-network}
-    echo ${VOLUME:=db-demo-volume}
+    echo ${NETWORK:=oracle-network}
+    echo ${VOLUME:=oracle-data-volume}
     echo ${ORDS_DIR:=$(cd ~ && pwd)/opt/oracle/ords}
     echo ${ORACLE_HOSTNAME:=database}
     echo ${ORACLE_PORT:=1521}
