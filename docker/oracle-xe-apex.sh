@@ -10,7 +10,11 @@ function init {
         source $CURDIR/.env
     fi
 
+    # container-registry.oracle.com/database/express:latest
+    echo ${DB_IMAGE=oracle-xe-21.3}
     echo ${DB_CONTAINER:=db-container}
+    # container-registry.oracle.com/database/ords:latest
+    echo ${ORDS_IMAGE:=ords-21.4}
     echo ${ORDS_CONTAINER:=ords}
     echo ${NETWORK:=demo-network}
     echo ${VOLUME:=db-demo-volume}
@@ -22,7 +26,9 @@ function init {
     if [ ! -f $CURDIR/.env ]
     then
         cat > $CURDIR/.env <<EOF
+DB_IMAGE=$DB_IMAGE
 DB_CONTAINER=$DB_CONTAINER
+ORDS_IMAGE=$ORDS_IMAGE
 ORDS_CONTAINER=$ORDS_CONTAINER
 NETWORK=$NETWORK
 VOLUME=$VOLUME
@@ -33,7 +39,7 @@ APEX_PORT=$APEX_PORT
 EOF
     fi
 
-    export DB_CONTAINER ORDS_CONTAINER NETWORK VOLUME ORDS_DIR ORACLE_HOSTNAME ORACLE_PORT APEX_PORT
+    export DB_IMAGE DB_CONTAINER ORDS_IMAGE ORDS_CONTAINER NETWORK VOLUME ORDS_DIR ORACLE_HOSTNAME ORACLE_PORT APEX_PORT
 
     printenv ORACLE_PWD 1>/dev/null 2>&1 || read -p "Oracle password? " ORACLE_PWD
     export ORACLE_PWD
