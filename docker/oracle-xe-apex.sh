@@ -80,21 +80,24 @@ function setup {
 }
 
 function run_oracle_xe {
-    docker run -d --name db-container \
-           -p 1521:${ORACLE_PORT} \
+    docker run -d --name ${DB_CONTAINER} \
+           -p ${ORACLE_PORT}:1521 \
            -e ORACLE_PWD=${ORACLE_PWD} \
            -v $VOLUME:/opt/oracle/oradata \
            --network=$NETWORK \
            --hostname $ORACLE_HOSTNAME \
            ${DB_IMAGE}
+    while ! docker logs ${DB_CONTAINER} | grep 'DATABASE IS READY TO USE!'
+    do
+        sleep 5
+    done
 }
 
 function run_ords {
-    docker run -d --name ords \
+    docker run -d --name ${ORDS_CONTAINER} \
            --network=$NETWORK \
-           -p 8181:${APEX_PORT} \
+           -p ${APEX_PORT}:8181 \
            -v $ORDS_DIR/variables:/opt/oracle/variables \
-           -v $ORDS_DIR/config:/etc/ords/config \
            ${ORDS_IMAGE}
     docker exec -it ords tail -f /tmp/install_container.log
     open http://localhost:${APEX_PORT}/ords/
