@@ -80,6 +80,11 @@ function setup {
 }
 
 function run_oracle_xe {
+    if docker ps | grep ${DB_CONTAINER}
+    then
+        docker stop ${DB_CONTAINER} || true
+        docker rm ${DB_CONTAINER}
+    fi
     docker run -d --name ${DB_CONTAINER} \
            -p ${ORACLE_PORT}:1521 \
            -e ORACLE_PWD=${ORACLE_PWD} \
@@ -94,6 +99,11 @@ function run_oracle_xe {
 }
 
 function run_ords {
+    if docker ps | grep ${ORDS_CONTAINER}
+    then
+        docker stop ${ORDS_CONTAINER} || true
+        docker rm ${ORDS_CONTAINER}
+    fi
     docker run -d --name ${ORDS_CONTAINER} \
            --network=$NETWORK \
            -p ${APEX_PORT}:8181 \
@@ -114,9 +124,16 @@ function main {
         case "$1" in
             "docker")
                 # Use Docker to start all
-                setup
-                run_oracle_xe
-                run_ords
+                shift
+                if [ $# -eq 0 ]
+                then
+                    set -- setup run_oracle_xe run_ords
+                fi
+                while [ $# -gt 0 ]
+                do
+                    eval $1
+                    shift
+                done
                 ;;
             "docker-compose")
                 shift
