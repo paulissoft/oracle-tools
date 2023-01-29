@@ -117,7 +117,7 @@ function main {
     ! printenv DEBUG 1>/dev/null 2>&1 || set -x
     if [ $# -eq 0 ]
     then
-        echo "Usage: $0 [ docker | docker-compose [OPTIONS] COMMAND ]" 1>&2
+        echo "Usage: $0 [ docker [ setup run_oracle_xe run_ords ] | docker-compose [OPTIONS] COMMAND ]" 1>&2
         exit 1
     else
         init
