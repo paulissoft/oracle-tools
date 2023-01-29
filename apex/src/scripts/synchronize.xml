@@ -103,7 +103,7 @@ The following properties are only important during export:
 
   <target name="init-split-userid">
     <echo message="(synchronize.xml.init-split-userid)" />
-    <property name="userid.pattern" value="([^/]+)/([^@]+)@(.+)"/>
+    <property name="userid.pattern" value="^([^/]+)/(.+)@([^@]+)$"/>
     <!--
       <script language="javascript">
         arr = project.getProperty('userid').split('[/@]');
@@ -136,8 +136,10 @@ The following properties are only important during export:
         </tokenfilter>
       </filterchain>
     </loadresource>
+    <property name="my.userid" value="${my.user}@${my.db}"/>
     <echo message="(synchronize.xml.init-split-userid) $${my.user}     => ${my.user}"/>
     <echo message="(synchronize.xml.init-split-userid) $${my.db}       => ${my.db}"/>
+    <echo message="(synchronize.xml.init-split-userid) $${my.userid}   => ${my.userid}"/>
   </target>
 
   <!-- IMPORT -->
@@ -161,7 +163,10 @@ The following properties are only important during export:
   <macrodef name="sqlplus" description="Run SQL*Plus">
     <attribute name="name"/> <!-- unique name -->
     <attribute name="dir"/>
-    <attribute name="inputstring"/>
+    <attribute name="sqlfile"/>
+    <attribute name="sqlarg1" default=""/>
+    <attribute name="sqlarg2" default=""/>
+    <attribute name="sqlarg3" default=""/>
     <sequential>
       <tempfile property="@{name}.file" deleteonexit="true" />
       <ac:trycatch property="@{name}.error">
@@ -172,9 +177,13 @@ The following properties are only important during export:
                 failonerror="true"
                 spawn="false"
                 dir="@{dir}"
-                inputstring="@{inputstring}">
+                inputstring="${my.password}">
             <arg value="-S" /> <!-- silent -->
-            <arg value="${quote}${userid}${quote}" />
+            <arg value="${quote}${my.userid}${quote}" />
+            <arg value="@{sqlfile}" />
+            <arg value="@{sqlarg1}" />
+            <arg value="@{sqlarg2}" />
+            <arg value="@{sqlarg3}" />
           </exec>
           <record name="${@{name}.file}" action="stop"/>
           <fail>
@@ -206,16 +215,20 @@ The following properties are only important during export:
           />
     <sqlplus name="import"
              dir="${input.file.dir}"
-             inputstring='@${basedir}/import.sql "${workspace}" "${application}" "${input.file}"'/>
+             sqlfile='@${basedir}/import.sql'
+             sqlarg1='"${workspace}"'
+             sqlarg2='"${application}"'
+             sqlarg3='"${input.file}"'/>
   </target>
 
   <macrodef name="sqlcl" description="Run Java Sql Client">
     <attribute name="name"/> <!-- unique name -->
     <attribute name="dir"/>
-    <attribute name="inputstring"/>
+    <attribute name="sqlfile"/>
+    <attribute name="sqlarg1" default=""/>
+    <attribute name="sqlarg2" default=""/>
+    <attribute name="sqlarg3" default=""/>
     <sequential>
-      <echo message="(synchronize.xml.sqlcl) dir: @{dir}"/>
-      <echo message="(synchronize.xml.sqlcl) inputstring: @{inputstring}"/>
       <ac:trycatch property="@{name}.error">
         <try>
           <ac:if>
@@ -229,7 +242,7 @@ The following properties are only important during export:
                     fork="true"
                     spawn="false"
                     dir="@{dir}"
-                    inputstring="@{inputstring}"
+                    inputstring="${my.password}"
                     failonerror="true">
                 <sysproperty key="java.awt.headless" value="true"/>
                 <sysproperty key="apple.awt.UIElement" value="true"/>
@@ -316,16 +329,24 @@ The following properties are only important during export:
                      value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
                 <!-- finally the arguments for the class -->
                 <arg value="-S" /> <!-- silent -->
-                <arg value="${quote}${userid}${quote}" />
+                <arg value="${quote}${my.userid}${quote}" />
+                <arg value="@{sqlfile}" />
+                <arg value="@{sqlarg1}" />
+                <arg value="@{sqlarg2}" />
+                <arg value="@{sqlarg3}" />
               </java>
             </then>
             <else>
               <exec executable="${sql.executable}"
                     dir="@{dir}"
-                    inputstring="@{inputstring}"
+                    inputstring="${my.password}"
                     failonerror="true">
                 <arg value="-S" /> <!-- silent -->
-                <arg value="${quote}${userid}${quote}" />
+                <arg value="${quote}${my.userid}${quote}" />
+                <arg value="@{sqlfile}" />
+                <arg value="@{sqlarg1}" />
+                <arg value="@{sqlarg2}" />
+                <arg value="@{sqlarg3}" />
               </exec>
             </else>
           </ac:if>        
@@ -380,19 +401,21 @@ The following properties are only important during export:
     <echo message="(synchronize.xml.import-sqlcl) Import is using Java SqlCli" />
     <sqlcl name="import"
            dir="${input.file.dir}"
-           inputstring='@${basedir}/import.sql "${workspace}" "${application}" "${input.file}"'>
-    </sqlcl>
+           sqlfile='@${basedir}/import.sql'
+           sqlarg1='"${workspace}"'
+           sqlarg2='"${application}"'
+           sqlarg3='"${input.file}"'/>
   </target>
 
   <target name="import"
-          depends="init,import-sqlplus,import-sqlcl"
+          depends="init,init-split-userid,import-sqlplus,import-sqlcl"
           description="import">
     <echo message="(synchronize.xml.import)" />
   </target>
 
   <!-- EXPORT -->
   
-  <target name="init-export" depends="init">
+  <target name="init-export" depends="init,init-split-userid">
     <property name="output.file" value="f${application}.sql" />
     <basename property="output.file.base" file="${output.file}" suffix=".sql" />
     <!-- delete temporary files / directories -->
@@ -408,8 +431,9 @@ The following properties are only important during export:
     <!-- Following command may create ${output.file} or not depending on SQL version -->
     <sqlcl name="export"
            dir="${output.dir}"
-           inputstring='@${basedir}/export.sql "${workspace}" "${application}"'>
-    </sqlcl>
+           sqlfile='@${basedir}/export.sql'
+           sqlarg1='"${workspace}"'
+           sqlarg2='"${application}"'/>
   </target>
 
   <!-- export solution with oracle.apex.APEXExport class -->
@@ -422,7 +446,9 @@ The following properties are only important during export:
          application -->
     <sqlplus name="pre_import"
              dir=""
-             inputstring='@${basedir}/pre_export.sql "${workspace}" "${application}"' />
+             sqlfile='@${basedir}/pre_export.sql'
+             sqlarg1='"${workspace}"'
+             sqlarg2='"${application}"'/>
 
     <echo message="(synchronize.xml.export-java) Writing Apex export of application ${application}" />
     <java classname="oracle.apex.APEXExport" fork="true" dir="${output.dir}">
@@ -447,7 +473,7 @@ The following properties are only important during export:
   </target>
 
   <target name="export"
-          depends="init,export-java,export-sqlcl"
+          depends="init,init-split-userid,export-java,export-sqlcl"
           description="export">
     <echo message="(synchronize.xml.export)" />
     <fail message="Error creating temporary export directory ${output.dir}/${output.file.base}">
@@ -467,7 +493,7 @@ The following properties are only important during export:
   </target>
 
   <target name="seed-publish"
-          depends="init,seed-publish-sqlplus,seed-publish-sqlcl"
+          depends="init,init-split-userid,seed-publish-sqlplus,seed-publish-sqlcl"
           description="Seed and publish">
     <echo message="(synchronize.xml.seed-publish)" />
   </target>
@@ -477,7 +503,9 @@ The following properties are only important during export:
           unless="my.sql.home">
     <sqlplus name="seed-publish"
              dir=""
-             inputstring='@${basedir}/pre_export.sql "${workspace}" "${application}"' />
+             sqlfile='@${basedir}/pre_export.sql'
+             sqlarg1='"${workspace}"'
+             sqlarg2='"${application}"'/>
   </target>
 
   <!-- seed and publish with Java SqlCli class -->
@@ -485,8 +513,9 @@ The following properties are only important during export:
           if="my.sql.home">
     <sqlcl name="seed-publish"
            dir=""
-           inputstring='@${basedir}/pre_export.sql "${workspace}" "${application}"'>
-    </sqlcl>
+           sqlfile='@${basedir}/pre_export.sql'
+           sqlarg1='"${workspace}"'
+           sqlarg2='"${application}"'/>
   </target>
 
 </project>
