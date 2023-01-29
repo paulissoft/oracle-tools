@@ -18,7 +18,7 @@ function init {
     echo ${ORDS_CONTAINER:=ords}
     echo ${NETWORK:=demo-network}
     echo ${VOLUME:=db-demo-volume}
-    echo ${ORDS_DIR:=~/opt/oracle/ords}
+    echo ${ORDS_DIR:=$(cd ~ && pwd)/opt/oracle/ords}
     echo ${ORACLE_HOSTNAME:=database}
     echo ${ORACLE_PORT:=1521}
     echo ${APEX_PORT:=8181}
@@ -43,8 +43,11 @@ EOF
 
     printenv ORACLE_PWD 1>/dev/null 2>&1 || read -p "Oracle password? " ORACLE_PWD
     export ORACLE_PWD
-    test -d $ORDS_DIR || mkdir -p $ORDS_DIR
-    echo "CONN_STRING=sys/${ORACLE_PWD}@${ORACLE_HOSTNAME}:${ORACLE_PORT}/XEPDB1" > $ORDS_DIR/conn_string.txt
+    for d in variables config
+    do
+        test -d $ORDS_DIR/$d || mkdir -p $ORDS_DIR/$d
+    done
+    echo "CONN_STRING=sys/${ORACLE_PWD}@${ORACLE_HOSTNAME}:${ORACLE_PORT}/XEPDB1" > $ORDS_DIR/variables/conn_string.txt
 
     # Mac M1 & M2 architectures
     if which colima
@@ -66,13 +69,13 @@ EOF
 function setup {
     # Oracle XE
     docker pull container-registry.oracle.com/database/express:latest
-    docker image tag container-registry.oracle.com/database/express:latest oracle-xe-21.3
+    docker image tag container-registry.oracle.com/database/express:latest ${DB_IMAGE}
 #    docker rmi container-registry.oracle.com/database/express:latest
     docker images
 
     # ORDS and APEX
     docker pull container-registry.oracle.com/database/ords:latest
-    docker image tag container-registry.oracle.com/database/ords:latest ords-21.4
+    docker image tag container-registry.oracle.com/database/ords:latest ${ORDS_IMAGE}
 #    docker rmi container-registry.oracle.com/database/ords:latest
 }
 
@@ -83,11 +86,16 @@ function run_oracle_xe {
            -v $VOLUME:/opt/oracle/oradata \
            --network=$NETWORK \
            --hostname $ORACLE_HOSTNAME \
-           oracle-xe-21.3
+           ${DB_IMAGE}
 }
 
 function run_ords {
-    docker run -d --name ords --network=$NETWORK -p 8181:${APEX_PORT} -v $ORDS_DIR:/opt/oracle/variables ords-21.4
+    docker run -d --name ords \
+           --network=$NETWORK \
+           -p 8181:${APEX_PORT} \
+           -v $ORDS_DIR/variables:/opt/oracle/variables \
+           -v $ORDS_DIR/config:/etc/ords/config \
+           ${ORDS_IMAGE}
     docker exec -it ords tail -f /tmp/install_container.log
     open http://localhost:${APEX_PORT}/ords/
 }
@@ -109,7 +117,11 @@ function main {
                 ;;
             "docker-compose")
                 shift
-                docker-compose -f $CURDIR/oracle-xe-apex.yaml "$@"
+                if [ $# -eq 0 ]
+                then
+                    set -- up --detach --remove-orphans
+                fi
+                docker-compose -f $CURDIR/docker-compose.yml "$@"
                 ;;
         esac
     fi

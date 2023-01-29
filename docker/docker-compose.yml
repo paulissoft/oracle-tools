@@ -18,7 +18,8 @@ services:
     depends_on:
       - db
     volumes:
-      - ${ORDS_DIR}:/opt/oracle/variables
+      - ${ORDS_DIR}/variables:/opt/oracle/variables
+      - ${ORDS_DIR}/config:/etc/ords/config
     ports:
       - ${APEX_PORT}:8181
 
