@@ -9,7 +9,7 @@ function sql_object_name
 return varchar2
 is
 begin
-  return p_schema || '.' || p_object_name;
+  return case when instr(p_object_name, '.') = 0 then p_schema || '.' end || p_object_name;
 end sql_object_name;
 
 procedure create_queue_table_at
@@ -50,6 +50,44 @@ begin
   );
   commit;
 end start_queue_at;
+
+procedure add_subscriber_at
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_rule in varchar2 default null
+, p_delivery_mode in pls_integer default dbms_aqadm.persistent_or_buffered
+)
+is
+  pragma autonomous_transaction;
+begin
+  add_subscriber
+  ( p_schema => p_schema
+  , p_queue_name => p_queue_name
+  , p_subscriber => p_subscriber
+  , p_rule => p_rule
+  , p_delivery_mode => p_delivery_mode
+  );
+  commit;
+end add_subscriber_at;  
+
+procedure register_at
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_plsql_callback in varchar -- schema.procedure
+)
+is
+  pragma autonomous_transaction;
+begin
+  register
+  ( p_schema => p_schema
+  , p_queue_name => p_queue_name
+  , p_subscriber => p_subscriber
+  , p_plsql_callback => p_plsql_callback
+  );
+  commit;
+end register_at;  
 
 -- public routines
 
@@ -260,6 +298,142 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end stop_queue;
 
+procedure add_subscriber
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_rule in varchar2
+, p_delivery_mode in pls_integer
+)
+is
+  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ADD_SUBSCRIBER');
+  dbug.print
+  ( dbug."input"
+  , 'p_schema: %s; p_queue_name: %s; p_subscriber: %s; p_rule: %s; p_delivery_mode: %s'
+  , p_schema
+  , p_queue_name
+  , p_subscriber
+  , p_rule
+  , p_delivery_mode
+  );
+$end
+
+  dbms_aqadm.add_subscriber
+  ( queue_name => sql_object_name(l_schema, l_queue_name)
+  , subscriber => sys.aq$_agent(p_subscriber, null, null)
+  , rule => p_rule
+  , delivery_mode => p_delivery_mode
+  );
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end add_subscriber;
+
+procedure remove_subscriber
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+)
+is
+  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.REMOVE_SUBSCRIBER');
+  dbug.print
+  ( dbug."input"
+  , 'p_schema: %s; p_queue_name: %s; p_subscriber: %s'
+  , p_schema
+  , p_queue_name
+  , p_subscriber
+  );
+$end
+
+  dbms_aqadm.remove_subscriber
+  ( queue_name => sql_object_name(l_schema, l_queue_name)
+  , subscriber => sys.aq$_agent(p_subscriber, null, null)
+  );
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end remove_subscriber;
+
+procedure register
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_plsql_callback in varchar
+)
+is
+  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.REGISTER');
+  dbug.print
+  ( dbug."input"
+  , 'p_schema: %s; p_queue_name: %s; p_subscriber: %s; p_plsql_callback: %s'
+  , p_schema
+  , p_queue_name
+  , p_subscriber
+  , p_plsql_callback
+  );
+$end
+
+  dbms_aq.register
+  ( reg_list => sys.aq$_reg_info_list
+                ( sys.aq$_reg_info
+                  ( name => sql_object_name(l_schema, l_queue_name) || case when p_subscriber is not null then ':' || p_subscriber end
+                  , namespace => dbms_aq.namespace_aq
+                  , callback => 'plsql://' || p_plsql_callback
+                  , context => hextoraw('FF')
+                  )
+                )
+  , reg_count => 1
+  );
+end register;
+
+procedure unregister
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_plsql_callback in varchar
+)
+is
+  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UNREGISTER');
+  dbug.print
+  ( dbug."input"
+  , 'p_schema: %s; p_queue_name: %s; p_subscriber: %s; p_plsql_callback: %s'
+  , p_schema
+  , p_queue_name
+  , p_subscriber
+  , p_plsql_callback
+  );
+$end
+
+  dbms_aq.unregister
+  ( reg_list => sys.aq$_reg_info_list
+                ( sys.aq$_reg_info
+                  ( name => sql_object_name(l_schema, l_queue_name) || case when p_subscriber is not null then ':' || p_subscriber end
+                  , namespace => dbms_aq.namespace_aq
+                  , callback => 'plsql://' || p_plsql_callback
+                  , context => hextoraw('FF')
+                  )
+                )
+  , reg_count => 1
+  );
+end unregister;
+
 procedure dml
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t
@@ -320,6 +494,17 @@ $end
           ( p_schema => p_schema
           , p_queue_name => l_queue_name
           , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
+          );
+          add_subscriber_at
+          ( p_schema => p_schema
+          , p_queue_name => l_queue_name
+          , p_subscriber => 'DEFAULT'
+          );
+          register_at
+          ( p_schema => p_schema
+          , p_queue_name => l_queue_name
+          , p_subscriber => 'DEFAULT'
+          , p_plsql_callback => sql_object_name(p_schema, 'DATA_ROW_NOTIFICATION_PRC')
           );
         else
           raise;

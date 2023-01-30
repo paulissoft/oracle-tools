@@ -76,6 +76,38 @@ procedure stop_queue
 );
 /** Stop the queue with enqueue and dequeue disabled. **/
 
+procedure add_subscriber
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_rule in varchar2 default null
+, p_delivery_mode in pls_integer default dbms_aqadm.persistent_or_buffered
+);
+/** Add a subscriber to a queue. The subscriber agent will not have an address. **/
+   
+procedure remove_subscriber
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+);
+/** Remove a subscriber from a queue. **/
+
+procedure register
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_plsql_callback in varchar -- schema.procedure
+);
+/** Register a PL/SQL callback for a queue and subscriber. **/
+
+procedure unregister
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_plsql_callback in varchar -- schema.procedure
+);
+/** Unregister a PL/SQL callback for a queue and subscriber. **/
+
 procedure dml
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t

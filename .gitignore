@@ -8,3 +8,4 @@ jenkins/.initrd
 node_modules/
 \.DS_Store
 docker/\.env
+apex/src/scripts/f138/*
