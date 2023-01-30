@@ -1,7 +1,7 @@
 /* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
--- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl
+-- JDBC url            : jdbc:oracle:thin:BC_PROXY[ORACLE_TOOLS]@bc_dev
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
