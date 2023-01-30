@@ -1,6 +1,9 @@
 CREATE OR REPLACE PACKAGE "DATA_DML_EVENT_MGR_PKG" AUTHID CURRENT_USER AS 
 
 c_queue_table constant user_queues.queue_table%type := '"DML_EVENTS_QT"';
+c_default_subscriber constant varchar2(30 char) := 'DEFAULT_SUBSCRIBER';
+c_default_plsql_callback constant all_objects.object_name%type := 'DATA_ROW_NOTIFICATION_PRC';
+c_buffered_messaging_ok constant boolean := false; -- getting ORA-24344 compilation with errors
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -17,6 +20,14 @@ pragma exception_init(e_no_recipients_for_message, -24033);
 -- ORA-25207: enqueue failed, queue is disabled from enqueueing
 e_enqueue_disabled exception;
 pragma exception_init(e_enqueue_disabled, -25207);
+
+-- ORA-24034: application ... is already a subscriber for queue ...
+e_subscriber_already_exists exception;
+pragma exception_init(e_subscriber_already_exists, -24034);
+
+-- ORA-24035: AQ agent ... is not a subscriber for queue ...
+e_subscriber_does_not_exist exception;
+pragma exception_init(e_subscriber_does_not_exist, -24035);
 
 /**
 
@@ -81,7 +92,7 @@ procedure add_subscriber
 , p_queue_name in varchar2
 , p_subscriber in varchar2
 , p_rule in varchar2 default null
-, p_delivery_mode in pls_integer default dbms_aqadm.persistent_or_buffered
+, p_delivery_mode in pls_integer default dbms_aqadm.persistent
 );
 /** Add a subscriber to a queue. The subscriber agent will not have an address. **/
    

@@ -56,7 +56,7 @@ procedure add_subscriber_at
 , p_queue_name in varchar2
 , p_subscriber in varchar2
 , p_rule in varchar2 default null
-, p_delivery_mode in pls_integer default dbms_aqadm.persistent_or_buffered
+, p_delivery_mode in pls_integer default dbms_aqadm.persistent
 )
 is
   pragma autonomous_transaction;
@@ -143,6 +143,25 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_QUEUE_TABLE');
   dbug.print(dbug."input", 'p_schema: %s; p_force: %s', p_schema, dbug.cast_to_varchar2(p_force));
 $end
+
+  if p_force
+  then
+    for r in
+    ( select  q.owner as schema
+      ,       q.name as queue_name
+      from    all_queues q
+      where   q.owner = trim('"' from l_schema)
+      and     q.queue_table = trim('"' from c_queue_table)
+      and     'NO' in ( trim(q.enqueue_enabled), trim(q.dequeue_enabled) )
+    )
+    loop
+      drop_queue
+      ( p_schema => r.schema
+      , p_queue_name => r.queue_name
+      , p_force => p_force
+      );
+    end loop;
+  end if;
 
   dbms_aqadm.drop_queue_table
   ( queue_table => sql_object_name(l_schema, c_queue_table)
@@ -320,6 +339,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_rule
   , p_delivery_mode
   );
+  dbug.print(dbug."info", 'add subscriber queue name: %s', sql_object_name(l_schema, l_queue_name));
 $end
 
   dbms_aqadm.add_subscriber
@@ -461,7 +481,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if p_data_row.has_non_empty_lob() != 0
+  if not(c_buffered_messaging_ok) or p_data_row.has_non_empty_lob() != 0 -- GJP 2023-01-30 temporarily disable buffered messaging
   then
     -- payload with a non-empty LOB can not be a buffered message
     l_enqueue_options.visibility := dbms_aq.on_commit;
@@ -500,13 +520,13 @@ $end
           add_subscriber_at
           ( p_schema => p_schema
           , p_queue_name => l_queue_name
-          , p_subscriber => 'DEFAULT'
+          , p_subscriber => c_default_subscriber
           );
           register_at
           ( p_schema => p_schema
           , p_queue_name => l_queue_name
-          , p_subscriber => 'DEFAULT'
-          , p_plsql_callback => sql_object_name(p_schema, 'DATA_ROW_NOTIFICATION_PRC')
+          , p_subscriber => c_default_subscriber
+          , p_plsql_callback => sql_object_name(p_schema, c_default_plsql_callback)
           );
         else
           raise;
