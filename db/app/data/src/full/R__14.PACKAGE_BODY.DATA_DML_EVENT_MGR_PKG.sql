@@ -437,11 +437,12 @@ end unregister;
 procedure dml
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t
+, p_queue_name in varchar2
 , p_force in boolean
 )
 is
   l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant user_queues.name%type := queue_name(p_data_row);
+  l_queue_name constant user_queues.name%type := nvl(p_queue_name, queue_name(p_data_row));
   l_enqueue_enabled user_queues.enqueue_enabled%type;
   l_dequeue_enabled user_queues.dequeue_enabled%type;
   l_enqueue_options dbms_aq.enqueue_options_t;
@@ -453,8 +454,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DML');
   dbug.print
   ( dbug."input"
-  , 'p_schema: %s; p_force: %s'
+  , 'p_schema: %s; p_queue_name: %s; p_force: %s'
   , p_schema
+  , p_queue_name
   , dbug.cast_to_varchar2(p_force)
   );
 $end

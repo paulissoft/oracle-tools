@@ -111,9 +111,10 @@ procedure unregister
 procedure dml
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t
+, p_queue_name in varchar2 default null
 , p_force in boolean default true -- Must we create/start queues if the operation fails due to such an event?
 );
-/** Add the data row to the queue queue_name(p_data_row) in schema p_schema. **/
+/** Add the data row to the queue in schema p_schema. If p_queue_name is null it will default to queue_name(p_data_row). **/
 
 end data_dml_event_mgr_pkg;
 /
