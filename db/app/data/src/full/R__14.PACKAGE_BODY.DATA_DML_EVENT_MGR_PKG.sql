@@ -54,7 +54,7 @@ end start_queue_at;
 procedure add_subscriber_at
 ( p_schema in varchar2
 , p_queue_name in varchar2
-, p_subscriber in varchar2
+, p_subscriber in varchar2 default c_default_subscriber
 , p_rule in varchar2 default null
 , p_delivery_mode in pls_integer default dbms_aqadm.persistent
 )
@@ -74,7 +74,7 @@ end add_subscriber_at;
 procedure register_at
 ( p_schema in varchar2
 , p_queue_name in varchar2
-, p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
 , p_plsql_callback in varchar -- schema.procedure
 )
 is
@@ -116,7 +116,7 @@ $end
   , queue_payload_type => sql_object_name($$PLSQL_UNIT_OWNER, 'DATA_ROW_T')
 --, storage_clause       IN      VARCHAR2        DEFAULT NULL
 --, sort_list            IN      VARCHAR2        DEFAULT NULL
-  , multiple_consumers => true
+  , multiple_consumers => c_multiple_consumers
   , message_grouping => dbms_aqadm.none
   , comment => 'Queue table containing DML events'
 --, auto_commit          IN      BOOLEAN         DEFAULT TRUE
@@ -344,7 +344,7 @@ $end
 
   dbms_aqadm.add_subscriber
   ( queue_name => sql_object_name(l_schema, l_queue_name)
-  , subscriber => sys.aq$_agent(p_subscriber, null, null)
+  , subscriber => sys.aq$_agent(p_subscriber, l_queue_name, null)
   , rule => p_rule
   , delivery_mode => p_delivery_mode
   );
@@ -376,7 +376,7 @@ $end
 
   dbms_aqadm.remove_subscriber
   ( queue_name => sql_object_name(l_schema, l_queue_name)
-  , subscriber => sys.aq$_agent(p_subscriber, null, null)
+  , subscriber => sys.aq$_agent(p_subscriber, l_queue_name, null)
   );
   
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -520,12 +520,10 @@ $end
           add_subscriber_at
           ( p_schema => p_schema
           , p_queue_name => l_queue_name
-          , p_subscriber => c_default_subscriber
           );
           register_at
           ( p_schema => p_schema
           , p_queue_name => l_queue_name
-          , p_subscriber => c_default_subscriber
           , p_plsql_callback => sql_object_name(p_schema, c_default_plsql_callback)
           );
         else
@@ -556,6 +554,38 @@ exception
     raise;
 $end
 end dml;
+
+procedure dequeue_notification
+( p_context in raw
+, p_reginfo in sys.aq$_reg_info
+, p_descr in sys.aq$_descriptor
+, p_payload in raw
+, p_payloadl in number
+, p_message_properties out nocopy dbms_aq.message_properties_t
+, p_message out nocopy oracle_tools.data_row_t
+, p_msgid out nocopy raw
+)
+is
+  l_dequeue_options dbms_aq.dequeue_options_t;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_NOTIFICATION');
+$end
+
+  l_dequeue_options.msgid := p_descr.msg_id;
+  l_dequeue_options.consumer_name := p_descr.consumer_name;
+  dbms_aq.dequeue
+  ( queue_name => p_descr.queue_name
+  , dequeue_options => l_dequeue_options
+  , message_properties => p_message_properties
+  , payload => p_message
+  , msgid => p_msgid
+  );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end dequeue_notification;
 
 end data_dml_event_mgr_pkg;
 /
