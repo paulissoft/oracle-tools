@@ -2,10 +2,10 @@ CREATE OR REPLACE PACKAGE "DATA_DML_EVENT_MGR_PKG" AUTHID CURRENT_USER AS
 
 c_queue_table constant user_queues.queue_table%type := '"DML_EVENTS_QT"';
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
-c_buffered_messaging_ok constant boolean := true; -- getting ORA-24344 compilation with errors
+c_buffered_messaging_ok constant boolean := false; -- getting ORA-24344 compilation with errors
 c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
 c_default_plsql_callback constant all_objects.object_name%type := 'DATA_ROW_NOTIFICATION_PRC';
-c_delivery_mode constant pls_integer := dbms_aqadm.persistent_or_buffered;
+c_delivery_mode constant pls_integer := case when c_buffered_messaging_ok then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;

@@ -573,10 +573,28 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_NOTIFICATION');
+  dbug.print
+  ( dbug."input"
+  , 'p_context: %s; p_descr.msg_id: %s; p_descr.consumer_name: %s; p_descr.queue_name: %s; p_payloadl: %s'
+  , p_context
+  , p_descr.msg_id
+  , p_descr.consumer_name
+  , p_descr.queue_name
+  , p_payloadl
+  );
 $end
 
   l_dequeue_options.msgid := p_descr.msg_id;
   l_dequeue_options.consumer_name := p_descr.consumer_name;
+
+  -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED or DBMS_AQ.PERSISTENT_OR_BUFFERED.
+  l_dequeue_options.visibility :=
+    case
+      when c_delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
+      then dbms_aq.immediate
+      else dbms_aq.on_commit
+    end;
+
   dbms_aq.dequeue
   ( queue_name => p_descr.queue_name
   , dequeue_options => l_dequeue_options
