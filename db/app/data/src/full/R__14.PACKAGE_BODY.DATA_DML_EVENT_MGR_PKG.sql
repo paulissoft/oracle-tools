@@ -344,7 +344,7 @@ $end
 
   dbms_aqadm.add_subscriber
   ( queue_name => sql_object_name(l_schema, l_queue_name)
-  , subscriber => sys.aq$_agent(p_subscriber, l_queue_name, null)
+  , subscriber => sys.aq$_agent(p_subscriber, null, null)
   , rule => p_rule
   , delivery_mode => p_delivery_mode
   );
@@ -376,7 +376,7 @@ $end
 
   dbms_aqadm.remove_subscriber
   ( queue_name => sql_object_name(l_schema, l_queue_name)
-  , subscriber => sys.aq$_agent(p_subscriber, l_queue_name, null)
+  , subscriber => sys.aq$_agent(p_subscriber, null, null)
   );
   
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -517,10 +517,13 @@ $end
           , p_queue_name => l_queue_name
           , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
           );
-          add_subscriber_at
-          ( p_schema => p_schema
-          , p_queue_name => l_queue_name
-          );
+          if c_multiple_consumers
+          then
+            add_subscriber_at
+            ( p_schema => p_schema
+            , p_queue_name => l_queue_name
+            );
+          end if;
           register_at
           ( p_schema => p_schema
           , p_queue_name => l_queue_name

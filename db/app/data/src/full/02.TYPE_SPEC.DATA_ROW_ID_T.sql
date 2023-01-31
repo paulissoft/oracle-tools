@@ -38,7 +38,6 @@ Serialize this type.
 Every sub type must add its attributes (in capital letters).
 */
 )
-not instantiable
 not final;
 /
 

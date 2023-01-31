@@ -87,7 +87,6 @@ At most 2000 characters are printed for the representation.
   return integer
 /* Has this data row a non empty LOB (BLOB or CLOB)? 0 for No, 1 for Yes. */  
 )
-not instantiable
 not final;
 /
 
