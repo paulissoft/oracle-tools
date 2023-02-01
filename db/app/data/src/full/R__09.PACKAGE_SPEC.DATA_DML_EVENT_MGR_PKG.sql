@@ -45,6 +45,22 @@ The default functionality is:
 
 **/
 
+procedure dml
+( p_schema in varchar2
+, p_data_row in oracle_tools.data_row_t
+, p_queue_name in varchar2 default null
+, p_force in boolean default true -- Must we create/start queues if the operation fails due to such an event?
+);
+/**
+
+The main operation: add the data row to the queue in schema p_schema.
+
+Is normally used in a trigger.
+
+Invokes enqueue() below so please have a look there.
+
+**/
+
 function queue_name
 ( p_data_row in oracle_tools.data_row_t
 )
@@ -121,13 +137,29 @@ procedure unregister
 );
 /** Unregister a PL/SQL callback for a queue and subscriber. **/
 
-procedure dml
+procedure enqueue
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t
-, p_queue_name in varchar2 default null
-, p_force in boolean default true -- Must we create/start queues if the operation fails due to such an event?
+, p_queue_name in varchar2 -- When empty it will default to queue_name(p_data_row).
+, p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary.
+, p_msgid out nocopy raw
 );
-/** Add the data row to the queue in schema p_schema. If p_queue_name is null it will default to queue_name(p_data_row). **/
+/** Enqueue the data row to the in schema p_schema. **/
+
+procedure dequeue
+( p_schema in varchar2 -- May be null but then p_queue_name may be fully qualified.
+, p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_subscriber in varchar2 default c_default_subscriber
+, p_dequeue_mode in binary_integer default dbms_aq.remove
+, p_navigation in binary_integer default dbms_aq.next_message
+, p_visibility in binary_integer default dbms_aq.on_commit
+, p_wait in binary_integer default dbms_aq.forever
+, p_deq_condition in varchar2 default null
+, p_msgid in out nocopy raw
+, p_message_properties out nocopy dbms_aq.message_properties_t
+, p_data_row out nocopy oracle_tools.data_row_t
+);
+/** Dequeue the data row from the queue in schema p_schema. **/
 
 procedure dequeue_notification
 ( p_context in raw

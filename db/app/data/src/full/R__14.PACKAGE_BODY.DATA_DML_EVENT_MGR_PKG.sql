@@ -9,7 +9,7 @@ function sql_object_name
 return varchar2
 is
 begin
-  return case when instr(p_object_name, '.') = 0 then p_schema || '.' end || p_object_name;
+  return case when instr(p_object_name, '.') = 0 and p_schema is not null then p_schema || '.' end || p_object_name;
 end sql_object_name;
 
 procedure create_queue_table_at
@@ -91,6 +91,24 @@ end register_at;
 
 -- public routines
 
+procedure dml
+( p_schema in varchar2
+, p_data_row in oracle_tools.data_row_t
+, p_queue_name in varchar2
+, p_force in boolean
+)
+is
+  l_msgid raw(16);
+begin
+  enqueue
+  ( p_schema => p_schema
+  , p_data_row => p_data_row
+  , p_queue_name => p_queue_name
+  , p_force => p_force
+  , p_msgid => l_msgid
+  );
+end dml;
+
 function queue_name
 ( p_data_row in oracle_tools.data_row_t
 )
@@ -146,7 +164,7 @@ $end
 
   if p_force
   then
-    for r in
+    for rq in
     ( select  q.owner as schema
       ,       q.name as queue_name
       from    all_queues q
@@ -155,9 +173,28 @@ $end
       and     'NO' in ( trim(q.enqueue_enabled), trim(q.dequeue_enabled) )
     )
     loop
+      for rsr in
+      ( select  location_name
+        from    user_subscr_registrations sr
+        where   sr.subscription_name = l_schema || '.' || data_api_pkg.dbms_assert$enquote_name(rq.queue_name, 'queue')
+      )
+      loop
+        unregister
+        ( p_schema => rq.schema
+        , p_queue_name => rq.queue_name
+        , p_plsql_callback => rsr.location_name
+        );
+      end loop;
+      if c_multiple_consumers
+      then
+        remove_subscriber
+        ( p_schema => rq.schema
+        , p_queue_name => rq.queue_name
+        );
+      end if;
       drop_queue
-      ( p_schema => r.schema
-      , p_queue_name => r.queue_name
+      ( p_schema => rq.schema
+      , p_queue_name => rq.queue_name
       , p_force => p_force
       );
     end loop;
@@ -454,11 +491,12 @@ $end
   );
 end unregister;
 
-procedure dml
+procedure enqueue
 ( p_schema in varchar2
 , p_data_row in oracle_tools.data_row_t
 , p_queue_name in varchar2
 , p_force in boolean
+, p_msgid out nocopy raw
 )
 is
   l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
@@ -467,11 +505,10 @@ is
   l_dequeue_enabled user_queues.dequeue_enabled%type;
   l_enqueue_options dbms_aq.enqueue_options_t;
   l_message_properties dbms_aq.message_properties_t;
-  l_msgid raw(16);
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DML');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE');
   dbug.print
   ( dbug."input"
   , 'p_schema: %s; p_queue_name: %s; p_force: %s'
@@ -504,7 +541,7 @@ $end
       , enqueue_options => l_enqueue_options
       , message_properties => l_message_properties
       , payload => p_data_row
-      , msgid => l_msgid
+      , msgid => p_msgid
       );
       exit try_loop; -- enqueue succeeded
     exception
@@ -549,6 +586,7 @@ $end
   end loop try_loop;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   dbug.leave;
 exception
   when others
@@ -556,7 +594,76 @@ exception
     dbug.leave_on_error;
     raise;
 $end
-end dml;
+end enqueue;
+
+procedure dequeue
+( p_schema in varchar2
+, p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_dequeue_mode in binary_integer
+, p_navigation in binary_integer
+, p_visibility in binary_integer
+, p_wait in binary_integer
+, p_deq_condition in varchar2
+, p_msgid in out nocopy raw
+, p_message_properties out nocopy dbms_aq.message_properties_t
+, p_data_row out nocopy oracle_tools.data_row_t
+)
+is
+  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant user_queues.name%type := nvl(p_queue_name, queue_name(p_data_row));
+  l_dequeue_options dbms_aq.dequeue_options_t;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE');
+  dbug.print
+  ( dbug."input"
+  , 'p_schema: %s; p_queue_name: %s; p_subscriber: %s; p_dequeue_mode: %s; p_navigation: %s'
+  , p_schema
+  , p_queue_name
+  , p_subscriber
+  , p_dequeue_mode
+  , p_navigation
+  );
+  dbug.print
+  ( dbug."input"
+  , 'p_visibility: %s; p_wait: %s; p_deq_condition: %s; p_msgid: %s'
+  , p_visibility
+  , p_wait
+  , p_deq_condition
+  , hextoraw(p_msgid)
+  );
+$end
+
+  l_dequeue_options.consumer_name := p_subscriber;
+  l_dequeue_options.dequeue_mode := p_dequeue_mode;
+  l_dequeue_options.navigation := p_navigation;
+  l_dequeue_options.visibility := p_visibility;
+  l_dequeue_options.wait := p_wait;
+  l_dequeue_options.deq_condition := p_deq_condition;
+  l_dequeue_options.msgid := p_msgid;
+
+  -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED or DBMS_AQ.PERSISTENT_OR_BUFFERED.
+  l_dequeue_options.visibility :=
+    case
+      when c_delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
+      then dbms_aq.immediate
+      else dbms_aq.on_commit
+    end;
+
+  dbms_aq.dequeue
+  ( queue_name => sql_object_name(l_schema, l_queue_name)
+  , dequeue_options => l_dequeue_options
+  , message_properties => p_message_properties
+  , payload => p_data_row
+  , msgid => p_msgid
+  );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
+  dbug.leave;
+$end
+end dequeue;
 
 procedure dequeue_notification
 ( p_context in raw
@@ -569,7 +676,6 @@ procedure dequeue_notification
 , p_msgid out nocopy raw
 )
 is
-  l_dequeue_options dbms_aq.dequeue_options_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_NOTIFICATION');
@@ -577,33 +683,26 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   ( dbug."input"
   , 'p_context: %s; p_descr.msg_id: %s; p_descr.consumer_name: %s; p_descr.queue_name: %s; p_payloadl: %s'
   , p_context
-  , p_descr.msg_id
+  , rawtohex(p_descr.msg_id)
   , p_descr.consumer_name
   , p_descr.queue_name
   , p_payloadl
   );
 $end
 
-  l_dequeue_options.msgid := p_descr.msg_id;
-  l_dequeue_options.consumer_name := p_descr.consumer_name;
+  p_msgid := p_descr.msg_id;
 
-  -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED or DBMS_AQ.PERSISTENT_OR_BUFFERED.
-  l_dequeue_options.visibility :=
-    case
-      when c_delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
-      then dbms_aq.immediate
-      else dbms_aq.on_commit
-    end;
-
-  dbms_aq.dequeue
-  ( queue_name => p_descr.queue_name
-  , dequeue_options => l_dequeue_options
-  , message_properties => p_message_properties
-  , payload => p_message
-  , msgid => p_msgid
+  dequeue
+  ( p_schema => null
+  , p_queue_name => p_descr.queue_name
+  , p_subscriber => p_descr.consumer_name
+  , p_msgid => p_msgid
+  , p_message_properties => p_message_properties
+  , p_data_row => p_message
   );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   dbug.leave;
 $end
 end dequeue_notification;
