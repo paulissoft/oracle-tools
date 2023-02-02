@@ -100,6 +100,9 @@ procedure dml
 is
   l_msgid raw(16);
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DML');
+$end  
   enqueue
   ( p_schema => p_schema
   , p_data_row => p_data_row
@@ -107,6 +110,9 @@ begin
   , p_force => p_force
   , p_msgid => l_msgid
   );
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end dml;
 
 function queue_name
@@ -115,14 +121,14 @@ function queue_name
 return varchar2
 is
 begin
-  return data_api_pkg.dbms_assert$enquote_name(p_data_row.table_owner || '$' || p_data_row.table_name, 'queue');
+  return oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_data_row.table_owner || '$' || p_data_row.table_name, 'queue');
 end queue_name;
 
 procedure create_queue_table
 ( p_schema in varchar2
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_QUEUE_TABLE');
@@ -155,7 +161,7 @@ procedure drop_queue_table
 , p_force in boolean
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_QUEUE_TABLE');
@@ -176,7 +182,7 @@ $end
       for rsr in
       ( select  location_name
         from    user_subscr_registrations sr
-        where   sr.subscription_name = l_schema || '.' || data_api_pkg.dbms_assert$enquote_name(rq.queue_name, 'queue')
+        where   sr.subscription_name = l_schema || '.' || oracle_tools.data_api_pkg.dbms_assert$enquote_name(rq.queue_name, 'queue')
       )
       loop
         unregister
@@ -216,8 +222,8 @@ procedure create_queue
 , p_comment in varchar2
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_QUEUE');
@@ -266,8 +272,8 @@ procedure drop_queue
 , p_force in boolean
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_QUEUE');
@@ -303,8 +309,8 @@ procedure start_queue
 , p_queue_name in varchar2
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.START_QUEUE');
@@ -328,8 +334,8 @@ procedure stop_queue
 , p_wait in boolean
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.STOP_QUEUE');
@@ -362,8 +368,8 @@ procedure add_subscriber
 , p_delivery_mode in pls_integer
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ADD_SUBSCRIBER');
@@ -397,8 +403,8 @@ procedure remove_subscriber
 , p_subscriber in varchar2
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.REMOVE_SUBSCRIBER');
@@ -428,8 +434,8 @@ procedure register
 , p_plsql_callback in varchar
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.REGISTER');
@@ -454,6 +460,10 @@ $end
                 )
   , reg_count => 1
   );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end register;
 
 procedure unregister
@@ -463,8 +473,8 @@ procedure unregister
 , p_plsql_callback in varchar
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
-  l_queue_name constant all_queues.name%type := data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UNREGISTER');
@@ -499,7 +509,7 @@ procedure enqueue
 , p_msgid out nocopy raw
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
   l_queue_name constant user_queues.name%type := nvl(p_queue_name, queue_name(p_data_row));
   l_enqueue_enabled user_queues.enqueue_enabled%type;
   l_dequeue_enabled user_queues.dequeue_enabled%type;
@@ -610,7 +620,7 @@ procedure dequeue
 , p_data_row out nocopy oracle_tools.data_row_t
 )
 is
-  l_schema constant all_queues.owner%type := data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
+  l_schema constant all_queues.owner%type := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_schema, 'schema');
   l_queue_name constant user_queues.name%type := nvl(p_queue_name, queue_name(p_data_row));
   l_dequeue_options dbms_aq.dequeue_options_t;
 begin
