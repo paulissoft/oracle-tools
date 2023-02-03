@@ -17,7 +17,7 @@
     <db.schema>${oracle-tools.db.schema.msg}</db.schema>
     <flyway.table>schema_version_tools_msg</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>MSG_TYP,MSG_TYP,MSG_AQ_PKG,MSG_NOTIFICATION_PRC</db.object.names>
+    <db.object.names>MSG_TYP,MSG_WITH_ID_KEY_TYP,MSG_AQ_PKG,MSG_NOTIFICATION_PRC</db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
 
