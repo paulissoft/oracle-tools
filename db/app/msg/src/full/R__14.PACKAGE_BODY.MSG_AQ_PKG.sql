@@ -451,8 +451,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE');
   dbug.print
   ( dbug."input"
-  , 'p_queue_name: %s; p_force: %s'
-  , p_queue_name
+  , 'p_force: %s'
   , dbug.cast_to_varchar2(p_force)
   );
 $end
