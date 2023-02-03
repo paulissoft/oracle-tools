@@ -9,9 +9,9 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.paulissoft.oracle-tools.db.app</groupId>
-  <artifactId>DATA</artifactId>
+  <artifactId>MSG</artifactId>
   <packaging>pom</packaging>
-  <description>Build DATA component</description>
+  <description>Build MSG component</description>
   
   <properties>
     <db.schema>${oracle-tools.db.schema.msg}</db.schema>

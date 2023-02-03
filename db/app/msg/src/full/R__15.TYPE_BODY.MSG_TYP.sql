@@ -1,36 +1,76 @@
-CREATE OR REPLACE TYPE BODY "DATA_ROW_T" AS
+CREATE OR REPLACE TYPE BODY "MSG_TYP" AS
 
 final
 member procedure construct
-( self in out nocopy data_row_t
-, p_table_owner in varchar2
-, p_table_name in varchar2
-, p_dml_operation in varchar2
-, p_key in anydata
+( self in out nocopy msg_typ
+, p_source$ in varchar2
+, p_context$ in varchar2
+, p_key$ in anydata
 )
 is
 begin
-  self.table_owner := p_table_owner;
-  self.table_name := p_table_name;
-  self.dml_operation := p_dml_operation;
-  self.key := p_key;
-  self.dml_timestamp := systimestamp;
+  self.source$ := p_source$;
+  self.context$ := p_context$;
+  self.key$ := p_key$;
+  self.timestamp$ := systimestamp;
 end construct;  
+
+member procedure process
+( self in msg_typ
+, p_msg_just_created in integer default 1 -- True (1) or false (1)
+)
+is
+begin
+  if self.wants_to_process(p_msg_just_created) = 1
+  then
+    case p_msg_just_created
+      when 1 then self.process$later;
+      when 0 then self.process$now;
+    end case;
+  end if;
+end process;
+
+member function wants_to_process
+( self in msg_typ
+, p_msg_just_created in integer -- True (1) or false (1)
+)
+return integer
+is
+begin
+  raise program_error; -- must override this one
+end wants_to_process;
+  
+member procedure process$now
+( self in msg_typ
+)
+is
+begin
+  raise program_error; -- must override this one
+end process$now;
+
+member procedure process$later
+( self in msg_typ
+)
+is
+  l_msgid raw(16);
+begin
+  msg_aq_pkg.enqueue(p_msg => self, p_msgid => l_msgid);
+end process$later;
 
 static
 function deserialize
 ( p_obj_type in varchar2
 , p_obj in clob
 )
-return data_row_t
+return msg_typ
 is
   l_cursor sys_refcursor;
-  l_data_row data_row_t;
+  l_msg msg_typ;
 begin
   open l_cursor
     for q'[select json_value(:obj, '$' returning ]' || p_obj_type || q'[) from dual]'
     using p_obj;
-  fetch l_cursor into l_data_row;
+  fetch l_cursor into l_msg;
   if l_cursor%notfound
   then
     close l_cursor;
@@ -38,12 +78,12 @@ begin
   else
     close l_cursor;
   end if;
-  return l_data_row;
+  return l_msg;
 end deserialize;
 
 final
 member function get_type
-( self in data_row_t
+( self in msg_typ
 )
 return varchar2
 is
@@ -53,7 +93,7 @@ end get_type;
 
 final
 member function serialize
-( self in data_row_t
+( self in msg_typ
 )
 return clob
 is
@@ -65,21 +105,20 @@ begin
 end serialize;
 
 member procedure serialize
-( self in data_row_t
+( self in msg_typ
 , p_json_object in out nocopy json_object_t
 )
 is
 begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
-  p_json_object.put('TABLE_OWNER', self.table_owner);
-  p_json_object.put('TABLE_NAME', self.table_name);
-  p_json_object.put('DML_OPERATION', self.dml_operation);
-  -- we do not know how to deserialize the key since it is anydata
-  p_json_object.put('DML_TIMESTAMP', self.dml_timestamp);
+  p_json_object.put('SOURCE$', self.source$);
+  p_json_object.put('CONTEXT$', self.context$);
+  -- we do not know how to deserialize the key$ since it is anydata
+  p_json_object.put('TIMESTAMP$', self.timestamp$);
 end serialize;
 
 member function repr
-( self in data_row_t
+( self in msg_typ
 )
 return clob
 is
@@ -94,7 +133,7 @@ end repr;
 
 final
 member procedure print
-( self in data_row_t
+( self in msg_typ
 )
 is
   l_msg constant varchar2(4000 char) := utl_lms.format_message('type: %s; repr: %s', get_type(), dbms_lob.substr(lob_loc => repr(), amount => 2000));
@@ -108,7 +147,7 @@ end print;
 
 final
 member function lob_attribute_list
-( self in data_row_t
+( self in msg_typ
 )
 return varchar2
 is
@@ -132,7 +171,7 @@ end lob_attribute_list;
 
 final
 member function may_have_non_empty_lob
-( self in data_row_t
+( self in msg_typ
 )
 return integer
 is
@@ -141,12 +180,12 @@ begin
 end may_have_non_empty_lob;
 
 member function has_non_empty_lob
-( self in data_row_t
+( self in msg_typ
 )
 return integer
 is
 begin
-  return 0; -- key can not store a LOB
+  return 0; -- key$ can not store a LOB
 end has_non_empty_lob;
 
 end;

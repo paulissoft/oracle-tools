@@ -1,10 +1,10 @@
-CREATE OR REPLACE PACKAGE "DATA_DML_EVENT_MGR_PKG" AUTHID CURRENT_USER AS 
+CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
-c_queue_table constant user_queues.queue_table%type := '"DML_EVENTS_QT"';
+c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
 c_buffered_messaging_ok constant boolean := false; -- getting ORA-24344 compilation with errors
 c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
-c_default_plsql_callback constant all_objects.object_name%type := 'DATA_ROW_NOTIFICATION_PRC';
+c_default_plsql_callback constant varchar(128 char) := $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
 c_delivery_mode constant pls_integer := case when c_buffered_messaging_ok then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
 -- ORA-24002: QUEUE_TABLE does not exist
@@ -35,7 +35,7 @@ pragma exception_init(e_subscriber_does_not_exist, -24035);
 
 This package is used as a wrapper around Oracle Advanced Queueing.
 
-Its main usage is to enqueue DML events (via object type DATA_ROW_T or one of its sub types) in triggers.
+Its main usage is to enqueue messages (object type MSG_TYP or one of its sub types).
 
 Next they can be dequeued by another process or by asynchronous PL/SQL notifications.
 
@@ -45,69 +45,45 @@ The default functionality is:
 
 **/
 
-procedure dml
-( p_schema in varchar2
-, p_data_row in oracle_tools.data_row_t
-, p_queue_name in varchar2 default null
-, p_force in boolean default true -- Must we create/start queues if the operation fails due to such an event?
-);
-/**
-
-The main operation: add the data row to the queue in schema p_schema.
-
-Is normally used in a trigger.
-
-Invokes enqueue() below so please have a look there.
-
-**/
-
 function queue_name
-( p_data_row in oracle_tools.data_row_t
+( p_msg in msg_typ
 )
 return varchar2;
-/** Returns the enquoted simple SQL queue name, i.e. p_data_row.table_owner || '$' || p_data_row.table_name (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
+/** Returns the enquoted simple SQL queue name, i.e. replace(p_msg.source$, '.', '$') (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
 
-procedure create_queue_table
-( p_schema in varchar2
-);
-/** Create the queue table c_queue_table in schema p_schema. **/
+procedure create_queue_table;
+/** Create the queue table c_queue_table. **/
 
 procedure drop_queue_table
-( p_schema in varchar2
-, p_force in boolean default false -- Must we drop queues first?
+( p_force in boolean default false -- Must we drop queues first?
 );
-/** Drop the queue table c_queue_table in schema p_schema. **/
+/** Drop the queue table c_queue_table. **/
 
 procedure create_queue
-( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a simple SQL name
+( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_comment in varchar2
 );
-/** Create the queue with queue table c_queue_table in schema p_schema. When the queue table does not exist, it is created too. **/
+/** Create the queue with queue table c_queue_table. When the queue table does not exist, it is created too. **/
 
 procedure drop_queue
-( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a simple SQL name
+( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_force in boolean default false -- Must we stop enqueueing / dequeueing first?
 );
 /** Drop the queue. Does not drop the queue table. **/
 
 procedure start_queue
-( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a simple SQL name
+( p_queue_name in varchar2 -- Must be a simple SQL name
 );
 /** Start the queue with enqueue and dequeue enabled. **/
 
 procedure stop_queue
-( p_schema in varchar2
-, p_queue_name in varchar2 -- Must be a simple SQL name
+( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_wait in boolean default true
 );
 /** Stop the queue with enqueue and dequeue disabled. **/
 
 procedure add_subscriber
-( p_schema in varchar2
-, p_queue_name in varchar2
+( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber
 , p_rule in varchar2 default null
 , p_delivery_mode in pls_integer default c_delivery_mode
@@ -115,40 +91,34 @@ procedure add_subscriber
 /** Add a subscriber to a queue. The subscriber name will be ignored for a single consumer queue table. **/
    
 procedure remove_subscriber
-( p_schema in varchar2
-, p_queue_name in varchar2
+( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber
 );
 /** Remove a subscriber from a queue. The subscriber name will be ignored for a single consumer queue table. **/
 
 procedure register
-( p_schema in varchar2
-, p_queue_name in varchar2
+( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar -- schema.procedure
+, p_plsql_callback in varchar default c_default_plsql_callback -- In the format schema.procedure
 );
 /** Register a PL/SQL callback for a queue and subscriber. **/
 
 procedure unregister
-( p_schema in varchar2
-, p_queue_name in varchar2
+( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar -- schema.procedure
+, p_plsql_callback in varchar default c_default_plsql_callback -- In the format schema.procedure
 );
 /** Unregister a PL/SQL callback for a queue and subscriber. **/
 
 procedure enqueue
-( p_schema in varchar2
-, p_data_row in oracle_tools.data_row_t
-, p_queue_name in varchar2 -- When empty it will default to queue_name(p_data_row).
+( p_msg in msg_typ
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary.
 , p_msgid out nocopy raw
 );
-/** Enqueue the data row to the in schema p_schema. **/
+/** Enqueue the data row to the queue queue_name(p_msg). **/
 
 procedure dequeue
-( p_schema in varchar2 -- May be null but then p_queue_name may be fully qualified.
-, p_queue_name in varchar2 -- Can be fully qualified (including schema).
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
 , p_subscriber in varchar2 default c_default_subscriber
 , p_dequeue_mode in binary_integer default dbms_aq.remove
 , p_navigation in binary_integer default dbms_aq.next_message
@@ -157,9 +127,9 @@ procedure dequeue
 , p_deq_condition in varchar2 default null
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
-, p_data_row out nocopy oracle_tools.data_row_t
+, p_msg out nocopy msg_typ
 );
-/** Dequeue the data row from the queue in schema p_schema. **/
+/** Dequeue the data row from the queue. **/
 
 procedure dequeue_notification
 ( p_context in raw
@@ -167,12 +137,12 @@ procedure dequeue_notification
 , p_descr in sys.aq$_descriptor
 , p_payload in raw
 , p_payloadl in number
-, p_message_properties out nocopy dbms_aq.message_properties_t
-, p_message out nocopy oracle_tools.data_row_t
 , p_msgid out nocopy raw
+, p_message_properties out nocopy dbms_aq.message_properties_t
+, p_msg out nocopy msg_typ
 );
-/** Dequeue a message as a result of a PL/SQL notification. **/
+/** Dequeue a message as a result of a PL/SQL notification. The first 5 parameters are mandated from the PL/SQL callback definition. **/
 
-end data_dml_event_mgr_pkg;
+end msg_aq_pkg;
 /
 

@@ -1,22 +1,21 @@
-CREATE TYPE DATA_ROW_ID_T AUTHID CURRENT_USER UNDER DATA_ROW_T
+CREATE TYPE MSG_WITH_ID_KEY_TYP AUTHID DEFINER UNDER MSG_TYP
 (
 /**
-An object type meant for all tables having ID as the primary key.
+An object type meant for all messages having ID as the primary key.
 **/
 
   final
   member procedure construct
-  ( self in out nocopy data_row_id_t
-  , p_table_owner in varchar2
-  , p_table_name in varchar2
-  , p_dml_operation in varchar2
-  , p_id in integer -- sets self.key using anydata.ConvertNumber(p_id)
+  ( self in out nocopy msg_with_id_key_typ
+  , p_source$ in varchar2
+  , p_context$ in varchar2
+  , p_id in integer -- sets self.key$ using anydata.ConvertNumber(p_id)
   )
 /*
 This procedure is there since Oracle Object Types do not allow to invoke a super constructor.
 Therefore this procedure can be called instead in a sub type constructor like this:
 ```
-(self as data_row_id_t).construct(p_table_owner, p_table_name, p_dml_operation, p_id);
+(self as msg_with_id_key_typ).construct(p_source$, p_context$, p_id);
 -- initialize other member attributes
 ```
 */
@@ -25,12 +24,12 @@ Therefore this procedure can be called instead in a sub type constructor like th
   member function id
   return integer
 /*
-Return the id (via the self.key.getnumber() function since key is an anydata).
+Return the id (via the self.key$.getnumber() function since self.key$ is an anydata).
 */
 
 , overriding
   member procedure serialize
-  ( self in data_row_id_t
+  ( self in msg_with_id_key_typ
   , p_json_object in out nocopy json_object_t
   )
 /*
