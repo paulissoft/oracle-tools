@@ -44,7 +44,17 @@ public class GenerateDDL
                     throw new Exception("NLS_LANG environment variable must end with .UTF8");
                 }
 
-                final StringBuffer JDBCUrl = new StringBuffer(env.get("JDBC_URL"));
+                StringBuffer JDBCUrl = new StringBuffer(env.get("JDBC_URL"));
+
+                // JDBC url, includes password (jdbc:oracle:thin:<user>/<password>@<db>) so strip it
+                final int slash = JDBCUrl.indexOf("/");
+                final int at = JDBCUrl.lastIndexOf("@");
+                
+                final String username = JDBCUrl.substring("jdbc:oracle:thin:".length(), slash);
+                final String password = JDBCUrl.substring(slash + 1, at);
+
+                JDBCUrl = new StringBuffer("jdbc:oracle:thin:" + JDBCUrl.substring(at));
+
                 final String sourceSchema = props.getProperty("source.schema");
                 final String sourceDbLink = props.getProperty("source.db.name");
                 final String targetSchema = props.getProperty("target.schema");
@@ -79,7 +89,14 @@ public class GenerateDDL
                 DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
                 // Establish a connection
 
-                conn = DriverManager.getConnection(JDBCUrl.toString());
+                try {
+                    // since username and/or password may contain strange characters like @, it is better to split them.
+                    conn = DriverManager.getConnection(JDBCUrl.toString(), username, password);
+                } catch (java.sql.SQLException e) {
+                    System.err.println("JDBC URL: " + JDBCUrl.toString());
+                    System.err.println("username: " + username);
+                    throw e;
+                }
 
                 final Statement stmt = conn.createStatement();
 
@@ -108,11 +125,7 @@ public class GenerateDDL
                     /* 0 and 13 are not statement parameters (?) but owner can be part of the statement */
                     switch (nr) {
                     case 0:
-                        // JDBC url, includes password (jdbc:oracle:thin:<user>/<password>@<db>) so strip it
-                        final String str1 = JDBCUrl.substring(0, JDBCUrl.indexOf("/"));
-                        final String str2 = JDBCUrl.substring(JDBCUrl.lastIndexOf("@"));
-
-                        out.println("JDBC url            : " + str1 + str2);
+                        out.println("JDBC url - username : " + JDBCUrl.toString() + " - " + username);
                         break;
     
                     case 1:
