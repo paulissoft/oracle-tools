@@ -17,6 +17,12 @@
   <properties>
     <oracle-tools.db.src.dir>${oracle-tools.dir}/db/src</oracle-tools.db.src.dir>
     <oracle-tools.db.schema>${oracle_tools_schema}</oracle-tools.db.schema>
+    <!--
+    # The msg subsystem is meant to be installed in an application schema where you want to derive from MSG_TYP.
+    # Since deriving from a super type works only well in one schema,
+    # you may want to override the schema where you want to install the msg subsystem.
+    -->
+    <oracle-tools.db.schema.msg>${oracle_tools_schema_msg}</oracle-tools.db.schema.msg>
 
     <!-- =========================================== -->
     <!-- Database properties for Flyway (db-install) -->
