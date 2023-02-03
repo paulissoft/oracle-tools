@@ -21,6 +21,11 @@ member procedure process
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS');
+  dbug.print(dbug."input", 'p_msg_just_created: %s', p_msg_just_created);
+$end
+
   if self.wants_to_process(p_msg_just_created) = 1
   then
     case p_msg_just_created
@@ -28,6 +33,10 @@ begin
       when 0 then self.process$now;
     end case;
   end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end process;
 
 member function wants_to_process
@@ -37,7 +46,16 @@ member function wants_to_process
 return integer
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.WANTS_TO_PROCESS');
+  dbug.print(dbug."input", 'p_msg_just_created: %s', p_msg_just_created);
+$end
+
   raise program_error; -- must override this one
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end wants_to_process;
   
 member procedure process$now
@@ -45,7 +63,15 @@ member procedure process$now
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
+$end
+
   raise program_error; -- must override this one
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end process$now;
 
 member procedure process$later
@@ -54,7 +80,15 @@ member procedure process$later
 is
   l_msgid raw(16);
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$LATER');
+$end
+
   msg_aq_pkg.enqueue(p_msg => self, p_msgid => l_msgid);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end process$later;
 
 static

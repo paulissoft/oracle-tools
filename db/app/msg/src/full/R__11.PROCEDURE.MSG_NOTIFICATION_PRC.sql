@@ -26,8 +26,17 @@ $end
   , p_msg => l_msg
   );
 
-  l_msg.process(p_msg_just_created => 0);
-  commit;
+  begin
+    savepoint spt;
+    
+    l_msg.process(p_msg_just_created => 0);
+  exception
+    when others
+    then
+      rollback to spt;
+  end;
+  
+  commit; -- remove message from the queue
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;

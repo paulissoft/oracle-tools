@@ -432,6 +432,10 @@ $end
                 )
   , reg_count => 1
   );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end unregister;
 
 procedure enqueue
