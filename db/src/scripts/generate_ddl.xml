@@ -518,31 +518,44 @@ Z       Time zone               RFC 822 time zone   -0800
         <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
       </perl-arguments>
     </generate-ddl>
+    <ac:if>
+      <istrue value="${full.skip.install.sql}" />
+      <then>
+        <delete file="${full.output.directory}/install.sql" quiet="false" failonerror="true"/>
+      </then>
+    </ac:if>
   </target>
 
   <!-- Create uninstall.sql script by migrating an empty schema to the target -->
   <target name="generate-ddl-full-uninstall"
           depends="init-schema,init-userid,jar"
-          description="Run: perl ${generate_ddl.pl}"
-          unless="${full.skip.uninstall.sql}">
-    <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
-    <!-- GJP When generating DDL the temporary file should be kept. -->
-    <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
-    <generate-ddl type="full"
-                  target.schema="${schema}"
-                  target.db.name="${source.db.name}"
-                  interface="${full.interface}"
-                  transform.params="${full.transform.params}"
-                  owner="${owner}"
-                  id="generate-ddl-full-uninstall"
-                  temp.file="${temp.uninstall.file}">
-      <perl-arguments>
-        <arg value="--output-directory=${full.output.directory}"/>
-        <arg value="--single-output-file=uninstall.sql"/>
-        <arg value="--source-schema=${schema}"/>
-        <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
-      </perl-arguments>
-    </generate-ddl>
+          description="Run: perl ${generate_ddl.pl}">
+    <ac:if>
+      <isfalse value="${full.skip.uninstall.sql}"/>
+      <then>
+        <fail message="Property full.output.directory undefined" unless="full.output.directory"/>
+        <!-- GJP When generating DDL the temporary file should be kept. -->
+        <tempfile property="temp.uninstall.file" destDir="${log.dir}" suffix=".sql" prefix="uninstall"/>
+        <generate-ddl type="full"
+                      target.schema="${schema}"
+                      target.db.name="${source.db.name}"
+                      interface="${full.interface}"
+                      transform.params="${full.transform.params}"
+                      owner="${owner}"
+                      id="generate-ddl-full-uninstall"
+                      temp.file="${temp.uninstall.file}">
+          <perl-arguments>
+            <arg value="--output-directory=${full.output.directory}"/>
+            <arg value="--single-output-file=uninstall.sql"/>
+            <arg value="--source-schema=${schema}"/>
+            <arg value="--${perl.full.strip.source.schema}strip-source-schema"/>
+          </perl-arguments>
+        </generate-ddl>
+      </then>
+      <else>
+        <delete file="${full.output.directory}/uninstall.sql" quiet="false" failonerror="true"/>
+      </else>
+    </ac:if>
   </target>
   
   <target name="generate-ddl-incr-help"
