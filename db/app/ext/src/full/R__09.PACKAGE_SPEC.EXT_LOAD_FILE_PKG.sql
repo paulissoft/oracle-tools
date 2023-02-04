@@ -1,4 +1,4 @@
-create or replace package ext_load_file_pkg authid definer as
+CREATE OR REPLACE PACKAGE "EXT_LOAD_FILE_PKG" authid definer as
 
 -- to speed it up
 create_collection_from_query constant boolean := false;
@@ -712,3 +712,4 @@ $end
 
 end ext_load_file_pkg;
 /
+
