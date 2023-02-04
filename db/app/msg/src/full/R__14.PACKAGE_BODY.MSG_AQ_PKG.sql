@@ -600,7 +600,60 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end dequeue;
 
-procedure dequeue_notification
+procedure dequeue_and_process
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_subscriber in varchar2 default c_default_subscriber
+, p_dequeue_mode in binary_integer default dbms_aq.remove
+, p_navigation in binary_integer default dbms_aq.next_message
+, p_visibility in binary_integer default dbms_aq.on_commit
+, p_wait in binary_integer default dbms_aq.forever
+, p_deq_condition in varchar2 default null
+, p_commit in boolean
+)
+is
+  l_msgid raw(16) := null;
+  l_message_properties dbms_aq.message_properties_t;
+  l_msg msg_typ;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS');
+  dbug.print(dbug."input", 'p_commit: %s', p_commit);
+$end
+
+  dequeue
+  ( p_queue_name => p_queue_name
+  , p_subscriber => p_subscriber
+  , p_dequeue_mode => p_dequeue_mode
+  , p_navigation => p_navigation
+  , p_visibility => p_visibility
+  , p_wait => p_wait
+  , p_deq_condition => p_deq_condition
+  , p_msgid => l_msgid
+  , p_message_properties => l_message_properties
+  , p_msg => l_msg
+  );
+
+  begin
+    savepoint spt;
+    
+    l_msg.process(p_msg_just_created => 0);
+  exception
+    when others
+    then
+      rollback to spt;
+  end;
+
+  if p_commit
+  then
+    commit; -- remove message from the queue
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end dequeue_and_process;
+
+procedure dequeue
 ( p_context in raw
 , p_reginfo in sys.aq$_reg_info
 , p_descr in sys.aq$_descriptor
@@ -613,7 +666,7 @@ procedure dequeue_notification
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_NOTIFICATION');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE');
   dbug.print
   ( dbug."input"
   , 'p_context: %s; p_descr.msg_id: %s; p_descr.consumer_name: %s; p_descr.queue_name: %s; p_payloadl: %s'
@@ -639,7 +692,61 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   dbug.leave;
 $end
-end dequeue_notification;
+end dequeue;
+
+procedure dequeue_and_process
+( p_context in raw
+, p_reginfo in sys.aq$_reg_info
+, p_descr in sys.aq$_descriptor
+, p_payload in raw
+, p_payloadl in number
+, p_commit in boolean
+)
+is
+  l_msgid raw(16);
+  l_message_properties dbms_aq.message_properties_t;
+  l_msg msg_typ;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS');
+  dbug.print(dbug."input", 'p_commit: %s', p_commit);
+$end
+
+  msg_aq_pkg.dequeue
+  ( p_context => p_context
+  , p_reginfo => p_reginfo
+  , p_descr => p_descr
+  , p_payload => p_payload
+  , p_payloadl => p_payloadl
+  , p_msgid => l_msgid
+  , p_message_properties => l_message_properties
+  , p_msg => l_msg
+  );
+
+  begin
+    savepoint spt;
+    
+    l_msg.process(p_msg_just_created => 0);
+  exception
+    when others
+    then
+      rollback to spt;
+  end;
+
+  if p_commit
+  then
+    commit; -- remove message from the queue
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end dequeue_and_process;
 
 end msg_aq_pkg;
 /

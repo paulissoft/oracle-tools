@@ -115,7 +115,7 @@ procedure enqueue
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary.
 , p_msgid out nocopy raw
 );
-/** Enqueue the data row to the queue queue_name(p_msg). **/
+/** Enqueue the message to the queue queue_name(p_msg). **/
 
 procedure dequeue
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
@@ -129,9 +129,21 @@ procedure dequeue
 , p_message_properties out nocopy dbms_aq.message_properties_t
 , p_msg out nocopy msg_typ
 );
-/** Dequeue the data row from the queue. **/
+/** Dequeue the message (of base type msg_typ) from the queue. The caller must process it (use <message>.process(0)). **/
 
-procedure dequeue_notification
+procedure dequeue_and_process
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_subscriber in varchar2 default c_default_subscriber
+, p_dequeue_mode in binary_integer default dbms_aq.remove
+, p_navigation in binary_integer default dbms_aq.next_message
+, p_visibility in binary_integer default dbms_aq.on_commit
+, p_wait in binary_integer default dbms_aq.forever
+, p_deq_condition in varchar2 default null
+, p_commit in boolean default true
+);
+/** Dequeue a message (of base type msg_typ) from the queue and process it using <message>.process(0). **/
+
+procedure dequeue
 ( p_context in raw
 , p_reginfo in sys.aq$_reg_info
 , p_descr in sys.aq$_descriptor
@@ -141,7 +153,23 @@ procedure dequeue_notification
 , p_message_properties out nocopy dbms_aq.message_properties_t
 , p_msg out nocopy msg_typ
 );
-/** Dequeue a message as a result of a PL/SQL notification. The first 5 parameters are mandated from the PL/SQL callback definition. **/
+/**
+Dequeue a message (of base type msg_typ) as a result of a PL/SQL notification. The caller must process it (use <message>.process(0)). 
+The first 5 parameters are mandated from the PL/SQL callback definition.
+**/
+
+procedure dequeue_and_process
+( p_context in raw
+, p_reginfo in sys.aq$_reg_info
+, p_descr in sys.aq$_descriptor
+, p_payload in raw
+, p_payloadl in number
+, p_commit in boolean default true
+);
+/**
+Dequeue a message (of base type msg_typ) from the queue as a result of a PL/SQL notification and process it using <message>.process(0).
+The first 5 parameters are mandated from the PL/SQL callback definition.
+**/
 
 end msg_aq_pkg;
 /

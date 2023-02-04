@@ -26,7 +26,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_msg_just_created: %s', p_msg_just_created);
 $end
 
-  if self.wants_to_process(p_msg_just_created) = 1
+  if self.must_be_processed(p_msg_just_created) = 1
   then
     case p_msg_just_created
       when 1 then self.process$later;
@@ -39,7 +39,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end process;
 
-member function wants_to_process
+member function must_be_processed
 ( self in msg_typ
 , p_msg_just_created in integer -- True (1) or false (1)
 )
@@ -47,7 +47,7 @@ return integer
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.WANTS_TO_PROCESS');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MUST_BE_PROCESSED');
   dbug.print(dbug."input", 'p_msg_just_created: %s', p_msg_just_created);
 $end
 
@@ -56,7 +56,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end wants_to_process;
+end must_be_processed;
   
 member procedure process$now
 ( self in msg_typ

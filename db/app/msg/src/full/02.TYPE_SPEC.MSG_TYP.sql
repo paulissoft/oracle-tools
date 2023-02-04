@@ -33,7 +33,7 @@ This is the main routine that determines whether to process a message later or n
 This is the default implementation which postpones the actual work:
 
 ```
-  if self.wants_to_process(p_msg_just_created) = 1
+  if self.must_be_processed(p_msg_just_created) = 1
   then
     case p_msg_just_created
       when 1 then self.process$later;
@@ -49,7 +49,7 @@ When dequeued the call self.process(0) should be invoked to do the actual job. M
 You may decide to override this in a subtype to force immediate processing like this:
 
 ```
-  if self.wants_to_process(p_msg_just_created) = 1
+  if self.must_be_processed(p_msg_just_created) = 1
   then
     case p_msg_just_created
       when 1 then self.process$now;
@@ -59,7 +59,7 @@ You may decide to override this in a subtype to force immediate processing like 
 
 */
 
-, member function wants_to_process
+, member function must_be_processed
   ( self in msg_typ
   , p_msg_just_created in integer -- True (1) or false (1)
   )

@@ -4,7 +4,7 @@ CREATE TYPE "MSG_TYP" AUTHID DEFINER AS OBJECT
 , key$ anydata
 , timestamp$ timestamp -- creation timestamp
 /**
-This type stores (meta-)information about a data row. It is intended as a generic type that can be used in Oracle Advanced Queueing.
+This type stores (meta-)information about a message. It is intended as a generic type that can be used in Oracle Advanced Queueing.
 **/
 
 , final member procedure construct
@@ -28,12 +28,15 @@ This procedure also sets timestamp$ to the sytem timestamp using the systimestam
   )
 /*
 
-This is the main routine that determines whether to process a message later or now.
+This is the main routine that determines whether to process a message:
+- never, if self.must_be_processed(p_msg_just_created => 1) <> 1
+- later, if self.must_be_processed(p_msg_just_created) = 1 and you invoke self.process$later
+- now, if self.must_be_processed(p_msg_just_created) = 1 and you invoke self.process$now
 
 This is the default implementation which postpones the actual work:
 
 ```
-  if self.wants_to_process(p_msg_just_created) = 1
+  if self.must_be_processed(p_msg_just_created) = 1
   then
     case p_msg_just_created
       when 1 then self.process$later;
@@ -49,7 +52,7 @@ When dequeued the call self.process(0) should be invoked to do the actual job. M
 You may decide to override this in a subtype to force immediate processing like this:
 
 ```
-  if self.wants_to_process(p_msg_just_created) = 1
+  if self.must_be_processed(p_msg_just_created) = 1
   then
     case p_msg_just_created
       when 1 then self.process$now;
@@ -59,7 +62,7 @@ You may decide to override this in a subtype to force immediate processing like 
 
 */
 
-, member function wants_to_process
+, member function must_be_processed
   ( self in msg_typ
   , p_msg_just_created in integer -- True (1) or false (1)
   )
@@ -134,7 +137,7 @@ MSG_AQ_PKG.ENQUEUE(self, ...);
   ( self in msg_typ
   )
   return clob
-/* Get the pretty printed JSON representation of a data row (or one of its sub types). */
+/* Get the pretty printed JSON representation of a message (or one of its sub types). */
   
 , final
   member procedure print
@@ -163,7 +166,7 @@ At most 2000 characters are printed for the representation.
   ( self in msg_typ
   )
   return integer
-/* Has this data row a non empty LOB (BLOB or CLOB)? 0 for No, 1 for Yes. */  
+/* Has this message a non empty LOB (BLOB or CLOB)? 0 for No, 1 for Yes. */  
 )
 not final;
 /
