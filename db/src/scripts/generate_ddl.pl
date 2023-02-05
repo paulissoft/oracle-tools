@@ -1161,7 +1161,23 @@ sub all_sql_statements_flush ($$$$) {
     # Now write tthe install.sql
     if (defined $fh_install_sql) {
         if (!$install_sql_preamble_printed) {
-            print $fh_install_sql "whenever oserror exit failure\nwhenever sqlerror exit failure\nset define off sqlblanklines on\nALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';\n\n";
+            my $preamble = << 'PREAMBLE';
+REMARK Try to call Flyway script beforeEachMigrate.sql (add its directory to SQLPATH) so that PLSQL_CCFlags can be set.
+REMARK But no harm done if it is not there.
+
+whenever oserror continue
+whenever sqlerror continue
+@@beforeEachMigrate.sql
+
+whenever oserror exit failure
+whenever sqlerror exit failure
+set define off sqlblanklines on
+ALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';
+
+PREAMBLE
+
+            print $fh_install_sql $preamble;
+
             $install_sql_preamble_printed = 1;
         }
 
