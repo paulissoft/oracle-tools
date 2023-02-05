@@ -12,7 +12,7 @@ begin
   self.source$ := p_source$;
   self.context$ := p_context$;
   self.key$ := p_key$;
-  self.timestamp$ := systimestamp;
+  self.created_utc$ := sys_extract_utc(systimestamp);
 end construct;  
 
 member procedure process
@@ -148,7 +148,7 @@ begin
   p_json_object.put('SOURCE$', self.source$);
   p_json_object.put('CONTEXT$', self.context$);
   -- we do not know how to deserialize the key$ since it is anydata
-  p_json_object.put('TIMESTAMP$', self.timestamp$);
+  p_json_object.put('CREATED_UTC$', self.created_utc$);
 end serialize;
 
 member function repr
