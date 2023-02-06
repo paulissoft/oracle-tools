@@ -5,13 +5,11 @@ member procedure construct
 ( self in out nocopy msg_typ
 , p_source$ in varchar2
 , p_context$ in varchar2
-, p_key$ in anydata
 )
 is
 begin
   self.source$ := p_source$;
   self.context$ := p_context$;
-  self.key$ := p_key$;
   self.created_utc$ := sys_extract_utc(systimestamp);
 end construct;  
 
@@ -147,7 +145,6 @@ begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
   p_json_object.put('SOURCE$', self.source$);
   p_json_object.put('CONTEXT$', self.context$);
-  -- we do not know how to deserialize the key$ since it is anydata
   p_json_object.put('CREATED_UTC$', self.created_utc$);
 end serialize;
 
@@ -219,7 +216,7 @@ member function has_non_empty_lob
 return integer
 is
 begin
-  return 0; -- key$ can not store a LOB
+  return 0;
 end has_non_empty_lob;
 
 end;

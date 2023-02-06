@@ -1,7 +1,6 @@
 CREATE TYPE "MSG_TYP" AUTHID DEFINER AS OBJECT
 ( source$ varchar2(128 char) -- may be used as a queue name (with dots replaced by dollars)
 , context$ varchar2(128 char) -- may be (I)nsert/(U)pdate/(D)elete on DML
-, key$ anydata
 , created_utc$ timestamp -- creation timestamp in UTC
 /**
 This type stores (meta-)information about a message. It is intended as a generic type that can be used in Oracle Advanced Queueing.
@@ -11,13 +10,12 @@ This type stores (meta-)information about a message. It is intended as a generic
   ( self in out nocopy msg_typ
   , p_source$ in varchar2
   , p_context$ in varchar2
-  , p_key$ in anydata
   )
 /**
 This procedure is there since Oracle Object Types do not allow to invoke a super constructor.
 Therefore this procedure can be called instead in a sub type constructor like this:
 
-(self as msg_typ).construct(p_source$, p_context$, p_key$);
+(self as msg_typ).construct(p_source$, p_context$);
 
 This procedure also sets created_utc$ to the sytem timestamp in UTC using SYS_EXTRACT_UTC(SYSTIMESTAMP()).
 **/
