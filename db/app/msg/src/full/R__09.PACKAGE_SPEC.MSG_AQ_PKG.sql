@@ -2,7 +2,7 @@ CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS
 
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
-c_buffered_messaging_ok constant boolean := true; -- getting ORA-24344 compilation with errors
+c_buffered_messaging_ok constant boolean := true;
 c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
 c_default_plsql_callback constant varchar(128 char) := $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
 c_delivery_mode constant binary_integer := case when c_buffered_messaging_ok then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;

@@ -532,16 +532,26 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if not(c_buffered_messaging_ok) or p_msg.has_non_empty_lob() != 0 -- GJP 2023-01-30 temporarily disable buffered messaging
+$if msg_aq_pkg.c_buffered_messaging_ok $then
+
+  if p_msg.has_non_empty_lob() != 0
   then
     -- payload with a non-empty LOB can not be a buffered message
     l_enqueue_options.visibility := dbms_aq.on_commit;
     l_enqueue_options.delivery_mode := dbms_aq.persistent;
   else
-    -- buffered messages
+    -- prefer buffered messages
     l_enqueue_options.visibility := dbms_aq.immediate;
     l_enqueue_options.delivery_mode := dbms_aq.buffered;
   end if;
+
+$else
+
+  -- no buffered messages
+  l_enqueue_options.visibility := dbms_aq.on_commit;
+  l_enqueue_options.delivery_mode := dbms_aq.persistent;
+
+$end
 
   l_message_properties.delay := dbms_aq.no_delay;
 
