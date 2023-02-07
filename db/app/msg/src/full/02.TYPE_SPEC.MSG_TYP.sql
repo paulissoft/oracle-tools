@@ -24,7 +24,7 @@ This procedure also sets created_utc$ to the sytem timestamp in UTC using SYS_EX
 
 , member procedure process
   ( self in msg_typ
-  , p_msg_just_created in integer default 1 -- True (1) or false (1)
+  , p_msg_just_created in integer default 1 -- True (1) or false (0)
   )
 /**
 
@@ -66,9 +66,9 @@ You may decide to override this in a subtype to force immediate processing like 
 
 , member function must_be_processed
   ( self in msg_typ
-  , p_msg_just_created in integer -- True (1) or false (1)
+  , p_msg_just_created in integer -- True (1) or false (0)
   )
-  return integer -- True (1) or false (1)
+  return integer -- True (1) or false (0)
 /**
 
 You must override this function that determines whether you want to process a message at this stage (just created or later).

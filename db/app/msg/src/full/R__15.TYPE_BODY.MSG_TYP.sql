@@ -15,7 +15,7 @@ end construct;
 
 member procedure process
 ( self in msg_typ
-, p_msg_just_created in integer default 1 -- True (1) or false (1)
+, p_msg_just_created in integer default 1 -- True (1) or false (0)
 )
 is
 begin
@@ -39,7 +39,7 @@ end process;
 
 member function must_be_processed
 ( self in msg_typ
-, p_msg_just_created in integer -- True (1) or false (1)
+, p_msg_just_created in integer -- True (1) or false (0)
 )
 return integer
 is
