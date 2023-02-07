@@ -1,8 +1,81 @@
-CREATE OR REPLACE PACKAGE BODY "MSG_AQ_PKG" AS
+create or replace PACKAGE BODY "MSG_AQ_PKG" AS
 
 -- private stuff
 
 c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
+
+function visibility_descr
+( p_visibility in binary_integer
+)
+return varchar2
+is
+begin
+  return case p_visibility
+           when dbms_aq.on_commit then 'ON_COMMIT'
+           when dbms_aq.immediate then 'IMMEDIATE'
+           else 'UNKNOWN visibility (' || to_char(p_visibility) || ')'
+         end;
+end visibility_descr;
+
+function delivery_mode_descr
+( p_delivery_mode in binary_integer
+)
+return varchar2
+is
+begin
+  return case p_delivery_mode
+           when dbms_aq.persistent then 'PERSISTENT'
+           when dbms_aq.buffered then 'BUFFERED'
+           when dbms_aq.persistent_or_buffered then 'PERSISTENT_OR_BUFFERED'
+           else 'UNKNOWN delivey mode (' || to_char(p_delivery_mode) || ')'
+         end;
+end delivery_mode_descr;
+
+function dequeue_mode_descr
+( p_dequeue_mode in binary_integer
+)
+return varchar2
+is
+begin
+  return case p_dequeue_mode
+           when dbms_aq.browse then 'BROWSE'
+           when dbms_aq.locked then 'LOCKED'
+           when dbms_aq.remove then 'REMOVE'
+           when dbms_aq.remove_nodata then 'REMOVE_NODATA'
+           else 'UNKNOWN dequeue mode (' || to_char(p_dequeue_mode) || ')'
+         end;
+end dequeue_mode_descr;
+
+function navigation_descr
+( p_navigation in binary_integer
+)
+return varchar2
+is
+begin
+  return case p_navigation
+           when dbms_aq.next_message then 'NEXT_MESSAGE'
+           when dbms_aq.next_transaction then 'NEXT_TRANSACTION'
+           when dbms_aq.first_message then 'FIRST_MESSAGE'
+           when dbms_aq.first_message_multi_group then 'FIRST_MESSAGE_MULTI_GROUP'
+           when dbms_aq.next_message_multi_group then 'NEXT_MESSAGE_MULTI_GROUP'
+           else 'UNKNOWN navigation (' || to_char(p_navigation) || ')'
+         end;
+end navigation_descr;
+
+function state_descr
+( p_state in binary_integer
+)
+return varchar2
+is
+begin
+  return case p_state
+           when dbms_aq.ready then 'READY'
+           when dbms_aq.waiting then 'WAITING'
+           when dbms_aq.processed then 'PROCESSED'
+           when dbms_aq.expired then 'EXPIRED'
+           else 'UNKNOWN state (' || to_char(p_state) || ')'
+         end;
+end state_descr;
 
 function sql_object_name
 ( p_schema in varchar2
@@ -13,13 +86,6 @@ is
 begin
   return p_schema || '.' || p_object_name;
 end sql_object_name;
-
-procedure create_queue_table_at
-is
-  pragma autonomous_transaction;
-begin
-  create_queue_table;
-end create_queue_table_at;
 
 procedure create_queue_at
 ( p_queue_name in varchar2
@@ -47,11 +113,13 @@ begin
   commit;
 end start_queue_at;
 
+$if msg_aq_pkg.c_multiple_consumers $then
+
 procedure add_subscriber_at
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber
 , p_rule in varchar2 default null
-, p_delivery_mode in pls_integer default dbms_aqadm.persistent
+, p_delivery_mode in binary_integer default c_delivery_mode
 )
 is
   pragma autonomous_transaction;
@@ -64,6 +132,8 @@ begin
   );
   commit;
 end add_subscriber_at;  
+
+$end
 
 procedure register_at
 ( p_queue_name in varchar2
@@ -151,12 +221,14 @@ $end
         , p_plsql_callback => rsr.location_name
         );
       end loop;
+/*      
       if c_multiple_consumers
       then
         remove_subscriber
         ( p_queue_name => rq.queue_name
         );
       end if;
+*/      
       drop_queue
       ( p_queue_name => rq.queue_name
       , p_force => p_force
@@ -310,7 +382,7 @@ procedure add_subscriber
 ( p_queue_name in varchar2
 , p_subscriber in varchar2
 , p_rule in varchar2
-, p_delivery_mode in pls_integer
+, p_delivery_mode in binary_integer
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
@@ -323,7 +395,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_queue_name
   , p_subscriber
   , p_rule
-  , p_delivery_mode
+  , delivery_mode_descr(p_delivery_mode)
   );
 $end
 
@@ -440,7 +512,7 @@ end unregister;
 
 procedure enqueue
 ( p_msg in msg_typ
-, p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary.
+, p_force in boolean
 , p_msgid out nocopy raw
 )
 is
@@ -472,6 +544,17 @@ $end
   end if;
 
   l_message_properties.delay := dbms_aq.no_delay;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'l_enqueue_options.visibility: %s; l_enqueue_options.delivery_mode: %s; l_message_properties.delay: %s'
+  , visibility_descr(l_enqueue_options.visibility)
+  , delivery_mode_descr(l_enqueue_options.delivery_mode)
+  , l_message_properties.delay
+  );
+$end
+
   l_message_properties.expiration := dbms_aq.never;
 
   <<try_loop>>
@@ -495,12 +578,11 @@ $end
           ( p_queue_name => l_queue_name
           , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
           );
-          if c_multiple_consumers
-          then
-            add_subscriber_at
-            ( p_queue_name => l_queue_name
-            );
-          end if;
+$if msg_aq_pkg.c_multiple_consumers $then
+          add_subscriber_at
+          ( p_queue_name => l_queue_name
+          );
+$end
           register_at
           ( p_queue_name => l_queue_name
           , p_plsql_callback => c_default_plsql_callback
@@ -536,12 +618,13 @@ end enqueue;
 
 procedure dequeue
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
-, p_subscriber in varchar2 default c_default_subscriber
-, p_dequeue_mode in binary_integer default dbms_aq.remove
-, p_navigation in binary_integer default dbms_aq.next_message
-, p_visibility in binary_integer default dbms_aq.on_commit
-, p_wait in binary_integer default dbms_aq.forever
-, p_deq_condition in varchar2 default null
+, p_subscriber in varchar2
+, p_dequeue_mode in binary_integer
+, p_navigation in binary_integer
+, p_visibility in binary_integer
+, p_wait in binary_integer
+, p_deq_condition in varchar2
+, p_delivery_mode in binary_integer
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
 , p_msg out nocopy msg_typ
@@ -557,15 +640,16 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , 'p_queue_name: %s; p_subscriber: %s; p_dequeue_mode: %s; p_navigation: %s'
   , p_queue_name
   , p_subscriber
-  , p_dequeue_mode
-  , p_navigation
+  , dequeue_mode_descr(p_dequeue_mode)
+  , navigation_descr(p_navigation)
   );
   dbug.print
   ( dbug."input"
-  , 'p_visibility: %s; p_wait: %s; p_deq_condition: %s; p_msgid: %s'
-  , p_visibility
+  , 'p_visibility: %s; p_wait: %s; p_deq_condition: %s; p_delivery_mode: %s; p_msgid: %s'
+  , visibility_descr(p_visibility)
   , p_wait
   , p_deq_condition
+  , delivery_mode_descr(p_delivery_mode)
   , hextoraw(p_msgid)
   );
 $end
@@ -573,18 +657,27 @@ $end
   l_dequeue_options.consumer_name := p_subscriber;
   l_dequeue_options.dequeue_mode := p_dequeue_mode;
   l_dequeue_options.navigation := p_navigation;
-  l_dequeue_options.visibility := p_visibility;
   l_dequeue_options.wait := p_wait;
   l_dequeue_options.deq_condition := p_deq_condition;
+  l_dequeue_options.delivery_mode := p_delivery_mode;
   l_dequeue_options.msgid := p_msgid;
 
   -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED or DBMS_AQ.PERSISTENT_OR_BUFFERED.
-  l_dequeue_options.visibility :=
-    case
-      when c_delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
-      then dbms_aq.immediate
-      else dbms_aq.on_commit
-    end;
+  if p_delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered ) and
+     p_visibility != dbms_aq.immediate
+  then
+    l_dequeue_options.visibility := dbms_aq.immediate;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."warning"
+    , 'setting l_dequeue_options.visibility to %s because delivery mode is %s'
+    , visibility_descr(l_dequeue_options.visibility)
+    , delivery_mode_descr(p_delivery_mode)
+    );
+$end
+  else
+    l_dequeue_options.visibility := p_visibility;
+  end if;
 
   dbms_aq.dequeue
   ( queue_name => l_queue_name
@@ -602,12 +695,13 @@ end dequeue;
 
 procedure dequeue_and_process
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
-, p_subscriber in varchar2 default c_default_subscriber
-, p_dequeue_mode in binary_integer default dbms_aq.remove
-, p_navigation in binary_integer default dbms_aq.next_message
-, p_visibility in binary_integer default dbms_aq.on_commit
-, p_wait in binary_integer default dbms_aq.forever
-, p_deq_condition in varchar2 default null
+, p_subscriber in varchar2
+, p_dequeue_mode in binary_integer
+, p_navigation in binary_integer
+, p_visibility in binary_integer
+, p_wait in binary_integer
+, p_deq_condition in varchar2
+, p_delivery_mode in binary_integer
 , p_commit in boolean
 )
 is
@@ -628,6 +722,7 @@ $end
   , p_visibility => p_visibility
   , p_wait => p_wait
   , p_deq_condition => p_deq_condition
+  , p_delivery_mode => p_delivery_mode
   , p_msgid => l_msgid
   , p_message_properties => l_message_properties
   , p_msg => l_msg
@@ -680,9 +775,30 @@ $end
 
   p_msgid := p_descr.msg_id;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'p_descr.msg_prop.state: %s; p_descr.msg_prop.delivery_mode: %s'
+  , state_descr(p_descr.msg_prop.state)
+  , delivery_mode_descr(p_descr.msg_prop.delivery_mode)
+  );
+$end
+
   dequeue
   ( p_queue_name => p_descr.queue_name
-  , p_subscriber => p_descr.consumer_name
+  , p_subscriber => p_descr.consumer_name 
+  , p_dequeue_mode => dbms_aq.remove
+  , p_navigation => dbms_aq.next_message
+  , p_visibility =>
+      -- to suppress a warning
+      case
+        when p_descr.msg_prop.delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
+        then dbms_aq.immediate
+        else dbms_aq.on_commit
+      end
+  , p_wait => dbms_aq.no_wait -- message is there
+  , p_deq_condition => null
+  , p_delivery_mode => p_descr.msg_prop.delivery_mode
   , p_msgid => p_msgid
   , p_message_properties => p_message_properties
   , p_msg => p_msg

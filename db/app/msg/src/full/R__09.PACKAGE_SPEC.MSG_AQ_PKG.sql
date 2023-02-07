@@ -2,10 +2,10 @@ CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS
 
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
-c_buffered_messaging_ok constant boolean := false; -- getting ORA-24344 compilation with errors
+c_buffered_messaging_ok constant boolean := true; -- getting ORA-24344 compilation with errors
 c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
 c_default_plsql_callback constant varchar(128 char) := $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
-c_delivery_mode constant pls_integer := case when c_buffered_messaging_ok then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
+c_delivery_mode constant binary_integer := case when c_buffered_messaging_ok then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -86,7 +86,7 @@ procedure add_subscriber
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber
 , p_rule in varchar2 default null
-, p_delivery_mode in pls_integer default c_delivery_mode
+, p_delivery_mode in binary_integer default c_delivery_mode
 );
 /** Add a subscriber to a queue. The subscriber name will be ignored for a single consumer queue table. **/
    
@@ -125,6 +125,7 @@ procedure dequeue
 , p_visibility in binary_integer default dbms_aq.on_commit
 , p_wait in binary_integer default dbms_aq.forever
 , p_deq_condition in varchar2 default null
+, p_delivery_mode in binary_integer default c_delivery_mode
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
 , p_msg out nocopy msg_typ
@@ -139,6 +140,7 @@ procedure dequeue_and_process
 , p_visibility in binary_integer default dbms_aq.on_commit
 , p_wait in binary_integer default dbms_aq.forever
 , p_deq_condition in varchar2 default null
+, p_delivery_mode in binary_integer default c_delivery_mode
 , p_commit in boolean default true
 );
 /** Dequeue a message (of base type msg_typ) from the queue and process it using <message>.process(0). **/
