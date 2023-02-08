@@ -23,6 +23,8 @@ constructor function rest_web_service_typ
 )
 return self as result
 is
+  c_max_size_vc constant simple_integer := 4000;
+  c_max_size_raw constant simple_integer := 2000;
 begin
   (self as msg_typ).construct(p_source$, p_context$);
   self.url := p_url;
@@ -32,28 +34,32 @@ begin
   self.scheme := p_scheme;
   self.proxy_override := p_proxy_override;
   self.transfer_timeout := p_transfer_timeout;
-  if p_body_clob is not null and lengthb(dbms_lob.substr(lob_loc => p_body_clob, amount => 32767)) > 4000
+  if p_body_clob is not null and lengthb(dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc + 1)) > c_max_size_vc 
   then
     self.body_vc := null;
     self.body_clob := p_body_clob;
   else
-    self.body_vc := dbms_lob.substr(lob_loc => p_body_clob, amount => 32767);
+    -- lengthb(dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc + 1)) <= c_max_size_vc
+    -- =>
+    -- dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc) = dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc + 1)
+    self.body_vc := dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc);
     self.body_clob := null;
   end if;  
-  if p_body_blob is not null and utl_raw.length(dbms_lob.substr(lob_loc => p_body_blob, amount => 32767)) > 2000
+  if p_body_blob is not null and utl_raw.length(dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_size_raw + 1)) > c_max_size_raw
   then
     self.body_raw := null;
     self.body_blob := p_body_blob;
   else
-    self.body_raw := dbms_lob.substr(lob_loc => p_body_blob, amount => 32767);
+    -- same reason as above
+    self.body_raw := dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_size_raw);
     self.body_blob := null;
   end if;  
-  if p_parms_clob is not null and lengthb(dbms_lob.substr(lob_loc => p_parms_clob, amount => 32767)) > 4000
+  if p_parms_clob is not null and lengthb(dbms_lob.substr(lob_loc => p_parms_clob, amount => c_max_size_vc + 1)) > c_max_size_vc
   then
     self.parms_vc := null;
     self.parms_clob := p_parms_clob;
   else
-    self.parms_vc := dbms_lob.substr(lob_loc => p_parms_clob, amount => 32767);
+    self.parms_vc := dbms_lob.substr(lob_loc => p_parms_clob, amount => c_max_size_vc);
     self.parms_clob := null;
   end if;  
   self.wallet_path := p_wallet_path;
@@ -213,10 +219,15 @@ is
     end;
   l_parms_keys constant json_key_list :=
     case
-      when l_parms is not null then l_parms.get_keys
+      when l_parms is not null
+      then l_parms.get_keys
       else null
     end;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS (1)');
+$end
+
   if l_parms is not null
   then
     for i_idx in l_parms_keys.first .. l_parms_keys.last
@@ -225,6 +236,7 @@ begin
       l_parm_values(l_parm_names.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
     end loop;
   end if;
+  
   p_clob := apex_web_service.make_rest_request
             ( p_url => self.url
             , p_http_method => self.http_method
@@ -257,6 +269,16 @@ begin
             , p_credential_static_id => self.credential_static_id
             , p_token_url => self.token_url
             );
+            
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_clob length: %s; contents (max 255 characters): "%s"'
+  , dbms_lob.getlength(p_clob)
+  , dbms_lob.substr(p_clob, 255)
+  );
+  dbug.leave;
+$end
 end process;
 
 member procedure process
@@ -276,10 +298,15 @@ is
     end;
   l_parms_keys constant json_key_list :=
     case
-      when l_parms is not null then l_parms.get_keys
+      when l_parms is not null
+      then l_parms.get_keys
       else null
     end;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS (2)');
+$end
+
   if l_parms is not null
   then
     for i_idx in l_parms_keys.first .. l_parms_keys.last
@@ -288,6 +315,7 @@ begin
       l_parm_values(l_parm_names.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
     end loop;
   end if;
+  
   p_blob := apex_web_service.make_rest_request_b
             ( p_url => self.url
             , p_http_method => self.http_method
@@ -320,6 +348,11 @@ begin
             , p_credential_static_id => self.credential_static_id
             , p_token_url => self.token_url
             );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_blob length: %s', dbms_lob.getlength(p_blob));
+  dbug.leave;
+$end
 end process;
 
 member procedure process_postamble
