@@ -93,7 +93,6 @@ member procedure serialize
 , p_json_object in out nocopy json_object_t
 )
 is
-begin
   l_body_vc constant json_object_t := 
     case
       when self.body_vc is not null
@@ -161,9 +160,9 @@ begin
   then
     p_json_object.put('PARMS_VC', l_parms_vc);
   end if;
-  if l_parms_blob is not null
+  if l_parms_clob is not null
   then
-    p_json_object.put('PARMS_BLOB', l_parms_blob);
+    p_json_object.put('PARMS_CLOB', l_parms_clob);
   end if;
   p_json_object.put('WALLET_PATH', self.wallet_path);
   p_json_object.put('WALLET_PWD', self.wallet_pwd);
@@ -225,7 +224,7 @@ begin
       l_parm_names(l_parm_names.count+1) := l_parms_keys(i_idx);
       l_parm_values(l_parm_names.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
     end loop;
-  end loop;
+  end if;
   p_clob := apex_web_service.make_rest_request
             ( p_url => self.url
             , p_http_method => self.http_method
@@ -288,8 +287,8 @@ begin
       l_parm_names(l_parm_names.count+1) := l_parms_keys(i_idx);
       l_parm_values(l_parm_names.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
     end loop;
-  end loop;
-  p_blob := apex_web_service.make_rest_request
+  end if;
+  p_blob := apex_web_service.make_rest_request_b
             ( p_url => self.url
             , p_http_method => self.http_method
             , p_username => self.username
