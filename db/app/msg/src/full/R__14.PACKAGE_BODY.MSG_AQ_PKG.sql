@@ -1,4 +1,4 @@
-create or replace PACKAGE BODY "MSG_AQ_PKG" AS
+CREATE OR REPLACE PACKAGE BODY "MSG_AQ_PKG" AS
 
 -- private stuff
 

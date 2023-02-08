@@ -8,7 +8,7 @@
 -- target database link: 
 -- object type         : 
 -- object names include: 1
--- object names        : MSG_TYP,MSG_WITH_ID_KEY_TYP,MSG_AQ_PKG,MSG_NOTIFICATION_PRC
+-- object names        : MSG_TYP,MSG_AQ_PKG,MSG_NOTIFICATION_PRC,REST_WEB_SERVICE_TYP
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
 -- transform params    : 
@@ -34,13 +34,13 @@ DROP TYPE BODY MSG_TYP;
 call dbms_application_info.set_action('SQL statement 4');
 DROP PACKAGE MSG_AQ_PKG;
 
-/* SQL statement 5 (DROP;ORACLE_TOOLS;TYPE_BODY;MSG_WITH_ID_KEY_TYP;;;;;;;;2) */
+/* SQL statement 5 (DROP;ORACLE_TOOLS;TYPE_BODY;REST_WEB_SERVICE_TYP;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 5');
-DROP TYPE BODY MSG_WITH_ID_KEY_TYP;
+DROP TYPE BODY REST_WEB_SERVICE_TYP;
 
-/* SQL statement 6 (DROP;ORACLE_TOOLS;TYPE_SPEC;MSG_WITH_ID_KEY_TYP;;;;;;;;2) */
+/* SQL statement 6 (DROP;ORACLE_TOOLS;TYPE_SPEC;REST_WEB_SERVICE_TYP;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 6');
-DROP TYPE MSG_WITH_ID_KEY_TYP FORCE;
+DROP TYPE REST_WEB_SERVICE_TYP FORCE;
 
 /* SQL statement 7 (DROP;ORACLE_TOOLS;TYPE_SPEC;MSG_TYP;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 7');
