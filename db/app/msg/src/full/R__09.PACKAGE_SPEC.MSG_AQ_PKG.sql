@@ -48,7 +48,7 @@ function queue_name
 ( p_msg in msg_typ
 )
 return varchar2;
-/** Returns the enquoted simple SQL queue name, i.e. replace(p_msg.source$, '.', '$') (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
+/** Returns the enquoted simple SQL queue name, i.e. replace(p_msg.group$, '.', '$') (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
 
 procedure create_queue_table;
 /** Create the queue table c_queue_table. **/
@@ -126,7 +126,7 @@ For AQ there are tree valid combinations for delivery mode and visibility:
 3. delivery mode equal to dbms_aq.persistent and visibility equal to dbms_aq.immediate
 
 When the input is not one of these combination the message payload will determine one of the first two combinations.
-When the message has a non empty lob (p_msg.has_non_empty_lob() != 0), AQ does not allow visibility to be immediate hence not a buffered message.
+When the message has a not null lob (p_msg.has_not_null_lob() != 0), AQ does not allow visibility to be immediate hence not a buffered message.
 So in that case the first combination will be used.
 Otherwise, when there is NOT an empty lob, the second combination.
 

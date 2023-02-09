@@ -22,16 +22,16 @@ This procedure also sets created_utc$ to the sytem timestamp in UTC using SYS_EX
 
 , member procedure process
   ( self in msg_typ
-  , p_msg_just_created in integer default 1 -- True (1) or false (0)
+  , p_maybe_later in integer default 1 -- True (1) or false (0)
   )
 /**
 
 This is the main routine that determines whether to (finally) process a message.
 
 Asumming that you use AQ (MSG_AQ_PKG) like this super type, these are the outcomes:
-- not now (and not later), if self.must_be_processed(p_msg_just_created) <> 1
-- later, if self.must_be_processed(p_msg_just_created) = 1 and you invoke self.process$later
-- now, if self.must_be_processed(p_msg_just_created) = 1 and you invoke self.process$now
+- not now (and not later), if self.must_be_processed(p_maybe_later) <> 1
+- later, if self.must_be_processed(p_maybe_later) = 1 and you invoke self.process$later
+- now, if self.must_be_processed(p_maybe_later) = 1 and you invoke self.process$now
 
 This is the default implementation which postpones the actual work:
 

@@ -159,7 +159,7 @@ function queue_name
 return varchar2
 is
 begin
-  return oracle_tools.data_api_pkg.dbms_assert$enquote_name(replace(p_msg.source$, '.', '$'), 'queue');
+  return oracle_tools.data_api_pkg.dbms_assert$enquote_name(replace(p_msg.group$, '.', '$'), 'queue');
 end queue_name;
 
 procedure create_queue_table
@@ -543,7 +543,7 @@ $end
     l_enqueue_options.delivery_mode := p_delivery_mode;
     l_enqueue_options.visibility := p_visibility;
   else
-    if p_msg.has_non_empty_lob() != 0
+    if p_msg.has_not_null_lob() != 0
     then
       -- payload with a non-empty LOB can not be a buffered message
       l_enqueue_options.delivery_mode := dbms_aq.persistent;
@@ -793,7 +793,7 @@ $end
   begin
     savepoint spt;
     
-    l_msg.process(p_msg_just_created => 0);
+    l_msg.process(p_maybe_later => 0);
   exception
     when others
     then
@@ -904,7 +904,7 @@ $end
   begin
     savepoint spt;
     
-    l_msg.process(p_msg_just_created => 0);
+    l_msg.process(p_maybe_later => 0);
   exception
     when others
     then

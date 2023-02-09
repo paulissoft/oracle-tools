@@ -3,30 +3,30 @@ CREATE OR REPLACE TYPE BODY "MSG_TYP" AS
 final
 member procedure construct
 ( self in out nocopy msg_typ
-, p_source$ in varchar2
+, p_group$ in varchar2
 , p_context$ in varchar2
 )
 is
 begin
-  self.source$ := p_source$;
+  self.group$ := p_group$;
   self.context$ := p_context$;
   self.created_utc$ := sys_extract_utc(systimestamp);
 end construct;  
 
 member procedure process
 ( self in msg_typ
-, p_msg_just_created in integer default 1 -- True (1) or false (0)
+, p_maybe_later in integer default 1 -- True (1) or false (0)
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS');
-  dbug.print(dbug."input", 'p_msg_just_created: %s', p_msg_just_created);
+  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
 $end
 
-  if self.must_be_processed(p_msg_just_created) = 1
+  if self.must_be_processed(p_maybe_later) = 1
   then
-    case p_msg_just_created
+    case p_maybe_later
       when 1 then self.process$later;
       when 0 then self.process$now;
     end case;
@@ -39,14 +39,14 @@ end process;
 
 member function must_be_processed
 ( self in msg_typ
-, p_msg_just_created in integer -- True (1) or false (0)
+, p_maybe_later in integer -- True (1) or false (0)
 )
 return integer
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MUST_BE_PROCESSED');
-  dbug.print(dbug."input", 'p_msg_just_created: %s', p_msg_just_created);
+  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
 $end
 
   raise program_error; -- must override this one
@@ -143,7 +143,7 @@ member procedure serialize
 is
 begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
-  p_json_object.put('SOURCE$', self.source$);
+  p_json_object.put('GROUP$', self.group$);
   p_json_object.put('CONTEXT$', self.context$);
   p_json_object.put('CREATED_UTC$', self.created_utc$);
 end serialize;
@@ -201,23 +201,23 @@ begin
 end lob_attribute_list;
 
 final
-member function may_have_non_empty_lob
+member function may_have_not_null_lob
 ( self in msg_typ
 )
 return integer
 is
 begin
   return case when self.lob_attribute_list() is not null then 1 else 0 end;
-end may_have_non_empty_lob;
+end may_have_not_null_lob;
 
-member function has_non_empty_lob
+member function has_not_null_lob
 ( self in msg_typ
 )
 return integer
 is
 begin
   return 0;
-end has_non_empty_lob;
+end has_not_null_lob;
 
 end;
 /

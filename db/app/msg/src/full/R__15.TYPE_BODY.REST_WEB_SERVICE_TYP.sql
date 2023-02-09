@@ -2,12 +2,10 @@ CREATE OR REPLACE TYPE BODY "REST_WEB_SERVICE_TYP" AS
 
 constructor function rest_web_service_typ
 ( self in out nocopy rest_web_service_typ
-, p_source$ in varchar2
+, p_group$ in varchar2
 , p_context$ in varchar2
 , p_url in varchar2
 , p_http_method in varchar2
-, p_username in varchar2 default null
-, p_password in varchar2 default null
 , p_scheme in varchar2 default 'Basic'
 , p_proxy_override in varchar2 default null
 , p_transfer_timeout in number default 180
@@ -15,46 +13,82 @@ constructor function rest_web_service_typ
 , p_body_blob in blob default null
 , p_parms_clob in clob default null
 , p_wallet_path in varchar2 default null
-, p_wallet_pwd in varchar2 default null
 , p_https_host in varchar2 default null
 , p_credential_static_id in varchar2 default null
 , p_token_url in varchar2 default null
-, p_custom_data in clob default null
 )
 return self as result
+is
+begin
+  self.construct
+  ( p_group$ => p_group$
+  , p_context$ => p_context$
+  , p_url => p_url
+  , p_http_method => p_http_method
+  , p_scheme => p_scheme
+  , p_proxy_override => p_proxy_override
+  , p_transfer_timeout => p_transfer_timeout
+  , p_body_clob => p_body_clob
+  , p_body_blob => p_body_blob
+  , p_parms_clob => p_parms_clob
+  , p_wallet_path => p_wallet_path
+  , p_https_host => p_https_host
+  , p_credential_static_id => p_credential_static_id
+  , p_token_url => p_token_url
+  );
+  return;
+end rest_web_service_typ;
+
+final member procedure construct
+( self in out nocopy rest_web_service_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
+, p_url in varchar2
+, p_http_method in varchar2
+, p_scheme in varchar2 default 'Basic'
+, p_proxy_override in varchar2 default null
+, p_transfer_timeout in number default 180
+, p_body_clob in clob default null
+, p_body_blob in blob default null
+, p_parms_clob in clob default null
+, p_wallet_path in varchar2 default null
+, p_https_host in varchar2 default null
+, p_credential_static_id in varchar2 default null
+, p_token_url in varchar2 default null
+)
 is
   c_max_size_vc constant simple_integer := 4000;
   c_max_size_raw constant simple_integer := 2000;
 begin
-  (self as msg_typ).construct(p_source$, p_context$);
+  (self as msg_typ).construct(p_group$, p_context$);
   self.url := p_url;
   self.http_method := p_http_method;
-  self.username := p_username;
-  self.password := p_password;
   self.scheme := p_scheme;
   self.proxy_override := p_proxy_override;
   self.transfer_timeout := p_transfer_timeout;
-  if p_body_clob is not null and lengthb(dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc + 1)) > c_max_size_vc 
+  if p_body_clob is not null and
+     ( dbms_lob.getlength(lob_loc => p_body_clob) > c_max_size_vc or
+       lengthb(dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc)) > c_max_size_vc )
   then
     self.body_vc := null;
     self.body_clob := p_body_clob;
   else
-    -- lengthb(dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc + 1)) <= c_max_size_vc
-    -- =>
-    -- dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc) = dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc + 1)
     self.body_vc := dbms_lob.substr(lob_loc => p_body_clob, amount => c_max_size_vc);
     self.body_clob := null;
   end if;  
-  if p_body_blob is not null and utl_raw.length(dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_size_raw + 1)) > c_max_size_raw
+  if p_body_blob is not null and
+     ( dbms_lob.getlength(lob_loc => p_body_blob) > c_max_size_raw or
+       utl_raw.length(dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_size_raw)) > c_max_size_raw )
   then
     self.body_raw := null;
     self.body_blob := p_body_blob;
   else
-    -- same reason as above
     self.body_raw := dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_size_raw);
     self.body_blob := null;
   end if;  
-  if p_parms_clob is not null and lengthb(dbms_lob.substr(lob_loc => p_parms_clob, amount => c_max_size_vc + 1)) > c_max_size_vc
+  if p_parms_clob is not null and
+     ( dbms_lob.getlength(lob_loc => p_parms_clob) > c_max_size_vc or
+       lengthb(dbms_lob.substr(lob_loc => p_parms_clob, amount => c_max_size_vc)) > c_max_size_vc )
   then
     self.parms_vc := null;
     self.parms_clob := p_parms_clob;
@@ -63,19 +97,15 @@ begin
     self.parms_clob := null;
   end if;  
   self.wallet_path := p_wallet_path;
-  self.wallet_pwd := p_wallet_pwd;
   self.https_host := p_https_host;
   self.credential_static_id := p_credential_static_id;
   self.token_url := p_token_url;
-  self.custom_data := p_custom_data;
-
-  return;
-end rest_web_service_typ;
+end construct;
 
 overriding
 member function must_be_processed
 ( self in rest_web_service_typ
-, p_msg_just_created in integer -- True (1) or false (0)
+, p_maybe_later in integer -- True (1) or false (0)
 )
 return integer -- True (1) or false (0)
 is
@@ -141,8 +171,6 @@ begin
 
   p_json_object.put('URL', self.url);
   p_json_object.put('HTTP_METHOD', self.http_method);
-  p_json_object.put('USERNAME', self.username);
-  p_json_object.put('PASSWORD', self.password);
   p_json_object.put('SCHEME', self.scheme);
   p_json_object.put('PROXY_OVERRIDE', self.proxy_override);
   p_json_object.put('TRANSFER_TIMEOUT', self.transfer_timeout);
@@ -171,15 +199,13 @@ begin
     p_json_object.put('PARMS_CLOB', l_parms_clob);
   end if;
   p_json_object.put('WALLET_PATH', self.wallet_path);
-  p_json_object.put('WALLET_PWD', self.wallet_pwd);
   p_json_object.put('HTTPS_HOST', self.https_host);
   p_json_object.put('CREDENTIAL_STATIC_ID', self.credential_static_id);
   p_json_object.put('TOKEN_URL', self.token_url);
-  p_json_object.put('CUSTOM_DATA', self.custom_data);
 end serialize;
 
 overriding
-member function has_non_empty_lob
+member function has_not_null_lob
 ( self in rest_web_service_typ
 )
 return integer
@@ -192,7 +218,7 @@ begin
       when self.parms_clob is not null then 1
       else 0
     end;
-end has_non_empty_lob;
+end has_not_null_lob;
 
 member procedure process_preamble
 ( self in rest_web_service_typ
@@ -204,6 +230,9 @@ end process_preamble;
 
 member procedure process
 ( self in rest_web_service_typ
+, p_username in varchar2
+, p_password in varchar2
+, p_wallet_pwd in varchar2
 , p_clob out nocopy clob
 )
 is
@@ -240,8 +269,8 @@ $end
   p_clob := apex_web_service.make_rest_request
             ( p_url => self.url
             , p_http_method => self.http_method
-            , p_username => self.username
-            , p_password => self.password
+            , p_username => p_username
+            , p_password => p_password
             , p_scheme => self.scheme
             , p_proxy_override => self.proxy_override
             , p_transfer_timeout => self.transfer_timeout
@@ -264,7 +293,7 @@ $end
             , p_parm_name => l_parm_names
             , p_parm_value => l_parm_values
             , p_wallet_path => self.wallet_path
-            , p_wallet_pwd => self.wallet_pwd
+            , p_wallet_pwd => p_wallet_pwd
             , p_https_host => self.https_host
             , p_credential_static_id => self.credential_static_id
             , p_token_url => self.token_url
@@ -283,6 +312,9 @@ end process;
 
 member procedure process
 ( self in rest_web_service_typ
+, p_username in varchar2
+, p_password in varchar2
+, p_wallet_pwd in varchar2
 , p_blob out nocopy blob
 )
 is
@@ -319,8 +351,8 @@ $end
   p_blob := apex_web_service.make_rest_request_b
             ( p_url => self.url
             , p_http_method => self.http_method
-            , p_username => self.username
-            , p_password => self.password
+            , p_username => p_username
+            , p_password => p_password
             , p_scheme => self.scheme
             , p_proxy_override => self.proxy_override
             , p_transfer_timeout => self.transfer_timeout
@@ -343,7 +375,7 @@ $end
             , p_parm_name => l_parm_names
             , p_parm_value => l_parm_values
             , p_wallet_path => self.wallet_path
-            , p_wallet_pwd => self.wallet_pwd
+            , p_wallet_pwd => p_wallet_pwd
             , p_https_host => self.https_host
             , p_credential_static_id => self.credential_static_id
             , p_token_url => self.token_url
