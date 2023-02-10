@@ -252,9 +252,32 @@ is
       then l_parms.get_keys
       else null
     end;
+  l_body_clob constant clob :=
+    case
+      when self.body_vc is not null
+      then to_clob(self.body_vc)
+      when self.body_clob is not null
+      then self.body_clob
+      else empty_clob()
+    end;
+  l_body_blob constant blob :=
+    case
+      when self.body_raw is not null
+      then to_blob(self.body_raw)
+      when self.body_blob is not null
+      then self.body_blob
+      else empty_blob()
+    end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS (1)');
+  self.print;
+  dbug.print
+  ( dbug."info"
+  , 'dbms_lob.getlength(l_body_clob): %s; dbms_lob.substr(l_body_clob, 100): %s'
+  , dbms_lob.getlength(l_body_clob)
+  , dbms_lob.substr(l_body_clob, 100)
+  );
 $end
 
   if l_parms is not null
@@ -274,22 +297,8 @@ $end
             , p_scheme => self.scheme
             , p_proxy_override => self.proxy_override
             , p_transfer_timeout => self.transfer_timeout
-            , p_body =>
-                case
-                  when self.body_vc is not null
-                  then to_clob(self.body_vc)
-                  when self.body_clob is not null
-                  then self.body_clob
-                  else empty_clob()
-                end
-            , p_body_blob =>
-                case
-                  when self.body_raw is not null
-                  then to_blob(self.body_raw)
-                  when self.body_blob is not null
-                  then self.body_blob
-                  else empty_blob()
-                end
+            , p_body => l_body_clob
+            , p_body_blob => l_body_blob
             , p_parm_name => l_parm_names
             , p_parm_value => l_parm_values
             , p_wallet_path => self.wallet_path

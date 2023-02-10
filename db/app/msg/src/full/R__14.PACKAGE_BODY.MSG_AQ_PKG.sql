@@ -850,9 +850,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , sys_context('USERENV', 'SESSIONID') ||
       case
         when sys_context('USERENV', 'BG_JOB_ID') is not null
-        then '(BG_JOB_ID=' || sys_context('USERENV', 'BG_JOB_ID') || ')'
+        then ' (BG_JOB_ID=' || sys_context('USERENV', 'BG_JOB_ID') || ')'
         when sys_context('USERENV', 'FG_JOB_ID') is not null
-        then '(FG_JOB_ID=' || sys_context('USERENV', 'FG_JOB_ID') || ')'
+        then ' (FG_JOB_ID=' || sys_context('USERENV', 'FG_JOB_ID') || ')'
       end
   , nvl(sys_context('APEX$SESSION', 'APP_SESSION'), sys_context('USERENV', 'CLIENT_IDENTIFIER'))
   , sys_context('USERENV', 'CURRENT_USER')
@@ -943,16 +943,24 @@ end dequeue_and_process;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
 
-procedure ut_rest_web_service
+procedure ut_rest_web_service_sync
 is
-begin
-  l_lines_exp constant sys.odcivarchar2list :=
-    sys.odcivarchar2list
-    ( 'hello'
-    );
-
-  procedure chk
+  procedure chk_dbug_dbms_output
   is
+    l_lines_exp constant sys.odcivarchar2list :=
+      sys.odcivarchar2list
+      ( '>ORACLE_TOOLS.MSG_TYP.PROCESS'
+      , '|   input: p_maybe_later: 0'
+      , '|   >ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '|   |   output: p_clob length: 83; contents (max 255 characters): "{'
+      , '  "userId": 1,'
+      , '  "id": 1,'
+      , '  "title": "delectus aut autem",'
+      , '  "completed": false'
+      , '}"'
+      , '|   <ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '<ORACLE_TOOLS.MSG_TYP.PROCESS'
+      );
     l_lines_act dbms_output.chararr;
     l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
   begin
@@ -969,12 +977,8 @@ begin
       dbms_output.put_line(l_lines_exp(i_idx));
     end loop;
     */
-  end chk;
+  end chk_dbug_dbms_output;
 begin
-  dbms_output.disable; -- clear the buffer
-  dbms_output.enable;
-  dbug.activate('dbms_output');
-
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- % curl https://jsonplaceholder.typicode.com/todos/1
@@ -986,16 +990,122 @@ begin
   --   "completed": false
   -- }%                                                                                                                                                                                                           
 
-  -- This will run it right now and issue some dbms_output
+  -- This will run it right now and use dbug_dbms_output, i.e. dbms_output
+  dbms_output.disable; -- clear the buffer
+  dbms_output.enable;
+  dbug.activate('dbms_output');
+
   rest_web_service_typ
   ( p_group$ => 'REST_WEB_SERVICE'
   , p_context$ => null
   , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
   , p_http_method => 'GET'
   ).process(p_maybe_later => 0);
-  
-  chk;
-end ut_rest_web_service;
+
+  chk_dbug_dbms_output;
+end ut_rest_web_service_sync;
+
+procedure ut_rest_web_service_async
+is
+  pragma autonomous_transaction;
+
+  l_start constant date := sysdate;
+
+  -- ORA-06550: line 1, column 7:
+  -- PLS-00201: identifier 'PLOG.PURGE' must be declared
+  e_compilation_error exception;
+  pragma exception_init(e_compilation_error, -06550);    
+
+  -- ORA-00942: table or view does not exist
+  e_object_does_not_exist exception;
+  pragma exception_init(e_object_does_not_exist, -00942);
+
+  procedure chk_dbug_log4plsql
+  is
+    l_lines_exp constant sys.odcivarchar2list :=
+      sys.odcivarchar2list
+      ( '>ORACLE_TOOLS.MSG_NOTIFICATION_PRC'
+      , '|   >ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
+      , '|   |   input: p_commit: TRUE'
+      , '|   |   >ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
+      , '|   |   |   input: p_context: FF; p_descr.msg_id: 05; p_descr.consumer_name: <NULL>; p_descr.queue_name: "ORACLE_TOOLS"."REST_WEB_SERVICE"; p_payloadl: 0'
+      , '|   |   |   input: p_descr.msg_prop.state: READY; p_descr.msg_prop.delivery_mode: BUFFERED'
+      , '|   |   |   info: USERENV: SESSIONID: 1067696434 (BG_JOB_ID=77142); APEX$SESSION.APP_SESSION|CLIENT_IDENTIFIER: <NULL>; CURRENT_USER: ORACLE_TOOLS; SESSION_USER: SYS; PROXY_USER: <NULL>'
+      , '|   |   |   >ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
+      , '|   |   |   |   input: p_queue_name: "ORACLE_TOOLS"."REST_WEB_SERVICE"; p_delivery_mode: BUFFERED; p_visibility: IMMEDIATE; p_subscriber: <NULL>; p_dequeue_mode: REMOVE'
+      , '|   |   |   |   input: p_navigation: NEXT_MESSAGE; p_wait: 0; p_deq_condition: <NULL>; p_msgid: 05'
+      , '|   |   |   |   info: l_dequeue_options.visibility: IMMEDIATE; l_dequeue_options.delivery_mode: BUFFERED'
+      , '|   |   |   |   output: p_msgid: 05'
+      , '|   |   |   <ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
+      , '|   |   |   output: p_msgid: 05'
+      , '|   |   <ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
+      , '|   |   >ORACLE_TOOLS.MSG_TYP.PROCESS'
+      , '|   |   |   input: p_maybe_later: 0'
+      , '|   |   |   >ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '|   |   |   |   output: p_clob length: 15; contents (max 255 characters): "{'
+      , '  "id": 101'
+      , '}"'
+      , '|   |   |   <ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '|   |   <ORACLE_TOOLS.MSG_TYP.PROCESS'
+      , '|   <ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
+      , '<ORACLE_TOOLS.MSG_NOTIFICATION_PRC'
+      );
+    l_lines_act dbms_output.chararr;
+    l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+    l_cursor sys_refcursor;
+    l_check boolean := false;
+  begin
+    open l_cursor for q'[select ltext from tlog where luser = 'SYS' and ldate >= :1 order by id]' using l_start;
+    fetch l_cursor bulk collect into l_lines_act;
+    close l_cursor;
+    
+    ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
+    ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
+    for i_idx in l_lines_exp.first .. l_lines_exp.last
+    loop
+      if l_lines_act.exists(i_idx)
+      then
+        if l_lines_act(i_idx) like '%>ORACLE_TOOLS.MSG_TYP.PROCESS'
+        then
+          l_check := true;
+        end if;
+        
+        if l_check
+        then
+          ut.expect(l_lines_act(i_idx), to_char(i_idx)).to_equal(l_lines_exp(i_idx));
+        end if;
+        
+        if l_lines_act(i_idx) like '%<ORACLE_TOOLS.MSG_TYP.PROCESS'
+        then
+          l_check := false;
+        end if;
+      end if;
+    end loop;
+  end chk_dbug_log4plsql;
+begin
+  -- See https://terminalcheatsheet.com/guides/curl-rest-api
+
+  -- This will run it asynchronous issue and use dbug_log4plsql, i.e. plog / tlog.
+  -- But these objects may not be granted (or having no synoyms) so use dynamic PL/SQL.
+  dbug.activate('log4plsql');
+
+  rest_web_service_typ
+  ( p_group$ => 'REST_WEB_SERVICE'
+  , p_context$ => null
+  , p_url => 'https://jsonplaceholder.typicode.com/posts'
+  , p_http_method => 'POST'
+  , p_body_clob => to_clob('{"title":"foo","body":"bar","userId":123}')
+  ).process;
+
+  commit; -- otherwise it may never arrive in the queue
+
+  chk_dbug_log4plsql;
+
+  commit;
+exception
+  when e_compilation_error or e_object_does_not_exist
+  then commit;
+end ut_rest_web_service_async;
 
 $end -- $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
 

@@ -223,7 +223,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
 --%suite
 
 --%test
-procedure ut_rest_web_service;
+procedure ut_rest_web_service_sync;
+
+--%test
+--%rollback(manual)
+procedure ut_rest_web_service_async;
 
 $end -- $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
 
