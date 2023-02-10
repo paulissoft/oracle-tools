@@ -214,6 +214,19 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 See also the dequeue(p_context...) procedure documentation.
 **/
 
+-- The tests will depend on dbug.activate('DBMS_OUTPUT') hence oracle_tools.cfg_pkg.c_debugging must be true as well
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(MSG)
+--%suite
+
+--%test
+procedure ut_rest_web_service;
+
+$end -- $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
+
 end msg_aq_pkg;
 /
 

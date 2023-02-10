@@ -833,6 +833,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_descr.queue_name
   , p_payloadl
   );
+  dbug.print
+  ( dbug."input"
+  , 'p_descr.msg_prop.state: %s; p_descr.msg_prop.delivery_mode: %s'
+  , state_descr(p_descr.msg_prop.state)
+  , delivery_mode_descr(p_descr.msg_prop.delivery_mode)
+  );
 $end
 
   p_msgid := p_descr.msg_id;
@@ -840,9 +846,18 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , 'p_descr.msg_prop.state: %s; p_descr.msg_prop.delivery_mode: %s'
-  , state_descr(p_descr.msg_prop.state)
-  , delivery_mode_descr(p_descr.msg_prop.delivery_mode)
+  , 'USERENV: SESSIONID: %s; APEX$SESSION.APP_SESSION|CLIENT_IDENTIFIER: %s; CURRENT_USER: %s; SESSION_USER: %s; PROXY_USER: %s'
+  , sys_context('USERENV', 'SESSIONID') ||
+      case
+        when sys_context('USERENV', 'BG_JOB_ID') is not null
+        then '(BG_JOB_ID=' || sys_context('USERENV', 'BG_JOB_ID') || ')'
+        when sys_context('USERENV', 'FG_JOB_ID') is not null
+        then '(FG_JOB_ID=' || sys_context('USERENV', 'FG_JOB_ID') || ')'
+      end
+  , nvl(sys_context('APEX$SESSION', 'APP_SESSION'), sys_context('USERENV', 'CLIENT_IDENTIFIER'))
+  , sys_context('USERENV', 'CURRENT_USER')
+  , sys_context('USERENV', 'SESSION_USER')
+  , sys_context('USERENV', 'PROXY_USER')
   );
 $end
 
@@ -925,6 +940,64 @@ exception
     raise;
 $end
 end dequeue_and_process;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
+
+procedure ut_rest_web_service
+is
+begin
+  l_lines_exp constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( 'hello'
+    );
+
+  procedure chk
+  is
+    l_lines_act dbms_output.chararr;
+    l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+  begin
+    dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
+    ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
+    ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
+    for i_idx in l_lines_exp.first .. l_lines_exp.last
+    loop
+      ut.expect(case when l_lines_act.exists(i_idx) then l_lines_act(i_idx) end, to_char(i_idx)).to_equal(l_lines_exp(i_idx));
+    end loop;
+    /*
+    for i_idx in l_lines_exp.first .. l_lines_exp.last
+    loop
+      dbms_output.put_line(l_lines_exp(i_idx));
+    end loop;
+    */
+  end chk;
+begin
+  dbms_output.disable; -- clear the buffer
+  dbms_output.enable;
+  dbug.activate('dbms_output');
+
+  -- See https://terminalcheatsheet.com/guides/curl-rest-api
+
+  -- % curl https://jsonplaceholder.typicode.com/todos/1
+  --
+  -- {
+  --   "userId": 1,
+  --   "id": 1,
+  --   "title": "delectus aut autem",
+  --   "completed": false
+  -- }%                                                                                                                                                                                                           
+
+  -- This will run it right now and issue some dbms_output
+  rest_web_service_typ
+  ( p_group$ => 'REST_WEB_SERVICE'
+  , p_context$ => null
+  , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
+  , p_http_method => 'GET'
+  ).process(p_maybe_later => 0);
+  
+  chk;
+end ut_rest_web_service;
+
+$end -- $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
 
 end msg_aq_pkg;
 /
