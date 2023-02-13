@@ -50,14 +50,28 @@ member function must_be_processed
 )
 return integer -- True (1) or false (0)
 is
+  l_result integer;
 begin
-  return case
-           when self.web_service_request is null
-           then 0
-           when self.web_service_request.correlation() is null
-           then 0
-           else 1
-         end;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MUST_BE_PROCESSED');
+  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
+$end
+
+  l_result :=
+    case
+      when self.web_service_request is null
+      then 0
+      when self.web_service_request.correlation() is null
+      then 0
+      else 1
+    end;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'return: %s', l_result);
+  dbug.leave;
+$end
+
+  return l_result;
 end must_be_processed;
 
 overriding
@@ -71,7 +85,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$LATER');
 $end
 
-  msg_aq_pkg.enqueue(p_msg => self, p_correlation => self.web_service_request.correlation(), p_plsql_callback => null, p_msgid => l_msgid);
+  msg_aq_pkg.enqueue
+  ( p_msg => self
+  , p_correlation => self.web_service_request.correlation()
+  , p_plsql_callback => null
+  , p_msgid => l_msgid
+  );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -84,7 +103,20 @@ member procedure process$now
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
+$end
+
   raise program_error;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end process$now;
 
 overriding

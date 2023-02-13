@@ -38,37 +38,37 @@ DROP PACKAGE BODY MSG_PKG;
 call dbms_application_info.set_action('SQL statement 3');
 DROP PACKAGE BODY WEB_SERVICE_PKG;
 
-/* SQL statement 4 (DROP;ORACLE_TOOLS;PROCEDURE;MSG_NOTIFICATION_PRC;;;;;;;;2) */
+/* SQL statement 4 (DROP;ORACLE_TOOLS;TYPE_BODY;REST_WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 4');
-DROP PROCEDURE MSG_NOTIFICATION_PRC;
-
-/* SQL statement 5 (DROP;ORACLE_TOOLS;TYPE_BODY;MSG_TYP;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 5');
-DROP TYPE BODY MSG_TYP;
-
-/* SQL statement 6 (DROP;ORACLE_TOOLS;TYPE_BODY;WEB_SERVICE_RESPONSE_TYP;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 6');
-DROP TYPE BODY WEB_SERVICE_RESPONSE_TYP;
-
-/* SQL statement 7 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;MSG_AQ_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 7');
-DROP PACKAGE MSG_AQ_PKG;
-
-/* SQL statement 8 (DROP;ORACLE_TOOLS;TYPE_BODY;REST_WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 8');
 DROP TYPE BODY REST_WEB_SERVICE_REQUEST_TYP;
 
-/* SQL statement 9 (DROP;ORACLE_TOOLS;TYPE_BODY;WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
+/* SQL statement 5 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;WEB_SERVICE_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 5');
+DROP PACKAGE WEB_SERVICE_PKG;
+
+/* SQL statement 6 (DROP;ORACLE_TOOLS;PROCEDURE;MSG_NOTIFICATION_PRC;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 6');
+DROP PROCEDURE MSG_NOTIFICATION_PRC;
+
+/* SQL statement 7 (DROP;ORACLE_TOOLS;TYPE_BODY;MSG_TYP;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 7');
+DROP TYPE BODY MSG_TYP;
+
+/* SQL statement 8 (DROP;ORACLE_TOOLS;TYPE_BODY;WEB_SERVICE_RESPONSE_TYP;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 8');
+DROP TYPE BODY WEB_SERVICE_RESPONSE_TYP;
+
+/* SQL statement 9 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;MSG_AQ_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 9');
+DROP PACKAGE MSG_AQ_PKG;
+
+/* SQL statement 10 (DROP;ORACLE_TOOLS;TYPE_BODY;WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 10');
 DROP TYPE BODY WEB_SERVICE_REQUEST_TYP;
 
-/* SQL statement 10 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;MSG_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 10');
-DROP PACKAGE MSG_PKG;
-
-/* SQL statement 11 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;WEB_SERVICE_PKG;;;;;;;;2) */
+/* SQL statement 11 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;MSG_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 11');
-DROP PACKAGE WEB_SERVICE_PKG;
+DROP PACKAGE MSG_PKG;
 
 /* SQL statement 12 (DROP;ORACLE_TOOLS;SEQUENCE;WEB_SERVICE_REQUEST_SEQ;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 12');

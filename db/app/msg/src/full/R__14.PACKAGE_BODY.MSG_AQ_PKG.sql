@@ -862,6 +862,9 @@ $end
   exception
     when others
     then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
       rollback to spt;
   end;
 
@@ -993,6 +996,9 @@ $end
   exception
     when others
     then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
       rollback to spt;
   end;
 
