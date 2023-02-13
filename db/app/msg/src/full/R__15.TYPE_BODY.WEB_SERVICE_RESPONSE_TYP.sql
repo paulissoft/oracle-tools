@@ -34,7 +34,7 @@ final member procedure construct
 )
 is
 begin
-  (self as msg_typ).construct(web_service_request_typ.request_queue_name, null);
+  (self as msg_typ).construct(web_service_request_typ.response_queue_name, null);
   self.web_service_request := p_web_service_request;
   self.http_status_code := p_http_status_code;
   msg_pkg.data2msg(p_body_clob, self.body_vc, self.body_clob);
