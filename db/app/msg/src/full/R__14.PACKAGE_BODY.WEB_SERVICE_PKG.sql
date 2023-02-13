@@ -205,6 +205,7 @@ $end
   , p_wait => dbms_aq.forever
   , p_correlation => l_correlation
   , p_deq_condition => null
+  , p_force => true
   , p_msgid => l_msgid
   , p_message_properties => l_message_properties
   , p_msg => l_msg
@@ -279,6 +280,7 @@ $end
   , p_wait => dbms_aq.forever
   , p_correlation => l_correlation
   , p_deq_condition => null
+  , p_force => true
   , p_msgid => l_msgid
   , p_message_properties => l_message_properties
   , p_msg => l_msg
