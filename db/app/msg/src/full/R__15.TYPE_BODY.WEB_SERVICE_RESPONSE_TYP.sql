@@ -71,7 +71,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$LATER');
 $end
 
-  msg_aq_pkg.enqueue(p_msg => self, p_plsql_callback => null, p_msgid => l_msgid);
+  msg_aq_pkg.enqueue(p_msg => self, p_correlation => self.web_service_request.correlation(), p_plsql_callback => null, p_msgid => l_msgid);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;

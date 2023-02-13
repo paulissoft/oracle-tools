@@ -193,8 +193,8 @@ $end
   -- and dequeued here
   msg_aq_pkg.dequeue
   ( p_queue_name => web_service_request_typ.response_queue_name()
-  , p_delivery_mode => dbms_aq.persistent_or_buffered
-  , p_visibility => dbms_aq.immediate
+  , p_delivery_mode => null
+  , p_visibility => null
   , p_subscriber => null
   , p_dequeue_mode => dbms_aq.remove
     /*
@@ -229,6 +229,7 @@ exception
   when others
   then
     dbug.leave_on_error;
+    raise;
 $end
 end ut_rest_web_service_get;
 
@@ -268,8 +269,8 @@ $end
   -- and dequeued here
   msg_aq_pkg.dequeue
   ( p_queue_name => web_service_request_typ.response_queue_name()
-  , p_delivery_mode => dbms_aq.persistent_or_buffered
-  , p_visibility => dbms_aq.immediate
+  , p_delivery_mode => null
+  , p_visibility => null
   , p_subscriber => null
   , p_dequeue_mode => dbms_aq.remove
     /*
@@ -304,6 +305,7 @@ exception
   when others
   then
     dbug.leave_on_error;
+    raise;
 $end
 end ut_rest_web_service_post;
 

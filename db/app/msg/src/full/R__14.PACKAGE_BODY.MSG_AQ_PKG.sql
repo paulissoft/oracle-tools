@@ -514,6 +514,7 @@ procedure enqueue
 ( p_msg in msg_typ
 , p_delivery_mode in binary_integer
 , p_visibility in binary_integer
+, p_correlation in varchar2
 , p_force in boolean
 , p_plsql_callback in varchar2
 , p_msgid out nocopy raw
@@ -530,32 +531,40 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE');
   dbug.print
   ( dbug."input"  
-  , 'queue name: %s; p_delivery_mode: %s; p_visibility: %s; p_force: %s; p_plsql_callback: %s'
+  , 'queue name: %s; p_delivery_mode: %s; p_visibility: %s; p_correlation: %s; p_force: %s'
   , l_queue_name
   , delivery_mode_descr(p_delivery_mode)
-  , visibility_descr(p_visibility)  
+  , visibility_descr(p_visibility)
+  , p_correlation
   , dbug.cast_to_varchar2(p_force)
+  );
+  dbug.print
+  ( dbug."input"  
+  , 'p_plsql_callback: %s'
   , p_plsql_callback
   );
 $end
 
   if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) or
+$if msg_aq_pkg.c_buffered_messaging $then
      ( p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) or
+$end     
      ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.immediate )
   then 
     l_enqueue_options.delivery_mode := p_delivery_mode;
     l_enqueue_options.visibility := p_visibility;
   else
-    if p_msg.has_not_null_lob() != 0
+    l_enqueue_options.delivery_mode := dbms_aq.persistent;
+    l_enqueue_options.visibility := dbms_aq.on_commit;
+
+$if msg_aq_pkg.c_buffered_messaging $then
+    if p_msg.has_not_null_lob() = 0
     then
-      -- payload with a non-empty LOB can not be a buffered message
-      l_enqueue_options.delivery_mode := dbms_aq.persistent;
-      l_enqueue_options.visibility := dbms_aq.on_commit;
-    else
       -- prefer buffered messages
       l_enqueue_options.delivery_mode := dbms_aq.buffered;
       l_enqueue_options.visibility := dbms_aq.immediate;
     end if;
+$end    
 
     -- give a warning when the input parameters were not default and not a correct combination
 
@@ -576,6 +585,7 @@ $end
   end if;
 
   l_message_properties.delay := dbms_aq.no_delay;
+  l_message_properties.correlation := p_correlation;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
@@ -707,7 +717,9 @@ $end
   l_dequeue_options.msgid := p_msgid;
 
   if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) or
+$if msg_aq_pkg.c_buffered_messaging $then
      ( p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) or
+$end     
      ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.immediate )
   then 
     l_dequeue_options.delivery_mode := p_delivery_mode;
@@ -715,12 +727,14 @@ $end
   else
     -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED
     case
+$if msg_aq_pkg.c_buffered_messaging $then
       -- try to preserve at least one of the input settings
       when p_delivery_mode = dbms_aq.buffered
       then
         l_dequeue_options.delivery_mode := p_delivery_mode;
         l_dequeue_options.visibility := dbms_aq.immediate;
-        
+$end
+
       when p_visibility = dbms_aq.on_commit
       then
         l_dequeue_options.delivery_mode := dbms_aq.persistent;
@@ -915,11 +929,15 @@ $end
   , p_delivery_mode => p_descr.msg_prop.delivery_mode
   , p_visibility =>
       -- to suppress a warning
+$if msg_aq_pkg.c_buffered_messaging $then
       case
         when p_descr.msg_prop.delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
         then dbms_aq.immediate
         else dbms_aq.on_commit
       end
+$else
+      dbms_aq.on_commit
+$end        
   , p_subscriber => p_descr.consumer_name 
   , p_dequeue_mode => dbms_aq.remove
   , p_navigation => dbms_aq.next_message

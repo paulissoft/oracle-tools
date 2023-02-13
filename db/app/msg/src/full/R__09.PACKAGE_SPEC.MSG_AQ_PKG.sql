@@ -1,12 +1,13 @@
 CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
+c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
+c_buffered_messaging constant boolean := not(c_testing); -- buffered messaging enabled?
+
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
 c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
 c_default_plsql_callback constant varchar(128 char) := $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
-c_subscriber_delivery_mode constant binary_integer := dbms_aqadm.persistent_or_buffered;
-
-c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
+c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -119,6 +120,7 @@ procedure enqueue
 ( p_msg in msg_typ -- the message
 , p_delivery_mode in binary_integer default null -- when null the message payload will determine this
 , p_visibility in binary_integer default null -- when null the message payload will determine this
+, p_correlation in varchar2 default null
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
 , p_plsql_callback in varchar2 default c_default_plsql_callback -- When not null that callback will e registered, other you must dequeue yourself
 , p_msgid out nocopy raw
