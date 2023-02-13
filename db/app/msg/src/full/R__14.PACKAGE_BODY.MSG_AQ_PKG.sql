@@ -543,6 +543,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , 'p_plsql_callback: %s'
   , p_plsql_callback
   );
+  p_msg.print();
 $end
 
   if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) or
@@ -810,6 +811,7 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
+  p_msg.print();
   dbug.leave;
 $end
 end dequeue;

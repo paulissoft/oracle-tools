@@ -184,8 +184,8 @@ $end
   -- will just get enqueued here
   rest_web_service_request_typ
   ( p_url => 'https://jsonplaceholder.typicode.com/todos/1'
-  , p_http_method => 'GET'
   , p_correlation => l_correlation
+  , p_http_method => 'GET'
   ).process;
 
   commit;
@@ -259,6 +259,7 @@ $end
   -- will just get enqueued here
   rest_web_service_request_typ
   ( p_url => 'https://jsonplaceholder.typicode.com/posts'
+  , p_correlation => l_correlation
   , p_http_method => 'POST'
   , p_body_clob => to_clob('{"title":"foo","body":"bar","userId":123}')
   , p_http_headers_clob => to_clob('[{"Content-Type":"application/json"},{"User-Agent":"APEX"}]')
