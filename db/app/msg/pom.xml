@@ -17,7 +17,17 @@
     <db.schema>${oracle-tools.db.schema.msg}</db.schema>
     <flyway.table>schema_version_tools_msg</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>MSG_TYP,MSG_AQ_PKG,MSG_NOTIFICATION_PRC,REST_WEB_SERVICE_TYP</db.object.names>
+    <db.object.names>
+      MSG_TYP,
+      MSG_PKG,
+      MSG_AQ_PKG,
+      MSG_NOTIFICATION_PRC,
+      WEB_SERVICE_REQUEST_SEQ,
+      WEB_SERVICE_REQUEST_TYP,
+      WEB_SERVICE_RESPONSE_TYP,
+      REST_WEB_SERVICE_REQUEST_TYP,
+      WEB_SERVICE_PKG,
+    </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
 

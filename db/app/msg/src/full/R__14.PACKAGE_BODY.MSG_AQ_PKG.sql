@@ -941,7 +941,7 @@ exception
 $end
 end dequeue_and_process;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
+$if msg_aq_pkg.c_testing $then
 
 procedure ut_rest_web_service_sync
 is
@@ -1107,7 +1107,21 @@ exception
   then commit;
 end ut_rest_web_service_async;
 
-$end -- $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.cfg_pkg.c_testing $then
+$else
+
+procedure ut_rest_web_service_sync
+is
+begin
+  null;
+end;
+
+procedure ut_rest_web_service_async
+is
+begin
+  null;
+end;
+
+$end -- $if msg_aq_pkg.c_testing $then
 
 end msg_aq_pkg;
 /
