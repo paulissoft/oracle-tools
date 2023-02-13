@@ -167,6 +167,10 @@ is
   "completed": false
 }');
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET');
+$end
+
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- % curl https://jsonplaceholder.typicode.com/todos/1
@@ -206,6 +210,8 @@ begin
   , p_msg => l_msg
   );
 
+  l_msg.print();
+  
   commit;
 
   ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
@@ -215,6 +221,14 @@ begin
   msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
 
   ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+$end
 end ut_rest_web_service_get;
 
 procedure ut_rest_web_service_post
@@ -234,6 +248,10 @@ is
   "id": 101
 }');
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_POST');
+$end
+
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- will just get enqueued here
@@ -266,6 +284,8 @@ begin
   , p_msg => l_msg
   );
 
+  l_msg.print();
+
   commit;
 
   ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
@@ -275,6 +295,14 @@ begin
   msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
 
   ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+$end
 end ut_rest_web_service_post;
 
 $end -- $if msg_aq_pkg.c_testing $then

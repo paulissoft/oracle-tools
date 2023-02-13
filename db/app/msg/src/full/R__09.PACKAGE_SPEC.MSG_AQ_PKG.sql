@@ -24,6 +24,10 @@ pragma exception_init(e_no_recipients_for_message, -24033);
 e_enqueue_disabled exception;
 pragma exception_init(e_enqueue_disabled, -25207);
 
+-- ORA-25253: dequeue failed
+e_dequeue_disabled exception;
+pragma exception_init(e_dequeue_disabled, -25253);
+
 -- ORA-24034: application ... is already a subscriber for queue ...
 e_subscriber_already_exists exception;
 pragma exception_init(e_subscriber_already_exists, -24034);
@@ -145,6 +149,7 @@ procedure dequeue
 , p_wait in binary_integer default dbms_aq.forever
 , p_correlation in varchar2 default null
 , p_deq_condition in varchar2 default null
+, p_force in boolean default false -- When true, queue tables, queues will be created/added if necessary
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
 , p_msg out nocopy msg_typ
@@ -175,6 +180,7 @@ procedure dequeue_and_process
 , p_wait in binary_integer default dbms_aq.forever
 , p_correlation in varchar2 default null
 , p_deq_condition in varchar2 default null
+, p_force in boolean default false -- When true, queue tables, queues will be created/added if necessary
 , p_commit in boolean default true
 );
 /** Dequeue a message (of base type msg_typ) from the queue and process it using <message>.process(0). **/

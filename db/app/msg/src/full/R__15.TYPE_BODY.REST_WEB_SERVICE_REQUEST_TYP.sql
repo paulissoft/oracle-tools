@@ -68,6 +68,10 @@ final member procedure construct
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT');
+$end
+
   (self as web_service_request_typ).construct
   ( p_url => p_url
   , p_scheme => p_scheme
@@ -86,6 +90,10 @@ begin
   msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
   msg_pkg.data2msg(p_parms_clob, self.parms_vc, self.parms_clob);
   self.binary_response := p_binary_response;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end construct;
 
 overriding
@@ -95,8 +103,19 @@ member function must_be_processed
 )
 return integer -- True (1) or false (0)
 is
+  l_result constant integer := 1;
 begin
-  return 1;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MUST_BE_PROCESSED');
+  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
+$end
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'return: %s', l_result);
+  dbug.leave;
+$end
+
+  return l_result;
 end must_be_processed;
 
 overriding
@@ -154,6 +173,10 @@ $end
 
   web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
   web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'self.binary_response: %s; self.correlation: %s', self.binary_response, self.correlation);
+$end
 
   if self.binary_response = 0
   then
@@ -242,7 +265,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end;
+end process$now;
 
 overriding
 member procedure serialize

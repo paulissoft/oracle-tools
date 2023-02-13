@@ -660,6 +660,7 @@ procedure dequeue
 , p_wait in binary_integer
 , p_correlation in varchar2
 , p_deq_condition in varchar2
+, p_force in boolean
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
 , p_msg out nocopy msg_typ
@@ -667,6 +668,7 @@ procedure dequeue
 is
   l_queue_name constant user_queues.name%type := nvl(p_queue_name, queue_name(p_msg));
   l_dequeue_options dbms_aq.dequeue_options_t;
+  c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE');
@@ -681,11 +683,16 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'p_navigation: %s; p_wait: %s; p_correlation: %s; p_deq_condition: %s; p_msgid: %s'
+  , 'p_navigation: %s; p_wait: %s; p_correlation: %s; p_deq_condition: %s; p_force: %s'
   , navigation_descr(p_navigation)
   , p_wait
   , p_correlation
   , p_deq_condition
+  , dbug.cast_to_varchar2(p_force)
+  );
+  dbug.print
+  ( dbug."input"
+  , 'p_msgid: %s'
   , hextoraw(p_msgid)
   );
 $end
@@ -749,13 +756,42 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  dbms_aq.dequeue
-  ( queue_name => l_queue_name
-  , dequeue_options => l_dequeue_options
-  , message_properties => p_message_properties
-  , payload => p_msg
-  , msgid => p_msgid
-  );
+  <<try_loop>>
+  for i_try in 1 .. c_max_tries
+  loop
+    begin
+      dbms_aq.dequeue
+      ( queue_name => l_queue_name
+      , dequeue_options => l_dequeue_options
+      , message_properties => p_message_properties
+      , payload => p_msg
+      , msgid => p_msgid
+      );
+      exit try_loop; -- enqueue succeeded
+    exception
+      when e_queue_does_not_exist
+      then
+        if i_try != c_max_tries
+        then
+          create_queue_at
+          ( p_queue_name => l_queue_name
+          , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
+          );
+        else
+          raise;
+        end if;
+      when e_dequeue_disabled
+      then
+        if i_try != c_max_tries
+        then
+          start_queue_at
+          ( p_queue_name => l_queue_name
+          );
+        else
+          raise;
+        end if;
+    end;
+  end loop try_loop;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
@@ -773,6 +809,7 @@ procedure dequeue_and_process
 , p_wait in binary_integer
 , p_correlation in varchar2
 , p_deq_condition in varchar2
+, p_force in boolean
 , p_commit in boolean
 )
 is
@@ -795,6 +832,7 @@ $end
   , p_wait => p_wait
   , p_correlation => p_correlation
   , p_deq_condition => p_deq_condition
+  , p_force => p_force
   , p_msgid => l_msgid
   , p_message_properties => l_message_properties
   , p_msg => l_msg
