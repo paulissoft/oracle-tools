@@ -530,7 +530,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE');
   dbug.print
   ( dbug."input"  
-  , 'p_delivery_mode: %s; p_visibility: %s; p_force: %s; p_plsql_callback: %s'
+  , 'queue name: %s; p_delivery_mode: %s; p_visibility: %s; p_force: %s; p_plsql_callback: %s'
+  , l_queue_name
   , delivery_mode_descr(p_delivery_mode)
   , visibility_descr(p_visibility)  
   , dbug.cast_to_varchar2(p_force)
@@ -674,8 +675,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE');
   dbug.print
   ( dbug."input"
-  , 'p_queue_name: %s; p_delivery_mode: %s; p_visibility: %s; p_subscriber: %s; p_dequeue_mode: %s'
-  , p_queue_name
+  , 'queue name: %s; p_delivery_mode: %s; p_visibility: %s; p_subscriber: %s; p_dequeue_mode: %s'
+  , l_queue_name
   , delivery_mode_descr(p_delivery_mode)
   , visibility_descr(p_visibility)
   , p_subscriber

@@ -202,7 +202,7 @@ $end
     -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
     */
   , p_navigation => dbms_aq.first_message
-  , p_wait => dbms_aq.forever
+  , p_wait => 60 -- dbms_aq.forever
   , p_correlation => l_correlation
   , p_deq_condition => null
   , p_force => true
@@ -277,7 +277,7 @@ $end
     -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
     */
   , p_navigation => dbms_aq.first_message
-  , p_wait => dbms_aq.forever
+  , p_wait => 60 -- dbms_aq.forever
   , p_correlation => l_correlation
   , p_deq_condition => null
   , p_force => true
