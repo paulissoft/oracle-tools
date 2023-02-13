@@ -238,7 +238,7 @@ $end
     , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
     ).process;
   end if;
-  
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
