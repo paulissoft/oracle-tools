@@ -658,6 +658,7 @@ procedure dequeue
 , p_dequeue_mode in binary_integer
 , p_navigation in binary_integer
 , p_wait in binary_integer
+, p_correlation in varchar2
 , p_deq_condition in varchar2
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
@@ -680,9 +681,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'p_navigation: %s; p_wait: %s; p_deq_condition: %s; p_msgid: %s'
+  , 'p_navigation: %s; p_wait: %s; p_correlation: %s; p_deq_condition: %s; p_msgid: %s'
   , navigation_descr(p_navigation)
   , p_wait
+  , p_correlation
   , p_deq_condition
   , hextoraw(p_msgid)
   );
@@ -692,6 +694,7 @@ $end
   l_dequeue_options.dequeue_mode := p_dequeue_mode;
   l_dequeue_options.navigation := p_navigation;
   l_dequeue_options.wait := p_wait;
+  l_dequeue_options.correlation := p_correlation;
   l_dequeue_options.deq_condition := p_deq_condition;
   l_dequeue_options.msgid := p_msgid;
 
@@ -768,6 +771,7 @@ procedure dequeue_and_process
 , p_dequeue_mode in binary_integer
 , p_navigation in binary_integer
 , p_wait in binary_integer
+, p_correlation in varchar2
 , p_deq_condition in varchar2
 , p_commit in boolean
 )
@@ -789,6 +793,7 @@ $end
   , p_dequeue_mode => p_dequeue_mode
   , p_navigation => p_navigation
   , p_wait => p_wait
+  , p_correlation => p_correlation
   , p_deq_condition => p_deq_condition
   , p_msgid => l_msgid
   , p_message_properties => l_message_properties
@@ -880,6 +885,7 @@ $end
   , p_dequeue_mode => dbms_aq.remove
   , p_navigation => dbms_aq.next_message
   , p_wait => dbms_aq.no_wait -- message is there
+  , p_correlation => null
   , p_deq_condition => null
   , p_msgid => p_msgid
   , p_message_properties => p_message_properties
@@ -945,188 +951,6 @@ exception
     raise;
 $end
 end dequeue_and_process;
-
-$if msg_aq_pkg.c_testing $then
-
-procedure ut_rest_web_service_sync
-is
-  procedure chk_dbug_dbms_output
-  is
-    l_lines_exp constant sys.odcivarchar2list :=
-      sys.odcivarchar2list
-      ( '>MSG_TYP.PROCESS'
-      , '|   input: p_maybe_later: 0'
-      , '|   >REST_WEB_SERVICE_TYP.PROCESS (1)'
-      , '|   |   output: p_clob length: 83; contents (max 255 characters): "{'
-      , '  "userId": 1,'
-      , '  "id": 1,'
-      , '  "title": "delectus aut autem",'
-      , '  "completed": false'
-      , '}"'
-      , '|   <REST_WEB_SERVICE_TYP.PROCESS (1)'
-      , '<MSG_TYP.PROCESS'
-      );
-    l_lines_act dbms_output.chararr;
-    l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
-  begin
-    dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
-    ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
-    ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
-    for i_idx in l_lines_exp.first .. l_lines_exp.last
-    loop
-      ut.expect(case when l_lines_act.exists(i_idx) then l_lines_act(i_idx) end, to_char(i_idx)).to_equal(l_lines_exp(i_idx));
-    end loop;
-    /*
-    for i_idx in l_lines_exp.first .. l_lines_exp.last
-    loop
-      dbms_output.put_line(l_lines_exp(i_idx));
-    end loop;
-    */
-  end chk_dbug_dbms_output;
-begin
-  -- See https://terminalcheatsheet.com/guides/curl-rest-api
-
-  -- % curl https://jsonplaceholder.typicode.com/todos/1
-  --
-  -- {
-  --   "userId": 1,
-  --   "id": 1,
-  --   "title": "delectus aut autem",
-  --   "completed": false
-  -- }%                                                                                                                                                                                                           
-
-  -- This will run it right now and use dbug_dbms_output, i.e. dbms_output
-  dbms_output.disable; -- clear the buffer
-  dbms_output.enable;
-  dbug.activate('dbms_output');
-
-  rest_web_service_typ
-  ( p_group$ => 'REST_WEB_SERVICE'
-  , p_context$ => null
-  , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
-  , p_http_method => 'GET'
-  ).process(p_maybe_later => 0);
-
-  chk_dbug_dbms_output;
-end ut_rest_web_service_sync;
-
-procedure ut_rest_web_service_async
-is
-  pragma autonomous_transaction;
-
-  l_start constant date := sysdate;
-
-  -- ORA-06550: line 1, column 7:
-  -- PLS-00201: identifier 'PLOG.PURGE' must be declared
-  e_compilation_error exception;
-  pragma exception_init(e_compilation_error, -06550);    
-
-  -- ORA-00942: table or view does not exist
-  e_object_does_not_exist exception;
-  pragma exception_init(e_object_does_not_exist, -00942);
-
-  procedure chk_dbug_log4plsql
-  is
-    l_lines_exp constant sys.odcivarchar2list :=
-      sys.odcivarchar2list
-      ( '>MSG_NOTIFICATION_PRC'
-      , '|   >MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
-      , '|   |   input: p_commit: TRUE'
-      , '|   |   >MSG_AQ_PKG.DEQUEUE'
-      , '|   |   |   input: p_context: FF; p_descr.msg_id: 05; p_descr.consumer_name: <NULL>; p_descr.queue_name: "REST_WEB_SERVICE"; p_payloadl: 0'
-      , '|   |   |   input: p_descr.msg_prop.state: READY; p_descr.msg_prop.delivery_mode: BUFFERED'
-      , '|   |   |   info: USERENV: SESSIONID: 1067696434 (BG_JOB_ID=77142); APEX$SESSION.APP_SESSION|CLIENT_IDENTIFIER: <NULL>; CURRENT_USER: ORACLE_TOOLS; SESSION_USER: SYS; PROXY_USER: <NULL>'
-      , '|   |   |   >MSG_AQ_PKG.DEQUEUE'
-      , '|   |   |   |   input: p_queue_name: "REST_WEB_SERVICE"; p_delivery_mode: BUFFERED; p_visibility: IMMEDIATE; p_subscriber: <NULL>; p_dequeue_mode: REMOVE'
-      , '|   |   |   |   input: p_navigation: NEXT_MESSAGE; p_wait: 0; p_deq_condition: <NULL>; p_msgid: 05'
-      , '|   |   |   |   info: l_dequeue_options.visibility: IMMEDIATE; l_dequeue_options.delivery_mode: BUFFERED'
-      , '|   |   |   |   output: p_msgid: 05'
-      , '|   |   |   <MSG_AQ_PKG.DEQUEUE'
-      , '|   |   |   output: p_msgid: 05'
-      , '|   |   <MSG_AQ_PKG.DEQUEUE'
-      , '|   |   >MSG_TYP.PROCESS'
-      , '|   |   |   input: p_maybe_later: 0'
-      , '|   |   |   >REST_WEB_SERVICE_TYP.PROCESS (1)'
-      , '|   |   |   |   output: p_clob length: 15; contents (max 255 characters): "{'
-      , '  "id": 101'
-      , '}"'
-      , '|   |   |   <REST_WEB_SERVICE_TYP.PROCESS (1)'
-      , '|   |   <MSG_TYP.PROCESS'
-      , '|   <MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
-      , '<MSG_NOTIFICATION_PRC'
-      );
-    l_lines_act dbms_output.chararr;
-    l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
-    l_cursor sys_refcursor;
-    l_check boolean := false;
-  begin
-    open l_cursor for q'[select ltext from tlog where luser = 'SYS' and ldate >= :1 order by id]' using l_start;
-    fetch l_cursor bulk collect into l_lines_act;
-    close l_cursor;
-    
-    ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
-    ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
-    for i_idx in l_lines_exp.first .. l_lines_exp.last
-    loop
-      if l_lines_act.exists(i_idx)
-      then
-        if l_lines_act(i_idx) like '%>MSG_TYP.PROCESS'
-        then
-          l_check := true;
-        end if;
-        
-        if l_check
-        then
-          ut.expect(l_lines_act(i_idx), to_char(i_idx)).to_equal(l_lines_exp(i_idx));
-        end if;
-        
-        if l_lines_act(i_idx) like '%<MSG_TYP.PROCESS'
-        then
-          l_check := false;
-        end if;
-      end if;
-    end loop;
-  end chk_dbug_log4plsql;
-begin
-  -- See https://terminalcheatsheet.com/guides/curl-rest-api
-
-  -- This will run it asynchronous issue and use dbug_log4plsql, i.e. plog / tlog.
-  -- But these objects may not be granted (or having no synoyms) so use dynamic PL/SQL.
-  dbug.activate('log4plsql');
-
-  rest_web_service_typ
-  ( p_group$ => 'REST_WEB_SERVICE'
-  , p_context$ => null
-  , p_url => 'https://jsonplaceholder.typicode.com/posts'
-  , p_http_method => 'POST'
-  , p_body_clob => to_clob('{"title":"foo","body":"bar","userId":123}')
-  ).process;
-
-  commit; -- otherwise it may never arrive in the queue
-
-  chk_dbug_log4plsql;
-
-  commit;
-exception
-  when e_compilation_error or e_object_does_not_exist
-  then commit;
-end ut_rest_web_service_async;
-
-$else
-
-procedure ut_rest_web_service_sync
-is
-begin
-  null;
-end;
-
-procedure ut_rest_web_service_async
-is
-begin
-  null;
-end;
-
-$end -- $if msg_aq_pkg.c_testing $then
 
 end msg_aq_pkg;
 /

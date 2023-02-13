@@ -118,28 +118,28 @@ is
       then json_object_t(self.body_blob)
       else null
     end;
-  l_cookies_vc constant json_object_t := 
+  l_cookies_vc constant json_array_t := 
     case
       when self.cookies_vc is not null
-      then json_object_t(self.cookies_vc)
+      then json_array_t(self.cookies_vc)
       else null
     end;
-  l_cookies_clob constant json_object_t := 
+  l_cookies_clob constant json_array_t := 
     case
       when self.cookies_clob is not null
-      then json_object_t(self.cookies_clob)
+      then json_array_t(self.cookies_clob)
       else null
     end;
-  l_http_headers_vc constant json_object_t := 
+  l_http_headers_vc constant json_array_t := 
     case
       when self.http_headers_vc is not null
-      then json_object_t(self.http_headers_vc)
+      then json_array_t(self.http_headers_vc)
       else null
     end;
-  l_http_headers_clob constant json_object_t := 
+  l_http_headers_clob constant json_array_t := 
     case
       when self.http_headers_clob is not null
-      then json_object_t(self.http_headers_clob)
+      then json_array_t(self.http_headers_clob)
       else null
     end;
 begin

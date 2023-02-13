@@ -20,6 +20,23 @@ procedure data2json
 , p_http_headers out nocopy json_array_t
 );
 
+$if msg_aq_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(MSG)
+--%suite
+
+--%test
+--%rollback(manual)
+procedure ut_rest_web_service_get;
+
+--%test
+--%rollback(manual)
+procedure ut_rest_web_service_post;
+
+$end -- $if msg_aq_pkg.c_testing $then
+
 END WEB_SERVICE_PKG;
 /
 

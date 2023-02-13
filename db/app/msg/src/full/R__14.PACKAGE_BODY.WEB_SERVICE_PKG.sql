@@ -148,6 +148,137 @@ begin
   end if;
 end data2json;
 
+$if msg_aq_pkg.c_testing $then
+
+procedure ut_rest_web_service_get
+is
+  pragma autonomous_transaction;
+
+  l_correlation constant varchar2(128) := web_service_request_typ.generate_correlation();
+  l_msgid raw(16) := null;
+  l_message_properties dbms_aq.message_properties_t;
+  l_msg msg_typ;
+  l_web_service_response web_service_response_typ;
+  l_json_act json_element_t;
+  l_json_exp constant json_object_t := json_object_t('{
+  "userId": 1,
+  "id": 1,
+  "title": "delectus aut autem",
+  "completed": false
+}');
+begin
+  -- See https://terminalcheatsheet.com/guides/curl-rest-api
+
+  -- % curl https://jsonplaceholder.typicode.com/todos/1
+  --
+  -- {
+  --   "userId": 1,
+  --   "id": 1,
+  --   "title": "delectus aut autem",
+  --   "completed": false
+  -- }%                                                                                                                                                                                                           
+  -- will just get enqueued here
+  rest_web_service_request_typ
+  ( p_url => 'https://jsonplaceholder.typicode.com/todos/1'
+  , p_http_method => 'GET'
+  , p_correlation => l_correlation
+  ).process;
+
+  commit;
+
+  -- and dequeued here
+  msg_aq_pkg.dequeue
+  ( p_queue_name => web_service_request_typ.response_queue_name()
+  , p_delivery_mode => dbms_aq.persistent_or_buffered
+  , p_visibility => dbms_aq.immediate
+  , p_subscriber => null
+  , p_dequeue_mode => dbms_aq.remove
+    /*
+    -- The correlation attribute specifies the correlation identifier of the dequeued message.
+    -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
+    */
+  , p_navigation => dbms_aq.first_message
+  , p_wait => dbms_aq.forever
+  , p_correlation => l_correlation
+  , p_deq_condition => null
+  , p_msgid => l_msgid
+  , p_message_properties => l_message_properties
+  , p_msg => l_msg
+  );
+
+  commit;
+
+  ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
+
+  l_web_service_response := treat(l_msg as web_service_response_typ);
+
+  msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+
+  ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+end ut_rest_web_service_get;
+
+procedure ut_rest_web_service_post
+is
+  pragma autonomous_transaction;
+
+  l_correlation constant varchar2(128) := web_service_request_typ.generate_correlation();
+  l_msgid raw(16) := null;
+  l_message_properties dbms_aq.message_properties_t;
+  l_msg msg_typ;
+  l_web_service_response web_service_response_typ;
+  l_json_act json_element_t;
+  l_json_exp constant json_object_t := json_object_t('{
+  "title": "foo",
+  "body": "bar",
+  "userId": 123,
+  "id": 101
+}');
+begin
+  -- See https://terminalcheatsheet.com/guides/curl-rest-api
+
+  -- will just get enqueued here
+  rest_web_service_request_typ
+  ( p_url => 'https://jsonplaceholder.typicode.com/posts'
+  , p_http_method => 'POST'
+  , p_body_clob => to_clob('{"title":"foo","body":"bar","userId":123}')
+  , p_http_headers_clob => to_clob('[{"Content-Type":"application/json"},{"User-Agent":"APEX"}]')
+  ).process;
+
+  commit;
+
+  -- and dequeued here
+  msg_aq_pkg.dequeue
+  ( p_queue_name => web_service_request_typ.response_queue_name()
+  , p_delivery_mode => dbms_aq.persistent_or_buffered
+  , p_visibility => dbms_aq.immediate
+  , p_subscriber => null
+  , p_dequeue_mode => dbms_aq.remove
+    /*
+    -- The correlation attribute specifies the correlation identifier of the dequeued message.
+    -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
+    */
+  , p_navigation => dbms_aq.first_message
+  , p_wait => dbms_aq.forever
+  , p_correlation => l_correlation
+  , p_deq_condition => null
+  , p_msgid => l_msgid
+  , p_message_properties => l_message_properties
+  , p_msg => l_msg
+  );
+
+  commit;
+
+  ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
+
+  l_web_service_response := treat(l_msg as web_service_response_typ);
+
+  msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+
+  ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+end ut_rest_web_service_post;
+
+$end -- $if msg_aq_pkg.c_testing $then
+
 END WEB_SERVICE_PKG;
 /
 

@@ -6,7 +6,7 @@ c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumer
 c_default_plsql_callback constant varchar(128 char) := $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
 c_subscriber_delivery_mode constant binary_integer := dbms_aqadm.persistent_or_buffered;
 
-c_testing constant boolean := false; -- oracle_tools.cfg_pkg.c_testing;
+c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -143,6 +143,7 @@ procedure dequeue
 , p_dequeue_mode in binary_integer default dbms_aq.remove
 , p_navigation in binary_integer default dbms_aq.next_message
 , p_wait in binary_integer default dbms_aq.forever
+, p_correlation in varchar2 default null
 , p_deq_condition in varchar2 default null
 , p_msgid in out nocopy raw
 , p_message_properties out nocopy dbms_aq.message_properties_t
@@ -172,6 +173,7 @@ procedure dequeue_and_process
 , p_dequeue_mode in binary_integer default dbms_aq.remove
 , p_navigation in binary_integer default dbms_aq.next_message
 , p_wait in binary_integer default dbms_aq.forever
+, p_correlation in varchar2 default null
 , p_deq_condition in varchar2 default null
 , p_commit in boolean default true
 );
@@ -216,18 +218,6 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 
 See also the dequeue(p_context...) procedure documentation.
 **/
-
--- test functions
-
---%suitepath(MSG)
---%suite
-
---%test
-procedure ut_rest_web_service_sync;
-
---%test
---%rollback(manual)
-procedure ut_rest_web_service_async;
 
 end msg_aq_pkg;
 /

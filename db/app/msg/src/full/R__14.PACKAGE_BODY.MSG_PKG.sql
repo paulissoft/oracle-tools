@@ -22,6 +22,22 @@ begin
   end if;
 end data2msg;
 
+procedure msg2data
+( p_msg_vc in varchar2
+, p_msg_clob in clob
+, p_data_json out nocopy json_element_t
+)
+is
+begin
+  p_data_json :=
+    case
+      when p_msg_vc is not null
+      then json_element_t.parse(p_msg_vc)
+      when p_msg_clob is not null
+      then json_element_t.parse(p_msg_clob)
+    end;
+end msg2data;
+
 procedure data2msg
 ( p_data_blob in blob
 , p_msg_raw out nocopy raw
@@ -40,6 +56,22 @@ begin
     p_msg_blob := null;
   end if;
 end data2msg;
+
+procedure msg2data
+( p_msg_raw in raw
+, p_msg_blob in blob
+, p_data_json out nocopy json_element_t
+)
+is
+begin
+  p_data_json :=
+    case
+      when p_msg_raw is not null
+      then json_element_t.parse(to_blob(p_msg_raw))
+      when p_msg_blob is not null
+      then json_element_t.parse(p_msg_blob)
+    end;
+end msg2data;
 
 end msg_pkg;
 /
