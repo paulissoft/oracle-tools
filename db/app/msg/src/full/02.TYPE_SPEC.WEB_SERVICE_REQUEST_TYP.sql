@@ -61,6 +61,12 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_json_object in out nocopy json_object_t
   )
 
+, overriding
+  member function has_not_null_lob
+  ( self in web_service_request_typ
+  )
+  return integer
+
 , final member function correlation
   return varchar2
 /** The correlation id. **/

@@ -20,7 +20,7 @@ This type stores the response of a web service request.
 **/
 , constructor function web_service_response_typ
   ( self in out nocopy web_service_response_typ
-  , web_service_request in web_service_request_typ
+  , p_web_service_request in web_service_request_typ
   , p_http_status_code in integer  
   , p_body_clob in clob default null
   , p_body_blob in blob default null
@@ -31,7 +31,7 @@ This type stores the response of a web service request.
 
 , final member procedure construct
   ( self in out nocopy web_service_response_typ
-  , web_service_request in web_service_request_typ
+  , p_web_service_request in web_service_request_typ
   , p_http_status_code in integer  
   , p_body_clob in clob default null
   , p_body_blob in blob default null

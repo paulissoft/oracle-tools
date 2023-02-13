@@ -50,6 +50,7 @@ buffered messages if it has length > 0).
 , final member procedure construct
   ( self in out nocopy rest_web_service_request_typ
     -- from web_service_request_typ
+  , p_url in varchar2
   , p_scheme in varchar2 default null -- 'Basic'
   , p_proxy_override in varchar2 default null
   , p_transfer_timeout in number default 180
