@@ -1,4 +1,4 @@
-create or replace type web_service_request_typ under msg_typ
+CREATE TYPE "WEB_SERVICE_REQUEST_TYP" under msg_typ
 ( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_REQUEST) and REST (APEX_WEB_SERVICE.MAKE_REST_REQUEST[_B]).
   -- However, no sensitive information like username or password is stored.
   url varchar2(2000 char)
@@ -61,12 +61,6 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_json_object in out nocopy json_object_t
   )
 
-, overriding
-  member function has_not_null_lob
-  ( self in web_service_request_typ
-  )
-  return integer
-
 , final member function correlation
   return varchar2
 /** The correlation id. **/
@@ -85,3 +79,4 @@ This allows for asynchronuous processing but retrieving the result later via a q
 )
 not final;
 /
+

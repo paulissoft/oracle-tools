@@ -1,4 +1,4 @@
-create or replace type web_service_response_typ under msg_typ
+CREATE TYPE "WEB_SERVICE_RESPONSE_TYP" under msg_typ
 ( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]).
   -- However, no sensitive information like username or password is stored.
   web_service_request web_service_request_typ
@@ -20,7 +20,7 @@ This type stores the response of a web service request.
 **/
 , constructor function web_service_response_typ
   ( self in out nocopy web_service_response_typ
-  , p_web_service_request in web_service_request_typ
+  , web_service_request in web_service_request_typ
   , p_http_status_code in integer  
   , p_body_clob in clob default null
   , p_body_blob in blob default null
@@ -31,7 +31,7 @@ This type stores the response of a web service request.
 
 , final member procedure construct
   ( self in out nocopy web_service_response_typ
-  , p_web_service_request in web_service_request_typ
+  , web_service_request in web_service_request_typ
   , p_http_status_code in integer  
   , p_body_clob in clob default null
   , p_body_blob in blob default null
@@ -74,3 +74,4 @@ This type stores the response of a web service request.
 )
 not final;
 /
+

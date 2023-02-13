@@ -515,6 +515,7 @@ procedure enqueue
 , p_delivery_mode in binary_integer
 , p_visibility in binary_integer
 , p_force in boolean
+, p_plsql_callback in varchar2
 , p_msgid out nocopy raw
 )
 is
@@ -529,10 +530,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE');
   dbug.print
   ( dbug."input"  
-  , 'p_delivery_mode: %s; p_visibility: %s; p_force: %s'
+  , 'p_delivery_mode: %s; p_visibility: %s; p_force: %s; p_plsql_callback: %s'
   , delivery_mode_descr(p_delivery_mode)
   , visibility_descr(p_visibility)  
   , dbug.cast_to_varchar2(p_force)
+  , p_plsql_callback
   );
 $end
 
@@ -607,15 +609,18 @@ $end
           ( p_queue_name => l_queue_name
           , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
           );
+          if p_plsql_callback is not null
+          then
 $if msg_aq_pkg.c_multiple_consumers $then
-          add_subscriber_at
-          ( p_queue_name => l_queue_name
-          );
+            add_subscriber_at
+            ( p_queue_name => l_queue_name
+            );
 $end
-          register_at
-          ( p_queue_name => l_queue_name
-          , p_plsql_callback => c_default_plsql_callback
-          );
+            register_at
+            ( p_queue_name => l_queue_name
+            , p_plsql_callback => p_plsql_callback
+            );
+          end if;
         else
           raise;
         end if;
@@ -949,17 +954,17 @@ is
   is
     l_lines_exp constant sys.odcivarchar2list :=
       sys.odcivarchar2list
-      ( '>ORACLE_TOOLS.MSG_TYP.PROCESS'
+      ( '>MSG_TYP.PROCESS'
       , '|   input: p_maybe_later: 0'
-      , '|   >ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '|   >REST_WEB_SERVICE_TYP.PROCESS (1)'
       , '|   |   output: p_clob length: 83; contents (max 255 characters): "{'
       , '  "userId": 1,'
       , '  "id": 1,'
       , '  "title": "delectus aut autem",'
       , '  "completed": false'
       , '}"'
-      , '|   <ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
-      , '<ORACLE_TOOLS.MSG_TYP.PROCESS'
+      , '|   <REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '<MSG_TYP.PROCESS'
       );
     l_lines_act dbms_output.chararr;
     l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
@@ -1024,31 +1029,31 @@ is
   is
     l_lines_exp constant sys.odcivarchar2list :=
       sys.odcivarchar2list
-      ( '>ORACLE_TOOLS.MSG_NOTIFICATION_PRC'
-      , '|   >ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
+      ( '>MSG_NOTIFICATION_PRC'
+      , '|   >MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
       , '|   |   input: p_commit: TRUE'
-      , '|   |   >ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
-      , '|   |   |   input: p_context: FF; p_descr.msg_id: 05; p_descr.consumer_name: <NULL>; p_descr.queue_name: "ORACLE_TOOLS"."REST_WEB_SERVICE"; p_payloadl: 0'
+      , '|   |   >MSG_AQ_PKG.DEQUEUE'
+      , '|   |   |   input: p_context: FF; p_descr.msg_id: 05; p_descr.consumer_name: <NULL>; p_descr.queue_name: "REST_WEB_SERVICE"; p_payloadl: 0'
       , '|   |   |   input: p_descr.msg_prop.state: READY; p_descr.msg_prop.delivery_mode: BUFFERED'
       , '|   |   |   info: USERENV: SESSIONID: 1067696434 (BG_JOB_ID=77142); APEX$SESSION.APP_SESSION|CLIENT_IDENTIFIER: <NULL>; CURRENT_USER: ORACLE_TOOLS; SESSION_USER: SYS; PROXY_USER: <NULL>'
-      , '|   |   |   >ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
-      , '|   |   |   |   input: p_queue_name: "ORACLE_TOOLS"."REST_WEB_SERVICE"; p_delivery_mode: BUFFERED; p_visibility: IMMEDIATE; p_subscriber: <NULL>; p_dequeue_mode: REMOVE'
+      , '|   |   |   >MSG_AQ_PKG.DEQUEUE'
+      , '|   |   |   |   input: p_queue_name: "REST_WEB_SERVICE"; p_delivery_mode: BUFFERED; p_visibility: IMMEDIATE; p_subscriber: <NULL>; p_dequeue_mode: REMOVE'
       , '|   |   |   |   input: p_navigation: NEXT_MESSAGE; p_wait: 0; p_deq_condition: <NULL>; p_msgid: 05'
       , '|   |   |   |   info: l_dequeue_options.visibility: IMMEDIATE; l_dequeue_options.delivery_mode: BUFFERED'
       , '|   |   |   |   output: p_msgid: 05'
-      , '|   |   |   <ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
+      , '|   |   |   <MSG_AQ_PKG.DEQUEUE'
       , '|   |   |   output: p_msgid: 05'
-      , '|   |   <ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE'
-      , '|   |   >ORACLE_TOOLS.MSG_TYP.PROCESS'
+      , '|   |   <MSG_AQ_PKG.DEQUEUE'
+      , '|   |   >MSG_TYP.PROCESS'
       , '|   |   |   input: p_maybe_later: 0'
-      , '|   |   |   >ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '|   |   |   >REST_WEB_SERVICE_TYP.PROCESS (1)'
       , '|   |   |   |   output: p_clob length: 15; contents (max 255 characters): "{'
       , '  "id": 101'
       , '}"'
-      , '|   |   |   <ORACLE_TOOLS.REST_WEB_SERVICE_TYP.PROCESS (1)'
-      , '|   |   <ORACLE_TOOLS.MSG_TYP.PROCESS'
-      , '|   <ORACLE_TOOLS.MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
-      , '<ORACLE_TOOLS.MSG_NOTIFICATION_PRC'
+      , '|   |   |   <REST_WEB_SERVICE_TYP.PROCESS (1)'
+      , '|   |   <MSG_TYP.PROCESS'
+      , '|   <MSG_AQ_PKG.DEQUEUE_AND_PROCESS'
+      , '<MSG_NOTIFICATION_PRC'
       );
     l_lines_act dbms_output.chararr;
     l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
@@ -1065,7 +1070,7 @@ is
     loop
       if l_lines_act.exists(i_idx)
       then
-        if l_lines_act(i_idx) like '%>ORACLE_TOOLS.MSG_TYP.PROCESS'
+        if l_lines_act(i_idx) like '%>MSG_TYP.PROCESS'
         then
           l_check := true;
         end if;
@@ -1075,7 +1080,7 @@ is
           ut.expect(l_lines_act(i_idx), to_char(i_idx)).to_equal(l_lines_exp(i_idx));
         end if;
         
-        if l_lines_act(i_idx) like '%<ORACLE_TOOLS.MSG_TYP.PROCESS'
+        if l_lines_act(i_idx) like '%<MSG_TYP.PROCESS'
         then
           l_check := false;
         end if;

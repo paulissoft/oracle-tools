@@ -116,6 +116,7 @@ procedure enqueue
 , p_delivery_mode in binary_integer default null -- when null the message payload will determine this
 , p_visibility in binary_integer default null -- when null the message payload will determine this
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
+, p_plsql_callback in varchar2 default c_default_plsql_callback -- When not null that callback will e registered, other you must dequeue yourself
 , p_msgid out nocopy raw
 );
 /**
