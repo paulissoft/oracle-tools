@@ -151,6 +151,28 @@ begin
   commit;
 end register_at;  
 
+procedure dequeue_and_process_worker
+( p_queue_name_tab in sys.odcivarchar2list
+, p_worker_nr in positiven
+, p_start in date
+, p_end in date
+)
+is
+begin
+  raise program_error;
+end dequeue_and_process_worker;
+
+procedure dequeue_and_process_supervisor
+( p_queue_name_tab in sys.odcivarchar2list
+, p_nr_workers in positiven
+, p_start in date
+, p_end in date
+)
+is
+begin
+  raise program_error;
+end dequeue_and_process_supervisor;
+
 -- public routines
 
 function queue_name
@@ -546,11 +568,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   p_msg.print();
 $end
 
-  if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) or
+  if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) -- option 1 from the spec
 $if msg_aq_pkg.c_buffered_messaging $then
-     ( p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) or
+  or ( p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) -- option 2 from the spec
 $end     
-     ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.immediate )
+  or ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.immediate ) -- option 3 from the spec
   then 
     l_enqueue_options.delivery_mode := p_delivery_mode;
     l_enqueue_options.visibility := p_visibility;
@@ -683,7 +705,7 @@ is
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE (1)');
   dbug.print
   ( dbug."input"
   , 'queue name: %s; p_delivery_mode: %s; p_visibility: %s; p_subscriber: %s; p_dequeue_mode: %s'
@@ -717,20 +739,23 @@ $end
   l_dequeue_options.deq_condition := p_deq_condition;
   l_dequeue_options.msgid := p_msgid;
 
-  if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) or
+  if ( p_delivery_mode = dbms_aq.persistent             and p_visibility = dbms_aq.on_commit ) -- option 1 from the spec
 $if msg_aq_pkg.c_buffered_messaging $then
-     ( p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) or
+  or ( p_delivery_mode = dbms_aq.buffered               and p_visibility = dbms_aq.immediate ) -- option 2 from the spec
 $end     
-     ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.immediate )
+  or ( p_delivery_mode = dbms_aq.persistent             and p_visibility = dbms_aq.immediate ) -- option 3 from the spec
+$if msg_aq_pkg.c_buffered_messaging $then
+  or ( p_delivery_mode = dbms_aq.persistent_or_buffered and p_visibility = dbms_aq.immediate ) -- option 4 from the spec
+$end     
   then 
     l_dequeue_options.delivery_mode := p_delivery_mode;
     l_dequeue_options.visibility := p_visibility;
   else
-    -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED
+    -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED or DBMS_AQ.PERSISTENT_OR_BUFFERED
     case
 $if msg_aq_pkg.c_buffered_messaging $then
       -- try to preserve at least one of the input settings
-      when p_delivery_mode = dbms_aq.buffered
+      when p_delivery_mode in (dbms_aq.buffered, dbms_aq.persistent_or_buffered)
       then
         l_dequeue_options.delivery_mode := p_delivery_mode;
         l_dequeue_options.visibility := dbms_aq.immediate;
@@ -835,7 +860,7 @@ is
   l_msg msg_typ;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (1)');
   dbug.print(dbug."input", 'p_commit: %s', p_commit);
 $end
 
@@ -891,7 +916,7 @@ procedure dequeue
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE (2)');
   dbug.print
   ( dbug."input"
   , 'p_context: %s; p_descr.msg_id: %s; p_descr.consumer_name: %s; p_descr.queue_name: %s; p_payloadl: %s'
@@ -974,7 +999,7 @@ is
   l_msg msg_typ;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (2)');
   dbug.print(dbug."input", 'p_commit: %s', p_commit);
 $end
 
@@ -1005,6 +1030,107 @@ $end
   if p_commit
   then
     commit; -- remove message from the queue
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end dequeue_and_process;
+
+procedure dequeue_and_process
+( p_queue_name_list in varchar2
+, p_nr_workers_multiply_per_q in positive
+, p_nr_workers_exact in positive
+, p_worker_nr in positive
+, p_ttl in positiven
+)
+is
+  c_start constant date := sysdate;
+  c_end constant date := c_start + p_ttl / ( 24 * 60 * 60 );
+  l_now date;
+  l_nr_worker_parameters naturaln := 0;
+  l_queue_name_tab sys.odcivarchar2list;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (3)');
+  dbug.print
+  ( dbug."input"
+  , 'p_queue_name_list: %s; p_nr_workers_multiply_per_q: %s; p_nr_workers_exact: %s; p_worker_nr: %s; p_ttl: %s'
+  , p_queue_name_list
+  , p_nr_workers_multiply_per_q
+  , p_nr_workers_exact
+  , p_worker_nr
+  , p_ttl
+  );
+$end
+
+  if p_nr_workers_multiply_per_q is not null
+  then
+    l_nr_worker_parameters := l_nr_worker_parameters + 1;
+  end if;
+  if p_nr_workers_exact is not null
+  then
+    l_nr_worker_parameters := l_nr_worker_parameters + 1;
+  end if;
+  if p_worker_nr is not null
+  then
+    l_nr_worker_parameters := l_nr_worker_parameters + 1;
+  end if;
+
+  if l_nr_worker_parameters != 1
+  then
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message
+      ( 'Exactly one of the following parameters must be set: p_nr_workers_multiply_per_q (%d), p_nr_workers_exact (%d), p_worker_nr (%d)'
+      , p_nr_workers_multiply_per_q -- since the type is positive %d should work
+      , p_nr_workers_exact -- idem
+      , p_worker_nr -- idem
+      )
+    );
+  end if;
+
+  -- determine the normal queues matching one of the input queues (that may have wildcards)
+  select  distinct
+          q.name
+  bulk collect
+  into    l_queue_name_tab
+  from    user_queues q
+          inner join table(oracle_tools.api_pkg.list2collection(p_value_list => p_queue_name_list, p_sep => ',', p_ignore_null => 1)) qn
+          on q.name like qn.column_value escape '\'
+  where   q.queue_type = 'NORMAL_QUEUE';
+
+  if l_queue_name_tab.count = 0
+  then
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message
+      ( 'Could not find normal queues for this comma separated queue name list: %s'
+      , p_queue_name_list
+      )
+    );
+  end if;
+
+  if p_worker_nr is not null
+  then
+    dequeue_and_process_worker
+    ( l_queue_name_tab
+    , p_worker_nr
+    , c_start
+    , c_end
+    );
+  else
+    dequeue_and_process_supervisor
+    ( l_queue_name_tab
+    , nvl(p_nr_workers_exact, p_nr_workers_multiply_per_q * l_queue_name_tab.count)
+    , c_start
+    , c_end
+    );  
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
