@@ -9,11 +9,6 @@ procedure json2data
 is
   l_cookie json_object_t;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.JSON2DATA (1)');
-  dbug.print(dbug."input", 'p_cookies: %s', case when p_cookies is not null then p_cookies.stringify end);
-$end
-
   if p_cookies is not null
   then
     for i_idx in 0 .. p_cookies.get_size - 1 -- 0 based
@@ -35,10 +30,6 @@ $end
       */
       
       l_cookie := treat(p_cookies.get(i_idx) as json_object_t);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'l_cookie: %s', l_cookie.stringify);
-$end
       
       p_cookie_tab(i_idx + 1).name := l_cookie.get_string('name');
       p_cookie_tab(i_idx + 1).value := l_cookie.get_string('value');
@@ -48,28 +39,8 @@ $end
       p_cookie_tab(i_idx + 1).secure := l_cookie.get_boolean('secure');
       p_cookie_tab(i_idx + 1).version := l_cookie.get_number('version');
       p_cookie_tab(i_idx + 1).comment := l_cookie.get_string('comment');
-      
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , '[%s] %s: %s'
-      , i_idx
-      , p_cookie_tab(i_idx + 1).name
-      , p_cookie_tab(i_idx + 1).value
-      );
-$end
     end loop;
-  end if;
-  
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."output", 'p_cookie_tab.count: %s', p_cookie_tab.count);
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
+  end if;  
 end json2data;
 
 procedure data2json
@@ -79,11 +50,6 @@ procedure data2json
 is
   l_cookie json_object_t;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DATA2JSON (1)');
-  dbug.print(dbug."input", 'p_cookie_tab.count: %s', p_cookie_tab.count);
-$end
-
   if p_cookie_tab.count = 0
   then
     p_cookies := null;
@@ -122,16 +88,6 @@ $end
       p_cookies.append(l_cookie);
     end loop;
   end if;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."output", 'p_cookies: %s', case when p_cookies is not null then p_cookies.stringify end);
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
 end data2json;
 
 procedure json2data
@@ -142,11 +98,6 @@ is
   l_http_header json_object_t;
   l_http_header_keys json_key_list;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.JSON2DATA (2)');
-  dbug.print(dbug."input", 'p_http_headers: %s', case when p_http_headers is not null then p_http_headers.stringify end);
-$end
-
   if p_http_headers is not null
   then
     for i_header_idx in 0 .. p_http_headers.get_size - 1 -- 0 based
@@ -162,9 +113,6 @@ $end
       l_http_header := treat(p_http_headers.get(i_header_idx) as json_object_t);
       l_http_header_keys := l_http_header.get_keys();
       
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'l_http_header: %s', l_http_header.stringify);
-$end
       if l_http_header_keys.count = 0
       then
         continue;
@@ -175,28 +123,8 @@ $end
         p_http_header_tab(p_http_header_tab.count+1).name := l_http_header_keys(i_key_idx);
         p_http_header_tab(p_http_header_tab.count+0).value := l_http_header.get_string(l_http_header_keys(i_key_idx));
       end loop;
-      
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , '[%s] %s: %s'
-      , p_http_header_tab.count+0
-      , p_http_header_tab(p_http_header_tab.count+0).name
-      , p_http_header_tab(p_http_header_tab.count+0).value
-      );
-$end
     end loop;
   end if;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."output", 'p_http_header_tab.count: %s', p_http_header_tab.count);
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
 end json2data;
 
 procedure data2json
@@ -206,11 +134,6 @@ procedure data2json
 is
   l_http_header json_object_t;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DATA2JSON (2)');
-  dbug.print(dbug."input", 'p_http_header_tab.count: %s', p_http_header_tab.count);
-$end
-
   if p_http_header_tab.count = 0
   then
     p_http_headers := null;
@@ -234,16 +157,6 @@ $end
       p_http_headers.append(l_http_header);
     end loop;
   end if;
-  
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."output", 'p_http_headers: %s', case when p_http_headers is not null then p_http_headers.stringify end);
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
 end data2json;
 
 $if msg_aq_pkg.c_testing $then
