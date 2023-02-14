@@ -1,7 +1,7 @@
 CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
 c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
-c_buffered_messaging constant boolean := not(c_testing); -- buffered messaging enabled?
+c_buffered_messaging constant boolean := true; -- not(c_testing); -- buffered messaging enabled?
 
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option

@@ -210,8 +210,8 @@ $end
   -- and dequeued here
   msg_aq_pkg.dequeue
   ( p_queue_name => web_service_response_typ.default_group()
-  , p_delivery_mode => null
-  , p_visibility => null
+  , p_delivery_mode => dbms_aq.persistent_or_buffered
+  , p_visibility => dbms_aq.immediate
   , p_subscriber => null
   , p_dequeue_mode => dbms_aq.remove
     /*
@@ -294,8 +294,8 @@ $end
   -- and dequeued here
   msg_aq_pkg.dequeue
   ( p_queue_name => web_service_response_typ.default_group()
-  , p_delivery_mode => null
-  , p_visibility => null
+  , p_delivery_mode => dbms_aq.persistent_or_buffered
+  , p_visibility => dbms_aq.immediate
   , p_subscriber => null
   , p_dequeue_mode => dbms_aq.remove
     /*
