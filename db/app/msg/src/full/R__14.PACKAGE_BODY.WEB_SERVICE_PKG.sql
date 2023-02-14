@@ -369,7 +369,7 @@ $end
     , p_url => 'https://jsonplaceholder.typicode.com/posts'
     , p_http_method => 'POST'
     , p_body_clob => to_clob(l_body_vc)
-    , p_http_headers_clob => to_clob(utl_lms.format_message('[{"Content-Type":"application/json"},{"Content-Length":%s},{"User-Agent":"APEX"}]', to_char(length(l_body_vc))))
+    , p_http_headers_clob => to_clob('[{"Content-Type":"application/json"}]')
     );
     
   l_rest_web_service_request.response().print; -- just invoke directly and print
