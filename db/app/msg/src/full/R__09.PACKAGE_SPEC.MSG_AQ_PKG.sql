@@ -37,6 +37,10 @@ pragma exception_init(e_subscriber_already_exists, -24034);
 e_subscriber_does_not_exist exception;
 pragma exception_init(e_subscriber_does_not_exist, -24035);
 
+-- ORA-25228: timeout or end-of-fetch during message dequeue from ...
+e_dequeue_timeout exception;
+pragma exception_init(e_dequeue_timeout, -25228);
+
 /**
 
 This package is used as a wrapper around Oracle Advanced Queueing.

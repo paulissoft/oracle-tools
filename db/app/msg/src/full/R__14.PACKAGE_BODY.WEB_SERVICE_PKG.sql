@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE BODY "WEB_SERVICE_PKG" AS
 
+c_timestamp_format constant varchar2(30) := 'YYYYMMDDHH24MISSXFF';
+
 procedure json2data
 ( p_cookies in json_array_t
 , p_cookie_tab out nocopy sys.utl_http.cookie_table
@@ -7,6 +9,11 @@ procedure json2data
 is
   l_cookie json_object_t;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.JSON2DATA (1)');
+  dbug.print(dbug."input", 'p_cookies: %s', case when p_cookies is not null then p_cookies.stringify end);
+$end
+
   if p_cookies is not null
   then
     for i_idx in 0 .. p_cookies.get_size - 1 -- 0 based
@@ -28,17 +35,41 @@ begin
       */
       
       l_cookie := treat(p_cookies.get(i_idx) as json_object_t);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_cookie: %s', l_cookie.stringify);
+$end
       
-      p_cookie_tab(p_cookie_tab.count+1).name := l_cookie.get_string('name');
-      p_cookie_tab(p_cookie_tab.count+0).value := l_cookie.get_string('value');
-      p_cookie_tab(p_cookie_tab.count+0).domain := l_cookie.get_string('domain');
-      p_cookie_tab(p_cookie_tab.count+0).expire := to_timestamp(l_cookie.get_string('expire'), 'YYYYMMDDHH24MISSXFF');
-      p_cookie_tab(p_cookie_tab.count+0).path := l_cookie.get_string('path');
-      p_cookie_tab(p_cookie_tab.count+0).secure := l_cookie.get_boolean('secure');
-      p_cookie_tab(p_cookie_tab.count+0).version := l_cookie.get_number('version');
-      p_cookie_tab(p_cookie_tab.count+0).comment := l_cookie.get_string('comment');
+      p_cookie_tab(i_idx + 1).name := l_cookie.get_string('name');
+      p_cookie_tab(i_idx + 1).value := l_cookie.get_string('value');
+      p_cookie_tab(i_idx + 1).domain := l_cookie.get_string('domain');
+      p_cookie_tab(i_idx + 1).expire := to_timestamp(l_cookie.get_string('expire'), c_timestamp_format);
+      p_cookie_tab(i_idx + 1).path := l_cookie.get_string('path');
+      p_cookie_tab(i_idx + 1).secure := l_cookie.get_boolean('secure');
+      p_cookie_tab(i_idx + 1).version := l_cookie.get_number('version');
+      p_cookie_tab(i_idx + 1).comment := l_cookie.get_string('comment');
+      
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , '[%s] %s: %s'
+      , i_idx
+      , p_cookie_tab(i_idx + 1).name
+      , p_cookie_tab(i_idx + 1).value
+      );
+$end
     end loop;
   end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_cookie_tab.count: %s', p_cookie_tab.count);
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end json2data;
 
 procedure data2json
@@ -48,6 +79,11 @@ procedure data2json
 is
   l_cookie json_object_t;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DATA2JSON (1)');
+  dbug.print(dbug."input", 'p_cookie_tab.count: %s', p_cookie_tab.count);
+$end
+
   if p_cookie_tab.count = 0
   then
     p_cookies := null;
@@ -77,7 +113,7 @@ begin
       l_cookie.put('name', p_cookie_tab(i_idx).name);
       l_cookie.put('value', p_cookie_tab(i_idx).value);
       l_cookie.put('domain', p_cookie_tab(i_idx).domain);
-      l_cookie.put('expire', to_timestamp(p_cookie_tab(i_idx).expire, 'YYYYMMDDHH24MISSXFF'));
+      l_cookie.put('expire', to_timestamp(p_cookie_tab(i_idx).expire, c_timestamp_format));
       l_cookie.put('path', p_cookie_tab(i_idx).path);
       l_cookie.put('secure', p_cookie_tab(i_idx).secure);
       l_cookie.put('version', p_cookie_tab(i_idx).version);
@@ -86,6 +122,16 @@ begin
       p_cookies.append(l_cookie);
     end loop;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_cookies: %s', case when p_cookies is not null then p_cookies.stringify end);
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end data2json;
 
 procedure json2data
@@ -94,10 +140,16 @@ procedure json2data
 )
 is
   l_http_header json_object_t;
+  l_http_header_keys json_key_list;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.JSON2DATA (2)');
+  dbug.print(dbug."input", 'p_http_headers: %s', case when p_http_headers is not null then p_http_headers.stringify end);
+$end
+
   if p_http_headers is not null
   then
-    for i_idx in 0 .. p_http_headers.get_size - 1 -- 0 based
+    for i_header_idx in 0 .. p_http_headers.get_size - 1 -- 0 based
     loop
       /*
       type header is record (
@@ -107,12 +159,44 @@ begin
       type header_table is table of header index by binary_integer;
       */
       
-      l_http_header := treat(p_http_headers.get(i_idx) as json_object_t);
+      l_http_header := treat(p_http_headers.get(i_header_idx) as json_object_t);
+      l_http_header_keys := l_http_header.get_keys();
       
-      p_http_header_tab(p_http_header_tab.count+1).name := l_http_header.get_string('name');
-      p_http_header_tab(p_http_header_tab.count+0).value := l_http_header.get_string('value');
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_http_header: %s', l_http_header.stringify);
+$end
+      if l_http_header_keys.count = 0
+      then
+        continue;
+      end if;
+      
+      for i_key_idx in l_http_header_keys.first .. l_http_header_keys.last
+      loop
+        p_http_header_tab(p_http_header_tab.count+1).name := l_http_header_keys(i_key_idx);
+        p_http_header_tab(p_http_header_tab.count+0).value := l_http_header.get_string(l_http_header_keys(i_key_idx));
+      end loop;
+      
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , '[%s] %s: %s'
+      , p_http_header_tab.count+0
+      , p_http_header_tab(p_http_header_tab.count+0).name
+      , p_http_header_tab(p_http_header_tab.count+0).value
+      );
+$end
     end loop;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_http_header_tab.count: %s', p_http_header_tab.count);
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end json2data;
 
 procedure data2json
@@ -122,6 +206,11 @@ procedure data2json
 is
   l_http_header json_object_t;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DATA2JSON (2)');
+  dbug.print(dbug."input", 'p_http_header_tab.count: %s', p_http_header_tab.count);
+$end
+
   if p_http_header_tab.count = 0
   then
     p_http_headers := null;
@@ -140,12 +229,21 @@ begin
       type header_table is table of header index by binary_integer;
       */
       
-      l_http_header.put('name', p_http_header_tab(i_idx).name);
-      l_http_header.put('value', p_http_header_tab(i_idx).value);
+      l_http_header.put(p_http_header_tab(i_idx).name, p_http_header_tab(i_idx).value);
 
       p_http_headers.append(l_http_header);
     end loop;
   end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_http_headers: %s', case when p_http_headers is not null then p_http_headers.stringify end);
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end data2json;
 
 $if msg_aq_pkg.c_testing $then
@@ -154,10 +252,11 @@ procedure ut_rest_web_service_get
 is
   pragma autonomous_transaction;
 
-  l_correlation constant varchar2(128) := web_service_request_typ.generate_correlation();
+  l_correlation constant varchar2(128) := web_service_request_typ.generate_unique_id();
   l_msgid raw(16) := null;
   l_message_properties dbms_aq.message_properties_t;
   l_msg msg_typ;
+  l_rest_web_service_request rest_web_service_request_typ;
   l_web_service_response web_service_response_typ;
   l_json_act json_element_t;
   l_json_exp constant json_object_t := json_object_t('{
@@ -182,17 +281,22 @@ $end
   --   "completed": false
   -- }%                                                                                                                                                                                                           
   -- will just get enqueued here
-  rest_web_service_request_typ
-  ( p_url => 'https://jsonplaceholder.typicode.com/todos/1'
-  , p_correlation => l_correlation
-  , p_http_method => 'GET'
-  ).process;
+  l_rest_web_service_request :=
+    rest_web_service_request_typ
+    ( p_context$ => l_correlation
+    , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
+    , p_http_method => 'GET'
+    );
+
+  l_rest_web_service_request.response().print; -- just invoke directly and print
+  
+  l_rest_web_service_request.process; -- invoke indirectly
 
   commit;
 
   -- and dequeued here
   msg_aq_pkg.dequeue
-  ( p_queue_name => web_service_request_typ.response_queue_name()
+  ( p_queue_name => web_service_response_typ.default_group()
   , p_delivery_mode => null
   , p_visibility => null
   , p_subscriber => null
@@ -237,10 +341,12 @@ procedure ut_rest_web_service_post
 is
   pragma autonomous_transaction;
 
-  l_correlation constant varchar2(128) := web_service_request_typ.generate_correlation();
+  l_correlation constant varchar2(128) := web_service_request_typ.generate_unique_id();
   l_msgid raw(16) := null;
+  l_body_vc constant varchar2(4000 char) := '{"title":"foo","body":"bar","userId":123}';
   l_message_properties dbms_aq.message_properties_t;
   l_msg msg_typ;
+  l_rest_web_service_request rest_web_service_request_typ;
   l_web_service_response web_service_response_typ;
   l_json_act json_element_t;
   l_json_exp constant json_object_t := json_object_t('{
@@ -257,19 +363,24 @@ $end
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- will just get enqueued here
-  rest_web_service_request_typ
-  ( p_url => 'https://jsonplaceholder.typicode.com/posts'
-  , p_correlation => l_correlation
-  , p_http_method => 'POST'
-  , p_body_clob => to_clob('{"title":"foo","body":"bar","userId":123}')
-  , p_http_headers_clob => to_clob('[{"Content-Type":"application/json"},{"User-Agent":"APEX"}]')
-  ).process;
+  l_rest_web_service_request :=
+    rest_web_service_request_typ
+    ( p_context$ => l_correlation
+    , p_url => 'https://jsonplaceholder.typicode.com/posts'
+    , p_http_method => 'POST'
+    , p_body_clob => to_clob(l_body_vc)
+    , p_http_headers_clob => to_clob(utl_lms.format_message('[{"Content-Type":"application/json"},{"Content-Length":%s},{"User-Agent":"APEX"}]', to_char(length(l_body_vc))))
+    );
+    
+  l_rest_web_service_request.response().print; -- just invoke directly and print
+  
+  l_rest_web_service_request.process; -- invoke indirectly
 
   commit;
 
   -- and dequeued here
   msg_aq_pkg.dequeue
-  ( p_queue_name => web_service_request_typ.response_queue_name()
+  ( p_queue_name => web_service_response_typ.default_group()
   , p_delivery_mode => null
   , p_visibility => null
   , p_subscriber => null

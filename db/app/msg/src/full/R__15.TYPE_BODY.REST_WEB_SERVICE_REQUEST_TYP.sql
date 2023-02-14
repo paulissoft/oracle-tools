@@ -3,29 +3,32 @@ CREATE OR REPLACE TYPE BODY "REST_WEB_SERVICE_REQUEST_TYP" AS
 constructor function rest_web_service_request_typ
 ( self in out nocopy rest_web_service_request_typ
   -- from web_service_request_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 , p_url in varchar2
-, p_scheme in varchar2 default null -- 'Basic'
-, p_proxy_override in varchar2 default null
-, p_transfer_timeout in number default 180
-, p_wallet_path in varchar2 default null
-, p_https_host in varchar2 default null
-, p_credential_static_id in varchar2 default null
-, p_token_url in varchar2 default null
-, p_correlation in varchar2 default null
-, p_cookies_clob in clob default null
-, p_http_headers_clob in clob default null
+, p_scheme in varchar2
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
+, p_wallet_path in varchar2
+, p_https_host in varchar2
+, p_credential_static_id in varchar2
+, p_token_url in varchar2
+, p_cookies_clob in clob
+, p_http_headers_clob in clob
   -- this type
-, p_http_method in varchar2 default 'GET'
-, p_body_clob in clob default null
-, p_body_blob in blob default null
-, p_parms_clob in clob default null
-, p_binary_response in integer default 0
+, p_http_method in varchar2
+, p_body_clob in clob
+, p_body_blob in blob
+, p_parms_clob in clob
+, p_binary_response in integer
 )
 return self as result
 is
 begin
   self.construct
-  ( p_url => p_url
+  ( p_group$ => p_group$
+  , p_context$ => p_context$
+  , p_url => p_url
   , p_scheme => p_scheme
   , p_proxy_override => p_proxy_override
   , p_transfer_timeout => p_transfer_timeout
@@ -33,7 +36,6 @@ begin
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_correlation => p_correlation
   , p_cookies_clob => p_cookies_clob
   , p_http_headers_clob => p_http_headers_clob
   , p_http_method => p_http_method
@@ -48,23 +50,24 @@ end rest_web_service_request_typ;
 final member procedure construct
 ( self in out nocopy rest_web_service_request_typ
   -- from web_service_request_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 , p_url in varchar2
-, p_scheme in varchar2 default null -- 'Basic'
-, p_proxy_override in varchar2 default null
-, p_transfer_timeout in number default 180
-, p_wallet_path in varchar2 default null
-, p_https_host in varchar2 default null
-, p_credential_static_id in varchar2 default null
-, p_token_url in varchar2 default null
-, p_correlation in varchar2 default null
-, p_cookies_clob in clob default null
-, p_http_headers_clob in clob default null
+, p_scheme in varchar2
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
+, p_wallet_path in varchar2
+, p_https_host in varchar2
+, p_credential_static_id in varchar2
+, p_token_url in varchar2
+, p_cookies_clob in clob
+, p_http_headers_clob in clob
   -- this type
-, p_http_method in varchar2 default 'GET'
-, p_body_clob in clob default null
-, p_body_blob in blob default null
-, p_parms_clob in clob default null
-, p_binary_response in integer default 0
+, p_http_method in varchar2
+, p_body_clob in clob
+, p_body_blob in blob
+, p_parms_clob in clob
+, p_binary_response in integer
 )
 is
 begin
@@ -73,7 +76,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   (self as web_service_request_typ).construct
-  ( p_url => p_url
+  ( p_group$ => p_group$
+  , p_context$ => p_context$
+  , p_url => p_url
   , p_scheme => p_scheme
   , p_proxy_override => p_proxy_override
   , p_transfer_timeout => p_transfer_timeout
@@ -81,7 +86,6 @@ $end
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_correlation => p_correlation
   , p_cookies_clob => p_cookies_clob
   , p_http_headers_clob => p_http_headers_clob
   );
@@ -123,6 +127,86 @@ member procedure process$now
 ( self in rest_web_service_request_typ
 )
 is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
+$end
+
+  self.response().process;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end process$now;
+
+overriding
+member procedure serialize
+( self in rest_web_service_request_typ
+, p_json_object in out nocopy json_object_t
+)
+is
+  l_parms_vc constant json_object_t := 
+    case
+      when self.parms_vc is not null
+      then json_object_t(self.parms_vc)
+      else null
+    end;
+  l_parms_clob constant json_object_t := 
+    case
+      when self.parms_clob is not null
+      then json_object_t(self.parms_clob)
+      else null
+    end;
+begin
+  (self as web_service_request_typ).serialize(p_json_object);
+  p_json_object.put('HTTP_METHOD', self.http_method);
+  if self.body_vc is not null
+  then
+    p_json_object.put('BODY_VC', self.body_vc);
+  end if;
+  if self.body_clob is not null
+  then
+    p_json_object.put('BODY_CLOB', self.body_clob);
+  end if;
+  if self.body_raw is not null
+  then
+    p_json_object.put('BODY_RAW', self.body_raw);
+  end if;
+  if self.body_blob is not null
+  then
+    p_json_object.put('BODY_BLOB', self.body_blob);
+  end if;
+  if l_parms_vc is not null
+  then
+    p_json_object.put('PARMS_VC', l_parms_vc);
+  end if;
+  if l_parms_clob is not null
+  then
+    p_json_object.put('PARMS_CLOB', l_parms_clob);
+  end if;
+  p_json_object.put('BINARY_RESPONSE', self.binary_response);
+end serialize;
+
+overriding
+member function has_not_null_lob
+( self in rest_web_service_request_typ
+)
+return integer
+is
+begin
+  return
+    case
+      when (self as web_service_request_typ).has_not_null_lob = 1 then 1
+      when self.body_clob is not null then 1
+      when self.body_blob is not null then 1
+      when self.parms_clob is not null then 1
+      else 0
+    end;
+end has_not_null_lob;
+
+member function response
+return web_service_response_typ
+is
   l_parm_names apex_application_global.vc_arr2 := apex_web_service.empty_vc_arr;
   l_parm_values apex_application_global.vc_arr2 := apex_web_service.empty_vc_arr;
   l_parms constant json_object_t := 
@@ -157,9 +241,10 @@ is
     end;
   l_body_clob clob := null;
   l_body_blob blob := null;
+  l_web_service_response web_service_response_typ := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.RESPONSE');
 $end
 
   if l_parms is not null
@@ -173,10 +258,6 @@ $end
 
   web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
   web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'self.binary_response: %s; self.correlation: %s', self.binary_response, self.correlation);
-$end
 
   if self.binary_response = 0
   then
@@ -250,8 +331,7 @@ $end
   web_service_pkg.data2json(apex_web_service.g_response_cookies, l_cookies);
   web_service_pkg.data2json(apex_web_service.g_headers, l_http_headers);
 
-  if self.correlation() is not null
-  then
+  l_web_service_response :=
     web_service_response_typ
     ( p_web_service_request => self
     , p_http_status_code => apex_web_service.g_status_code
@@ -259,102 +339,14 @@ $end
     , p_body_blob => l_body_blob
     , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
     , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
-    ).process;
-  end if;
+    );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end process$now;
 
-overriding
-member procedure serialize
-( self in rest_web_service_request_typ
-, p_json_object in out nocopy json_object_t
-)
-is
-  l_body_vc constant json_object_t := 
-    case
-      when self.body_vc is not null
-      then json_object_t(self.body_vc)
-      else null
-    end;
-  l_body_clob constant json_object_t := 
-    case
-      when self.body_clob is not null
-      then json_object_t(self.body_clob)
-      else null
-    end;
-  l_body_raw constant json_object_t := 
-    case
-      when self.body_raw is not null
-      then json_object_t(to_blob(self.body_raw))
-      else null
-    end;
-  l_body_blob constant json_object_t := 
-    case
-      when self.body_blob is not null
-      then json_object_t(self.body_blob)
-      else null
-    end;
-  l_parms_vc constant json_object_t := 
-    case
-      when self.parms_vc is not null
-      then json_object_t(self.parms_vc)
-      else null
-    end;
-  l_parms_clob constant json_object_t := 
-    case
-      when self.parms_clob is not null
-      then json_object_t(self.parms_clob)
-      else null
-    end;
-begin
-  (self as web_service_request_typ).serialize(p_json_object);
-  p_json_object.put('HTTP_METHOD', self.http_method);
-  if l_body_vc is not null
-  then
-    p_json_object.put('BODY_VC', l_body_vc);
-  end if;
-  if l_body_clob is not null
-  then
-    p_json_object.put('BODY_CLOB', l_body_clob);
-  end if;
-  if l_body_raw is not null
-  then
-    p_json_object.put('BODY_RAW', l_body_raw);
-  end if;
-  if l_body_blob is not null
-  then
-    p_json_object.put('BODY_BLOB', l_body_blob);
-  end if;
-  if l_parms_vc is not null
-  then
-    p_json_object.put('PARMS_VC', l_parms_vc);
-  end if;
-  if l_parms_clob is not null
-  then
-    p_json_object.put('PARMS_CLOB', l_parms_clob);
-  end if;
-  p_json_object.put('BINARY_RESPONSE', self.binary_response);
-end serialize;
-
-overriding
-member function has_not_null_lob
-( self in rest_web_service_request_typ
-)
-return integer
-is
-begin
-  return
-    case
-      when (self as web_service_request_typ).has_not_null_lob = 1 then 1
-      when self.body_clob is not null then 1
-      when self.body_blob is not null then 1
-      when self.parms_clob is not null then 1
-      else 0
-    end;
-end has_not_null_lob;
+  return l_web_service_response;
+end response;
 
 end;
 /

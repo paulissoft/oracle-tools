@@ -21,12 +21,14 @@ be enqueued.
 Since we want to be able to enqueue buffered messages we must take care of the
 LOBs above. There are two variants: a small variant with suffix _vc/_raw or
 otherwise the LOB variant with suffix _clob/_blob (meaning we can not use
-buffered messages if it has length > 0).
+buffered messages if it has a non null LOB).
 
 **/
 , constructor function rest_web_service_request_typ
   ( self in out nocopy rest_web_service_request_typ
     -- from web_service_request_typ
+  , p_group$ in varchar2 default null -- use web_service_request_typ.default_group()
+  , p_context$ in varchar2 default null -- you may use web_service_request_typ.generate_unique_id() to generate an AQ correlation id
   , p_url in varchar2
   , p_scheme in varchar2 default null -- 'Basic'
   , p_proxy_override in varchar2 default null
@@ -35,7 +37,6 @@ buffered messages if it has length > 0).
   , p_https_host in varchar2 default null
   , p_credential_static_id in varchar2 default null
   , p_token_url in varchar2 default null
-  , p_correlation in varchar2 default null
   , p_cookies_clob in clob default null
   , p_http_headers_clob in clob default null
     -- this type
@@ -50,6 +51,8 @@ buffered messages if it has length > 0).
 , final member procedure construct
   ( self in out nocopy rest_web_service_request_typ
     -- from web_service_request_typ
+  , p_group$ in varchar2
+  , p_context$ in varchar2
   , p_url in varchar2
   , p_scheme in varchar2 default null -- 'Basic'
   , p_proxy_override in varchar2 default null
@@ -58,7 +61,6 @@ buffered messages if it has length > 0).
   , p_https_host in varchar2 default null
   , p_credential_static_id in varchar2 default null
   , p_token_url in varchar2 default null
-  , p_correlation in varchar2 default null
   , p_cookies_clob in clob default null
   , p_http_headers_clob in clob default null
     -- this type
@@ -99,6 +101,9 @@ enqueue (process) that if correlation is not null.
   )
   return integer
 
+, member function response
+  return web_service_response_typ
+/** Invoke the web service and use the response (body, status, cookies, HTTP headers) to create a response object. **/
 )
 not final;
 /

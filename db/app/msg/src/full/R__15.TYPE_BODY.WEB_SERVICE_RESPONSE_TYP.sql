@@ -2,18 +2,22 @@ CREATE OR REPLACE TYPE BODY "WEB_SERVICE_RESPONSE_TYP" AS
 
 constructor function web_service_response_typ
 ( self in out nocopy web_service_response_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 , p_web_service_request in web_service_request_typ
 , p_http_status_code in integer  
-, p_body_clob in clob default null
-, p_body_blob in blob default null
-, p_cookies_clob in clob default null
-, p_http_headers_clob in clob default null
+, p_body_clob in clob
+, p_body_blob in blob
+, p_cookies_clob in clob
+, p_http_headers_clob in clob
 )
 return self as result
 is
 begin
   self.construct
-  ( p_web_service_request => p_web_service_request
+  ( p_group$ => p_group$
+  , p_context$ => p_context$
+  , p_web_service_request => p_web_service_request
   , p_http_status_code => p_http_status_code
   , p_body_clob => p_body_clob
   , p_body_blob => p_body_blob
@@ -25,16 +29,18 @@ end web_service_response_typ;
 
 final member procedure construct
 ( self in out nocopy web_service_response_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 , p_web_service_request in web_service_request_typ
 , p_http_status_code in integer  
-, p_body_clob in clob default null
-, p_body_blob in blob default null
-, p_cookies_clob in clob default null
-, p_http_headers_clob in clob default null
+, p_body_clob in clob
+, p_body_blob in blob
+, p_cookies_clob in clob
+, p_http_headers_clob in clob
 )
 is
 begin
-  (self as msg_typ).construct(web_service_request_typ.response_queue_name, null);
+  (self as msg_typ).construct(nvl(p_group$, web_service_response_typ.default_group()), p_context$);
   self.web_service_request := p_web_service_request;
   self.http_status_code := p_http_status_code;
   msg_pkg.data2msg(p_body_clob, self.body_vc, self.body_clob);
@@ -61,7 +67,7 @@ $end
     case
       when self.web_service_request is null
       then 0
-      when self.web_service_request.correlation() is null
+      when self.web_service_request.context$ is null
       then 0
       else 1
     end;
@@ -87,7 +93,7 @@ $end
 
   msg_aq_pkg.enqueue
   ( p_msg => self
-  , p_correlation => self.web_service_request.correlation()
+  , p_correlation => self.web_service_request.context$
   , p_plsql_callback => null
   , p_msgid => l_msgid
   );
@@ -126,30 +132,6 @@ member procedure serialize
 )
 is
   l_web_service_request json_object_t := json_object_t();
-  l_body_vc constant json_object_t := 
-    case
-      when self.body_vc is not null
-      then json_object_t(self.body_vc)
-      else null
-    end;
-  l_body_clob constant json_object_t := 
-    case
-      when self.body_clob is not null
-      then json_object_t(self.body_clob)
-      else null
-    end;
-  l_body_raw constant json_object_t := 
-    case
-      when self.body_raw is not null
-      then json_object_t(to_blob(self.body_raw))
-      else null
-    end;
-  l_body_blob constant json_object_t := 
-    case
-      when self.body_blob is not null
-      then json_object_t(self.body_blob)
-      else null
-    end;
   l_cookies_vc constant json_array_t := 
     case
       when self.cookies_vc is not null
@@ -182,21 +164,21 @@ begin
     p_json_object.put('WEB_SERVICE_REQUEST', l_web_service_request);
   end if;
   p_json_object.put('HTTP_STATUS_CODE', self.http_status_code);
-  if l_body_vc is not null
+  if self.body_vc is not null
   then
-    p_json_object.put('BODY_VC', l_body_vc);
+    p_json_object.put('BODY_VC', self.body_vc);
   end if;
-  if l_body_clob is not null
+  if self.body_clob is not null
   then
-    p_json_object.put('BODY_CLOB', l_body_clob);
+    p_json_object.put('BODY_CLOB', self.body_clob);
   end if;
-  if l_body_raw is not null
+  if self.body_raw is not null
   then
-    p_json_object.put('BODY_RAW', l_body_raw);
+    p_json_object.put('BODY_RAW', self.body_raw);
   end if;
-  if l_body_blob is not null
+  if self.body_blob is not null
   then
-    p_json_object.put('BODY_BLOB', l_body_blob);
+    p_json_object.put('BODY_BLOB', self.body_blob);
   end if;
   if l_cookies_vc is not null
   then
@@ -239,6 +221,13 @@ begin
       else 0
     end;
 end has_not_null_lob;
+
+static function default_group
+return varchar2
+is
+begin
+  return 'WEB_SERVICE_RESPONSE';
+end default_group;
 
 end;
 /

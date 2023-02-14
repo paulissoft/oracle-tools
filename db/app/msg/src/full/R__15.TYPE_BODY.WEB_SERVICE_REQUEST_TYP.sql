@@ -2,23 +2,26 @@ CREATE OR REPLACE TYPE BODY "WEB_SERVICE_REQUEST_TYP" AS
 
 constructor function web_service_request_typ
 ( self in out nocopy web_service_request_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 , p_url in varchar2
-, p_scheme in varchar2 default null -- 'Basic'
-, p_proxy_override in varchar2 default null
-, p_transfer_timeout in number default 180
-, p_wallet_path in varchar2 default null
-, p_https_host in varchar2 default null
-, p_credential_static_id in varchar2 default null
-, p_token_url in varchar2 default null
-, p_correlation in varchar2 default null
-, p_cookies_clob in clob default null
-, p_http_headers_clob in clob default null
+, p_scheme in varchar2
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
+, p_wallet_path in varchar2
+, p_https_host in varchar2
+, p_credential_static_id in varchar2
+, p_token_url in varchar2
+, p_cookies_clob in clob
+, p_http_headers_clob in clob
 )
 return self as result
 is
 begin
   self.construct
-  ( p_url => p_url
+  ( p_group$ => p_group$
+  , p_context$ => p_context$
+  , p_url => p_url
   , p_scheme => p_scheme
   , p_proxy_override => p_proxy_override
   , p_transfer_timeout => p_transfer_timeout
@@ -26,7 +29,6 @@ begin
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_correlation => p_correlation
   , p_cookies_clob => p_cookies_clob
   , p_http_headers_clob => p_http_headers_clob
   );
@@ -35,21 +37,22 @@ end web_service_request_typ;
 
 final member procedure construct
 ( self in out nocopy web_service_request_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 , p_url in varchar2
-, p_scheme in varchar2 default null -- 'Basic'
-, p_proxy_override in varchar2 default null
-, p_transfer_timeout in number default 180
-, p_wallet_path in varchar2 default null
-, p_https_host in varchar2 default null
-, p_credential_static_id in varchar2 default null
-, p_token_url in varchar2 default null
-, p_correlation in varchar2 default null
-, p_cookies_clob in clob default null
-, p_http_headers_clob in clob default null
+, p_scheme in varchar2
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
+, p_wallet_path in varchar2
+, p_https_host in varchar2
+, p_credential_static_id in varchar2
+, p_token_url in varchar2
+, p_cookies_clob in clob
+, p_http_headers_clob in clob
 )
 is
 begin
-  (self as msg_typ).construct(web_service_request_typ.request_queue_name, p_correlation);
+  (self as msg_typ).construct(nvl(p_group$, web_service_request_typ.default_group()), p_context$);
   self.url := p_url;
   self.scheme := p_scheme;
   self.proxy_override := p_proxy_override;
@@ -103,7 +106,6 @@ begin
   p_json_object.put('WALLET_PATH', self.wallet_path);
   p_json_object.put('HTTPS_HOST', self.https_host);
   p_json_object.put('CREDENTIAL_STATIC_ID', self.credential_static_id);
-  p_json_object.put('CORRELATION', self.correlation());
   p_json_object.put('TOKEN_URL', self.token_url);
   if l_cookies_vc is not null
   then
@@ -138,33 +140,19 @@ begin
     end;
 end has_not_null_lob;
 
-final member function correlation
-return varchar2
-is
-begin
-  return self.context$;
-end correlation;
-
-static function request_queue_name
+static function default_group
 return varchar2
 is
 begin
   return 'WEB_SERVICE_REQUEST';
-end request_queue_name;
+end default_group;
 
-static function response_queue_name
-return varchar2
-is
-begin
-  return 'WEB_SERVICE_RESPONSE';
-end response_queue_name;
-
-static function generate_correlation
+static function generate_unique_id
 return varchar2
 is
 begin
   return to_char(web_service_request_seq.nextval);
-end generate_correlation;
+end generate_unique_id;
 
 end;
 /
