@@ -152,14 +152,95 @@ begin
 end register_at;  
 
 procedure dequeue_and_process_worker
-( p_queue_name_tab in sys.odcivarchar2list
+( p_queue_name_tab in out nocopy sys.odcivarchar2list -- to check for agent list construction
 , p_worker_nr in positiven
 , p_start in date
 , p_end in date
 )
 is
+  l_agent_list dbms_aq.aq$_agent_list_t;
+  l_queue_name_idx positiven := 1;
+  l_agent sys.aq$_agent;
+  l_message_delivery_mode pls_integer;
+  l_now date;
 begin
-  raise program_error;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS_WORKER');
+  dbug.print
+  ( dbug."input"
+  , 'p_queue_name_tab.count: %s; p_worker_nr: %s; p_end: %s'
+  , case when p_queue_name_tab is not null then p_queue_name_tab.count end
+  , p_worker_nr
+  , to_char(p_end, 'yyyy-mm-dd hh24:mi:ss')
+  );
+$end
+
+  if p_queue_name_tab is not null and p_queue_name_tab.first = 1
+  then
+    null;
+  else
+    raise value_error;
+  end if;
+
+  if p_start is null or p_end is null
+  then
+    raise value_error;
+  end if;
+
+  -- i_idx can be from
+  -- a) 1 .. p_queue_name_tab.count     (<=> 1 .. p_queue_name_tab.count + (1) - 1)
+  -- b) 2 .. p_queue_name_tab.count + 1 (<=> 2 .. p_queue_name_tab.count + (2) - 1)
+  -- z) p_queue_name_tab.count .. p_queue_name_tab.count + (p_queue_name_tab.count) - 1
+  for i_idx in mod(p_worker_nr - 1, p_queue_name_tab.count) + 1 ..
+               mod(p_worker_nr - 1, p_queue_name_tab.count) + p_queue_name_tab.count
+  loop
+    l_queue_name_idx := mod(i_idx - 1, p_queue_name_tab.count) + 1; -- between 1 and p_queue_name_tab.count
+    
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."input", 'i_idx: %s; p_queue_name_tab(%s): %s', i_idx, l_queue_name_idx, p_queue_name_tab(l_queue_name_idx));
+$end
+
+    if p_queue_name_tab(l_queue_name_idx) is null
+    then
+      raise program_error;
+    end if;
+    
+    l_agent_list(l_agent_list.count+1) :=
+      sys.aq$_agent(null, p_queue_name_tab(l_queue_name_idx), null);
+    p_queue_name_tab(l_queue_name_idx) := null;
+  end loop;
+
+  loop
+    l_now := sysdate;
+    
+    exit when l_now >= p_end;
+    
+    dbms_aq.listen
+    ( agent_list => l_agent_list
+    , wait => greatest(0, (p_end - l_now) * (24 * 60 * 60))
+    , listen_delivery_mode => dbms_aq.persistent_or_buffered
+    , agent => l_agent
+    , message_delivery_mode => l_message_delivery_mode
+    );
+
+    msg_aq_pkg.dequeue_and_process
+    ( p_queue_name => l_agent.address
+    , p_delivery_mode => l_message_delivery_mode
+    , p_visibility => dbms_aq.immediate
+    , p_subscriber => l_agent.name
+    , p_dequeue_mode => dbms_aq.remove
+    , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+    , p_wait => 0 -- message should be there so there is no need to wait
+    , p_correlation => null
+    , p_deq_condition => null
+    , p_force => false -- queue should be there
+    , p_commit => true
+    );
+  end loop; 
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end dequeue_and_process_worker;
 
 procedure dequeue_and_process_supervisor
@@ -1097,13 +1178,15 @@ $end
 
   -- determine the normal queues matching one of the input queues (that may have wildcards)
   select  distinct
-          q.name
+          q.name as queue_name
   bulk collect
   into    l_queue_name_tab
   from    user_queues q
           inner join table(oracle_tools.api_pkg.list2collection(p_value_list => p_queue_name_list, p_sep => ',', p_ignore_null => 1)) qn
           on q.name like qn.column_value escape '\'
-  where   q.queue_type = 'NORMAL_QUEUE';
+  where   q.queue_type = 'NORMAL_QUEUE'
+  order by
+          queue_name;
 
   if l_queue_name_tab.count = 0
   then
