@@ -234,12 +234,14 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 See also the dequeue(p_context...) procedure documentation.
 **/
 
-procedure dequeue_and_process
+procedure dequeue_and_process_task
 ( p_include_queue_name_list in varchar2 default '%' -- a comma separated list of (case sensitive) queue names with wildcards allowed
 , p_exclude_queue_name_list in varchar2 default replace(web_service_response_typ.default_group, '_', '\_') -- these queues must be manually dequeued because the creator is interested in the result
 , p_nr_workers_multiply_per_q in positive default null -- supervisor parameter: the total number of workers will be this number multiplied by the number of queues
 , p_nr_workers_exact in positive default null -- supervisor parameter: the total number of workers will be this number
 , p_ttl in positiven default c_one_day_minus_something -- time to live (in seconds)
+, p_job_name in varchar2 default null -- when you want to start this as a job
+, p_repeat_interval in varchar2 default null -- when you want to start this as a repeating job
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs.
@@ -276,7 +278,7 @@ This procedure is meant to be used (indirectly) by DBMS_SCHEDULER jobs.
 The administrator does NOT need to create a job based on this procedure.
 
 This is the worker job, started by
-dequeue_and_process(p_include_queue_name_list, ...).  They start first to
+dequeue_and_process_task(p_include_queue_name_list, ...).  They start first to
 create an agent list for DBMS_AQ.listen where worker 1 must have queue 1 as
 the first agent queue, worker 2 must have queue 2 as the first agent
 queue. This is necessary since DBMS_AQ.listen returns the FIRST agent that is
@@ -291,16 +293,16 @@ rollback to a savepoint like in procedure dequeue_and_process(p_context, ...).
 
 procedure create_job
 ( p_job_name in varchar2 -- (1) like 'MSG\_PROCESS%#%' escape '\' or (2) like 'MSG\_PROCESS%' escape '\'
-, p_start_date in timestamp with time zone default null
-, p_repeat_interval in varchar2 default null
-, p_end_date in timestamp with time zone default null
+, p_start_date in timestamp with time zone default null -- only relevant for case 2
+, p_repeat_interval in varchar2 default null -- only relevant for case 2
+, p_end_date in timestamp with time zone default null -- only relevant for case 2
 );
 /**
 Create a job that is disabled to allow you to define actual job arguments and then to enable it (to run).
 
 Depending on the job name, one of these job programs are used:
 1. DEQUEUE_AND_PROCESS_WORKER
-2. DEQUEUE_AND_PROCESS
+2. DEQUEUE_AND_PROCESS_TASK
 
 See also:
 
@@ -316,7 +318,7 @@ DBMS_SCHEDULER.CREATE_JOB (
 **/
 
 procedure create_program
-( p_program_name in varchar2 -- either DEQUEUE_AND_PROCESS or DEQUEUE_AND_PROCESS_WORKER
+( p_program_name in varchar2 -- either DEQUEUE_AND_PROCESS_TASK or DEQUEUE_AND_PROCESS_WORKER
 );
 /**
 Create an (enabled) program to be used by jobs created by create_job(p_job_name).

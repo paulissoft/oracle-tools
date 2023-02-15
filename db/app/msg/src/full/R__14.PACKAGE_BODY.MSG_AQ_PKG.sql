@@ -262,27 +262,14 @@ begin
       -- See https://oracle-base.com/articles/10g/scheduler-enhancements-10gr2
       dbms_scheduler.add_event_queue_subscriber(subscriber_name => $$PLSQL_UNIT_OWNER);
   end;
-  
-  create_job
-  ( p_job_name => l_job_name
+
+  dequeue_and_process_task
+  ( p_include_queue_name_list => case when l_job_name <> "MSG_PROCESS" then replace(p_fq_queue_name, '_', '\_') else '%' end
+  , p_nr_workers_multiply_per_q => 1
+  , p_job_name => l_job_name
   , p_repeat_interval => case when l_job_name = "MSG_PROCESS" then 'FREQ=DAILY' end
   );
-  -- set the actual arguments
-  if l_job_name <> "MSG_PROCESS"
-  then
-    dbms_scheduler.set_job_argument_value
-    ( job_name => l_job_name
-    , argument_name => 'P_INCLUDE_QUEUE_NAME_LIST'
-    , argument_value => replace(p_fq_queue_name, '_', '\_')
-    );
-  else
-    null; -- default argument (%) is OK
-  end if;
-  dbms_scheduler.set_job_argument_value
-  ( job_name => l_job_name
-  , argument_name => 'P_NR_WORKERS_MULTIPLY_PER_Q'
-  , argument_value => to_char(1)
-  );
+
   dbms_scheduler.enable(l_job_name);
 end run_job_to_dequeue_at;
 
@@ -1175,45 +1162,128 @@ exception
 $end
 end dequeue_and_process;
 
-procedure dequeue_and_process
+procedure dequeue_and_process_task
 ( p_include_queue_name_list in varchar2
 , p_exclude_queue_name_list in varchar2
 , p_nr_workers_multiply_per_q in positive
 , p_nr_workers_exact in positive
 , p_ttl in positiven
+, p_job_name in varchar2
+, p_repeat_interval in varchar2
 )
 is
   c_start_date constant date := sysdate;
   c_end_date constant date := c_start_date + p_ttl / ( 24 * 60 * 60 );
-  l_now date;
-  l_nr_worker_parameters naturaln := 0;
   l_queue_name_tab sys.odcivarchar2list;
   l_job_name_prefix all_objects.object_name%type;
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
-  
+
+  procedure init
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    if p_job_name is null
+    then
+      dbug_init;
+    end if;
+$else
+    null;
+$end
+  end init;
+
+  procedure done
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    if p_job_name is null
+    then
+      dbug_done;
+    end if;
+$else
+    null;
+$end
+  end done;
+
+  function submit_job
+  ( p_job_name in varchar2
+  )
+  return boolean
+  is
+    l_found pls_integer;
+  begin
+    if p_job_name is null
+    then
+      return false;
+    end if;
+
+    begin
+      select  1
+      into    l_found
+      from    user_scheduler_jobs j
+      where   j.job_name = p_job_name;
+    exception
+      when no_data_found
+      then
+        create_job
+        ( p_job_name => p_job_name
+        , p_repeat_interval => p_repeat_interval
+        );
+    end;
+    
+    -- set the actual arguments
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    --, argument_name => 'P_INCLUDE_QUEUE_NAME_LIST'
+    , argument_position => 1
+    , argument_value => p_include_queue_name_list
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    --, argument_name => 'P_EXCLUDE_QUEUE_NAME_LIST'
+    , argument_position => 2
+    , argument_value => p_exclude_queue_name_list
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    --, argument_name => 'P_NR_WORKERS_MULTIPLY_PER_Q'
+    , argument_position => 3
+    , argument_value => to_char(p_nr_workers_multiply_per_q)
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    --, argument_name => 'P_NR_WORKERS_EXACT'
+    , argument_position => 4
+    , argument_value => to_char(p_nr_workers_exact)
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    --, argument_name => 'P_TTL'
+    , argument_position => 5
+    , argument_value => to_char(p_ttl)
+    );
+    
+    dbms_scheduler.enable(p_job_name); -- start the job
+
+    return true;
+  end submit_job;
+
   procedure check_input_and_state
   is
   begin
-    if p_nr_workers_multiply_per_q is not null
-    then
-      l_nr_worker_parameters := l_nr_worker_parameters + 1;
-    end if;
-    if p_nr_workers_exact is not null
-    then
-      l_nr_worker_parameters := l_nr_worker_parameters + 1;
-    end if;
-
-    if l_nr_worker_parameters != 1
-    then
-      raise_application_error
-      ( -20000
-      , utl_lms.format_message
-        ( 'Exactly one of the following parameters must be set: p_nr_workers_multiply_per_q (%d), p_nr_workers_exact (%d).'
-        , p_nr_workers_multiply_per_q -- since the type is positive %d should work
-        , p_nr_workers_exact -- idem
-        )
-      );
-    end if;
+    case
+      when ( p_nr_workers_multiply_per_q is not null and p_nr_workers_exact is null ) or
+           ( p_nr_workers_multiply_per_q is null and p_nr_workers_exact is not null )
+      then null; -- ok
+      else
+        raise_application_error
+        ( -20000
+        , utl_lms.format_message
+          ( 'Exactly one of the following parameters must be set: p_nr_workers_multiply_per_q (%d), p_nr_workers_exact (%d).'
+          , p_nr_workers_multiply_per_q -- since the type is positive %d should work
+          , p_nr_workers_exact -- idem
+          )
+        );
+    end case;
 
     -- Is this session running as a job?
     -- If not, just create a job name prefix to be used by the worker jobs.
@@ -1269,37 +1339,52 @@ $end
   end check_input_and_state;
 
   procedure start_worker
-  ( p_job_name in varchar2
+  ( p_worker_job_name in varchar2
   )
   is
-    l_worker_nr constant positiven := to_number(substr(p_job_name, instr(p_job_name, '#')+1));
+    l_found pls_integer;
+    l_worker_nr constant positiven := to_number(substr(p_worker_job_name, instr(p_worker_job_name, '#')+1));
   begin
-    create_job(p_job_name => p_job_name);
+    begin
+      select  1
+      into    l_found
+      from    user_scheduler_jobs j
+      where   j.job_name = p_worker_job_name;
+    exception
+      when no_data_found
+      then
+        create_job(p_job_name => p_worker_job_name);
+    end;
+    
     -- set the actual arguments
     dbms_scheduler.set_job_anydata_value
-    ( job_name => p_job_name
-    , argument_name => 'P_INCLUDE_QUEUE_NAME_LIST'
+    ( job_name => p_worker_job_name
+    --, argument_name => 'P_INCLUDE_QUEUE_NAME_LIST'
+    , argument_position => 1
     , argument_value => anydata.ConvertCollection(l_queue_name_tab)
     );
     dbms_scheduler.set_job_argument_value
-    ( job_name => p_job_name
-    , argument_name => 'P_WORKER_NR'
+    ( job_name => p_worker_job_name
+    --, argument_name => 'P_WORKER_NR'
+    , argument_position => 2
     , argument_value => to_char(l_worker_nr)
     );
     dbms_scheduler.set_job_argument_value
-    ( job_name => p_job_name
-    , argument_name => 'P_START_DATE_STR'
+    ( job_name => p_worker_job_name
+    --, argument_name => 'P_START_DATE_STR'
+    , argument_position => 3
     , argument_value => to_char(c_start_date, "yyyy-mm-dd hh24:mi:ss")
     );
     dbms_scheduler.set_job_argument_value
-    ( job_name => p_job_name
-    , argument_name => 'P_END_DATE_STR'
+    ( job_name => p_worker_job_name
+    --, argument_name => 'P_END_DATE_STR'
+    , argument_position => 4
     , argument_value => to_char(c_end_date, "yyyy-mm-dd hh24:mi:ss")
     );
-    dbms_scheduler.enable(p_job_name);
+    dbms_scheduler.enable(p_worker_job_name);
   end start_worker;
 
-  procedure start_workers
+  procedure define_workers
   is
   begin
     -- Create the workers
@@ -1307,9 +1392,19 @@ $end
     loop
       l_job_name_tab.extend(1);
       l_job_name_tab(l_job_name_tab.last) := l_job_name_prefix || '#' || to_char(i_worker); -- the # indicates a worker job
-      
-      start_worker(l_job_name_tab(l_job_name_tab.last));
     end loop;  
+  end define_workers;
+
+  procedure start_workers
+  is
+  begin
+    if l_job_name_tab.count > 0
+    then
+      for i_worker in l_job_name_tab.first .. l_job_name_tab.last
+      loop
+        start_worker(l_job_name_tab(i_worker));
+      end loop;
+    end if;
   end start_workers;
 
   procedure stop_workers
@@ -1339,6 +1434,7 @@ $end
   procedure supervise_workers
   is
     l_dequeue_options dbms_aq.dequeue_options_t;
+    l_now date;
     l_message_properties dbms_aq.message_properties_t;
     l_message_handle raw(16);
     l_queue_msg sys.scheduler$_event_info;
@@ -1397,10 +1493,10 @@ $end
       raise;
   end supervise_workers;
 begin
+  init;
+  
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug_init;
-
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (3)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS_TASK');
   dbug.print
   ( dbug."input"
   , 'p_include_queue_name_list: %s; p_exclude_queue_name_list: %s; p_nr_workers_multiply_per_q: %s; p_nr_workers_exact: %s; p_ttl: %s'
@@ -1410,27 +1506,38 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_nr_workers_exact
   , p_ttl
   );
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name: %s; p_repeat_interval: %s'
+  , p_job_name
+  , p_repeat_interval
+  );
 $end
 
-  check_input_and_state;  
-
-  start_workers;
-
-  supervise_workers;
+  if not(submit_job(upper(p_job_name)))
+  then
+    check_input_and_state;
+    define_workers;
+    stop_workers; -- get rid of old stuff first
+    start_workers;
+    supervise_workers;
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+$end
 
-  dbug_done;
+  done;
 exception
   when others
   then
+$if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
-
-    dbug_done;
-    raise;
 $end
-end dequeue_and_process;
+
+    done;
+    raise;
+end dequeue_and_process_task;
 
 procedure dequeue_and_process_worker
 ( p_queue_name_tab in anydata
@@ -1555,7 +1662,28 @@ procedure create_job
 )
 is
   l_job_name constant all_objects.object_name%type := upper(p_job_name);
-  l_program_name all_objects.object_name%type;
+
+  function create_program_if_necessary
+  ( p_program_name in varchar2
+  )
+  return varchar2
+  is
+    l_found pls_integer;
+  begin
+    begin
+      select  1
+      into    l_found
+      from    user_scheduler_programs p
+      where   p.program_name = p_program_name
+      and     p.program_type = 'STORED_PROCEDURE';
+    exception
+      when no_data_found
+      then
+        create_program(p_program_name);
+    end;      
+    
+    return p_program_name;
+  end create_program_if_necessary;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_JOB');
@@ -1569,76 +1697,60 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  <<try_loop>>
-  for i_try in 1..2 -- when you create a job the program may not be there yet, so we need a change to create that
-  loop
-    begin
-      case 
-        when l_job_name like "MSG\_PROCESS" || '%#%' escape '\'
-        then
-          /*
-          -- See https://oracle-base.com/articles/12c/scheduler-enhancements-12cr2#in-memory-jobs
-          --
-          -- IN_MEMORY_FULL: A job that must be associated with a program,
-          -- can't have a repeat interval and persists nothing to
-          -- disk. These jobs use a little more memory, but since they
-          -- persist nothing to disk they have reduced overheard and zero
-          -- redo generation as a result of the job mechanism itself. As
-          -- nothing is persisted to disk they are only present on the
-          -- instance that created them.
-          */
-          l_program_name := 'DEQUEUE_AND_PROCESS_WORKER';
-          dbms_scheduler.create_job
-          ( job_name => l_job_name
-          , program_name => l_program_name
-          , start_date => p_start_date
-          , repeat_interval => p_repeat_interval
-          , end_date => p_end_date
-          , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
-          , enabled => false
-          , auto_drop => true
-          , comments => 'Worker job for dequeueing and processing.'
-          , job_style => 'IN_MEMORY_FULL' -- most efficient
-          , credential_name => null
-          , destination_name => null
-          );
-          -- let this worker job raise events so that the supervisor can act
-          dbms_scheduler.set_attribute
-          ( name => l_job_name
-          , attribute => 'raise_events'
-          , value => dbms_scheduler.job_completed
-          );
-    
-        when l_job_name like "MSG\_PROCESS" || '%' escape '\'
-        then
-          l_program_name := 'DEQUEUE_AND_PROCESS';
-          dbms_scheduler.create_job
-          ( job_name => l_job_name
-          , program_name => l_program_name
-          , start_date => p_start_date
-          , repeat_interval => p_repeat_interval
-          , end_date => p_end_date
-          , job_class => 'DEFAULT_JOB_CLASS'
-          , enabled => false
-          , auto_drop => false
-          , comments => 'Main job for dequeueing and processing.'
-          , job_style => 'REGULAR'
-          , credential_name => null
-          , destination_name => null
-          );
-      end case;
-      
-      exit try_loop; -- apparently we succeeded so stop
-    exception
-      when others
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.on_error;
-$end
-        raise;
-        create_program(p_program_name => l_program_name);
-    end;
-  end loop try_loop;
+  case 
+    when l_job_name like "MSG\_PROCESS" || '%#%' escape '\'
+    then
+      /*
+      -- See https://oracle-base.com/articles/12c/scheduler-enhancements-12cr2#in-memory-jobs
+      --
+      -- IN_MEMORY_FULL: A job that must be associated with a program,
+      -- can't have a repeat interval and persists nothing to
+      -- disk. These jobs use a little more memory, but since they
+      -- persist nothing to disk they have reduced overheard and zero
+      -- redo generation as a result of the job mechanism itself. As
+      -- nothing is persisted to disk they are only present on the
+      -- instance that created them.
+      */
+      dbms_scheduler.create_job
+      ( job_name => l_job_name
+      , program_name => create_program_if_necessary('DEQUEUE_AND_PROCESS_WORKER')
+        -- will never repeat
+      , start_date => null
+      , repeat_interval => null
+      , end_date => null
+      --, job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
+      , enabled => false
+      , auto_drop => true
+      , comments => 'Worker job for dequeueing and processing.'
+        -- ORA-27354: attribute RAISE_EVENTS cannot be set for in-memory jobs
+      --, job_style => 'LIGHTWEIGHT' -- most efficient that can raise events
+      , credential_name => null
+      , destination_name => null
+      );
+      -- let this worker job raise events so that the supervisor can act
+      dbms_scheduler.set_attribute
+      ( name => l_job_name
+      , attribute => 'raise_events'
+      , value => dbms_scheduler.job_completed
+      );
+  
+    when l_job_name like "MSG\_PROCESS" || '%' escape '\'
+    then
+      dbms_scheduler.create_job
+      ( job_name => l_job_name
+      , program_name => create_program_if_necessary('DEQUEUE_AND_PROCESS_TASK')
+      , start_date => p_start_date
+      , repeat_interval => p_repeat_interval
+      , end_date => p_end_date
+      , job_class => 'DEFAULT_JOB_CLASS'
+      , enabled => false
+      , auto_drop => false
+      , comments => 'Main job for dequeueing and processing.'
+      , job_style => 'REGULAR'
+      , credential_name => null
+      , destination_name => null
+      );
+  end case;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1661,12 +1773,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   case l_program_name
-    when 'DEQUEUE_AND_PROCESS'
+    when 'DEQUEUE_AND_PROCESS_TASK'
     then
       dbms_scheduler.create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
-      , program_action => $$PSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
       , number_of_arguments => 5
       , enabled => false
       , comments => 'Main program for dequeueing and processing that spawns other worker in-memory jobs and supervises them.'
@@ -1704,7 +1816,7 @@ $end
       dbms_scheduler.create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
-      , program_action => $$PSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
       , number_of_arguments => 4
       , enabled => false
       , comments => 'Worker program for dequeueing and processing spawned by the main job as an in-memory job.'
