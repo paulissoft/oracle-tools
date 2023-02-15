@@ -4,6 +4,89 @@ CREATE OR REPLACE PACKAGE BODY "MSG_AQ_PKG" AS
 
 c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
+"yyyy-mm-dd hh24:mi:ss" constant varchar2(100) := 'yyyy-mm-dd hh24:mi:ss';
+"MSG_PROCESS" constant user_scheduler_jobs.job_name%type := 'MSG_PROCESS';
+"MSG\_PROCESS" constant user_scheduler_jobs.job_name%type := 'MSG\_PROCESS'; -- for like 
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+ 
+g_longops_rec oracle_tools.api_longops_pkg.t_longops_rec;
+
+type t_dbug_channel_active_tab is table of boolean index by all_objects.object_name%type;
+
+g_dbug_channel_active_tab t_dbug_channel_active_tab;
+
+procedure dbug_init
+is
+begin
+  g_dbug_channel_active_tab('BC_LOG') := dbug.active('BC_LOG');
+  g_dbug_channel_active_tab('DBMS_APPLICATION_INFO') := dbug.active('DBMS_APPLICATION_INFO');
+  g_dbug_channel_active_tab('DBMS_OUTPUT') := dbug.active('DBMS_OUTPUT');
+  g_dbug_channel_active_tab('LOG4PLSQL') := dbug.active('LOG4PLSQL');
+  g_dbug_channel_active_tab('PROFILER') := dbug.active('PROFILER');
+  g_dbug_channel_active_tab('PLSDBUG') := dbug.active('PLSDBUG');
+  
+  dbug.activate('BC_LOG', true);
+  dbug.activate('DBMS_APPLICATION_INFO', true);
+  dbug.activate('DBMS_OUTPUT', false);
+  dbug.activate('LOG4PLSQL', false);
+  dbug.activate('PROFILER', true); -- to be able to use select * from table(dbug_profiler.show)
+  dbug.activate('PLSDBUG', false);
+
+  g_longops_rec := 
+    oracle_tools.api_longops_pkg.longops_init
+    ( p_target_desc => $$PLSQL_UNIT
+    , p_totalwork => 0
+    , p_op_name => 'process'
+    , p_units => 'messages'
+    );
+end dbug_init;
+
+procedure dbug_profiler_report
+is
+  l_dbug_channel all_objects.object_name%type := g_dbug_channel_active_tab.first;
+begin
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DBUG_PROFILER_REPORT');
+
+  for r in
+  ( select  t.module_name
+    ,       t.nr_calls
+    ,       t.elapsed_time
+    ,       t.avg_time
+    from    table(dbug_profiler.show) t
+  )
+  loop
+    dbug.print
+    ( dbug."info"
+    , 'module: %s; # calls: %s, elapsed time: %s; avg_time: %s'
+    , r.module_name
+    , r.nr_calls
+    , r.elapsed_time
+    , r.avg_time
+    );
+  end loop;
+
+  dbug.leave;
+end dbug_profiler_report;
+
+procedure dbug_done
+is
+  l_dbug_channel all_objects.object_name%type := g_dbug_channel_active_tab.first;
+begin
+  dbug_profiler_report;
+
+  oracle_tools.api_longops_pkg.longops_done(g_longops_rec);
+
+  while l_dbug_channel is not null
+  loop
+    dbug.activate('BC_LOG', g_dbug_channel_active_tab(l_dbug_channel));
+    
+    l_dbug_channel := g_dbug_channel_active_tab.next(l_dbug_channel);
+  end loop;
+end dbug_done;
+
+$end -- $if oracle_tools.cfg_pkg.c_debugging $then
+
 function visibility_descr
 ( p_visibility in binary_integer
 )
@@ -151,108 +234,98 @@ begin
   commit;
 end register_at;  
 
-procedure dequeue_and_process_worker
-( p_queue_name_tab in out nocopy sys.odcivarchar2list -- to check for agent list construction
-, p_worker_nr in positiven
-, p_start in date
-, p_end in date
+procedure run_job_to_dequeue_at
+( p_fq_queue_name in varchar2
 )
 is
-  l_agent_list dbms_aq.aq$_agent_list_t;
-  l_queue_name_idx positiven := 1;
-  l_agent sys.aq$_agent;
-  l_message_delivery_mode pls_integer;
-  l_now date;
+  pragma autonomous_transaction;
+
+  l_job_name all_objects.object_name%type;
+begin
+  -- Does job MSG_PROCESS exist?
+  -- a) If true, we must create a one-off job to dequeue the new queue.
+  --    When that one-off job finishes, subsequent runs of the normal MSG_PROCESS job will take over.
+  -- b) If not, we just create MSG_PROCESS that will dequeue all queues.
+  begin
+    select  j.job_name
+    into    l_job_name
+    from    user_scheduler_jobs j
+    where   j.job_name = "MSG_PROCESS";
+
+    -- Case a
+    l_job_name := "MSG_PROCESS" || '_' || trim('"' from p_fq_queue_name);
+  exception
+    when no_data_found
+    then
+      -- Case b
+      l_job_name := "MSG_PROCESS";
+      -- See https://oracle-base.com/articles/10g/scheduler-enhancements-10gr2
+      dbms_scheduler.add_event_queue_subscriber(subscriber_name => $$PLSQL_UNIT_OWNER);
+  end;
+  
+  create_job
+  ( p_job_name => l_job_name
+  , p_repeat_interval => case when l_job_name = "MSG_PROCESS" then 'FREQ=DAILY' end
+  );
+  -- set the actual arguments
+  if l_job_name <> "MSG_PROCESS"
+  then
+    dbms_scheduler.set_job_argument_value
+    ( job_name => l_job_name
+    , argument_name => 'P_INCLUDE_QUEUE_NAME_LIST'
+    , argument_value => replace(p_fq_queue_name, '_', '\_')
+    );
+  else
+    null; -- default argument (%) is OK
+  end if;
+  dbms_scheduler.set_job_argument_value
+  ( job_name => l_job_name
+  , argument_name => 'P_NR_WORKERS_MULTIPLY_PER_Q'
+  , argument_value => to_char(1)
+  );
+  dbms_scheduler.enable(l_job_name);
+end run_job_to_dequeue_at;
+
+-- dedicated procedure to enable profiling
+procedure process_msg
+( p_msg in msg_typ
+, p_commit in boolean
+)
+is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS_WORKER');
-  dbug.print
-  ( dbug."input"
-  , 'p_queue_name_tab.count: %s; p_worker_nr: %s; p_end: %s'
-  , case when p_queue_name_tab is not null then p_queue_name_tab.count end
-  , p_worker_nr
-  , to_char(p_end, 'yyyy-mm-dd hh24:mi:ss')
-  );
+  dbug.enter('PROCESS ' || p_msg.group$);
+  dbug.print(dbug."input", 'p_commit: %s', dbug.cast_to_varchar2(p_commit));
 $end
 
-  if p_queue_name_tab is not null and p_queue_name_tab.first = 1
+  savepoint spt;
+  
+  p_msg.process(p_maybe_later => 0);
+
+  oracle_tools.api_longops_pkg.longops_show(g_longops_rec);
+  
+  if p_commit
   then
-    null;
-  else
-    raise value_error;
+    commit; -- remove message from the queue
   end if;
-
-  if p_start is null or p_end is null
-  then
-    raise value_error;
-  end if;
-
-  -- i_idx can be from
-  -- a) 1 .. p_queue_name_tab.count     (<=> 1 .. p_queue_name_tab.count + (1) - 1)
-  -- b) 2 .. p_queue_name_tab.count + 1 (<=> 2 .. p_queue_name_tab.count + (2) - 1)
-  -- z) p_queue_name_tab.count .. p_queue_name_tab.count + (p_queue_name_tab.count) - 1
-  for i_idx in mod(p_worker_nr - 1, p_queue_name_tab.count) + 1 ..
-               mod(p_worker_nr - 1, p_queue_name_tab.count) + p_queue_name_tab.count
-  loop
-    l_queue_name_idx := mod(i_idx - 1, p_queue_name_tab.count) + 1; -- between 1 and p_queue_name_tab.count
-    
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."input", 'i_idx: %s; p_queue_name_tab(%s): %s', i_idx, l_queue_name_idx, p_queue_name_tab(l_queue_name_idx));
-$end
-
-    if p_queue_name_tab(l_queue_name_idx) is null
-    then
-      raise program_error;
-    end if;
-    
-    l_agent_list(l_agent_list.count+1) :=
-      sys.aq$_agent(null, p_queue_name_tab(l_queue_name_idx), null);
-    p_queue_name_tab(l_queue_name_idx) := null;
-  end loop;
-
-  loop
-    l_now := sysdate;
-    
-    exit when l_now >= p_end;
-    
-    dbms_aq.listen
-    ( agent_list => l_agent_list
-    , wait => greatest(0, (p_end - l_now) * (24 * 60 * 60))
-    , listen_delivery_mode => dbms_aq.persistent_or_buffered
-    , agent => l_agent
-    , message_delivery_mode => l_message_delivery_mode
-    );
-
-    msg_aq_pkg.dequeue_and_process
-    ( p_queue_name => l_agent.address
-    , p_delivery_mode => l_message_delivery_mode
-    , p_visibility => dbms_aq.immediate
-    , p_subscriber => l_agent.name
-    , p_dequeue_mode => dbms_aq.remove
-    , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
-    , p_wait => 0 -- message should be there so there is no need to wait
-    , p_correlation => null
-    , p_deq_condition => null
-    , p_force => false -- queue should be there
-    , p_commit => true
-    );
-  end loop; 
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end dequeue_and_process_worker;
+exception
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.on_error;
+$end
+    rollback to spt;
 
-procedure dequeue_and_process_supervisor
-( p_queue_name_tab in sys.odcivarchar2list
-, p_nr_workers in positiven
-, p_start in date
-, p_end in date
-)
-is
-begin
-  raise program_error;
-end dequeue_and_process_supervisor;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
+
+    -- raise; -- no reraise
+end process_msg;
 
 -- public routines
 
@@ -735,6 +808,11 @@ $end
             ( p_queue_name => l_queue_name
             , p_plsql_callback => p_plsql_callback
             );
+          else
+            -- Create and run a job to process this queue.
+            run_job_to_dequeue_at
+            ( p_fq_queue_name => l_queue_name
+            );
           end if;
         else
           raise;
@@ -961,23 +1039,10 @@ $end
   , p_msg => l_msg
   );
 
-  begin
-    savepoint spt;
-    
-    l_msg.process(p_maybe_later => 0);
-  exception
-    when others
-    then
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.on_error;
-$end
-      rollback to spt;
-  end;
-
-  if p_commit
-  then
-    commit; -- remove message from the queue
-  end if;
+  process_msg
+  ( p_msg => l_msg
+  , p_commit => p_commit
+  );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1095,23 +1160,10 @@ $end
   , p_msg => l_msg
   );
 
-  begin
-    savepoint spt;
-    
-    l_msg.process(p_maybe_later => 0);
-  exception
-    when others
-    then
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.on_error;
-$end
-      rollback to spt;
-  end;
-
-  if p_commit
-  then
-    commit; -- remove message from the queue
-  end if;
+  process_msg
+  ( p_msg => l_msg
+  , p_commit => p_commit
+  );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1124,107 +1176,574 @@ $end
 end dequeue_and_process;
 
 procedure dequeue_and_process
-( p_queue_name_list in varchar2
+( p_include_queue_name_list in varchar2
+, p_exclude_queue_name_list in varchar2
 , p_nr_workers_multiply_per_q in positive
 , p_nr_workers_exact in positive
-, p_worker_nr in positive
 , p_ttl in positiven
 )
 is
-  c_start constant date := sysdate;
-  c_end constant date := c_start + p_ttl / ( 24 * 60 * 60 );
+  c_start_date constant date := sysdate;
+  c_end_date constant date := c_start_date + p_ttl / ( 24 * 60 * 60 );
   l_now date;
   l_nr_worker_parameters naturaln := 0;
   l_queue_name_tab sys.odcivarchar2list;
+  l_job_name_prefix all_objects.object_name%type;
+  l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
+  
+  procedure check_input_and_state
+  is
+  begin
+    if p_nr_workers_multiply_per_q is not null
+    then
+      l_nr_worker_parameters := l_nr_worker_parameters + 1;
+    end if;
+    if p_nr_workers_exact is not null
+    then
+      l_nr_worker_parameters := l_nr_worker_parameters + 1;
+    end if;
+
+    if l_nr_worker_parameters != 1
+    then
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'Exactly one of the following parameters must be set: p_nr_workers_multiply_per_q (%d), p_nr_workers_exact (%d).'
+        , p_nr_workers_multiply_per_q -- since the type is positive %d should work
+        , p_nr_workers_exact -- idem
+        )
+      );
+    end if;
+
+    -- Is this session running as a job?
+    -- If not, just create a job name prefix to be used by the worker jobs.
+    begin
+      select  j.job_name
+      into    l_job_name_prefix
+      from    user_scheduler_running_jobs j
+      where   j.session_id = sys_context('USERENV', 'SID');
+    exception
+      when no_data_found
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( dbug."warning"
+        , utl_lms.format_message
+          ( 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.'
+          , sys_context('USERENV', 'SID')
+          )
+        );
+$end
+        
+        l_job_name_prefix := "MSG_PROCESS" || '_' || to_char(sysdate, 'yyyymmddhh24miss');        
+    end;
+
+    -- determine the normal queues matching one of the input queues (that may have wildcards)
+    select  distinct
+            dbms_assert.enquote_name($$PLSQL_UNIT_OWNER) || '.' || dbms_assert.enquote_name(q.name) as fq_queue_name
+    bulk collect
+    into    l_queue_name_tab
+    from    user_queues q
+            inner join table(oracle_tools.api_pkg.list2collection(p_value_list => p_include_queue_name_list, p_sep => ',', p_ignore_null => 1)) qni
+            on q.name like qni.column_value escape '\'
+            inner join table(oracle_tools.api_pkg.list2collection(p_value_list => p_exclude_queue_name_list, p_sep => ',', p_ignore_null => 1)) qne
+            on q.name not like qne.column_value escape '\'
+    where   q.queue_type = 'NORMAL_QUEUE'
+    minus
+    select  sr.subscription_name as fq_queue_name -- "OWNER"."QUEUE"
+    from    user_subscr_registrations sr
+    order by
+            fq_queue_name;
+
+    if l_queue_name_tab.count = 0
+    then
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'Could not find normal queues for this comma separated include queue name list (%s) and exclude list (%s) that are not already handled by registrations / notifications'
+        , p_include_queue_name_list
+        , p_exclude_queue_name_list
+        )
+      );
+    end if;
+  end check_input_and_state;
+
+  procedure start_worker
+  ( p_job_name in varchar2
+  )
+  is
+    l_worker_nr constant positiven := to_number(substr(p_job_name, instr(p_job_name, '#')+1));
+  begin
+    create_job(p_job_name => p_job_name);
+    -- set the actual arguments
+    dbms_scheduler.set_job_anydata_value
+    ( job_name => p_job_name
+    , argument_name => 'P_INCLUDE_QUEUE_NAME_LIST'
+    , argument_value => anydata.ConvertCollection(l_queue_name_tab)
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    , argument_name => 'P_WORKER_NR'
+    , argument_value => to_char(l_worker_nr)
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    , argument_name => 'P_START_DATE_STR'
+    , argument_value => to_char(c_start_date, "yyyy-mm-dd hh24:mi:ss")
+    );
+    dbms_scheduler.set_job_argument_value
+    ( job_name => p_job_name
+    , argument_name => 'P_END_DATE_STR'
+    , argument_value => to_char(c_end_date, "yyyy-mm-dd hh24:mi:ss")
+    );
+    dbms_scheduler.enable(p_job_name);
+  end start_worker;
+
+  procedure start_workers
+  is
+  begin
+    -- Create the workers
+    for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_multiply_per_q * l_queue_name_tab.count)
+    loop
+      l_job_name_tab.extend(1);
+      l_job_name_tab(l_job_name_tab.last) := l_job_name_prefix || '#' || to_char(i_worker); -- the # indicates a worker job
+      
+      start_worker(l_job_name_tab(l_job_name_tab.last));
+    end loop;  
+  end start_workers;
+
+  procedure stop_workers
+  is
+  begin
+    if l_job_name_tab.count > 0
+    then
+      for i_worker in l_job_name_tab.first .. l_job_name_tab.last
+      loop
+        begin
+          dbms_scheduler.stop_job
+          ( job_name => l_job_name_tab(i_worker)
+          , force => true
+          );
+        exception
+          when others
+          then
+$if oracle_tools.cfg_pkg.c_debugging $then
+            dbug.on_error;
+$end            
+            null;
+        end;
+      end loop;
+    end if;
+  end stop_workers;
+
+  procedure supervise_workers
+  is
+    l_dequeue_options dbms_aq.dequeue_options_t;
+    l_message_properties dbms_aq.message_properties_t;
+    l_message_handle raw(16);
+    l_queue_msg sys.scheduler$_event_info;
+  begin
+    l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER; -- see dbms_scheduler.add_event_queue_subscriber(subscriber_name => $$PLSQL_UNIT_OWNER) above
+
+    loop
+      l_now := sysdate;
+
+      exit when l_now >= c_end_date;
+
+      l_dequeue_options.wait := greatest(1, (c_end_date - l_now) * (24 * 60 * 60)); -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+      
+      dbms_aq.dequeue
+      ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
+      , dequeue_options => l_dequeue_options
+      , message_properties => l_message_properties
+      , payload => l_queue_msg
+      , msgid => l_message_handle
+      );
+      commit;
+
+      exit when l_now >= c_end_date;
+      
+      -- Job l_queue_msg.object_name has completed: start it over again but first some logging
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'Job event raised (1); event_type: %s; object_owner: %s; object_name: %s: event_timestamp: %s; error_code: %s'
+      , l_queue_msg.event_type
+      , l_queue_msg.object_owner
+      , l_queue_msg.object_name
+      , to_char(l_queue_msg.event_timestamp, "yyyy-mm-dd hh24:mi:ss")
+      , l_queue_msg.error_code
+      );
+      dbug.print
+      ( dbug."info"
+      , 'Job event raised (2); event_status: %s; log_id: %s; run_count: %s; failure_count: %s; retry_count: %s'
+      , l_queue_msg.event_status
+      , l_queue_msg.log_id
+      , l_queue_msg.run_count
+      , l_queue_msg.failure_count
+      , l_queue_msg.retry_count
+      );
+$end
+
+      start_worker(l_queue_msg.object_name);
+    end loop;
+    
+    stop_workers;
+  exception
+    when others
+    then
+      stop_workers;
+      raise;
+  end supervise_workers;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug_init;
+
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (3)');
   dbug.print
   ( dbug."input"
-  , 'p_queue_name_list: %s; p_nr_workers_multiply_per_q: %s; p_nr_workers_exact: %s; p_worker_nr: %s; p_ttl: %s'
-  , p_queue_name_list
+  , 'p_include_queue_name_list: %s; p_exclude_queue_name_list: %s; p_nr_workers_multiply_per_q: %s; p_nr_workers_exact: %s; p_ttl: %s'
+  , p_include_queue_name_list
+  , p_exclude_queue_name_list
   , p_nr_workers_multiply_per_q
   , p_nr_workers_exact
-  , p_worker_nr
   , p_ttl
   );
 $end
 
-  if p_nr_workers_multiply_per_q is not null
-  then
-    l_nr_worker_parameters := l_nr_worker_parameters + 1;
-  end if;
-  if p_nr_workers_exact is not null
-  then
-    l_nr_worker_parameters := l_nr_worker_parameters + 1;
-  end if;
-  if p_worker_nr is not null
-  then
-    l_nr_worker_parameters := l_nr_worker_parameters + 1;
-  end if;
+  check_input_and_state;  
 
-  if l_nr_worker_parameters != 1
-  then
-    raise_application_error
-    ( -20000
-    , utl_lms.format_message
-      ( 'Exactly one of the following parameters must be set: p_nr_workers_multiply_per_q (%d), p_nr_workers_exact (%d), p_worker_nr (%d)'
-      , p_nr_workers_multiply_per_q -- since the type is positive %d should work
-      , p_nr_workers_exact -- idem
-      , p_worker_nr -- idem
-      )
-    );
-  end if;
+  start_workers;
 
-  -- determine the normal queues matching one of the input queues (that may have wildcards)
-  select  distinct
-          q.name as queue_name
-  bulk collect
-  into    l_queue_name_tab
-  from    user_queues q
-          inner join table(oracle_tools.api_pkg.list2collection(p_value_list => p_queue_name_list, p_sep => ',', p_ignore_null => 1)) qn
-          on q.name like qn.column_value escape '\'
-  where   q.queue_type = 'NORMAL_QUEUE'
-  order by
-          queue_name;
-
-  if l_queue_name_tab.count = 0
-  then
-    raise_application_error
-    ( -20000
-    , utl_lms.format_message
-      ( 'Could not find normal queues for this comma separated queue name list: %s'
-      , p_queue_name_list
-      )
-    );
-  end if;
-
-  if p_worker_nr is not null
-  then
-    dequeue_and_process_worker
-    ( l_queue_name_tab
-    , p_worker_nr
-    , c_start
-    , c_end
-    );
-  else
-    dequeue_and_process_supervisor
-    ( l_queue_name_tab
-    , nvl(p_nr_workers_exact, p_nr_workers_multiply_per_q * l_queue_name_tab.count)
-    , c_start
-    , c_end
-    );  
-  end if;
+  supervise_workers;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+
+  dbug_done;
 exception
   when others
   then
     dbug.leave_on_error;
+
+    dbug_done;
     raise;
 $end
 end dequeue_and_process;
+
+procedure dequeue_and_process_worker
+( p_queue_name_tab in anydata
+, p_worker_nr in positiven
+, p_start_date_str in varchar2
+, p_end_date_str in varchar2
+)
+is
+  l_start_date constant date := to_date(p_start_date_str, "yyyy-mm-dd hh24:mi:ss");
+  l_end_date constant date := to_date(p_end_date_str, "yyyy-mm-dd hh24:mi:ss");
+  l_queue_name_tab sys.odcivarchar2list;
+  l_agent_list dbms_aq.aq$_agent_list_t;
+  l_queue_name_idx positiven := 1;
+  l_agent sys.aq$_agent;
+  l_message_delivery_mode pls_integer;
+  l_now date;
+begin
+  case p_queue_name_tab.GetCollection(l_queue_name_tab)
+    when DBMS_TYPES.SUCCESS
+    then null;
+    when DBMS_TYPES.NO_DATA
+    then l_queue_name_tab := null;
+  end case;
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug_init;
+
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS_WORKER');
+  dbug.print
+  ( dbug."input"
+  , 'l_queue_name_tab.count: %s; p_worker_nr: %s; p_start_date_str: %s; p_end_date_str: %s'
+  , case when l_queue_name_tab is not null then l_queue_name_tab.count end
+  , p_worker_nr
+  , p_start_date_str
+  , p_end_date_str
+  );
+$end
+
+  if l_queue_name_tab is not null and l_queue_name_tab.first = 1
+  then
+    null;
+  else
+    raise value_error;
+  end if;
+
+  if l_start_date is null or l_end_date is null
+  then
+    raise value_error;
+  end if;
+
+  -- i_idx can be from
+  -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
+  -- b) 2 .. l_queue_name_tab.count + 1 (<=> 2 .. l_queue_name_tab.count + (2) - 1)
+  -- z) l_queue_name_tab.count .. l_queue_name_tab.count + (l_queue_name_tab.count) - 1
+  for i_idx in mod(p_worker_nr - 1, l_queue_name_tab.count) + 1 ..
+               mod(p_worker_nr - 1, l_queue_name_tab.count) + l_queue_name_tab.count
+  loop
+    l_queue_name_idx := mod(i_idx - 1, l_queue_name_tab.count) + 1; -- between 1 and l_queue_name_tab.count
+    
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."input", 'i_idx: %s; l_queue_name_tab(%s): %s', i_idx, l_queue_name_idx, l_queue_name_tab(l_queue_name_idx));
+$end
+
+    if l_queue_name_tab(l_queue_name_idx) is null
+    then
+      raise program_error;
+    end if;
+    
+    l_agent_list(l_agent_list.count+1) :=
+      sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
+    l_queue_name_tab(l_queue_name_idx) := null;
+  end loop;
+
+  loop
+    l_now := sysdate;
+    
+    exit when l_now >= l_end_date;
+
+    -- to be able to profile this call
+    dbms_aq.listen
+    ( agent_list => l_agent_list
+    , wait => greatest(1, (l_end_date - l_now) * (24 * 60 * 60)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+    , listen_delivery_mode => dbms_aq.persistent_or_buffered
+    , agent => l_agent
+    , message_delivery_mode => l_message_delivery_mode
+    );
+
+    msg_aq_pkg.dequeue_and_process
+    ( p_queue_name => l_agent.address
+    , p_delivery_mode => l_message_delivery_mode
+    , p_visibility => dbms_aq.immediate
+    , p_subscriber => l_agent.name
+    , p_dequeue_mode => dbms_aq.remove
+    , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+    , p_wait => 0 -- message should be there so there is no need to wait
+    , p_correlation => null
+    , p_deq_condition => null
+    , p_force => false -- queue should be there
+    , p_commit => true
+    );
+  end loop; 
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+
+  dbug_done;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+
+    dbug_done;
+    raise;
+$end
+end dequeue_and_process_worker;
+
+procedure create_job
+( p_job_name in varchar2
+, p_start_date in timestamp with time zone
+, p_repeat_interval in varchar2
+, p_end_date in timestamp with time zone
+)
+is
+  l_job_name constant all_objects.object_name%type := upper(p_job_name);
+  l_program_name all_objects.object_name%type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_JOB');
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name: %s; p_start_date: %s; p_repeat_interval: %s; p_end_date: %s'
+  , p_job_name
+  , to_char(p_start_date, "yyyy-mm-dd hh24:mi:ss")
+  , p_repeat_interval
+  , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")
+  );
+$end
+
+  <<try_loop>>
+  for i_try in 1..2 -- when you create a job the program may not be there yet, so we need a change to create that
+  loop
+    begin
+      case 
+        when l_job_name like "MSG\_PROCESS" || '%#%' escape '\'
+        then
+          /*
+          -- See https://oracle-base.com/articles/12c/scheduler-enhancements-12cr2#in-memory-jobs
+          --
+          -- IN_MEMORY_FULL: A job that must be associated with a program,
+          -- can't have a repeat interval and persists nothing to
+          -- disk. These jobs use a little more memory, but since they
+          -- persist nothing to disk they have reduced overheard and zero
+          -- redo generation as a result of the job mechanism itself. As
+          -- nothing is persisted to disk they are only present on the
+          -- instance that created them.
+          */
+          l_program_name := 'DEQUEUE_AND_PROCESS_WORKER';
+          dbms_scheduler.create_job
+          ( job_name => l_job_name
+          , program_name => l_program_name
+          , start_date => p_start_date
+          , repeat_interval => p_repeat_interval
+          , end_date => p_end_date
+          , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
+          , enabled => false
+          , auto_drop => true
+          , comments => 'Worker job for dequeueing and processing.'
+          , job_style => 'IN_MEMORY_FULL' -- most efficient
+          , credential_name => null
+          , destination_name => null
+          );
+          -- let this worker job raise events so that the supervisor can act
+          dbms_scheduler.set_attribute
+          ( name => l_job_name
+          , attribute => 'raise_events'
+          , value => dbms_scheduler.job_completed
+          );
+    
+        when l_job_name like "MSG\_PROCESS" || '%' escape '\'
+        then
+          l_program_name := 'DEQUEUE_AND_PROCESS';
+          dbms_scheduler.create_job
+          ( job_name => l_job_name
+          , program_name => l_program_name
+          , start_date => p_start_date
+          , repeat_interval => p_repeat_interval
+          , end_date => p_end_date
+          , job_class => 'DEFAULT_JOB_CLASS'
+          , enabled => false
+          , auto_drop => false
+          , comments => 'Main job for dequeueing and processing.'
+          , job_style => 'REGULAR'
+          , credential_name => null
+          , destination_name => null
+          );
+      end case;
+      
+      exit try_loop; -- apparently we succeeded so stop
+    exception
+      when others
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        raise;
+        create_program(p_program_name => l_program_name);
+    end;
+  end loop try_loop;
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end create_job;
+
+procedure create_program
+( p_program_name in varchar2
+)
+is
+  l_program_name constant all_objects.object_name%type := upper(p_program_name);
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_PROGRAM');
+  dbug.print
+  ( dbug."input"
+  , 'p_program_name: %s'
+  , p_program_name
+  );
+$end
+
+  case l_program_name
+    when 'DEQUEUE_AND_PROCESS'
+    then
+      dbms_scheduler.create_program
+      ( program_name => l_program_name
+      , program_type => 'STORED_PROCEDURE'
+      , program_action => $$PSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , number_of_arguments => 5
+      , enabled => false
+      , comments => 'Main program for dequeueing and processing that spawns other worker in-memory jobs and supervises them.'
+      );
+
+      for i_par_idx in 1..5
+      loop
+        dbms_scheduler.define_program_argument
+        ( program_name => l_program_name
+        , argument_name => case i_par_idx
+                             when 1 then 'P_INCLUDE_QUEUE_NAME_LIST'
+                             when 2 then 'P_EXCLUDE_QUEUE_NAME_LIST'
+                             when 3 then 'P_NR_WORKERS_MULTIPLY_PER_Q'
+                             when 4 then 'P_NR_WORKERS_EXACT'
+                             when 5 then 'P_TTL'
+                           end
+        , argument_position => i_par_idx
+        , argument_type => case 
+                             when i_par_idx <= 2
+                             then 'VARCHAR2'
+                             else 'NUMBER'
+                           end
+        , default_value => case i_par_idx
+                             when 1 then '%'
+                             when 2 then replace(web_service_response_typ.default_group, '_', '\_')
+                             when 3 then null
+                             when 4 then null
+                             when 5 then to_char(c_one_day_minus_something)
+                           end
+        );
+      end loop;
+
+    when 'DEQUEUE_AND_PROCESS_WORKER'
+    then
+      dbms_scheduler.create_program
+      ( program_name => l_program_name
+      , program_type => 'STORED_PROCEDURE'
+      , program_action => $$PSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , number_of_arguments => 4
+      , enabled => false
+      , comments => 'Worker program for dequeueing and processing spawned by the main job as an in-memory job.'
+      );
+
+      dbms_scheduler.define_anydata_argument
+      ( program_name => l_program_name
+      , argument_position => 1
+      , argument_name => 'P_QUEUE_NAME_TAB'
+      , argument_type => 'SYS.ODCIVARCHAR2LIST'
+      , default_value => null
+      );
+  
+      for i_par_idx in 2..4
+      loop
+        dbms_scheduler.define_program_argument
+        ( program_name => l_program_name
+        , argument_name => case i_par_idx
+                             when 2 then 'P_WORKER_NR'
+                             when 3 then 'P_START_DATE_STR'
+                             when 4 then 'P_END_DATE_STR'
+                           end
+        , argument_position => i_par_idx
+        , argument_type => case 
+                             when i_par_idx = 2
+                             then 'NUMBER'
+                             else 'VARCHAR2'
+                           end
+        , default_value => null
+        );
+      end loop;
+  end case;
+      
+  dbms_scheduler.enable(name => l_program_name);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end create_program;
 
 end msg_aq_pkg;
 /
