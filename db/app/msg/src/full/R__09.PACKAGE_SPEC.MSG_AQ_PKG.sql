@@ -1,14 +1,14 @@
 CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
+-- You can tweak the constants thru MSG_CONSTANTS_PKG, you are not supposed to do it here.
+c_buffered_messaging constant boolean := msg_constants_pkg.c_buffered_messaging;
+c_multiple_consumers constant boolean := msg_constants_pkg.c_multiple_consumers;
+c_default_subscriber constant varchar2(30 char) := msg_constants_pkg.c_default_subscriber;
+c_default_plsql_callback constant varchar(128 char) := msg_constants_pkg.c_default_plsql_callback;
+
 c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
-c_buffered_messaging constant boolean := true; -- not(c_testing); -- buffered messaging enabled?
-
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
-c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
-c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
-c_default_plsql_callback constant varchar(128 char) := $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
-
 c_one_day_minus_something constant positiven := (24 * 60 * 60 - 5);
 
 -- ORA-24002: QUEUE_TABLE does not exist
