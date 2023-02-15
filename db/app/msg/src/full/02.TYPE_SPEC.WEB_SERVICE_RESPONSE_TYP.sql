@@ -20,6 +20,8 @@ This type stores the response of a web service request.
 **/
 , constructor function web_service_response_typ
   ( self in out nocopy web_service_response_typ
+  , p_group$ in varchar2 default null -- use default_group() from below
+  , p_context$ in varchar2 default null
   , p_web_service_request in web_service_request_typ
   , p_http_status_code in integer  
   , p_body_clob in clob default null
@@ -31,12 +33,14 @@ This type stores the response of a web service request.
 
 , final member procedure construct
   ( self in out nocopy web_service_response_typ
+  , p_group$ in varchar2
+  , p_context$ in varchar2
   , p_web_service_request in web_service_request_typ
   , p_http_status_code in integer  
-  , p_body_clob in clob default null
-  , p_body_blob in blob default null
-  , p_cookies_clob in clob default null
-  , p_http_headers_clob in clob default null
+  , p_body_clob in clob
+  , p_body_blob in blob
+  , p_cookies_clob in clob
+  , p_http_headers_clob in clob
   )
 
 , overriding
@@ -70,6 +74,10 @@ This type stores the response of a web service request.
   ( self in web_service_response_typ
   )
   return integer
+
+, static function default_group
+  return varchar2
+/** All sub types share the same response queue. You need to dequeue from that queue usig the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP). **/  
 
 )
 not final;

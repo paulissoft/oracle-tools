@@ -16,17 +16,15 @@ CREATE TYPE "WEB_SERVICE_REQUEST_TYP" under msg_typ
 /**
 
 This super type allows sub types to make a web service call, either synchronous or asynchronous.
-
-When the correlation parameter is not null, the sub type is obliged to enqueue the web service response with that correlation number.
-
-The correlation is stored in the attribute context$.
-
+When the context$ attribute is not null, the sub type is obliged to enqueue the web service response with that attribute as the correlation id.
 This allows for asynchronuous processing but retrieving the result later via a queue.
 
 **/
 , constructor function web_service_request_typ
   ( self in out nocopy web_service_request_typ
-  , p_url in varchar2
+  , p_group$ in varchar2 default null -- use default_group() from below
+  , p_context$ in varchar2 default null -- you may use generate_unique_id() to generate an AQ correlation id
+  , p_url in varchar2 default null
   , p_scheme in varchar2 default null -- 'Basic'
   , p_proxy_override in varchar2 default null
   , p_transfer_timeout in number default 180
@@ -34,7 +32,6 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_https_host in varchar2 default null
   , p_credential_static_id in varchar2 default null
   , p_token_url in varchar2 default null
-  , p_correlation in varchar2 default null
   , p_cookies_clob in clob default null
   , p_http_headers_clob in clob default null
   )
@@ -42,17 +39,18 @@ This allows for asynchronuous processing but retrieving the result later via a q
 
 , final member procedure construct
   ( self in out nocopy web_service_request_typ
+  , p_group$ in varchar2
+  , p_context$ in varchar2
   , p_url in varchar2
-  , p_scheme in varchar2 default null -- 'Basic'
-  , p_proxy_override in varchar2 default null
-  , p_transfer_timeout in number default 180
-  , p_wallet_path in varchar2 default null
-  , p_https_host in varchar2 default null
-  , p_credential_static_id in varchar2 default null
-  , p_token_url in varchar2 default null
-  , p_correlation in varchar2 default null
-  , p_cookies_clob in clob default null
-  , p_http_headers_clob in clob default null
+  , p_scheme in varchar2
+  , p_proxy_override in varchar2
+  , p_transfer_timeout in number
+  , p_wallet_path in varchar2
+  , p_https_host in varchar2
+  , p_credential_static_id in varchar2
+  , p_token_url in varchar2
+  , p_cookies_clob in clob
+  , p_http_headers_clob in clob
   )
 
 , overriding
@@ -67,19 +65,11 @@ This allows for asynchronuous processing but retrieving the result later via a q
   )
   return integer
 
-, final member function correlation
+, static function default_group
   return varchar2
-/** The correlation id. **/
+/** All sub types share the same request queue, this function. **/  
 
-, static function request_queue_name
-  return varchar2
-/** All sub types share the same request queue. **/  
-
-, static function response_queue_name
-  return varchar2
-/** All sub types share the same response queue. You need to dequeue from that queue usig the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP). **/  
-
-, static function generate_correlation
+, static function generate_unique_id
   return varchar2
 /** return WEB_SERVICE_REQUEST_SEQ.NEXTVAL **/  
 )
