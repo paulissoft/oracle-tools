@@ -1260,7 +1260,7 @@ $end
       raise_application_error
       ( -20000
       , utl_lms.format_message
-        ( 'Could not find normal queues for this comma separated include queue name list (%s) and exclude list (%s) that are not already handled by registrations / notifications'
+        ( 'Could not find normal queues with included list (%s) and excluded list (%s), or they are already handled by registrations / notifications (USER_SUBSCR_REGISTRATIONS).'
         , p_include_queue_name_list
         , p_exclude_queue_name_list
         )
