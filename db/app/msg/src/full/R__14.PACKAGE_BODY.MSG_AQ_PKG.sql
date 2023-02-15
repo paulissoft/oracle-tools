@@ -29,7 +29,11 @@ begin
   dbug.activate('BC_LOG', true);
   dbug.activate('DBMS_APPLICATION_INFO', true);
   dbug.activate('DBMS_OUTPUT', false);
+$if oracle_tools.cfg_pkg.c_testing $then
+  dbug.activate('LOG4PLSQL', true);
+$else  
   dbug.activate('LOG4PLSQL', false);
+$end  
   dbug.activate('PROFILER', true); -- to be able to use select * from table(dbug_profiler.show)
   dbug.activate('PLSDBUG', false);
 
@@ -1350,6 +1354,8 @@ $end
       into    l_found
       from    user_scheduler_jobs j
       where   j.job_name = p_worker_job_name;
+
+      raise too_many_rows; -- should not happen
     exception
       when no_data_found
       then
@@ -1407,30 +1413,6 @@ $end
     end if;
   end start_workers;
 
-  procedure stop_workers
-  is
-  begin
-    if l_job_name_tab.count > 0
-    then
-      for i_worker in l_job_name_tab.first .. l_job_name_tab.last
-      loop
-        begin
-          dbms_scheduler.stop_job
-          ( job_name => l_job_name_tab(i_worker)
-          , force => true
-          );
-        exception
-          when others
-          then
-$if oracle_tools.cfg_pkg.c_debugging $then
-            dbug.on_error;
-$end            
-            null;
-        end;
-      end loop;
-    end if;
-  end stop_workers;
-
   procedure supervise_workers
   is
     l_dequeue_options dbms_aq.dequeue_options_t;
@@ -1484,13 +1466,10 @@ $end
 
       start_worker(l_queue_msg.object_name);
     end loop;
-    
-    stop_workers;
   exception
-    when others
+    when e_dequeue_timeout
     then
-      stop_workers;
-      raise;
+      null;
   end supervise_workers;
 begin
   init;
@@ -1518,7 +1497,6 @@ $end
   then
     check_input_and_state;
     define_workers;
-    stop_workers; -- get rid of old stuff first
     start_workers;
     supervise_workers;
   end if;
@@ -1714,10 +1692,10 @@ $end
       dbms_scheduler.create_job
       ( job_name => l_job_name
       , program_name => create_program_if_necessary('DEQUEUE_AND_PROCESS_WORKER')
+      , start_date => p_start_date
         -- will never repeat
-      , start_date => null
       , repeat_interval => null
-      , end_date => null
+      , end_date => p_end_date
       --, job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
       , enabled => false
       , auto_drop => true

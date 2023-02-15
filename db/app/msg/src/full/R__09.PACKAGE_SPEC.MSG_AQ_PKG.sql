@@ -293,9 +293,9 @@ rollback to a savepoint like in procedure dequeue_and_process(p_context, ...).
 
 procedure create_job
 ( p_job_name in varchar2 -- (1) like 'MSG\_PROCESS%#%' escape '\' or (2) like 'MSG\_PROCESS%' escape '\'
-, p_start_date in timestamp with time zone default null -- only relevant for case 2
+, p_start_date in timestamp with time zone default null
 , p_repeat_interval in varchar2 default null -- only relevant for case 2
-, p_end_date in timestamp with time zone default null -- only relevant for case 2
+, p_end_date in timestamp with time zone default null
 );
 /**
 Create a job that is disabled to allow you to define actual job arguments and then to enable it (to run).
