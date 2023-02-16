@@ -489,11 +489,15 @@ $end
         -- will never repeat
       , repeat_interval => null
       , end_date => p_end_date
-      , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
+        -- ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
+        -- Can not be granted neither, at least not by ADMIN
+      -- , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
       , enabled => false -- so we can set job arguments
       , auto_drop => true -- one-off jobs
       , comments => 'Worker job for dequeueing and processing.'
-      , job_style => 'IN_MEMORY_FULL'
+      --, job_style => 'IN_MEMORY_FULL'
+      --, job_style => 'IN_MEMORY_RUNTIME'
+      , job_style => 'LIGHTWEIGHT'
       , credential_name => null
       , destination_name => null
       );
@@ -1626,7 +1630,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       ( dbug."warning"
       , utl_lms.format_message
         ( 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.'
-        , c_session_id
+        , to_char(c_session_id)
         )
       );
 $end
@@ -1727,7 +1731,7 @@ $end
       , p_timeout => greatest(1, (c_end_date - l_now) * (24 * 60 * 60)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
       , p_worker_nr => l_worker_nr 
       , p_sqlcode => l_sqlcode
-      , p_sqlerrm =>  l_sqlerrm
+      , p_sqlerrm => l_sqlerrm
       , p_session_id => l_session_id
       );
 
@@ -1749,6 +1753,9 @@ $end
 
       start_worker(p_job_name_worker => l_job_name_supervisor || '#' || l_worker_nr);
     end loop;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'Stopped supervising workers at %s', to_char(l_now, "yyyy-mm-dd hh24:mi:ss"));
+$end
   exception
     when e_dequeue_timeout
     then
@@ -1791,12 +1798,19 @@ $end
 
   done;
 exception
+  when e_dbms_pipe_error
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then  
+    dbug.leave_on_error;
+$end
+    done;
+    -- no reraise necessary
+    
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
 $end
-
     done;
     raise;
 end dequeue_and_process_supervisor;
@@ -1939,6 +1953,10 @@ $end
       , p_commit => true
       );
     end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'Stopped working at %s', to_char(l_now, "yyyy-mm-dd hh24:mi:ss"));
+$end
 
     -- OK
     send_worker_status
