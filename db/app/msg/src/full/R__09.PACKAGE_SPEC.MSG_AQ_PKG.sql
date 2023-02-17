@@ -9,15 +9,20 @@ c_default_plsql_callback constant varchar(128 char) := msg_constants_pkg.c_defau
 c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
-c_one_day_minus_something constant positiven := (24 * 60 * 60 - 5);
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
 pragma exception_init(e_queue_table_does_not_exist, -24002);
 
+-- ORA-25205/ORA-24010 on Executing PL/SQL which is invoking DBMS_AQ and DBMS_AQADM procedures (Doc ID 220477.1)
+
 -- ORA-24010: QUEUE does not exist
 e_queue_does_not_exist exception;
 pragma exception_init(e_queue_does_not_exist, -24010);
+
+-- ORA-25205: the QUEUE %s.%s does not exist
+e_fq_queue_does_not_exist exception;
+pragma exception_init(e_fq_queue_does_not_exist, -25205);
 
 -- ORA-24033: no recipients for message
 e_no_recipients_for_message exception;
@@ -111,14 +116,14 @@ procedure remove_subscriber
 procedure register
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar default c_default_plsql_callback -- In the format schema.procedure
+, p_plsql_callback in varchar2 default c_default_plsql_callback -- In the format schema.procedure
 );
 /** Register a PL/SQL callback for a queue and subscriber. **/
 
 procedure unregister
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar default c_default_plsql_callback -- In the format schema.procedure
+, p_plsql_callback in varchar2 default c_default_plsql_callback -- In the format schema.procedure
 );
 /** Unregister a PL/SQL callback for a queue and subscriber. **/
 
@@ -234,66 +239,20 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 See also the dequeue(p_context...) procedure documentation.
 **/
 
-procedure dequeue_and_process_supervisor
-( p_include_queue_name_list in varchar2 default '%' -- a comma separated list of (case sensitive) queue names with wildcards allowed
-, p_exclude_queue_name_list in varchar2 default replace(web_service_response_typ.default_group, '_', '\_') -- these queues must be manually dequeued because the creator is interested in the result
-, p_nr_workers_multiply_per_q in positive default null -- supervisor parameter: the total number of workers will be this number multiplied by the number of queues
-, p_nr_workers_exact in positive default null -- supervisor parameter: the total number of workers will be this number
-, p_ttl in positiven default c_one_day_minus_something -- time to live (in seconds)
-  -- the arguments below will be empty when it runs as a job 
-, p_job_name in varchar2 default null -- when you want to start this as a job
-, p_start_date in timestamp with time zone default null
-, p_repeat_interval in varchar2 default null
+-- will be invoked by MSG_PKG
+procedure get_groups_for_processing
+( p_include_group_tab in sys.odcivarchar2list
+, p_exclude_group_tab in sys.odcivarchar2list
+, p_processing_group_tab out nocopy sys.odcivarchar2list
 );
-/**
-This procedure is meant to be used by DBMS_SCHEDULER jobs.
 
-The administrator MAY create a job based on this procedure, although such a job is created implicitly by enqueue(p_force => true).
-
-It is a supervisor routine that just launches other jobs, the workers.  The
-supervisor also surveys them using events.  When worker jobs complete before
-the end (defined by start time + time to live), they will be restarted.  A job
-completes when it failed, succeeded, or was stopped
-(DBMS_SCHEDULER.job_run_completed).  The supervisor will actively kill the
-worker jobs when he finishes.  Now the recurring schedule of the job (for
-instance each day) will start this process all over again.  The idea is to be
-use resources efficient by running for a long period with some concurrent
-worker jobs but not to exhaust system resources due to processes that run
-forever and that do not correctly clean up resources.
-
-Exactly one of the following parameters must be set:
-1. p_nr_workers_multiply_per_q - the number of workers is then the number of queues found multiplied by this number
-2. p_nr_workers_exact - the number of workers is this number
-
-See also [Scheduler Enhancements in Oracle 10g Database Release 2, https://oracle-base.com](https://oracle-base.com/articles/10g/scheduler-enhancements-10gr2).
-**/
-
-procedure dequeue_and_process_worker
-( p_queue_name_list in varchar2 -- a comma separated list of queue names to listen to
+-- will be invoked by MSG_PKG
+procedure processing
+( p_processing_group_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_start_date_str in varchar2 -- start date converted to YYYY-MM-DD HH24:MI:SS
-, p_end_date_str in varchar2 -- end date converted to YYYY-MM-DD HH24:MI:SS
-  -- the arguments below will be empty when it runs as a job
-, p_job_name_supervisor in varchar2 default null -- when you want to start this as a job
+, p_ttl in positiven
+, p_job_name_supervisor in varchar2
 );
-/**
-This procedure is meant to be used (indirectly) by DBMS_SCHEDULER jobs.
-
-The administrator does NOT need to create a job based on this procedure.
-
-This is the worker job, started by
-dequeue_and_process_supervisor(p_include_queue_name_list, ...).  They start first to
-create an agent list for dbms_aq.listen where worker 1 must have queue 1 as
-the first agent queue, worker 2 must have queue 2 as the first agent
-queue. This is necessary since dbms_aq.listen returns the FIRST agent that is
-ready and so if all workers have the same first agent queues, the last queues
-may be dequeued less frequently.  When the end has been reached, each
-individual worker job is supposed to stop (let the dequeue timeout be the time
-left with a minimum of 0). When the listen procedure has a ready queue, the
-procedure dequeue_and_process(p_queue_name, p_delivery_mode, ...) must be
-invoked to do the job, where you must take care to ignore any error and
-rollback to a savepoint like in procedure dequeue_and_process(p_context, ...).
-**/
 
 end msg_aq_pkg;
 /
