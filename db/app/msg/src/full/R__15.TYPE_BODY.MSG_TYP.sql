@@ -1,36 +1,108 @@
-CREATE OR REPLACE TYPE BODY "DATA_ROW_T" AS
+CREATE OR REPLACE TYPE BODY "MSG_TYP" AS
 
 final
 member procedure construct
-( self in out nocopy data_row_t
-, p_table_owner in varchar2
-, p_table_name in varchar2
-, p_dml_operation in varchar2
-, p_key in anydata
+( self in out nocopy msg_typ
+, p_group$ in varchar2
+, p_context$ in varchar2
 )
 is
 begin
-  self.table_owner := p_table_owner;
-  self.table_name := p_table_name;
-  self.dml_operation := p_dml_operation;
-  self.key := p_key;
-  self.dml_timestamp := systimestamp;
+  self.group$ := p_group$;
+  self.context$ := p_context$;
+  self.created_utc$ := sys_extract_utc(systimestamp);
 end construct;  
+
+member procedure process
+( self in msg_typ
+, p_maybe_later in integer default 1 -- True (1) or false (0)
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS');
+  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
+$end
+
+  if self.must_be_processed(p_maybe_later) = 1
+  then
+    case p_maybe_later
+      when 1 then self.process$later;
+      when 0 then self.process$now;
+    end case;
+  end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end process;
+
+member function must_be_processed
+( self in msg_typ
+, p_maybe_later in integer -- True (1) or false (0)
+)
+return integer
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MUST_BE_PROCESSED');
+  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
+$end
+
+  raise program_error; -- must override this one
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end must_be_processed;
+  
+member procedure process$now
+( self in msg_typ
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
+$end
+
+  raise program_error; -- must override this one
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end process$now;
+
+member procedure process$later
+( self in msg_typ
+)
+is
+  l_msgid raw(16);
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$LATER');
+$end
+
+  msg_aq_pkg.enqueue(p_msg => self, p_msgid => l_msgid);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end process$later;
 
 static
 function deserialize
 ( p_obj_type in varchar2
 , p_obj in clob
 )
-return data_row_t
+return msg_typ
 is
   l_cursor sys_refcursor;
-  l_data_row data_row_t;
+  l_msg msg_typ;
 begin
   open l_cursor
     for q'[select json_value(:obj, '$' returning ]' || p_obj_type || q'[) from dual]'
     using p_obj;
-  fetch l_cursor into l_data_row;
+  fetch l_cursor into l_msg;
   if l_cursor%notfound
   then
     close l_cursor;
@@ -38,12 +110,12 @@ begin
   else
     close l_cursor;
   end if;
-  return l_data_row;
+  return l_msg;
 end deserialize;
 
 final
 member function get_type
-( self in data_row_t
+( self in msg_typ
 )
 return varchar2
 is
@@ -53,7 +125,7 @@ end get_type;
 
 final
 member function serialize
-( self in data_row_t
+( self in msg_typ
 )
 return clob
 is
@@ -65,21 +137,19 @@ begin
 end serialize;
 
 member procedure serialize
-( self in data_row_t
+( self in msg_typ
 , p_json_object in out nocopy json_object_t
 )
 is
 begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
-  p_json_object.put('TABLE_OWNER', self.table_owner);
-  p_json_object.put('TABLE_NAME', self.table_name);
-  p_json_object.put('DML_OPERATION', self.dml_operation);
-  -- we do not know how to deserialize the key since it is anydata
-  p_json_object.put('DML_TIMESTAMP', self.dml_timestamp);
+  p_json_object.put('GROUP$', self.group$);
+  p_json_object.put('CONTEXT$', self.context$);
+  p_json_object.put('CREATED_UTC$', self.created_utc$);
 end serialize;
 
 member function repr
-( self in data_row_t
+( self in msg_typ
 )
 return clob
 is
@@ -94,7 +164,7 @@ end repr;
 
 final
 member procedure print
-( self in data_row_t
+( self in msg_typ
 )
 is
   l_msg constant varchar2(4000 char) := utl_lms.format_message('type: %s; repr: %s', get_type(), dbms_lob.substr(lob_loc => repr(), amount => 2000));
@@ -108,7 +178,7 @@ end print;
 
 final
 member function lob_attribute_list
-( self in data_row_t
+( self in msg_typ
 )
 return varchar2
 is
@@ -131,23 +201,23 @@ begin
 end lob_attribute_list;
 
 final
-member function may_have_non_empty_lob
-( self in data_row_t
+member function may_have_not_null_lob
+( self in msg_typ
 )
 return integer
 is
 begin
   return case when self.lob_attribute_list() is not null then 1 else 0 end;
-end may_have_non_empty_lob;
+end may_have_not_null_lob;
 
-member function has_non_empty_lob
-( self in data_row_t
+member function has_not_null_lob
+( self in msg_typ
 )
 return integer
 is
 begin
-  return 0; -- key can not store a LOB
-end has_non_empty_lob;
+  return 0;
+end has_not_null_lob;
 
 end;
 /

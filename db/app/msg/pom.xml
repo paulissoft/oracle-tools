@@ -9,22 +9,31 @@
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.paulissoft.oracle-tools.db.app</groupId>
-  <artifactId>EXT</artifactId>
+  <artifactId>MSG</artifactId>
   <packaging>pom</packaging>
-  <description>Build EXT component</description>
+  <description>Build MSG component</description>
   
   <properties>
-    <flyway.table>schema_version_tools_ext</flyway.table>
-    <!-- this project uses Flyway placeholders so do not generate DDL -->
-    <!-- GJP 2023-02-04 Not any more -->
-    <db.generate.ddl.full.skip>false</db.generate.ddl.full.skip>
+    <db.schema>${oracle-tools.db.schema.msg}</db.schema>
+    <flyway.table>schema_version_tools_msg</flyway.table>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>EXT_LOAD_FILE_PKG
-,EXT_LOAD_FILE_COLUMN_V
-,EXT_LOAD_FILE_OBJECT_V
+    <db.object.names>
+      MSG_TYP,
+      MSG_PKG,
+      MSG_AQ_PKG,
+      MSG_NOTIFICATION_PRC,
+      WEB_SERVICE_REQUEST_SEQ,
+      WEB_SERVICE_REQUEST_TYP,
+      WEB_SERVICE_RESPONSE_TYP,
+      REST_WEB_SERVICE_REQUEST_TYP,
+      WEB_SERVICE_PKG,
     </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
+
+  <build>
+    <resources />
+  </build>
 
 </project>
 

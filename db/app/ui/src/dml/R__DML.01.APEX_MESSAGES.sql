@@ -8,7 +8,12 @@ declare
     end;
   l_max_name_length constant pls_integer := 50;  
 begin
-  ui_apex_messages_pkg.init(l_application_id);
+  begin
+    ui_apex_messages_pkg.init(l_application_id);
+  exception
+    when no_data_found -- when the application does not exist, just return
+    then return;
+  end;
 
   -- messages to merge
   for r in
