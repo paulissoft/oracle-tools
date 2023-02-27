@@ -1085,8 +1085,8 @@ is
   l_queue_name_idx positiven := 1;
   l_agent sys.aq$_agent;
   l_message_delivery_mode pls_integer;
-  l_start constant oracle_tools.api_timer_pkg.time_t := oracle_tools.api_timer_pkg.get_time;
-  l_elapsed_time oracle_tools.api_timer_pkg.seconds_t;
+  l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
+  l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
@@ -1110,7 +1110,7 @@ $end
   for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
   loop
     l_queue_name_tab.extend(1);
-    l_queue_name_tab(l_queue_name_tab.last) := queue_name(p_groups_tab(i_idx));
+    l_queue_name_tab(l_queue_name_tab.last) := queue_name(p_groups_to_process_tab(i_idx));
   end loop;
 
   -- i_idx can be from
@@ -1137,7 +1137,7 @@ $end
   end loop;
 
   loop
-    l_elapsed_time := oracle_tools.api_timer_pkg.elapsed_time(l_start, oracle_tools.api_timer_pkg.get_time);
+    l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
@@ -1154,7 +1154,7 @@ $end
     , message_delivery_mode => l_message_delivery_mode
     );
 
-    l_elapsed_time := oracle_tools.api_timer_pkg.elapsed_time(l_start, oracle_tools.api_timer_pkg.get_time);
+    l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));

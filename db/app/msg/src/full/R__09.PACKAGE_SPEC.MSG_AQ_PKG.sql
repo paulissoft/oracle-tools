@@ -4,7 +4,6 @@ CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS
 c_buffered_messaging constant boolean := msg_constants_pkg.c_buffered_messaging;
 c_multiple_consumers constant boolean := msg_constants_pkg.c_multiple_consumers;
 c_default_subscriber constant varchar2(30 char) := msg_constants_pkg.c_default_subscriber;
-c_default_plsql_callback constant varchar(128 char) := msg_constants_pkg.c_default_plsql_callback;
 
 c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
@@ -116,14 +115,14 @@ procedure remove_subscriber
 procedure register
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar2 default c_default_plsql_callback -- In the format schema.procedure
+, p_plsql_callback in varchar2 -- In the format schema.procedure
 );
 /** Register a PL/SQL callback for a queue and subscriber. **/
 
 procedure unregister
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar2 default c_default_plsql_callback -- In the format schema.procedure
+, p_plsql_callback in varchar2 -- In the format schema.procedure
 );
 /** Unregister a PL/SQL callback for a queue and subscriber. **/
 

@@ -1,8 +1,8 @@
-CREATE OR REPLACE PACKAGE "MSG_PKG" AS 
+CREATE OR REPLACE PACKAGE "MSG_PKG" AUTHID DEFINER AS 
 
 type t_boolean_lookup_tab is table of boolean index by varchar2(4000 char);
 
-type msg_tab_t is table msg_typ;
+type msg_tab_t is table of msg_typ;
 
 e_dbms_pipe_timeout exception;
 c_dbms_pipe_timeout constant integer := -20100;
@@ -22,6 +22,10 @@ pragma exception_init(e_dbms_pipe_interrupted, -20102);
 /**
 A package with some generic definitions, exceptions, functions and procedures.
 **/
+
+procedure init;
+
+procedure done;
 
 function get_object_name
 ( p_object_name in varchar2 -- the object name part

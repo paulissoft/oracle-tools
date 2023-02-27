@@ -5,8 +5,28 @@ c_max_size_raw constant simple_integer := 2000;
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
+g_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
+  oracle_tools.api_longops_pkg.longops_init
+  ( p_target_desc => $$PLSQL_UNIT
+  , p_totalwork => 0
+  , p_op_name => 'process'
+  , p_units => 'messages'
+  );
+
 -- PUBLIC
 
+procedure init
+is
+begin
+  null;
+end init;
+
+procedure done
+is
+begin
+  oracle_tools.api_longops_pkg.longops_done(g_longops_rec);
+end done;  
+  
 function get_object_name
 ( p_object_name in varchar2
 , p_schema_name in varchar2
@@ -63,7 +83,7 @@ begin
     if r.supertype_name is not null
     then
       l_msg_tab.extend(1);
-      l_msg_tab(l_msg_tab.last) := r.type_name;
+      execute immediate utl_lms.format_message('begin :1 := new %s(); end;', r.type_name) using out l_msg_tab(l_msg_tab.last);
     end if;
   end loop;
   

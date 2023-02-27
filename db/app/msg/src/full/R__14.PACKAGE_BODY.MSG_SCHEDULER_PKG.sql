@@ -3,6 +3,8 @@ CREATE OR REPLACE PACKAGE BODY "MSG_SCHEDULER_PKG" AS
 c_program_supervisor constant user_scheduler_programs.program_name%type := 'PROCESSING_SUPERVISOR';
 c_program_worker constant user_scheduler_programs.program_name%type := 'PROCESSING';
 
+c_schedule_supervisor constant user_scheduler_programs.program_name%type := 'SCHEDULE_SUPERVISOR';
+
 "yyyy-mm-dd hh24:mi:ss" constant varchar2(100) := 'yyyy-mm-dd hh24:mi:ss';
 "yyyy-mm-ddThh24:mi:ssZ" constant varchar2(100) := 'yyyy-mm-ddThh24:mi:ssZ'; -- ISO 8601 
 
@@ -10,19 +12,11 @@ c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(s
 
 $if oracle_tools.cfg_pkg.c_debugging $then
  
-subtype t_dbug_channel_active_tab is t_boolean_lookup_tab;
+subtype t_dbug_channel_tab is msg_pkg.t_boolean_lookup_tab;
 
-g_dbug_channel_tab t_dbug_channel_active_tab;
+g_dbug_channel_tab t_dbug_channel_tab;
 
 $end -- $if oracle_tools.cfg_pkg.c_debugging $then
-
-g_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
-  oracle_tools.api_longops_pkg.longops_init
-  ( p_target_desc => $$PLSQL_UNIT
-  , p_totalwork => 0
-  , p_op_name => 'process'
-  , p_units => 'messages'
-  );
 
 procedure init
 is
@@ -53,7 +47,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   end loop;
 $end
 
-  null;
+  msg_pkg.init;
 end init;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -97,7 +91,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   profiler_report;
 $end  
 
-  oracle_tools.api_longops_pkg.longops_done(g_longops_rec);
+  msg_pkg.done;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   while l_dbug_channel is not null
@@ -161,6 +155,25 @@ exception
   then
     return false;
 end does_program_exist;
+
+function does_schedule_exist
+( p_schedule_name in varchar2
+)
+return boolean
+is
+  l_found pls_integer;
+begin
+  select  1
+  into    l_found
+  from    user_scheduler_schedules p
+  where   p.schedule_name = p_schedule_name;
+
+  return true;
+exception
+  when no_data_found
+  then
+    return false;
+end does_schedule_exist;
 
 function session_job_name
 ( p_session_id in varchar2 default c_session_id
@@ -307,7 +320,8 @@ begin
   then
     create_program(c_program_worker);
   end if;
-  
+
+  -- use inline schedule
   dbms_scheduler.create_job
   ( job_name => l_job_name_worker
   , program_name => c_program_worker
@@ -379,11 +393,12 @@ is
     , p_program_name => c_program_supervisor
     , p_worker_nr => null
     );
-  l_state user_scheduler_jobs.status%type;
+  l_state user_scheduler_jobs.state%type;
   l_start boolean := false;
 begin
   begin
     select  j.state
+    into    l_state
     from    user_scheduler_jobs j
     where   j.job_name = l_job_name;
   
@@ -437,6 +452,7 @@ procedure submit_processing_supervisor
 , p_ttl in positiven
 , p_start_date in timestamp with time zone
 , p_repeat_interval in varchar2
+, p_end_date in timestamp with time zone
 )
 is
   l_processing_package constant all_objects.object_name%type :=
@@ -459,10 +475,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'p_ttl: %s; p_start_date: %s; p_repeat_interval: %s'
+  , 'p_ttl: %s; p_start_date: %s; p_repeat_interval: %s; p_end_date: %s'
   , p_ttl
   , to_char(p_start_date, "yyyy-mm-dd hh24:mi:ss")
   , p_repeat_interval
+  , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")  
   );
 $end
 
@@ -472,13 +489,23 @@ $end
     then
       create_program(c_program_supervisor);
     end if;
-    
+
+    if not(does_schedule_exist(c_schedule_supervisor))
+    then
+      dbms_scheduler.create_schedule
+      ( schedule_name => c_schedule_supervisor
+      , start_date => p_start_date
+      , repeat_interval => p_repeat_interval
+      , end_date => p_end_date
+      , comments => 'Supervisor job schedule'
+      );
+      dbms_scheduler.enable(c_schedule_supervisor);
+    end if;
+
     dbms_scheduler.create_job
     ( job_name => l_job_name
     , program_name => c_program_supervisor
-    , start_date => p_start_date
-    , repeat_interval => p_repeat_interval
-    , end_date => null
+    , schedule_name => c_schedule_supervisor
     , job_class => 'DEFAULT_JOB_CLASS'
     , enabled => false -- so we can set job arguments
     , auto_drop => false
@@ -487,6 +514,8 @@ $end
     , credential_name => null
     , destination_name => null
     );
+  else
+    dbms_scheduler.disable(l_job_name); -- stop the job so we can give it job arguments
   end if;
 
   -- set arguments
@@ -538,8 +567,8 @@ is
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_groups_to_process_tab sys.odcivarchar2list;
   l_groups_to_process_list varchar2(4000 char);
-  l_start constant number := dbms_utility.get_time;
-  l_elapsed_time number;
+  l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
+  l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
 
   procedure check_input_and_state
   is
@@ -648,7 +677,7 @@ $end
     l_session_id user_scheduler_running_jobs.session_id%type;
   begin    
     loop
-      l_elapsed_time := msg_pkg.elapsed_time(l_start, dbms_utility.get_time);
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
@@ -667,7 +696,7 @@ $end
       , p_session_id => l_session_id
       );
 
-      l_elapsed_time := msg_pkg.elapsed_time(l_start, dbms_utility.get_time);
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
       exit when l_elapsed_time >= p_ttl;
       

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AS 
+CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AUTHID DEFINER AS 
 
 c_one_day_minus_something constant positiven := (24 * 60 * 60 - 5);
 
@@ -23,8 +23,9 @@ procedure submit_processing_supervisor
 , p_nr_workers_each_group in positive default null -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default null -- the total number of workers will be this number
 , p_ttl in positiven default c_one_day_minus_something -- time to live (in seconds)
-, p_start_date in timestamp with time zone default null
-, p_repeat_interval in varchar2 default null
+, p_start_date in timestamp with time zone default msg_constants_pkg.c_job_schedule_start_date -- for creating job schedule 
+, p_repeat_interval in varchar2 default msg_constants_pkg.c_job_schedule_repeat_interval -- idem
+, p_end_date in timestamp with time zone default msg_constants_pkg.c_job_schedule_end_date -- idem
 );
 /**
 Submits the supervisor, processing_supervisor() below, that will submit its workers.
