@@ -300,7 +300,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 
     dbug.print
     ( dbug."info"
-    , 'self.wallet_path: %s; self.https_host is null: %s; self.credential_static_id is null: %s; self.token_url is null: %s; apex_web_service.g_request_cookies.count = 0: %s'
+    , 'self.wallet_path is null: %s; self.https_host is null: %s; self.credential_static_id is null: %s; self.token_url is null: %s; apex_web_service.g_request_cookies.count = 0: %s'
     , dbug.cast_to_varchar2(self.wallet_path is null)
     , dbug.cast_to_varchar2(self.https_host is null)
     , dbug.cast_to_varchar2(self.credential_static_id is null)
