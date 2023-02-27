@@ -36,34 +36,34 @@ function get_object_name
 )
 return varchar2
 is
+  l_object_name all_objects.object_name%type := p_object_name;
+  l_schema_name all_objects.owner%type := null;
+
+  procedure fmt(p_name in out nocopy varchar2)
+  is
+  begin
+    if p_uc = 1
+    then
+      p_name := upper(p_name);
+    end if;
+    
+    if p_qq = 1 and p_name not like '"%"'
+    then
+      p_name := '"' || replace(p_name, '"', '""') || '"';
+    end if;
+  end fmt;
 begin
-  return
-    case p_fq
-      when 1 -- schema.object
-      then
-        case p_qq
-          when 1
-          then dbms_assert.enquote_name(str => p_schema_name, capitalize => (p_uc = 1)) ||
-               '.' ||
-               dbms_assert.enquote_name(str => p_object_name, capitalize => (p_uc = 1))
-          else case p_uc
-                 when 1
-                 then upper(p_schema_name || '.' || p_object_name)
-                 else p_schema_name || '.' || p_object_name
-               end
-        end
-        
-      else -- just object
-        case p_qq
-          when 1
-          then dbms_assert.enquote_name(str => p_object_name, capitalize => (p_uc = 1))
-          else case p_uc
-                 when 1
-                 then upper(p_object_name)
-                 else p_object_name
-               end
-        end
-    end;
+  fmt(l_object_name);
+
+  if p_fq = 1
+  then
+    l_schema_name := p_schema_name;
+    fmt(l_schema_name);
+    
+    return l_schema_name || '.' || l_object_name;
+  else
+    return l_object_name;
+  end if;
 end get_object_name;
 
 function get_msg_tab
