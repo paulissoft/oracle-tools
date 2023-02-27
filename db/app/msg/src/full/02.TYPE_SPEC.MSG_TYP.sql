@@ -176,6 +176,12 @@ The list is empty when there are no LOB attributes.
   )
   return integer
 /** Has this message a not null LOB (BLOB or CLOB)? 0 for No, 1 for Yes. **/  
+
+, member function default_processing_method
+  ( self in msg_typ
+  )
+  return varchar2
+/** The default processing method for a message: PL/SQL callback to dequeue and process (plsql://<procedure>), PL/SQL package with an dequeue and process loop (package://<package>) or NULL (nothing defined). **/  
 )
 not final;
 /
