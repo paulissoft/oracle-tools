@@ -47,6 +47,34 @@ begin
   return;
 end rest_web_service_request_typ;
 
+constructor function rest_web_service_request_typ
+( self in out nocopy rest_web_service_request_typ
+)
+return self as result
+is
+begin
+  self.construct
+  ( p_group$ => null
+  , p_context$ => null
+  , p_url => null
+  , p_scheme => null
+  , p_proxy_override => null
+  , p_transfer_timeout => null
+  , p_wallet_path => null
+  , p_https_host => null
+  , p_credential_static_id => null
+  , p_token_url => null
+  , p_cookies_clob => null
+  , p_http_headers_clob => null
+  , p_http_method => null
+  , p_body_clob => null
+  , p_body_blob => null
+  , p_parms_clob => null
+  , p_binary_response => null
+  );
+  return;
+end rest_web_service_request_typ;
+
 final member procedure construct
 ( self in out nocopy rest_web_service_request_typ
   -- from web_service_request_typ

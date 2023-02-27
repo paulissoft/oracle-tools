@@ -285,6 +285,24 @@ $end
   return l_collection;
 end list2collection;
 
+function collection2list
+( p_value_tab in sys.odcivarchar2list
+, p_sep in varchar2
+, p_ignore_null in naturaln
+)
+return varchar2
+deterministic
+is
+  l_values_list varchar2(32767) := null;
+begin
+  select  listagg(t.column_value, p_sep) within group (order by t.column_value)
+  into    l_values_list
+  from    table(p_value_tab) t
+  where   ( p_ignore_null = 0 or t.column_value is not null );
+  
+  return l_values_list;
+end collection2list;
+
 function excel_date_number2date
 ( p_date_number in integer
 )

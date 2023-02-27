@@ -133,7 +133,6 @@ procedure enqueue
 , p_visibility in binary_integer default null -- when null the message payload will determine this
 , p_correlation in varchar2 default null
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
-, p_plsql_callback in varchar2 default c_default_plsql_callback -- When not null that callback will e registered, other you must dequeue yourself
 , p_msgid out nocopy raw
 );
 /**
@@ -240,15 +239,12 @@ See also the dequeue(p_context...) procedure documentation.
 **/
 
 -- will be invoked by MSG_PKG
-procedure get_groups_for_processing
-( p_include_group_tab in sys.odcivarchar2list
-, p_exclude_group_tab in sys.odcivarchar2list
-, p_processing_group_tab out nocopy sys.odcivarchar2list
-);
+function get_groups_to_process
+return sys.odcivarchar2list;
 
 -- will be invoked by MSG_PKG
 procedure processing
-( p_processing_group_tab in sys.odcivarchar2list
+( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
 , p_ttl in positiven
 , p_job_name_supervisor in varchar2

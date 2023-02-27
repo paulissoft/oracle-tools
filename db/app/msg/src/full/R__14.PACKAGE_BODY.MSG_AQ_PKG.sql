@@ -4,11 +4,8 @@ CREATE OR REPLACE PACKAGE BODY "MSG_AQ_PKG" AS
 
 c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
--- three values:
--- 1) TRUE (a callback)
--- 2) FALSE (no callback but someone else (job?) handles it)
--- 3) UNKNOWN or not existing
-g_fq_queue_has_callback_tab msg_pkg.t_boolean_lookup_tab;
+"plsql://" constant varchar2(10) := 'plsql://';
+"package://" constant varchar2(10) := 'package://';
 
 function simple_queue_name
 ( p_queue_name in varchar2
@@ -16,7 +13,7 @@ function simple_queue_name
 return varchar2
 is
 begin
-  return oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_queue_name, 'queue');
+  return msg_pkg.get_object_name(p_object_name => p_queue_name, p_fq => 0);
 end simple_queue_name;
 
 function visibility_descr
@@ -166,40 +163,14 @@ begin
   commit;
 end register_at;  
 
-procedure run_job_to_dequeue_at
-( p_fq_queue_name in varchar2
+function queue_name
+( p_group_name in varchar2
 )
+return varchar2
 is
-  pragma autonomous_transaction;
-
-  l_include_group_list varchar2(4000 char) := '%';
-  l_job_name_suffix all_objects.object_name%type := null;
-  l_repeat_interval varchar2(4000 char) := null;
 begin
-  -- Does job supervisor exist?
-  -- a) If true, we must create a one-off job to dequeue the new queue.
-  --    When that one-off job finishes, subsequent runs of the normal supervisor job job will take over.
-  -- b) If not, we just create the supervisor job that will dequeue all queues.
-  if msg_pkg.does_job_supervisor_exist
-  then
-    -- Case a
-    l_include_group_list := replace(p_fq_queue_name, '_', '\_');
-    l_job_name_suffix := trim('"' from p_fq_queue_name);
-  else
-    -- Case b
-    l_repeat_interval := 'FREQ=DAILY';
-  end if;
-
-  msg_pkg.submit_processing_supervisor
-  ( p_include_group_list => l_include_group_list
-  , p_nr_workers_each_group => 1
-    -- job parameters
-  , p_job_name_suffix => l_job_name_suffix
-  , p_repeat_interval => l_repeat_interval
-  );
-
-  g_fq_queue_has_callback_tab(p_fq_queue_name) := false;
-end run_job_to_dequeue_at;
+  return msg_pkg.get_object_name(p_object_name => replace(p_group_name, '.', '$'), p_fq => 0);
+end queue_name;
 
 -- public routines
 
@@ -209,7 +180,7 @@ function queue_name
 return varchar2
 is
 begin
-  return oracle_tools.data_api_pkg.dbms_assert$enquote_name(replace(p_msg.group$, '.', '$'), 'queue');
+  return queue_name(p_msg.group$);
 end queue_name;
 
 procedure create_queue_table
@@ -263,7 +234,8 @@ $end
       for rsr in
       ( select  location_name
         from    user_subscr_registrations sr
-        where   sr.subscription_name = c_schema || '.' || oracle_tools.data_api_pkg.dbms_assert$enquote_name(rq.queue_name, 'queue')
+                -- sr.subscription_name is in "SCHEMA"."QUEUE" format
+        where   sr.subscription_name = msg_pkg.get_object_name(p_object_name => rq.queue_name, p_schema_name => c_schema)
       )
       loop
         unregister
@@ -517,14 +489,12 @@ $end
                 ( sys.aq$_reg_info
                   ( name => sql_object_name(c_schema, l_queue_name) || case when p_subscriber is not null then ':' || p_subscriber end
                   , namespace => dbms_aq.namespace_aq
-                  , callback => 'plsql://' || p_plsql_callback
+                  , callback => "plsql://" || p_plsql_callback
                   , context => hextoraw('FF')
                   )
                 )
   , reg_count => 1
   );
-
-  g_fq_queue_has_callback_tab(simple_queue_name(p_queue_name)) := true;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -555,17 +525,12 @@ $end
                 ( sys.aq$_reg_info
                   ( name => sql_object_name(c_schema, l_queue_name) || case when p_subscriber is not null then ':' || p_subscriber end
                   , namespace => dbms_aq.namespace_aq
-                  , callback => 'plsql://' || p_plsql_callback
+                  , callback => "plsql://" || p_plsql_callback
                   , context => hextoraw('FF')
                   )
                 )
   , reg_count => 1
   );
-
-  if g_fq_queue_has_callback_tab.exists(simple_queue_name(p_queue_name))
-  then
-    g_fq_queue_has_callback_tab.delete(simple_queue_name(p_queue_name));
-  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -578,11 +543,10 @@ procedure enqueue
 , p_visibility in binary_integer
 , p_correlation in varchar2
 , p_force in boolean
-, p_plsql_callback in varchar2
 , p_msgid out nocopy raw
 )
 is
-  l_queue_name constant user_queues.name%type := simple_queue_name(queue_name(p_msg));
+  l_queue_name constant user_queues.name%type := queue_name(p_msg);
   l_enqueue_enabled user_queues.enqueue_enabled%type;
   l_dequeue_enabled user_queues.dequeue_enabled%type;
   l_enqueue_options dbms_aq.enqueue_options_t;
@@ -591,14 +555,8 @@ is
 
   procedure ensure_queue_gets_dequeued
   is
-    l_processing_group_tab sys.odcivarchar2list;
   begin
-    if g_fq_queue_has_callback_tab.exists(l_queue_name) and
-       g_fq_queue_has_callback_tab(l_queue_name) is not null
-    then
-      -- there is either a callback or a job
-      null; -- OK
-    elsif p_plsql_callback is not null
+    if p_msg.default_processing_method() like "plsql://" || '%'
     then
 $if msg_aq_pkg.c_multiple_consumers $then
       add_subscriber_at
@@ -607,25 +565,16 @@ $if msg_aq_pkg.c_multiple_consumers $then
 $end
       register_at
       ( p_queue_name => l_queue_name
-      , p_plsql_callback => p_plsql_callback
+      , p_plsql_callback => replace(p_msg.default_processing_method(), "plsql://")
       );
-    else
-      -- This one excludes the web service response queue
-      get_groups_for_processing
-      ( p_include_group_tab => sys.odcivarchar2list(l_queue_name)
-      , p_exclude_group_tab => sys.odcivarchar2list(replace(web_service_response_typ.default_group, '_', '\_'))
-      , p_processing_group_tab => l_processing_group_tab
-      );
-      -- l_queue_name is a simple enquoted queue name
-      if l_processing_group_tab.count > 0
-      then
-        -- Create and run a job to process this queue.
-        run_job_to_dequeue_at
-        ( p_fq_queue_name => l_queue_name
+    elsif p_msg.default_processing_method() like "package://" || '%'
+    then
+      execute immediate
+        utl_lms.format_message
+        ( q'[call %s.restart('%s')]'
+        , replace(p_msg.default_processing_method(), "package://")
+        , $$PLSQL_UNIT
         );
-      else
-        g_fq_queue_has_callback_tab(l_queue_name) := false;
-      end if;
     end if;
   end ensure_queue_gets_dequeued;
 begin
@@ -639,11 +588,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , visibility_descr(p_visibility)
   , p_correlation
   , dbug.cast_to_varchar2(p_force)
-  );
-  dbug.print
-  ( dbug."input"  
-  , 'p_plsql_callback: %s'
-  , p_plsql_callback
   );
   p_msg.print();
 $end
@@ -726,6 +670,9 @@ $end
         else
           raise;
         end if;
+        -- now ensure that the message is dequeued by either registering a callback or starting a job
+        ensure_queue_gets_dequeued;
+  
       when e_enqueue_disabled
       then
         if i_try != c_max_tries
@@ -741,9 +688,6 @@ $end
     end;
   end loop try_loop;  
 
-  -- now ensure that the message is dequeued by either registering a callback or starting a job
-  ensure_queue_gets_dequeued;
-  
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   dbug.leave;
@@ -771,7 +715,7 @@ procedure dequeue
 , p_msg out nocopy msg_typ
 )
 is
-  l_queue_name constant user_queues.name%type := simple_queue_name(nvl(p_queue_name, queue_name(p_msg)));
+  l_queue_name constant user_queues.name%type := nvl(simple_queue_name(p_queue_name), queue_name(p_msg));
   l_dequeue_options dbms_aq.dequeue_options_t;
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
@@ -1087,89 +1031,87 @@ exception
 $end
 end dequeue_and_process;
 
--- will be invoked by MSG_PKG
-procedure get_groups_for_processing
-( p_include_group_tab in sys.odcivarchar2list
-, p_exclude_group_tab in sys.odcivarchar2list
-, p_processing_group_tab out nocopy sys.odcivarchar2list
-)
+-- will be invoked by MSG_SCHEDULER_PKG
+function get_groups_to_process
+return sys.odcivarchar2list
 is
-  l_schema_owner constant all_objects.owner%type := dbms_assert.enquote_name($$PLSQL_UNIT_OWNER); -- ensure correct case
+  l_msg_tab constant msg_pkg.msg_tab_t := msg_pkg.get_msg_tab;
+  l_groups_to_process_tab sys.odcivarchar2list := sys.odcivarchar2list();
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_GROUPS_FOR_PROCESSING');
-  dbug.print
-  ( dbug."input"
-  , 'p_include_group_tab.count: %s; p_exclude_group_tab.count: %s'
-  , case when p_include_group_tab is not null then p_include_group_tab.count end
-  , case when p_exclude_group_tab is not null then p_exclude_group_tab.count end
-  );
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_GROUPS_TO_PROCESS');
 $end
 
   -- determine the normal queues matching one of the input queues (that may have wildcards)
-  select  dbms_assert.enquote_name(substr(fq_queue_name, 1 + length(l_schema_owner || '.'))) as queue_name
+  select  t.group$
   bulk collect
-  into    p_processing_group_tab
-  from    ( select  l_schema_owner || '.' || dbms_assert.enquote_name(q.name) as fq_queue_name
+  into    l_groups_to_process_tab
+  from    ( select  msg_pkg.get_object_name(p_object_name => q.name) as fq_queue_name
             from    user_queues q
-                    inner join table(p_include_group_tab) qni
-                    on q.name like qni.column_value escape '\'
-                    inner join table(p_exclude_group_tab) qne
-                    on q.name not like qne.column_value escape '\'
             where   q.queue_type = 'NORMAL_QUEUE'
+            and     q.queue_table = trim('"' from c_queue_table)
             and     trim(q.dequeue_enabled) = 'YES'
             minus
             select  sr.subscription_name as fq_queue_name -- "OWNER"."QUEUE"
             from    user_subscr_registrations sr
             order by
                     fq_queue_name
-          );
-
+          ) q
+          inner join table(l_msg_tab) t
+          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)));
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
-  , 'p_processing_group_tab.count: %s'
-  , case when p_processing_group_tab is not null then p_processing_group_tab.count end
+  , 'l_groups_to_process_tab.count: %s'
+  , case when l_groups_to_process_tab is not null then l_groups_to_process_tab.count end
   );
   dbug.leave;
 $end
-end get_groups_for_processing;
 
--- will be invoked by MSG_PKG
+  return l_groups_to_process_tab;
+end get_groups_to_process;
+
+-- will be invoked by MSG_SCHEDULER_PKG
 procedure processing
-( p_processing_group_tab in sys.odcivarchar2list
+( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
 , p_ttl in positiven
 , p_job_name_supervisor in varchar2
 )
 is
-  l_queue_name_tab sys.odcivarchar2list := p_processing_group_tab;
+  l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_agent_list dbms_aq.aq$_agent_list_t;
   l_queue_name_idx positiven := 1;
   l_agent sys.aq$_agent;
   l_message_delivery_mode pls_integer;
-  l_start constant number := dbms_utility.get_time;
-  l_elapsed_time number;
+  l_start constant oracle_tools.api_timer_pkg.time_t := oracle_tools.api_timer_pkg.get_time;
+  l_elapsed_time oracle_tools.api_timer_pkg.seconds_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
   dbug.print
   ( dbug."input"
-  , 'p_processing_group_tab.count: %s; p_worker_nr; %s; p_ttl: %s; p_job_name_supervisor: %s'
-  , case when p_processing_group_tab is not null then p_processing_group_tab.count end
+  , 'p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_ttl: %s; p_job_name_supervisor: %s'
+  , case when p_groups_to_process_tab is not null then p_groups_to_process_tab.count end
   , p_worker_nr
   , p_ttl
   , p_job_name_supervisor
   );
 $end
 
-  if l_queue_name_tab is not null and l_queue_name_tab.first = 1
+  if p_groups_to_process_tab is not null and p_groups_to_process_tab.first = 1
   then
     null;
   else
     raise value_error;
   end if;
+
+  for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
+  loop
+    l_queue_name_tab.extend(1);
+    l_queue_name_tab(l_queue_name_tab.last) := queue_name(p_groups_tab(i_idx));
+  end loop;
 
   -- i_idx can be from
   -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
@@ -1195,7 +1137,7 @@ $end
   end loop;
 
   loop
-    l_elapsed_time := msg_pkg.elapsed_time(l_start, dbms_utility.get_time);
+    l_elapsed_time := oracle_tools.api_timer_pkg.elapsed_time(l_start, oracle_tools.api_timer_pkg.get_time);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
@@ -1212,7 +1154,7 @@ $end
     , message_delivery_mode => l_message_delivery_mode
     );
 
-    l_elapsed_time := msg_pkg.elapsed_time(l_start, dbms_utility.get_time);
+    l_elapsed_time := oracle_tools.api_timer_pkg.elapsed_time(l_start, oracle_tools.api_timer_pkg.get_time);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
@@ -1248,7 +1190,9 @@ $end
   , p_timeout => 0
   );
 exception
-  when msg_pkg.e_dbms_pipe_error
+  when msg_pkg.e_dbms_pipe_timeout or
+       msg_pkg.e_dbms_pipe_record_too_large or
+       msg_pkg.e_dbms_pipe_interrupted
   then
     raise;
     
