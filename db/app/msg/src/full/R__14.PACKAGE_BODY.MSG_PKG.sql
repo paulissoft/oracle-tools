@@ -42,14 +42,27 @@ is
   procedure fmt(p_name in out nocopy varchar2)
   is
   begin
-    if p_uc = 1
+    if p_name like '"%"'
     then
-      p_name := upper(p_name);
-    end if;
+      -- name is enquoted, no need to change case
+      if p_qq = 1
+      then
+        -- already enquoted
+        null;
+      else
+        -- remove quotes at the beginning and end and convert two double quotes into one
+        p_name := replace(trim('"' from p_name), '""', '"');
+      end if;
+    else -- p_name NOT like '"%"'
+      if p_uc = 1
+      then
+        p_name := upper(p_name);
+      end if;
     
-    if p_qq = 1 and p_name not like '"%"'
-    then
-      p_name := '"' || replace(p_name, '"', '""') || '"';
+      if p_qq = 1
+      then
+        p_name := '"' || replace(p_name, '"', '""') || '"';
+      end if;
     end if;
   end fmt;
 begin

@@ -137,6 +137,25 @@ exception
     return false;
 end does_job_exist;
 
+function is_job_running
+( p_job_name in varchar2
+)
+return boolean
+is
+  l_found pls_integer;
+begin
+  select  1
+  into    l_found
+  from    user_scheduler_running_jobs j
+  where   j.job_name = p_job_name;
+
+  return true;
+exception
+  when no_data_found
+  then
+    return false;
+end is_job_running;
+
 function does_program_exist
 ( p_program_name in varchar2
 )
@@ -311,36 +330,41 @@ is
   l_job_name_worker constant user_scheduler_jobs.job_name%type := p_job_name_supervisor || '#' || to_char(p_worker_nr);
   l_argument_value user_scheduler_program_args.default_value%type;
 begin  
-  if does_job_exist(l_job_name_worker)
+  if is_job_running(l_job_name_worker)
   then
-    raise too_many_rows; -- should not happen
+    raise too_many_rows;
   end if;
   
-  if not(does_program_exist(c_program_worker))
-  then
-    create_program(c_program_worker);
-  end if;
+  if not(does_job_exist(l_job_name_worker))
+  then  
+    if not(does_program_exist(c_program_worker))
+    then
+      create_program(c_program_worker);
+    end if;
 
-  -- use inline schedule
-  dbms_scheduler.create_job
-  ( job_name => l_job_name_worker
-  , program_name => c_program_worker
-  , start_date => null
-    -- will never repeat
-  , repeat_interval => null
-  , end_date => sysdate + (p_ttl / (24 * 60 * 60)) -- as precaution
-    -- ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
-    -- Can not be granted neither, at least not by ADMIN
-  -- , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
-  , enabled => false -- so we can set job arguments
-  , auto_drop => true -- one-off jobs
-  , comments => 'Worker job for processing messages.'
-  --, job_style => 'IN_MEMORY_FULL'
-  --, job_style => 'IN_MEMORY_RUNTIME'
-  , job_style => 'LIGHTWEIGHT'
-  , credential_name => null
-  , destination_name => null
-  );
+    -- use inline schedule
+    dbms_scheduler.create_job
+    ( job_name => l_job_name_worker
+    , program_name => c_program_worker
+    , start_date => null
+      -- will never repeat
+    , repeat_interval => null
+    , end_date => sysdate + (p_ttl / (24 * 60 * 60)) -- as precaution
+      -- ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
+      -- Can not be granted neither, at least not by ADMIN
+    -- , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
+    , enabled => false -- so we can set job arguments
+    , auto_drop => true -- one-off jobs
+    , comments => 'Worker job for processing messages.'
+    --, job_style => 'IN_MEMORY_FULL'
+    --, job_style => 'IN_MEMORY_RUNTIME'
+    , job_style => 'LIGHTWEIGHT'
+    , credential_name => null
+    , destination_name => null
+    );
+  else
+    dbms_scheduler.disable(l_job_name_worker);    
+  end if;
   
   -- set the actual arguments
 
@@ -386,7 +410,7 @@ is
   pragma autonomous_transaction;
 
   l_processing_package constant all_objects.object_name%type :=
-    trim('"' from dbms_assert.enquote_name(nvl(p_processing_package, utl_call_stack.subprogram(2)(1)))); -- 2 is the index of the calling unit, 1 is the name of the unit
+    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
   l_job_name constant user_scheduler_jobs.job_name%type :=
     job_name
     ( p_processing_package => l_processing_package 
@@ -456,7 +480,7 @@ procedure submit_processing_supervisor
 )
 is
   l_processing_package constant all_objects.object_name%type :=
-    trim('"' from dbms_assert.enquote_name(nvl(p_processing_package, utl_call_stack.subprogram(2)(1)))); -- 2 is the index of the calling unit, 1 is the name of the unit
+    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
   l_job_name constant user_scheduler_jobs.job_name%type :=
     job_name
     ( l_processing_package
@@ -482,6 +506,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")  
   );
 $end
+
+  if is_job_running(l_job_name)
+  then
+    raise too_many_rows;
+  end if;
 
   if not(does_job_exist(l_job_name))
   then
@@ -562,7 +591,7 @@ procedure processing_supervisor
 )
 is
   l_processing_package constant all_objects.object_name%type :=
-    trim('"' from dbms_assert.enquote_name(nvl(p_processing_package, utl_call_stack.subprogram(2)(1)))); -- 2 is the index of the calling unit, 1 is the name of the unit
+    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
   l_job_name_supervisor user_scheduler_jobs.job_name%type;
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_groups_to_process_tab sys.odcivarchar2list;
@@ -658,7 +687,19 @@ $end
 
   procedure start_workers
   is
+    l_dummy integer;
+    -- ORA-23322 Failure due to naming conflict.
+    e_pipe_naming_conflict exception;
+    pragma exception_init(e_pipe_naming_conflict, -23322);
   begin
+    -- try to create a private pipe for maximum security
+    begin
+      l_dummy := dbms_pipe.create_pipe(pipename => l_job_name_supervisor, private => true);
+    exception
+      when e_pipe_naming_conflict
+      then null;
+    end;
+    
     if l_job_name_tab.count > 0
     then
       for i_worker in l_job_name_tab.first .. l_job_name_tab.last
@@ -720,6 +761,37 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'Stopped supervising workers after %s seconds', to_char(l_elapsed_time));
 $end
   end supervise_workers;
+
+  procedure stop_worker
+  ( p_job_name_worker in varchar2
+  )
+  is
+  begin
+    if is_job_running(p_job_name_worker)
+    then
+      dbms_scheduler.stop_job(p_job_name_worker);
+      dbms_scheduler.disable(p_job_name_worker);
+    end if;
+  end stop_worker;
+
+  procedure stop_workers
+  is
+  begin
+    if l_job_name_tab.count > 0
+    then
+      for i_worker in l_job_name_tab.first .. l_job_name_tab.last
+      loop        
+        stop_worker(p_job_name_worker => l_job_name_tab(i_worker));
+      end loop;
+    end if;
+  end stop_workers;
+  
+  procedure cleanup
+  is
+  begin
+    stop_workers;
+    done;
+  end cleanup;
 begin
   init;
   
@@ -746,7 +818,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 
-  done;
+  cleanup; -- after dbug.leave since the done inside will change dbug state
+  
 exception
   when msg_pkg.e_dbms_pipe_timeout or
        msg_pkg.e_dbms_pipe_record_too_large or
@@ -755,7 +828,8 @@ exception
 $if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
 $end
-    done;
+
+    cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     -- no reraise necessary
     
   when others
@@ -763,7 +837,8 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
 $end
-    done;
+
+    cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     raise;
 end processing_supervisor;
 
@@ -776,7 +851,7 @@ procedure processing
 )
 is
   l_processing_package constant all_objects.object_name%type :=
-    trim('"' from dbms_assert.enquote_name(nvl(p_processing_package, utl_call_stack.subprogram(2)(1)))); -- 2 is the index of the calling unit, 1 is the name of the unit  
+    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
   l_job_name_worker constant user_scheduler_jobs.job_name%type := session_job_name();
   l_groups_to_process_tab sys.odcivarchar2list;
 begin
@@ -837,7 +912,7 @@ function does_job_supervisor_exist
 return boolean
 is
   l_processing_package constant all_objects.object_name%type :=
-    trim('"' from dbms_assert.enquote_name(nvl(p_processing_package, utl_call_stack.subprogram(2)(1)))); -- 2 is the index of the calling unit, 1 is the name of the unit
+    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
 begin
   return does_job_exist
          ( job_name

@@ -20,6 +20,11 @@ procedure data2json
 , p_http_headers out nocopy json_array_t
 );
 
+function make_rest_request
+( p_request in rest_web_service_request_typ
+)
+return web_service_response_typ;
+
 $if msg_aq_pkg.c_testing $then
 
 -- test functions

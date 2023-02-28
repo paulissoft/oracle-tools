@@ -2,6 +2,9 @@ CREATE OR REPLACE PACKAGE BODY "WEB_SERVICE_PKG" AS
 
 c_timestamp_format constant varchar2(30) := 'YYYYMMDDHH24MISSXFF';
 
+g_body_clob clob := null;
+g_body_blob blob := null;
+
 procedure json2data
 ( p_cookies in json_array_t
 , p_cookie_tab out nocopy sys.utl_http.cookie_table
@@ -158,6 +161,338 @@ begin
     end loop;
   end if;
 end data2json;
+
+function make_rest_request
+( p_request in rest_web_service_request_typ
+)
+return web_service_response_typ
+is
+  l_parm_names apex_application_global.vc_arr2 := apex_web_service.empty_vc_arr;
+  l_parm_values apex_application_global.vc_arr2 := apex_web_service.empty_vc_arr;
+  l_parms constant json_object_t := 
+    case
+      when p_request.parms_vc is not null
+      then json_object_t(p_request.parms_vc)
+      when p_request.parms_clob is not null
+      then json_object_t(p_request.parms_clob)
+      else null
+    end;
+  l_parms_keys constant json_key_list :=
+    case
+      when l_parms is not null
+      then l_parms.get_keys
+      else null
+    end;
+  l_cookies json_array_t := 
+    case
+      when p_request.cookies_vc is not null
+      then json_array_t(p_request.cookies_vc)
+      when p_request.cookies_clob is not null
+      then json_array_t(p_request.cookies_clob)
+      else null
+    end;
+  l_http_headers json_array_t := 
+    case
+      when p_request.http_headers_vc is not null
+      then json_array_t(p_request.http_headers_vc)
+      when p_request.http_headers_clob is not null
+      then json_array_t(p_request.http_headers_clob)
+      else null
+    end;
+  l_body_clob clob :=
+    case
+      when p_request.body_vc is not null
+      then to_clob(p_request.body_vc)
+      when p_request.body_clob is not null
+      then p_request.body_clob
+    end;
+  l_body_blob blob := 
+    case
+      when p_request.body_raw is not null
+      then to_blob(p_request.body_raw)
+      when p_request.body_blob is not null
+      then p_request.body_blob
+    end;
+  l_web_service_response web_service_response_typ := null;
+
+  function simple_request
+  return boolean
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'p_request.scheme is null: %s; p_request.proxy_override is null: %s; l_parm_names.count = 0: %s; l_parm_values.count = 0: %s'
+    , dbug.cast_to_varchar2(p_request.scheme is null)
+    , dbug.cast_to_varchar2(p_request.proxy_override is null)
+    , dbug.cast_to_varchar2(l_parm_names.count = 0)
+    , dbug.cast_to_varchar2(l_parm_values.count = 0)
+    );                          
+
+    dbug.print
+    ( dbug."info"
+    , 'p_request.wallet_path is null: %s; p_request.https_host is null: %s; p_request.credential_static_id is null: %s; p_request.token_url is null: %s'
+    , dbug.cast_to_varchar2(p_request.wallet_path is null)
+    , dbug.cast_to_varchar2(p_request.https_host is null)
+    , dbug.cast_to_varchar2(p_request.credential_static_id is null)
+    , dbug.cast_to_varchar2(p_request.token_url is null)
+    );
+$end
+
+    return p_request.scheme is null and
+           p_request.proxy_override is null and
+           l_parm_names.count = 0 and
+           l_parm_values.count = 0 and
+           p_request.wallet_path is null and
+           p_request.https_host is null and
+           p_request.credential_static_id is null and
+           p_request.token_url is null;
+  end simple_request;
+  
+  procedure utl_http_request
+  ( p_body_clob in out nocopy clob -- on input the request body, on output the response body
+  , p_body_blob in out nocopy blob -- on input the request body, on output the response body
+  , p_request_cookies in sys.utl_http.cookie_table
+  , p_request_headers in apex_web_service.header_table
+  , p_response_cookies out nocopy sys.utl_http.cookie_table
+  , p_response_headers out nocopy apex_web_service.header_table
+  , p_status_code out nocopy pls_integer
+  )
+  is
+    l_http_request utl_http.req;
+    l_http_response utl_http.resp;
+    l_offset positiven := 1;
+    l_nr_bytes_to_write pls_integer;
+    l_raw raw(2000);
+    c_max_raw_size constant positiven := 2000;
+    l_text varchar2(2000 char);
+    c_max_text_size constant positiven := 2000;
+    l_header_count pls_integer;
+    -- for dbms_lob.converttoblob
+    l_dest_offset integer := 1;
+    l_src_offset integer := 1;
+    l_lang number := dbms_lob.default_lang_ctx;
+    l_warning integer;  
+  begin
+    if p_body_clob is not null
+    then
+      dbms_lob.trim(g_body_blob, 0);
+      dbms_lob.converttoblob
+      ( /*dest_lob => */g_body_blob
+      , /*src_lob => */p_body_clob
+      , /*amount => */dbms_lob.getlength(p_body_clob)
+      , /*dest_offset => */l_dest_offset
+      , /*src_offset => */l_src_offset
+      , /*blob_csid => */dbms_lob.default_csid
+      , /*lang_context => */l_lang
+      , /*warning => */l_warning
+      );
+      p_body_clob := null;
+      p_body_blob := g_body_blob;
+    end if;
+    -- request body is in p_body_blob, if any
+    
+    utl_http.set_wallet(null);
+    utl_http.set_transfer_timeout(p_request.transfer_timeout);
+    utl_http.clear_cookies;
+    utl_http.add_cookies(p_request_cookies);
+
+    l_http_request := utl_http.begin_request(p_request.url, p_request.http_method);
+
+    if p_request_headers.count > 0
+    then
+      for i_idx in p_request_headers.first .. p_request_headers.last
+      loop
+        if p_request_headers(i_idx).name not in ('Content-Length'/*, 'Accept', 'User-Agent'*/)
+        then
+          utl_http.set_header(l_http_request, p_request_headers(i_idx).name, p_request_headers(i_idx).value);
+        end if;
+      end loop;
+    end if;
+
+    -- utl_http.set_header(l_http_request, 'Accept', '*/*');
+    -- utl_http.set_header(l_http_request, 'User-Agent', 'APEX');
+
+    l_nr_bytes_to_write := case when p_body_blob is null then 0 else dbms_lob.getlength(p_body_blob) end;
+    utl_http.set_header(l_http_request, 'Content-Length', l_nr_bytes_to_write);
+
+    while l_nr_bytes_to_write > 0
+    loop
+      l_raw := dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_raw_size, offset => l_offset);     
+      utl_http.write_raw(l_http_request, l_raw);
+      l_nr_bytes_to_write := l_nr_bytes_to_write - c_max_raw_size; -- may be too much if l_raw is not fully filled but that does not hurt
+      l_offset := l_offset + c_max_raw_size;
+    end loop;
+
+    l_http_response := utl_http.get_response(l_http_request);
+
+    p_status_code := l_http_response.status_code;
+
+    begin
+      if p_request.binary_response = 0
+      then
+        -- read text
+        dbms_lob.trim(g_body_clob, 0);
+        loop
+          utl_http.read_text(l_http_response, l_text, c_max_text_size);
+          dbms_lob.writeappend
+          ( lob_loc => g_body_clob
+          , amount => length(l_text)
+          , buffer => l_text
+          );   
+        end loop;
+      else
+        -- read binary
+        dbms_lob.trim(g_body_blob, 0);
+        loop
+          utl_http.read_raw(l_http_response, l_raw, c_max_raw_size);
+          dbms_lob.writeappend
+          ( lob_loc => g_body_blob
+          , amount => utl_raw.length(l_raw)
+          , buffer => l_raw
+          );   
+        end loop;
+      end if;
+    exception
+      when utl_http.end_of_body 
+      then
+        /*
+        -- If the response body returned by the remote Web server is encoded in chunked transfer encoding format,
+        -- the trailer headers that are returned at the end of the response body will be added to the response,
+        -- and the response header count will be updated. You can retrieve the additional headers
+        -- after the end of the response body is reached and before you end the response.
+        */
+        l_header_count := utl_http.get_header_count(l_http_response);
+        for i_header_idx in 1..l_header_count
+        loop
+          utl_http.get_header
+          ( r => l_http_response
+          , n => i_header_idx
+          , name => p_response_headers(i_header_idx).name
+          , value => p_response_headers(i_header_idx).value
+          );
+        end loop;
+
+        utl_http.get_cookies(cookies => p_response_cookies);
+
+        utl_http.end_response(l_http_response);
+    end;
+
+    if p_request.binary_response = 0
+    then
+      -- read text
+      p_body_clob := g_body_clob;
+      p_body_blob := null;
+    else
+      -- read binary
+      p_body_clob := null;
+      p_body_blob := g_body_blob;
+    end if;
+  end utl_http_request;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
+$end
+
+  if l_parms is not null
+  then
+    for i_idx in l_parms_keys.first .. l_parms_keys.last
+    loop
+      l_parm_names(l_parm_names.count+1) := l_parms_keys(i_idx);
+      l_parm_values(l_parm_values.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
+    end loop;
+  end if;
+
+  web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
+  web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
+
+  -- Prefer utl_http over apex_web_service since it is more performant.
+  -- But only for simple calls.
+  if simple_request
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
+$end
+
+    utl_http_request
+    ( p_body_clob => l_body_clob
+    , p_body_blob => l_body_blob
+    , p_request_cookies => apex_web_service.g_request_cookies
+    , p_request_headers => apex_web_service.g_request_headers
+    , p_response_cookies => apex_web_service.g_response_cookies
+    , p_response_headers => apex_web_service.g_headers
+    , p_status_code => apex_web_service.g_status_code
+    );
+  elsif p_request.binary_response = 0
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
+$end
+
+    l_body_clob := apex_web_service.make_rest_request
+                   ( p_url => p_request.url
+                   , p_http_method => p_request.http_method
+                   , p_username => null
+                   , p_password => null
+                   , p_scheme => p_request.scheme
+                   , p_proxy_override => p_request.proxy_override
+                   , p_transfer_timeout => p_request.transfer_timeout
+                   , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
+                   , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+                   , p_parm_name => l_parm_names
+                   , p_parm_value => l_parm_values
+                   , p_wallet_path => p_request.wallet_path
+                   , p_wallet_pwd => null
+                   , p_https_host => p_request.https_host
+                   , p_credential_static_id => p_request.credential_static_id
+                   , p_token_url => p_request.token_url
+                   );
+    l_body_blob := null;
+  else
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST_B to issue the REST webservice');
+$end
+
+    l_body_blob := apex_web_service.make_rest_request_b
+                   ( p_url => p_request.url
+                   , p_http_method => p_request.http_method
+                   , p_username => null
+                   , p_password => null
+                   , p_scheme => p_request.scheme
+                   , p_proxy_override => p_request.proxy_override
+                   , p_transfer_timeout => p_request.transfer_timeout
+                   , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
+                   , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+                   , p_parm_name => l_parm_names
+                   , p_parm_value => l_parm_values
+                   , p_wallet_path => p_request.wallet_path
+                   , p_wallet_pwd => null
+                   , p_https_host => p_request.https_host
+                   , p_credential_static_id => p_request.credential_static_id
+                   , p_token_url => p_request.token_url
+                   );
+    l_body_clob := null;
+  end if;
+
+  web_service_pkg.data2json(apex_web_service.g_response_cookies, l_cookies);
+  web_service_pkg.data2json(apex_web_service.g_headers, l_http_headers);
+
+  l_web_service_response :=
+    web_service_response_typ
+    ( p_web_service_request => p_request
+    , p_http_status_code => apex_web_service.g_status_code
+    , p_body_clob => l_body_clob
+    , p_body_blob => l_body_blob
+    , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
+    , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
+    );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+
+  return l_web_service_response;
+end make_rest_request;
 
 $if msg_aq_pkg.c_testing $then
 
@@ -336,6 +671,9 @@ end ut_rest_web_service_post;
 
 $end -- $if msg_aq_pkg.c_testing $then
 
-END WEB_SERVICE_PKG;
+begin
+  dbms_lob.createtemporary(g_body_clob, true);
+  dbms_lob.createtemporary(g_body_blob, true);
+end web_service_pkg;
 /
 
