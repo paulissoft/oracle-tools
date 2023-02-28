@@ -670,6 +670,16 @@ is
   procedure ensure_queue_gets_dequeued
   is
   begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE.ENSURE_QUEUE_GETS_DEQUEUED');
+    dbug.print
+    ( dbug."info"
+    , 'p_msg.default_processing_method(): %s; l_queue_name: %s'
+    , p_msg.default_processing_method()
+    , l_queue_name
+    );
+$end
+
     if p_msg.default_processing_method() like "plsql://" || '%'
     then
       select  qt.recipients
@@ -679,7 +689,11 @@ is
               on qt.owner = q.owner and qt.queue_table = q.queue_table
       where   q.owner = trim('"' from c_schema)
       and     q.queue_table = trim('"' from c_queue_table)
-      and     q.name = l_queue_name;
+      and     q.name = trim('"' from l_queue_name);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_recipients: %s', l_recipients);
+$end
 
       -- add default subscriber for a multiple consumer queue table
       if l_recipients <> 'SINGLE'
@@ -705,6 +719,9 @@ is
         )
       );
     end if;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
   end ensure_queue_gets_dequeued;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -778,6 +795,9 @@ $end
   <<try_loop>>
   for i_try in 1 .. c_max_tries
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'i_try: %s', i_try);
+$end    
     begin
       dbms_aq.enqueue
       ( queue_name => l_queue_name
@@ -790,6 +810,9 @@ $end
     exception
       when e_queue_does_not_exist or e_fq_queue_does_not_exist
       then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
         if i_try != c_max_tries
         then
           create_queue_at
@@ -804,6 +827,9 @@ $end
   
       when e_enqueue_disabled
       then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
         if i_try != c_max_tries
         then
           start_queue_at

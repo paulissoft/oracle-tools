@@ -277,14 +277,13 @@ $end
                            end
         , argument_position => i_par_idx
         , argument_type => case 
-                             when i_par_idx <= 3
+                             when i_par_idx <= 1
                              then 'VARCHAR2'
                              else 'NUMBER'
                            end
         , default_value => case i_par_idx
-                             when 2 then '%'
-                             when 3 then replace(web_service_response_typ.default_group, '_', '\_')
-                             when 6 then to_char(c_ttl)
+                             when 2 then to_char(1)
+                             when 4 then to_char(c_ttl)
                              else null
                            end
         );
