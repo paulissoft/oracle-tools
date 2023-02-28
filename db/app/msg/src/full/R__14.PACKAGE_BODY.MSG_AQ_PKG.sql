@@ -125,11 +125,9 @@ begin
   commit;
 end start_queue_at;
 
-$if msg_aq_pkg.c_multiple_consumers $then
-
 procedure add_subscriber_at
 ( p_queue_name in varchar2
-, p_subscriber in varchar2 default c_default_subscriber
+, p_subscriber in varchar2
 , p_rule in varchar2 default null
 , p_delivery_mode in binary_integer default c_subscriber_delivery_mode
 )
@@ -145,11 +143,9 @@ begin
   commit;
 end add_subscriber_at;  
 
-$end
-
 procedure register_at
 ( p_queue_name in varchar2
-, p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_subscriber in varchar2
 , p_plsql_callback in varchar2 -- schema.procedure
 )
 is
@@ -215,6 +211,7 @@ procedure drop_queue_table
 ( p_force in boolean
 )
 is
+  l_fq_queue_name varchar2(1000 char);
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_QUEUE_TABLE');
@@ -223,34 +220,46 @@ $end
 
   if p_force
   then
+    -- remove subscribers and callbacks for a possibly multiple consumer queue table
     for rq in
     ( select  q.name as queue_name
+      ,       qt.recipients -- SINGLE or ...
       from    all_queues q
+              inner join all_queue_tables qt
+              on qt.owner = q.owner and qt.queue_table = q.queue_table
       where   q.owner = trim('"' from c_schema)
       and     q.queue_table = trim('"' from c_queue_table)
       and     'NO' in ( trim(q.enqueue_enabled), trim(q.dequeue_enabled) )
     )
     loop
+      l_fq_queue_name := msg_pkg.get_object_name(p_object_name => rq.queue_name, p_schema_name => c_schema);
+      
       for rsr in
-      ( select  location_name
+      ( select  sr.location_name
+        ,       case
+                  when sr.subscription_name like l_fq_queue_name || ':%'
+                  then trim('"' from substr(sr.subscription_name, 1 + length(l_fq_queue_name) + 1))
+                end as subscriber
         from    user_subscr_registrations sr
                 -- sr.subscription_name is in "SCHEMA"."QUEUE" format
-        where   sr.subscription_name = msg_pkg.get_object_name(p_object_name => rq.queue_name, p_schema_name => c_schema)
+        where   sr.subscription_name = l_fq_queue_name -- single consumer
+        or      sr.subscription_name like l_fq_queue_name || ':%' -- multiple consumer, consumer after the :
       )
       loop
         unregister
         ( p_queue_name => rq.queue_name
+        , p_subscriber => rsr.subscriber
         , p_plsql_callback => rsr.location_name
         );
+        if rsr.subscriber is not null
+        then
+          remove_subscriber
+          ( p_queue_name => rq.queue_name
+          , p_subscriber => rsr.subscriber
+          );
+        end if;
       end loop;
-/*      
-      if c_multiple_consumers
-      then
-        remove_subscriber
-        ( p_queue_name => rq.queue_name
-        );
-      end if;
-*/      
+
       drop_queue
       ( p_queue_name => rq.queue_name
       , p_force => p_force
@@ -552,26 +561,41 @@ is
   l_enqueue_options dbms_aq.enqueue_options_t;
   l_message_properties dbms_aq.message_properties_t;
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
+  l_recipients all_queue_tables.recipients%type;
 
   procedure ensure_queue_gets_dequeued
   is
   begin
     if p_msg.default_processing_method() like "plsql://" || '%'
     then
-$if msg_aq_pkg.c_multiple_consumers $then
-      add_subscriber_at
-      ( p_queue_name => l_queue_name
-      );
-$end
+      select  qt.recipients
+      into    l_recipients
+      from    all_queues q
+              inner join all_queue_tables qt
+              on qt.owner = q.owner and qt.queue_table = q.queue_table
+      where   q.owner = trim('"' from c_schema)
+      and     q.queue_table = trim('"' from c_queue_table)
+      and     q.name = l_queue_name;
+
+      -- add default subscriber for a multiple consumer queue table
+      if l_recipients <> 'SINGLE'
+      then
+        add_subscriber_at
+        ( p_queue_name => l_queue_name
+        , p_subscriber => c_default_subscriber
+        );
+      end if;
+      
       register_at
       ( p_queue_name => l_queue_name
+      , p_subscriber => case when l_recipients <> 'SINGLE' then c_default_subscriber end
       , p_plsql_callback => replace(p_msg.default_processing_method(), "plsql://")
       );
     elsif p_msg.default_processing_method() like "package://" || '%'
     then
       execute immediate
         utl_lms.format_message
-        ( q'[call %s.restart('%s')]'
+        ( q'[call %s.do('restart', '%s')]'
         , replace(p_msg.default_processing_method(), "package://")
         , $$PLSQL_UNIT
         );
@@ -1033,6 +1057,8 @@ end dequeue_and_process;
 
 -- will be invoked by MSG_SCHEDULER_PKG
 function get_groups_to_process
+( p_processing_method in varchar2
+)
 return sys.odcivarchar2list
 is
   l_msg_tab constant msg_pkg.msg_tab_t := msg_pkg.get_msg_tab;
@@ -1040,9 +1066,9 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_GROUPS_TO_PROCESS');
+  dbug.print(dbug."input", 'p_processing_method: %s', p_processing_method);
 $end
 
-  -- determine the normal queues matching one of the input queues (that may have wildcards)
   select  t.group$
   bulk collect
   into    l_groups_to_process_tab
@@ -1052,13 +1078,19 @@ $end
             and     q.queue_table = trim('"' from c_queue_table)
             and     trim(q.dequeue_enabled) = 'YES'
             minus
-            select  sr.subscription_name as fq_queue_name -- "OWNER"."QUEUE"
+            select  case
+                      when sr.subscription_name like '%:%'
+                      then substr(sr.subscription_name, 1, instr(sr.subscription_name, ':', -1) - 1)
+                      else sr.subscription_name
+                    end as fq_queue_name -- "OWNER"."QUEUE"
             from    user_subscr_registrations sr
             order by
                     fq_queue_name
           ) q
           inner join table(l_msg_tab) t
-          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)));
+          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)))
+  where   t.default_processing_method() = p_processing_method
+  or      t.default_processing_method() like "plsql://" || '%';
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print

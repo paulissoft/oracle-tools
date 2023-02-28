@@ -3,7 +3,7 @@ is
 
 c_buffered_messaging constant boolean := true; -- buffered messaging enabled?
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
-c_default_subscriber constant varchar2(30 char) := case when c_multiple_consumers then 'DEFAULT_SUBSCRIBER' end;
+c_default_subscriber constant varchar2(30 char) := 'DEFAULT_SUBSCRIBER';
 -- can be:
 -- 1) 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
 -- 2) 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG'

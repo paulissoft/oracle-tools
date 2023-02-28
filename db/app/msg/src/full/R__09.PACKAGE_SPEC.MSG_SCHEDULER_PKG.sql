@@ -7,15 +7,21 @@ Package to (re)start the process that will process the groups for which the defa
 and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOTIFICATION_PRC".
 **/
 
-procedure restart
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+procedure do
+( p_command in varchar2 -- start / restart / stop
+, p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package 
 );
 /**
 Runs in an autononous transaction.
 
-If there is no processing job yet, it will create and start it.
-If there is a running job, it will stop and restart it.
-If there is a processing job but not running (stopped by a DBA?), nothing happens.
+p_command = start: start the supervisor job.
+
+p_command = restart:
+- If there is no processing job yet, it will create and start it.
+- If there is a running job, it will stop and restart it.
+- If there is a processing job but not running (stopped by a DBA?), nothing happens.
+
+p_command = stop: stop the supervisor job (and the workers).
 **/
 
 procedure submit_processing_supervisor
@@ -67,6 +73,8 @@ The processing package must have this routine that will be invoked by dynamic SQ
 
 ```
 function get_groups_to_process
+( p_processing_method in varchar2
+)
 return sys.odcivarchar2list;
 ```
 

@@ -100,7 +100,7 @@ procedure stop_queue
 
 procedure add_subscriber
 ( p_queue_name in varchar2
-, p_subscriber in varchar2 default c_default_subscriber
+, p_subscriber in varchar2
 , p_rule in varchar2 default null
 , p_delivery_mode in binary_integer default c_subscriber_delivery_mode
 );
@@ -108,20 +108,20 @@ procedure add_subscriber
    
 procedure remove_subscriber
 ( p_queue_name in varchar2
-, p_subscriber in varchar2 default c_default_subscriber
+, p_subscriber in varchar2
 );
 /** Remove a subscriber from a queue. The subscriber name will be ignored for a single consumer queue table. **/
 
 procedure register
 ( p_queue_name in varchar2
-, p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
 , p_plsql_callback in varchar2 -- In the format schema.procedure
 );
 /** Register a PL/SQL callback for a queue and subscriber. **/
 
 procedure unregister
 ( p_queue_name in varchar2
-, p_subscriber in varchar2 default c_default_subscriber -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
+, p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
 , p_plsql_callback in varchar2 -- In the format schema.procedure
 );
 /** Unregister a PL/SQL callback for a queue and subscriber. **/
@@ -154,7 +154,7 @@ procedure dequeue
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
 , p_delivery_mode in binary_integer -- dbms_aq.persistent or dbms_aq.buffered
 , p_visibility in binary_integer -- dbms_aq.on_commit (persistent delivery mode only) or dbms_aq.immediate (all delivery modes)
-, p_subscriber in varchar2 default c_default_subscriber
+, p_subscriber in varchar2
 , p_dequeue_mode in binary_integer default dbms_aq.remove
 , p_navigation in binary_integer default dbms_aq.next_message
 , p_wait in binary_integer default dbms_aq.forever
@@ -186,7 +186,7 @@ procedure dequeue_and_process
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
 , p_delivery_mode in binary_integer
 , p_visibility in binary_integer
-, p_subscriber in varchar2 default c_default_subscriber
+, p_subscriber in varchar2
 , p_dequeue_mode in binary_integer default dbms_aq.remove
 , p_navigation in binary_integer default dbms_aq.next_message
 , p_wait in binary_integer default dbms_aq.forever
@@ -237,17 +237,27 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 See also the dequeue(p_context...) procedure documentation.
 **/
 
--- will be invoked by MSG_PKG
 function get_groups_to_process
+( p_processing_method in varchar2
+)
 return sys.odcivarchar2list;
+/**
+Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
+Must return the message groups whose queue is not serviced by a PL/SQL callback and
+whose default processing method is either p_processing_method or something like 'plsql://%'.
+The latter case indicates that dbms_aq.unregister() has been invoked so someone needs to take care of such a queue.
+**/
 
--- will be invoked by MSG_PKG
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
 , p_ttl in positiven
 , p_job_name_supervisor in varchar2
 );
+/**
+Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
+Performs the processing of a worker job.
+**/
 
 end msg_aq_pkg;
 /

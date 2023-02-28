@@ -403,8 +403,9 @@ end submit_processing;
 
 -- PUBLIC
 
-procedure restart
-( p_processing_package in varchar2
+procedure do
+( p_command in varchar2
+, p_processing_package in varchar2
 )
 is
   pragma autonomous_transaction;
@@ -420,54 +421,86 @@ is
   l_state user_scheduler_jobs.state%type;
   l_start boolean := false;
 begin
-  begin
-    select  j.state
-    into    l_state
-    from    user_scheduler_jobs j
-    where   j.job_name = l_job_name;
-  
-    case l_state  
-      when 'DISABLED'
-      then l_start := false;
-      when 'RETRY SCHEDULED'
-      then l_start := false;
-      when 'SCHEDULED'
-      then l_start := false;
-      when 'BLOCKED'
-      then l_start := false;
-      when 'RUNNING'
-      then dbms_scheduler.stop_job(l_job_name); l_start := true;
-      when 'COMPLETED'
-      then l_start := false;
-      when 'BROKEN'
-      then l_start := false;
-      when 'FAILED'
-      then l_start := false;
-      when 'REMOTE'
-      then l_start := false;
-      when 'RESOURCE_UNAVAILABLE'
-      then l_start := false;
-      when 'SUCCEEDED'
-      then l_start := false;
-      when 'CHAIN_STALLED'
-      then l_start := false;
-    end case;
-  exception
-    when no_data_found
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
+  dbug.print(dbug."input", 'p_command: %s; p_processing_package: %s', p_command, p_processing_package);
+$end
+
+  case p_command
+    when 'start'
     then
-      l_start := true;
-  end;
+      submit_processing_supervisor
+      ( p_processing_package => l_processing_package
+      , p_nr_workers_each_group => 1
+      );
 
-  if l_start
-  then
-    submit_processing_supervisor
-    ( p_processing_package => l_processing_package
-    , p_nr_workers_each_group => 1
-    );
-  end if;
+    when 'restart'
+    then
+      begin
+        select  j.state
+        into    l_state
+        from    user_scheduler_jobs j
+        where   j.job_name = l_job_name;
+      
+        case l_state  
+          when 'DISABLED'
+          then l_start := false;
+          when 'RETRY SCHEDULED'
+          then l_start := false;
+          when 'SCHEDULED'
+          then l_start := false;
+          when 'BLOCKED'
+          then l_start := false;
+          when 'RUNNING'
+          then do(p_command => 'stop', p_processing_package => l_processing_package); l_start := true;
+          when 'COMPLETED'
+          then l_start := false;
+          when 'BROKEN'
+          then l_start := false;
+          when 'FAILED'
+          then l_start := false;
+          when 'REMOTE'
+          then l_start := false;
+          when 'RESOURCE_UNAVAILABLE'
+          then l_start := false;
+          when 'SUCCEEDED'
+          then l_start := false;
+          when 'CHAIN_STALLED'
+          then l_start := false;
+          else l_start := false;
+        end case;
+      exception
+        when no_data_found
+        then
+          l_start := true;
+      end;
 
+      if l_start
+      then
+        do(p_command => 'start', p_processing_package => l_processing_package);
+      end if;
+
+    when 'stop'
+    then
+      for r in
+      ( select  j.job_name
+        from    user_scheduler_running_jobs j
+        where   j.job_name like l_job_name || '%'
+        order by
+                length(j.job_name) desc -- workers first
+      )
+      loop
+        dbms_scheduler.stop_job(r.job_name);
+        dbms_scheduler.disable(r.job_name);
+      end loop;
+  end case;
+  
   commit;
-end restart;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end do;
 
 procedure submit_processing_supervisor
 ( p_processing_package in varchar2
@@ -643,10 +676,12 @@ $end
     end if;
 
     execute immediate utl_lms.format_message
-                      ( 'begin :1 := %s.get_groups_to_process; end;'
+                      ( q'[begin :1 := %s.get_groups_to_process('package://%s.%s'); end;]'
                       , l_processing_package
+                      , $$PLSQL_UNIT_OWNER
+                      , $$PLSQL_UNIT
                       )
-      using out l_groups_to_process_tab;                      
+      using out l_groups_to_process_tab;
 
     if l_groups_to_process_tab.count = 0
     then
