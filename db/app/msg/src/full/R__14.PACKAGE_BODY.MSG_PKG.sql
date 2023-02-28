@@ -13,6 +13,31 @@ g_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
   , p_units => 'messages'
   );
 
+procedure dbms_pipe$send_message
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+)
+is
+  l_result pls_integer;
+begin
+  l_result := dbms_pipe.send_message(pipename => p_job_name_supervisor, timeout => p_timeout);
+  /*
+  == 0 - Success. If the pipe already exists and the user attempting to create it is authorized to use it, then Oracle returns 0, indicating success, and any data already in the pipe remains. If a user connected as SYSDBS/SYSOPER re-creates a pipe, then Oracle returns status 0, but the ownership of the pipe remains unchanged.
+  == 1 - Timed out. This procedure can timeout either because it cannot get a lock on the pipe, or because the pipe remains too full to be used. If the pipe was implicitly-created and is empty, then it is removed.
+  == 3 - An interrupt occurred. If the pipe was implicitly created and is empty, then it is removed.
+  == ORA-23322 - Insufficient privileges. If a pipe with the same name exists and was created by a different user, then Oracle signals error ORA-23322, indicating the naming conflict.
+  */
+
+  case l_result
+    when 0 -- OK
+    then null;
+    when 1 -- Timeout
+    then raise_application_error(c_dbms_pipe_timeout, 'Timeout while sending to pipe "' || p_job_name_supervisor || '"');
+    when 3 -- Interrupt
+    then raise_application_error(c_dbms_pipe_interrupted, 'Interrupt while sending to pipe "' || p_job_name_supervisor || '"');
+  end case;  
+end dbms_pipe$send_message;
+
 -- PUBLIC
 
 procedure init
@@ -222,36 +247,33 @@ procedure send_worker_status
 , p_timeout in integer
 )
 is
-  l_result pls_integer;
 begin
   dbms_pipe.reset_buffer;
+  dbms_pipe.pack_message("WORKER_STATUS");
   dbms_pipe.pack_message(p_worker_nr);
   dbms_pipe.pack_message(p_sqlcode);
   dbms_pipe.pack_message(p_sqlerrm);
   dbms_pipe.pack_message(c_session_id);
   
-  l_result := dbms_pipe.send_message(pipename => p_job_name_supervisor, timeout => p_timeout);
-
-  /*
-  == 0 - Success. If the pipe already exists and the user attempting to create it is authorized to use it, then Oracle returns 0, indicating success, and any data already in the pipe remains. If a user connected as SYSDBS/SYSOPER re-creates a pipe, then Oracle returns status 0, but the ownership of the pipe remains unchanged.
-  == 1 - Timed out. This procedure can timeout either because it cannot get a lock on the pipe, or because the pipe remains too full to be used. If the pipe was implicitly-created and is empty, then it is removed.
-  == 3 - An interrupt occurred. If the pipe was implicitly created and is empty, then it is removed.
-  == ORA-23322 - Insufficient privileges. If a pipe with the same name exists and was created by a different user, then Oracle signals error ORA-23322, indicating the naming conflict.
-  */
-
-  case l_result
-    when 0 -- OK
-    then null;
-    when 1 -- Timeout
-    then raise_application_error(c_dbms_pipe_timeout, 'Timeout while sending to pipe "' || p_job_name_supervisor || '"');
-    when 3 -- Interrupt
-    then raise_application_error(c_dbms_pipe_interrupted, 'Interrupt while sending to pipe "' || p_job_name_supervisor || '"');
-  end case;  
+  dbms_pipe$send_message(p_job_name_supervisor => p_job_name_supervisor, p_timeout => p_timeout);
 end send_worker_status;
 
-procedure recv_worker_status
+procedure send_stop_supervisor
 ( p_job_name_supervisor in varchar2
 , p_timeout in integer
+)
+is
+begin
+  dbms_pipe.reset_buffer;
+  dbms_pipe.pack_message("STOP_SUPERVISOR");
+  
+  dbms_pipe$send_message(p_job_name_supervisor => p_job_name_supervisor, p_timeout => p_timeout);
+end send_stop_supervisor;
+
+procedure recv_event
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+, p_event out nocopy event_t -- WORKER_STATUS / STOP_SUPERVISOR
 , p_worker_nr out nocopy integer
 , p_sqlcode out nocopy integer
 , p_sqlerrm out nocopy varchar2
@@ -274,10 +296,14 @@ begin
   case l_result
     when 0
     then
-      dbms_pipe.unpack_message(p_worker_nr);
-      dbms_pipe.unpack_message(p_sqlcode);
-      dbms_pipe.unpack_message(p_sqlerrm);
-      dbms_pipe.unpack_message(p_session_id);
+      dbms_pipe.unpack_message(p_event);
+      if p_event = "WORKER_STATUS"
+      then
+        dbms_pipe.unpack_message(p_worker_nr);
+        dbms_pipe.unpack_message(p_sqlcode);
+        dbms_pipe.unpack_message(p_sqlerrm);
+        dbms_pipe.unpack_message(p_session_id);
+      end if;
     when 1
     then raise_application_error(c_dbms_pipe_timeout, 'Timeout while receiving from pipe "' || p_job_name_supervisor || '"');
     when 2 -- Too large
@@ -285,7 +311,7 @@ begin
     when 3 -- Interrupt
     then raise_application_error(c_dbms_pipe_interrupted, 'Interrupt while receiving from pipe "' || p_job_name_supervisor || '"');
   end case;
-end recv_worker_status;
+end recv_event;
 
 end msg_pkg;
 /

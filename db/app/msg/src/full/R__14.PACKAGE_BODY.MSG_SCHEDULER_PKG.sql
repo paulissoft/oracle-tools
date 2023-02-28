@@ -419,7 +419,10 @@ is
     , p_worker_nr => null
     );
   l_state user_scheduler_jobs.state%type;
+  l_next_run_date user_scheduler_jobs.next_run_date%type;
+  l_ttl oracle_tools.api_time_pkg.seconds_t;
   l_start boolean := false;
+  l_job binary_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
@@ -434,6 +437,39 @@ $end
       , p_nr_workers_each_group => 1
       );
 
+      -- the next run may take long (midnight) so create a one-off job using dbms_job.submit()
+      begin
+        select  j.next_run_date
+        into    l_next_run_date
+        from    user_scheduler_jobs j
+        where   j.job_name = l_job_name
+        and     j.state = 'SCHEDULED';
+
+        l_ttl := oracle_tools.api_time_pkg.elapsed_time(oracle_tools.api_time_pkg.get_timestamp, l_next_run_date);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", 'l_ttl: %s', l_ttl);
+$end
+
+        l_ttl := trunc(l_ttl) - 5;
+        if l_ttl > 0
+        then
+          dbms_job.submit
+          ( job => l_job
+          , what => utl_lms.format_message
+                    ( q'[%s.processing_supervisor(p_processing_package => '%s', p_nr_workers_each_group => 1, p_ttl => %s);]'
+                    , $$PLSQL_UNIT
+                    , l_processing_package
+                    , to_char(l_ttl)
+                    )
+          );
+          -- will be committed at the end
+        end if;
+      exception
+        when no_data_found
+        then null;          
+      end;
+
     when 'restart'
     then
       begin
@@ -447,8 +483,8 @@ $end
           then l_start := false;
           when 'RETRY SCHEDULED'
           then l_start := false;
-          when 'SCHEDULED'
-          then l_start := false;
+          when 'SCHEDULED' -- there may be a job running due to DBMS_JOB.SUBMIT
+          then do(p_command => 'stop', p_processing_package => l_processing_package); l_start := true;
           when 'BLOCKED'
           then l_start := false;
           when 'RUNNING'
@@ -482,6 +518,12 @@ $end
 
     when 'stop'
     then
+      -- there may be a job running due to DBMS_JOB.SUBMIT
+      msg_pkg.send_stop_supervisor
+      ( p_job_name_supervisor => l_job_name
+      , p_timeout => 0
+      );
+      
       for r in
       ( select  j.job_name
         from    user_scheduler_running_jobs j
@@ -733,6 +775,9 @@ $end
       when e_pipe_naming_conflict
       then null;
     end;
+
+    -- no old messages
+    dbms_pipe.purge(pipename => l_job_name_supervisor);
     
     if l_job_name_tab.count > 0
     then
@@ -746,6 +791,7 @@ $end
   procedure supervise_workers
   is
     l_now date;
+    l_event msg_pkg.event_t;
     l_worker_nr integer;
     l_sqlcode integer;
     l_sqlerrm varchar2(4000 char);
@@ -762,14 +808,21 @@ $end
 
       -- get the status from the pipe
 
-      msg_pkg.recv_worker_status
+      msg_pkg.recv_event
       ( p_job_name_supervisor => l_job_name_supervisor
       , p_timeout => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+      , p_event => l_event
       , p_worker_nr => l_worker_nr 
       , p_sqlcode => l_sqlcode
       , p_sqlerrm => l_sqlerrm
       , p_session_id => l_session_id
       );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_event: %s', l_event);
+$end      
+
+      exit when l_event = msg_pkg."STOP_SUPERVISOR";
 
       l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 

@@ -19,6 +19,11 @@ c_dbms_pipe_interrupted constant integer := -20102;
 
 pragma exception_init(e_dbms_pipe_interrupted, -20102);
 
+subtype event_t is varchar2(20 char);
+
+"WORKER_STATUS"   constant event_t := 'WORKER_STATUS';
+"STOP_SUPERVISOR" constant event_t := 'STOP_SUPERVISOR';
+
 /**
 A package with some generic definitions, exceptions, functions and procedures.
 **/
@@ -82,15 +87,24 @@ procedure send_worker_status
 , p_sqlerrm in varchar2
 , p_timeout in integer
 );
+/** Send the status of a worker. **/
 
-procedure recv_worker_status
+procedure send_stop_supervisor
 ( p_job_name_supervisor in varchar2
 , p_timeout in integer
-, p_worker_nr out nocopy integer
-, p_sqlcode out nocopy integer
-, p_sqlerrm out nocopy varchar2
-, p_session_id out nocopy user_scheduler_running_jobs.session_id%type
 );
+/** Send the supervisor a signal to stop. **/
+
+procedure recv_event
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+, p_event out nocopy event_t -- WORKER_STATUS / STOP_SUPERVISOR
+, p_worker_nr out nocopy integer -- Only relevant when the event is WORKER_STATUS
+, p_sqlcode out nocopy integer -- Idem
+, p_sqlerrm out nocopy varchar2 -- Idem
+, p_session_id out nocopy user_scheduler_running_jobs.session_id%type -- Idem
+);
+/** Used by the supervisor to receive events, either the worker status or a signal to stop. **/
 
 end msg_pkg;
 /

@@ -534,12 +534,16 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , l_count);
 $end
 
-  if l_count <> l_groups_to_process_before.count
+  if l_groups_to_process_before.count = l_groups_to_process_after.count and
+     l_count = l_groups_to_process_before.count
   then
+    null; -- no changes
+  else
     execute immediate
       utl_lms.format_message
-      ( q'[call %s.do('restart', '%s')]'
+      ( q'[call %s.do('%s', '%s')]'
       , replace(l_processing_method, "package://")
+      , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
       , $$PLSQL_UNIT
       );
   end if;  
@@ -609,12 +613,16 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , l_count);
 $end
 
-  if l_count <> l_groups_to_process_before.count
+  if l_groups_to_process_before.count = l_groups_to_process_after.count and
+     l_count = l_groups_to_process_before.count
   then
+    null; -- no changes
+  else
     execute immediate
       utl_lms.format_message
-      ( q'[call %s.do('restart', '%s')]'
+      ( q'[call %s.do('%s', '%s')]'
       , replace(l_processing_method, "package://")
+      , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
       , $$PLSQL_UNIT
       );
   end if;  

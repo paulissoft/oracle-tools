@@ -8,6 +8,13 @@ begin
   return dbms_utility.get_time;
 end get_time;
 
+function get_timestamp
+return timestamp_t
+is
+begin
+  return systimestamp();
+end get_timestamp;
+
 function elapsed_time
 ( p_start in time_t
 , p_end in time_t
@@ -47,6 +54,20 @@ begin
            -- count p_start till 0 and 0 till p_end
            when p_start <  0 and p_end >= 0 then (p_end + -1 * p_start)
          end / 100;
+end elapsed_time;
+
+function elapsed_time
+( p_start in timestamp_t
+, p_end in timestamp_t
+)
+return seconds_t
+is
+  l_interval constant timestamp_diff_t := sys_extract_utc(p_end) - sys_extract_utc(p_start);
+begin
+  return extract(day from l_interval) * 24 * 60 * 60 +
+         extract(hour from l_interval) * 60 * 60 +
+         extract(minute from l_interval) * 60 +
+         extract(second from l_interval);
 end elapsed_time;
 
 end API_TIME_PKG;
