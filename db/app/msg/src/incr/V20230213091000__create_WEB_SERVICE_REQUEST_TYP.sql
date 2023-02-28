@@ -37,11 +37,6 @@ This allows for asynchronuous processing but retrieving the result later via a q
   )
   return self as result
 
-, constructor function web_service_request_typ
-  ( self in out nocopy web_service_request_typ
-  )
-  return self as result
-
 , final member procedure construct
   ( self in out nocopy web_service_request_typ
   , p_group$ in varchar2

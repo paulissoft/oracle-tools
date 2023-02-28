@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE BODY "MSG_SCHEDULER_PKG" AS
 
+subtype job_name_t is user_scheduler_jobs.job_name%type;
+
 c_program_supervisor constant user_scheduler_programs.program_name%type := 'PROCESSING_SUPERVISOR';
 c_program_worker constant user_scheduler_programs.program_name%type := 'PROCESSING';
 
@@ -106,20 +108,29 @@ end done;
 function job_name
 ( p_processing_package in varchar2
 , p_program_name in varchar2
+, p_job_suffix in varchar2 default null
 , p_worker_nr in positive default null
 )
-return varchar2
+return job_name_t
 is
+  l_job_name job_name_t;
 begin
-  return
+  l_job_name :=
     p_processing_package ||
     '$' ||
     p_program_name ||
+    case when p_job_suffix is not null then '$' || p_job_suffix end ||
     case when p_worker_nr is not null then '#' || to_char(p_worker_nr) end;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'l_job_name: %s', l_job_name);
+$end
+
+  return l_job_name;
 end job_name;
 
 function does_job_exist
-( p_job_name in varchar2
+( p_job_name in job_name_t
 )
 return boolean
 is
@@ -138,7 +149,7 @@ exception
 end does_job_exist;
 
 function is_job_running
-( p_job_name in varchar2
+( p_job_name in job_name_t
 )
 return boolean
 is
@@ -197,9 +208,9 @@ end does_schedule_exist;
 function session_job_name
 ( p_session_id in varchar2 default c_session_id
 )
-return varchar2
+return job_name_t
 is
-  l_job_name user_scheduler_running_jobs.job_name%type;
+  l_job_name job_name_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SESSION_JOB_NAME');
@@ -327,7 +338,7 @@ procedure submit_processing
 , p_job_name_supervisor in varchar2
 )
 is
-  l_job_name_worker constant user_scheduler_jobs.job_name%type := p_job_name_supervisor || '#' || to_char(p_worker_nr);
+  l_job_name_worker constant job_name_t := p_job_name_supervisor || '#' || to_char(p_worker_nr);
   l_argument_value user_scheduler_program_args.default_value%type;
 begin  
   if is_job_running(l_job_name_worker)
@@ -412,7 +423,7 @@ is
 
   l_processing_package constant all_objects.object_name%type :=
     msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
-  l_job_name constant user_scheduler_jobs.job_name%type :=
+  l_job_name constant job_name_t :=
     job_name
     ( p_processing_package => l_processing_package 
     , p_program_name => c_program_supervisor
@@ -423,6 +434,7 @@ is
   l_ttl oracle_tools.api_time_pkg.seconds_t;
   l_start boolean := false;
   l_job binary_integer;
+  l_what varchar2(32767);
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
@@ -454,15 +466,19 @@ $end
         l_ttl := trunc(l_ttl) - 5;
         if l_ttl > 0
         then
-          dbms_job.submit
-          ( job => l_job
-          , what => utl_lms.format_message
+          l_what := utl_lms.format_message
                     ( q'[%s.processing_supervisor(p_processing_package => '%s', p_nr_workers_each_group => 1, p_ttl => %s);]'
                     , $$PLSQL_UNIT
                     , l_processing_package
                     , to_char(l_ttl)
-                    )
+                    );
+          dbms_job.submit
+          ( job => l_job
+          , what => l_what
           );
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print(dbug."info", 'l_job: %s; l_what: %s', l_job, l_what);
+$end
           -- will be committed at the end
         end if;
       exception
@@ -556,7 +572,7 @@ procedure submit_processing_supervisor
 is
   l_processing_package constant all_objects.object_name%type :=
     msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
-  l_job_name constant user_scheduler_jobs.job_name%type :=
+  l_job_name constant job_name_t :=
     job_name
     ( l_processing_package
     , c_program_supervisor
@@ -666,7 +682,7 @@ procedure processing_supervisor
 is
   l_processing_package constant all_objects.object_name%type :=
     msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
-  l_job_name_supervisor user_scheduler_jobs.job_name%type;
+  l_job_name_supervisor job_name_t;
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_groups_to_process_tab sys.odcivarchar2list;
   l_groups_to_process_list varchar2(4000 char);
@@ -675,6 +691,7 @@ is
 
   procedure check_input_and_state
   is
+    l_statement varchar2(32767 byte);
   begin
     case
       when ( p_nr_workers_each_group is not null and p_nr_workers_exact is null ) or
@@ -710,19 +727,30 @@ $end
         
       l_job_name_supervisor := 
         job_name
-        ( l_processing_package
-        , c_program_supervisor
-        , to_char(sysdate, 'yyyymmddhh24miss')
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_supervisor
+        , p_job_suffix => to_char(sysdate, 'yyyymmddhh24miss')
         );
     end if;
 
-    execute immediate utl_lms.format_message
-                      ( q'[begin :1 := %s.get_groups_to_process('package://%s.%s'); end;]'
-                      , l_processing_package
-                      , $$PLSQL_UNIT_OWNER
-                      , $$PLSQL_UNIT
-                      )
-      using out l_groups_to_process_tab;
+    l_statement := utl_lms.format_message
+                   ( q'[begin :1 := %s.get_groups_to_process('package://%s.%s'); end;]'
+                   , l_processing_package
+                   , $$PLSQL_UNIT_OWNER
+                   , $$PLSQL_UNIT
+                   );
+
+    begin
+      execute immediate l_statement using out l_groups_to_process_tab;      
+$if oracle_tools.cfg_pkg.c_debugging $then
+    exception
+      when others
+      then
+        dbug.print(dbug."error", 'l_statement: %s', l_statement);
+        dbug.on_error;
+        raise;     
+$end
+    end;
 
     if l_groups_to_process_tab.count = 0
     then
@@ -939,7 +967,8 @@ procedure processing
 is
   l_processing_package constant all_objects.object_name%type :=
     msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
-  l_job_name_worker constant user_scheduler_jobs.job_name%type := session_job_name();
+  l_job_name_worker constant job_name_t := session_job_name();
+  l_statement varchar2(32767 byte);
   l_groups_to_process_tab sys.odcivarchar2list;
 begin
   init;
@@ -970,12 +999,24 @@ $end
     bulk collect
     into    l_groups_to_process_tab
     from    table(oracle_tools.api_pkg.list2collection(p_value_list => p_groups_to_process_list, p_sep => ',', p_ignore_null => 1)) pg;
-  
-    execute immediate utl_lms.format_message
-                      ( 'call %s.processing(p_groups_to_process_tab => :1, p_worker_nr => :2, p_ttl => :3, p_job_name_supervisor => :4)'
-                      , l_processing_package
-                      )
-      using in l_groups_to_process_tab, in p_worker_nr, in p_ttl, in p_job_name_supervisor;
+
+    l_statement := utl_lms.format_message
+                   ( 'call %s.processing(p_groups_to_process_tab => :1, p_worker_nr => :2, p_ttl => :3, p_job_name_supervisor => :4)'
+                   , l_processing_package
+                   );
+    begin
+      execute immediate l_statement
+        using in l_groups_to_process_tab, in p_worker_nr, in p_ttl, in p_job_name_supervisor;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    exception
+      when others
+      then
+        dbug.print(dbug."error", 'statement: %s', l_statement);
+        dbug.on_error;
+        raise;
+$end
+                   
+    end;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then

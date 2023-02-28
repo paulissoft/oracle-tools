@@ -108,20 +108,35 @@ function get_msg_tab
 return msg_tab_t
 is
   l_msg_tab msg_tab_t := msg_tab_t();
+  l_statement varchar2(32767 byte);
 begin
   for r in
-  ( select ut.type_name, ut.supertype_name
-    from   user_types ut
+  ( select  ut.type_name
+    ,       ut.supertype_name
+    from    user_types ut
     connect by prior
-           ut.type_name = ut.supertype_name and ut.supertype_owner = user
+            ut.type_name = ut.supertype_name and ut.supertype_owner = user
     start with
-           ut.type_name = 'MSG_TYP'
+            ut.type_name = 'MSG_TYP'
   )
   loop
     if r.supertype_name is not null
     then
       l_msg_tab.extend(1);
-      execute immediate utl_lms.format_message('begin :1 := new %s(); end;', r.type_name) using out l_msg_tab(l_msg_tab.last);
+
+      l_statement := utl_lms.format_message('begin :1 := new %s(); end;', r.type_name);
+
+      begin
+        execute immediate l_statement using out l_msg_tab(l_msg_tab.last);
+$if oracle_tools.cfg_pkg.c_debugging $then
+      exception
+        when others
+        then
+          dbug.print(dbug."error", 'statement: %s', l_statement);
+          dbug.on_error;
+          raise;
+$end
+      end;
     end if;
   end loop;
   

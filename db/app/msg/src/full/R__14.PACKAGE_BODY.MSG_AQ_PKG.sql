@@ -168,6 +168,22 @@ begin
   return msg_pkg.get_object_name(p_object_name => replace(p_group_name, '.', '$'), p_fq => 0);
 end queue_name;
 
+procedure execute_immediate
+( p_statement in varchar
+)
+is
+begin
+  execute immediate p_statement;
+$if oracle_tools.cfg_pkg.c_debugging $then
+exception
+  when others
+  then
+    dbug.print(dbug."error", 'statement: %s', p_statement);
+    dbug.on_error;
+    raise;
+$end
+end execute_immediate;
+
 -- public routines
 
 function queue_name
@@ -539,13 +555,14 @@ $end
   then
     null; -- no changes
   else
-    execute immediate
-      utl_lms.format_message
+    execute_immediate
+    ( utl_lms.format_message
       ( q'[call %s.do('%s', '%s')]'
       , replace(l_processing_method, "package://")
       , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
       , $$PLSQL_UNIT
-      );
+      )
+    );
   end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -618,13 +635,14 @@ $end
   then
     null; -- no changes
   else
-    execute immediate
-      utl_lms.format_message
+    execute_immediate
+    ( utl_lms.format_message
       ( q'[call %s.do('%s', '%s')]'
       , replace(l_processing_method, "package://")
       , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
       , $$PLSQL_UNIT
-      );
+      )
+    );
   end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -679,12 +697,13 @@ is
       );
     elsif p_msg.default_processing_method() like "package://" || '%'
     then
-      execute immediate
-        utl_lms.format_message
+      execute_immediate
+      ( utl_lms.format_message
         ( q'[call %s.do('restart', '%s')]'
         , replace(p_msg.default_processing_method(), "package://")
         , $$PLSQL_UNIT
-        );
+        )
+      );
     end if;
   end ensure_queue_gets_dequeued;
 begin
