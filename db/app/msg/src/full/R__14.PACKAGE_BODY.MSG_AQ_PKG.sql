@@ -476,6 +476,13 @@ procedure register
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  -- Since we add a callback for a queue the number of queues to listen to may change.
+  -- If so, the MSG_SCHEDULER_PKG has to restart.
+  l_groups_to_process_before sys.odcivarchar2list;
+  l_groups_to_process_after sys.odcivarchar2list;
+  -- see MSG_CONSTANTS_PKG
+  l_processing_method constant varchar2(100) := "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG';
+  l_count pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.REGISTER');
@@ -493,6 +500,8 @@ $end
     raise value_error;
   end if;
 
+  l_groups_to_process_before := get_groups_to_process(l_processing_method);
+
   dbms_aq.register
   ( reg_list => sys.aq$_reg_info_list
                 ( sys.aq$_reg_info
@@ -504,6 +513,36 @@ $end
                 )
   , reg_count => 1
   );
+
+  l_groups_to_process_after := get_groups_to_process(l_processing_method);
+
+  select  count(*)
+  into    l_count
+  from    ( select  b.column_value
+            from    table(l_groups_to_process_before) b
+            intersect
+            select  a.column_value
+            from    table(l_groups_to_process_after) a
+          );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'l_groups_to_process_before.count: %s; l_groups_to_process_after.count: %s; l_count: %s'
+  , l_groups_to_process_before.count
+  , l_groups_to_process_after.count
+  , l_count);
+$end
+
+  if l_count <> l_groups_to_process_before.count
+  then
+    execute immediate
+      utl_lms.format_message
+      ( q'[call %s.do('restart', '%s')]'
+      , replace(l_processing_method, "package://")
+      , $$PLSQL_UNIT
+      );
+  end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -517,6 +556,13 @@ procedure unregister
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  -- Since we add a callback for a queue the number of queues to listen to may change.
+  -- If so, the MSG_SCHEDULER_PKG has to restart.
+  l_groups_to_process_before sys.odcivarchar2list;
+  l_groups_to_process_after sys.odcivarchar2list;
+  -- see MSG_CONSTANTS_PKG
+  l_processing_method constant varchar2(100) := "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG';
+  l_count pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UNREGISTER');
@@ -529,6 +575,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
+  l_groups_to_process_before := get_groups_to_process(l_processing_method);
+
   dbms_aq.unregister
   ( reg_list => sys.aq$_reg_info_list
                 ( sys.aq$_reg_info
@@ -540,6 +588,36 @@ $end
                 )
   , reg_count => 1
   );
+
+  l_groups_to_process_after := get_groups_to_process(l_processing_method);
+
+  select  count(*)
+  into    l_count
+  from    ( select  b.column_value
+            from    table(l_groups_to_process_before) b
+            intersect
+            select  a.column_value
+            from    table(l_groups_to_process_after) a
+          );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'l_groups_to_process_before.count: %s; l_groups_to_process_after.count: %s; l_count: %s'
+  , l_groups_to_process_before.count
+  , l_groups_to_process_after.count
+  , l_count);
+$end
+
+  if l_count <> l_groups_to_process_before.count
+  then
+    execute immediate
+      utl_lms.format_message
+      ( q'[call %s.do('restart', '%s')]'
+      , replace(l_processing_method, "package://")
+      , $$PLSQL_UNIT
+      );
+  end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1055,7 +1133,6 @@ exception
 $end
 end dequeue_and_process;
 
--- will be invoked by MSG_SCHEDULER_PKG
 function get_groups_to_process
 ( p_processing_method in varchar2
 )
@@ -1104,7 +1181,6 @@ $end
   return l_groups_to_process_tab;
 end get_groups_to_process;
 
--- will be invoked by MSG_SCHEDULER_PKG
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
@@ -1119,6 +1195,25 @@ is
   l_message_delivery_mode pls_integer;
   l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+
+  -- to be able to profile this call
+  procedure dbms_aq_listen
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter('DBMS_AQ.LISTEN');
+$end
+    dbms_aq.listen
+    ( agent_list => l_agent_list
+    , wait => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+    , listen_delivery_mode => dbms_aq.persistent_or_buffered
+    , agent => l_agent
+    , message_delivery_mode => l_message_delivery_mode
+    );
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
+  end dbms_aq_listen;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
@@ -1177,14 +1272,7 @@ $end
 
     exit when l_elapsed_time >= p_ttl;
 
-    -- to be able to profile this call
-    dbms_aq.listen
-    ( agent_list => l_agent_list
-    , wait => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-    , listen_delivery_mode => dbms_aq.persistent_or_buffered
-    , agent => l_agent
-    , message_delivery_mode => l_message_delivery_mode
-    );
+    dbms_aq_listen;
 
     l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 

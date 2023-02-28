@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AUTHID DEFINER AS 
 
-c_one_day_minus_something constant positiven := (24 * 60 * 60 - 5);
+c_ttl constant positiven := msg_constants_pkg.c_ttl;
 
 /**
 Package to (re)start the process that will process the groups for which the default processing method is "package://<schema>.MSG_SCHEDULER_PKG"
@@ -28,7 +28,7 @@ procedure submit_processing_supervisor
 ( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
 , p_nr_workers_each_group in positive default null -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default null -- the total number of workers will be this number
-, p_ttl in positiven default c_one_day_minus_something -- time to live (in seconds)
+, p_ttl in positiven default c_ttl -- time to live (in seconds)
 , p_start_date in timestamp with time zone default msg_constants_pkg.c_job_schedule_start_date -- for creating job schedule 
 , p_repeat_interval in varchar2 default msg_constants_pkg.c_job_schedule_repeat_interval -- idem
 , p_end_date in timestamp with time zone default msg_constants_pkg.c_job_schedule_end_date -- idem
@@ -45,7 +45,7 @@ procedure processing_supervisor
 ( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
 , p_nr_workers_each_group in positive default null -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default null -- the total number of workers will be this number
-, p_ttl in positiven default c_one_day_minus_something -- time to live (in seconds)
+, p_ttl in positiven default c_ttl -- time to live (in seconds)
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test

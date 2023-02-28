@@ -110,7 +110,7 @@ procedure process_msg
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter('PROCESS ' || p_msg.group$);
+  dbug.enter($$PLSL_UNIT || '.PROCESS_MSG for group ' || p_msg.group$);
   dbug.print(dbug."input", 'p_commit: %s', dbug.cast_to_varchar2(p_commit));
 $end
 

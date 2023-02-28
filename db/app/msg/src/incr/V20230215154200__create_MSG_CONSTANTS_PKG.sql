@@ -13,7 +13,10 @@ c_default_processing_method constant varchar(128 char) := 'plsql://' || $$PLSQL_
 c_job_schedule_start_date constant timestamp with time zone := null;
 c_job_schedule_repeat_interval constant varchar2(100) := 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0; BYSECOND=0'; -- start every day at 00:00:00
 c_job_schedule_end_date constant timestamp with time zone := null;
+-- job duration
+c_ttl constant positiven := (24 * 60 * 60 - 5); -- time to live: 24 hours minus 5 seconds
 
+--
 c_dbug_channel_active_tab constant sys.odcivarchar2list :=
   sys.odcivarchar2list
   ( 'DBMS_APPLICATION_INFO'

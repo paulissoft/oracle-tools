@@ -44,6 +44,22 @@ end list2collection;
 
 -- GLOBAL
 
+procedure afterMigrate
+( p_compile_all in boolean
+, p_reuse_settings in boolean
+)
+is
+begin
+  setup_session;
+  compile_objects(p_compile_all => p_compile_all, p_reuse_settings => p_reuse_settings);
+end afterMigrate;
+
+procedure beforeEachMigrate
+is
+begin
+  setup_session;
+end beforeEachMigrate;
+
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 --
 -- This procedure must be in sync with the same procedure in ../callbacks/beforeEachMigrate.sql

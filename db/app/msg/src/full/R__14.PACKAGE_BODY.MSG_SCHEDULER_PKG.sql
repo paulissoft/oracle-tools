@@ -273,7 +273,7 @@ $end
         , default_value => case i_par_idx
                              when 2 then '%'
                              when 3 then replace(web_service_response_typ.default_group, '_', '\_')
-                             when 6 then to_char(c_one_day_minus_something)
+                             when 6 then to_char(c_ttl)
                              else null
                            end
         );
@@ -561,7 +561,6 @@ $end
       , end_date => p_end_date
       , comments => 'Supervisor job schedule'
       );
-      dbms_scheduler.enable(c_schedule_supervisor);
     end if;
 
     dbms_scheduler.create_job
