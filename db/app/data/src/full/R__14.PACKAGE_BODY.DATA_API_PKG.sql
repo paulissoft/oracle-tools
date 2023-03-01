@@ -286,7 +286,12 @@ function get_object_name
 )
 return varchar2
 is
-  l_use_dbms_assert_for_object constant boolean := case p_what when 'queue' then false else true end;
+  l_use_dbms_assert_for_object constant boolean :=
+    case
+      when p_what in ('queue', 'subscriber', 'agent')
+      then false
+      else true
+    end;
   l_object_name all_objects.object_name%type := p_object_name;
   l_schema_name all_objects.owner%type := null;
 

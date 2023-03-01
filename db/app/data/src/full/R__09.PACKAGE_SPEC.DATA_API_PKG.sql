@@ -140,7 +140,10 @@ function get_object_name
 , p_uc in integer default 1 -- return name in upper case, yes (1) or no (0)
 )
 return varchar2;
-/** A function to return the object name in some kind of format. **/
+/**
+A function to return the object name in some kind of format.
+When p_what equals 'queue', 'subscriber' or 'agent', NO dbms_assert.sql_object_name() will be invoked for the resulting object name.
+**/
 
 $if cfg_pkg.c_testing $then
 

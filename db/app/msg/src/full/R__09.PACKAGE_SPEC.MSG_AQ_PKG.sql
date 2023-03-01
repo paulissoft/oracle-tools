@@ -115,14 +115,14 @@ procedure remove_subscriber
 procedure register
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar2 -- In the format schema.procedure
+, p_plsql_callback in varchar2 -- In the format schema.procedure or schema.package.procedure
 );
 /** Register a PL/SQL callback for a queue and subscriber. **/
 
 procedure unregister
 ( p_queue_name in varchar2
 , p_subscriber in varchar2 -- the name of the subscriber already added via add_subscriber (for multi-consumer queues only)
-, p_plsql_callback in varchar2 -- In the format schema.procedure
+, p_plsql_callback in varchar2 default '%' -- In the format schema.procedure or schema.package.procedure, but wildcards allowed with escape backslash
 );
 /** Unregister a PL/SQL callback for a queue and subscriber. **/
 

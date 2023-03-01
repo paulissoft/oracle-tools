@@ -274,14 +274,16 @@ $end
                 end as subscriber
         from    user_subscr_registrations sr
                 -- sr.subscription_name is in "SCHEMA"."QUEUE" format
-        where   sr.subscription_name = l_fq_queue_name -- single consumer
-        or      sr.subscription_name like l_fq_queue_name || ':%' -- multiple consumer, consumer after the :
+        where   ( sr.subscription_name = l_fq_queue_name /* single consumer */ or
+                  sr.subscription_name like l_fq_queue_name || ':%' /* multiple consumer, consumer after the : */
+                )
+        and     sr.location_name like "plsql://" || '%'
       )
       loop
         unregister
         ( p_queue_name => rq.queue_name
         , p_subscriber => rsr.subscriber
-        , p_plsql_callback => rsr.location_name
+        , p_plsql_callback => replace(rsr.location_name, "plsql://")
         );
         if rsr.subscriber is not null
         then
@@ -588,8 +590,14 @@ procedure unregister
 , p_plsql_callback in varchar2
 )
 is
-  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
-  -- Since we add a callback for a queue the number of queues to listen to may change.
+  -- user_subscr_registrations.subscription_name is in "SCHEMA"."QUEUE" or "SCHEMA"."QUEUE":"SUBSCRIBER" format
+  l_subscription_name constant user_subscr_registrations.subscription_name%type :=
+    msg_pkg.get_object_name(p_object_name => p_queue_name, p_what => 'queue', p_schema_name => c_schema) ||
+    case
+      when p_subscriber is not null
+      then ':' || msg_pkg.get_object_name(p_object_name => p_subscriber, p_what => 'subscriber', p_fq => 0)
+    end;
+  -- Since we remove a callback for a queue the number of queues to listen to may change.
   -- If so, the MSG_SCHEDULER_PKG has to restart.
   l_groups_to_process_before sys.odcivarchar2list;
   l_groups_to_process_after sys.odcivarchar2list;
@@ -609,18 +617,27 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   l_groups_to_process_before := get_groups_to_process(l_processing_method);
-
-  dbms_aq.unregister
-  ( reg_list => sys.aq$_reg_info_list
-                ( sys.aq$_reg_info
-                  ( name => sql_object_name(c_schema, l_queue_name) || case when p_subscriber is not null then ':' || p_subscriber end
-                  , namespace => dbms_aq.namespace_aq
-                  , callback => "plsql://" || p_plsql_callback
-                  , context => hextoraw('FF')
+      
+  for rsr in
+  ( select  sr.subscription_name
+    ,       sr.location_name
+    from    user_subscr_registrations sr
+    where   sr.subscription_name = l_subscription_name
+    and     sr.location_name like "plsql://" || p_plsql_callback escape '\'
+  )
+  loop
+    dbms_aq.unregister
+    ( reg_list => sys.aq$_reg_info_list
+                  ( sys.aq$_reg_info
+                    ( name => rsr.subscription_name
+                    , namespace => dbms_aq.namespace_aq
+                    , callback => rsr.location_name
+                    , context => hextoraw('FF')
+                    )
                   )
-                )
-  , reg_count => 1
-  );
+    , reg_count => 1
+    );
+  end loop;
 
   l_groups_to_process_after := get_groups_to_process(l_processing_method);
 
