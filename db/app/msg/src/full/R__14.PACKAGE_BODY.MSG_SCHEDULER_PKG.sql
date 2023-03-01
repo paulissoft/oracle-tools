@@ -11,7 +11,7 @@ c_schedule_supervisor constant user_scheduler_programs.program_name%type := 'SCH
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
--- ORA-27476: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING_SUPERVISOR$20230301114922#1" does not exist
+-- ORA-27476: "MSG_AQ_PKG$PROCESSING_SUPERVISOR$20230301114922#1" does not exist
 e_job_does_not_exist exception;
 pragma exception_init(e_job_does_not_exist, -27476);
 
