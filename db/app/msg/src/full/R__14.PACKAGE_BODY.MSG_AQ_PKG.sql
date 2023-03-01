@@ -159,15 +159,6 @@ begin
   commit;
 end register_at;  
 
-function queue_name
-( p_group_name in varchar2
-)
-return varchar2
-is
-begin
-  return msg_pkg.get_object_name(p_object_name => replace(p_group_name, '.', '$'), p_what => 'queue', p_fq => 0);
-end queue_name;
-
 procedure execute_immediate
 ( p_statement in varchar2
 )
@@ -190,6 +181,7 @@ procedure run_processing_method
 )
 is
 begin
+  PRAGMA INLINE (execute_immediate, 'YES');
   execute_immediate
   ( utl_lms.format_message
     ( q'[call %s.do('%s', '%s')]'
@@ -202,14 +194,24 @@ end run_processing_method;
 
 -- public routines
 
-function queue_name
+function get_queue_name
+( p_group_name in varchar2
+)
+return varchar2
+is
+begin
+  return msg_pkg.get_object_name(p_object_name => replace(p_group_name, '.', '$'), p_what => 'queue', p_fq => 0);
+end get_queue_name;
+
+function get_queue_name
 ( p_msg in msg_typ
 )
 return varchar2
 is
 begin
-  return queue_name(p_msg.group$);
-end queue_name;
+  PRAGMA INLINE (get_queue_name, 'YES');
+  return get_queue_name(p_msg.group$);
+end get_queue_name;
 
 procedure create_queue_table
 is
@@ -529,7 +531,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if p_plsql_callback is null
+  if p_plsql_callback is null or p_plsql_callback like "plsql://" || '%'
   then
     raise value_error;
   end if;
@@ -616,6 +618,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
+  if p_plsql_callback is null or p_plsql_callback like "plsql://" || '%'
+  then
+    raise value_error;
+  end if;
+
   l_groups_to_process_before := get_groups_to_process(l_processing_method);
       
   for rsr in
@@ -684,7 +691,7 @@ procedure enqueue
 , p_msgid out nocopy raw
 )
 is
-  l_queue_name constant user_queues.name%type := queue_name(p_msg);
+  l_queue_name constant user_queues.name%type := get_queue_name(p_msg);
   l_enqueue_enabled user_queues.enqueue_enabled%type;
   l_dequeue_enabled user_queues.dequeue_enabled%type;
   l_enqueue_options dbms_aq.enqueue_options_t;
@@ -892,7 +899,7 @@ procedure dequeue
 , p_msg out nocopy msg_typ
 )
 is
-  l_queue_name constant user_queues.name%type := nvl(simple_queue_name(p_queue_name), queue_name(p_msg));
+  l_queue_name constant user_queues.name%type := nvl(simple_queue_name(p_queue_name), get_queue_name(p_msg));
   l_dequeue_options dbms_aq.dequeue_options_t;
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
@@ -1241,7 +1248,7 @@ $end
                     fq_queue_name
           ) q
           inner join table(l_msg_tab) t
-          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)), p_what => 'queue')
+          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.get_queue_name(value(t)), p_what => 'queue')
   where   ( t.default_processing_method() = p_processing_method or t.default_processing_method() like "plsql://" || '%' )
   and     t.group$ is not null;
 
@@ -1313,7 +1320,7 @@ $end
   for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
   loop
     l_queue_name_tab.extend(1);
-    l_queue_name_tab(l_queue_name_tab.last) := queue_name(p_groups_to_process_tab(i_idx));
+    l_queue_name_tab(l_queue_name_tab.last) := get_queue_name(p_groups_to_process_tab(i_idx));
   end loop;
 
   -- i_idx can be from

@@ -496,11 +496,44 @@ end make_rest_request;
 
 $if msg_aq_pkg.c_testing $then
 
+procedure ut_setup
+is
+  pragma autonomous_transaction;
+begin
+  msg_aq_pkg.register
+  ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+  , p_subscriber => null
+  , p_plsql_callback => $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
+  );
+  commit;
+end ut_setup;
+  
+procedure ut_teardown
+is
+  pragma autonomous_transaction;
+begin
+  if msg_constants_pkg.c_default_processing_method like 'plsql://%'
+  then
+    msg_aq_pkg.register
+    ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+    , p_subscriber => null
+    , p_plsql_callback => replace(msg_constants_pkg.c_default_processing_method, 'plsql://')
+    );
+  else
+    msg_aq_pkg.unregister
+    ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+    , p_subscriber => null
+    , p_plsql_callback => '%'
+    );
+  end if;
+  commit;
+end ut_teardown;
+
 procedure ut_rest_web_service_get
 is
   pragma autonomous_transaction;
 
-  l_correlation constant varchar2(128) := web_service_request_typ.generate_unique_id();
+  l_correlation varchar2(128);
   l_msgid raw(16) := null;
   l_message_properties dbms_aq.message_properties_t;
   l_msg msg_typ;
@@ -527,53 +560,69 @@ $end
   --   "id": 1,
   --   "title": "delectus aut autem",
   --   "completed": false
-  -- }%                                                                                                                                                                                                           
-  -- will just get enqueued here
-  l_rest_web_service_request :=
-    rest_web_service_request_typ
-    ( p_context$ => l_correlation
-    , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
-    , p_http_method => 'GET'
+  -- }%
+
+  -- We want to test both callbacks and the scheduler supervisor process.
+  for i_try in 1..2
+  loop
+    if i_try = 2
+    then
+      msg_aq_pkg.unregister
+      ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+      , p_subscriber => null
+      , p_plsql_callback => '%'
+      );
+    end if;
+    
+    l_correlation := web_service_request_typ.generate_unique_id();
+
+    -- will just get enqueued here
+    l_rest_web_service_request :=
+      rest_web_service_request_typ
+      ( p_context$ => l_correlation
+      , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
+      , p_http_method => 'GET'
+      );
+
+    l_rest_web_service_request.response().print; -- just invoke directly and print
+
+    l_rest_web_service_request.process; -- invoke indirectly
+
+    commit;
+
+    -- and dequeued here
+    msg_aq_pkg.dequeue
+    ( p_queue_name => web_service_response_typ.default_group()
+    , p_delivery_mode => dbms_aq.persistent_or_buffered
+    , p_visibility => dbms_aq.immediate
+    , p_subscriber => null
+    , p_dequeue_mode => dbms_aq.remove
+      /*
+      -- The correlation attribute specifies the correlation identifier of the dequeued message.
+      -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
+      */
+    , p_navigation => dbms_aq.first_message
+    , p_wait => 10 -- dbms_aq.forever
+    , p_correlation => l_correlation
+    , p_deq_condition => null
+    , p_force => true
+    , p_msgid => l_msgid
+    , p_message_properties => l_message_properties
+    , p_msg => l_msg
     );
 
-  l_rest_web_service_request.response().print; -- just invoke directly and print
-  
-  l_rest_web_service_request.process; -- invoke indirectly
+    l_msg.print();
+    
+    commit;
 
-  commit;
+    ut.expect(l_msg is of (web_service_response_typ), 'web service response object type; try ' || i_try).to_be_true();
 
-  -- and dequeued here
-  msg_aq_pkg.dequeue
-  ( p_queue_name => web_service_response_typ.default_group()
-  , p_delivery_mode => dbms_aq.persistent_or_buffered
-  , p_visibility => dbms_aq.immediate
-  , p_subscriber => null
-  , p_dequeue_mode => dbms_aq.remove
-    /*
-    -- The correlation attribute specifies the correlation identifier of the dequeued message.
-    -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
-    */
-  , p_navigation => dbms_aq.first_message
-  , p_wait => 10 -- dbms_aq.forever
-  , p_correlation => l_correlation
-  , p_deq_condition => null
-  , p_force => true
-  , p_msgid => l_msgid
-  , p_message_properties => l_message_properties
-  , p_msg => l_msg
-  );
+    l_web_service_response := treat(l_msg as web_service_response_typ);
 
-  l_msg.print();
-  
-  commit;
+    msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
 
-  ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
-
-  l_web_service_response := treat(l_msg as web_service_response_typ);
-
-  msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
-
-  ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+    ut.expect(l_json_act, 'json; try ' || i_try).to_equal(l_json_exp);
+  end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;

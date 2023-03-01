@@ -61,11 +61,17 @@ The default functionality is:
 
 **/
 
-function queue_name
+function get_queue_name
+( p_group_name in varchar2
+)
+return varchar2;
+/** Returns the enquoted simple SQL queue name, i.e. replace(p_group_name, '.', '$') (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
+
+function get_queue_name
 ( p_msg in msg_typ
 )
 return varchar2;
-/** Returns the enquoted simple SQL queue name, i.e. replace(p_msg.group$, '.', '$') (enquoted via DBMS_ASSERT.ENQUOTE_NAME). **/
+/** Just invokes get_queue_name(p_msg.group$). **/
 
 procedure create_queue_table;
 /** Create the queue table c_queue_table. **/
@@ -136,7 +142,7 @@ procedure enqueue
 );
 /**
 
-Enqueue the message to the queue queue_name(p_msg).
+Enqueue the message to the queue get_queue_name(p_msg).
 
 For AQ there are tree valid combinations for delivery mode and visibility:
 1. delivery mode equal to dbms_aq.persistent and visibility equal to dbms_aq.on_commit

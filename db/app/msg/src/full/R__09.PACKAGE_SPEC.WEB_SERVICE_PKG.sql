@@ -32,6 +32,14 @@ $if msg_aq_pkg.c_testing $then
 --%suitepath(MSG)
 --%suite
 
+--%beforeeach
+--%rollback(manual)
+procedure ut_setup;
+
+--%aftereach
+--%rollback(manual)
+procedure ut_teardown;
+
 --%test
 --%rollback(manual)
 procedure ut_rest_web_service_get;
