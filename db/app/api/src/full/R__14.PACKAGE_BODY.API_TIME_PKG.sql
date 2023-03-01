@@ -56,6 +56,17 @@ begin
          end / 100;
 end elapsed_time;
 
+function delta
+( p_start in time_t
+, p_end in time_t
+)
+return seconds_t
+is
+begin
+  PRAGMA INLINE (elapsed_time, 'YES'); -- speed it up!
+  return elapsed_time(p_start, p_end);
+end delta;
+
 function elapsed_time
 ( p_start in timestamp_t
 , p_end in timestamp_t
@@ -69,6 +80,17 @@ begin
          extract(minute from l_interval) * 60 +
          extract(second from l_interval);
 end elapsed_time;
+
+function delta
+( p_start in timestamp_t
+, p_end in timestamp_t
+)
+return seconds_t
+is
+begin
+  PRAGMA INLINE (elapsed_time, 'YES'); -- speed it up!
+  return elapsed_time(p_start, p_end);
+end delta;
 
 end API_TIME_PKG;
 /

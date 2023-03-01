@@ -169,7 +169,7 @@ begin
 end queue_name;
 
 procedure execute_immediate
-( p_statement in varchar
+( p_statement in varchar2
 )
 is
 begin
@@ -183,6 +183,22 @@ exception
     raise;
 $end
 end execute_immediate;
+
+procedure run_processing_method
+( p_processing_method in varchar2
+, p_command in varchar2
+)
+is
+begin
+  execute_immediate
+  ( utl_lms.format_message
+    ( q'[call %s.do('%s', '%s')]'
+    , oracle_tools.data_api_pkg.dbms_assert$sql_object_name(replace(p_processing_method, "package://"), 'package')
+    , p_command
+    , $$PLSQL_UNIT
+    )
+  );
+end run_processing_method;  
 
 -- public routines
 
@@ -555,13 +571,9 @@ $end
   then
     null; -- no changes
   else
-    execute_immediate
-    ( utl_lms.format_message
-      ( q'[call %s.do('%s', '%s')]'
-      , replace(l_processing_method, "package://")
-      , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
-      , $$PLSQL_UNIT
-      )
+    run_processing_method
+    ( l_processing_method
+    , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
     );
   end if;  
 
@@ -635,13 +647,9 @@ $end
   then
     null; -- no changes
   else
-    execute_immediate
-    ( utl_lms.format_message
-      ( q'[call %s.do('%s', '%s')]'
-      , replace(l_processing_method, "package://")
-      , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
-      , $$PLSQL_UNIT
-      )
+    run_processing_method
+    ( l_processing_method
+    , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
     );
   end if;  
 
@@ -711,12 +719,9 @@ $end
       );
     elsif p_msg.default_processing_method() like "package://" || '%'
     then
-      execute_immediate
-      ( utl_lms.format_message
-        ( q'[call %s.do('restart', '%s')]'
-        , replace(p_msg.default_processing_method(), "package://")
-        , $$PLSQL_UNIT
-        )
+      run_processing_method
+      ( p_msg.default_processing_method()
+      , 'restart'
       );
     end if;
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1199,7 +1204,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_processing_method: %s', p_processing_method);
 $end
 
-  select  t.group$
+  select  distinct
+          t.group$
   bulk collect
   into    l_groups_to_process_tab
   from    ( select  msg_pkg.get_object_name(p_object_name => q.name, p_what => 'queue') as fq_queue_name
@@ -1219,8 +1225,8 @@ $end
           ) q
           inner join table(l_msg_tab) t
           on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)), p_what => 'queue')
-  where   t.default_processing_method() = p_processing_method
-  or      t.default_processing_method() like "plsql://" || '%';
+  where   ( t.default_processing_method() = p_processing_method or t.default_processing_method() like "plsql://" || '%' )
+  and     t.group$ is not null;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print

@@ -37,6 +37,13 @@ same token, your application should also allow that the first (earlier) number
 be negative and the second (later) number be positive.
 **/
 
+function delta
+( p_start in time_t -- start value returned by get_time
+, p_end in time_t -- end value returned by get_time
+)
+return seconds_t; -- in seconds with fractions (not hundredths of seconds!)
+/** Just another name for elapsed_time above. **/
+
 function elapsed_time
 ( p_start in timestamp_t -- start value returned by get_timestamp
 , p_end in timestamp_t -- end value returned by get_timestamp
@@ -46,6 +53,13 @@ return seconds_t; -- in seconds with fractions (not hundredths of seconds!)
 Determines the elapsed time in seconds (and fractional seconds) between two measure points taken by get_timestamp(), the start (earlier) and the end (later).
 Both start and end are converted using sys_extract_utc() first, next the DAY, HOUR, MINUTE and SECOND will be EXTRACTed from the difference interval.
 **/
+
+function delta
+( p_start in timestamp_t -- start value returned by get_timestamp
+, p_end in timestamp_t -- end value returned by get_timestamp
+)
+return seconds_t; -- in seconds with fractions (not hundredths of seconds!)
+/** Just another name for elapsed_time above. **/
 
 end API_TIME_PKG;
 /

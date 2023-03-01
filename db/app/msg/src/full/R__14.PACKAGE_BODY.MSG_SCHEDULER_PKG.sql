@@ -756,7 +756,7 @@ $end
 
     l_statement := utl_lms.format_message
                    ( q'[begin :1 := %s.get_groups_to_process('package://%s.%s'); end;]'
-                   , l_processing_package
+                   , l_processing_package -- already checked by determine_processing_package
                    , $$PLSQL_UNIT_OWNER
                    , $$PLSQL_UNIT
                    );
@@ -1022,7 +1022,7 @@ $end
 
     l_statement := utl_lms.format_message
                    ( 'call %s.processing(p_groups_to_process_tab => :1, p_worker_nr => :2, p_ttl => :3, p_job_name_supervisor => :4)'
-                   , l_processing_package
+                   , l_processing_package -- already checked by determine_processing_package
                    );
     begin
       execute immediate l_statement

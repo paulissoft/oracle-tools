@@ -318,24 +318,23 @@ is
   end fmt;
 begin
   fmt(l_object_name);
-  if l_use_dbms_assert_for_object
-  then
-    l_object_name := dbms_assert$simple_sql_name(l_object_name, p_what);
-  end if;
 
   if p_fq = 1
   then
     l_schema_name := p_schema_name;
     fmt(l_schema_name);
-    l_schema_name := dbms_assert$schema_name(l_schema_name, p_what);
     
     return case
              when l_use_dbms_assert_for_object
              then dbms_assert$sql_object_name(l_schema_name || '.' || l_object_name, p_what)
-             else l_schema_name || '.' || l_object_name
+             else dbms_assert$schema_name(l_schema_name, p_what) || '.' || l_object_name
            end;
   else
-    return l_object_name;
+    return case
+             when l_use_dbms_assert_for_object
+             then dbms_assert$sql_object_name(l_object_name, p_what)
+             else l_object_name
+           end;
   end if;
 end get_object_name;
 
