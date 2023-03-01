@@ -500,18 +500,27 @@ procedure ut_setup
 is
   pragma autonomous_transaction;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_SETUP');
+$end
   msg_aq_pkg.register
   ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
   , p_subscriber => null
   , p_plsql_callback => $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
   );
   commit;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end ut_setup;
   
 procedure ut_teardown
 is
   pragma autonomous_transaction;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_TEARDOWN');
+$end
   if msg_constants_pkg.c_default_processing_method like 'plsql://%'
   then
     msg_aq_pkg.register
@@ -527,6 +536,9 @@ begin
     );
   end if;
   commit;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end ut_teardown;
 
 procedure ut_rest_web_service_get
@@ -565,6 +577,10 @@ $end
   -- We want to test both callbacks and the scheduler supervisor process.
   for i_try in 1..2
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'i_try: %s', i_try);
+$end
+
     if i_try = 2
     then
       msg_aq_pkg.unregister
@@ -575,6 +591,10 @@ $end
     end if;
     
     l_correlation := web_service_request_typ.generate_unique_id();
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'l_correlation: %s', l_correlation);
+$end
 
     -- will just get enqueued here
     l_rest_web_service_request :=
