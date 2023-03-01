@@ -54,6 +54,7 @@ end done;
   
 function get_object_name
 ( p_object_name in varchar2
+, p_what in varchar2
 , p_schema_name in varchar2
 , p_fq in integer
 , p_qq in integer
@@ -61,47 +62,15 @@ function get_object_name
 )
 return varchar2
 is
-  l_object_name all_objects.object_name%type := p_object_name;
-  l_schema_name all_objects.owner%type := null;
-
-  procedure fmt(p_name in out nocopy varchar2)
-  is
-  begin
-    if p_name like '"%"'
-    then
-      -- name is enquoted, no need to change case
-      if p_qq = 1
-      then
-        -- already enquoted
-        null;
-      else
-        -- remove quotes at the beginning and end and convert two double quotes into one
-        p_name := replace(trim('"' from p_name), '""', '"');
-      end if;
-    else -- p_name NOT like '"%"'
-      if p_uc = 1
-      then
-        p_name := upper(p_name);
-      end if;
-    
-      if p_qq = 1
-      then
-        p_name := '"' || replace(p_name, '"', '""') || '"';
-      end if;
-    end if;
-  end fmt;
 begin
-  fmt(l_object_name);
-
-  if p_fq = 1
-  then
-    l_schema_name := p_schema_name;
-    fmt(l_schema_name);
-    
-    return l_schema_name || '.' || l_object_name;
-  else
-    return l_object_name;
-  end if;
+  return oracle_tools.data_api_pkg.get_object_name
+         ( p_object_name => p_object_name
+         , p_what => p_what
+         , p_schema_name => p_schema_name
+         , p_fq => p_fq
+         , p_qq => p_qq
+         , p_uc => p_uc
+         );
 end get_object_name;
 
 function get_msg_tab

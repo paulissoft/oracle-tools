@@ -9,13 +9,13 @@ type t_message_tab is table of varchar2(4000 char);
 This package defines functions and procedures used by Flyway callbacks.
 **/
 
-procedure afterMigrate
+procedure "afterMigrate"
 ( p_compile_all in boolean -- Do we need to compile all?
 , p_reuse_settings in boolean -- Do we reuse PL/SQL settings?
 );
 /** The Flyway afterMigrate callback. **/
 
-procedure beforeEachMigrate;
+procedure "beforeEachMigrate";
 /** The Flyway beforeEachMigrate callback. **/
 
 procedure setup_session

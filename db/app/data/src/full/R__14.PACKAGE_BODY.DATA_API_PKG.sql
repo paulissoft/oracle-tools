@@ -276,6 +276,69 @@ exception
     raise; -- to keep the compiler happy
 end dbms_assert$sql_object_name;
 
+function get_object_name
+( p_object_name in varchar2
+, p_what in varchar2
+, p_schema_name in varchar2
+, p_fq in integer
+, p_qq in integer
+, p_uc in integer
+)
+return varchar2
+is
+  l_use_dbms_assert_for_object constant boolean := case p_what when 'queue' then false else true end;
+  l_object_name all_objects.object_name%type := p_object_name;
+  l_schema_name all_objects.owner%type := null;
+
+  procedure fmt(p_name in out nocopy varchar2)
+  is
+  begin
+    if p_name like '"%"'
+    then
+      -- name is enquoted, no need to change case
+      if p_qq = 1
+      then
+        -- already enquoted
+        null;
+      else
+        -- remove quotes at the beginning and end and convert two double quotes into one
+        p_name := replace(trim('"' from p_name), '""', '"');
+      end if;
+    else -- p_name NOT like '"%"'
+      if p_uc = 1
+      then
+        p_name := upper(p_name);
+      end if;
+    
+      if p_qq = 1
+      then
+        p_name := '"' || replace(p_name, '"', '""') || '"';
+      end if;
+    end if;
+  end fmt;
+begin
+  fmt(l_object_name);
+  if l_use_dbms_assert_for_object
+  then
+    l_object_name := dbms_assert$simple_sql_name(l_object_name, p_what);
+  end if;
+
+  if p_fq = 1
+  then
+    l_schema_name := p_schema_name;
+    fmt(l_schema_name);
+    l_schema_name := dbms_assert$schema_name(l_schema_name, p_what);
+    
+    return case
+             when l_use_dbms_assert_for_object
+             then dbms_assert$sql_object_name(l_schema_name || '.' || l_object_name, p_what)
+             else l_schema_name || '.' || l_object_name
+           end;
+  else
+    return l_object_name;
+  end if;
+end get_object_name;
+
 $if cfg_pkg.c_testing $then
 
 procedure ut_raise_error

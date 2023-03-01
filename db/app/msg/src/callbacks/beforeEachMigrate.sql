@@ -1,4 +1,4 @@
 begin
-  ${oracle_tools_schema}.cfg_install_pkg.beforeEachMigrate;
+  ${oracle_tools_schema}.cfg_install_pkg."beforeEachMigrate";
 end;
 /

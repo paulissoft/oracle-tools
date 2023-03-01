@@ -13,7 +13,7 @@ function simple_queue_name
 return varchar2
 is
 begin
-  return msg_pkg.get_object_name(p_object_name => p_queue_name, p_fq => 0);
+  return msg_pkg.get_object_name(p_object_name => p_queue_name, p_what => 'queue', p_fq => 0);
 end simple_queue_name;
 
 function visibility_descr
@@ -165,7 +165,7 @@ function queue_name
 return varchar2
 is
 begin
-  return msg_pkg.get_object_name(p_object_name => replace(p_group_name, '.', '$'), p_fq => 0);
+  return msg_pkg.get_object_name(p_object_name => replace(p_group_name, '.', '$'), p_what => 'queue', p_fq => 0);
 end queue_name;
 
 procedure execute_immediate
@@ -248,7 +248,7 @@ $end
       and     'NO' in ( trim(q.enqueue_enabled), trim(q.dequeue_enabled) )
     )
     loop
-      l_fq_queue_name := msg_pkg.get_object_name(p_object_name => rq.queue_name, p_schema_name => c_schema);
+      l_fq_queue_name := msg_pkg.get_object_name(p_object_name => rq.queue_name, p_what => 'queue', p_schema_name => c_schema);
       
       for rsr in
       ( select  sr.location_name
@@ -1202,7 +1202,7 @@ $end
   select  t.group$
   bulk collect
   into    l_groups_to_process_tab
-  from    ( select  msg_pkg.get_object_name(p_object_name => q.name) as fq_queue_name
+  from    ( select  msg_pkg.get_object_name(p_object_name => q.name, p_what => 'queue') as fq_queue_name
             from    user_queues q
             where   q.queue_type = 'NORMAL_QUEUE'
             and     q.queue_table = trim('"' from c_queue_table)
@@ -1218,7 +1218,7 @@ $end
                     fq_queue_name
           ) q
           inner join table(l_msg_tab) t
-          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)))
+          on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.queue_name(value(t)), p_what => 'queue')
   where   t.default_processing_method() = p_processing_method
   or      t.default_processing_method() like "plsql://" || '%';
 

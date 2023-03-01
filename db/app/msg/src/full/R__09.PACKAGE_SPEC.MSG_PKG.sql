@@ -34,6 +34,7 @@ procedure done;
 
 function get_object_name
 ( p_object_name in varchar2 -- the object name part
+, p_what in varchar2 -- the kind of object: used in error message
 , p_schema_name in varchar2 default $$PLSQL_UNIT_OWNER -- the schema part name
 , p_fq in integer default 1 -- return fully qualified name, yes (1) or no (0)
 , p_qq in integer default 1 -- return double quoted name, yes (1) or no (0)

@@ -411,6 +411,31 @@ begin
   dbms_scheduler.enable(l_job_name_worker);
 end submit_processing;
 
+function determine_processing_package
+( p_processing_package in varchar2
+)
+return varchar2
+is
+begin
+  if p_processing_package is not null
+  then
+    return msg_pkg.get_object_name(p_object_name => p_processing_package, p_what => 'package', p_fq => 0, p_qq => 0);
+  else
+    -- this private function is called from within this package so we can skip those two (top) items on the call stack
+    for i_idx in 3..utl_call_stack.dynamic_depth
+    loop
+      -- utl_call_stack.subprogram(i_idx)(1) is the name of the unit
+      if utl_call_stack.subprogram(i_idx)(1) <> $$PLSQL_UNIT
+      then
+        -- must be the calling unit
+        return utl_call_stack.subprogram(i_idx)(1); -- is already not fully qualified nor enquoted
+      end if;
+    end loop;
+  end if;
+  -- well, someone made a mistake
+  raise program_error;
+end determine_processing_package;
+
 -- PUBLIC
 
 procedure do
@@ -420,8 +445,7 @@ procedure do
 is
   pragma autonomous_transaction;
 
-  l_processing_package constant all_objects.object_name%type :=
-    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
+  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name constant job_name_t :=
     job_name
     ( p_processing_package => l_processing_package 
@@ -569,8 +593,7 @@ procedure submit_processing_supervisor
 , p_end_date in timestamp with time zone
 )
 is
-  l_processing_package constant all_objects.object_name%type :=
-    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
+  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name constant job_name_t :=
     job_name
     ( l_processing_package
@@ -679,8 +702,7 @@ procedure processing_supervisor
 , p_ttl in positiven
 )
 is
-  l_processing_package constant all_objects.object_name%type :=
-    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
+  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name_supervisor job_name_t;
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_groups_to_process_tab sys.odcivarchar2list;
@@ -964,8 +986,7 @@ procedure processing
 , p_job_name_supervisor in varchar2
 )
 is
-  l_processing_package constant all_objects.object_name%type :=
-    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
+  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name_worker constant job_name_t := session_job_name();
   l_statement varchar2(32767 byte);
   l_groups_to_process_tab sys.odcivarchar2list;
@@ -1038,12 +1059,10 @@ function does_job_supervisor_exist
 )
 return boolean
 is
-  l_processing_package constant all_objects.object_name%type :=
-    msg_pkg.get_object_name(p_object_name => nvl(p_processing_package, utl_call_stack.subprogram(2)(1)), p_fq => 0, p_qq => 0); -- 2 is the index of the calling unit, 1 is the name of the unit
 begin
   return does_job_exist
          ( job_name
-           ( p_processing_package => p_processing_package
+           ( p_processing_package => determine_processing_package(p_processing_package)
            , p_program_name => c_program_supervisor
            , p_worker_nr => null
            )

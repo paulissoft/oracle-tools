@@ -44,7 +44,7 @@ end list2collection;
 
 -- GLOBAL
 
-procedure afterMigrate
+procedure "afterMigrate"
 ( p_compile_all in boolean
 , p_reuse_settings in boolean
 )
@@ -52,13 +52,13 @@ is
 begin
   setup_session;
   compile_objects(p_compile_all => p_compile_all, p_reuse_settings => p_reuse_settings);
-end afterMigrate;
+end "afterMigrate";
 
-procedure beforeEachMigrate
+procedure "beforeEachMigrate"
 is
 begin
   setup_session;
-end beforeEachMigrate;
+end "beforeEachMigrate";
 
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 --
