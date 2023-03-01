@@ -480,6 +480,8 @@ $end
   l_web_service_response :=
     web_service_response_typ
     ( p_web_service_request => p_request
+    , p_sql_code => sqlcode -- 0
+    , p_sql_error_message => sqlerrm -- null
     , p_http_status_code => apex_web_service.g_status_code
     , p_body_clob => l_body_clob
     , p_body_blob => l_body_blob
@@ -492,6 +494,23 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   return l_web_service_response;
+exception
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+
+    return web_service_response_typ
+           ( p_web_service_request => p_request
+           , p_sql_code => sqlcode
+           , p_sql_error_message => sqlerrm
+           , p_http_status_code => null
+           , p_body_clob => null
+           , p_body_blob => null
+           , p_cookies_clob => null
+           , p_http_headers_clob => null
+           );
 end make_rest_request;
 
 $if msg_aq_pkg.c_testing $then
@@ -574,9 +593,17 @@ $end
 
   l_web_service_response := treat(l_msg as web_service_response_typ);
 
-  msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+  -- ORA-29273: HTTP request failed?
+  -- In bc_dev yes, on pato no
+  if l_web_service_response.sql_code = 0
+  then
+    msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
 
-  ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+    ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+  else
+    ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);  
+    ut.expect(l_web_service_response.sql_error_message, 'sql error message').to_equal('ORA-29273: HTTP request failed');  
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -593,15 +620,38 @@ end ut_rest_web_service_get;
 procedure ut_setup
 is
   pragma autonomous_transaction;
+
+  l_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_request_typ.default_group());
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_SETUP');
 $end
-  msg_aq_pkg.register
-  ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
-  , p_subscriber => null
-  , p_plsql_callback => $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
-  );
+  for i_try in 1..2
+  loop
+    begin
+      msg_aq_pkg.register
+      ( p_queue_name => l_queue_name
+      , p_subscriber => null
+      , p_plsql_callback => $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
+      );
+      exit;
+    exception
+      when msg_aq_pkg.e_queue_does_not_exist or msg_aq_pkg.e_fq_queue_does_not_exist
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        if i_try != 2
+        then
+          msg_aq_pkg.create_queue
+          ( p_queue_name => l_queue_name
+          , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
+          );
+        else
+          raise;
+        end if;      
+    end;
+  end loop;
   commit;
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -749,9 +799,17 @@ $end
 
   l_web_service_response := treat(l_msg as web_service_response_typ);
 
-  msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+  -- ORA-29273: HTTP request failed?
+  -- In bc_dev yes, on pato no
+  if l_web_service_response.sql_code = 0
+  then
+    msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
 
-  ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+    ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+  else
+    ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);  
+    ut.expect(l_web_service_response.sql_error_message, 'sql error message').to_equal('ORA-29273: HTTP request failed');  
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;

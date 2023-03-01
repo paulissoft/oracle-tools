@@ -5,6 +5,8 @@ constructor function web_service_response_typ
 , p_group$ in varchar2
 , p_context$ in varchar2
 , p_web_service_request in web_service_request_typ
+, p_sql_code in integer
+, p_sql_error_message in varchar2
 , p_http_status_code in integer  
 , p_body_clob in clob
 , p_body_blob in blob
@@ -18,6 +20,8 @@ begin
   ( p_group$ => p_group$
   , p_context$ => p_context$
   , p_web_service_request => p_web_service_request
+  , p_sql_code => p_sql_code
+  , p_sql_error_message => p_sql_error_message
   , p_http_status_code => p_http_status_code
   , p_body_clob => p_body_clob
   , p_body_blob => p_body_blob
@@ -37,6 +41,8 @@ begin
   ( p_group$ => null
   , p_context$ => null
   , p_web_service_request => null
+  , p_sql_code => null
+  , p_sql_error_message => null
   , p_http_status_code => null
   , p_body_clob => null
   , p_body_blob => null
@@ -51,6 +57,8 @@ final member procedure construct
 , p_group$ in varchar2
 , p_context$ in varchar2
 , p_web_service_request in web_service_request_typ
+, p_sql_code in integer
+, p_sql_error_message in varchar2
 , p_http_status_code in integer  
 , p_body_clob in clob
 , p_body_blob in blob
@@ -61,6 +69,8 @@ is
 begin
   (self as msg_typ).construct(nvl(p_group$, web_service_response_typ.default_group()), p_context$);
   self.web_service_request := p_web_service_request;
+  self.sql_code := p_sql_code;
+  self.sql_error_message := p_sql_error_message;
   self.http_status_code := p_http_status_code;
   msg_pkg.data2msg(p_body_clob, self.body_vc, self.body_clob);
   msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
@@ -181,6 +191,8 @@ begin
     self.web_service_request.serialize(l_web_service_request);
     p_json_object.put('WEB_SERVICE_REQUEST', l_web_service_request);
   end if;
+  p_json_object.put('SQL_CODE', self.sql_code);
+  p_json_object.put('SQL_ERROR_MESSAGE', self.sql_error_message);
   p_json_object.put('HTTP_STATUS_CODE', self.http_status_code);
   if self.body_vc is not null
   then
