@@ -496,6 +496,100 @@ end make_rest_request;
 
 $if msg_aq_pkg.c_testing $then
 
+-- PRIVATE
+
+procedure ut_rest_web_service_get
+is
+  pragma autonomous_transaction;
+
+  l_correlation constant varchar2(128) := web_service_request_typ.generate_unique_id();
+  l_msgid raw(16) := null;
+  l_message_properties dbms_aq.message_properties_t;
+  l_msg msg_typ;
+  l_rest_web_service_request rest_web_service_request_typ;
+  l_web_service_response web_service_response_typ;
+  l_json_act json_element_t;
+  l_json_exp constant json_object_t := json_object_t('{
+  "userId": 1,
+  "id": 1,
+  "title": "delectus aut autem",
+  "completed": false
+}');
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET');
+$end
+
+  -- See https://terminalcheatsheet.com/guides/curl-rest-api
+
+  -- % curl https://jsonplaceholder.typicode.com/todos/1
+  --
+  -- {
+  --   "userId": 1,
+  --   "id": 1,
+  --   "title": "delectus aut autem",
+  --   "completed": false
+  -- }%
+
+  -- will just get enqueued here
+  l_rest_web_service_request :=
+    rest_web_service_request_typ
+    ( p_context$ => l_correlation
+    , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
+    , p_http_method => 'GET'
+    );
+
+  l_rest_web_service_request.response().print; -- just invoke directly and print
+
+  l_rest_web_service_request.process; -- invoke indirectly
+
+  commit;
+
+  -- and dequeued here
+  msg_aq_pkg.dequeue
+  ( p_queue_name => web_service_response_typ.default_group()
+  , p_delivery_mode => dbms_aq.persistent_or_buffered
+  , p_visibility => dbms_aq.immediate
+  , p_subscriber => null
+  , p_dequeue_mode => dbms_aq.remove
+    /*
+    -- The correlation attribute specifies the correlation identifier of the dequeued message.
+    -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
+    */
+  , p_navigation => dbms_aq.first_message
+  , p_wait => 10 -- dbms_aq.forever
+  , p_correlation => l_correlation
+  , p_deq_condition => null
+  , p_force => true
+  , p_msgid => l_msgid
+  , p_message_properties => l_message_properties
+  , p_msg => l_msg
+  );
+
+  l_msg.print();
+  
+  commit;
+
+  ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
+
+  l_web_service_response := treat(l_msg as web_service_response_typ);
+
+  msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+
+  ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end ut_rest_web_service_get;
+
+-- PUBLIC
+
 procedure ut_setup
 is
   pragma autonomous_transaction;
@@ -541,108 +635,15 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end ut_teardown;
 
-procedure ut_rest_web_service_get
+procedure ut_rest_web_service_get_cb
 is
-  pragma autonomous_transaction;
-
-  l_correlation varchar2(128);
-  l_msgid raw(16) := null;
-  l_message_properties dbms_aq.message_properties_t;
-  l_msg msg_typ;
-  l_rest_web_service_request rest_web_service_request_typ;
-  l_web_service_response web_service_response_typ;
-  l_json_act json_element_t;
-  l_json_exp constant json_object_t := json_object_t('{
-  "userId": 1,
-  "id": 1,
-  "title": "delectus aut autem",
-  "completed": false
-}');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_CB');
 $end
 
-  -- See https://terminalcheatsheet.com/guides/curl-rest-api
-
-  -- % curl https://jsonplaceholder.typicode.com/todos/1
-  --
-  -- {
-  --   "userId": 1,
-  --   "id": 1,
-  --   "title": "delectus aut autem",
-  --   "completed": false
-  -- }%
-
-  -- We want to test both callbacks and the scheduler supervisor process.
-  for i_try in 1..2
-  loop
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'i_try: %s', i_try);
-$end
-
-    if i_try = 2
-    then
-      msg_aq_pkg.unregister
-      ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
-      , p_subscriber => null
-      , p_plsql_callback => '%'
-      );
-    end if;
-    
-    l_correlation := web_service_request_typ.generate_unique_id();
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'l_correlation: %s', l_correlation);
-$end
-
-    -- will just get enqueued here
-    l_rest_web_service_request :=
-      rest_web_service_request_typ
-      ( p_context$ => l_correlation
-      , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
-      , p_http_method => 'GET'
-      );
-
-    l_rest_web_service_request.response().print; -- just invoke directly and print
-
-    l_rest_web_service_request.process; -- invoke indirectly
-
-    commit;
-
-    -- and dequeued here
-    msg_aq_pkg.dequeue
-    ( p_queue_name => web_service_response_typ.default_group()
-    , p_delivery_mode => dbms_aq.persistent_or_buffered
-    , p_visibility => dbms_aq.immediate
-    , p_subscriber => null
-    , p_dequeue_mode => dbms_aq.remove
-      /*
-      -- The correlation attribute specifies the correlation identifier of the dequeued message.
-      -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
-      */
-    , p_navigation => dbms_aq.first_message
-    , p_wait => 10 -- dbms_aq.forever
-    , p_correlation => l_correlation
-    , p_deq_condition => null
-    , p_force => true
-    , p_msgid => l_msgid
-    , p_message_properties => l_message_properties
-    , p_msg => l_msg
-    );
-
-    l_msg.print();
-    
-    commit;
-
-    ut.expect(l_msg is of (web_service_response_typ), 'web service response object type; try ' || i_try).to_be_true();
-
-    l_web_service_response := treat(l_msg as web_service_response_typ);
-
-    msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
-
-    ut.expect(l_json_act, 'json; try ' || i_try).to_equal(l_json_exp);
-  end loop;
+  -- ut_setup issues the register
+  ut_rest_web_service_get;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -652,7 +653,31 @@ exception
     dbug.leave_on_error;
     raise;
 $end
-end ut_rest_web_service_get;
+end ut_rest_web_service_get_cb;
+
+procedure ut_rest_web_service_get_job
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_JOB');
+$end
+
+  msg_aq_pkg.unregister
+  ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+  , p_subscriber => null
+  , p_plsql_callback => '%'
+  );
+  ut_rest_web_service_get;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end ut_rest_web_service_get_job;
 
 procedure ut_rest_web_service_post
 is

@@ -11,6 +11,10 @@ c_schedule_supervisor constant user_scheduler_programs.program_name%type := 'SCH
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
+-- ORA-27476: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING_SUPERVISOR$20230301114922#1" does not exist
+e_job_does_not_exist exception;
+pragma exception_init(e_job_does_not_exist, -27476);
+
 $if oracle_tools.cfg_pkg.c_debugging $then
  
 subtype t_dbug_channel_tab is msg_pkg.t_boolean_lookup_tab;
@@ -565,6 +569,8 @@ $end
           dbms_scheduler.stop_job(r.job_name);
           dbms_scheduler.disable(r.job_name);
         exception
+          when e_job_does_not_exist
+          then null;
           when others
           then
 $if oracle_tools.cfg_pkg.c_debugging $then

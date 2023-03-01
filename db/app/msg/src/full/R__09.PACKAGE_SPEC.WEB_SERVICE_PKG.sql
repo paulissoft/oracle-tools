@@ -42,7 +42,11 @@ procedure ut_teardown;
 
 --%test
 --%rollback(manual)
-procedure ut_rest_web_service_get;
+procedure ut_rest_web_service_get_cb; -- processed by callback
+
+--%test
+--%rollback(manual)
+procedure ut_rest_web_service_get_job; -- processed by job
 
 --%test
 --%rollback(manual)

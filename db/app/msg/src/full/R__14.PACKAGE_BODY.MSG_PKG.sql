@@ -119,7 +119,7 @@ procedure process_msg
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSL_UNIT || '.PROCESS_MSG for group ' || p_msg.group$);
+  dbug.enter($$PLSQL_UNIT || '.PROCESS_MSG for group ' || p_msg.group$);
   dbug.print(dbug."input", 'p_commit: %s', dbug.cast_to_varchar2(p_commit));
 $end
 
@@ -232,6 +232,19 @@ procedure send_worker_status
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.SEND_WORKER_STATUS');
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name_supervisor: %s; p_worker_nr: %s; p_sqlcode: %s; p_sqlerrm: %s; p_timeout: %s'
+  , p_job_name_supervisor
+  , p_worker_nr
+  , p_sqlcode
+  , p_sqlerrm
+  , p_timeout
+  );
+$end
+
   dbms_pipe.reset_buffer;
   dbms_pipe.pack_message("WORKER_STATUS");
   dbms_pipe.pack_message(p_worker_nr);
@@ -240,6 +253,10 @@ begin
   dbms_pipe.pack_message(c_session_id);
   
   dbms_pipe$send_message(p_job_name_supervisor => p_job_name_supervisor, p_timeout => p_timeout);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end send_worker_status;
 
 procedure send_stop_supervisor
@@ -248,10 +265,24 @@ procedure send_stop_supervisor
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.SEND_STOP_SUPERVISOR');
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name_supervisor: %s; p_timeout: %s'
+  , p_job_name_supervisor
+  , p_timeout
+  );
+$end
+
   dbms_pipe.reset_buffer;
   dbms_pipe.pack_message("STOP_SUPERVISOR");
   
   dbms_pipe$send_message(p_job_name_supervisor => p_job_name_supervisor, p_timeout => p_timeout);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end send_stop_supervisor;
 
 procedure recv_event
@@ -266,6 +297,16 @@ procedure recv_event
 is
   l_result pls_integer;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.RECV_EVENT');
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name_supervisor: %s; p_timeout: %s'
+  , p_job_name_supervisor
+  , p_timeout
+  );
+$end
+
   dbms_pipe.reset_buffer;
 
   l_result := dbms_pipe.receive_message(pipename => p_job_name_supervisor, timeout => p_timeout);
@@ -295,6 +336,19 @@ begin
     when 3 -- Interrupt
     then raise_application_error(c_dbms_pipe_interrupted, 'Interrupt while receiving from pipe "' || p_job_name_supervisor || '"');
   end case;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_event: %s; p_worker_nr: %s; p_sqlcode: %s; p_sqlerrm: %s; p_session_id: %s'
+  , p_event
+  , p_worker_nr
+  , p_sqlcode
+  , p_sqlerrm
+  , p_session_id
+  );
+  dbug.leave;
+$end
 end recv_event;
 
 end msg_pkg;
