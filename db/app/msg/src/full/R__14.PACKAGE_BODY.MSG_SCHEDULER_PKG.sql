@@ -464,6 +464,7 @@ is
     get_job_name
     ( p_processing_package => l_processing_package 
     , p_program_name => c_program_supervisor
+    , p_job_suffix => null
     , p_worker_nr => null
     );
   l_state user_scheduler_jobs.state%type;
@@ -558,7 +559,7 @@ $end
     then
       for r in
       ( select  j.job_name
-        ,       case when j.job_name like l_job_name || '#%' then 1 else 0 end as is_worker
+        ,       sign(instr(j.job_name, '#')) as is_worker
         from    user_scheduler_running_jobs j
         where   j.job_name like l_job_name || '%' -- repeating and non-repeating jobs, supervisors and workers
         order by
@@ -566,7 +567,12 @@ $end
       )
       loop
 $if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print(dbug."info", 'trying to stop and disable job %s', r.job_name);
+        dbug.print
+        ( dbug."info"
+        , 'trying to stop and disable %s job %s'
+        , case when r.is_worker = 0 then 'supervisor' else 'worker' end
+        , r.job_name
+        );
 $end
         -- try to stop gracefully
         if r.is_worker = 0
