@@ -1258,6 +1258,13 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , 'l_groups_to_process_tab.count: %s'
   , case when l_groups_to_process_tab is not null then l_groups_to_process_tab.count end
   );
+  if l_groups_to_process_tab is not null and l_groups_to_process_tab.count > 0
+  then
+    for i_idx in l_groups_to_process_tab.first .. l_groups_to_process_tab.last
+    loop
+      dbug.print(dbug."output", 'l_groups_to_process_tab(%s): %s', i_idx, l_groups_to_process_tab(i_idx));
+    end loop;
+  end if;  
   dbug.leave;
 $end
 
