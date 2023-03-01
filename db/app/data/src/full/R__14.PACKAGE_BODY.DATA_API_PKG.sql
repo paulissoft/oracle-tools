@@ -332,7 +332,7 @@ begin
     return case
              when l_use_dbms_assert_for_object
              then dbms_assert$sql_object_name(l_schema_name || '.' || l_object_name, p_what)
-             else dbms_assert$schema_name(l_schema_name, p_what) || '.' || l_object_name
+             else l_schema_name || '.' || l_object_name -- dbms_assert.schema_name does not accept "SCHEMA", nor schema, just SCHEMA
            end;
   else
     return case
