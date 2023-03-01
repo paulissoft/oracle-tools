@@ -26,7 +26,7 @@ A subtype for ALL_TAB_PARTITIONS.HIGH_VALUE that is a LONG.
 type t_range_rec is record
 ( partition_name all_tab_partitions.partition_name%type
 , partition_position all_tab_partitions.partition_position%type
-, interval all_tab_partitions.interval%type -- YES for anchor partition
+, interval all_tab_partitions.interval%type -- YES for anchor partition in interval partitioned table (when ALL_PART_TABLES.INTERVAL is not null)
 , lwb_incl t_value
 , upb_excl t_value
 );
@@ -110,6 +110,28 @@ Find the partitions with respect to the reference timestamp and operator:
 
 **/
 
+procedure create_new_partitions 
+( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_reference_timestamp in timestamp -- create partitions where the last one created will includes this timestamp
+, p_update_index_clauses in varchar2 default 'UPDATE GLOBAL INDEXES' -- can be empty or UPDATE GLOBAL INDEXES
+, p_nr_days_per_partition in positiven default 1 -- the number of days per partition
+);
+
+/**
+ 
+Create new range partitions until the reference timestamp lies inside the last created partition.
+
+Only meant for a range partitioned table without an interval (ALL_PART_TABLES.PARTITIONING_TYPE = 'RANGE' and ALL_PART_TABLES.INTERVAL is null).
+
+One of the statements to create a partition: 
+
+```sql
+ALTER TABLE "<p_table_owner>"."<p_table_name>" ADD PARTITION "<new partition>" VALUES LESS THAN (TIMESTAMP '<timestamp>') <p_update_index_clauses>
+```
+
+**/
+                           
 procedure drop_old_partitions 
 ( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
@@ -119,26 +141,33 @@ procedure drop_old_partitions
 
 /**
  
-Drop interval partitions before the reference timestamp.
+Drop partitions before the reference timestamp.
+
+For a partitioned table with an interval (ALL_PART_TABLES.INTERVAL is not null) only the partitions with ALL_TAB_PARTITIONS.INTERVAL = 'YES' are dropped. When there is not an interval defined for the table, there is no such restriction.
 
 This query will be used to find the old partitions:
 
 ```sql
-select  t.* 
+select  p.* 
 from    table
         ( oracle_tools.data_partitioning_pkg.find_partitions_range
-          ( p_table_name
+          ( p_table_owner
+          , p_table_name
           , p_reference_timestamp
           , '<'
           )
-        ) t
-where   t.interval = 'YES'
+        ) p
+        cross join all_part_tables t
+where   t.owner = p_table_owner
+and     t.table_name = p_table_name
+and     t.partitioning_type = 'RANGE'
+and     (t.interval is null or p.interval = 'YES')
 ```
 
 The statement to drop: 
 
 ```sql
-ALTER TABLE <p_table_name> DROP PARTITION <old partition> <p_update_index_clauses>
+ALTER TABLE "<p_table_owner>"."<p_table_name>" DROP PARTITION "<old partition>" <p_update_index_clauses>
 ```
 
 See also [Updating indexes with partition maintenance](https://connor-mcdonald.com/2017/09/20/updating-indexes-with-partition-maintenance/).

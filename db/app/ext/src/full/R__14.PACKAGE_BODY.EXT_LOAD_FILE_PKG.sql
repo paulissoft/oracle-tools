@@ -3608,7 +3608,9 @@ is
 
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'UT_DETERMINE_CSV_INFO';
 begin
+$if cfg_pkg.c_debugging $then
   dbug.enter(l_module_name);
+$end  
 
   l_csv := q'[Name,Surname,Salary
 John,Doe,"$2,130"
@@ -3652,7 +3654,9 @@ Ivan;Horvat;"$3,200"]';
   ut.expect(l_eol, 'eol #3').to_equal(chr(10) || chr(13));
   ut.expect(l_field_separator, 'separator #3').to_equal('|');
 
+$if cfg_pkg.c_debugging $then
   dbug.leave;
+$end  
 end ut_determine_csv_info;
 
 $end -- $if cfg_pkg.c_testing $then

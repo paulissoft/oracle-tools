@@ -48,10 +48,13 @@
       The database directory name is a directory below a configuration
       folder with a file named db.properties, just like env.properties
 
-      The following properties are set in db.properties:
+      The following properties can be set in db.properties:
       - username
       - userid
       - database.link
+      - connect.identifier
+      - url
+      - proxy.username
       
       These are prefixed with db (or db.prev) using the criteria above.
       

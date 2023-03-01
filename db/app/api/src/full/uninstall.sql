@@ -1,19 +1,27 @@
 /* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
--- JDBC url            : jdbc:oracle:thin:ORACLE_TOOLS@//localhost:1521/orcl
+-- JDBC url - username : jdbc:oracle:thin:@pato - ORACLE_TOOLS
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
 -- target database link: 
 -- object type         : 
--- object names include: 1
--- object names        : API_PKG,API_LONGOPS_PKG,API_CALL_STACK_PKG
+-- object names include: 
+-- object names        : 
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
 -- transform params    : 
 -- exclude objects     : 
--- include objects     : 
+-- include objects     : :OBJECT_GRANT::ORACLE_TOOLS::API_CALL_STACK_PKG::*:*:*
+:OBJECT_GRANT::ORACLE_TOOLS::API_LONGOPS_PKG::*:*:*
+:OBJECT_GRANT::ORACLE_TOOLS::API_PKG::*:*:*
+ORACLE_TOOLS:PACKAGE_BODY:API_CALL_STACK_PKG:::::::
+ORACLE_TOOLS:PACKAGE_BODY:API_LONGOPS_PKG:::::::
+ORACLE_TOOLS:PACKAGE_BODY:API_PKG:::::::
+ORACLE_TOOLS:PACKAGE_SPEC:API_CALL_STACK_PKG:::::::
+ORACLE_TOOLS:PACKAGE_SPEC:API_LONGOPS_PKG:::::::
+ORACLE_TOOLS:PACKAGE_SPEC:API_PKG:::::::
 -- owner               : ORACLE_TOOLS
 */
 -- pkg_ddl_util v4

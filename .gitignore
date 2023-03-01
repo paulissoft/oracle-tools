@@ -7,4 +7,5 @@ target
 jenkins/.initrd
 node_modules/
 \.DS_Store
-package-lock.json
+docker/\.env
+apex/src/scripts/f138/*

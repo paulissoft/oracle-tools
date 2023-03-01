@@ -30,6 +30,7 @@
     <module>api</module>
     <module>ddl</module>
     <module>ext</module>
+    <module>msg</module>
     <module>ui</module>
   </modules>
 

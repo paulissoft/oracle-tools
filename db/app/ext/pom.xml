@@ -15,8 +15,9 @@
   
   <properties>
     <flyway.table>schema_version_tools_ext</flyway.table>
-    <!-- this project uses Flyway placeholders -->
-    <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
+    <!-- this project uses Flyway placeholders so do not generate DDL -->
+    <!-- GJP 2023-02-04 Not any more -->
+    <db.generate.ddl.full.skip>false</db.generate.ddl.full.skip>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>EXT_LOAD_FILE_PKG
 ,EXT_LOAD_FILE_COLUMN_V
