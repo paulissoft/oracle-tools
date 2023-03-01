@@ -404,7 +404,17 @@ begin
       when 'P_JOB_NAME_SUPERVISOR'
       then l_argument_value := p_job_name_supervisor;
     end case;
-    
+
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'argument name: %s; argument value: %s'
+    , r.argument_name
+    , l_argument_value
+    );
+$end
+
     dbms_scheduler.set_job_argument_value
     ( job_name => l_job_name_worker
     , argument_name => r.argument_name
@@ -555,13 +565,27 @@ $end
                 is_worker asc -- supervisors first
       )
       loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", 'trying to stop and disable job %s', r.job_name);
+$end
         -- try to stop gracefully
         if r.is_worker = 0
         then
-          msg_pkg.send_stop_supervisor
-          ( p_job_name_supervisor => r.job_name
-          , p_timeout => 0
-          );
+          begin
+            msg_pkg.send_stop_supervisor
+            ( p_job_name_supervisor => r.job_name
+            , p_timeout => 0
+            );
+          exception
+            when msg_pkg.e_dbms_pipe_timeout or
+                 msg_pkg.e_dbms_pipe_record_too_large or
+                 msg_pkg.e_dbms_pipe_interrupted
+            then
+$if oracle_tools.cfg_pkg.c_debugging $then
+              dbug.on_error;
+$end
+              null;
+          end;
         end if;
 
         -- kill
@@ -571,6 +595,7 @@ $end
         exception
           when e_job_does_not_exist
           then null;
+          
           when others
           then
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -609,17 +634,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING_SUPERVISOR');
   dbug.print
   ( dbug."input"
-  , 'p_processing_package: %s; p_nr_workers_each_group: %s; p_nr_workers_exact: %s'
+  , 'p_processing_package: %s; p_nr_workers_each_group: %s; p_nr_workers_exact: %s; p_ttl: %s; p_repeat_interval: %s'
   , p_processing_package
   , p_nr_workers_each_group
   , p_nr_workers_exact
-  );
-  dbug.print
-  ( dbug."input"
-  , 'p_ttl: %s; p_repeat_interval: %s'
   , p_ttl
   , p_repeat_interval
   );
+  dbug.print(dbug."info", 'l_job_name: %s', l_job_name);
 $end
 
   if is_job_running(l_job_name)
@@ -699,7 +721,16 @@ $end
       when 'P_TTL'
       then l_argument_value := to_char(p_ttl);
     end case;
-    
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'argument name: %s; argument value: %s'
+    , r.argument_name
+    , l_argument_value
+    );
+$end
+
     dbms_scheduler.set_job_argument_value
     ( job_name => l_job_name
     , argument_name => r.argument_name
@@ -803,6 +834,17 @@ $end
     l_groups_to_process_list := oracle_tools.api_pkg.collection2list(p_value_tab => l_groups_to_process_tab, p_sep => ',', p_ignore_null => 1);
   end check_input_and_state;
 
+  procedure define_workers
+  is
+  begin
+    -- Create the workers
+    for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_each_group * l_groups_to_process_tab.count)
+    loop
+      l_job_name_tab.extend(1);
+      l_job_name_tab(l_job_name_tab.last) := l_job_name_supervisor || '#' || to_char(i_worker); -- the # indicates a worker job
+    end loop;  
+  end define_workers;
+
   procedure start_worker
   ( p_job_name_worker in varchar2
   )
@@ -817,18 +859,7 @@ $end
     , p_job_name_supervisor => l_job_name_supervisor
     );
   end start_worker;
-
-  procedure define_workers
-  is
-  begin
-    -- Create the workers
-    for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_each_group * l_groups_to_process_tab.count)
-    loop
-      l_job_name_tab.extend(1);
-      l_job_name_tab(l_job_name_tab.last) := l_job_name_supervisor || '#' || to_char(i_worker); -- the # indicates a worker job
-    end loop;  
-  end define_workers;
-
+  
   procedure start_workers
   is
     l_dummy integer;
@@ -1053,8 +1084,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
         dbug.print(dbug."error", 'statement: %s', l_statement);
         dbug.on_error;
         raise;
-$end
-                   
+$end                  
     end;
   end if;
 
@@ -1072,21 +1102,6 @@ $end
     done;
     raise;
 end processing;
-
-function does_job_supervisor_exist
-( p_processing_package in varchar2
-)
-return boolean
-is
-begin
-  return does_job_exist
-         ( get_job_name
-           ( p_processing_package => determine_processing_package(p_processing_package)
-           , p_program_name => c_program_supervisor
-           , p_worker_nr => null
-           )
-         );
-end does_job_supervisor_exist;
 
 end msg_scheduler_pkg;
 /
