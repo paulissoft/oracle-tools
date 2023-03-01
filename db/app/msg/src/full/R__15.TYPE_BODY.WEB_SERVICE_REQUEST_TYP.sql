@@ -34,7 +34,7 @@ begin
   );
   return;
 end web_service_request_typ;
-
+  
 final member procedure construct
 ( self in out nocopy web_service_request_typ
 , p_group$ in varchar2

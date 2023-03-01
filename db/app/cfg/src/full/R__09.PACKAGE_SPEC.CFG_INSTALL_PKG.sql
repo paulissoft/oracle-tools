@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "CFG_INSTALL_PKG" authid current_user
+CREATE OR REPLACE PACKAGE "CFG_INSTALL_PKG" AUTHID CURRENT_USER
 is 
 
 type t_compiler_message_tab is table of all_errors%rowtype;
@@ -6,84 +6,63 @@ type t_compiler_message_tab is table of all_errors%rowtype;
 type t_message_tab is table of varchar2(4000 char);
 
 /**
- * Setup a session.
- *
- * Used by Flyway to define PL/SQL flags (PLSQL_CCFlags), PL/SQL warnings (PLSQL_WARNINGS) and PL/Scope settings (PLSCOPE_SETTINGS).
- *
- * PLSQL_CCFlags:
- * <ol>
- * <li>$$Debug (is package DBUG available)</li>
- * <li>$$Testing (is utPLSQL package UT available)</li>
- * </ol>
- *
- * @param p_plsql_warnings    For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'"
- * @param p_plscope_settings  For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'"
- */
+This package defines functions and procedures used by Flyway callbacks.
+**/
+
+procedure "afterMigrate"
+( p_compile_all in boolean -- Do we need to compile all?
+, p_reuse_settings in boolean -- Do we reuse PL/SQL settings?
+);
+/** The Flyway afterMigrate callback. **/
+
+procedure "beforeEachMigrate";
+/** The Flyway beforeEachMigrate callback. **/
+
 procedure setup_session
-( p_plsql_warnings in varchar2 default 'DISABLE:ALL'
-, p_plscope_settings in varchar2 default null
+( p_plsql_warnings in varchar2 default 'DISABLE:ALL' -- For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'"
+, p_plscope_settings in varchar2 default null -- For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'"
 );
-
 /**
- * Compile objects in the current schema.
- *
- * @param p_compile_all     Do we need to compile all?
- * @param p_reuse_settings  Do we reuse PL/SQL settings?
- */
+Setup a session.
+
+Used by Flyway to define PL/SQL flags (PLSQL_CCFlags), PL/SQL warnings (PLSQL_WARNINGS) and PL/Scope settings (PLSCOPE_SETTINGS).
+
+PLSQL_CCFlags:
+- $$Debug (is package DBUG available?)
+- $$Testing (is utPLSQL package UT available?)
+**/
+
 procedure compile_objects
-( p_compile_all in boolean
-, p_reuse_settings in boolean
+( p_compile_all in boolean -- Do we need to compile all?
+, p_reuse_settings in boolean -- Do we reuse PL/SQL settings?
 );
+/** Compile objects in the current schema. **/
 
-/**
- * Show compiler messages.
- *
- * @param p_object_schema         The schema owner of the objects to show.
- * @param p_object_type           The object type (may be a DBMS_METADATA object type).
- * @param p_object_names          A comma separated list of object names.
- * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
- * @param p_recompile             Do we need to recompile the objects before showing the messages? 0 means no.
- * @param p_plsql_warnings        For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
- * @param p_plscope_settings      For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
- *
- * @return A list of USER_ERRORS rows ordered by name, type, sequence.
- */
 function show_compiler_messages
-( p_object_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_recompile in integer default 0
-, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
-, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
+( p_object_schema in varchar2 default user -- The schema owner of the objects to show.
+, p_object_type in varchar2 default null -- The object type (may be a DBMS_METADATA object type).
+, p_object_names in varchar2 default null -- A comma separated list of object names.
+, p_object_names_include in integer default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_recompile in integer default 0 -- Do we need to recompile the objects before showing the messages? 0 means no.
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL' -- For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL' -- For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
 )
-return t_compiler_message_tab
+return t_compiler_message_tab -- A list of USER_ERRORS rows ordered by name, type, sequence.
 pipelined;
+/** Show compiler messages. **/
 
-/**
- * Format compiler messages.
- *
- * @param p_object_schema         The schema owner of the objects to show.
- * @param p_object_type           The object type (may be a DBMS_METADATA object type).
- * @param p_object_names          A comma separated list of object names.
- * @param p_object_names_include  How to treat the object name list: include (1), exclude (0) or don't care (null)?
- * @param p_recompile             Do we need to recompile the objects before showing the messages? 0 means no.
- * @param p_plsql_warnings        For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
- * @param p_plscope_settings      For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
- *
- * @return A list of USER_ERRORS rows ordered by name, type, sequence.
- */
 function format_compiler_messages
-( p_object_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_recompile in integer default 0
-, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
-, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
+( p_object_schema in varchar2 default user -- The schema owner of the objects to show.
+, p_object_type in varchar2 default null -- The object type (may be a DBMS_METADATA object type).
+, p_object_names in varchar2 default null -- A comma separated list of object names.
+, p_object_names_include in integer default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_recompile in integer default 0 -- Do we need to recompile the objects before showing the messages? 0 means no.
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL' -- For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL' -- For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
 )
-return t_message_tab
+return t_message_tab -- A list of USER_ERRORS rows ordered by name, type, sequence.
 pipelined;
+/** Format compiler messages. **/
 
 end cfg_install_pkg;
 /

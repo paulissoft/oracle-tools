@@ -48,6 +48,11 @@ buffered messages if it has a non null LOB).
   )
   return self as result
 
+, constructor function rest_web_service_request_typ
+  ( self in out nocopy rest_web_service_request_typ
+  )
+  return self as result
+
 , final member procedure construct
   ( self in out nocopy rest_web_service_request_typ
     -- from web_service_request_typ

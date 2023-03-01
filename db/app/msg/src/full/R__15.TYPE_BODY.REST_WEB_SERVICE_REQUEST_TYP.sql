@@ -47,6 +47,34 @@ begin
   return;
 end rest_web_service_request_typ;
 
+constructor function rest_web_service_request_typ
+( self in out nocopy rest_web_service_request_typ
+)
+return self as result
+is
+begin
+  self.construct
+  ( p_group$ => null
+  , p_context$ => null
+  , p_url => null
+  , p_scheme => null
+  , p_proxy_override => null
+  , p_transfer_timeout => null
+  , p_wallet_path => null
+  , p_https_host => null
+  , p_credential_static_id => null
+  , p_token_url => null
+  , p_cookies_clob => null
+  , p_http_headers_clob => null
+  , p_http_method => null
+  , p_body_clob => null
+  , p_body_blob => null
+  , p_parms_clob => null
+  , p_binary_response => null
+  );
+  return;
+end rest_web_service_request_typ;
+
 final member procedure construct
 ( self in out nocopy rest_web_service_request_typ
   -- from web_service_request_typ
@@ -207,145 +235,8 @@ end has_not_null_lob;
 member function response
 return web_service_response_typ
 is
-  l_parm_names apex_application_global.vc_arr2 := apex_web_service.empty_vc_arr;
-  l_parm_values apex_application_global.vc_arr2 := apex_web_service.empty_vc_arr;
-  l_parms constant json_object_t := 
-    case
-      when self.parms_vc is not null
-      then json_object_t(self.parms_vc)
-      when self.parms_clob is not null
-      then json_object_t(self.parms_clob)
-      else null
-    end;
-  l_parms_keys constant json_key_list :=
-    case
-      when l_parms is not null
-      then l_parms.get_keys
-      else null
-    end;
-  l_cookies json_array_t := 
-    case
-      when self.cookies_vc is not null
-      then json_array_t(self.cookies_vc)
-      when self.cookies_clob is not null
-      then json_array_t(self.cookies_clob)
-      else null
-    end;
-  l_http_headers json_array_t := 
-    case
-      when self.http_headers_vc is not null
-      then json_array_t(self.http_headers_vc)
-      when self.http_headers_clob is not null
-      then json_array_t(self.http_headers_clob)
-      else null
-    end;
-  l_body_clob clob := null;
-  l_body_blob blob := null;
-  l_web_service_response web_service_response_typ := null;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.RESPONSE');
-$end
-
-  if l_parms is not null
-  then
-    for i_idx in l_parms_keys.first .. l_parms_keys.last
-    loop
-      l_parm_names(l_parm_names.count+1) := l_parms_keys(i_idx);
-      l_parm_values(l_parm_names.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
-    end loop;
-  end if;
-
-  web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
-  web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
-
-  if self.binary_response = 0
-  then
-    l_body_clob := apex_web_service.make_rest_request
-                   ( p_url => self.url
-                   , p_http_method => self.http_method
-                   , p_username => null
-                   , p_password => null
-                   , p_scheme => self.scheme
-                   , p_proxy_override => self.proxy_override
-                   , p_transfer_timeout => self.transfer_timeout
-                   , p_body =>
-                       case
-                         when self.body_vc is not null
-                         then to_clob(self.body_vc)
-                         when self.body_clob is not null
-                         then self.body_clob
-                         else empty_clob()
-                       end
-                   , p_body_blob =>
-                       case
-                         when self.body_raw is not null
-                         then to_blob(self.body_raw)
-                         when self.body_blob is not null
-                         then self.body_blob
-                         else empty_blob()
-                       end
-                   , p_parm_name => l_parm_names
-                   , p_parm_value => l_parm_values
-                   , p_wallet_path => self.wallet_path
-                   , p_wallet_pwd => null
-                   , p_https_host => self.https_host
-                   , p_credential_static_id => self.credential_static_id
-                   , p_token_url => self.token_url
-                   );
-  else
-    l_body_blob := apex_web_service.make_rest_request_b
-                   ( p_url => self.url
-                   , p_http_method => self.http_method
-                   , p_username => null
-                   , p_password => null
-                   , p_scheme => self.scheme
-                   , p_proxy_override => self.proxy_override
-                   , p_transfer_timeout => self.transfer_timeout
-                   , p_body =>
-                       case
-                         when self.body_vc is not null
-                         then to_clob(self.body_vc)
-                         when self.body_clob is not null
-                         then self.body_clob
-                         else empty_clob()
-                       end
-                   , p_body_blob =>
-                       case
-                         when self.body_raw is not null
-                         then to_blob(self.body_raw)
-                         when self.body_blob is not null
-                         then self.body_blob
-                         else empty_blob()
-                       end
-                   , p_parm_name => l_parm_names
-                   , p_parm_value => l_parm_values
-                   , p_wallet_path => self.wallet_path
-                   , p_wallet_pwd => null
-                   , p_https_host => self.https_host
-                   , p_credential_static_id => self.credential_static_id
-                   , p_token_url => self.token_url
-                   );
-  end if;
-
-  web_service_pkg.data2json(apex_web_service.g_response_cookies, l_cookies);
-  web_service_pkg.data2json(apex_web_service.g_headers, l_http_headers);
-
-  l_web_service_response :=
-    web_service_response_typ
-    ( p_web_service_request => self
-    , p_http_status_code => apex_web_service.g_status_code
-    , p_body_clob => l_body_clob
-    , p_body_blob => l_body_blob
-    , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
-    , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
-    );
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-$end
-
-  return l_web_service_response;
+  return web_service_pkg.make_rest_request(self);
 end response;
 
 end;

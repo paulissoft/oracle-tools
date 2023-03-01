@@ -31,6 +31,11 @@ This type stores the response of a web service request.
   )
   return self as result
 
+, constructor function web_service_response_typ
+  ( self in out nocopy web_service_response_typ
+  )
+  return self as result
+
 , final member procedure construct
   ( self in out nocopy web_service_response_typ
   , p_group$ in varchar2
@@ -75,9 +80,16 @@ This type stores the response of a web service request.
   )
   return integer
 
+, overriding
+  member function default_processing_method
+  ( self in web_service_response_typ
+  )
+  return varchar2
+/** Returns NULL to indicate that a custom routine will dequeue and process the response. **/  
+
 , static function default_group
   return varchar2
-/** All sub types share the same response queue. You need to dequeue from that queue usig the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP). **/  
+/** All sub types share the same response queue. You need to dequeue from that queue using the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP). **/  
 
 )
 not final;

@@ -27,6 +27,25 @@ begin
   return;
 end web_service_response_typ;
 
+constructor function web_service_response_typ
+( self in out nocopy web_service_response_typ
+)
+return self as result
+is
+begin
+  self.construct
+  ( p_group$ => null
+  , p_context$ => null
+  , p_web_service_request => null
+  , p_http_status_code => null
+  , p_body_clob => null
+  , p_body_blob => null
+  , p_cookies_clob => null
+  , p_http_headers_clob => null
+  );
+  return;
+end web_service_response_typ;
+
 final member procedure construct
 ( self in out nocopy web_service_response_typ
 , p_group$ in varchar2
@@ -94,7 +113,6 @@ $end
   msg_aq_pkg.enqueue
   ( p_msg => self
   , p_correlation => self.web_service_request.context$
-  , p_plsql_callback => null
   , p_msgid => l_msgid
   );
 
@@ -228,6 +246,16 @@ is
 begin
   return 'WEB_SERVICE_RESPONSE';
 end default_group;
+
+overriding
+member function default_processing_method
+( self in web_service_response_typ
+)
+return varchar2
+is
+begin
+  return null;
+end default_processing_method;
 
 end;
 /

@@ -65,6 +65,23 @@ function list2collection
 return sys.odcivarchar2list
 deterministic;
 
+/**
+ * Convert a collection into a separated list.
+ *
+ * @param p_value_tab    The table of values
+ * @param p_sep          The list separator
+ * @param p_ignore_null  Ignore null values (when set, value list "|" returns 0 elements instead of 2)
+ * 
+ * @return The values separated by p_sep
+ */
+function collection2list
+( p_value_tab in sys.odcivarchar2list
+, p_sep in varchar2 default ','
+, p_ignore_null in naturaln default 1
+)
+return varchar2
+deterministic;
+
 function excel_date_number2date
 ( p_date_number in integer
 )
