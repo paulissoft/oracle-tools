@@ -590,7 +590,9 @@ procedure recv_done
 )
 is
 begin
-  dbms_scheduler.remove_event_queue_subscriber;
+  -- Never remove this schema from the queue since other supervisors may be running too.
+  -- dbms_scheduler.remove_event_queue_subscriber;
+  null;
 end recv_done;
 
 procedure recv_event
@@ -626,9 +628,15 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
+  p_event := null;
+  p_worker_nr := null;
+  p_sqlcode := null;
+  p_sqlerrm := null;
+  p_session_id := null;
+
   l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
   l_dequeue_options.wait := p_timeout;
-
+  
   dbms_aq.dequeue
   ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
   , dequeue_options => l_dequeue_options
@@ -649,20 +657,17 @@ $end
     , p_worker_nr => p_worker_nr 
     );
 
-    p_event := 'WORKER_STATUS';
-    p_sqlcode := l_queue_msg.error_code;
-    p_sqlerrm := l_queue_msg.error_msg;
-    p_session_id := null;
-    
+    if p_worker_nr is not null
+    then
+      p_event := 'WORKER_STATUS';
+      p_sqlcode := l_queue_msg.error_code;
+      p_sqlerrm := l_queue_msg.error_msg;
+      p_session_id := null;
+    end if;
+
     commit;
   else
-    p_event := null;
-    p_worker_nr := null;
-    p_sqlcode := null;
-    p_sqlerrm := null;
-    p_session_id := null;
-    
-    rollback; -- give another supervisor the chance to get process it
+    rollback; -- give another supervisor the chance to process it
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
