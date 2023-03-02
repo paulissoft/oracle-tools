@@ -499,10 +499,11 @@ function determine_processing_package
 )
 return varchar2
 is
+  l_processing_package user_objects.object_name%type := null;
 begin
   if p_processing_package is not null
   then
-    return msg_pkg.get_object_name(p_object_name => p_processing_package, p_what => 'package', p_fq => 0, p_qq => 0);
+    l_processing_package := p_processing_package;
   else
     -- this private function is called from within this package so we can skip those two (top) items on the call stack
     for i_idx in 3..utl_call_stack.dynamic_depth
@@ -511,12 +512,18 @@ begin
       if utl_call_stack.subprogram(i_idx)(1) <> $$PLSQL_UNIT
       then
         -- must be the calling unit
-        return utl_call_stack.subprogram(i_idx)(1); -- is already not fully qualified nor enquoted
+        l_processing_package := utl_call_stack.subprogram(i_idx)(1); -- is already not fully qualified nor enquoted
+        exit;
       end if;
     end loop;
   end if;
-  -- well, someone made a mistake
-  raise program_error;
+  
+  if l_processing_package is not null
+  then
+    return msg_pkg.get_object_name(p_object_name => l_processing_package, p_what => 'package', p_fq => 0, p_qq => 0);
+  else
+    raise program_error;
+  end if;
 end determine_processing_package;
 
 $if msg_constants_pkg.c_use_job_events_for_status $then
@@ -607,8 +614,20 @@ is
   l_processing_package all_objects.object_name%type;
   l_program_name user_scheduler_programs.program_name%type;
   l_job_suffix varchar2(20);
+  l_job_name_worker job_name_t;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.RECV_EVENT');
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name_supervisor: %s; p_timeout: %s'
+  , p_job_name_supervisor
+  , p_timeout
+  );
+$end
+
   l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
+  l_dequeue_options.wait := p_timeout;
 
   dbms_aq.dequeue
   ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
@@ -617,20 +636,52 @@ begin
   , payload => l_queue_msg
   , msgid => l_message_handle
   );
-  
-  commit;
 
-  p_event := 'WORKER_STATUS';
-  split_job_name
-  ( p_job_name => l_queue_msg.object_name
-  , p_processing_package => l_processing_package
-  , p_program_name => l_program_name 
-  , p_job_suffix => l_job_suffix
-  , p_worker_nr => p_worker_nr 
-  );
-  p_sqlcode := l_queue_msg.error_code;
-  p_sqlerrm := l_queue_msg.error_msg;
-  p_session_id := null;
+  l_job_name_worker := l_queue_msg.object_name;
+
+  if l_job_name_worker like p_job_name_supervisor || '%'
+  then
+    split_job_name
+    ( p_job_name => l_job_name_worker
+    , p_processing_package => l_processing_package
+    , p_program_name => l_program_name 
+    , p_job_suffix => l_job_suffix
+    , p_worker_nr => p_worker_nr 
+    );
+
+    p_event := 'WORKER_STATUS';
+    p_sqlcode := l_queue_msg.error_code;
+    p_sqlerrm := l_queue_msg.error_msg;
+    p_session_id := null;
+    
+    commit;
+  else
+    p_event := null;
+    p_worker_nr := null;
+    p_sqlcode := null;
+    p_sqlerrm := null;
+    p_session_id := null;
+    
+    rollback; -- give another supervisor the chance to get process it
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_event: %s; p_worker_nr: %s; p_sqlcode: %s; p_sqlerrm: %s; p_session_id: %s'
+  , p_event
+  , p_worker_nr
+  , p_sqlcode
+  , p_sqlerrm
+  , p_session_id
+  );  
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end recv_event;
 
 $else -- $if msg_constants_pkg.c_use_job_events_for_status $then
@@ -1186,7 +1237,7 @@ $end
 
       exit when l_elapsed_time >= p_ttl;
 
-      -- get the status from the pipe
+      -- get the status
 
       recv_event
       ( p_job_name_supervisor => l_job_name_supervisor
@@ -1292,10 +1343,13 @@ $end
   cleanup; -- after dbug.leave since the done inside will change dbug state
 
 exception
-$if not(msg_constants_pkg.c_use_job_events_for_status) $then
+$if msg_constants_pkg.c_use_job_events_for_status $then
+  when msg_aq_pkg.e_dequeue_timeout
+$else  
   when msg_pkg.e_dbms_pipe_timeout or
        msg_pkg.e_dbms_pipe_record_too_large or
        msg_pkg.e_dbms_pipe_interrupted
+$end -- $if msg_constants_pkg.c_use_job_events_for_status $then
   then
 $if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
@@ -1303,7 +1357,6 @@ $end
 
     cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     -- no reraise necessary
-$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
     
   when others
   then

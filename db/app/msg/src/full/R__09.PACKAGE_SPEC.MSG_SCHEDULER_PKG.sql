@@ -7,7 +7,7 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 
 procedure do
 ( p_command in varchar2 -- start / restart / stop
-, p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package 
+, p_processing_package in varchar2 default 'MSG_AQ_PKG' -- if null utl_call_stack will be used to use the calling package as processing package 
 );
 /**
 Runs in an autonomous transaction.
