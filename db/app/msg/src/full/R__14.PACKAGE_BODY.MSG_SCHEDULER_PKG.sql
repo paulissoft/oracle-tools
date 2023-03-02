@@ -568,8 +568,14 @@ procedure recv_init
 ( p_job_name_supervisor in varchar2
 )
 is
+  -- ORA-24034: application ORACLE_TOOLS is already a subscriber for queue SYS.SCHEDULER$_EVENT_QUEUE
+  e_already_subscriber exception;  
+  pragma exception_init(e_already_subscriber, -24034);
 begin
   dbms_scheduler.add_event_queue_subscriber;
+exception
+  when e_already_subscriber
+  then null;
 end recv_init;
 
 procedure recv_done
