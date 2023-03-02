@@ -647,6 +647,10 @@ $end
 
   l_job_name_worker := l_queue_msg.object_name;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'l_job_name_worker: %s', l_job_name_worker);
+$end
+
   if l_job_name_worker like p_job_name_supervisor || '%'
   then
     split_job_name
