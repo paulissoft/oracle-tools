@@ -58,7 +58,7 @@ submit_processing_supervisor() above!
 So the administrator should NEVER create a job based on this procedure.
 
 It is a supervisor routine that just launches other jobs, the workers.  The
-supervisor also surveys them via DBMS_PIPE.  When worker jobs complete before
+supervisor also surveys them.  When worker jobs complete before
 the end (defined by start time + time to live), they will be restarted by the
 supervisor.  The supervisor will actively kill the worker jobs when he
 finishes.  Now the recurring schedule of the job (for instance each day) will
@@ -110,7 +110,6 @@ procedure processing
 ```
 
 This will do the processing of all messages till the end is reached or an exception occurs.
-Then it will signal the status to the supervisor via DBMS_PIPE and stop.
 
 **/
 

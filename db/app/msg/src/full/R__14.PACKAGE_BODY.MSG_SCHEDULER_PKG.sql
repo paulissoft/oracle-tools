@@ -132,6 +132,79 @@ $end
   return l_job_name;
 end get_job_name;
 
+procedure split_job_name
+( p_job_name in job_name_t
+, p_processing_package out nocopy varchar2
+, p_program_name out nocopy varchar2
+, p_job_suffix out nocopy varchar2
+, p_worker_nr out nocopy positive
+)
+is
+  l_pos$ pls_integer;
+  l_pos# pls_integer;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_JOB_NAME');
+  dbug.print(dbug."input", 'p_job_name: %s',  p_job_name);
+$end  
+
+  p_processing_package := null;
+  p_program_name := null;
+  p_job_suffix := null;
+  p_worker_nr := null;
+  
+  l_pos$ := instr(p_job_name, '$'); -- first $
+  if l_pos$ > 0
+  then
+    p_processing_package := substr(p_job_name, 1, l_pos$ - 1);
+    p_program_name := substr(p_job_name, l_pos$ + 1); -- rest of the job name
+    
+    l_pos$ := instr(p_program_name, '$'); -- second $ ?
+    l_pos# := instr(p_program_name, '#'); -- first #
+    case
+      when l_pos$ is null or l_pos# is null -- p_program_name is null
+      then
+        null;
+        
+      when l_pos$ = 0 and l_pos# = 0
+      then
+        null;
+        
+      when l_pos$ = 0 and l_pos# > 0
+      then
+        p_worker_nr := to_number(substr(p_program_name, l_pos# + 1));
+        p_program_name := substr(p_program_name, 1, l_pos# - 1);
+        
+      when l_pos$ > 0 and l_pos# = 0
+      then
+        p_job_suffix := substr(p_program_name, l_pos$ + 1);
+        p_program_name := substr(p_program_name, 1, l_pos$ - 1);
+        
+      when l_pos$ > 0 and l_pos# > l_pos$
+      then
+        p_job_suffix := substr(p_program_name, l_pos$ + 1, l_pos# - l_pos$ - 1);
+        p_worker_nr := to_number(substr(p_program_name, l_pos# + 1));
+        p_program_name := substr(p_program_name, 1, l_pos$ - 1);
+        
+      when l_pos$ > 0 and l_pos# <= l_pos$
+      then
+        raise value_error; -- strange job name
+    end case;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_processing_package: %s; p_program_name: %s; p_job_suffix: %s; p_worker_nr: %s'
+  , p_processing_package
+  , p_program_name
+  , p_job_suffix
+  , p_worker_nr
+  );
+  dbug.leave;
+$end  
+end split_job_name;
+
 function does_job_exist
 ( p_job_name in job_name_t
 )
@@ -364,15 +437,11 @@ begin
       -- will never repeat
     , repeat_interval => null
     , end_date => sysdate + (p_ttl / (24 * 60 * 60)) -- as precaution
-      -- ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
-      -- Can not be granted neither, at least not by ADMIN
-    -- , job_class => 'DEFAULT_IN_MEMORY_JOB_CLASS'
+    , job_class => msg_constants_pkg.c_job_class_worker
     , enabled => false -- so we can set job arguments
     , auto_drop => true -- one-off jobs
     , comments => 'Worker job for processing messages.'
-    --, job_style => 'IN_MEMORY_FULL'
-    --, job_style => 'IN_MEMORY_RUNTIME'
-    , job_style => 'LIGHTWEIGHT'
+    , job_style => msg_constants_pkg.c_job_style_worker
     , credential_name => null
     , destination_name => null
     );
@@ -449,6 +518,217 @@ begin
   -- well, someone made a mistake
   raise program_error;
 end determine_processing_package;
+
+$if msg_constants_pkg.c_use_job_events_for_status $then
+
+procedure send_init
+( p_job_name_supervisor in varchar2
+, p_worker_nr in integer
+)
+is
+begin
+  dbms_scheduler.set_attribute
+  ( name => p_job_name_supervisor || '#' || to_char(p_worker_nr)
+  , attribute => 'raise_events'
+  , value => dbms_scheduler.job_run_completed
+  );
+end send_init;
+
+procedure send_done
+( p_job_name_supervisor in varchar2
+, p_worker_nr in integer
+)
+is
+begin
+  null;
+end send_done;
+
+procedure send_worker_status
+( p_job_name_supervisor in varchar2
+, p_worker_nr in integer
+, p_sqlcode in integer
+, p_sqlerrm in varchar2
+, p_timeout in integer
+)
+is
+begin
+  null;
+end send_worker_status;
+
+procedure send_stop_supervisor
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+)
+is
+begin
+  null;
+end send_stop_supervisor;
+
+procedure recv_init
+( p_job_name_supervisor in varchar2
+)
+is
+begin
+  dbms_scheduler.add_event_queue_subscriber;
+end recv_init;
+
+procedure recv_done
+( p_job_name_supervisor in varchar2
+)
+is
+begin
+  dbms_scheduler.remove_event_queue_subscriber;
+end recv_done;
+
+procedure recv_event
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+, p_event out nocopy msg_pkg.event_t -- WORKER_STATUS / STOP_SUPERVISOR
+, p_worker_nr out nocopy integer -- Only relevant when the event is WORKER_STATUS
+, p_sqlcode out nocopy integer -- Idem
+, p_sqlerrm out nocopy varchar2 -- Idem
+, p_session_id out nocopy user_scheduler_running_jobs.session_id%type -- Idem
+)
+is
+  pragma autonomous_transaction;
+  
+  l_dequeue_options     dbms_aq.dequeue_options_t;
+  l_message_properties  dbms_aq.message_properties_t;
+  l_message_handle      raw(16);
+  l_queue_msg           sys.scheduler$_event_info;
+
+  -- for split job name
+  l_processing_package all_objects.object_name%type;
+  l_program_name user_scheduler_programs.program_name%type;
+  l_job_suffix varchar2(20);
+begin
+  l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
+
+  dbms_aq.dequeue
+  ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
+  , dequeue_options => l_dequeue_options
+  , message_properties => l_message_properties
+  , payload => l_queue_msg
+  , msgid => l_message_handle
+  );
+  
+  commit;
+
+  p_event := 'WORKER_STATUS';
+  split_job_name
+  ( p_job_name => l_queue_msg.object_name
+  , p_processing_package => l_processing_package
+  , p_program_name => l_program_name 
+  , p_job_suffix => l_job_suffix
+  , p_worker_nr => p_worker_nr 
+  );
+  p_sqlcode := l_queue_msg.error_code;
+  p_sqlerrm := l_queue_msg.error_msg;
+  p_session_id := null;
+end recv_event;
+
+$else -- $if msg_constants_pkg.c_use_job_events_for_status $then
+
+procedure send_init
+( p_job_name_supervisor in varchar2
+, p_worker_nr in integer
+)
+is
+begin
+  null;
+end send_init;
+
+procedure send_done
+( p_job_name_supervisor in varchar2
+, p_worker_nr in integer
+)
+is
+begin
+  null;
+end send_done;
+
+procedure send_worker_status
+( p_job_name_supervisor in varchar2
+, p_worker_nr in integer
+, p_sqlcode in integer
+, p_sqlerrm in varchar2
+, p_timeout in integer
+)
+is
+begin
+  msg_pkg.send_worker_status
+  ( p_job_name_supervisor => p_job_name_supervisor
+  , p_worker_nr => p_worker_nr
+  , p_sqlcode => p_sqlcode
+  , p_sqlerrm => p_sqlerrm
+  , p_timeout => p_timeout
+  );
+end send_worker_status;
+
+procedure send_stop_supervisor
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+)
+is
+begin
+  msg_pkg.send_stop_supervisor
+  ( p_job_name_supervisor => p_job_name_supervisor
+  , p_timeout => p_timeout
+  );
+end send_stop_supervisor;
+
+procedure recv_init
+( p_job_name_supervisor in varchar2
+)
+is
+  l_dummy integer;
+  -- ORA-23322 Failure due to naming conflict.
+  e_pipe_naming_conflict exception;
+  pragma exception_init(e_pipe_naming_conflict, -23322);
+begin
+  -- try to create a private pipe for maximum security
+  begin
+    l_dummy := dbms_pipe.create_pipe(pipename => p_job_name_supervisor, private => true);
+  exception
+    when e_pipe_naming_conflict
+    then null;
+  end;
+
+  -- no old messages
+  dbms_pipe.purge(pipename => p_job_name_supervisor);
+end recv_init;
+
+procedure recv_done
+( p_job_name_supervisor in varchar2
+)
+is
+begin
+  null;
+end recv_done;
+
+procedure recv_event
+( p_job_name_supervisor in varchar2
+, p_timeout in integer
+, p_event out nocopy msg_pkg.event_t -- WORKER_STATUS / STOP_SUPERVISOR
+, p_worker_nr out nocopy integer -- Only relevant when the event is WORKER_STATUS
+, p_sqlcode out nocopy integer -- Idem
+, p_sqlerrm out nocopy varchar2 -- Idem
+, p_session_id out nocopy user_scheduler_running_jobs.session_id%type -- Idem
+)
+is
+begin
+  msg_pkg.recv_event
+  ( p_job_name_supervisor => p_job_name_supervisor
+  , p_timeout => p_timeout
+  , p_event => p_event
+  , p_worker_nr => p_worker_nr
+  , p_sqlcode => p_sqlcode
+  , p_sqlerrm => p_sqlerrm
+  , p_session_id => p_session_id
+  );
+end recv_event;
+
+$end -- $if msg_constants_pkg.c_use_job_events_for_status $then
 
 -- PUBLIC
 
@@ -563,7 +843,7 @@ $end
         from    user_scheduler_running_jobs j
         where   j.job_name like l_job_name || '%' -- repeating and non-repeating jobs, supervisors and workers
         order by
-                is_worker asc -- supervisors first
+                is_worker asc -- supervisors first otherwise they may restart completed workers again
       )
       loop
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -578,10 +858,11 @@ $end
         if r.is_worker = 0
         then
           begin
-            msg_pkg.send_stop_supervisor
+            send_stop_supervisor
             ( p_job_name_supervisor => r.job_name
             , p_timeout => 0
             );
+$if not(msg_constants_pkg.c_use_job_events_for_status) $then
           exception
             when msg_pkg.e_dbms_pipe_timeout or
                  msg_pkg.e_dbms_pipe_record_too_large or
@@ -589,8 +870,9 @@ $end
             then
 $if oracle_tools.cfg_pkg.c_debugging $then
               dbug.on_error;
-$end
+$end -- $if oracle_tools.cfg_pkg.c_debugging $then
               null;
+$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
           end;
         end if;
 
@@ -759,7 +1041,7 @@ procedure processing_supervisor
 )
 is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
-  l_job_name_supervisor job_name_t;
+  l_job_name_supervisor job_name_t := null;
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_groups_to_process_tab sys.odcivarchar2list;
   l_groups_to_process_list varchar2(4000 char);
@@ -855,7 +1137,7 @@ $end
   ( p_job_name_worker in varchar2
   )
   is
-    l_worker_nr constant positiven := to_number(substr(p_job_name_worker, instr(p_job_name_worker, '#')+1));
+    l_worker_nr constant positiven := to_number(substr(p_job_name_worker, instr(p_job_name_worker, '#') + 1));
   begin
     submit_processing
     ( p_processing_package => p_processing_package
@@ -868,21 +1150,8 @@ $end
   
   procedure start_workers
   is
-    l_dummy integer;
-    -- ORA-23322 Failure due to naming conflict.
-    e_pipe_naming_conflict exception;
-    pragma exception_init(e_pipe_naming_conflict, -23322);
   begin
-    -- try to create a private pipe for maximum security
-    begin
-      l_dummy := dbms_pipe.create_pipe(pipename => l_job_name_supervisor, private => true);
-    exception
-      when e_pipe_naming_conflict
-      then null;
-    end;
-
-    -- no old messages
-    dbms_pipe.purge(pipename => l_job_name_supervisor);
+    recv_init(l_job_name_supervisor);
     
     if l_job_name_tab.count > 0
     then
@@ -913,7 +1182,7 @@ $end
 
       -- get the status from the pipe
 
-      msg_pkg.recv_event
+      recv_event
       ( p_job_name_supervisor => l_job_name_supervisor
       , p_timeout => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
       , p_event => l_event
@@ -982,6 +1251,10 @@ $end
   is
   begin
     stop_workers;
+    if l_job_name_supervisor is not null
+    then
+      recv_done(l_job_name_supervisor);
+    end if;
     done;
   end cleanup;
 begin
@@ -1011,8 +1284,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   cleanup; -- after dbug.leave since the done inside will change dbug state
-  
+
 exception
+$if not(msg_constants_pkg.c_use_job_events_for_status) $then
   when msg_pkg.e_dbms_pipe_timeout or
        msg_pkg.e_dbms_pipe_record_too_large or
        msg_pkg.e_dbms_pipe_interrupted
@@ -1023,6 +1297,7 @@ $end
 
     cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     -- no reraise necessary
+$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
     
   when others
   then
@@ -1046,7 +1321,21 @@ is
   l_job_name_worker constant job_name_t := session_job_name();
   l_statement varchar2(32767 byte);
   l_groups_to_process_tab sys.odcivarchar2list;
+
+  procedure cleanup
+  is
+  begin
+    done;
+    send_done
+    ( p_job_name_supervisor => p_job_name_supervisor
+    , p_worker_nr => p_worker_nr
+    );
+  end cleanup;
 begin
+  send_init
+  ( p_job_name_supervisor => p_job_name_supervisor
+  , p_worker_nr => p_worker_nr
+  );
   init;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1080,17 +1369,44 @@ $end
                    ( 'call %s.processing(p_groups_to_process_tab => :1, p_worker_nr => :2, p_ttl => :3, p_job_name_supervisor => :4)'
                    , l_processing_package -- already checked by determine_processing_package
                    );
+    declare
+      -- ORA-06550: line 1, column 18:
+      -- PLS-00302: component 'PROCESING' must be declared
+      e_compilation_error exception;
+      pragma exception_init(e_compilation_error, -6550);
     begin
       execute immediate l_statement
         using in l_groups_to_process_tab, in p_worker_nr, in p_ttl, in p_job_name_supervisor;
-$if oracle_tools.cfg_pkg.c_debugging $then
+        
+      send_worker_status
+      ( p_job_name_supervisor => p_job_name_supervisor
+      , p_worker_nr => p_worker_nr
+      , p_sqlcode => sqlcode
+      , p_sqlerrm => sqlerrm
+      , p_timeout => 0
+      );  
     exception
-      when others
+      when e_compilation_error
       then
+$if oracle_tools.cfg_pkg.c_debugging $then
         dbug.print(dbug."error", 'statement: %s', l_statement);
         dbug.on_error;
-        raise;
 $end                  
+        raise;
+        
+      when others
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        send_worker_status
+        ( p_job_name_supervisor => p_job_name_supervisor
+        , p_worker_nr => p_worker_nr
+        , p_sqlcode => sqlcode
+        , p_sqlerrm => sqlerrm
+        , p_timeout => 0
+        );
+        raise;
     end;
   end if;
 
@@ -1098,14 +1414,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end  
 
-  done;  
+  cleanup;
 exception
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
 $end    
-    done;
+    cleanup;
     raise;
 end processing;
 

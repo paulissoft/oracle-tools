@@ -1389,33 +1389,13 @@ $end
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
-$end
-
-  -- OK
-  msg_pkg.send_worker_status
-  ( p_job_name_supervisor => p_job_name_supervisor
-  , p_worker_nr => p_worker_nr
-  , p_sqlcode => 0
-  , p_sqlerrm => null
-  , p_timeout => 0
-  );
+  dbug.leave;
 exception
-  when msg_pkg.e_dbms_pipe_timeout or
-       msg_pkg.e_dbms_pipe_record_too_large or
-       msg_pkg.e_dbms_pipe_interrupted
-  then
-    raise;
-    
   when others
   then
-    msg_pkg.send_worker_status
-    ( p_job_name_supervisor => p_job_name_supervisor
-    , p_worker_nr => p_worker_nr
-    , p_sqlcode => sqlcode
-    , p_sqlerrm => sqlerrm
-    , p_timeout => 0
-    );
+    dbug.leave_on_error;
     raise;
+$end
 end processing;
 
 end msg_aq_pkg;

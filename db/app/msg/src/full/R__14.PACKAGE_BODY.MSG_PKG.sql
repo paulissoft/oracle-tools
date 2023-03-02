@@ -13,6 +13,8 @@ g_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
   , p_units => 'messages'
   );
 
+$if not(msg_constants_pkg.c_use_job_events_for_status) $then
+
 procedure dbms_pipe$send_message
 ( p_job_name_supervisor in varchar2
 , p_timeout in integer
@@ -37,6 +39,8 @@ begin
     then raise_application_error(c_dbms_pipe_interrupted, 'Interrupt while sending to pipe "' || p_job_name_supervisor || '"');
   end case;  
 end dbms_pipe$send_message;
+
+$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
 
 -- PUBLIC
 
@@ -223,6 +227,8 @@ begin
     end;
 end msg2data;
 
+$if not(msg_constants_pkg.c_use_job_events_for_status) $then
+
 procedure send_worker_status
 ( p_job_name_supervisor in varchar2
 , p_worker_nr in integer
@@ -350,6 +356,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 end recv_event;
+
+$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
 
 end msg_pkg;
 /

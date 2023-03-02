@@ -4,6 +4,8 @@ type t_boolean_lookup_tab is table of boolean index by varchar2(4000 char);
 
 type msg_tab_t is table of msg_typ;
 
+$if not(msg_constants_pkg.c_use_job_events_for_status) $then
+
 e_dbms_pipe_timeout exception;
 c_dbms_pipe_timeout constant integer := -20100;
 
@@ -18,6 +20,8 @@ e_dbms_pipe_interrupted exception;
 c_dbms_pipe_interrupted constant integer := -20102;
 
 pragma exception_init(e_dbms_pipe_interrupted, -20102);
+
+$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
 
 subtype event_t is varchar2(20 char);
 
@@ -81,6 +85,8 @@ procedure msg2data
 );
 /** Copy either p_msg_raw if not null, otherwise p_msg_blob to the output BLOB. **/
 
+$if not(msg_constants_pkg.c_use_job_events_for_status) $then
+
 procedure send_worker_status
 ( p_job_name_supervisor in varchar2
 , p_worker_nr in integer
@@ -106,6 +112,8 @@ procedure recv_event
 , p_session_id out nocopy user_scheduler_running_jobs.session_id%type -- Idem
 );
 /** Used by the supervisor to receive events, either the worker status or a signal to stop. **/
+
+$end -- $if not(msg_constants_pkg.c_use_job_events_for_status) $then
 
 end msg_pkg;
 /

@@ -17,6 +17,20 @@ c_default_processing_method constant varchar(128 char) := 'plsql://' || $$PLSQL_
 -- for MSG_SCHEDULER_PKG
 */
 
+/*
+-- worker job attributes
+-- It seemed that in in memory was useful, however:
+-- 1) you can not use job events to signal to the supervisor that a job has completed
+-- 2) the necessary job class DEFAULT_IN_MEMORY_JOB_CLASS does not seem to exist in the Oracle Cloud:
+--
+--      ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
+--      Can not be granted neither, at least not by ADMIN
+*/
+c_job_style_worker constant varchar2(20 char) := 'LIGHTWEIGHT'; -- IN_MEMORY_FULL / IN_MEMORY_RUNTIME / LIGHTWEIGHT / REGULAR
+c_job_class_worker constant varchar2(40 char) := 'DEFAULT_JOB_CLASS'; -- DEFAULT_IN_MEMORY_JOB_CLASS (first two styles)  / DEFAULT_JOB_CLASS (last two styles)
+
+c_use_job_events_for_status constant boolean := true; -- c_job_style_worker in ('LIGHTWEIGHT', 'REGULAR');
+
 -- job scheduler schedule
 c_repeat_interval constant varchar2(100) := 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0; BYSECOND=0'; -- start every day at 00:00:00
 
