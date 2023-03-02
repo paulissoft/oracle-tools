@@ -663,7 +663,7 @@ $end
 
     if p_worker_nr is not null
     then
-      p_event := 'WORKER_STATUS';
+      p_event := msg_pkg."WORKER_STATUS";
       p_sqlcode := l_queue_msg.error_code;
       p_sqlerrm := l_queue_msg.error_msg;
       p_session_id := null;
@@ -1267,22 +1267,25 @@ $end
       l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
       exit when l_elapsed_time >= p_ttl;
-      
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( case when l_sqlerrm is null then dbug."info" else dbug."error" end
-      , 'Worker %s (SID=%s) stopped with error code %s'
-      , l_worker_nr
-      , l_session_id
-      , l_sqlcode
-      );
-      if l_sqlerrm is not null
+
+      if l_event = msg_pkg."WORKER_STATUS"
       then
-        dbug.print(dbug."error", l_sqlerrm);
-      end if;
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( case when l_sqlerrm is null then dbug."info" else dbug."error" end
+        , 'Worker %s (SID=%s) stopped with error code %s'
+        , l_worker_nr
+        , l_session_id
+        , l_sqlcode
+        );
+        if l_sqlerrm is not null
+        then
+          dbug.print(dbug."error", l_sqlerrm);
+        end if;
 $end
 
-      start_worker(p_job_name_worker => l_job_name_supervisor || '#' || l_worker_nr);
+        start_worker(p_job_name_worker => l_job_name_supervisor || '#' || l_worker_nr);
+      end if;
     end loop;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'Stopped supervising workers after %s seconds', to_char(l_elapsed_time));
