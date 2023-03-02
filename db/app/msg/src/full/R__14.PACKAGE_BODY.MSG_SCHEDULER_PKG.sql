@@ -634,41 +634,69 @@ $end
   p_sqlerrm := null;
   p_session_id := null;
 
-  l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
-  l_dequeue_options.wait := p_timeout;
-  
-  dbms_aq.dequeue
-  ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
-  , dequeue_options => l_dequeue_options
-  , message_properties => l_message_properties
-  , payload => l_queue_msg
-  , msgid => l_message_handle
-  );
+  -- The message dequeued may need to be processed by another process
+  -- since we receive all job status events in this schema.
+  -- The best way to ignore other job events is:
+  -- 1) to LOCK and inspect whether the concerning job is one of the workers of this supervisor
+  -- 2) if so, REMOVE the message with the msgid just retrieved 
 
-  l_job_name_worker := l_queue_msg.object_name;
-
+  <<step_loop>>
+  for i_step in 1..2
+  loop
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'l_job_name_worker: %s', l_job_name_worker);
+    dbug.print(dbug."info", 'i_step: %s', i_step);
 $end
 
-  if l_job_name_worker like p_job_name_supervisor || '%'
-  then
-    split_job_name
-    ( p_job_name => l_job_name_worker
-    , p_processing_package => l_processing_package
-    , p_program_name => l_program_name 
-    , p_job_suffix => l_job_suffix
-    , p_worker_nr => p_worker_nr 
+    l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
+
+    if i_step = 1
+    then
+      l_dequeue_options.dequeue_mode := dbms_aq.locked;
+      l_dequeue_options.wait := p_timeout;
+    else
+      l_dequeue_options.dequeue_mode := dbms_aq.remove;
+      l_dequeue_options.wait := dbms_aq.no_wait; -- no need to wait since we alreay locked the message
+      l_dequeue_options.msgid := l_message_handle;
+    end if;
+    
+    dbms_aq.dequeue
+    ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
+    , dequeue_options => l_dequeue_options
+    , message_properties => l_message_properties
+    , payload => l_queue_msg
+    , msgid => l_message_handle
     );
 
-    if p_worker_nr is not null
-    then
-      p_event := msg_pkg."WORKER_STATUS";
-      p_sqlcode := l_queue_msg.error_code;
-      p_sqlerrm := l_queue_msg.error_msg;
-      p_session_id := null;
-    end if;
+    exit step_loop when i_step = 2;
+    
+    l_job_name_worker := l_queue_msg.object_name;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'l_job_name_worker: %s', l_job_name_worker);
+$end
+
+    if l_job_name_worker like p_job_name_supervisor || '%'
+    then
+      split_job_name
+      ( p_job_name => l_job_name_worker
+      , p_processing_package => l_processing_package
+      , p_program_name => l_program_name 
+      , p_job_suffix => l_job_suffix
+      , p_worker_nr => p_worker_nr 
+      );
+
+      if p_worker_nr is not null
+      then
+        p_event := msg_pkg."WORKER_STATUS";
+        p_sqlcode := l_queue_msg.error_code;
+        p_sqlerrm := l_queue_msg.error_msg;
+        p_session_id := null;
+      end if;
+    end if;
+  end loop step_loop;
+
+  if p_worker_nr is not null
+  then
     commit;
   else
     rollback; -- give another supervisor the chance to process it
