@@ -25,22 +25,24 @@ c_default_processing_method constant varchar(128 char) := 'plsql://' || $$PLSQL_
 --
 --      ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
 --      Can not be granted neither, at least not by ADMIN
+--
+-- So we will use lightweight worker jobs.
 */
-c_job_style_worker constant varchar2(20 char) := 'LIGHTWEIGHT'; -- IN_MEMORY_FULL / IN_MEMORY_RUNTIME / LIGHTWEIGHT / REGULAR
-c_job_class_worker constant varchar2(40 char) := 'DEFAULT_JOB_CLASS'; -- DEFAULT_IN_MEMORY_JOB_CLASS (first two styles)  / DEFAULT_JOB_CLASS (last two styles)
-
-c_use_job_events_for_status constant boolean := true; -- c_job_style_worker in ('LIGHTWEIGHT', 'REGULAR');
+c_job_style_worker constant varchar2(20 char) := 'LIGHTWEIGHT'; -- LIGHTWEIGHT / REGULAR
+c_job_class_worker constant varchar2(40 char) := 'DEFAULT_JOB_CLASS';
 
 -- job scheduler schedule
-c_repeat_interval constant varchar2(100) := 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0; BYSECOND=0'; -- start every day at 00:00:00
+-- job duration
+c_time_between_runs constant positiven := 5; -- seconds between subsequent runs
+-- keep c_ttl and c_repeat_interval in sync
+-- c_ttl constant positiven := (24 * 60 * 60 - c_time_between_runs); -- time to live: 24 hours minus 5 seconds
+-- c_repeat_interval constant varchar2(100) := 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0; BYSECOND=0'; -- start every day at 00:00:00
+c_ttl constant positiven := (1 * 60 * 60 - c_time_between_runs); -- time to live: 24 hours minus 5 seconds
+c_repeat_interval constant varchar2(100) := 'FREQ=HOURLY; BYMINUTE=0; BYSECOND=0'; -- start every hour at 00:00
 
 -- exactly one of the following two parameters must be not null
 c_nr_workers_each_group constant positive := 1; -- the total number of workers will be this number multiplied by the number of groups
 c_nr_workers_exact constant positive := null; -- the total number of workers will be this number
-
--- job duration
-c_time_between_runs constant positiven := 5; -- seconds between subsequent runs
-c_ttl constant positiven := (24 * 60 * 60 - c_time_between_runs); -- time to live: 24 hours minus 5 seconds
 
 -- these DBUG channels will be activated by msg_scheduler_pkg.init
 c_dbug_channel_active_tab constant sys.odcivarchar2list :=

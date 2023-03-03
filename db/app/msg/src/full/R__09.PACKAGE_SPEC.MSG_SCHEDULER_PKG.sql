@@ -6,22 +6,33 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 **/
 
 procedure do
-( p_command in varchar2 -- start / restart / stop
+( p_command in varchar2 -- check_jobs_not_running / start / stop / restart
 , p_processing_package in varchar2 default 'MSG_AQ_PKG' -- if null utl_call_stack will be used to use the calling package as processing package 
 );
 /**
 Runs in an autonomous transaction.
 
+This procedure should be used to manage the supervisor job instead of directly calling DBMS_SCHEDULER.
+
+p_command = check_jobs_not_running:
+- Check that there are no running jobs that have been started by this package. If so, an error is raised.
+
 p_command = start:
-- Start the supervisor job (submit_processing_supervisor())
-- If the delta between now and the next run date is too far away, start a temporary supervisor job (submit_processing_supervisor(p_ttl => delta - time between runs, p_repeat_interval => null)).
+- Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
+- Start the supervisor job (submit_processing_supervisor()) if it does not exist,
+  otherwise disable and enable (i.e. start).
+- If the delta between now and the next run date is too far away,
+  start a temporary supervisor job (submit_processing_supervisor(p_ttl => delta - time between runs, p_repeat_interval => null)).
+
+p_command = stop:
+- Stop all the running supervisor jobs (and their workers).
+  Worker jobs will disappear due to the auto_drop parameter in DBMS_SCHEDULER.CREATE_JOB being true,
+  supervisor jobs will be disabled.
+- Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
 
 p_command = restart:
-- If there is no processing job yet, it will create and start it (do('start')).
-- If there is a running job, it will stop and restart it (do('stop') followed by do('start')).
-- If there is a processing job but not running (stopped by a DBA?), nothing happens.
+- Stop and start, equivalent to do('stop') followed by do('start').
 
-p_command = stop: stop all the running supervisor jobs (and their workers).
 **/
 
 procedure submit_processing_supervisor
