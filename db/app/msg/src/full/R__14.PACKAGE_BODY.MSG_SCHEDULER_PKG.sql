@@ -503,34 +503,16 @@ function determine_processing_package
 )
 return varchar2
 is
-  l_processing_package user_objects.object_name%type := null;
 begin
   if p_processing_package is not null
   then
-    l_processing_package := p_processing_package;
-  else
-    -- this private function is called from within this package so we can skip those two (top) items on the call stack
-    for i_idx in 3..utl_call_stack.dynamic_depth
-    loop
-      -- utl_call_stack.subprogram(i_idx)(1) is the name of the unit
-      if utl_call_stack.subprogram(i_idx)(1) <> $$PLSQL_UNIT
-      then
-        -- must be the calling unit
-        l_processing_package := utl_call_stack.subprogram(i_idx)(1); -- is already not fully qualified nor enquoted
-        exit;
-      end if;
-    end loop;
-  end if;
-  
-  if l_processing_package is not null
-  then
-    return msg_pkg.get_object_name(p_object_name => l_processing_package, p_what => 'package', p_fq => 0, p_qq => 0);
+    return msg_pkg.get_object_name(p_object_name => p_processing_package, p_what => 'package', p_fq => 0, p_qq => 0);
   else
     raise program_error;
   end if;
 end determine_processing_package;
 
-procedure send_init
+procedure job_event_send_init
 ( p_job_name_supervisor in varchar2
 , p_worker_nr in integer
 )
@@ -541,18 +523,9 @@ begin
   , attribute => 'raise_events'
   , value => dbms_scheduler.job_run_completed
   );
-end send_init;
+end job_event_send_init;
 
-procedure send_done
-( p_job_name_supervisor in varchar2
-, p_worker_nr in integer
-)
-is
-begin
-  null;
-end send_done;
-
-procedure recv_init
+procedure job_event_recv_init
 ( p_job_name_supervisor in varchar2
 )
 is
@@ -564,19 +537,9 @@ begin
 exception
   when e_already_subscriber
   then null;
-end recv_init;
+end job_event_recv_init;
 
-procedure recv_done
-( p_job_name_supervisor in varchar2
-)
-is
-begin
-  -- Never remove this schema from the queue since other supervisors may be running too.
-  -- dbms_scheduler.remove_event_queue_subscriber;
-  null;
-end recv_done;
-
-procedure recv_event
+procedure job_event_recv
 ( p_job_name_supervisor in varchar2
 , p_timeout in integer
 , p_worker_nr out nocopy integer -- Only relevant when the event is WORKER_STATUS
@@ -598,7 +561,7 @@ is
   l_job_name_worker job_name_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT || '.RECV_EVENT');
+  dbug.enter($$PLSQL_UNIT || '.JOB_EVENT_RECV');
   dbug.print
   ( dbug."input"
   , 'p_job_name_supervisor: %s; p_timeout: %s'
@@ -700,7 +663,7 @@ exception
     dbug.leave_on_error;
     raise;
 $end
-end recv_event;
+end job_event_recv;
 
 -- PUBLIC
 
@@ -719,9 +682,12 @@ is
       then sys.odcivarchar2list(p_command, 'check_jobs_not_running')
       when 'restart'
       then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'start')
+      when 'drop'
+      then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'drop')
       else sys.odcivarchar2list(p_command)
     end;    
-  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
+  l_processing_package all_objects.object_name%type := trim('"' from replace(upper(p_processing_package), '_', '\_'));
+  l_processing_package_tab sys.odcivarchar2list;
   l_job_name_supervisor job_name_t;
   l_job_names sys.odcivarchar2list;
   l_state user_scheduler_jobs.state%type;
@@ -732,142 +698,205 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_command: %s; p_processing_package: %s', p_command, p_processing_package);
 $end
 
-  l_job_name_supervisor :=
-    get_job_name
-    ( p_processing_package => l_processing_package 
-    , p_program_name => c_program_supervisor
-    , p_job_suffix => null
-    , p_worker_nr => null
-    );
+  select  p.package_name
+  bulk collect
+  into    l_processing_package_tab
+  from    user_arguments p
+  where   p.object_name = 'GET_GROUPS_TO_PROCESS'
+  and     ( l_processing_package is null or p.package_name like l_processing_package escape '\' )
+  intersect
+  select  p.package_name
+  from    user_arguments p
+  where   p.object_name = 'PROCESSING'
+  and     ( l_processing_package is null or p.package_name like l_processing_package escape '\' )
+  ;
 
-  for i_command_idx in l_command_tab.first .. l_command_tab.last
+  if l_processing_package_tab.count = 0
+  then
+    raise no_data_found;
+  end if;
+
+  <<processing_package_loop>>
+  for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
   loop
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'l_command_tab(%s): %s', i_command_idx, l_command_tab(i_command_idx));
-$end
-    case l_command_tab(i_command_idx)
-      when 'check_jobs_not_running'
-      then
-        l_job_names := get_jobs(l_job_name_supervisor || '%', 'RUNNING');
-        if l_job_names.count > 0
-        then
-          raise_application_error
-          ( -20000
-          , utl_lms.format_message
-            ( 'There should be no running jobs matching "%s" but these are running:%s%s'
-            , l_job_name_supervisor || '%'
-            , chr(10)
-            , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => chr(10), p_ignore_null => 1)
-            )
-          );
-        end if;
-        
-      when 'start'
-      then
-        begin
-          -- respect the fact that the job is there with its current job arguments (maybe a DBA did that)
-          dbms_scheduler.disable(l_job_name_supervisor);
-          dbms_scheduler.enable(l_job_name_supervisor);
-        exception
-          when others
-          then
-$if oracle_tools.cfg_pkg.c_debugging $then
-            dbug.on_error;
-$end
-            submit_processing_supervisor(p_processing_package => l_processing_package);
-        end;
+    l_processing_package := l_processing_package_tab(i_package_idx);
 
-        select  j.state
-        ,       oracle_tools.api_time_pkg.delta(oracle_tools.api_time_pkg.get_timestamp, j.next_run_date) as ttl
-        into    l_state
-        ,       l_ttl
-        from    user_scheduler_jobs j
-        where   j.job_name = l_job_name_supervisor;
-        
-        if l_state = 'SCHEDULED'
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
+$end
+
+    l_job_name_supervisor :=
+      get_job_name
+      ( p_processing_package => l_processing_package 
+      , p_program_name => c_program_supervisor
+      , p_job_suffix => null
+      , p_worker_nr => null
+      );
+
+    <<command_loop>>
+    for i_command_idx in l_command_tab.first .. l_command_tab.last
+    loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_command_tab(%s): %s', i_command_idx, l_command_tab(i_command_idx));
+$end
+      case l_command_tab(i_command_idx)
+        when 'check_jobs_not_running'
         then
-          l_ttl := trunc(l_ttl) - msg_constants_pkg.c_time_between_runs;
-          if l_ttl > 0
+          l_job_names := get_jobs(l_job_name_supervisor || '%', 'RUNNING');
+          if l_job_names.count > 0
           then
-            submit_processing_supervisor
-            ( p_processing_package => l_processing_package
-            , p_ttl => l_ttl
-            , p_repeat_interval => null
+            raise_application_error
+            ( -20000
+            , utl_lms.format_message
+              ( 'There should be no running jobs matching "%s" but these are running:%s%s'
+              , l_job_name_supervisor || '%'
+              , chr(10)
+              , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => chr(10), p_ignore_null => 1)
+              )
             );
           end if;
-        elsif l_state = 'RUNNING'
+          
+        when 'start'
         then
-          null; -- OK
+          begin
+            -- respect the fact that the job is there with its current job arguments (maybe a DBA did that)
+            dbms_scheduler.disable(l_job_name_supervisor);
+            dbms_scheduler.enable(l_job_name_supervisor);
+          exception
+            when others
+            then
+  $if oracle_tools.cfg_pkg.c_debugging $then
+              dbug.on_error;
+  $end
+              submit_processing_supervisor(p_processing_package => l_processing_package);
+          end;
+
+          select  j.state
+          ,       oracle_tools.api_time_pkg.delta(oracle_tools.api_time_pkg.get_timestamp, j.next_run_date) as ttl
+          into    l_state
+          ,       l_ttl
+          from    user_scheduler_jobs j
+          where   j.job_name = l_job_name_supervisor;
+          
+          if l_state = 'SCHEDULED'
+          then
+            l_ttl := trunc(l_ttl) - msg_constants_pkg.c_time_between_runs;
+            if l_ttl > 0
+            then
+              submit_processing_supervisor
+              ( p_processing_package => l_processing_package
+              , p_ttl => l_ttl
+              , p_repeat_interval => null
+              );
+            end if;
+          elsif l_state = 'RUNNING'
+          then
+            null; -- OK
+          else
+            raise_application_error
+            ( -20000
+            , utl_lms.format_message
+              ( 'Unexpected state for job "%s": "%s"'
+              , l_job_name_supervisor
+              , l_state
+              )
+            );
+          end if;
+
+        when 'stop'
+        then
+          -- This is a bit tricky: when you stop supervisors and workers in one run, there may be new workers stopped during that process.
+          -- So, just stop all supervisors first, next the workers.
+          -- And: always get a fresh list!
+          <<supervisors_then_workers_loop>>
+          for i_only_workers in 0..1
+          loop
+            l_job_names := get_jobs(p_job_name_expr => l_job_name_supervisor || '%', p_state => 'RUNNING', p_only_workers => i_only_workers);
+
+            if l_job_names.count > 0
+            then
+              <<job_loop>>
+              for i_job_idx in l_job_names.first .. l_job_names.last
+              loop
+    $if oracle_tools.cfg_pkg.c_debugging $then
+                dbug.print
+                ( dbug."info"
+                , 'trying to stop and disable job %s'
+                , l_job_names(i_job_idx)
+                );
+    $end
+                -- kill
+                begin
+                  dbms_scheduler.stop_job(l_job_names(i_job_idx));
+                  if i_only_workers = 0
+                  then
+                    -- disable supervisors
+                    dbms_scheduler.disable(l_job_names(i_job_idx));
+                  else
+                    dbms_scheduler.drop_job(l_job_names(i_job_idx)); -- just to be sure
+                  end if;
+                exception
+                  when e_job_does_not_exist
+                  then null;
+                  
+                  when others
+                  then
+    $if oracle_tools.cfg_pkg.c_debugging $then
+                    dbug.on_error;
+    $end
+                    null;
+                end;
+              end loop job_loop;
+            end if;
+          end loop supervisors_then_workers_loop;
+
+        when 'drop'
+        then
+          <<force_loop>>
+          for i_force in 0..1 -- 0: force false
+          loop
+            l_job_names := get_jobs(p_job_name_expr => l_job_name_supervisor || '%');
+
+            if l_job_names.count > 0
+            then
+              <<job_loop>>
+              for i_job_idx in l_job_names.first .. l_job_names.last
+              loop
+    $if oracle_tools.cfg_pkg.c_debugging $then
+                dbug.print
+                ( dbug."info"
+                , 'trying to drop job %s'
+                , l_job_names(i_job_idx)
+                );
+    $end
+
+                begin
+                  dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => (i_force = 1));
+                exception
+                  when others
+                  then
+    $if oracle_tools.cfg_pkg.c_debugging $then
+                    dbug.on_error;
+    $end
+                    null;
+                end;
+              end loop job_loop;
+            end if;
+          end loop force_loop;
+
         else
           raise_application_error
           ( -20000
           , utl_lms.format_message
-            ( 'Unexpected state for job "%s": "%s"'
-            , l_job_name_supervisor
-            , l_state
+            ( 'Unexpected command: "%s"'
+            , l_command_tab(i_command_idx)
             )
           );
-        end if;
 
-      when 'stop'
-      then
-        -- This is a bit tricky: when you stop supervisors and workers in one run, there may be new workers stopped during that process.
-        -- So, just stop all supervisors first, next the workers.
-        -- And: always get a fresh list!
-        <<supervisors_then_workers_loop>>
-        for i_only_workers in 0..1
-        loop
-          l_job_names := get_jobs(p_job_name_expr => l_job_name_supervisor || '%', p_state => 'RUNNING', p_only_workers => i_only_workers);
+      end case;
+    end loop command_loop;
+  end loop processing_package_loop;
 
-          if l_job_names.count > 0
-          then
-            <<job_loop>>
-            for i_job_idx in l_job_names.first .. l_job_names.last
-            loop
-  $if oracle_tools.cfg_pkg.c_debugging $then
-              dbug.print
-              ( dbug."info"
-              , 'trying to stop and disable job %s'
-              , l_job_names(i_job_idx)
-              );
-  $end
-              -- kill
-              begin
-                dbms_scheduler.stop_job(l_job_names(i_job_idx));
-                if i_only_workers = 0
-                then
-                  -- disable supervisors
-                  dbms_scheduler.disable(l_job_names(i_job_idx));
-                else
-                  dbms_scheduler.drop_job(l_job_names(i_job_idx)); -- just to be sure
-                end if;
-              exception
-                when e_job_does_not_exist
-                then null;
-                
-                when others
-                then
-  $if oracle_tools.cfg_pkg.c_debugging $then
-                  dbug.on_error;
-  $end
-                  null;
-              end;
-            end loop job_loop;
-          end if;
-        end loop supervisors_then_workers_loop;
-
-      else
-        raise_application_error
-        ( -20000
-        , utl_lms.format_message
-          ( 'Unexpected command: "%s"'
-          , l_command_tab(i_command_idx)
-          )
-        );
-
-    end case;
-  end loop;
-  
   commit;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1126,7 +1155,7 @@ $end
   procedure start_workers
   is
   begin
-    recv_init(l_job_name_supervisor);
+    job_event_recv_init(l_job_name_supervisor);
     
     if l_job_name_tab.count > 0
     then
@@ -1155,7 +1184,7 @@ $end
 
       -- get the status
 
-      recv_event
+      job_event_recv
       ( p_job_name_supervisor => l_job_name_supervisor
       , p_timeout => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
       , p_worker_nr => l_worker_nr 
@@ -1221,10 +1250,6 @@ $end
   is
   begin
     stop_workers;
-    if l_job_name_supervisor is not null
-    then
-      recv_done(l_job_name_supervisor);
-    end if;
     done;
   end cleanup;
 begin
@@ -1292,13 +1317,9 @@ is
   is
   begin
     done;
-    send_done
-    ( p_job_name_supervisor => p_job_name_supervisor
-    , p_worker_nr => p_worker_nr
-    );
   end cleanup;
 begin
-  send_init
+  job_event_send_init
   ( p_job_name_supervisor => p_job_name_supervisor
   , p_worker_nr => p_worker_nr
   );

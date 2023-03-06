@@ -6,8 +6,8 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 **/
 
 procedure do
-( p_command in varchar2 -- check_jobs_not_running / start / stop / restart
-, p_processing_package in varchar2 default 'MSG_AQ_PKG' -- if null utl_call_stack will be used to use the calling package as processing package 
+( p_command in varchar2 -- check_jobs_not_running / start / stop / restart / drop
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 );
 /**
 Runs in an autonomous transaction.
@@ -33,10 +33,13 @@ p_command = stop:
 p_command = restart:
 - Stop and start, equivalent to do('stop') followed by do('start').
 
+p_command = drop:
+- Stop all the running supervisor jobs (and their workers), equivalent to do('stop').
+- Drop the jobs, first with force false, next with force true if necessary.
 **/
 
 procedure submit_processing_supervisor
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
 , p_ttl in positiven default msg_constants_pkg.c_ttl -- time to live (in seconds)
@@ -56,7 +59,7 @@ A non-repeating job (p_repeat_interval null) will just create a job that will be
 **/
 
 procedure processing_supervisor
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
 , p_ttl in positiven default msg_constants_pkg.c_ttl -- time to live (in seconds)
@@ -96,7 +99,7 @@ the actual work based on that information.
 **/
 
 procedure processing
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2 -- a comma separated list of groups to process
 , p_worker_nr in positiven
 , p_ttl in positiven
