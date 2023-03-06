@@ -9,6 +9,10 @@ procedure ut_assign(p_str out nocopy varchar2);
 
 procedure ut_reference(p_str in varchar2);
 
+/**
+Test package for checking code (unused variables and so on).
+**/
+
 end ut_code_check_pkg;
 /
 
