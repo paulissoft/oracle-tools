@@ -15,6 +15,15 @@ Types of changes:
 
 [Unreleased]
 
+## [1.11.0] - 2023-03-06
+
+### Added
+
+- [It should be possible to exchange partitions to a table instead of just dropping them.](https://github.com/paulissoft/oracle-tools/issues/117)
+- [Create an asynchronous message subsystem as a replacement for Oracle Query Notification.](https://github.com/paulissoft/oracle-tools/issues/118)
+
+### Fixed
+
 - [The Jenkins pipeline does not merge correctly development into the next branch.](https://github.com/paulissoft/oracle-tools/issues/111)
 
 ## [1.10.0] - 2023-01-14

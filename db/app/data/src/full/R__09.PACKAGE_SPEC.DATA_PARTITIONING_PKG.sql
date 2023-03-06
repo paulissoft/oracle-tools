@@ -132,18 +132,20 @@ ALTER TABLE "<p_table_owner>"."<p_table_name>" ADD PARTITION "<new partition>" V
 
 **/
                            
-procedure drop_old_partitions 
+procedure drop_old_partitions
 ( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_reference_timestamp in timestamp -- the reference timestamp to find the reference partition (that will NOT be dropped)
 , p_update_index_clauses in varchar2 default 'UPDATE INDEXES' -- can be empty or UPDATE GLOBAL INDEXES as well
+, p_backup in boolean default false -- if true, a backup table will be used for each exchanged partition
 );
 
 /**
  
-Drop partitions before the reference timestamp.
+Drop (or backup) partitions before the reference timestamp.
 
-For a partitioned table with an interval (ALL_PART_TABLES.INTERVAL is not null) only the partitions with ALL_TAB_PARTITIONS.INTERVAL = 'YES' are dropped. When there is not an interval defined for the table, there is no such restriction.
+For a partitioned table with an interval (ALL_PART_TABLES.INTERVAL is not null) only the partitions with ALL_TAB_PARTITIONS.INTERVAL = 'YES' are dropped.
+When there is not an interval defined for the table, there is no such restriction.
 
 This query will be used to find the old partitions:
 
@@ -164,16 +166,33 @@ and     t.partitioning_type = 'RANGE'
 and     (t.interval is null or p.interval = 'YES')
 ```
 
-The statement to drop: 
+The statement to drop (when p_backup is false): 
 
 ```sql
-ALTER TABLE "<p_table_owner>"."<p_table_name>" DROP PARTITION "<old partition>" <p_update_index_clauses>
+ALTER TABLE "<p_table_owner>"."<p_table_name>" DROP PARTITION "<old partition>" <p_update_index_clauses>;
 ```
 
 See also [Updating indexes with partition maintenance](https://connor-mcdonald.com/2017/09/20/updating-indexes-with-partition-maintenance/).
 
+The statements to create a backup table and exchange the partition (when p_backup is true):
+
+```sql
+CREATE TABLE "<p_table_owner>"."<p_table_name>_<timestamp>_<partition>"
+  TABLESPACE "<tablespace>"
+  FOR EXCHANGE WITH TABLE "<p_table_owner>"."<p_table_name>";
+
+ALTER TABLE "<p_table_owner>"."<p_table_name>"
+  EXCHANGE PARTITION "<partition>"
+  WITH TABLE "<p_table_owner>"."<p_table_name>_<timestamp>_<partition>"
+  WITHOUT VALIDATION
+  <p_update_index_clauses>;
+```
+
+where <timestamp> is the system date in 'yyyymmddhh24miss' format and <tablespace> the table space of the source table.
+
+See also [Create Table for Exchange With a Partitioned Table in Oracle Database 12c Release 2 (12.2)](https://oracle-base.com/articles/12c/create-table-for-exchange-with-table-12cr2).
 **/
-                           
+
 end data_partitioning_pkg;
 /
 

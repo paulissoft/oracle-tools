@@ -6,26 +6,40 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 **/
 
 procedure do
-( p_command in varchar2 -- start / restart / stop
-, p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package 
+( p_command in varchar2 -- check_jobs_not_running / start / stop / restart / drop
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 );
 /**
 Runs in an autonomous transaction.
 
+This procedure should be used to manage the supervisor job instead of directly calling DBMS_SCHEDULER.
+
+p_command = check_jobs_not_running:
+- Check that there are no running jobs that have been started by this package. If so, an error is raised.
+
 p_command = start:
-- Start the supervisor job (submit_processing_supervisor())
-- If the delta between now and the next run date is too far away, start a temporary supervisor job (submit_processing_supervisor(p_ttl => delta - time between runs, p_repeat_interval => null)).
+- Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
+- Start the supervisor job (submit_processing_supervisor()) if it does not exist,
+  otherwise disable and enable (i.e. start).
+- If the delta between now and the next run date is too far away,
+  start a temporary supervisor job (submit_processing_supervisor(p_ttl => delta - time between runs, p_repeat_interval => null)).
+
+p_command = stop:
+- Stop all the running supervisor jobs (and their workers).
+  Worker jobs will disappear due to the auto_drop parameter in DBMS_SCHEDULER.CREATE_JOB being true,
+  supervisor jobs will be disabled.
+- Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
 
 p_command = restart:
-- If there is no processing job yet, it will create and start it (do('start')).
-- If there is a running job, it will stop and restart it (do('stop') followed by do('start')).
-- If there is a processing job but not running (stopped by a DBA?), nothing happens.
+- Stop and start, equivalent to do('stop') followed by do('start').
 
-p_command = stop: stop all the running supervisor jobs (and their workers).
+p_command = drop:
+- Stop all the running supervisor jobs (and their workers), equivalent to do('stop').
+- Drop the jobs, first with force false, next with force true if necessary.
 **/
 
 procedure submit_processing_supervisor
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
 , p_ttl in positiven default msg_constants_pkg.c_ttl -- time to live (in seconds)
@@ -45,7 +59,7 @@ A non-repeating job (p_repeat_interval null) will just create a job that will be
 **/
 
 procedure processing_supervisor
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
 , p_ttl in positiven default msg_constants_pkg.c_ttl -- time to live (in seconds)
@@ -58,7 +72,7 @@ submit_processing_supervisor() above!
 So the administrator should NEVER create a job based on this procedure.
 
 It is a supervisor routine that just launches other jobs, the workers.  The
-supervisor also surveys them via DBMS_PIPE.  When worker jobs complete before
+supervisor also surveys them.  When worker jobs complete before
 the end (defined by start time + time to live), they will be restarted by the
 supervisor.  The supervisor will actively kill the worker jobs when he
 finishes.  Now the recurring schedule of the job (for instance each day) will
@@ -85,7 +99,7 @@ the actual work based on that information.
 **/
 
 procedure processing
-( p_processing_package in varchar2 default null -- if null utl_call_stack will be used to use the calling package as processing package
+( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2 -- a comma separated list of groups to process
 , p_worker_nr in positiven
 , p_ttl in positiven
@@ -110,7 +124,6 @@ procedure processing
 ```
 
 This will do the processing of all messages till the end is reached or an exception occurs.
-Then it will signal the status to the supervisor via DBMS_PIPE and stop.
 
 **/
 

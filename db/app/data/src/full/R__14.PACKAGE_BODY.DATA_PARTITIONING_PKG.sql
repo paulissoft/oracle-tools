@@ -35,7 +35,7 @@ $if cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'p_ddl: %s', p_ddl);
 $end
 
-  execute immediate p_ddl;  
+  execute immediate p_ddl;
 end execute_immediate;
 
 -- PUBLIC routines
@@ -457,14 +457,19 @@ procedure drop_old_partitions
 , p_table_name in varchar2
 , p_reference_timestamp in timestamp
 , p_update_index_clauses in varchar2
+, p_backup in boolean
 )
 is
   l_table_owner constant all_tab_partitions.table_owner%type :=
     oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'owner');
   l_table_name constant all_tab_partitions.table_name%type :=
     oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name, 'table');
+  l_timestamp constant varchar2(8) := to_char(sysdate, "yyyymmdd");
+  l_table_name_backup all_tab_partitions.table_name%type;
   l_partition_lt_reference_tab t_range_tab := t_range_tab();
   l_ddl varchar2(32767 char) := null;
+  l_tablespace_name all_tables.tablespace_name%type;
+  l_partition_name all_tab_partitions.partition_name%type;
 
   procedure cleanup
   is
@@ -513,11 +518,12 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DROP_OLD_PARTITIONS');
   dbug.print
   ( dbug."input"
-  , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s'
+  , 'p_table_owner: %s; p_table_name: %s; p_reference_timestamp: %s; p_update_index_clauses: %s; p_backup: %s'
   , p_table_owner
   , p_table_name
   , to_char(p_reference_timestamp, "yyyy-mm-dd hh24:mi:ss.ff9")
   , p_update_index_clauses
+  , dbug.cast_to_varchar2(p_backup)
   );
 $end
 
@@ -540,21 +546,67 @@ $end
   and     (t.interval is null or p.interval = 'YES')
   ;
 
+  if p_backup
+  then
+    select  t.tablespace_name
+    into    l_tablespace_name
+    from    all_tables t
+    where   t.owner = trim('"' from l_table_owner)
+    and     t.table_name = trim('"' from l_table_name);
+  end if;
+
   if l_partition_lt_reference_tab.count > 0
   then
     for i_idx in l_partition_lt_reference_tab.first .. l_partition_lt_reference_tab.last
     loop
-      l_ddl := utl_lms.format_message
-               ( 'ALTER TABLE %s.%s DROP PARTITION %s %s'
-               , l_table_owner
-               , l_table_name
-               , oracle_tools.data_api_pkg.dbms_assert$enquote_name
-                 ( l_partition_lt_reference_tab(i_idx).partition_name
-                 , 'partition'
-                 )
-               , p_update_index_clauses
-               );
-      execute_immediate(l_ddl);
+      if not(p_backup)
+      then
+        l_ddl := utl_lms.format_message
+                 ( 'ALTER TABLE %s.%s DROP PARTITION %s %s'
+                 , l_table_owner
+                 , l_table_name
+                 , oracle_tools.data_api_pkg.dbms_assert$enquote_name
+                   ( l_partition_lt_reference_tab(i_idx).partition_name
+                   , 'partition'
+                   )
+                 , p_update_index_clauses
+                 );
+        execute_immediate(l_ddl);
+      else
+        l_partition_name :=
+          oracle_tools.data_api_pkg.dbms_assert$enquote_name
+          ( l_partition_lt_reference_tab(i_idx).partition_name
+          , 'partition'
+          );
+        l_table_name_backup :=
+          utl_lms.format_message
+          ( '"%s_%s_%s"'
+          , trim('"' from l_table_name)
+          , l_timestamp
+          , trim('"' from l_partition_name)
+          );
+          
+        l_ddl := utl_lms.format_message
+                 ( 'CREATE TABLE %s.%s TABLESPACE "%s" FOR EXCHANGE WITH TABLE %s.%s'
+                 , l_table_owner
+                 , l_table_name_backup
+                 , l_tablespace_name
+                 , l_table_owner
+                 , l_table_name
+                 );
+        execute_immediate(l_ddl);
+
+        l_ddl := utl_lms.format_message
+                 ( 'ALTER TABLE %s.%s EXCHANGE PARTITION %s WITH TABLE %s.%s WITHOUT VALIDATION %s'
+                 , l_table_owner
+                 , l_table_name
+                 , l_partition_name
+                 , l_table_owner
+                 , l_table_name_backup
+                 , p_update_index_clauses
+                 );
+        execute_immediate(l_ddl);
+      end if;
     end loop;
   end if;
 
