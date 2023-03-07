@@ -412,9 +412,10 @@ $end
   web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
   web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
 
-  -- Prefer utl_http over apex_web_service since it is more performant.
+  -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
-  if simple_request
+  if msg_constants_pkg.c_prefer_to_use_utl_http and
+     simple_request
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');

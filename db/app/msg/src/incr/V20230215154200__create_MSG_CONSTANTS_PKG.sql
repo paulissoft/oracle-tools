@@ -8,7 +8,8 @@ is
 c_buffered_messaging constant boolean := true; -- buffered messaging enabled?
 c_multiple_consumers constant boolean := false; -- single consumer is the fastest option
 c_default_subscriber constant varchar2(30 char) := 'DEFAULT_SUBSCRIBER';
--- can be:
+
+-- c_default_processing_method can be:
 -- 1) 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
 -- 2) 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG'
 c_default_processing_method constant varchar(128 char) := 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
@@ -63,6 +64,12 @@ $if not(oracle_tools.cfg_pkg.c_testing) $then
 $end  
   , 'PLSDBUG'
   );
+
+/*
+-- for WEB_SERVICE_PKG
+*/
+
+c_prefer_to_use_utl_http constant boolean := false; -- utl_http versus apex_web_service
 
 /**
 This package just defines constants to be used by the MSG subsystem.
