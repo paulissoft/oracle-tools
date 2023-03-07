@@ -423,7 +423,13 @@ is
 begin  
   if is_job_running(l_job_name_worker)
   then
-    raise too_many_rows;
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message
+      ( 'Job "%s" is already running.'
+      , l_job_name_worker
+      )
+    );
   end if;
   
   if not(does_job_exist(l_job_name_worker))
@@ -440,7 +446,9 @@ begin
     , start_date => null
       -- will never repeat
     , repeat_interval => null
-    , end_date => sysdate + (p_ttl / (24 * 60 * 60)) -- as precaution
+      -- GJP 2023-03-07 Due to failing ORA-27483: "BC_API"."MSG_AQ_PKG$PROCESSING_SUPERVISOR$20230307111848#1" has an invalid END_DATE 
+      -- , end_date => sysdate + (p_ttl / (24 * 60 * 60)) -- as precaution
+    , end_date => null
     , job_class => msg_constants_pkg.c_job_class_worker
     , enabled => false -- so we can set job arguments
     , auto_drop => true -- one-off jobs
@@ -811,7 +819,12 @@ $end
           <<supervisors_then_workers_loop>>
           for i_only_workers in 0..1
           loop
-            l_job_names := get_jobs(p_job_name_expr => l_job_name_supervisor || '%', p_state => 'RUNNING', p_only_workers => i_only_workers);
+            l_job_names :=
+              get_jobs
+              ( p_job_name_expr => l_job_name_supervisor || '%'
+              , p_state => case i_only_workers when 0 then 'RUNNING' else null end -- only running supervisors but all workers to get rid of oldies
+              , p_only_workers => i_only_workers
+              );
 
             if l_job_names.count > 0
             then
