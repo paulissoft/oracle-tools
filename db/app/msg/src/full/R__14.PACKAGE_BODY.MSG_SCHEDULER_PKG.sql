@@ -840,13 +840,13 @@ $end
     $end
                 -- kill
                 begin
-                  dbms_scheduler.stop_job(l_job_names(i_job_idx));
                   if i_only_workers = 0
                   then
-                    -- disable supervisors
+                    -- stop and disable supervisors
+                    dbms_scheduler.stop_job(l_job_names(i_job_idx));
                     dbms_scheduler.disable(l_job_names(i_job_idx));
                   else
-                    dbms_scheduler.drop_job(l_job_names(i_job_idx)); -- just to be sure
+                    dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => true); -- just to be sure
                   end if;
                 exception
                   when e_job_does_not_exist
@@ -1237,13 +1237,12 @@ $end
   )
   is
   begin
-    if is_job_running(p_job_name_worker)
+    if does_job_exist(p_job_name_worker)
     then
-      dbms_scheduler.stop_job(p_job_name_worker);
-      dbms_scheduler.drop_job(p_job_name_worker); -- will probaby fail since auto_drop is normally true
+      dbms_scheduler.drop_job(job_name => p_job_name_worker, force => true);
     end if;
   exception
-    when e_job_does_not_exist -- to take care of failing dbms_scheduler.disable()
+    when e_job_does_not_exist -- strange
     then null;
   end stop_worker;
 
