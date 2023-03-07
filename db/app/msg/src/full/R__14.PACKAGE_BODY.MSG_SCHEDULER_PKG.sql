@@ -1240,7 +1240,7 @@ $end
     if is_job_running(p_job_name_worker)
     then
       dbms_scheduler.stop_job(p_job_name_worker);
-      dbms_scheduler.disable(p_job_name_worker); -- will probaby fail since auto_drop is normally true
+      dbms_scheduler.drop_job(p_job_name_worker); -- will probaby fail since auto_drop is normally true
     end if;
   exception
     when e_job_does_not_exist -- to take care of failing dbms_scheduler.disable()
