@@ -546,33 +546,12 @@ $end
   and     (t.interval is null or p.interval = 'YES')
   ;
 
-  if p_backup
-  then
-    select  t.tablespace_name
-    into    l_tablespace_name
-    from    all_tables t
-    where   t.owner = trim('"' from l_table_owner)
-    and     t.table_name = trim('"' from l_table_name);
-  end if;
-
   if l_partition_lt_reference_tab.count > 0
   then
     for i_idx in l_partition_lt_reference_tab.first .. l_partition_lt_reference_tab.last
     loop
-      if not(p_backup)
+      if p_backup
       then
-        l_ddl := utl_lms.format_message
-                 ( 'ALTER TABLE %s.%s DROP PARTITION %s %s'
-                 , l_table_owner
-                 , l_table_name
-                 , oracle_tools.data_api_pkg.dbms_assert$enquote_name
-                   ( l_partition_lt_reference_tab(i_idx).partition_name
-                   , 'partition'
-                   )
-                 , p_update_index_clauses
-                 );
-        execute_immediate(l_ddl);
-      else
         l_partition_name :=
           oracle_tools.data_api_pkg.dbms_assert$enquote_name
           ( l_partition_lt_reference_tab(i_idx).partition_name
@@ -585,6 +564,12 @@ $end
           , l_timestamp
           , trim('"' from l_partition_name)
           );
+        select  p.tablespace_name
+        into    l_tablespace_name
+        from    all_tab_partitions p
+        where   p.table_owner = trim('"' from l_table_owner)
+        and     p.table_name = trim('"' from l_table_name)
+        and     p.partition_name = trim('"' from l_partition_name);
           
         l_ddl := utl_lms.format_message
                  ( 'CREATE TABLE %s.%s TABLESPACE "%s" FOR EXCHANGE WITH TABLE %s.%s'
@@ -607,6 +592,19 @@ $end
                  );
         execute_immediate(l_ddl);
       end if;
+
+      -- must drop partition anyway even if p_backup is true
+      l_ddl := utl_lms.format_message
+               ( 'ALTER TABLE %s.%s DROP PARTITION %s %s'
+               , l_table_owner
+               , l_table_name
+               , oracle_tools.data_api_pkg.dbms_assert$enquote_name
+                 ( l_partition_lt_reference_tab(i_idx).partition_name
+                 , 'partition'
+                 )
+               , p_update_index_clauses
+               );
+      execute_immediate(l_ddl);
     end loop;
   end if;
 
