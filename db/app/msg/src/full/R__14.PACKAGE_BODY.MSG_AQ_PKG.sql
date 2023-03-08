@@ -1340,7 +1340,7 @@ $end
     l_queue_name_idx := mod(i_idx - 1, l_queue_name_tab.count) + 1; -- between 1 and l_queue_name_tab.count
     
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."input", 'i_idx: %s; l_queue_name_tab(%s): %s', i_idx, l_queue_name_idx, l_queue_name_tab(l_queue_name_idx));
+    dbug.print(dbug."info", 'i_idx: %s; l_queue_name_tab(%s): %s', i_idx, l_queue_name_idx, l_queue_name_tab(l_queue_name_idx));
 $end
 
     if l_queue_name_tab(l_queue_name_idx) is null
