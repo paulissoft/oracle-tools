@@ -1,3 +1,10 @@
+REMARK Try to call Flyway script beforeEachMigrate.sql (add its directory to SQLPATH) so that PLSQL_CCFlags can be set.
+REMARK But no harm done if it is not there.
+
+whenever oserror continue
+whenever sqlerror continue
+@@beforeEachMigrate.sql
+
 whenever oserror exit failure
 whenever sqlerror exit failure
 set define off sqlblanklines on
