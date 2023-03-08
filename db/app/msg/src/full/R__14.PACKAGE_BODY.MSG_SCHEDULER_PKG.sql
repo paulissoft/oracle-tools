@@ -215,7 +215,7 @@ begin
   bulk collect
   into    l_job_names
   from    user_scheduler_jobs j
-  where   j.job_name like replace(replace(p_job_name_expr, '_', '\_'), '\\', '\') escape '\'
+  where   j.job_name like replace(replace(p_job_name_expr, '_', '\_'), '\\_', '\_') escape '\'
   and     ( p_state is null or j.state = p_state )
   and     ( p_only_workers is null or p_only_workers = sign(instr(j.job_name, '#')) )
   order by
@@ -653,6 +653,16 @@ $end
     
     l_job_name_worker := l_queue_msg.object_name;
 
+    l_our_worker :=
+      l_job_name_worker like replace
+                             ( get_job_name
+                               ( p_processing_package => l_processing_package_supervisor
+                               , p_program_name => l_program_name_supervisor
+                               )
+                             , '_'
+                             , '\_'
+                             ) || '#%';
+
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
@@ -661,14 +671,19 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     , l_queue_msg.event_type
     , to_char(l_queue_msg.event_timestamp, "yyyymmddhh24miss")
     , dbug.cast_to_varchar2(l_job_name_worker like p_job_name_supervisor || '#%')
-    , dbug.cast_to_varchar2(l_job_name_worker like l_processing_package_supervisor || '#%')
+    , dbug.cast_to_varchar2(l_our_worker)
     );
 $end
 
     if l_job_name_worker like p_job_name_supervisor || '#%'
     then
       -- my (and our) worker
-      l_our_worker := true;
+      if l_our_worker = true
+      then
+        null;
+      else
+        raise program_error;  
+      end if;
       
       pragma inline (split_job_name, 'YES');
       split_job_name
@@ -684,9 +699,6 @@ $end
         p_sqlcode := l_queue_msg.error_code;
         p_sqlerrm := l_queue_msg.error_msg;
       end if;
-    elsif l_job_name_worker like l_processing_package_supervisor || '#%'
-    then
-      l_our_worker := true;
     end if;
   end loop step_loop;
 
@@ -735,7 +747,7 @@ is
       then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'drop')
       else sys.odcivarchar2list(p_command)
     end;    
-  l_processing_package all_objects.object_name%type := trim('"' from replace(replace(upper(p_processing_package), '_', '\_'), '\\', '\'));
+  l_processing_package all_objects.object_name%type := trim('"' from replace(replace(upper(p_processing_package), '_', '\_'), '\\_', '\_'));
   l_processing_package_tab sys.odcivarchar2list;
   l_job_name_supervisor job_name_t;
   l_job_names sys.odcivarchar2list;
