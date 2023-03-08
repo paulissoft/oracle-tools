@@ -1324,25 +1324,23 @@ $end
     raise value_error;
   end if;
 
+  <<queue_loop>>
   for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
   loop
     l_queue_name_tab.extend(1);
     l_queue_name_tab(l_queue_name_tab.last) := get_queue_name(p_groups_to_process_tab(i_idx));
-  end loop;
+  end loop queue_loop;
 
   -- i_idx can be from
   -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
   -- b) 2 .. l_queue_name_tab.count + 1 (<=> 2 .. l_queue_name_tab.count + (2) - 1)
   -- z) l_queue_name_tab.count .. l_queue_name_tab.count + (l_queue_name_tab.count) - 1
+  <<agent_loop>>
   for i_idx in mod(p_worker_nr - 1, l_queue_name_tab.count) + 1 ..
                mod(p_worker_nr - 1, l_queue_name_tab.count) + l_queue_name_tab.count
   loop
     l_queue_name_idx := mod(i_idx - 1, l_queue_name_tab.count) + 1; -- between 1 and l_queue_name_tab.count
     
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'i_idx: %s; l_queue_name_tab(%s): %s', i_idx, l_queue_name_idx, l_queue_name_tab(l_queue_name_idx));
-$end
-
     if l_queue_name_tab(l_queue_name_idx) is null
     then
       raise program_error;
@@ -1351,8 +1349,22 @@ $end
     l_agent_list(l_agent_list.count+1) :=
       sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
     l_queue_name_tab(l_queue_name_idx) := null;
-  end loop;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'i_idx: %s; l_queue_name_tab(%s): %s; l_agent_list(%s).address: %s'
+    , i_idx
+    , l_queue_name_idx
+    , l_queue_name_tab(l_queue_name_idx)
+    , l_agent_list.count
+    , l_agent_list(l_agent_list.count).address
+    );
+$end
+
+  end loop agent_loop;
+
+  <<process_loop>>
   loop
     l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
@@ -1360,7 +1372,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
 $end
 
-    exit when l_elapsed_time >= p_ttl;
+    exit process_loop when l_elapsed_time >= p_ttl;
 
     dbms_aq_listen;
 
@@ -1370,7 +1382,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
 $end
 
-    exit when l_elapsed_time >= p_ttl;
+    exit process_loop when l_elapsed_time >= p_ttl;
 
     msg_aq_pkg.dequeue_and_process
     ( p_queue_name => l_agent.address
@@ -1385,7 +1397,7 @@ $end
     , p_force => false -- queue should be there
     , p_commit => true
     );
-  end loop;
+  end loop process_loop;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
