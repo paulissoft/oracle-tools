@@ -144,11 +144,6 @@ is
   l_pos$ pls_integer;
   l_pos# pls_integer;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_JOB_NAME');
-  dbug.print(dbug."input", 'p_job_name: %s',  p_job_name);
-$end  
-
   p_processing_package := null;
   p_program_name := null;
   p_job_suffix := null;
@@ -195,15 +190,16 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
-  ( dbug."output"
-  , 'p_processing_package: %s; p_program_name: %s; p_job_suffix: %s; p_worker_nr: %s'
+  ( dbug."info"
+  , q'[split_job_name(p_job_name => '%s', p_processing_package => '%s', p_program_name => '%s', p_job_suffix => '%s', p_worker_nr => %s)]'
+  , p_job_name
   , p_processing_package
   , p_program_name
   , p_job_suffix
   , p_worker_nr
   );
-  dbug.leave;
 $end  
+
 end split_job_name;
 
 function get_jobs
@@ -523,7 +519,7 @@ end determine_processing_package;
 
 procedure job_event_send_init
 ( p_job_name_supervisor in varchar2
-, p_worker_nr in integer
+, p_worker_nr in positive
 )
 is
 begin
@@ -548,12 +544,13 @@ exception
   then null;
 end job_event_recv_init;
 
+-- Receive a job event for this supervisor.
 procedure job_event_recv
 ( p_job_name_supervisor in varchar2
 , p_timeout in integer
-, p_worker_nr out nocopy integer -- Only relevant when the event is WORKER_STATUS
-, p_sqlcode out nocopy integer -- Idem
-, p_sqlerrm out nocopy varchar2 -- Idem
+, p_worker_nr out nocopy positive
+, p_sqlcode out nocopy integer
+, p_sqlerrm out nocopy varchar2
 )
 is
   pragma autonomous_transaction;
@@ -563,11 +560,19 @@ is
   l_message_handle      raw(16);
   l_queue_msg           sys.scheduler$_event_info;
 
-  -- for split job name
-  l_processing_package all_objects.object_name%type;
-  l_program_name user_scheduler_programs.program_name%type;
-  l_job_suffix job_suffix_t;
+  -- for split_job_name on the supervisor
+  l_processing_package_supervisor all_objects.object_name%type;
+  l_program_name_supervisor user_scheduler_programs.program_name%type;
+  l_job_suffix_supervisor job_suffix_t;
+  l_worker_nr_supervisor positive;
+  
+  -- for split_job_name on the completed job
   l_job_name_worker job_name_t;
+  l_processing_package_worker all_objects.object_name%type;
+  l_program_name_worker user_scheduler_programs.program_name%type;
+  l_job_suffix_worker job_suffix_t;
+
+  l_our_worker boolean := false;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.JOB_EVENT_RECV');
@@ -583,12 +588,39 @@ $end
   p_sqlcode := null;
   p_sqlerrm := null;
 
+  pragma inline (split_job_name, 'YES');
+  split_job_name
+  ( p_job_name => p_job_name_supervisor
+  , p_processing_package => l_processing_package_supervisor
+  , p_program_name => l_program_name_supervisor
+  , p_job_suffix => l_job_suffix_supervisor
+  , p_worker_nr => l_worker_nr_supervisor
+  );
+
+  -- some sanity checks
+  if l_program_name_supervisor = c_program_supervisor
+  then
+    null;
+  else
+    raise value_error;
+  end if;
+
+  if l_worker_nr_supervisor is null
+  then
+    null;
+  else
+    raise value_error;
+  end if;
+
   -- The message dequeued may need to be processed by another process,
   -- since we receive all job status events in this schema.
-  -- The best way to ignore other job events is:
-  -- 1) to LOCK and inspect whether the concerning job is one of the workers of this supervisor
-  -- 2a) if so, REMOVE the message with the msgid just retrieved and COMMIT
-  -- 2b) if NOT so, just ignore the message and ROLLBACK
+  -- But since there should be only ONE supervisor running for the SAME processing package (for now there is just one: MSG_AQ_PKG),
+  -- we can REMOVE all messages for the same processing package.
+  --
+  -- The best way to ignore job events from OTHER processing packages is
+  -- to LOCK and inspect whether the concerning job is one of the workers for this processing package.
+  -- If it is one of our workers, REMOVE the message with the msgid just retrieved and COMMIT.
+  -- Otherwise, just ignore the message and ROLLBACK.
 
   l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
 
@@ -624,21 +656,26 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
-    , 'job name: %s; event type: %s; event timestamp: %s; one of our workers: %s'
+    , 'job name: %s; event type: %s; event timestamp: %s; one of my / our workers: %s / %s'
     , l_job_name_worker
     , l_queue_msg.event_type
     , to_char(l_queue_msg.event_timestamp, "yyyymmddhh24miss")
     , dbug.cast_to_varchar2(l_job_name_worker like p_job_name_supervisor || '#%')
+    , dbug.cast_to_varchar2(l_job_name_worker like l_processing_package_supervisor || '#%')
     );
 $end
 
     if l_job_name_worker like p_job_name_supervisor || '#%'
     then
+      -- my (and our) worker
+      l_our_worker := true;
+      
+      pragma inline (split_job_name, 'YES');
       split_job_name
       ( p_job_name => l_job_name_worker
-      , p_processing_package => l_processing_package
-      , p_program_name => l_program_name 
-      , p_job_suffix => l_job_suffix
+      , p_processing_package => l_processing_package_worker
+      , p_program_name => l_program_name_worker
+      , p_job_suffix => l_job_suffix_worker
       , p_worker_nr => p_worker_nr 
       );
 
@@ -647,14 +684,17 @@ $end
         p_sqlcode := l_queue_msg.error_code;
         p_sqlerrm := l_queue_msg.error_msg;
       end if;
+    elsif l_job_name_worker like l_processing_package_supervisor || '#%'
+    then
+      l_our_worker := true;
     end if;
   end loop step_loop;
 
-  if p_worker_nr is not null
+  if l_our_worker
   then
     commit;
   else
-    rollback; -- give another supervisor the chance to process it
+    rollback; -- give another processing package supervisor a chance to process it
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -837,6 +877,7 @@ $end
               <<job_loop>>
               for i_job_idx in l_job_names.first .. l_job_names.last
               loop
+                pragma inline (split_job_name, 'YES');
                 split_job_name
                 ( p_job_name => l_job_names(i_job_idx)
                 , p_processing_package => l_processing_package_dummy
@@ -1235,7 +1276,7 @@ $end
   procedure supervise_workers
   is
     l_now date;
-    l_worker_nr integer;
+    l_worker_nr positive;
     l_sqlcode integer;
     l_sqlerrm varchar2(4000 char);
   begin    
