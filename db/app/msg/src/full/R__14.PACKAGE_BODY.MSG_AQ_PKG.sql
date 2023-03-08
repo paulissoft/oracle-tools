@@ -1348,7 +1348,6 @@ $end
     
     l_agent_list(l_agent_list.count+1) :=
       sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
-    l_queue_name_tab(l_queue_name_idx) := null;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
@@ -1362,6 +1361,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     );
 $end
 
+    l_queue_name_tab(l_queue_name_idx) := null;
   end loop agent_loop;
 
   <<process_loop>>
