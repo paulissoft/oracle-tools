@@ -202,6 +202,25 @@ $end
 
 end split_job_name;
 
+function to_like_expr
+( p_expr in varchar2
+)
+return varchar2
+is
+  l_expr constant varchar2(4000 char) := replace(replace(p_expr, '_', '\_'), '\\_', '\_');
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , q'[to_like_expr(p_expr => '%s') = '%s')]'
+  , p_expr
+  , l_expr
+  );
+$end  
+
+  return l_expr;
+end to_like_expr;
+
 function get_jobs
 ( p_job_name_expr in varchar2
 , p_state in user_scheduler_jobs.state%type default null
@@ -210,12 +229,13 @@ function get_jobs
 return sys.odcivarchar2list
 is
   l_job_names sys.odcivarchar2list;
+  l_job_name_expr constant job_name_t := to_like_expr(p_job_name_expr);
 begin
   select  j.job_name
   bulk collect
   into    l_job_names
   from    user_scheduler_jobs j
-  where   j.job_name like replace(replace(p_job_name_expr, '_', '\_'), '\\_', '\_') escape '\'
+  where   j.job_name like l_job_name_expr escape '\'
   and     ( p_state is null or j.state = p_state )
   and     ( p_only_workers is null or p_only_workers = sign(instr(j.job_name, '#')) )
   order by
@@ -572,7 +592,7 @@ is
   l_program_name_worker user_scheduler_programs.program_name%type;
   l_job_suffix_worker job_suffix_t;
 
-  l_our_worker boolean := false;
+  l_worker_type varchar2(3 char) := null; -- null, 'my' or 'our'
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.JOB_EVENT_RECV');
@@ -653,37 +673,33 @@ $end
     
     l_job_name_worker := l_queue_msg.object_name;
 
-    l_our_worker :=
-      l_job_name_worker like replace
-                             ( get_job_name
-                               ( p_processing_package => l_processing_package_supervisor
-                               , p_program_name => l_program_name_supervisor
-                               )
-                             , '_'
-                             , '\_'
-                             ) || '#%';
-
+    l_worker_type :=
+      case
+        when l_job_name_worker like to_like_expr(p_job_name_supervisor || '#%') escape '\'
+        then 'my'
+        when l_job_name_worker like to_like_expr
+                                    ( get_job_name
+                                      ( p_processing_package => l_processing_package_supervisor
+                                      , p_program_name => l_program_name_supervisor
+                                      ) || '%#%' -- add a second percent sign in front for all the (temporary) supervisors
+                                    ) escape '\'
+        then 'our'
+      end;
+    
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
-    , 'job name: %s; event type: %s; event timestamp: %s; one of my / our workers: %s / %s'
+    , 'job name: %s; event type: %s; event timestamp: %s; worker type: %s'
     , l_job_name_worker
     , l_queue_msg.event_type
     , to_char(l_queue_msg.event_timestamp, "yyyymmddhh24miss")
-    , dbug.cast_to_varchar2(l_job_name_worker like p_job_name_supervisor || '#%')
-    , dbug.cast_to_varchar2(l_our_worker)
+    , l_worker_type
     );
 $end
 
-    if l_job_name_worker like p_job_name_supervisor || '#%'
+    if l_worker_type = 'my'
     then
       -- my (and our) worker
-      if l_our_worker = true
-      then
-        null;
-      else
-        raise program_error;  
-      end if;
       
       pragma inline (split_job_name, 'YES');
       split_job_name
@@ -702,7 +718,7 @@ $end
     end if;
   end loop step_loop;
 
-  if l_our_worker
+  if l_worker_type is not null
   then
     commit;
   else
@@ -747,7 +763,7 @@ is
       then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'drop')
       else sys.odcivarchar2list(p_command)
     end;    
-  l_processing_package all_objects.object_name%type := trim('"' from replace(replace(upper(p_processing_package), '_', '\_'), '\\_', '\_'));
+  l_processing_package all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
   l_processing_package_tab sys.odcivarchar2list;
   l_job_name_supervisor job_name_t;
   l_job_names sys.odcivarchar2list;
