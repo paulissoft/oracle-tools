@@ -221,6 +221,8 @@ is
     end;
   l_web_service_response web_service_response_typ := null;
 
+$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+
   function simple_request
   return boolean
   is
@@ -395,6 +397,8 @@ $end
       p_body_blob := g_body_blob;
     end if;
   end utl_http_request;
+
+$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
@@ -409,80 +413,89 @@ $end
     end loop;
   end if;
 
-  web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
-  web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
+  pragma inline (json2data, 'YES');
+  json2data(l_cookies, apex_web_service.g_request_cookies);
+  pragma inline (json2data, 'YES');
+  json2data(l_http_headers, apex_web_service.g_request_headers);
 
   -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
-  if msg_constants_pkg.c_prefer_to_use_utl_http and
-     simple_request
-  then
+  case
+$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+  
+    when simple_request
+    then
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
+      dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
 $end
 
-    utl_http_request
-    ( p_body_clob => l_body_clob
-    , p_body_blob => l_body_blob
-    , p_request_cookies => apex_web_service.g_request_cookies
-    , p_request_headers => apex_web_service.g_request_headers
-    , p_response_cookies => apex_web_service.g_response_cookies
-    , p_response_headers => apex_web_service.g_headers
-    , p_status_code => apex_web_service.g_status_code
-    );
-  elsif p_request.binary_response = 0
-  then
+      utl_http_request
+      ( p_body_clob => l_body_clob
+      , p_body_blob => l_body_blob
+      , p_request_cookies => apex_web_service.g_request_cookies
+      , p_request_headers => apex_web_service.g_request_headers
+      , p_response_cookies => apex_web_service.g_response_cookies
+      , p_response_headers => apex_web_service.g_headers
+      , p_status_code => apex_web_service.g_status_code
+      );
+$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+      
+    when p_request.binary_response = 0
+    then
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
+      dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
 $end
 
-    l_body_clob := apex_web_service.make_rest_request
-                   ( p_url => p_request.url
-                   , p_http_method => p_request.http_method
-                   , p_username => null
-                   , p_password => null
-                   , p_scheme => p_request.scheme
-                   , p_proxy_override => p_request.proxy_override
-                   , p_transfer_timeout => p_request.transfer_timeout
-                   , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
-                   , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
-                   , p_parm_name => l_parm_names
-                   , p_parm_value => l_parm_values
-                   , p_wallet_path => p_request.wallet_path
-                   , p_wallet_pwd => null
-                   , p_https_host => p_request.https_host
-                   , p_credential_static_id => p_request.credential_static_id
-                   , p_token_url => p_request.token_url
-                   );
-    l_body_blob := null;
-  else
+      l_body_clob := apex_web_service.make_rest_request
+                     ( p_url => p_request.url
+                     , p_http_method => p_request.http_method
+                     , p_username => null
+                     , p_password => null
+                     , p_scheme => p_request.scheme
+                     , p_proxy_override => p_request.proxy_override
+                     , p_transfer_timeout => p_request.transfer_timeout
+                     , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
+                     , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+                     , p_parm_name => l_parm_names
+                     , p_parm_value => l_parm_values
+                     , p_wallet_path => p_request.wallet_path
+                     , p_wallet_pwd => null
+                     , p_https_host => p_request.https_host
+                     , p_credential_static_id => p_request.credential_static_id
+                     , p_token_url => p_request.token_url
+                     );
+      l_body_blob := null;
+
+    else
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST_B to issue the REST webservice');
+      dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST_B to issue the REST webservice');
 $end
 
-    l_body_blob := apex_web_service.make_rest_request_b
-                   ( p_url => p_request.url
-                   , p_http_method => p_request.http_method
-                   , p_username => null
-                   , p_password => null
-                   , p_scheme => p_request.scheme
-                   , p_proxy_override => p_request.proxy_override
-                   , p_transfer_timeout => p_request.transfer_timeout
-                   , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
-                   , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
-                   , p_parm_name => l_parm_names
-                   , p_parm_value => l_parm_values
-                   , p_wallet_path => p_request.wallet_path
-                   , p_wallet_pwd => null
-                   , p_https_host => p_request.https_host
-                   , p_credential_static_id => p_request.credential_static_id
-                   , p_token_url => p_request.token_url
-                   );
-    l_body_clob := null;
-  end if;
+      l_body_blob := apex_web_service.make_rest_request_b
+                     ( p_url => p_request.url
+                     , p_http_method => p_request.http_method
+                     , p_username => null
+                     , p_password => null
+                     , p_scheme => p_request.scheme
+                     , p_proxy_override => p_request.proxy_override
+                     , p_transfer_timeout => p_request.transfer_timeout
+                     , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
+                     , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+                     , p_parm_name => l_parm_names
+                     , p_parm_value => l_parm_values
+                     , p_wallet_path => p_request.wallet_path
+                     , p_wallet_pwd => null
+                     , p_https_host => p_request.https_host
+                     , p_credential_static_id => p_request.credential_static_id
+                     , p_token_url => p_request.token_url
+                     );
+      l_body_clob := null;
+  end case;
 
-  web_service_pkg.data2json(apex_web_service.g_response_cookies, l_cookies);
-  web_service_pkg.data2json(apex_web_service.g_headers, l_http_headers);
+  pragma inline (data2json, 'YES');
+  data2json(apex_web_service.g_response_cookies, l_cookies);
+  pragma inline (data2json, 'YES');
+  data2json(apex_web_service.g_headers, l_http_headers);
 
   l_web_service_response :=
     web_service_response_typ
@@ -601,7 +614,12 @@ $end
   l_web_service_response := treat(l_msg as web_service_response_typ);
 
   -- ORA-29273: HTTP request failed?
-  -- In bc_dev yes, on pato no
+  -- In bc_dev only when msg_constants_pkg.c_prefer_to_use_utl_http is true, on pato never
+  
+$if not(msg_constants_pkg.c_prefer_to_use_utl_http) $then
+  ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
+$end  
+
   if l_web_service_response.sql_code = 0
   then
     msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
@@ -807,7 +825,12 @@ $end
   l_web_service_response := treat(l_msg as web_service_response_typ);
 
   -- ORA-29273: HTTP request failed?
-  -- In bc_dev yes, on pato no
+  -- In bc_dev only when msg_constants_pkg.c_prefer_to_use_utl_http is true, on pato never
+  
+$if not(msg_constants_pkg.c_prefer_to_use_utl_http) $then
+  ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
+$end  
+
   if l_web_service_response.sql_code = 0
   then
     msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);

@@ -1,7 +1,42 @@
 CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AUTHID DEFINER AS 
 
+c_job_already_running simple_integer := -20200;
+e_job_already_running exception;
+pragma exception_init(e_job_already_running, -20200);
+c_job_already_running_msg constant varchar2(2000 char) := 'Job "%s" is already running.';
+
+c_there_are_running_jobs simple_integer := c_job_already_running - 1;
+e_there_are_running_jobs exception;
+pragma exception_init(e_there_are_running_jobs, -20201);
+c_there_are_running_jobs_msg constant varchar2(2000 char) := 'There should be no running jobs matching "%s" but these are running:%s';
+
+c_unexpected_job_state simple_integer := c_job_already_running - 2;
+e_unexpected_job_state exception;
+pragma exception_init(e_unexpected_job_state, -20202);
+c_unexpected_job_state_msg constant varchar2(2000 char) := 'Unexpected state for job "%s": "%s"';
+
+c_unexpected_command simple_integer := c_job_already_running - 3;
+e_unexpected_command exception;
+pragma exception_init(e_unexpected_command, -20203);
+c_unexpected_command_msg constant varchar2(2000 char) := 'Unexpected command: "%s"';
+
+c_one_parameter_not_null simple_integer := c_job_already_running - 4;
+e_one_parameter_not_null exception;
+pragma exception_init(e_one_parameter_not_null, -20204);
+c_one_parameter_not_null_msg constant varchar2(2000 char) := 'Exactly one of the following parameters must be set: p_nr_workers_each_group (%d), p_nr_workers_exact (%d).';
+
+c_no_groups_to_process simple_integer := c_job_already_running - 5;
+e_no_groups_to_process exception;
+pragma exception_init(e_no_groups_to_process, -20205);
+c_no_groups_to_process_msg constant varchar2(2000 char) := 'Could not find groups to process.';
+
+c_session_not_running_job simple_integer := c_job_already_running - 6;
+e_session_not_running_job exception;
+pragma exception_init(e_session_not_running_job, -20206);
+c_session_not_running_job_msg constant varchar2(2000 char) := 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.';
+
 /**
-Package to (re)start or stop the process that will process the groups for which the default processing method is "package://<schema>.MSG_SCHEDULER_PKG"
+Package to (re)start, stop or drop the process that will process the groups for which the default processing method is "package://<schema>.MSG_SCHEDULER_PKG"
 and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOTIFICATION_PRC".
 **/
 

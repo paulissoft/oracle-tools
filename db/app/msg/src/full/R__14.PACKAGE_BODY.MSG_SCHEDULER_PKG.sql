@@ -1,6 +1,7 @@
 CREATE OR REPLACE PACKAGE BODY "MSG_SCHEDULER_PKG" AS
 
 subtype job_name_t is user_scheduler_jobs.job_name%type;
+subtype job_suffix_t is varchar2(14 char); -- to_char(sysdate, "yyyymmddhh24miss")
 
 "yyyymmddhh24miss" constant varchar2(16) := 'yyyymmddhh24miss';
 
@@ -136,7 +137,7 @@ procedure split_job_name
 ( p_job_name in job_name_t
 , p_processing_package out nocopy varchar2
 , p_program_name out nocopy varchar2
-, p_job_suffix out nocopy varchar2
+, p_job_suffix out nocopy job_suffix_t
 , p_worker_nr out nocopy positive
 )
 is
@@ -218,7 +219,7 @@ begin
   bulk collect
   into    l_job_names
   from    user_scheduler_jobs j
-  where   j.job_name like replace(p_job_name_expr, '_', '\_') escape '\'
+  where   j.job_name like replace(replace(p_job_name_expr, '_', '\_'), '\\', '\') escape '\'
   and     ( p_state is null or j.state = p_state )
   and     ( p_only_workers is null or p_only_workers = sign(instr(j.job_name, '#')) )
   order by
@@ -424,9 +425,9 @@ begin
   if is_job_running(l_job_name_worker)
   then
     raise_application_error
-    ( -20000
+    ( c_job_already_running
     , utl_lms.format_message
-      ( 'Job "%s" is already running.'
+      ( c_job_already_running_msg
       , l_job_name_worker
       )
     );
@@ -565,7 +566,7 @@ is
   -- for split job name
   l_processing_package all_objects.object_name%type;
   l_program_name user_scheduler_programs.program_name%type;
-  l_job_suffix varchar2(20);
+  l_job_suffix job_suffix_t;
   l_job_name_worker job_name_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -683,7 +684,7 @@ is
   pragma autonomous_transaction;
 
   l_command_tab constant sys.odcivarchar2list :=
-    case p_command
+    case lower(p_command)
       when 'start'
       then sys.odcivarchar2list('check_jobs_not_running', p_command)
       when 'stop'
@@ -694,12 +695,18 @@ is
       then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'drop')
       else sys.odcivarchar2list(p_command)
     end;    
-  l_processing_package all_objects.object_name%type := trim('"' from replace(upper(p_processing_package), '_', '\_'));
+  l_processing_package all_objects.object_name%type := trim('"' from replace(replace(upper(p_processing_package), '_', '\_'), '\\', '\'));
   l_processing_package_tab sys.odcivarchar2list;
   l_job_name_supervisor job_name_t;
   l_job_names sys.odcivarchar2list;
   l_state user_scheduler_jobs.state%type;
   l_ttl oracle_tools.api_time_pkg.seconds_t;
+
+  -- for split job name
+  l_processing_package_dummy all_objects.object_name%type;
+  l_program_name_dummy user_scheduler_programs.program_name%type;
+  l_job_suffix job_suffix_t;
+  l_worker_nr positive;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
@@ -754,12 +761,11 @@ $end
           if l_job_names.count > 0
           then
             raise_application_error
-            ( -20000
+            ( c_there_are_running_jobs
             , utl_lms.format_message
-              ( 'There should be no running jobs matching "%s" but these are running:%s%s'
+              ( c_there_are_running_jobs_msg
               , l_job_name_supervisor || '%'
-              , chr(10)
-              , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => chr(10), p_ignore_null => 1)
+              , chr(10) || oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => chr(10), p_ignore_null => 1)
               )
             );
           end if;
@@ -773,9 +779,9 @@ $end
           exception
             when others
             then
-  $if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
               dbug.on_error;
-  $end
+$end
               submit_processing_supervisor(p_processing_package => l_processing_package);
           end;
 
@@ -802,9 +808,9 @@ $end
             null; -- OK
           else
             raise_application_error
-            ( -20000
+            ( c_unexpected_job_state
             , utl_lms.format_message
-              ( 'Unexpected state for job "%s": "%s"'
+              ( c_unexpected_job_state_msg
               , l_job_name_supervisor
               , l_state
               )
@@ -822,7 +828,7 @@ $end
             l_job_names :=
               get_jobs
               ( p_job_name_expr => l_job_name_supervisor || '%'
-              , p_state => case i_only_workers when 0 then 'RUNNING' else null end -- only running supervisors but all workers to get rid of oldies
+              , p_state => case i_only_workers when 0 then 'RUNNING' else null end -- only running supervisors but all workers to get rid of left-overs
               , p_only_workers => i_only_workers
               );
 
@@ -831,22 +837,38 @@ $end
               <<job_loop>>
               for i_job_idx in l_job_names.first .. l_job_names.last
               loop
-    $if oracle_tools.cfg_pkg.c_debugging $then
+                split_job_name
+                ( p_job_name => l_job_names(i_job_idx)
+                , p_processing_package => l_processing_package_dummy
+                , p_program_name => l_program_name_dummy
+                , p_job_suffix => l_job_suffix
+                , p_worker_nr => l_worker_nr
+                );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
                 dbug.print
                 ( dbug."info"
-                , 'trying to stop and disable job %s'
+                , 'trying to stop %s%s job %s'
+                , case when l_job_suffix is not null then 'temporary 'end
+                , case when l_worker_nr is null then 'supervisor' else 'worker' end
                 , l_job_names(i_job_idx)
                 );
-    $end
+$end
+
                 -- kill
                 begin
-                  if i_only_workers = 0
+                  if l_job_suffix is null and l_worker_nr is null
                   then
                     -- stop and disable supervisors
-                    dbms_scheduler.stop_job(l_job_names(i_job_idx));
+                    dbms_scheduler.stop_job(job_name => l_job_names(i_job_idx), force => false);
+                    if is_job_running(l_job_names(i_job_idx)) -- strange, but anyhow
+                    then
+                      dbms_scheduler.stop_job(job_name => l_job_names(i_job_idx), force => true);
+                    end if;                    
                     dbms_scheduler.disable(l_job_names(i_job_idx));
                   else
-                    dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => true); -- just to be sure
+                    -- drop temporary and/or worker jobs
+                    dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => true);
                   end if;
                 exception
                   when e_job_does_not_exist
@@ -854,9 +876,9 @@ $end
                   
                   when others
                   then
-    $if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
                     dbug.on_error;
-    $end
+$end
                     null;
                 end;
               end loop job_loop;
@@ -875,22 +897,22 @@ $end
               <<job_loop>>
               for i_job_idx in l_job_names.first .. l_job_names.last
               loop
-    $if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
                 dbug.print
                 ( dbug."info"
                 , 'trying to drop job %s'
                 , l_job_names(i_job_idx)
                 );
-    $end
+$end
 
                 begin
                   dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => (i_force = 1));
                 exception
                   when others
                   then
-    $if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging $then
                     dbug.on_error;
-    $end
+$end
                     null;
                 end;
               end loop job_loop;
@@ -899,9 +921,9 @@ $end
 
         else
           raise_application_error
-          ( -20000
+          ( c_unexpected_command
           , utl_lms.format_message
-            ( 'Unexpected command: "%s"'
+            ( c_unexpected_command_msg
             , l_command_tab(i_command_idx)
             )
           );
@@ -1075,10 +1097,10 @@ is
       then null; -- ok
       else
         raise_application_error
-        ( -20000
+        ( c_one_parameter_not_null
         , utl_lms.format_message
-          ( 'Exactly one of the following parameters must be set: p_nr_workers_each_group (%d), p_nr_workers_exact (%d).'
-          , p_nr_workers_each_group -- since the type is positive %d should work
+          ( c_one_parameter_not_null_msg
+          , p_nr_workers_each_group -- since the type is positive, %d should work
           , p_nr_workers_exact -- idem
           )
         );
@@ -1131,8 +1153,8 @@ $end
     if l_groups_to_process_tab.count = 0
     then
       raise_application_error
-      ( -20000
-      , 'Could not find groups for processing.'
+      ( c_no_groups_to_process
+      , c_no_groups_to_process_msg
       );
     end if;
 
@@ -1150,19 +1172,50 @@ $end
     end loop;  
   end define_workers;
 
+  procedure stop_worker
+  ( p_job_name_worker in varchar2
+  )
+  is
+  begin
+    if does_job_exist(p_job_name_worker)
+    then
+      dbms_scheduler.drop_job(job_name => p_job_name_worker, force => true);
+    end if;
+  exception
+    when e_job_does_not_exist -- strange
+    then null;
+  end stop_worker;
+
   procedure start_worker
   ( p_job_name_worker in varchar2
   )
   is
     l_worker_nr constant positiven := to_number(substr(p_job_name_worker, instr(p_job_name_worker, '#') + 1));
   begin
-    submit_processing
-    ( p_processing_package => p_processing_package
-    , p_groups_to_process_list => l_groups_to_process_list
-    , p_worker_nr => l_worker_nr
-    , p_ttl => p_ttl
-    , p_job_name_supervisor => l_job_name_supervisor
-    );
+    -- submit but when job already exists: stop it and retry
+    <<try_loop>>
+    for i_try in 1..2
+    loop
+      begin
+        submit_processing
+        ( p_processing_package => p_processing_package
+        , p_groups_to_process_list => l_groups_to_process_list
+        , p_worker_nr => l_worker_nr
+        , p_ttl => p_ttl
+        , p_job_name_supervisor => l_job_name_supervisor
+        );
+        exit try_loop; -- OK
+      exception
+        when e_job_already_running
+        then
+          if i_try = 1
+          then
+            stop_worker(p_job_name_worker);
+          else
+            raise;
+          end if;
+      end;
+    end loop try_loop;
   end start_worker;
   
   procedure start_workers
@@ -1231,20 +1284,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'Stopped supervising workers after %s seconds', to_char(l_elapsed_time));
 $end
   end supervise_workers;
-
-  procedure stop_worker
-  ( p_job_name_worker in varchar2
-  )
-  is
-  begin
-    if does_job_exist(p_job_name_worker)
-    then
-      dbms_scheduler.drop_job(job_name => p_job_name_worker, force => true);
-    end if;
-  exception
-    when e_job_does_not_exist -- strange
-    then null;
-  end stop_worker;
 
   procedure stop_workers
   is
@@ -1352,9 +1391,9 @@ $end
   if l_job_name_worker is null
   then
     raise_application_error
-    ( -20000
+    ( c_session_not_running_job
     , utl_lms.format_message
-      ( 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.'
+      ( c_session_not_running_job_msg
       , to_char(c_session_id)
       )
     );
