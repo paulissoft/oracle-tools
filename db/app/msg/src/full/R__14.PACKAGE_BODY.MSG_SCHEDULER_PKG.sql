@@ -87,6 +87,11 @@ begin
   end loop;
 
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    null; -- do not re-raise
 end profiler_report;
 
 $end -- $if oracle_tools.cfg_pkg.c_debugging $then
@@ -98,7 +103,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  profiler_report;
+  if dbug.active('PROFILER')
+  then
+    profiler_report;
+  end if;
 $end  
 
   msg_pkg.done;
