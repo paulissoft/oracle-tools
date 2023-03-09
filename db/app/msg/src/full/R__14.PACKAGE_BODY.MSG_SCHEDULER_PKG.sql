@@ -775,13 +775,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 exception
-  when e_job_does_not_exist or e_job_unknown
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave_on_error;
-$end
-    null;
-
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -808,10 +801,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 exception
-  when e_job_does_not_exist or e_job_unknown
+  when e_job_unknown -- when the job is stopped it may disappear due to auto_drop true
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave_on_error;
+    dbug.leave;
 $end
     null;
 
