@@ -756,7 +756,7 @@ begin
     exit when not(is_job_running(p_job_name));
 
     dbms_scheduler.stop_job(job_name => p_job_name, force => case i_step when 1 then false else true end);
-  end if;
+  end loop;
 end stop_job;
 
 procedure drop_job
