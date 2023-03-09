@@ -1286,7 +1286,7 @@ is
   l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
 
-  -- to be able to profile this call
+  -- to be able to profile this call just create a procedure and use dbug.enter/dbug.leave
   procedure dbms_aq_listen
   is
   begin
@@ -1366,37 +1366,45 @@ $end
 
   <<process_loop>>
   loop
-    l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
+    <<listen_then_dequeue_loop>>
+    for i_step in 1..2
+    loop
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
+      dbug.print
+      ( dbug."info"
+      , 'elapsed time: %s (s); finished?: %s'
+      , to_char(l_elapsed_time)
+      , dbug.cast_to_varchar2(l_elapsed_time >= p_ttl)
+      );
 $end
 
-    exit process_loop when l_elapsed_time >= p_ttl;
+      exit process_loop when l_elapsed_time >= p_ttl;
 
-    dbms_aq_listen;
-
-    l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
-$end
-
-    exit process_loop when l_elapsed_time >= p_ttl;
-
-    msg_aq_pkg.dequeue_and_process
-    ( p_queue_name => l_agent.address
-    , p_delivery_mode => l_message_delivery_mode
-    , p_visibility => dbms_aq.immediate
-    , p_subscriber => l_agent.name
-    , p_dequeue_mode => dbms_aq.remove
-    , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
-    , p_wait => 0 -- message should be there so there is no need to wait
-    , p_correlation => null
-    , p_deq_condition => null
-    , p_force => false -- queue should be there
-    , p_commit => true
-    );
+      case i_step
+        when 1
+        then
+          dbms_aq_listen;
+          
+        when 2
+        then
+          msg_aq_pkg.dequeue_and_process
+          ( p_queue_name => l_agent.address
+          , p_delivery_mode => l_message_delivery_mode
+          , p_visibility => dbms_aq.immediate
+          , p_subscriber => l_agent.name
+          , p_dequeue_mode => dbms_aq.remove
+          , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+          -- although a message should be there we will just specify the maximum wait time
+          , p_wait => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+          , p_correlation => null
+          , p_deq_condition => null
+          , p_force => false -- queue should be there
+          , p_commit => true
+          );
+      end case;
+    end loop listen_then_dequeue_loop;
   end loop process_loop;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
