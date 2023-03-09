@@ -438,6 +438,7 @@ is
   l_job_name_worker constant job_name_t := p_job_name_supervisor || '#' || to_char(p_worker_nr);
   l_argument_value user_scheduler_program_args.default_value%type;
 begin  
+  PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name_worker)
   then
     raise_application_error
@@ -449,6 +450,7 @@ begin
     );
   end if;
   
+  PRAGMA INLINE (does_job_exist, 'YES');
   if not(does_job_exist(l_job_name_worker))
   then  
     if not(does_program_exist(c_program_worker))
@@ -608,7 +610,7 @@ $end
   p_sqlcode := null;
   p_sqlerrm := null;
 
-  pragma inline (split_job_name, 'YES');
+  PRAGMA INLINE (split_job_name, 'YES');
   split_job_name
   ( p_job_name => p_job_name_supervisor
   , p_processing_package => l_processing_package_supervisor
@@ -701,7 +703,7 @@ $end
     then
       -- my (and our) worker
       
-      pragma inline (split_job_name, 'YES');
+      PRAGMA INLINE (split_job_name, 'YES');
       split_job_name
       ( p_job_name => l_job_name_worker
       , p_processing_package => l_processing_package_worker
@@ -741,6 +743,31 @@ exception
     raise;
 $end
 end job_event_recv;
+
+procedure stop_job
+( p_job_name in job_name_t
+)
+is
+begin
+  for i_step in 1..2
+  loop
+    -- stop and disable jobs gracefully first
+    PRAGMA INLINE (is_job_running, 'YES');
+    exit when not(is_job_running(p_job_name));
+
+    dbms_scheduler.stop_job(job_name => p_job_name, force => case i_step when 1 then false else true end);
+  end if;
+end stop_job;
+
+procedure drop_job
+( p_job_name in job_name_t
+)
+is
+begin
+  PRAGMA INLINE (stop_job, 'YES');
+  stop_job(p_job_name);
+  dbms_scheduler.drop_job(job_name => p_job_name, force => false);
+end drop_job;
 
 -- PUBLIC
 
@@ -825,6 +852,7 @@ $end
       case l_command_tab(i_command_idx)
         when 'check_jobs_not_running'
         then
+          PRAGMA INLINE (get_jobs, 'YES');
           l_job_names := get_jobs(l_job_name_supervisor || '%', 'RUNNING');
           if l_job_names.count > 0
           then
@@ -893,6 +921,7 @@ $end
           <<supervisors_then_workers_loop>>
           for i_only_workers in 0..1
           loop
+            PRAGMA INLINE (get_jobs, 'YES');
             l_job_names :=
               get_jobs
               ( p_job_name_expr => l_job_name_supervisor || '%'
@@ -905,7 +934,7 @@ $end
               <<job_loop>>
               for i_job_idx in l_job_names.first .. l_job_names.last
               loop
-                pragma inline (split_job_name, 'YES');
+                PRAGMA INLINE (split_job_name, 'YES');
                 split_job_name
                 ( p_job_name => l_job_names(i_job_idx)
                 , p_processing_package => l_processing_package_dummy
@@ -926,18 +955,18 @@ $end
 
                 -- kill
                 begin
+                  
                   if l_job_suffix is null and l_worker_nr is null
                   then
-                    -- stop and disable supervisors
-                    dbms_scheduler.stop_job(job_name => l_job_names(i_job_idx), force => false);
-                    if is_job_running(l_job_names(i_job_idx)) -- strange, but anyhow
-                    then
-                      dbms_scheduler.stop_job(job_name => l_job_names(i_job_idx), force => true);
-                    end if;                    
+                    -- stop and disable jobs gracefully first
+                    PRAGMA INLINE (stop_job, 'YES');
+                    stop_job(l_job_names(i_job_idx));
+                    -- disable supervisor jobs unless it is temporary
                     dbms_scheduler.disable(l_job_names(i_job_idx));
                   else
                     -- drop temporary and/or worker jobs
-                    dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => true);
+                    PRAGMA INLINE (drop_job, 'YES');
+                    drop_job(l_job_names(i_job_idx));
                   end if;
                 exception
                   when e_job_does_not_exist
@@ -959,6 +988,7 @@ $end
           <<force_loop>>
           for i_force in 0..1 -- 0: force false
           loop
+            PRAGMA INLINE (get_jobs, 'YES');
             l_job_names := get_jobs(p_job_name_expr => l_job_name_supervisor || '%');
 
             if l_job_names.count > 0
@@ -975,7 +1005,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
                 begin
-                  dbms_scheduler.drop_job(job_name => l_job_names(i_job_idx), force => (i_force = 1));
+                  PRAGMA INLINE (drop_job, 'YES');
+                  drop_job(l_job_names(i_job_idx));
                 exception
                   when others
                   then
@@ -1040,11 +1071,13 @@ $end
     , p_job_suffix => case when p_repeat_interval is null then to_char(sysdate, "yyyymmddhh24miss") end
     );
 
+  PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name_supervisor)
   then
     raise too_many_rows;
   end if;
 
+  PRAGMA INLINE (does_job_exist, 'YES');
   if not(does_job_exist(l_job_name_supervisor))
   then
     if not(does_program_exist(c_program_supervisor))
@@ -1246,9 +1279,11 @@ $end
   )
   is
   begin
+    PRAGMA INLINE (does_job_exist, 'YES');
     if does_job_exist(p_job_name_worker)
     then
-      dbms_scheduler.drop_job(job_name => p_job_name_worker, force => true);
+      PRAGMA INLINE (drop_job, 'YES');
+      drop_job(p_job_name_worker);
     end if;
   exception
     when e_job_does_not_exist -- strange
