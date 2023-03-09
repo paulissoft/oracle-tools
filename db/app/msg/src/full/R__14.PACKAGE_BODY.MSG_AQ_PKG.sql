@@ -1389,20 +1389,30 @@ $end
           
         when 2
         then
-          msg_aq_pkg.dequeue_and_process
-          ( p_queue_name => l_agent.address
-          , p_delivery_mode => l_message_delivery_mode
-          , p_visibility => dbms_aq.immediate
-          , p_subscriber => l_agent.name
-          , p_dequeue_mode => dbms_aq.remove
-          , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
-          -- although a message should be there we will just specify the maximum wait time
-          , p_wait => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-          , p_correlation => null
-          , p_deq_condition => null
-          , p_force => false -- queue should be there
-          , p_commit => true
-          );
+          begin
+            msg_aq_pkg.dequeue_and_process
+            ( p_queue_name => l_agent.address
+            , p_delivery_mode => l_message_delivery_mode
+            , p_visibility => dbms_aq.immediate
+            , p_subscriber => l_agent.name
+            , p_dequeue_mode => dbms_aq.remove
+            , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+            -- Although a message should be and a timeout of 0 should be okay, we will just specify a wait time of 1 second
+            -- since I saw a few times time-outs here.
+            , p_wait => 1
+            , p_correlation => null
+            , p_deq_condition => null
+            , p_force => false -- queue should be there
+            , p_commit => true
+            );
+          exception
+            when e_dequeue_timeout -- something strange happened, just log the error
+            then
+$if oracle_tools.cfg_pkg.c_debugging $then
+              dbug.on_error;
+$end
+              null; 
+          end;
       end case;
     end loop listen_then_dequeue_loop;
   end loop process_loop;
