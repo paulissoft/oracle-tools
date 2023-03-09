@@ -16,6 +16,10 @@ c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(s
 e_job_does_not_exist exception;
 pragma exception_init(e_job_does_not_exist, -27476);
 
+-- sqlerrm: ORA-27475: unknown job "BC_API"."MSG_AQ_PKG$PROCESSING_SUPERVISOR#1"
+e_job_unknown exception;
+pragma exception_init(e_job_unknown, -27475);
+
 $if oracle_tools.cfg_pkg.c_debugging $then
  
 subtype t_dbug_channel_tab is msg_pkg.t_boolean_lookup_tab;
@@ -749,14 +753,41 @@ procedure stop_job
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.STOP_JOB');
+  dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
+$end
+
   for i_step in 1..2
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'i_step: %s', i_step);
+$end
+
     -- stop and disable jobs gracefully first
     PRAGMA INLINE (is_job_running, 'YES');
     exit when not(is_job_running(p_job_name));
 
     dbms_scheduler.stop_job(job_name => p_job_name, force => case i_step when 1 then false else true end);
   end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+exception
+  when e_job_does_not_exist or e_job_unknown
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    null;
+
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end    
+    raise;
 end stop_job;
 
 procedure drop_job
@@ -764,9 +795,32 @@ procedure drop_job
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.DROP_JOB');
+  dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
+$end
+
   PRAGMA INLINE (stop_job, 'YES');
   stop_job(p_job_name);
   dbms_scheduler.drop_job(job_name => p_job_name, force => false);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+exception
+  when e_job_does_not_exist or e_job_unknown
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    null;
+
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end    
+    raise;
 end drop_job;
 
 -- PUBLIC
@@ -946,22 +1000,21 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
                 dbug.print
                 ( dbug."info"
-                , 'trying to stop %s%s job %s'
-                , case when l_job_suffix is not null then 'temporary 'end
+                , 'trying to %s%s%s job %s'
+                , case when l_job_suffix is null and l_worker_nr is null then 'stop and disable' else 'drop' end
+                , case when l_job_suffix is not null then ' temporary ' else ' ' end
                 , case when l_worker_nr is null then 'supervisor' else 'worker' end
                 , l_job_names(i_job_idx)
                 );
 $end
 
                 -- kill
-                begin
-                  
+                begin                  
                   if l_job_suffix is null and l_worker_nr is null
                   then
-                    -- stop and disable jobs gracefully first
+                    -- stop and disable a supervisor job unless it is temporary
                     PRAGMA INLINE (stop_job, 'YES');
                     stop_job(l_job_names(i_job_idx));
-                    -- disable supervisor jobs unless it is temporary
                     dbms_scheduler.disable(l_job_names(i_job_idx));
                   else
                     -- drop temporary and/or worker jobs
