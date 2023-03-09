@@ -773,14 +773,12 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
-$end
 exception
   when others
   then
-$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
-$end    
     raise;
+$end    
 end stop_job;
 
 procedure drop_job
@@ -808,12 +806,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
     null;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
   when others
   then
-$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
-$end    
     raise;
+$end    
 end drop_job;
 
 -- PUBLIC
