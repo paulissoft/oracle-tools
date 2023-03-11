@@ -454,6 +454,12 @@ Z       Time zone               RFC 822 time zone   -0800
           </java>
         </try>
         <catch>
+          <!-- 
+               Error: LinkageError occurred while loading main class GenerateDDL
+               [WARNING]      [java]   java.lang.UnsupportedClassVersionError: GenerateDDL has been compiled by a more recent version of the Java Runtime (class file version 63.0), this version of the Java Runtime only recognizes class file versions up to 55.0
+          -->
+          <echo>Cleaning up build directory (${build.dir}) so you can TRY AGAIN.</echo>
+          <delete dir="${build.dir}"/>
           <echoproperties prefix="perl." />
           <echoproperties prefix="@{type}." />
           <loadfile property="@{id}.properties" srcFile="${property.file}" />
