@@ -1274,8 +1274,7 @@ end get_groups_to_process;
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
+, p_end_date in timestamp with time zone
 )
 is
   l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
@@ -1283,8 +1282,9 @@ is
   l_queue_name_idx positiven := 1;
   l_agent sys.aq$_agent;
   l_message_delivery_mode pls_integer;
-  l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
+  l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+  l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, p_end_date);
 
   -- to be able to profile this call just create a procedure and use dbug.enter/dbug.leave
   procedure dbms_aq_listen
@@ -1295,7 +1295,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
     dbms_aq.listen
     ( agent_list => l_agent_list
-    , wait => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+    , wait => greatest(1, trunc(l_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
     , listen_delivery_mode => dbms_aq.persistent_or_buffered
     , agent => l_agent
     , message_delivery_mode => l_message_delivery_mode
@@ -1309,11 +1309,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
   dbug.print
   ( dbug."input"
-  , 'p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_ttl: %s; p_job_name_supervisor: %s'
+  , 'p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_end_date: %s'
   , case when p_groups_to_process_tab is not null then p_groups_to_process_tab.count end
   , p_worker_nr
-  , p_ttl
-  , p_job_name_supervisor
+  , to_char(p_end_date, 'yyyy-mm-dd hh24:mi:ss')
   );
 $end
 
@@ -1331,6 +1330,12 @@ $end
     l_queue_name_tab(l_queue_name_tab.last) := get_queue_name(p_groups_to_process_tab(i_idx));
   end loop queue_loop;
 
+  -- The first (and most important) queue is the job event queue
+  -- since the co-workers survey each others status via that queue.
+  -- So add an agent for this multiple consumer queue (use the schema as subscriber).
+  l_agent_list(l_agent_list.count+1) :=
+    sys.aq$_agent($$PLSQL_UNIT_OWNER, c_job_event_queue_name, null);
+
   -- i_idx can be from
   -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
   -- b) 2 .. l_queue_name_tab.count + 1 (<=> 2 .. l_queue_name_tab.count + (2) - 1)
@@ -1345,7 +1350,8 @@ $end
     then
       raise program_error;
     end if;
-    
+
+    -- assume single consumer queues
     l_agent_list(l_agent_list.count+1) :=
       sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
 
@@ -1369,23 +1375,27 @@ $end
     <<listen_then_dequeue_loop>>
     for i_step in 1..2
     loop
-      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, oracle_tools.api_time_pkg.get_timestamp);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print
       ( dbug."info"
       , 'elapsed time: %s (s); finished?: %s'
       , to_char(l_elapsed_time)
-      , dbug.cast_to_varchar2(l_elapsed_time >= p_ttl)
+      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
       );
 $end
 
-      exit process_loop when l_elapsed_time >= p_ttl;
+      exit process_loop when l_elapsed_time >= l_ttl;
 
       case i_step
         when 1
         then
           dbms_aq_listen;
+          if l_agent.address = c_job_event_queue_name
+          then
+            raise e_job_event_signal;
+          end if;
           
         when 2
         then

@@ -47,41 +47,38 @@ procedure do
 /**
 Runs in an autonomous transaction.
 
-This procedure should be used to manage the supervisor job instead of directly calling DBMS_SCHEDULER.
+This procedure should be used to manage the jobs instead of directly calling DBMS_SCHEDULER.
 
 p_command = check_jobs_not_running:
 - Check that there are no running jobs that have been started by this package. If so, an error is raised.
 
 p_command = start:
 - Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
-- Start the supervisor job (submit_processing_supervisor()) if it does not exist,
+- Start the launcher job (submit_processing_launcher()) if it does not exist,
   otherwise disable and enable (i.e. start).
-- If the delta between now and the next run date is too far away,
-  start a temporary supervisor job (submit_processing_supervisor(p_ttl => delta - time between runs, p_repeat_interval => null)).
 
 p_command = stop:
-- Stop all the running supervisor jobs (and their workers).
+- Stop all the running jobs launched by this package.
   Worker jobs will disappear due to the auto_drop parameter in DBMS_SCHEDULER.CREATE_JOB being true,
-  supervisor jobs will be disabled.
+  the launcher job will be disabled.
 - Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
 
 p_command = restart:
 - Stop and start, equivalent to do('stop') followed by do('start').
 
 p_command = drop:
-- Stop all the running supervisor jobs (and their workers), equivalent to do('stop').
+- Stop the running jobs, equivalent to do('stop').
 - Drop the jobs, first with force false, next with force true if necessary.
 **/
 
-procedure submit_processing_supervisor
+procedure submit_processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
-, p_ttl in positiven default msg_constants_pkg.c_ttl -- time to live (in seconds)
 , p_repeat_interval in varchar2 default msg_constants_pkg.c_repeat_interval -- used to create a schedule if not null (a repeating job)
 );
 /**
-Submits the supervisor, see processing_supervisor() below, that will submit its workers.
+Submits the launcher, see processing_launcher() below, that will submit its workers and then finish.
 
 The administrator MAY create a job by calling this procedure, although that
 will already be done implicitly by the processing package (for instance
@@ -93,28 +90,29 @@ It may not run immediately due to the schedule: do('start') will then run a temp
 A non-repeating job (p_repeat_interval null) will just create a job that will be auto dropped.
 **/
 
-procedure processing_supervisor
+procedure processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
-, p_ttl in positiven default msg_constants_pkg.c_ttl -- time to live (in seconds)
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test
 purposes, never use it in application code: use 
-submit_processing_supervisor() above!
+submit_processing_launcher() above!
 
 So the administrator should NEVER create a job based on this procedure.
 
-It is a supervisor routine that just launches other jobs, the workers.  The
-supervisor also surveys them.  When worker jobs complete before
-the end (defined by start time + time to live), they will be restarted by the
-supervisor.  The supervisor will actively kill the worker jobs when he
-finishes.  Now the recurring schedule of the job (for instance each day) will
-start this supervisor process all over again.  The idea is to be use resources
-efficient by running for a long period with some concurrent worker jobs but
-not to exhaust system resources due to processes that run forever and that do
-not correctly clean up resources.
+It is a launcher routine that just launches other jobs, the workers.  The
+launcher then finishes since the workers survey themselves using the job event
+mechanism of DBMS_SCHEDULER.  When a worker job completes before the end
+(defined by start time + time to live) and thus sends a job event signal, one
+of its co-workers (there need to be at least 2) will pick up that up and it
+will restart the stopped job.  Now the recurring schedule of the launcher job
+(for instance each day) will start this launcher process again and again just
+launching the workers.  The idea is to use resources efficient by running
+for a long period with some concurrent worker jobs but not to exhaust system
+resources due to processes that run forever and that do not correctly clean up
+resources.
 
 Exactly one of the following parameters must be set:
 1. p_nr_workers_each_group: the number of workers is then the number of groups found to be processed multiplied by this number
@@ -129,23 +127,24 @@ function get_groups_to_process
 return sys.odcivarchar2list;
 ```
 
-This will determine the groups to process, after which the workers will do
-the actual work based on that information.
+This will determine the groups to process, after which the workers will do the
+actual work based on that information. The worker must also survey the
+DBMS_SCHEDULER job event queue (MSG_AQ_PKG.C_JOB_EVENT_QUEUE_NAME). When such
+an event occurs, an exception, MSG_AQ_PKG.E_JOB_EVENT_SIGNAL, will be raised.
 **/
 
 procedure processing
 ( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2 -- a comma separated list of groups to process
+, p_job_name_launcher in varchar2
 , p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
 );
 /**
 This procedure is meant to be used by (indirectly) DBMS_SCHEDULER jobs, not by YOU!
 
 So the administrator should NEVER create a job based on this procedure.
 
-This is the worker routine, started as a job by processing_supervisor(). 
+This is the worker routine, started as a job by processing_launcher(). 
 
 The processing package must have this routine that will be invoked by dynamic SQL:
 
@@ -153,8 +152,7 @@ The processing package must have this routine that will be invoked by dynamic SQ
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
+, p_end_date in timestamp with time zone
 );
 ```
 
