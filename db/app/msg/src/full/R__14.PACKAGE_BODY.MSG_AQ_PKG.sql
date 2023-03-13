@@ -1289,6 +1289,13 @@ is
   -- job event queue and the rest since the listen_delivery_mode equal to
   -- dbms_aq.persistent_or_buffered does not work when the job event queue is
   -- part of the agent list.
+  --
+  -- The actions to take when msg_aq_pkg.c_buffered_messaging is true:
+  -- 1. create an agent list and agent job event list with separate job queues
+  -- 2. check whether there is a job event on the job event queue without waiting
+  --    (use persistent listen delivery mode)
+  -- 3. check for the other queues but wait only at most 1 minute
+  --    otherwise we will never come back to point 2
   */
 $if msg_aq_pkg.c_buffered_messaging $then
   l_agent_job_event_list dbms_aq.aq$_agent_list_t; -- only the job event queue
@@ -1305,9 +1312,6 @@ $end
   ( p_agent out nocopy sys.aq$_agent
   )
   is
-$if msg_aq_pkg.c_buffered_messaging $then
-    l_ready boolean := false;
-$end    
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter('DBMS_AQ.LISTEN');
@@ -1316,31 +1320,49 @@ $end
     -- ORA-25295: Subscriber is not allowed to dequeue buffered messages
 $if msg_aq_pkg.c_buffered_messaging $then
 
-    begin
-      dbms_aq.listen
-      ( agent_list => l_agent_job_event_list
-      , wait => 0 -- just try
-      , listen_delivery_mode => dbms_aq.persistent
-      , agent => p_agent
-      , message_delivery_mode => l_message_delivery_mode
-      );
-      l_ready := true; -- there is a job event message
-    exception
-      when e_listen_timeout
+    <<listen_loop>>
+    loop
+      <<job_event_queue_first_loop>>
+      for i_try in 1..2
+      loop
+        begin
+          case i_try
+            when 1
+            then
+              dbms_aq.listen
+              ( agent_list => l_agent_job_event_list
+              , wait => 0 -- return immediately
+              , listen_delivery_mode => dbms_aq.persistent
+              , agent => p_agent
+              , message_delivery_mode => l_message_delivery_mode
+              );
+              
+            when 2
+            then
+              dbms_aq.listen
+              ( agent_list => l_agent_list
+              , wait => least(60, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+              , listen_delivery_mode => dbms_aq.persistent_or_buffered
+              , agent => p_agent
+              , message_delivery_mode => l_message_delivery_mode
+              );
+          end case;
+          
+          exit listen_loop; -- no time-out, hence there is a message
+        exception
+          when e_listen_timeout
+          then
+            null; -- no job event, so try the other agents (all groups)
+        end;
+      end loop job_event_queue_first_loop;
+      
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, oracle_tools.api_time_pkg.get_timestamp);
+
+      if l_elapsed_time >= l_ttl
       then
-        null; -- no job event, so try the other agents (all groups)
-    end;
-    
-    if not(l_ready)
-    then
-      dbms_aq.listen
-      ( agent_list => l_agent_list
-      , wait => greatest(1, trunc(l_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-      , listen_delivery_mode => dbms_aq.persistent_or_buffered
-      , agent => p_agent
-      , message_delivery_mode => l_message_delivery_mode
-      );
-    end if;
+        raise e_listen_timeout; -- till now we have absorbed all these kind of exceptions so emit it finally
+      end if;
+    end loop listen_loop;
     
 $else
 
