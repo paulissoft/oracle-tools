@@ -1326,7 +1326,7 @@ $if msg_aq_pkg.c_buffered_messaging $then
       );
       l_ready := true; -- there is a job event message
     exception
-      when e_dequeue_timeout
+      when e_listen_timeout
       then
         null; -- no job event, so try the other agents (all groups)
     end;
@@ -1509,6 +1509,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
   dbug.leave;
 exception
+  when e_job_event_signal
+  then
+    dbug.leave;
+    raise;
+    
   when others
   then
     dbug.leave_on_error;
