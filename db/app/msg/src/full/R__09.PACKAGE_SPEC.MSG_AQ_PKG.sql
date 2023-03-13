@@ -57,6 +57,10 @@ pragma exception_init(e_subscriber_does_not_exist, -24035);
 e_dequeue_timeout exception;
 pragma exception_init(e_dequeue_timeout, -25228);
 
+-- ORA-25254: time-out in LISTEN while waiting for a message
+e_listen_timeout exception;
+pragma exception_init(e_listen_timeout, -25254);
+
 /**
 
 This package is used as a wrapper around Oracle Advanced Queueing.
