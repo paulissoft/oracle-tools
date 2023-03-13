@@ -103,21 +103,27 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
+/* GJP 2023-03-13 Getting dbug errors. */
+/*
   if dbug.active('PROFILER')
   then
     profiler_report;
   end if;
+*/  
 $end  
 
   msg_pkg.done;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+/* GJP 2023-03-13 Do not change dbug settings anymore. */
+/*
   while l_dbug_channel is not null
   loop
     dbug.activate(l_dbug_channel, g_dbug_channel_tab(l_dbug_channel));
     
     l_dbug_channel := g_dbug_channel_tab.next(l_dbug_channel);
   end loop;
+*/  
 $end -- $if oracle_tools.cfg_pkg.c_debugging $then  
 end done;
 
