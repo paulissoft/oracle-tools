@@ -1033,6 +1033,12 @@ $end
     end;
   end loop try_loop;  
 
+  -- Must we stop? Only if the message type MSG_TYP since those are not supposed to be processed.
+  if msg_pkg.get_object_name(p_object_name => p_msg.get_type(), p_what => 'type', p_uc => 1, p_fq => 0, p_qq => 0) = 'MSG_TYP'
+  then
+    raise e_stop_signal;
+  end if;  
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   p_msg.print();
@@ -1274,7 +1280,7 @@ end get_groups_to_process;
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_end_date in timestamp with time zone
+, p_end_date in timestamp with time zone -- null indicates stop
 )
 is
   l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
@@ -1305,8 +1311,21 @@ $end
   l_message_delivery_mode pls_integer;
   l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
-  l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, p_end_date);
+  l_stop constant boolean := p_end_date is null;
+  l_ttl constant positiven := case when l_stop then 1 else oracle_tools.api_time_pkg.delta(l_start_date, p_end_date) end;
 
+  procedure interrupt_worker_process
+  is
+    l_msgid raw(16);
+  begin
+    -- send a message to the first queue in the agent list
+    enqueue
+    ( p_msg => new msg_typ(l_agent_list(l_agent_list.first).address, null, null)
+    , p_force => false -- the queue must be already there
+    , p_msgid => l_msgid
+    );
+  end interrupt_worker_process;
+  
   -- to be able to profile this call just create a procedure and use dbug.enter/dbug.leave
   procedure dbms_aq_listen
   ( p_agent out nocopy sys.aq$_agent
@@ -1391,6 +1410,75 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       raise;
 $end
   end dbms_aq_listen;
+
+  procedure process_messages
+  is
+  begin
+    <<process_loop>>
+    loop
+      <<listen_then_dequeue_loop>>
+      for i_step in 1..2
+      loop
+        l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, oracle_tools.api_time_pkg.get_timestamp);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( dbug."info"
+        , 'elapsed time: %s (s); finished?: %s'
+        , to_char(l_elapsed_time)
+        , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
+        );
+$end
+
+        exit process_loop when l_elapsed_time >= l_ttl;
+
+        case i_step
+          when 1
+          then
+            dbms_aq_listen(l_agent);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+            dbug.print
+            ( dbug."info"
+            , 'l_agent.address = c_job_event_queue_name: %s'
+            , l_agent.address = c_job_event_queue_name
+            );
+$end
+            if l_agent.address = c_job_event_queue_name
+            then
+              raise e_job_event_signal;
+            end if;
+            
+          when 2
+          then
+            begin
+              msg_aq_pkg.dequeue_and_process
+              ( p_queue_name => l_agent.address
+              , p_delivery_mode => l_message_delivery_mode
+              , p_visibility => dbms_aq.immediate
+              , p_subscriber => l_agent.name
+              , p_dequeue_mode => dbms_aq.remove
+              , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+              -- Although a message should be and a timeout of 0 should be okay, we will just specify a wait time of 1 second
+              -- since I saw a few times time-outs here.
+              , p_wait => 1
+              , p_correlation => null
+              , p_deq_condition => null
+              , p_force => false -- queue should be there
+              , p_commit => true
+              );
+            exception
+              when e_dequeue_timeout -- something strange happened, just log the error
+              then
+$if oracle_tools.cfg_pkg.c_debugging $then
+                dbug.on_error;
+$end
+                null; 
+            end;
+        end case;
+      end loop listen_then_dequeue_loop;
+    end loop process_loop;
+  end process_messages;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
@@ -1462,76 +1550,18 @@ $end
     l_queue_name_tab(l_queue_name_idx) := null;
   end loop agent_loop;
 
-  <<process_loop>>
-  loop
-    <<listen_then_dequeue_loop>>
-    for i_step in 1..2
-    loop
-      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, oracle_tools.api_time_pkg.get_timestamp);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , 'elapsed time: %s (s); finished?: %s'
-      , to_char(l_elapsed_time)
-      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
-      );
-$end
-
-      exit process_loop when l_elapsed_time >= l_ttl;
-
-      case i_step
-        when 1
-        then
-          dbms_aq_listen(l_agent);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-          dbug.print
-          ( dbug."info"
-          , 'l_agent.address = c_job_event_queue_name: %s'
-          , l_agent.address = c_job_event_queue_name
-          );
-$end
-          if l_agent.address = c_job_event_queue_name
-          then
-            raise e_job_event_signal;
-          end if;
-          
-        when 2
-        then
-          begin
-            msg_aq_pkg.dequeue_and_process
-            ( p_queue_name => l_agent.address
-            , p_delivery_mode => l_message_delivery_mode
-            , p_visibility => dbms_aq.immediate
-            , p_subscriber => l_agent.name
-            , p_dequeue_mode => dbms_aq.remove
-            , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
-            -- Although a message should be and a timeout of 0 should be okay, we will just specify a wait time of 1 second
-            -- since I saw a few times time-outs here.
-            , p_wait => 1
-            , p_correlation => null
-            , p_deq_condition => null
-            , p_force => false -- queue should be there
-            , p_commit => true
-            );
-          exception
-            when e_dequeue_timeout -- something strange happened, just log the error
-            then
-$if oracle_tools.cfg_pkg.c_debugging $then
-              dbug.on_error;
-$end
-              null; 
-          end;
-      end case;
-    end loop listen_then_dequeue_loop;
-  end loop process_loop;
+  if l_stop
+  then
+    interrupt_worker_process;
+  else
+    process_messages;
+  end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
   dbug.leave;
 exception
-  when e_job_event_signal
+  when e_job_event_signal or e_stop_signal
   then
     dbug.leave;
     raise;
