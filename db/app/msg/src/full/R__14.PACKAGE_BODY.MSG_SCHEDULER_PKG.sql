@@ -844,6 +844,15 @@ $end
         end if;
     end;
   end loop try_loop;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end    
 end start_worker;
   
 -- PUBLIC
