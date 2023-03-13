@@ -9,7 +9,9 @@ c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
-/* Some definitions for the job event queue. */
+/*
+-- Some definitions for (re-)starting (via job events) and stopping (via an empty message).
+*/
 
 /* A user-defined exception, see also MSG_SCHEDULER_PKG. */
 e_job_event_signal exception;
@@ -17,7 +19,12 @@ pragma exception_init(e_job_event_signal, -20300);
 
 c_job_event_queue_name constant all_queues.name%type := '"SYS"."SCHEDULER$_EVENT_QUEUE"';
 
-/* The following exceptions are all defined by Oracle. */
+e_stop_signal exception;
+pragma exception_init(e_stop_signal, -20301);
+
+/*
+-- The following exceptions are all defined by Oracle.
+*/
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -271,7 +278,7 @@ The latter case indicates that dbms_aq.unregister() has been invoked so someone 
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_end_date in timestamp with time zone
+, p_end_date in timestamp with time zone -- null indicates stop
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
