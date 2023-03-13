@@ -15,7 +15,7 @@ c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messa
 e_job_event_signal exception;
 pragma exception_init(e_job_event_signal, -20300);
 
-c_job_event_queue_name constant all_queues.name%type := 'SYS.SCHEDULER$_EVENT_QUEUE';
+c_job_event_queue_name constant all_queues.name%type := '"SYS"."SCHEDULER$_EVENT_QUEUE"';
 
 /* The following exceptions are all defined by Oracle. */
 
