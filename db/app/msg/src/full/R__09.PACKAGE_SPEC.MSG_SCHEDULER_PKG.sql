@@ -94,6 +94,7 @@ procedure processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
+, p_stop in naturaln default 0 -- must we stop all workers launched here?
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test
@@ -152,7 +153,7 @@ The processing package must have this routine that will be invoked by dynamic SQ
 procedure processing
 ( p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_end_date in timestamp with time zone
+, p_end_date in timestamp with time zone -- null indicates stop
 );
 ```
 
