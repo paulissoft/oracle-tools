@@ -1279,6 +1279,20 @@ procedure processing
 is
   l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_agent_list dbms_aq.aq$_agent_list_t;
+  /* GJP 2023-03-13
+  --
+  -- While listening with DBMS_AQ.LISTEN I got:
+  --
+  --   ORA-25295: Subscriber is not allowed to dequeue buffered messages
+  --
+  -- Apparently we must either not use buffered messages or split listening on
+  -- job event queue and the rest since the listen_delivery_mode equal to
+  -- dbms_aq.persistent_or_buffered does not work when the job event queue is
+  -- part of the agent list.
+  */
+$if msg_aq_pkg.c_buffered_messaging $then
+  l_agent_job_event_list dbms_aq.aq$_agent_list_t; -- only the job event queue
+$end
   l_queue_name_idx positiven := 1;
   l_agent sys.aq$_agent;
   l_message_delivery_mode pls_integer;
@@ -1289,17 +1303,54 @@ is
   -- to be able to profile this call just create a procedure and use dbug.enter/dbug.leave
   procedure dbms_aq_listen
   is
+$if msg_aq_pkg.c_buffered_messaging $then
+    l_ready boolean := false;
+$end    
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter('DBMS_AQ.LISTEN');
 $end
+
+    -- ORA-25295: Subscriber is not allowed to dequeue buffered messages
+$if msg_aq_pkg.c_buffered_messaging $then
+
+    begin
+      dbms_aq.listen
+      ( agent_list => l_agent_job_event_list
+      , wait => 0 -- just try
+      , listen_delivery_mode => dbms_aq.persistent
+      , agent => l_agent
+      , message_delivery_mode => l_message_delivery_mode
+      );
+      l_ready := true; -- there is a job event message
+    exception
+      when e_dequeue_timeout
+      then
+        null; -- no job event, so try the other agents (all groups)
+    end;
+    if not(l_ready)
+    then
+      dbms_aq.listen
+      ( agent_list => l_agent_list
+      , wait => greatest(1, trunc(l_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+      , listen_delivery_mode => dbms_aq.persistent_or_buffered
+      , agent => l_agent
+      , message_delivery_mode => l_message_delivery_mode
+      );
+    end if;
+    
+$else
+
     dbms_aq.listen
     ( agent_list => l_agent_list
     , wait => greatest(1, trunc(l_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-    , listen_delivery_mode => dbms_aq.persistent_or_buffered
+    , listen_delivery_mode => dbms_aq.persistent
     , agent => l_agent
     , message_delivery_mode => l_message_delivery_mode
     );
+    
+$end
+
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
 $end
@@ -1335,6 +1386,11 @@ $end
   -- So add an agent for this multiple consumer queue (use the schema as subscriber).
   l_agent_list(l_agent_list.count+1) :=
     sys.aq$_agent($$PLSQL_UNIT_OWNER, c_job_event_queue_name, null);
+
+$if msg_aq_pkg.c_buffered_messaging $then
+  l_agent_job_event_list := l_agent_list;
+  l_agent_list.delete;
+$end  
 
   -- i_idx can be from
   -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
