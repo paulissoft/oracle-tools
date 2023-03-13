@@ -1302,6 +1302,8 @@ $end
 
   -- to be able to profile this call just create a procedure and use dbug.enter/dbug.leave
   procedure dbms_aq_listen
+  ( p_agent out nocopy sys.aq$_agent
+  )
   is
 $if msg_aq_pkg.c_buffered_messaging $then
     l_ready boolean := false;
@@ -1319,7 +1321,7 @@ $if msg_aq_pkg.c_buffered_messaging $then
       ( agent_list => l_agent_job_event_list
       , wait => 0 -- just try
       , listen_delivery_mode => dbms_aq.persistent
-      , agent => l_agent
+      , agent => p_agent
       , message_delivery_mode => l_message_delivery_mode
       );
       l_ready := true; -- there is a job event message
@@ -1328,13 +1330,14 @@ $if msg_aq_pkg.c_buffered_messaging $then
       then
         null; -- no job event, so try the other agents (all groups)
     end;
+    
     if not(l_ready)
     then
       dbms_aq.listen
       ( agent_list => l_agent_list
       , wait => greatest(1, trunc(l_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
       , listen_delivery_mode => dbms_aq.persistent_or_buffered
-      , agent => l_agent
+      , agent => p_agent
       , message_delivery_mode => l_message_delivery_mode
       );
     end if;
@@ -1345,14 +1348,25 @@ $else
     ( agent_list => l_agent_list
     , wait => greatest(1, trunc(l_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
     , listen_delivery_mode => dbms_aq.persistent
-    , agent => l_agent
+    , agent => p_agent
     , message_delivery_mode => l_message_delivery_mode
     );
     
 $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."output"
+    , 'p_agent.name: %s; p_agent.address: %s'
+    , p_agent.name
+    , p_agent.address
+    );
     dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
 $end
   end dbms_aq_listen;
 begin
@@ -1447,7 +1461,15 @@ $end
       case i_step
         when 1
         then
-          dbms_aq_listen;
+          dbms_aq_listen(l_agent);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print
+          ( dbug."info"
+          , 'l_agent.address = c_job_event_queue_name: %s'
+          , l_agent.address = c_job_event_queue_name
+          );
+$end
           if l_agent.address = c_job_event_queue_name
           then
             raise e_job_event_signal;
