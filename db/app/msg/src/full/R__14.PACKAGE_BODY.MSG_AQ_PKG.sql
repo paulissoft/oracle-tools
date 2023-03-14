@@ -1430,7 +1430,7 @@ $end
         ( p_controlling_package => p_controlling_package
         , p_recv_timeout => msg_constants_pkg.c_time_between_heartbeats
         , p_worker_nr => p_worker_nr
-        , p_recv_timestamp => l_timestamp_dummy
+        , p_timestamp => l_timestamp_dummy
         );
         loop
           l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');

@@ -220,11 +220,12 @@ procedure send_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds
 , p_worker_nr in positiven -- the worker number
-, p_recv_timestamp out nocopy timestamp_tz_t
+, p_timestamp out nocopy timestamp_tz_t
 )
 is
   l_result pls_integer;
-  l_timestamp_tz_str timestamp_tz_str_t := timestamp_tz2timestamp_tz_str(current_timestamp);
+  l_send_timestamp_str timestamp_tz_str_t := null;
+  l_recv_timestamp_str timestamp_tz_str_t := null;
   l_send_pipe constant varchar2(128 char) := p_controlling_package;
   l_send_timeout constant naturaln := 0;
   l_recv_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
@@ -240,14 +241,15 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  p_recv_timestamp := null;
+  p_timestamp := null;
 
   dbms_pipe.reset_buffer;
   dbms_pipe.pack_message(p_worker_nr);
-  dbms_pipe.pack_message(l_timestamp_tz_str);
+  l_send_timestamp_str := timestamp_tz2timestamp_tz_str(current_timestamp);
+  dbms_pipe.pack_message(l_send_timestamp_str);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'timestamp sent to receiver: %s', l_timestamp_tz_str);
+  dbug.print(dbug."info", 'timestamp sent to receiver: %s', l_send_timestamp_str);
   dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
   if l_result = 0
@@ -259,8 +261,13 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
     if l_result = 0
     then
-      dbms_pipe.unpack_message(l_timestamp_tz_str);
-      p_recv_timestamp := timestamp_tz_str2timestamp_tz(l_timestamp_tz_str);
+      dbms_pipe.unpack_message(l_recv_timestamp_str);
+      if l_recv_timestamp_str = l_send_timestamp_str
+      then
+        p_timestamp := timestamp_tz_str2timestamp_tz(l_recv_timestamp_str);
+      else
+        raise value_error;
+      end if;
     else
       raise_application_error
       ( c_heartbeat_failure
@@ -277,10 +284,15 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
-  , 'timestamp received from receiver: %s'
-  , l_timestamp_tz_str
+  , 'p_timestamp (timestamp received from receiver): %s'
+  , l_recv_timestamp_str
   );
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end send_heartbeat;    
   
@@ -288,12 +300,12 @@ procedure recv_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds
 , p_worker_nr out nocopy positive
-, p_send_timestamp out nocopy timestamp_tz_t
+, p_timestamp out nocopy timestamp_tz_t
 )
 is
   l_result pls_integer;
-  l_timestamp_tz_str timestamp_tz_str_t := null;  
-  l_send_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
+  l_timestamp_str timestamp_tz_str_t := null;  
+  l_send_pipe varchar2(128 char) := null;
   l_send_timeout constant naturaln := 0;
   l_recv_pipe constant varchar2(128 char) := p_controlling_package;
 begin
@@ -307,7 +319,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  p_send_timestamp := null;
+  p_timestamp := null;
   
   dbms_pipe.reset_buffer;
   l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => p_recv_timeout);
@@ -317,18 +329,24 @@ $end
   if l_result = 0
   then
     dbms_pipe.unpack_message(p_worker_nr);
-    dbms_pipe.unpack_message(l_timestamp_tz_str);
+    dbms_pipe.unpack_message(l_timestamp_str);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'timestamp received from sender: %s', l_timestamp_str);
+$end
+
+    l_send_pipe := p_controlling_package || '#' || p_worker_nr;
     
     dbms_pipe.reset_buffer;
-    dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
+
+    dbms_pipe.pack_message(l_timestamp_str);
     l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'timestamp received from sender: %s', l_timestamp_tz_str);
     dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
     if l_result = 0
     then
-      p_send_timestamp := timestamp_tz_str2timestamp_tz(l_timestamp_tz_str);
+      p_timestamp := timestamp_tz_str2timestamp_tz(l_timestamp_str);
     else
       raise_application_error
       ( c_heartbeat_failure
@@ -345,11 +363,16 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
-  , 'p_worker_nr: %s; timestamp sent to sender: %s'
+  , 'p_worker_nr: %s; p_timestamp: %s'
   , p_worker_nr
-  , l_timestamp_tz_str
+  , l_timestamp_str
   );
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end recv_heartbeat;    
 

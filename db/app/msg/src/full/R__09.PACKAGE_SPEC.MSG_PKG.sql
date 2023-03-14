@@ -88,7 +88,7 @@ procedure send_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds
 , p_worker_nr in positiven -- the worker number
-, p_recv_timestamp out nocopy timestamp_tz_t
+, p_timestamp out nocopy timestamp_tz_t
 );
 /**
 Send a heartbeat to the request pipe (p_controlling_package) with a timeout of 0 seconds.
@@ -106,13 +106,13 @@ procedure recv_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds
 , p_worker_nr out nocopy positive -- the worker number
-, p_send_timestamp out nocopy timestamp_tz_t
+, p_timestamp out nocopy timestamp_tz_t
 );
 /**
 Receive a heartbeat from the request pipe (p_controlling_package) with a timeout of p_recv_timeout seconds.
 
 The receiver will check whether the message is conform described above.
-If so, it will respond (timeout 0) to the response pipe (p_controlling_package || '#' || p_worker_nr) with just its own current timestamp.
+If so, it will respond (timeout 0) to the response pipe (p_controlling_package || '#' || p_worker_nr) with the same timestamp.
 
 In case of problems: raise an e_heartbeat_failure exception.
 */

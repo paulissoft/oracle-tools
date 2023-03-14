@@ -695,7 +695,7 @@ $end
     l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
     l_inactive_worker_tab sys.odcinumberlist := sys.odcinumberlist();
     l_timestamp_tab dbms_sql.timestamp_with_time_zone_table;
-    l_send_timestamp msg_pkg.timestamp_tz_t;
+    l_timestamp msg_pkg.timestamp_tz_t;
     l_worker_nr positive;
   begin
     for i_worker_nr in 1..p_nr_workers
@@ -726,11 +726,11 @@ $end
         ( p_controlling_package => $$PLSQL_UNIT
         , p_recv_timeout => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
         , p_worker_nr => l_worker_nr
-        , p_send_timestamp => l_send_timestamp
+        , p_timestamp => l_timestamp
         );
         if l_worker_nr is not null
         then
-          l_timestamp_tab(l_worker_nr) := l_send_timestamp;
+          l_timestamp_tab(l_worker_nr) := l_timestamp;
         end if;
       exception
         when msg_pkg.e_heartbeat_failure
