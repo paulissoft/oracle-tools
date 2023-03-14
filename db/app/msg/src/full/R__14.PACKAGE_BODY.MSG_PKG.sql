@@ -224,7 +224,7 @@ procedure send_heartbeat
 )
 is
   l_result pls_integer;
-  l_timestamp_tz_str timestamp_tz_str_t := null;
+  l_timestamp_tz_str timestamp_tz_str_t := timestamp_tz2timestamp_tz_str(current_timestamp);
   l_send_pipe constant varchar2(128 char) := p_controlling_package;
   l_send_timeout constant naturaln := 0;
   l_recv_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
@@ -244,9 +244,10 @@ $end
 
   dbms_pipe.reset_buffer;
   dbms_pipe.pack_message(p_worker_nr);
-  dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
+  dbms_pipe.pack_message(l_timestamp_tz_str);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'timestamp sent: %s', l_timestamp_tz_str);
   dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
   if l_result = 0
