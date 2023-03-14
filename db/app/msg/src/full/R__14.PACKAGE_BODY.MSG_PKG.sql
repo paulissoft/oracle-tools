@@ -224,7 +224,7 @@ procedure send_heartbeat
 )
 is
   l_result pls_integer;
-  l_timestamp_tz_str timestamp_tz_str_t;
+  l_timestamp_tz_str timestamp_tz_str_t := null;
   l_send_pipe constant varchar2(128 char) := p_controlling_package;
   l_send_timeout constant naturaln := 0;
   l_recv_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
@@ -233,7 +233,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SEND_HEARTBEAT');
   dbug.print
   ( dbug."input"
-  , 'p_controlling_package : %s; p_recv_timeout: %s; p_worker_nr: %s'
+  , 'p_controlling_package: %s; p_recv_timeout: %s; p_worker_nr: %s'
   , p_controlling_package
   , p_recv_timeout
   , p_worker_nr
@@ -246,10 +246,16 @@ $end
   dbms_pipe.pack_message(p_worker_nr);
   dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
+$end
   if l_result = 0
   then
     dbms_pipe.reset_buffer;
     l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => p_recv_timeout);
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'dbms_pipe.receive_message(pipename => %s, timeout => %s): %s', l_recv_pipe, p_recv_timeout, l_result);
+$end
     if l_result = 0
     then
       dbms_pipe.unpack_message(l_timestamp_tz_str);
@@ -294,7 +300,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.RECV_HEARTBEAT');
   dbug.print
   ( dbug."input"
-  , 'p_controlling_package : %s; p_recv_timeout: %s'
+  , 'p_controlling_package: %s; p_recv_timeout: %s'
   , p_controlling_package
   , p_recv_timeout
   );
@@ -304,6 +310,9 @@ $end
   
   dbms_pipe.reset_buffer;
   l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => p_recv_timeout);
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'dbms_pipe.receive_message(pipename => %s, timeout => %s): %s', l_recv_pipe, p_recv_timeout, l_result);
+$end
   if l_result = 0
   then
     dbms_pipe.unpack_message(p_worker_nr);
@@ -312,6 +321,9 @@ $end
     dbms_pipe.reset_buffer;
     dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
     l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
+$end
     if l_result = 0
     then
       p_send_timestamp := timestamp_tz_str2timestamp_tz(l_timestamp_tz_str);
