@@ -1596,11 +1596,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
   dbug.leave;
 exception
-  when e_job_event_signal or e_stop_signal
-  then
-    dbug.leave;
-    raise;
-    
   when others
   then
     dbug.leave_on_error;
