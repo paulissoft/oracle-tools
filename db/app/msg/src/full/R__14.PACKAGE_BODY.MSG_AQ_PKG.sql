@@ -1215,6 +1215,35 @@ exception
 $end
 end dequeue_and_process;
 
+procedure do
+( p_command in varchar2 -- start / stop
+, p_controlling_package in varchar2 -- the package calling this procedure
+)
+is
+  pragma autonomous_transaction;
+
+  l_msg msg_typ := new msg_heartbeat_typ(p_controlling_package); -- to get the queue name
+  l_queue_name constant queue_name_t := get_queue_name(l_msg);
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
+  dbug.print(dbug."input", 'p_command: %s; p_controlling_package: %s', p_command, p_controlling_package);
+$end
+
+  case p_command
+    when 'start'
+    then start_queue(p_queue_name => l_queue_name);    
+    when 'stop'
+    then stop_queue(p_queue_name => l_queue_name, p_wait => false);
+  end case;
+
+  commit;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end do;
+
 function get_groups_to_process
 ( p_processing_method in varchar2
 )
@@ -1449,7 +1478,7 @@ $end
 
   procedure processing_as_supervisor
   is
-    l_msg msg_typ := new msg_heartbeat_typ(p_controlling_package); -- to get the queue
+    l_msg msg_typ := new msg_heartbeat_typ(p_controlling_package); -- to get the queue name
     l_queue_name constant queue_name_t := get_queue_name(l_msg);
     l_timestamp_table dbms_sql.timestamp_with_time_zone_table;
     l_msgid raw(16);

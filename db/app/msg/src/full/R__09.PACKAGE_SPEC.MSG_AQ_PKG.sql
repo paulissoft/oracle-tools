@@ -251,6 +251,22 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 See also the dequeue(p_context...) procedure documentation.
 **/
 
+procedure do
+( p_command in varchar2 -- start / stop
+, p_controlling_package in varchar2 -- the package calling this procedure
+);
+/**
+Runs in an autonomous transaction.
+
+Helps the controlling package to start and stop.
+
+p_command = start:
+- Enable enqueue / dequeue for heartbeat queue.
+
+p_command = stop:
+- Disable enqueue / dequeue for heartbeat queue.
+**/
+
 function get_groups_to_process
 ( p_processing_method in varchar2
 )

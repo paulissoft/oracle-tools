@@ -94,7 +94,6 @@ procedure processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
-, p_stop in naturaln default 0 -- must we stop all workers launched here?
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test
@@ -103,17 +102,14 @@ submit_processing_launcher() above!
 
 So the administrator should NEVER create a job based on this procedure.
 
-It is a launcher routine that just launches other jobs, the workers.  The
-launcher then finishes since the workers survey themselves using the job event
-mechanism of DBMS_SCHEDULER.  When a worker job completes before the end
-(defined by start time + time to live) and thus sends a job event signal, one
-of its co-workers (there need to be at least 2) will pick up that up and it
-will restart the stopped job.  Now the recurring schedule of the launcher job
-(for instance each day) will start this launcher process again and again just
-launching the workers.  The idea is to use resources efficient by running
-for a long period with some concurrent worker jobs but not to exhaust system
-resources due to processes that run forever and that do not correctly clean up
-resources.
+It is a launcher routine that just launches other jobs, the workers and a
+supervisor.  The launcher then finishes since the supervisor restarts failing
+or stopped workers. Now the recurring schedule of the launcher job (for
+instance each day) will start this launcher process again and again just
+launching the supervisor and workers.  The idea is to use resources efficient
+by running for a long period with some concurrent worker jobs but not to
+exhaust system resources due to processes that run forever and that do not
+correctly clean up resources.
 
 Exactly one of the following parameters must be set:
 1. p_nr_workers_each_group: the number of workers is then the number of groups found to be processed multiplied by this number
@@ -128,17 +124,16 @@ function get_groups_to_process
 return sys.odcivarchar2list;
 ```
 
-This will determine the groups to process, after which the workers will do the
-actual work based on that information. The worker must also survey the
-DBMS_SCHEDULER job event queue (MSG_AQ_PKG.C_JOB_EVENT_QUEUE_NAME). When such
-an event occurs, an exception, MSG_AQ_PKG.E_JOB_EVENT_SIGNAL, will be raised.
+This will determine the groups to process, after which the supervisor and workers will do the
+actual work based on that information.
 **/
 
 procedure processing
 ( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2 -- a comma separated list of groups to process
-, p_job_name_launcher in varchar2
-, p_worker_nr in positiven
+, p_nr_workers in positiven -- the number of workers
+, p_worker_nr in positive -- the worker number: null for supervisor
+, p_end_date in anydata -- the end date (a timestamp with time zone)
 );
 /**
 This procedure is meant to be used by (indirectly) DBMS_SCHEDULER jobs, not by YOU!
@@ -151,9 +146,12 @@ The processing package must have this routine that will be invoked by dynamic SQ
 
 ```
 procedure processing
-( p_groups_to_process_tab in sys.odcivarchar2list
-, p_worker_nr in positiven
-, p_end_date in timestamp with time zone -- null indicates stop
+( p_controlling_package in varchar2 -- the controlling package, i.e. the one who invoked this procedure
+, p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
+, p_nr_workers in positiven -- the number of workers
+, p_worker_nr in positive -- the worker number: null for supervisor
+, p_end_date in timestamp with time zone -- the end date
+, p_inactive_worker_tab out nocopy sys.odcinumberlist -- a table of worker numbers that did not send a heartbeat lately
 );
 ```
 
