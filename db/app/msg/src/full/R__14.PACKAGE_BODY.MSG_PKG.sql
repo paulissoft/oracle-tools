@@ -247,7 +247,7 @@ $end
   dbms_pipe.pack_message(l_timestamp_tz_str);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'timestamp sent: %s', l_timestamp_tz_str);
+  dbug.print(dbug."info", 'timestamp sent to receiver: %s', l_timestamp_tz_str);
   dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
   if l_result = 0
@@ -277,7 +277,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
-  , 'p_recv_timestamp: %s'
+  , 'timestamp received from receiver: %s'
   , l_timestamp_tz_str
   );
   dbug.leave;
@@ -323,6 +323,7 @@ $end
     dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
     l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'timestamp received from sender: %s', l_timestamp_tz_str);
     dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
     if l_result = 0
@@ -344,7 +345,7 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
-  , 'p_worker_nr: %s; p_send_timestamp: %s'
+  , 'p_worker_nr: %s; timestamp sent to sender: %s'
   , p_worker_nr
   , l_timestamp_tz_str
   );
