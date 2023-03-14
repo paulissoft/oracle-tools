@@ -27,15 +27,15 @@ c_default_processing_method constant varchar(128 char) := 'package://' || $$PLSQ
 --      ORA-27476: "SYS"."DEFAULT_IN_MEMORY_JOB_CLASS" does not exist
 --      Can not be granted neither, at least not by ADMIN
 --
--- So lightweight worker jobs seemed to be the next interesting thing, however I got too much disconnected processed.
--- So just stick with REGULAR.
 */
-c_job_style_worker constant varchar2(20 char) := 'REGULAR'; -- LIGHTWEIGHT / REGULAR
+c_job_style_worker constant varchar2(20 char) := 'LIGHTWEIGHT'; -- LIGHTWEIGHT / REGULAR
 c_job_class_worker constant varchar2(40 char) := 'DEFAULT_JOB_CLASS';
 
 -- job scheduler schedule
 -- job duration
 c_time_between_runs constant positiven := 5; -- seconds between subsequent runs
+c_time_between_heartbeats constant positiven := 10; -- seconds between subsequent runs
+
 -- c_repeat_interval constant varchar2(100) := 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0; BYSECOND=0'; -- start every day at 00:00:00
 c_repeat_interval constant varchar2(100) := 'FREQ=HOURLY; BYMINUTE=0; BYSECOND=0'; -- start every hour at 00:00
 

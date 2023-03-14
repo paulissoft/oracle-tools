@@ -10,19 +10,6 @@ c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
 /*
--- Some definitions for (re-)starting (via job events) and stopping (via an empty message).
-*/
-
-/* A user-defined exception, see also MSG_SCHEDULER_PKG. */
-e_job_event_signal exception;
-pragma exception_init(e_job_event_signal, -20300);
-
-c_job_event_queue_name constant all_queues.name%type := '"SYS"."SCHEDULER$_EVENT_QUEUE"';
-
-e_stop_signal exception;
-pragma exception_init(e_stop_signal, -20301);
-
-/*
 -- The following exceptions are all defined by Oracle.
 */
 
@@ -276,14 +263,33 @@ The latter case indicates that dbms_aq.unregister() has been invoked so someone 
 **/
 
 procedure processing
-( p_groups_to_process_tab in sys.odcivarchar2list
-, p_worker_nr in positiven
-, p_end_date in timestamp with time zone -- null indicates stop
+( p_controlling_package in varchar2 -- the controlling package, i.e. the one who invoked this procedure
+, p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
+, p_nr_workers in positiven -- the number of workers
+, p_worker_nr in positive -- the worker number: null for supervisor
+, p_end_date in timestamp with time zone -- the end date
+, p_inactive_worker_tab out nocopy sys.odcinumberlist -- a table of worker numbers that did not send a heartbeat lately
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
-Performs the processing of a worker job.
-As soon as a DBMS_SCHEDULER job event occurs, exception E_JOB_EVENT_SIGNAL wil be raised.
+Performs the processing of a supervisor / worker job.
+
+Two modes of working:
+* WORKER (p_worker_nr is not null)
+A worker runs till the end date (will check himself) and listens to the queues
+derived from the groups to process.  Every X seconds (X = time between
+heartbeats) it must also send a heartbeat to the heartbeat queue.  This means
+that it can listen at most X seconds for messages to arrive before it sends a
+heartbeat.
+* SUPERVISOR (p_worker_nr is null)
+A supervisor runs till the end date (will check himself) and listens on the
+heartbeat queue (message MSG_HEARTBEAT_TYP) for worker heartbeats.  Anytime a
+heartbeat is received (from any worker) all recent heartbeats are checked
+against the time between heartbeats.  If a heartbeat is too old (now minus
+last heartbeat > time between heartbeats) it will be added to the table of
+worker numbers that did not send a heartbeat lately and the procedure will
+return giving the controlling package a chance to restart those workers.
+The number of workers is needed to create an initial list of heartbeat timestamps.
 **/
 
 end msg_aq_pkg;
