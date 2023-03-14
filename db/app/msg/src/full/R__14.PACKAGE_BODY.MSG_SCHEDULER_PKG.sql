@@ -411,7 +411,7 @@ $end
                              then 'VARCHAR2'
                              when i_par_idx <= 4
                              then 'NUMBER'
-                             else 'IMESTAMP WITH TIMEZONE'
+                             else 'VARCHAR2'
                            end
         , default_value => null
         );
@@ -435,8 +435,20 @@ procedure submit_processing
 is
   l_job_name constant job_name_t := join_job_name(p_processing_package, c_program_worker_group, p_worker_nr);
   l_argument_value user_scheduler_program_args.default_value%type;
-  l_end_date anydata;
 begin  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING');
+  dbug.print
+  ( dbug."input"
+  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_workers: %s; p_worker_nr: %s; p_end_date: %s'
+  , p_processing_package
+  , p_groups_to_process_list
+  , p_nr_workers
+  , p_worker_nr
+  , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")
+  );
+$end
+
   PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name)
   then
@@ -489,6 +501,10 @@ begin
             a.argument_position
   )
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'argument name: %s', r.argument_name);
+$end
+
     case r.argument_name
       when 'P_PROCESSING_PACKAGE'
       then l_argument_value := p_processing_package;
@@ -499,35 +515,25 @@ begin
       when 'P_WORKER_NR'
       then l_argument_value := to_char(p_worker_nr);
       when 'P_END_DATE'
-      then l_end_date := anydata.ConvertTimestampTZ(p_end_date);
+      then l_argument_value := msg_pkg.timestamp_tz2timestamp_tz_str(p_end_date);
     end case;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print
-    ( dbug."info"
-    , 'argument name: %s; argument value: %s'
-    , r.argument_name
-    , l_argument_value
-    );
+    dbug.print(dbug."info", 'argument value: %s', l_argument_value);
 $end
 
-    if r.argument_name <> 'P_END_DATE'
-    then
-      dbms_scheduler.set_job_argument_value
-      ( job_name => l_job_name
-      , argument_name => r.argument_name
-      , argument_value => l_argument_value
-      );
-    else
-      dbms_scheduler.set_job_anydata_value
-      ( job_name => l_job_name
-      , argument_name => r.argument_name
-      , argument_value => l_end_date
-      );
-    end if;
+    dbms_scheduler.set_job_argument_value
+    ( job_name => l_job_name
+    , argument_name => r.argument_name
+    , argument_value => l_argument_value
+    );
   end loop;
   
   dbms_scheduler.enable(l_job_name);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end submit_processing;
 
 function determine_processing_package
@@ -615,7 +621,7 @@ procedure processing
 , p_groups_to_process_list in varchar2
 , p_nr_workers in positiven
 , p_worker_nr in positive
-, p_end_date in anydata
+, p_end_date in varchar2
 )
 is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
@@ -623,7 +629,7 @@ is
   l_statement varchar2(32767 byte);
   l_groups_to_process_tab sys.odcivarchar2list;
   l_inactive_worker_tab sys.odcinumberlist; -- for supervisor only
-  l_end_date constant user_scheduler_jobs.end_date%type := p_end_date.AccessTimestampTZ();
+  l_end_date constant msg_pkg.timestamp_tz_t := msg_pkg.timestamp_tz_str2timestamp_tz(p_end_date);
 
   -- ORA-06550: line 1, column 18:
   -- PLS-00302: component 'PROCESING' must be declared

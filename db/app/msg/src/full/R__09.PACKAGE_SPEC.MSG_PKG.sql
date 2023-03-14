@@ -4,6 +4,11 @@ type t_boolean_lookup_tab is table of boolean index by varchar2(4000 char);
 
 type msg_tab_t is table of msg_typ;
 
+subtype timestamp_tz_t is timestamp with time zone;
+subtype timestamp_tz_str_t is varchar2(40);
+
+c_timestamp_tz_format constant timestamp_tz_str_t := 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"';
+
 /**
 A package with some generic definitions, exceptions, functions and procedures.
 **/
@@ -60,6 +65,18 @@ procedure msg2data
 , p_data_json out nocopy json_element_t
 );
 /** Copy either p_msg_raw if not null, otherwise p_msg_blob to the output BLOB. **/
+
+function timestamp_tz2timestamp_tz_str
+( p_val in timestamp_tz_t
+)
+return timestamp_tz_str_t;
+/** Return the timestamp value in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format. */
+
+function timestamp_tz_str2timestamp_tz
+( p_val in timestamp_tz_str_t
+)
+return timestamp_tz_t;
+/** Return the timestamp string value (in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format) as a timestamp with time zone. */
 
 end msg_pkg;
 /

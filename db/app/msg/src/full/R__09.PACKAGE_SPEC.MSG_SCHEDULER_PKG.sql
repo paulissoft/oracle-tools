@@ -133,7 +133,7 @@ procedure processing
 , p_groups_to_process_list in varchar2 -- a comma separated list of groups to process
 , p_nr_workers in positiven -- the number of workers
 , p_worker_nr in positive -- the worker number: null for supervisor
-, p_end_date in anydata -- the end date (a timestamp with time zone)
+, p_end_date in varchar2 -- the end date (as string)
 );
 /**
 This procedure is meant to be used by (indirectly) DBMS_SCHEDULER jobs, not by YOU!

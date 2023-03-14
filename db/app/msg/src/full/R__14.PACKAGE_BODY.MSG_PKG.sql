@@ -198,6 +198,24 @@ begin
     end;
 end msg2data;
 
+function timestamp_tz2timestamp_tz_str
+( p_val in timestamp_tz_t
+)
+return timestamp_tz_str_t
+is
+begin
+  return to_char(p_val, c_timestamp_tz_format);
+end timestamp_tz2timestamp_tz_str;
+
+function timestamp_tz_str2timestamp_tz
+( p_val in timestamp_tz_str_t
+)
+return timestamp_tz_t
+is
+begin
+  return to_timestamp_tz(p_val, c_timestamp_tz_format);
+end timestamp_tz_str2timestamp_tz;
+
 end msg_pkg;
 /
 
