@@ -1042,7 +1042,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    dbug.leave_on_error;
+    dbug.leave;
     raise;
 $end
 end dequeue;
@@ -1096,7 +1096,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    dbug.leave_on_error;
+    dbug.leave;
     raise;
 $end
 end dequeue_and_process;
@@ -1183,7 +1183,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    dbug.leave_on_error;
+    dbug.leave;
     raise;
 $end
 end dequeue;
@@ -1227,7 +1227,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    dbug.leave_on_error;
+    dbug.leave;
     raise;
 $end
 end dequeue_and_process;
@@ -1397,7 +1397,7 @@ $end
       when others
       then
 $if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.leave_on_error;
+        dbug.leave;
 $end      
         raise;
     end dbms_aq_listen;
@@ -1526,6 +1526,43 @@ $end
     l_msgid raw(16);
     l_message_properties dbms_aq.message_properties_t;
     l_diff_last_heartbeat_till_now oracle_tools.api_time_pkg.seconds_t;
+
+    function there_are_inactive_workers
+    return boolean
+    is
+      l_inactive_worker boolean;
+    begin
+      p_inactive_worker_tab := sys.odcinumberlist();
+      
+      <<check_heartbeat_loop>>
+      for i_worker_idx in 1..p_nr_workers
+      loop
+        l_diff_last_heartbeat_till_now :=
+          oracle_tools.api_time_pkg.delta
+          ( nvl(l_timestamp_table(i_worker_idx), l_start_date)
+          , l_now
+          );
+
+        l_inactive_worker := l_diff_last_heartbeat_till_now > msg_constants_pkg.c_time_between_heartbeats;
+        if l_inactive_worker
+        then
+          p_inactive_worker_tab.extend(1);
+          p_inactive_worker_tab(p_inactive_worker_tab.last) := i_worker_idx;
+        end if;
+        
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( dbug."info"
+        , 'worker: %s; last_heartbeat_till_now: %s; inactive worker: %s'
+        , i_worker_idx
+        , l_diff_last_heartbeat_till_now
+        , dbug.cast_to_varchar2(l_inactive_worker)
+        );
+$end              
+      end loop check_heartbeat_loop;
+
+      return p_inactive_worker_tab.count > 0;
+    end there_are_inactive_workers;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_AS_SUPERVISOR');
@@ -1572,33 +1609,7 @@ $end
         if to_number(l_msg.context$) between 1 and p_nr_workers
         then          
           l_timestamp_table(to_number(l_msg.context$)) := l_msg.created_utc$ at time zone 'GMT';
-          p_inactive_worker_tab := sys.odcinumberlist();
-          <<check_heartbeat_loop>>
-          for i_worker_idx in 1..p_nr_workers
-          loop
-            l_diff_last_heartbeat_till_now :=
-              oracle_tools.api_time_pkg.delta
-              ( nvl(l_timestamp_table(i_worker_idx), l_start_date)
-              , l_now
-              );
-$if oracle_tools.cfg_pkg.c_debugging $then
-            dbug.print
-            ( dbug."info"
-            , 'worker: %s; last_heartbeat_till_now: %s'
-            , i_worker_idx
-            , l_diff_last_heartbeat_till_now 
-            );
-$end
-              
-            if l_diff_last_heartbeat_till_now > msg_constants_pkg.c_time_between_heartbeats
-            then
-              p_inactive_worker_tab.extend(1);
-              p_inactive_worker_tab(p_inactive_worker_tab.last) := i_worker_idx;
-            end if;
-          end loop check_heartbeat_loop;
-          
-          exit process_loop when p_inactive_worker_tab.count > 0;
-        end if;        
+        end if;
       exception
         when e_dequeue_timeout -- something strange happened, just log the error
         then
@@ -1607,6 +1618,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
           null; 
       end;
+
+      exit process_loop when there_are_inactive_workers;
     end loop process_loop;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
