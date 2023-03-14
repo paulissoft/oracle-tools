@@ -2,6 +2,8 @@ CREATE OR REPLACE PACKAGE BODY "MSG_AQ_PKG" AS
 
 -- private stuff
 
+subtype queue_name_t is user_queues.name%type;
+
 c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
 "plsql://" constant varchar2(10) := 'plsql://';
@@ -1313,7 +1315,7 @@ is
   l_next_heartbeat oracle_tools.api_time_pkg.timestamp_t := l_start_date;
   l_now oracle_tools.api_time_pkg.timestamp_t;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
-  l_ttl constant positiven := case when l_stop then 1 else oracle_tools.api_time_pkg.delta(l_start_date, p_end_date) end;
+  l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, p_end_date);
 
   procedure processing_as_worker
   is
