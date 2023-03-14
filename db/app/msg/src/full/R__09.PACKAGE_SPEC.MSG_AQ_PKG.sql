@@ -251,22 +251,6 @@ The first 5 parameters are mandated from the PL/SQL callback definition.
 See also the dequeue(p_context...) procedure documentation.
 **/
 
-procedure do
-( p_command in varchar2 -- start / stop
-, p_controlling_package in varchar2 -- the package calling this procedure
-);
-/**
-Runs in an autonomous transaction.
-
-Helps the controlling package to start and stop.
-
-p_command = start:
-- Enable enqueue / dequeue for heartbeat queue.
-
-p_command = stop:
-- Disable enqueue / dequeue for heartbeat queue.
-**/
-
 function get_groups_to_process
 ( p_processing_method in varchar2
 )
@@ -281,31 +265,18 @@ The latter case indicates that dbms_aq.unregister() has been invoked so someone 
 procedure processing
 ( p_controlling_package in varchar2 -- the controlling package, i.e. the one who invoked this procedure
 , p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
-, p_nr_workers in positiven -- the number of workers
-, p_worker_nr in positive -- the worker number: null for supervisor
+, p_worker_nr in positiven -- the worker number
 , p_end_date in timestamp with time zone -- the end date
-, p_inactive_worker_tab out nocopy sys.odcinumberlist -- a table of worker numbers that did not send a heartbeat lately
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
-Performs the processing of a supervisor / worker job.
+Performs the processing of a worker job.
 
-Two modes of working:
-* WORKER (p_worker_nr is not null)
 A worker runs till the end date (will check himself) and listens to the queues
 derived from the groups to process.  Every X seconds (X = time between
-heartbeats) it must also send a heartbeat to the heartbeat queue.  This means
+heartbeats) it must also send a (bidirectional) heartbeat to the supervisor.  This means
 that it can listen at most X seconds for messages to arrive before it sends a
 heartbeat.
-* SUPERVISOR (p_worker_nr is null)
-A supervisor runs till the end date (will check himself) and listens on the
-heartbeat queue (message MSG_HEARTBEAT_TYP) for worker heartbeats.  Anytime a
-heartbeat is received (from any worker) all recent heartbeats are checked
-against the time between heartbeats.  If a heartbeat is too old (now minus
-last heartbeat > time between heartbeats) it will be added to the table of
-worker numbers that did not send a heartbeat lately and the procedure will
-return giving the controlling package a chance to restart those workers.
-The number of workers is needed to create an initial list of heartbeat timestamps.
 **/
 
 end msg_aq_pkg;

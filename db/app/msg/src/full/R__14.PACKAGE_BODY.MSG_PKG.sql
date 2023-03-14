@@ -216,6 +216,89 @@ begin
   return to_timestamp_tz(p_val, c_timestamp_tz_format);
 end timestamp_tz_str2timestamp_tz;
 
+procedure send_heartbeat
+( p_controlling_package in varchar2
+, p_recv_timeout in naturaln -- receive timeout in seconds
+, p_worker_nr in positiven -- the worker number
+, p_recv_timestamp out nocopy timestamp_tz_t
+)
+is
+  l_result pls_integer;
+  l_timestamp_tz_str timestamp_tz_str_t;
+  l_send_pipe constant varchar2(128 char) := p_controlling_package;
+  l_send_timeout constant naturaln := 0;
+  l_recv_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
+begin
+  p_recv_timestamp := null;
+
+  dbms_pipe.reset_buffer;
+  dbms_pipe.pack_message(p_worker_nr);
+  dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
+  l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
+  if l_result = 0
+  then
+    dbms_pipe.reset_buffer;
+    l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => p_recv_timeout);
+    if l_result = 0
+    then
+      dbms_pipe.unpack_message(l_timestamp_tz_str);
+      p_recv_timestamp := timestamp_tz_str2timestamp_tz(l_timestamp_tz_str);
+    else
+      raise_application_error
+      ( c_heartbeat_failure
+      , utl_lms.format_message(q'[dbms_pipe.receive_message('%s', %d) returned %d]', l_recv_pipe, p_recv_timeout, l_result)
+      );
+    end if;
+  else
+    raise_application_error
+    ( c_heartbeat_failure
+    , utl_lms.format_message(q'[dbms_pipe.send_message('%s', %d) returned %d]', l_send_pipe, l_send_timeout, l_result)
+    );
+  end if;
+end send_heartbeat;    
+  
+procedure recv_heartbeat
+( p_controlling_package in varchar2
+, p_recv_timeout in naturaln -- receive timeout in seconds
+, p_worker_nr out nocopy positive
+, p_send_timestamp out nocopy timestamp_tz_t
+)
+is
+  l_result pls_integer;
+  l_timestamp_tz_str timestamp_tz_str_t;  
+  l_send_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
+  l_send_timeout constant naturaln := 0;
+  l_recv_pipe constant varchar2(128 char) := p_controlling_package;
+begin
+  p_send_timestamp := null;
+  
+  dbms_pipe.reset_buffer;
+  l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => p_recv_timeout);
+  if l_result = 0
+  then
+    dbms_pipe.unpack_message(p_worker_nr);
+    dbms_pipe.unpack_message(l_timestamp_tz_str);
+    
+    dbms_pipe.reset_buffer;
+    dbms_pipe.pack_message(timestamp_tz2timestamp_tz_str(current_timestamp));
+    l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
+    if l_result = 0
+    then
+      p_send_timestamp := timestamp_tz_str2timestamp_tz(l_timestamp_tz_str);
+    else
+      raise_application_error
+      ( c_heartbeat_failure
+      , utl_lms.format_message(q'[dbms_pipe.send_message('%s', %d) returned %d]', l_send_pipe, l_send_timeout, l_result)
+      );
+    end if;
+  else
+    raise_application_error
+    ( c_heartbeat_failure
+    , utl_lms.format_message(q'[dbms_pipe.receive_message('%s', %d) returned %d]', l_recv_pipe, p_recv_timeout, l_result)
+    );
+  end if;
+end recv_heartbeat;    
+
 end msg_pkg;
 /
 

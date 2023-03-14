@@ -148,10 +148,8 @@ The processing package must have this routine that will be invoked by dynamic SQ
 procedure processing
 ( p_controlling_package in varchar2 -- the controlling package, i.e. the one who invoked this procedure
 , p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
-, p_nr_workers in positiven -- the number of workers
-, p_worker_nr in positive -- the worker number: null for supervisor
+, p_worker_nr in positiven -- the worker number: null for supervisor
 , p_end_date in timestamp with time zone -- the end date
-, p_inactive_worker_tab out nocopy sys.odcinumberlist -- a table of worker numbers that did not send a heartbeat lately
 );
 ```
 

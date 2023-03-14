@@ -441,7 +441,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING');
   dbug.print
   ( dbug."input"
-  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_workers: %s; p_worker_nr: %s; p_end_date: %s'
+  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_worker: %s; p_worker_nr: %s; p_end_date: %s'
   , p_processing_package
   , p_groups_to_process_list
   , p_nr_workers
@@ -627,51 +627,156 @@ procedure processing
 is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name constant job_name_t := session_job_name();
-  l_statement varchar2(32767 byte);
   l_groups_to_process_tab sys.odcivarchar2list;
-  l_inactive_worker_tab sys.odcinumberlist; -- for supervisor only
   l_end_date constant msg_pkg.timestamp_tz_t := msg_pkg.timestamp_tz_str2timestamp_tz(p_end_date);
 
-  -- ORA-06550: line 1, column 18:
-  -- PLS-00302: component 'PROCESING' must be declared
-  e_compilation_error exception;
-  pragma exception_init(e_compilation_error, -6550);
-
   procedure restart_workers
+  ( p_now in oracle_tools.api_time_pkg.timestamp_t
+  , p_timestamp_tab in out nocopy dbms_sql.timestamp_with_time_zone_table
+  )
   is
-    l_worker_nr positive;
+    l_inactive boolean;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING.RESTART_WORKERS');
 $end
 
-    for i_worker_idx in l_inactive_worker_tab.first .. l_inactive_worker_tab.last
+    <<worker_loop>>
+    for i_worker_nr in 1..p_nr_workers
     loop
-      l_worker_nr := l_inactive_worker_tab(i_worker_idx);
-      if l_worker_nr is not null
-      then
+      l_inactive :=
+        case
+          when not(p_timestamp_tab.exists(i_worker_nr))
+          then true
+          when p_timestamp_tab(i_worker_nr) between p_now - numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND')
+                                                and p_now
+          then false
+          else true
+        end;
+          
 $if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print
-        ( dbug."info"
-        , 'Worker %s is inactive'
-        , l_worker_nr
-        );
+      dbug.print
+      ( dbug."info"
+      , 'Worker %s is inactive: %s'
+      , i_worker_nr
+      , dbug.cast_to_varchar2(l_inactive)
+      );
 $end
-
+      if not(l_inactive)
+      then
+        null; -- do not remove the heartbeat since we need to check next round
+      else
+        -- this one is not valid so remove (may be > l_now)
+        if p_timestamp_tab.exists(i_worker_nr)
+        then
+          p_timestamp_tab.delete(i_worker_nr);
+        end if;
+        
         submit_processing
         ( p_processing_package => p_processing_package
         , p_groups_to_process_list => p_groups_to_process_list
         , p_nr_workers => p_nr_workers
-        , p_worker_nr => l_worker_nr
+        , p_worker_nr => i_worker_nr
         , p_end_date => l_end_date -- all jobs in the worker group are supposed to have the same end date
         );
       end if;
-    end loop;
+    end loop worker_loop;
+
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
 $end  
   end restart_workers;
 
+  procedure processing_as_supervisor
+  is
+    l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
+    l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, l_end_date);
+    l_now oracle_tools.api_time_pkg.timestamp_t;
+    l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+    l_inactive_worker_tab sys.odcinumberlist := sys.odcinumberlist();
+    l_timestamp_tab dbms_sql.timestamp_with_time_zone_table;
+    l_send_timestamp msg_pkg.timestamp_tz_t;
+    l_worker_nr positive;
+  begin
+    for i_worker_nr in 1..p_nr_workers
+    loop
+      l_timestamp_tab(i_worker_nr) := l_start_date;
+    end loop;
+    
+    <<process_loop>>
+    loop
+      l_now := oracle_tools.api_time_pkg.get_timestamp;      
+
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'elapsed time: %s (s); finished?: %s'
+      , to_char(l_elapsed_time)
+      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
+      );
+$end
+
+      /* Test whether we must end? */
+      exit process_loop when l_elapsed_time >= l_ttl;
+
+      begin
+        msg_pkg.recv_heartbeat
+        ( p_controlling_package => $$PLSQL_UNIT
+        , p_recv_timeout => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+        , p_worker_nr => l_worker_nr
+        , p_send_timestamp => l_send_timestamp
+        );
+        if l_worker_nr is not null
+        then
+          l_timestamp_tab(l_worker_nr) := l_send_timestamp;
+        end if;
+      exception
+        when msg_pkg.e_heartbeat_failure
+        then null;
+      end;
+      
+      restart_workers(l_now, l_timestamp_tab);
+    end loop process_loop;
+  end processing_as_supervisor;
+
+  procedure processing_as_worker
+  is
+    l_statement varchar2(32767 byte);
+    -- ORA-06550: line 1, column 18:
+    -- PLS-00302: component 'PROCESING' must be declared
+    e_compilation_error exception;
+    pragma exception_init(e_compilation_error, -6550);
+  begin
+    l_statement := utl_lms.format_message
+                   ( q'[
+call %s.processing( p_controlling_package => :1
+                  , p_groups_to_process_tab => :2
+                  , p_worker_nr => :3
+                  , p_end_date => :4
+                  )]'
+                   , l_processing_package -- already checked by determine_processing_package
+                   );
+
+    execute immediate l_statement
+      using in $$PLSQL_UNIT, in l_groups_to_process_tab, in p_worker_nr, in l_end_date;
+  exception
+    when e_compilation_error
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."error", 'statement: %s', l_statement);
+$end                  
+      raise;
+
+    when others
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
+      raise;
+  end processing_as_worker;
+  
   procedure cleanup
   is
   begin
@@ -702,53 +807,18 @@ $end
       , to_char(c_session_id)
       )
     );
+  end if;
+
+  select  pg.column_value
+  bulk collect
+  into    l_groups_to_process_tab
+  from    table(oracle_tools.api_pkg.list2collection(p_value_list => p_groups_to_process_list, p_sep => ',', p_ignore_null => 1)) pg;
+
+  if p_worker_nr is null
+  then
+    processing_as_supervisor;
   else
-    select  pg.column_value
-    bulk collect
-    into    l_groups_to_process_tab
-    from    table(oracle_tools.api_pkg.list2collection(p_value_list => p_groups_to_process_list, p_sep => ',', p_ignore_null => 1)) pg;
-
-    <<processing_loop>>
-    loop
-      l_statement := utl_lms.format_message
-                     ( q'[
-call %s.processing( p_controlling_package => :1
-                  , p_groups_to_process_tab => :2
-                  , p_nr_workers => :3
-                  , p_worker_nr => :4
-                  , p_end_date => :5
-                  , p_inactive_worker_tab => :6
-                  )]'
-                     , l_processing_package -- already checked by determine_processing_package
-                     );
-
-      begin
-        execute immediate l_statement
-          using in $$PLSQL_UNIT, in l_groups_to_process_tab, in p_nr_workers, in p_worker_nr, in l_end_date, out l_inactive_worker_tab;
-
-        if p_worker_nr is null and l_inactive_worker_tab is not null and l_inactive_worker_tab.count > 0
-        then
-          restart_workers;
-        else
-          exit processing_loop; -- the processing just succeeded (no signal), so stop
-        end if;
-      exception
-        when e_compilation_error
-        then
-$if oracle_tools.cfg_pkg.c_debugging $then
-          dbug.print(dbug."error", 'statement: %s', l_statement);
-          dbug.on_error;
-$end                  
-          raise;
-
-        when others
-        then
-$if oracle_tools.cfg_pkg.c_debugging $then
-          dbug.on_error;
-$end
-          raise;
-      end;
-    end loop processing_loop;
+    processing_as_worker;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -848,12 +918,6 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'l_command_tab(%s): %s', i_command_idx, l_command_tab(i_command_idx));
 $end
-
-      if l_command_tab(i_command_idx) in ('start', 'stop')
-      then
-        execute immediate utl_lms.format_message('call %s.do(:1, :2)', l_processing_package)
-          using in l_command_tab(i_command_idx), in $$PLSQL_UNIT;
-      end if;
 
       case l_command_tab(i_command_idx)
         when 'check_jobs_not_running'
@@ -1237,9 +1301,6 @@ $end
   procedure define_jobs
   is
   begin
-    -- Create the supervisor
-    l_job_name_tab.extend(1);
-    l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker_group);
     -- Create the workers
     for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_each_group * l_groups_to_process_tab.count)
     loop
@@ -1254,7 +1315,15 @@ $end
     l_program_name_dummy user_scheduler_programs.program_name%type;
     l_worker_nr positive;
   begin
-    if l_job_name_tab.count > 1 -- including supervisor
+    -- the supervisor
+    submit_processing
+    ( p_processing_package => p_processing_package
+    , p_groups_to_process_list => l_groups_to_process_list
+    , p_nr_workers => l_job_name_tab.count
+    , p_worker_nr => null
+    , p_end_date => l_end_date
+    );
+    if l_job_name_tab.count > 0 -- excluding supervisor
     then
       for i_idx in l_job_name_tab.first .. l_job_name_tab.last
       loop
@@ -1270,7 +1339,7 @@ $end
           submit_processing
           ( p_processing_package => p_processing_package
           , p_groups_to_process_list => l_groups_to_process_list
-          , p_nr_workers => l_job_name_tab.count - 1 -- minus supervisor
+          , p_nr_workers => l_job_name_tab.count
           , p_worker_nr => l_worker_nr
           , p_end_date => l_end_date
           );

@@ -1232,61 +1232,6 @@ exception
 $end
 end dequeue_and_process;
 
-procedure do
-( p_command in varchar2 -- start / stop
-, p_controlling_package in varchar2 -- the package calling this procedure
-)
-is
-  pragma autonomous_transaction;
-
-  l_msg msg_typ := new msg_heartbeat_typ(p_controlling_package); -- to get the queue name
-  l_queue_name constant queue_name_t := get_queue_name(l_msg);
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
-  dbug.print(dbug."input", 'p_command: %s; p_controlling_package: %s', p_command, p_controlling_package);
-$end
-
-  <<try_loop>>
-  for i_try in 1..2
-  loop
-    begin
-      case p_command
-        when 'start'
-        then start_queue(p_queue_name => l_queue_name);    
-        when 'stop'
-        then stop_queue(p_queue_name => l_queue_name, p_wait => false);
-      end case;
-      exit try_loop; -- OK
-    exception
-      when e_queue_does_not_exist or e_fq_queue_does_not_exist
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.on_error;
-$end
-        if i_try != 2
-        then
-          create_queue
-          ( p_queue_name => l_queue_name
-          , p_comment => 'Heartbeat queue'
-          );
-        else
-          raise;
-        end if;
-    end;
-  end loop try_loop;  
-  commit;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
-end do;
-
 function get_groups_to_process
 ( p_processing_method in varchar2
 )
@@ -1346,10 +1291,8 @@ end get_groups_to_process;
 procedure processing
 ( p_controlling_package in varchar2
 , p_groups_to_process_tab in sys.odcivarchar2list
-, p_nr_workers in positiven
-, p_worker_nr in positive
+, p_worker_nr in positiven
 , p_end_date in timestamp with time zone
-, p_inactive_worker_tab out nocopy sys.odcinumberlist
 )
 is
   l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
@@ -1357,280 +1300,48 @@ is
   l_now oracle_tools.api_time_pkg.timestamp_t;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
   l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, p_end_date);
+  l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
+  l_agent_list dbms_aq.aq$_agent_list_t;
+  l_queue_name_idx positiven := 1;
+  l_agent sys.aq$_agent;
+  l_message_delivery_mode pls_integer;
+  l_timestamp_dummy msg_pkg.timestamp_tz_t;
 
-  procedure processing_as_worker
+  -- Use a simple procedure and dbug.enter/dbug.leave to be able to profile this dbms_aq.listen call.
+  procedure dbms_aq_listen
   is
-    l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
-    l_agent_list dbms_aq.aq$_agent_list_t;
-    l_queue_name_idx positiven := 1;
-    l_agent sys.aq$_agent;
-    l_message_delivery_mode pls_integer;
-    
-    -- Use a simple procedure and dbug.enter/dbug.leave to be able to profile this dbms_aq.listen call.
-    procedure dbms_aq_listen
-    is
-    begin
+  begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.enter('DBMS_AQ.LISTEN');
+    dbug.enter('DBMS_AQ.LISTEN');
 $end
 
-      dbms_aq.listen
-      ( agent_list => l_agent_list
-      , wait => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-      , listen_delivery_mode => dbms_aq.persistent
-      , agent => l_agent
-      , message_delivery_mode => l_message_delivery_mode
-      );
+    dbms_aq.listen
+    ( agent_list => l_agent_list
+    , wait => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+    , listen_delivery_mode => dbms_aq.persistent
+    , agent => l_agent
+    , message_delivery_mode => l_message_delivery_mode
+    );
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
+  exception
+    when e_listen_timeout
+    then
+      l_agent := sys.aq$_agent(null, null, null);
+      l_message_delivery_mode := null;
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.leave;
 $end
-    exception
-      when e_listen_timeout
-      then
-        l_agent := sys.aq$_agent(null, null, null);
-        l_message_delivery_mode := null;
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.leave;
-$end
         
-      when others
-      then
+    when others
+    then
 $if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.leave;
+      dbug.leave;
 $end      
-        raise;
-    end dbms_aq_listen;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_AS_WORKER');
-$end
-    <<queue_loop>>
-    for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
-    loop
-      l_queue_name_tab.extend(1);
-      l_queue_name_tab(l_queue_name_tab.last) := get_queue_name(p_groups_to_process_tab(i_idx));
-    end loop queue_loop;
-
-    -- i_idx can be from
-    -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
-    -- b) 2 .. l_queue_name_tab.count + 1 (<=> 2 .. l_queue_name_tab.count + (2) - 1)
-    -- z) l_queue_name_tab.count .. l_queue_name_tab.count + (l_queue_name_tab.count) - 1
-    <<agent_loop>>
-    for i_idx in mod(p_worker_nr - 1, l_queue_name_tab.count) + 1 ..
-                 mod(p_worker_nr - 1, l_queue_name_tab.count) + l_queue_name_tab.count
-    loop
-      l_queue_name_idx := mod(i_idx - 1, l_queue_name_tab.count) + 1; -- between 1 and l_queue_name_tab.count
-      
-      if l_queue_name_tab(l_queue_name_idx) is null
-      then
-        raise program_error;
-      end if;
-
-      -- assume single consumer queues
-      l_agent_list(l_agent_list.count+1) :=
-        sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , 'i_idx: %s; l_queue_name_tab(%s): %s; l_agent_list(%s).address: %s'
-      , i_idx
-      , l_queue_name_idx
-      , l_queue_name_tab(l_queue_name_idx)
-      , l_agent_list.count
-      , l_agent_list(l_agent_list.count).address
-      );
-$end
-
-      l_queue_name_tab(l_queue_name_idx) := null;
-    end loop agent_loop;
-  
-    <<process_loop>>
-    loop
-      <<listen_then_dequeue_loop>>
-      for i_step in 1..2
-      loop        
-        l_now := oracle_tools.api_time_pkg.get_timestamp;      
-
-        l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print
-        ( dbug."info"
-        , 'elapsed time: %s (s); finished?: %s'
-        , to_char(l_elapsed_time)
-        , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
-        );
-$end
-
-        /* Test whether we must end? */
-        exit process_loop when l_elapsed_time >= l_ttl;
-
-        /* Test whether we must send a heartbeat? */
-        if l_now >= l_next_heartbeat
-        then
-          msg_heartbeat_typ(p_controlling_package, p_worker_nr).process(); -- sends the heartbeat
-          loop
-            l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');
-            exit when l_next_heartbeat > l_now;
-          end loop;
-        end if;
-
-        case i_step
-          when 1
-          then
-            dbms_aq_listen;
-            -- Did we get a timeout? If so continue with the next listen action
-            exit listen_then_dequeue_loop when l_agent.address is null;
-            
-          when 2
-          then
-            begin
-              msg_aq_pkg.dequeue_and_process
-              ( p_queue_name => l_agent.address
-              , p_delivery_mode => l_message_delivery_mode
-              , p_visibility => dbms_aq.immediate
-              , p_subscriber => l_agent.name
-              , p_dequeue_mode => dbms_aq.remove
-              , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
-              -- Although a message should be and a timeout of 0 should be okay, we will just specify a wait time of 1 second
-              -- since I saw a few times time-outs here.
-              , p_wait => 1
-              , p_correlation => null
-              , p_deq_condition => null
-              , p_force => false -- queue should be there
-              , p_commit => true
-              );
-            exception
-              when e_dequeue_timeout -- something strange happened, just log the error
-              then
-$if oracle_tools.cfg_pkg.c_debugging $then
-                dbug.on_error;
-$end
-                null; 
-            end;
-        end case;
-      end loop listen_then_dequeue_loop;
-    end loop process_loop;
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave;
-$end
-  end processing_as_worker;
-
-  procedure processing_as_supervisor
-  is
-    l_msg msg_typ := new msg_heartbeat_typ(p_controlling_package); -- to get the queue name
-    l_queue_name constant queue_name_t := get_queue_name(l_msg);
-    l_timestamp_table dbms_sql.timestamp_with_time_zone_table;
-    l_msgid raw(16);
-    l_message_properties dbms_aq.message_properties_t;
-    l_diff_last_heartbeat_till_now oracle_tools.api_time_pkg.seconds_t;
-
-    function there_are_inactive_workers
-    return boolean
-    is
-      l_inactive_worker boolean;
-    begin
-      p_inactive_worker_tab := sys.odcinumberlist();
-      
-      <<check_heartbeat_loop>>
-      for i_worker_idx in 1..p_nr_workers
-      loop
-        l_diff_last_heartbeat_till_now :=
-          oracle_tools.api_time_pkg.delta
-          ( nvl(l_timestamp_table(i_worker_idx), l_start_date)
-          , l_now
-          );
-
-        l_inactive_worker := l_diff_last_heartbeat_till_now > msg_constants_pkg.c_time_between_heartbeats;
-        if l_inactive_worker
-        then
-          p_inactive_worker_tab.extend(1);
-          p_inactive_worker_tab(p_inactive_worker_tab.last) := i_worker_idx;
-        end if;
-        
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print
-        ( dbug."info"
-        , 'worker: %s; last_heartbeat_till_now: %s; inactive worker: %s'
-        , i_worker_idx
-        , l_diff_last_heartbeat_till_now
-        , dbug.cast_to_varchar2(l_inactive_worker)
-        );
-$end              
-      end loop check_heartbeat_loop;
-
-      return p_inactive_worker_tab.count > 0;
-    end there_are_inactive_workers;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_AS_SUPERVISOR');
-$end
-
-    for i_worker_idx in 1..p_nr_workers
-    loop
-      l_timestamp_table(i_worker_idx) := null;
-    end loop;
-
-    <<process_loop>>
-    loop
-      l_now := oracle_tools.api_time_pkg.get_timestamp;      
-
-      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , 'elapsed time: %s (s); finished?: %s'
-      , to_char(l_elapsed_time)
-      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
-      );
-$end
-
-      /* Test whether we must end? */
-      exit process_loop when l_elapsed_time >= l_ttl;
-
-      begin
-        msg_aq_pkg.dequeue
-        ( p_queue_name => l_queue_name
-        , p_delivery_mode => dbms_aq.persistent_or_buffered
-        , p_visibility => dbms_aq.immediate
-        , p_subscriber => null
-        , p_dequeue_mode => dbms_aq.remove
-        --, p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
-        , p_navigation => dbms_aq.next_message -- may be better for performance when concurrent messages arrive
-        , p_wait => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-        , p_force => false -- queue should be there
-        , p_msgid => l_msgid
-        , p_message_properties => l_message_properties
-        , p_msg => l_msg
-        );
-
-        if to_number(l_msg.context$) between 1 and p_nr_workers
-        then          
-          l_timestamp_table(to_number(l_msg.context$)) := l_msg.created_utc$ at time zone 'GMT';
-$if oracle_tools.cfg_pkg.c_debugging $then
-          dbug.print
-          ( dbug."info"
-          , 'received heartbeat for worker %s; created at UTC %s'
-          , l_msg.context$
-          , msg_pkg.timestamp_tz2timestamp_tz_str(l_timestamp_table(to_number(l_msg.context$)))
-          );
-$end
-        end if;
-      exception
-        when e_dequeue_timeout
-        then
-          null; 
-      end;
-
-      exit process_loop when there_are_inactive_workers;
-    end loop process_loop;
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave;
-$end
-  end processing_as_supervisor;
+      raise;
+  end dbms_aq_listen;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
@@ -1650,12 +1361,119 @@ $end
     raise value_error;
   end if;
 
-  if p_worker_nr is not null
-  then
-    processing_as_worker;
-  else
-    processing_as_supervisor;
-  end if;
+  <<queue_loop>>
+  for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
+  loop
+    l_queue_name_tab.extend(1);
+    l_queue_name_tab(l_queue_name_tab.last) := get_queue_name(p_groups_to_process_tab(i_idx));
+  end loop queue_loop;
+
+  -- i_idx can be from
+  -- a) 1 .. l_queue_name_tab.count     (<=> 1 .. l_queue_name_tab.count + (1) - 1)
+  -- b) 2 .. l_queue_name_tab.count + 1 (<=> 2 .. l_queue_name_tab.count + (2) - 1)
+  -- z) l_queue_name_tab.count .. l_queue_name_tab.count + (l_queue_name_tab.count) - 1
+  <<agent_loop>>
+  for i_idx in mod(p_worker_nr - 1, l_queue_name_tab.count) + 1 ..
+               mod(p_worker_nr - 1, l_queue_name_tab.count) + l_queue_name_tab.count
+  loop
+    l_queue_name_idx := mod(i_idx - 1, l_queue_name_tab.count) + 1; -- between 1 and l_queue_name_tab.count
+    
+    if l_queue_name_tab(l_queue_name_idx) is null
+    then
+      raise program_error;
+    end if;
+
+    -- assume single consumer queues
+    l_agent_list(l_agent_list.count+1) :=
+      sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'i_idx: %s; l_queue_name_tab(%s): %s; l_agent_list(%s).address: %s'
+    , i_idx
+    , l_queue_name_idx
+    , l_queue_name_tab(l_queue_name_idx)
+    , l_agent_list.count
+    , l_agent_list(l_agent_list.count).address
+    );
+$end
+
+    l_queue_name_tab(l_queue_name_idx) := null;
+  end loop agent_loop;
+
+  <<process_loop>>
+  loop
+    <<listen_then_dequeue_loop>>
+    for i_step in 1..2
+    loop        
+      l_now := oracle_tools.api_time_pkg.get_timestamp;      
+
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'elapsed time: %s (s); finished?: %s'
+      , to_char(l_elapsed_time)
+      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
+      );
+$end
+
+      /* Test whether we must end? */
+      exit process_loop when l_elapsed_time >= l_ttl;
+
+      /* Test whether we must send a heartbeat? */
+      if l_now >= l_next_heartbeat
+      then
+        msg_pkg.send_heartbeat
+        ( p_controlling_package => p_controlling_package
+        , p_recv_timeout => msg_constants_pkg.c_time_between_heartbeats
+        , p_worker_nr => p_worker_nr
+        , p_recv_timestamp => l_timestamp_dummy
+        );
+        loop
+          l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');
+          exit when l_next_heartbeat > l_now;
+        end loop;
+      end if;
+
+      case i_step
+        when 1
+        then
+          dbms_aq_listen;
+          -- Did we get a timeout? If so continue with the next listen action
+          exit listen_then_dequeue_loop when l_agent is null or l_agent.address is null;
+          
+        when 2
+        then
+          begin
+            msg_aq_pkg.dequeue_and_process
+            ( p_queue_name => l_agent.address
+            , p_delivery_mode => l_message_delivery_mode
+            , p_visibility => dbms_aq.immediate
+            , p_subscriber => l_agent.name
+            , p_dequeue_mode => dbms_aq.remove
+            , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+            -- Although a message should be and a timeout of 0 should be okay, we will just specify a wait time of 1 second
+            -- since I saw a few times time-outs here.
+            , p_wait => 1
+            , p_correlation => null
+            , p_deq_condition => null
+            , p_force => false -- queue should be there
+            , p_commit => true
+            );
+          exception
+            when e_dequeue_timeout -- something strange happened, just log the error
+            then
+$if oracle_tools.cfg_pkg.c_debugging $then
+              dbug.on_error;
+$end
+              null; 
+          end;
+      end case;
+    end loop listen_then_dequeue_loop;
+  end loop process_loop;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
