@@ -229,6 +229,17 @@ is
   l_send_timeout constant naturaln := 0;
   l_recv_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.SEND_HEARTBEAT');
+  dbug.print
+  ( dbug."input"
+  , 'p_controlling_package : %s; p_recv_timeout: %s; p_worker_nr: %s'
+  , p_controlling_package
+  , p_recv_timeout
+  , p_worker_nr
+  );
+$end
+
   p_recv_timestamp := null;
 
   dbms_pipe.reset_buffer;
@@ -255,6 +266,15 @@ begin
     , utl_lms.format_message(q'[dbms_pipe.send_message('%s', %d) returned %d]', l_send_pipe, l_send_timeout, l_result)
     );
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_recv_timestamp: %s'
+  , l_timestamp_tz_str
+  );
+  dbug.leave;
+$end
 end send_heartbeat;    
   
 procedure recv_heartbeat
@@ -265,11 +285,21 @@ procedure recv_heartbeat
 )
 is
   l_result pls_integer;
-  l_timestamp_tz_str timestamp_tz_str_t;  
+  l_timestamp_tz_str timestamp_tz_str_t := null;  
   l_send_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
   l_send_timeout constant naturaln := 0;
   l_recv_pipe constant varchar2(128 char) := p_controlling_package;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.RECV_HEARTBEAT');
+  dbug.print
+  ( dbug."input"
+  , 'p_controlling_package : %s; p_recv_timeout: %s'
+  , p_controlling_package
+  , p_recv_timeout
+  );
+$end
+
   p_send_timestamp := null;
   
   dbms_pipe.reset_buffer;
@@ -297,6 +327,16 @@ begin
     , utl_lms.format_message(q'[dbms_pipe.receive_message('%s', %d) returned %d]', l_recv_pipe, p_recv_timeout, l_result)
     );
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_worker_nr: %s; p_send_timestamp: %s'
+  , p_worker_nr
+  , l_timestamp_tz_str
+  );
+  dbug.leave;
+$end
 end recv_heartbeat;    
 
 end msg_pkg;
