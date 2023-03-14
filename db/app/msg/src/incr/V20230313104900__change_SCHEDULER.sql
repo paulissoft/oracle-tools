@@ -31,6 +31,14 @@ end;
 /
 
 begin
+  dbms_scheduler.drop_program(program_name => 'PROCESSING_LAUNCHER', force => true);
+exception
+  when others
+  then null;
+end;
+/
+
+begin
   dbms_scheduler.drop_schedule(schedule_name => 'SCHEDULE_SUPERVISOR', force => true);
 exception
   when others

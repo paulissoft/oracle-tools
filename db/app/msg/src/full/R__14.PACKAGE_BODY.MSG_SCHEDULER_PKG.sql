@@ -5,10 +5,11 @@ subtype job_name_t is user_scheduler_jobs.job_name%type;
 "yyyymmddhh24miss" constant varchar2(16) := 'yyyymmddhh24miss';
 "yyyy-mm-dd hh24:mi:ss" constant varchar2(21) := 'yyyy-mm-dd hh24:mi:ss';
 
-c_program_launcher constant user_scheduler_programs.program_name%type := 'PROCESSING_LAUNCHER';
+-- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
+c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
 c_program_worker_group constant user_scheduler_programs.program_name%type := 'PROCESSING';
 
-c_schedule_launcher constant user_scheduler_programs.program_name%type := 'SCHEDULE_LAUNCHER';
+c_schedule_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_SCHEDULE';
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
@@ -876,7 +877,16 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
               dbug.on_error;
 $end
-              submit_processing_launcher(p_processing_package => l_processing_package);
+              submit_launcher_processing(p_processing_package => l_processing_package);
+          end;
+
+          -- But since the next run may take some time, we must schedule the jobs till then.
+          -- Job is running or scheduled, but we may have to run workers between now and the next run date
+          begin
+            launcher_processing(p_processing_package => l_processing_package);
+          exception
+            when e_no_groups_to_process
+            then null;
           end;
 
         when 'stop'
@@ -980,7 +990,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end do;
 
-procedure submit_processing_launcher
+procedure submit_launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive
 , p_nr_workers_exact in positive
@@ -992,7 +1002,7 @@ is
   l_argument_value user_scheduler_program_args.default_value%type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING_LAUNCHER');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_LAUNCHER_PROCESSING');
   dbug.print
   ( dbug."input"
   , 'p_processing_package: %s; p_nr_workers_each_group: %s; p_nr_workers_exact: %s; p_repeat_interval: %s'
@@ -1095,22 +1105,12 @@ $end
   -- start the job
   dbms_scheduler.enable(l_job_name_launcher); 
 
-  -- but since the next run may take some time, we must schedule the till then
-
-  -- Job is running or scheduled, but we may have to run workers between now and the next run date
-  begin
-    processing_launcher(p_processing_package => l_processing_package);
-  exception
-    when e_no_groups_to_process
-    then null;
-  end;
-
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end submit_processing_launcher;
+end submit_launcher_processing;
 
-procedure processing_launcher
+procedure launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive
 , p_nr_workers_exact in positive
@@ -1284,7 +1284,7 @@ begin
   init;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_LAUNCHER');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.LAUNCHER_PROCESSING');
   dbug.print
   ( dbug."input"
   , utl_lms.format_message
@@ -1315,33 +1315,7 @@ $end
 
     cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     raise;
-end processing_launcher;
-
-/*
-procedure processing
-( p_processing_package in varchar2 
-, p_groups_to_process_list in varchar2
-, p_nr_workers in positiven
-, p_worker_nr in positive
-)
-is
-  l_job_name constant job_name_t := session_job_name();
-  l_end_date user_scheduler_jobs.end_date%type := null;
-begin
-  select  j.end_date
-  into    l_end_date
-  from    user_scheduler_jobs j
-  where   j.job_name = l_job_name;
-
-  processing
-  ( p_processing_package => p_processing_package
-  , p_groups_to_process_list => p_groups_to_process_list
-  , p_nr_workers => p_nr_workers
-  , p_worker_nr => p_worker_nr
-  , p_end_date => anydata.ConvertTimestampTZ(l_end_date)
-  );
-end processing;
-*/
+end launcher_processing;
 
 end msg_scheduler_pkg;
 /

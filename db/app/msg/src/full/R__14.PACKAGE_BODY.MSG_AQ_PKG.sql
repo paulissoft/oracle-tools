@@ -41,7 +41,7 @@ begin
            when dbms_aq.persistent then 'PERSISTENT'
            when dbms_aq.buffered then 'BUFFERED'
            when dbms_aq.persistent_or_buffered then 'PERSISTENT_OR_BUFFERED'
-           else 'UNKNOWN delivey mode (' || to_char(p_delivery_mode) || ')'
+           else 'UNKNOWN delivery mode (' || to_char(p_delivery_mode) || ')'
          end;
 end delivery_mode_descr;
 
@@ -1039,6 +1039,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   p_msg.print();
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end dequeue;
 
@@ -1088,6 +1093,11 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end dequeue_and_process;
 
@@ -1170,6 +1180,11 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end dequeue;
 
@@ -1264,6 +1279,11 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end do;
 
@@ -1368,8 +1388,7 @@ $end
     exception
       when e_listen_timeout
       then
-        l_agent.name := null;
-        l_agent.address := null;
+        l_agent := sys.aq$_agent(null, null, null);
         l_message_delivery_mode := null;
 $if oracle_tools.cfg_pkg.c_debugging $then
         dbug.leave;

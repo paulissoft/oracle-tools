@@ -54,7 +54,7 @@ p_command = check_jobs_not_running:
 
 p_command = start:
 - Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
-- Start the launcher job (submit_processing_launcher()) if it does not exist,
+- Start the launcher job (submit_launcher_processing()) if it does not exist,
   otherwise disable and enable (i.e. start).
 
 p_command = stop:
@@ -71,14 +71,14 @@ p_command = drop:
 - Drop the jobs, first with force false, next with force true if necessary.
 **/
 
-procedure submit_processing_launcher
+procedure submit_launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
 , p_repeat_interval in varchar2 default msg_constants_pkg.c_repeat_interval -- used to create a schedule if not null (a repeating job)
 );
 /**
-Submits the launcher, see processing_launcher() below, that will submit its workers and then finish.
+Submits the launcher, see launcher_processing() below, that will submit its workers and then finish.
 
 The administrator MAY create a job by calling this procedure, although that
 will already be done implicitly by the processing package (for instance
@@ -90,7 +90,7 @@ It may not run immediately due to the schedule: do('start') will then run a temp
 A non-repeating job (p_repeat_interval null) will just create a job that will be auto dropped.
 **/
 
-procedure processing_launcher
+procedure launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
@@ -98,7 +98,7 @@ procedure processing_launcher
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test
 purposes, never use it in application code: use 
-submit_processing_launcher() above!
+submit_launcher_processing() above!
 
 So the administrator should NEVER create a job based on this procedure.
 
@@ -140,7 +140,7 @@ This procedure is meant to be used by (indirectly) DBMS_SCHEDULER jobs, not by Y
 
 So the administrator should NEVER create a job based on this procedure.
 
-This is the worker routine, started as a job by processing_launcher(). 
+This is the worker routine, started as a job by launcher_processing(). 
 
 The processing package must have this routine that will be invoked by dynamic SQL:
 
