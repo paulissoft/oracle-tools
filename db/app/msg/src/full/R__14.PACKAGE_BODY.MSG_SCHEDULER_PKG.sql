@@ -702,6 +702,11 @@ $end
     loop
       l_timestamp_tab(i_worker_nr) := l_start_date;
     end loop;
+
+    msg_pkg.init_heartbeat
+    ( p_controlling_package => $$PLSQL_UNIT
+    , p_worker_nr => null
+    );
     
     <<process_loop>>
     loop

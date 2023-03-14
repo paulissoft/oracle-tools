@@ -1361,6 +1361,11 @@ $end
     raise value_error;
   end if;
 
+  msg_pkg.init_heartbeat
+  ( p_controlling_package => p_controlling_package
+  , p_worker_nr => p_worker_nr
+  );
+
   <<queue_loop>>
   for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
   loop

@@ -84,6 +84,11 @@ function timestamp_tz_str2timestamp_tz
 return timestamp_tz_t;
 /** Return the timestamp string value (in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format) as a timestamp with time zone. */
 
+procedure init_heartbeat
+( p_controlling_package in varchar2
+, p_worker_nr in positive default null -- null for the supervisor
+);
+
 procedure send_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds

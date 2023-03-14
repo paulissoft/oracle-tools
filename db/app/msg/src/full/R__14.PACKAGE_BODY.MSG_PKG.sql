@@ -216,6 +216,15 @@ begin
   return to_timestamp_tz(p_val, c_timestamp_tz_format);
 end timestamp_tz_str2timestamp_tz;
 
+procedure init_heartbeat
+( p_controlling_package in varchar2
+, p_worker_nr in positive
+)
+is
+begin
+  dbms_pipe.purge(p_controlling_package || case when p_worker_nr is not null then '#' || p_worker_nr end);  
+end init_heartbeat;
+ 
 procedure send_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds
@@ -262,6 +271,9 @@ $end
     if l_result = 0
     then
       dbms_pipe.unpack_message(l_recv_timestamp_str);
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'timestamp received from receiver: %s', l_recv_timestamp_str);
+$end
       if l_recv_timestamp_str = l_send_timestamp_str
       then
         p_timestamp := timestamp_tz_str2timestamp_tz(l_recv_timestamp_str);
