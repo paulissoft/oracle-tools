@@ -13,8 +13,9 @@ begin
   , p_context$ => to_char(p_worker_nr)
   );
   return;
-end construct;  
+end msg_heartbeat_typ;  
 
+overriding
 member function must_be_processed
 ( self in msg_heartbeat_typ
 , p_maybe_later in integer -- True (1) or false (0)
@@ -25,6 +26,7 @@ begin
   return p_maybe_later; -- never invoke process$now
 end must_be_processed;
 
+overriding
 member function default_processing_method
 ( self in msg_heartbeat_typ
 )

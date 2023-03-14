@@ -433,7 +433,7 @@ procedure submit_processing
 , p_end_date in user_scheduler_jobs.end_date%type
 )
 is
-  l_job_name constant job_name_t := join_job_name(p_processing_package, c_program_name_worker_group, p_worker_nr);
+  l_job_name constant job_name_t := join_job_name(p_processing_package, c_program_worker_group, p_worker_nr);
   l_argument_value user_scheduler_program_args.default_value%type;
   l_end_date anydata;
 begin  
@@ -1226,12 +1226,12 @@ $end
   begin
     -- Create the supervisor
     l_job_name_tab.extend(1);
-    l_job_name_tab(l_job_name_tab.last) := join_job_name(_processing_package, c_program_name_worker_group);
+    l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker_group);
     -- Create the workers
     for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_each_group * l_groups_to_process_tab.count)
     loop
       l_job_name_tab.extend(1);
-      l_job_name_tab(l_job_name_tab.last) := join_job_name(_processing_package, c_program_name_worker_group, i_worker);
+      l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker_group, i_worker);
     end loop;
   end define_jobs;
 
@@ -1241,7 +1241,7 @@ $end
     l_program_name_dummy user_scheduler_programs.program_name%type;
     l_worker_nr positive;
   begin
-    if l_job_name_tab.count > 0
+    if l_job_name_tab.count > 1 -- including supervisor
     then
       for i_idx in l_job_name_tab.first .. l_job_name_tab.last
       loop
@@ -1257,7 +1257,7 @@ $end
           submit_processing
           ( p_processing_package => p_processing_package
           , p_groups_to_process_list => l_groups_to_process_list
-          , p_job_name_launcher => l_job_name_launcher
+          , p_nr_workers => l_job_name_tab.count - 1 -- minus supervisor
           , p_worker_nr => l_worker_nr
           , p_end_date => l_end_date
           );

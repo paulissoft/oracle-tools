@@ -1232,13 +1232,34 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_command: %s; p_controlling_package: %s', p_command, p_controlling_package);
 $end
 
-  case p_command
-    when 'start'
-    then start_queue(p_queue_name => l_queue_name);    
-    when 'stop'
-    then stop_queue(p_queue_name => l_queue_name, p_wait => false);
-  end case;
-
+  <<try_loop>>
+  for i_try in 1..2
+  loop
+    begin
+      case p_command
+        when 'start'
+        then start_queue(p_queue_name => l_queue_name);    
+        when 'stop'
+        then stop_queue(p_queue_name => l_queue_name, p_wait => false);
+      end case;
+      exit try_loop; -- OK
+    exception
+      when e_queue_does_not_exist or e_fq_queue_does_not_exist
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        if i_try != 2
+        then
+          create_queue
+          ( p_queue_name => l_queue_name
+          , p_comment => 'Heartbeat queue'
+          );
+        else
+          raise;
+        end if;
+    end;
+  end loop try_loop;  
   commit;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1491,7 +1512,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_AS_SUPERVISOR');
 $end
 
-    for i_idx in 1..p_nr_workers
+    for i_worker_idx in 1..p_nr_workers
     loop
       l_timestamp_table(i_worker_idx) := null;
     end loop;
@@ -1517,10 +1538,14 @@ $end
       begin
         msg_aq_pkg.dequeue
         ( p_queue_name => l_queue_name
+        , p_delivery_mode => null
+        , p_visibility => null
+        , p_subscriber => null
+        , p_dequeue_mode => dbms_aq.remove
         , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
         , p_wait => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
         , p_force => false -- queue should be there
-        , p_msgidk => l_msgid
+        , p_msgid => l_msgid
         , p_message_properties => l_message_properties
         , p_msg => l_msg
         );
@@ -1549,7 +1574,7 @@ $end
             if l_diff_last_heartbeat_till_now > msg_constants_pkg.c_time_between_heartbeats
             then
               p_inactive_worker_tab.extend(1);
-              p_inactive_worker_tab := i_worker_idx;
+              p_inactive_worker_tab(p_inactive_worker_tab.last) := i_worker_idx;
             end if;
           end loop check_heartbeat_loop;
           
