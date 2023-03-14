@@ -1594,28 +1594,34 @@ $end
       begin
         msg_aq_pkg.dequeue
         ( p_queue_name => l_queue_name
-        , p_delivery_mode => null
-        , p_visibility => null
+        , p_delivery_mode => dbms_aq.persistent_or_buffered
+        , p_visibility => dbms_aq.immediate
         , p_subscriber => null
         , p_dequeue_mode => dbms_aq.remove
-        , p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+        --, p_navigation => dbms_aq.first_message -- may be better for performance when concurrent messages arrive
+        , p_navigation => dbms_aq.next_message -- may be better for performance when concurrent messages arrive
         , p_wait => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
         , p_force => false -- queue should be there
         , p_msgid => l_msgid
         , p_message_properties => l_message_properties
         , p_msg => l_msg
         );
-        commit;
+
         if to_number(l_msg.context$) between 1 and p_nr_workers
         then          
           l_timestamp_table(to_number(l_msg.context$)) := l_msg.created_utc$ at time zone 'GMT';
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print
+          ( dbug."info"
+          , 'received heartbeat for worker %s; created at UTC %s'
+          , l_msg.context$
+          , msg_pkg.timestamp_tz2timestamp_tz_str(l_timestamp_table(to_number(l_msg.context$)))
+          );
+$end
         end if;
       exception
-        when e_dequeue_timeout -- something strange happened, just log the error
+        when e_dequeue_timeout
         then
-$if oracle_tools.cfg_pkg.c_debugging $then
-          dbug.on_error;
-$end
           null; 
       end;
 
