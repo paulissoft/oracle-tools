@@ -641,6 +641,10 @@ is
   is
     l_worker_nr positive;
   begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING.RESTART_WORKERS');
+$end
+
     for i_worker_idx in l_inactive_worker_tab.first .. l_inactive_worker_tab.last
     loop
       l_worker_nr := l_inactive_worker_tab(i_worker_idx);
@@ -663,6 +667,9 @@ $end
         );
       end if;
     end loop;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end  
   end restart_workers;
 
   procedure cleanup
