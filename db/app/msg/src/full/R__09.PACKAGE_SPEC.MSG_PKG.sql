@@ -89,6 +89,11 @@ procedure init_heartbeat
 , p_worker_nr in positive default null -- null for the supervisor
 );
 
+procedure done_heartbeat
+( p_controlling_package in varchar2
+, p_worker_nr in positive default null -- null for the supervisor
+);
+
 procedure send_heartbeat
 ( p_controlling_package in varchar2
 , p_recv_timeout in naturaln -- receive timeout in seconds
@@ -98,11 +103,11 @@ procedure send_heartbeat
 /**
 Send a heartbeat to the request pipe (p_controlling_package) with a timeout of 0 seconds.
 The contents of the message will be:
-1. the response pipe (p_controlling_package || '#' || p_worker_nr)
+1. the response pipe (dbms_pipe.unique_session_name)
 2. the worker number
 3. the current time (current_timestamp)
 
-Then receive a response on the response pipe (p_controlling_package || '#' || p_worker_nr) while waiting for p_recv_timeout seconds, see recv_heartbeat() below.
+Then receive a response on the response pipe while waiting for p_recv_timeout seconds, see recv_heartbeat() below.
 
 In case of problems: raise an e_heartbeat_failure exception.
 */
@@ -117,7 +122,7 @@ procedure recv_heartbeat
 Receive a heartbeat from the request pipe (p_controlling_package) with a timeout of p_recv_timeout seconds.
 
 The receiver will check whether the message is conform described above.
-If so, it will respond (timeout 0) to the response pipe (p_controlling_package || '#' || p_worker_nr) with the same timestamp.
+If so, it will respond (timeout 0) to the response pipe with the same timestamp.
 
 In case of problems: raise an e_heartbeat_failure exception.
 */

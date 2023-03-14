@@ -222,8 +222,20 @@ procedure init_heartbeat
 )
 is
 begin
-  dbms_pipe.purge(p_controlling_package || case when p_worker_nr is not null then '#' || p_worker_nr end);  
+  dbms_pipe.purge(case when p_worker_nr is null then p_controlling_package else dbms_pipe.unique_session_name end);
 end init_heartbeat;
+ 
+procedure done_heartbeat
+( p_controlling_package in varchar2
+, p_worker_nr in positive
+)
+is
+begin
+  if dbms_pipe.remove_pipe(case when p_worker_nr is null then p_controlling_package else dbms_pipe.unique_session_name end) = 0
+  then
+    null;
+  end if;
+end done_heartbeat;
  
 procedure send_heartbeat
 ( p_controlling_package in varchar2
@@ -237,8 +249,8 @@ is
   l_recv_timestamp_str timestamp_tz_str_t := null;
   l_send_pipe constant varchar2(128 char) := p_controlling_package;
   l_send_timeout constant naturaln := 0;
-  l_recv_pipe constant varchar2(128 char) := p_controlling_package || '#' || p_worker_nr;
-begin
+  l_recv_pipe constant varchar2(128 char) := dbms_pipe.unique_session_name;
+begin  
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SEND_HEARTBEAT');
   dbug.print
@@ -253,6 +265,7 @@ $end
   p_timestamp := null;
 
   dbms_pipe.reset_buffer;
+  dbms_pipe.pack_message(l_recv_pipe);
   dbms_pipe.pack_message(p_worker_nr);
   l_send_timestamp_str := timestamp_tz2timestamp_tz_str(current_timestamp);
   dbms_pipe.pack_message(l_send_timestamp_str);
@@ -340,17 +353,15 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
   if l_result = 0
   then
+    dbms_pipe.unpack_message(l_send_pipe);
     dbms_pipe.unpack_message(p_worker_nr);
     dbms_pipe.unpack_message(l_timestamp_str);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'timestamp received from sender: %s', l_timestamp_str);
 $end
-
-    l_send_pipe := p_controlling_package || '#' || p_worker_nr;
     
     dbms_pipe.reset_buffer;
-
     dbms_pipe.pack_message(l_timestamp_str);
     l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.cfg_pkg.c_debugging $then

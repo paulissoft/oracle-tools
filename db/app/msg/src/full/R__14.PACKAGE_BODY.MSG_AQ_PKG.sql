@@ -1342,6 +1342,15 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end      
       raise;
   end dbms_aq_listen;
+
+  procedure cleanup
+  is
+  begin
+    msg_pkg.done_heartbeat
+    ( p_controlling_package => p_controlling_package
+    , p_worker_nr => p_worker_nr
+    );
+  end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
@@ -1479,6 +1488,8 @@ $end
       end case;
     end loop listen_then_dequeue_loop;
   end loop process_loop;
+
+  cleanup;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
@@ -1486,6 +1497,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
+    cleanup;
     dbug.leave_on_error;
     raise;
 $end

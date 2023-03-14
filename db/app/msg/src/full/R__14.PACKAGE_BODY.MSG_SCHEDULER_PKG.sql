@@ -697,6 +697,15 @@ $end
     l_timestamp_tab dbms_sql.timestamp_with_time_zone_table;
     l_timestamp msg_pkg.timestamp_tz_t;
     l_worker_nr positive;
+    
+    procedure cleanup
+    is
+    begin
+      msg_pkg.done_heartbeat
+      ( p_controlling_package => $$PLSQL_UNIT
+      , p_worker_nr => null
+      );
+    end cleanup;
   begin
     for i_worker_nr in 1..p_nr_workers
     loop
@@ -744,6 +753,13 @@ $end
       
       restart_workers(l_now, l_timestamp_tab);
     end loop process_loop;
+
+    cleanup;
+  exception
+    when others
+    then
+      cleanup;
+      raise;
   end processing_as_supervisor;
 
   procedure processing_as_worker
