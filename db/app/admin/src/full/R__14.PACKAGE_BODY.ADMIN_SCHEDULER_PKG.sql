@@ -16,7 +16,7 @@ begin
   where   j.owner = sys_context('USERENV', 'SESSION_USER')
   and     j.job_name = p_job_name;
   
-  dbms_scheduler.stop_job(job_name => p_job_name, force => p_force, commit_semantics => p_commit_semantics);
+  dbms_scheduler.stop_job(job_name => sys_context('USERENV', 'SESSION_USER') || '.' || p_job_name, force => p_force, commit_semantics => p_commit_semantics);
 
   if l_session_id is not null
   then
@@ -41,7 +41,7 @@ begin
   where   j.owner = sys_context('USERENV', 'SESSION_USER')
   and     j.job_name = p_job_name;
 
-  dbms_scheduler.drop_job(job_name => p_job_name, force => p_force, defer => p_defer, commit_semantics => p_commit_semantics);
+  dbms_scheduler.drop_job(job_name => sys_context('USERENV', 'SESSION_USER') || '.' || p_job_name, force => p_force, defer => p_defer, commit_semantics => p_commit_semantics);
 
   if l_session_id is not null
   then
