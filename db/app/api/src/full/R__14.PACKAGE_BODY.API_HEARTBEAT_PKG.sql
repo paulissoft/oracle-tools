@@ -75,9 +75,10 @@ is
 begin
   -- try to create a private pipe and if that fails purge it
   begin
-    if dbms_pipe.remove_pipe(l_pipename) = 0
+    if dbms_pipe.remove_pipe(l_pipename) = 0 and
+       dbms_pipe.create_pipe(pipename => l_pipename, private => true) = 0
     then
-      dbms_pipe.create_pipe(pipename => l_pipename, private => true);
+      null;
     else
       raise program_error; -- should not happen
     end if;
