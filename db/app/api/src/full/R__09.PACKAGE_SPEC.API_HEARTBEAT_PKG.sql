@@ -130,6 +130,16 @@ The contents of the response message sent to the worker:
 See also send() above.
 */
 
+$if cfg_pkg.c_testing $then
+
+--%suitepath(API)
+--%suite
+
+--%test
+procedure ut_ping_pong;
+
+$end
+
 end api_heartbeat_pkg;
 /
 
