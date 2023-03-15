@@ -46,7 +46,7 @@ Please note that this is a valid, probably even preferred, WAY of WORKING for th
 2.  for all silent workers check whether their session are still there.
 3a. start sessions when they are missing.
 3b. when all the sessions are still there but not responding,
-    double the silence threshold for the next run.
+    increase the silence threshold for the next run.
 4.  when that threshold is above some limit,
     stop the supervisor and workers and restart the whole process (supervisor and workers).
 
@@ -55,7 +55,7 @@ Please note that this is a valid, probably even preferred, WAY of WORKING for th
 2.  if there is a silent worker (must be the supervisor) check whether its session is still there.
 3a. start the supervisor session when they are missing.
 3b. when the supervisor session is still there but not responding,
-    double the silence threshold for the next run.
+    increase the silence threshold for the next run.
 4.  when that threshold is above some limit,
     stop the supervisor and workers and restart the whole process (supervisor and workers).
 */
