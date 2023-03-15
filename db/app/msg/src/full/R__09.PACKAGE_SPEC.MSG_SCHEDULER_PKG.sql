@@ -71,6 +71,14 @@ p_command = drop:
 - Drop the jobs, first with force false, next with force true if necessary.
 **/
 
+procedure submit_do
+( p_command in varchar2 -- check_jobs_not_running / start / stop / restart / drop
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+);
+/**
+Submits do() as a non-repeating job, starting immediately.
+*/
+
 procedure submit_launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
@@ -150,6 +158,7 @@ procedure processing
 , p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
 , p_worker_nr in positiven -- the worker number: null for supervisor
 , p_end_date in timestamp with time zone -- the end date
+, p_silence_threshold in number
 );
 ```
 

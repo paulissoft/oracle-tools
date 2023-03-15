@@ -267,6 +267,7 @@ procedure processing
 , p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
 , p_worker_nr in positiven -- the worker number
 , p_end_date in timestamp with time zone -- the end date
+, p_silence_threshold in number -- the number of seconds the supervisor may be silent before exception oracle_tools.api_heartbeat_pkg.e_heartbeat_silent_workers is raised
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
@@ -274,7 +275,7 @@ Performs the processing of a worker job.
 
 A worker runs till the end date (will check himself) and listens to the queues
 derived from the groups to process.  Every X seconds (X = time between
-heartbeats) it must also send a (bidirectional) heartbeat to the supervisor.  This means
+heartbeats) it must also send a heartbeat to the supervisor.  This means
 that it can listen at most X seconds for messages to arrive before it sends a
 heartbeat.
 **/

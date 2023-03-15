@@ -1293,6 +1293,7 @@ procedure processing
 , p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
 , p_end_date in timestamp with time zone
+, p_silence_threshold in number
 )
 is
   l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
@@ -1305,7 +1306,8 @@ is
   l_queue_name_idx positiven := 1;
   l_agent sys.aq$_agent;
   l_message_delivery_mode pls_integer;
-  l_timestamp_dummy msg_pkg.timestamp_tz_t;
+  l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
+  l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
 
   -- Use a simple procedure and dbug.enter/dbug.leave to be able to profile this dbms_aq.listen call.
   procedure dbms_aq_listen
@@ -1343,11 +1345,39 @@ $end
       raise;
   end dbms_aq_listen;
 
+  procedure send_next_heartbeat
+  is
+  begin
+    if l_now >= l_next_heartbeat
+    then
+      oracle_tools.api_heartbeat_pkg.send
+      ( p_supervisor_channel => p_controlling_package
+      , p_worker_nr => p_worker_nr
+      , p_silence_threshold => p_silence_threshold
+      , p_first_recv_timeout => 0 -- non-blocking
+      , p_timestamp_tab => l_timestamp_tab
+      , p_silent_worker_tab => l_silent_worker_tab
+      );
+      if l_silent_worker_tab.count > 0
+      then
+        raise_application_error
+        ( oracle_tools.api_heartbeat_pkg.c_heartbeat_silent_workers
+        , 'The supervisor is silent since at least ' || p_silence_threshold || ' seconds.'
+        );
+      end if;
+      
+      loop
+        l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');
+        exit when l_next_heartbeat > l_now;
+      end loop;
+    end if;
+  end send_next_heartbeat;
+  
   procedure cleanup
   is
   begin
-    msg_pkg.done_heartbeat
-    ( p_controlling_package => p_controlling_package
+    oracle_tools.api_heartbeat_pkg.done
+    ( p_supervisor_channel => p_controlling_package
     , p_worker_nr => p_worker_nr
     );
   end cleanup;
@@ -1356,10 +1386,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
   dbug.print
   ( dbug."input"
-  , 'p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_end_date: %s'
+  , 'p_controlling_package: %s; p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_end_date: %s; p_silence_threshold: %s'
+  , p_controlling_package
   , case when p_groups_to_process_tab is not null then p_groups_to_process_tab.count end
   , p_worker_nr
   , to_char(p_end_date, 'yyyy-mm-dd hh24:mi:ss')
+  , p_silence_threshold
   );
 $end
 
@@ -1370,9 +1402,11 @@ $end
     raise value_error;
   end if;
 
-  msg_pkg.init_heartbeat
-  ( p_controlling_package => p_controlling_package
+  oracle_tools.api_heartbeat_pkg.init
+  ( p_supervisor_channel => p_controlling_package
   , p_worker_nr => p_worker_nr
+  , p_max_worker_nr => 0
+  , p_timestamp_tab => l_timestamp_tab
   );
 
   <<queue_loop>>
@@ -1438,19 +1472,7 @@ $end
       exit process_loop when l_elapsed_time >= l_ttl;
 
       /* Test whether we must send a heartbeat? */
-      if l_now >= l_next_heartbeat
-      then
-        msg_pkg.send_heartbeat
-        ( p_controlling_package => p_controlling_package
-        , p_recv_timeout => msg_constants_pkg.c_time_between_heartbeats
-        , p_worker_nr => p_worker_nr
-        , p_timestamp => l_timestamp_dummy
-        );
-        loop
-          l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');
-          exit when l_next_heartbeat > l_now;
-        end loop;
-      end if;
+      send_next_heartbeat;
 
       case i_step
         when 1

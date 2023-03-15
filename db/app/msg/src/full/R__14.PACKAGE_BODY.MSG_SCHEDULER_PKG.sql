@@ -8,10 +8,13 @@ subtype job_name_t is user_scheduler_jobs.job_name%type;
 -- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
 c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
 c_program_worker_group constant user_scheduler_programs.program_name%type := 'PROCESSING';
+c_program_do constant user_scheduler_programs.program_name%type := 'DO';
 
 c_schedule_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_SCHEDULE';
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
+
+c_max_silence_threshold constant oracle_tools.api_time_pkg.seconds_t := 60;
 
 -- ORA-27476: "MSG_AQ_PKG$PROCESSING_LAUNCHER#1" does not exist
 e_job_does_not_exist exception;
@@ -417,6 +420,31 @@ $end
         , default_value => null
         );
       end loop;
+      
+    when c_program_do
+    then
+      dbms_scheduler.create_program
+      ( program_name => l_program_name
+      , program_type => 'STORED_PROCEDURE'
+      , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , number_of_arguments => 2
+      , enabled => false
+      , comments => 'Main program for executing commands.'
+      );
+
+      for i_par_idx in 1..2
+      loop
+        dbms_scheduler.define_program_argument
+        ( program_name => l_program_name
+        , argument_name => case i_par_idx
+                             when 1 then 'P_COMMAND'
+                             when 2 then 'P_PROCESSING_PACKAGE'
+                           end
+        , argument_position => i_par_idx
+        , argument_type => 'VARCHAR2'
+        , default_value => null
+        );
+      end loop;
   end case;
       
   dbms_scheduler.enable(name => l_program_name);
@@ -516,7 +544,7 @@ $end
       when 'P_WORKER_NR'
       then l_argument_value := to_char(p_worker_nr);
       when 'P_END_DATE'
-      then l_argument_value := msg_pkg.timestamp_tz2timestamp_tz_str(p_end_date);
+      then l_argument_value := oracle_tools.api_time_pkg.timestamp2str(p_end_date);
     end case;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -571,7 +599,7 @@ $end
     PRAGMA INLINE (is_job_running, 'YES');
     exit when not(is_job_running(p_job_name));
 
-    dbms_scheduler.stop_job(job_name => p_job_name, force => case i_step when 1 then false else true end);
+    admin_scheduler_pkg.stop_job(p_job_name => p_job_name, p_force => case i_step when 1 then false else true end);
   end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -596,7 +624,7 @@ $end
 
   PRAGMA INLINE (stop_job, 'YES');
   stop_job(p_job_name);
-  dbms_scheduler.drop_job(job_name => p_job_name, force => false);
+  admin_scheduler_pkg.drop_job(p_job_name => p_job_name, p_force => false);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -628,55 +656,50 @@ is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name constant job_name_t := session_job_name();
   l_groups_to_process_tab sys.odcivarchar2list;
-  l_end_date constant msg_pkg.timestamp_tz_t := msg_pkg.timestamp_tz_str2timestamp_tz(p_end_date);
+  l_end_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.str2timestamp(p_end_date);
+  -- for the heartbeat
+  l_silence_threshold oracle_tools.api_time_pkg.seconds_t := msg_constants_pkg.c_time_between_heartbeats * 2;
 
   procedure restart_workers
-  ( p_now in oracle_tools.api_time_pkg.timestamp_t
-  , p_timestamp_tab in out nocopy dbms_sql.timestamp_with_time_zone_table
+  ( p_silent_worker_tab in oracle_tools.api_heartbeat_pkg.silent_worker_tab_t
+  , p_silence_threshold in out nocopy oracle_tools.api_time_pkg.seconds_t
   )
   is
-    l_inactive boolean;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING.RESTART_WORKERS');
 $end
 
-    <<worker_loop>>
-    for i_worker_nr in 1..p_nr_workers
-    loop
-      l_inactive :=
-        case
-          when not(p_timestamp_tab.exists(i_worker_nr))
-          then true
-          when p_timestamp_tab(i_worker_nr) between p_now - numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND')
-                                                and p_now
-          then false
-          else true
-        end;
-          
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , 'Worker %s is inactive: %s'
-      , i_worker_nr
-      , dbug.cast_to_varchar2(l_inactive)
+    if p_silent_worker_tab is null or p_silent_worker_tab.count = 0
+    then
+      raise program_error;
+    end if;
+
+    if p_silence_threshold >= c_max_silence_threshold
+    then
+      submit_do('restart', p_processing_package);
+      raise_application_error
+      ( oracle_tools.api_heartbeat_pkg.c_heartbeat_silent_workers
+      , utl_lms.format_message
+        ( 'There are %s workers silent since at least %s seconds.'
+        , to_char(p_silent_worker_tab.count)
+        , to_char(p_silence_threshold)
+        )
       );
-$end
-      if not(l_inactive)
+    end if;
+    
+    p_silence_threshold := p_silence_threshold + msg_constants_pkg.c_time_between_heartbeats;
+ 
+    <<worker_loop>>
+    for i_idx in p_silent_worker_tab.first .. p_silent_worker_tab.last
+    loop
+      if not(is_job_running(join_job_name(p_processing_package, c_program_worker_group, p_silent_worker_tab(i_idx))))
       then
-        null; -- do not remove the heartbeat since we need to check next round
-      else
-        -- this one is not valid so remove (may be > l_now)
-        if p_timestamp_tab.exists(i_worker_nr)
-        then
-          p_timestamp_tab.delete(i_worker_nr);
-        end if;
-        
         submit_processing
         ( p_processing_package => p_processing_package
         , p_groups_to_process_list => p_groups_to_process_list
         , p_nr_workers => p_nr_workers
-        , p_worker_nr => i_worker_nr
+        , p_worker_nr => p_silent_worker_tab(i_idx)
         , p_end_date => l_end_date -- all jobs in the worker group are supposed to have the same end date
         );
       end if;
@@ -693,28 +716,24 @@ $end
     l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, l_end_date);
     l_now oracle_tools.api_time_pkg.timestamp_t;
     l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
-    l_inactive_worker_tab sys.odcinumberlist := sys.odcinumberlist();
-    l_timestamp_tab dbms_sql.timestamp_with_time_zone_table;
-    l_timestamp msg_pkg.timestamp_tz_t;
-    l_worker_nr positive;
-    
+    -- for the heartbeat
+    l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
+    l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
+
     procedure cleanup
     is
     begin
-      msg_pkg.done_heartbeat
-      ( p_controlling_package => $$PLSQL_UNIT
+      oracle_tools.api_heartbeat_pkg.done
+      ( p_supervisor_channel => $$PLSQL_UNIT
       , p_worker_nr => null
       );
     end cleanup;
   begin
-    for i_worker_nr in 1..p_nr_workers
-    loop
-      l_timestamp_tab(i_worker_nr) := l_start_date;
-    end loop;
-
-    msg_pkg.init_heartbeat
-    ( p_controlling_package => $$PLSQL_UNIT
+    oracle_tools.api_heartbeat_pkg.init
+    ( p_supervisor_channel => $$PLSQL_UNIT
     , p_worker_nr => null
+    , p_max_worker_nr => p_nr_workers
+    , p_timestamp_tab => l_timestamp_tab
     );
     
     <<process_loop>>
@@ -735,23 +754,24 @@ $end
       /* Test whether we must end? */
       exit process_loop when l_elapsed_time >= l_ttl;
 
-      begin
-        msg_pkg.recv_heartbeat
-        ( p_controlling_package => $$PLSQL_UNIT
-        , p_recv_timeout => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-        , p_worker_nr => l_worker_nr
-        , p_timestamp => l_timestamp
-        );
-        if l_worker_nr is not null
-        then
-          l_timestamp_tab(l_worker_nr) := l_timestamp;
-        end if;
-      exception
-        when msg_pkg.e_heartbeat_failure
-        then null;
-      end;
-      
-      restart_workers(l_now, l_timestamp_tab);
+      oracle_tools.api_heartbeat_pkg.recv
+      ( p_supervisor_channel => $$PLSQL_UNIT
+      , p_silence_threshold => l_silence_threshold
+      , p_first_recv_timeout => least
+                                ( msg_constants_pkg.c_time_between_heartbeats
+                                , greatest
+                                  ( 1 -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+                                  , trunc(l_ttl - l_elapsed_time)
+                                  )
+                                ) 
+      , p_timestamp_tab =>l_timestamp_tab
+      , p_silent_worker_tab => l_silent_worker_tab
+      );
+
+      if l_silent_worker_tab is not null and l_silent_worker_tab.count > 0
+      then
+        restart_workers(l_silent_worker_tab, l_silence_threshold);
+      end if;
     end loop process_loop;
 
     cleanup;
@@ -776,12 +796,29 @@ call %s.processing( p_controlling_package => :1
                   , p_groups_to_process_tab => :2
                   , p_worker_nr => :3
                   , p_end_date => :4
+                  , p_silence_threshold => :5
                   )]'
                    , l_processing_package -- already checked by determine_processing_package
                    );
-
-    execute immediate l_statement
-      using in $$PLSQL_UNIT, in l_groups_to_process_tab, in p_worker_nr, in l_end_date;
+    <<processing_loop>>
+    loop
+      begin
+        execute immediate l_statement
+          using in $$PLSQL_UNIT, in l_groups_to_process_tab, in p_worker_nr, in l_end_date, in l_silence_threshold;
+          
+        exit processing_loop; -- no error so stop
+      exception
+        when oracle_tools.api_heartbeat_pkg.e_heartbeat_silent_workers
+        then
+          -- just the supervisor is silent
+          restart_workers
+          ( p_silent_worker_tab => sys.odcinumberlist(null) -- null means supervisor
+          , p_silence_threshold => l_silence_threshold
+          );
+          -- no re-raise because we want to try again till the silence threshold is too large
+      end;
+    end loop processing_loop;
+    
   exception
     when e_compilation_error
     then
@@ -1082,6 +1119,97 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end do;
 
+procedure submit_do
+( p_command in varchar2
+, p_processing_package in varchar2
+)
+is
+  l_job_name_do job_name_t;
+  l_argument_value user_scheduler_program_args.default_value%type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_DO');
+  dbug.print(dbug."input", 'p_command: %s; p_processing_package: %s', p_command, p_processing_package);
+$end
+
+  l_job_name_do :=
+    join_job_name
+    ( p_processing_package => p_processing_package
+    , p_program_name => c_program_do
+    );
+
+  PRAGMA INLINE (is_job_running, 'YES');
+  if is_job_running(l_job_name_do)
+  then
+    raise too_many_rows;
+  end if;
+
+  PRAGMA INLINE (does_job_exist, 'YES');
+  if not(does_job_exist(l_job_name_do))
+  then
+    PRAGMA INLINE (does_program_exist, 'YES');
+    if not(does_program_exist(c_program_do))
+    then
+      create_program(c_program_do);
+    end if;
+
+    dbms_scheduler.create_job
+    ( job_name => l_job_name_do
+    , program_name => c_program_do
+    , job_class => 'DEFAULT_JOB_CLASS'
+    , enabled => false -- so we can set job arguments
+    , auto_drop => false
+    , comments => 'A job for executing commands.'
+    , job_style => 'REGULAR'
+    , credential_name => null
+    , destination_name => null
+    );
+  else
+    dbms_scheduler.disable(l_job_name_do); -- stop the job so we can give it job arguments
+  end if;
+
+  -- set arguments
+  for r in
+  ( select  a.argument_name
+    from    user_scheduler_jobs j
+            inner join user_scheduler_program_args a
+            on a.program_name = j.program_name
+    where   job_name = l_job_name_do
+    order by
+            a.argument_position 
+  )
+  loop
+    case r.argument_name
+      when 'P_COMMAND'
+      then l_argument_value := p_command;
+      when 'P_PROCESSING_PACKAGE'
+      then l_argument_value := p_processing_package;
+    end case;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'argument name: %s; argument value: %s'
+    , r.argument_name
+    , l_argument_value
+    );
+$end
+
+    dbms_scheduler.set_job_argument_value
+    ( job_name => l_job_name_do
+    , argument_name => r.argument_name
+    , argument_value => l_argument_value
+    );
+  end loop;
+
+  -- start the job
+  dbms_scheduler.enable(l_job_name_do); 
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end submit_do;
+
 procedure submit_launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive
@@ -1120,6 +1248,7 @@ $end
   PRAGMA INLINE (does_job_exist, 'YES');
   if not(does_job_exist(l_job_name_launcher))
   then
+    PRAGMA INLINE (does_program_exist, 'YES');
     if not(does_program_exist(c_program_launcher))
     then
       create_program(c_program_launcher);
@@ -1332,9 +1461,6 @@ $end
 
   procedure start_jobs
   is
-    l_processing_package_dummy all_objects.object_name%type;
-    l_program_name_dummy user_scheduler_programs.program_name%type;
-    l_worker_nr positive;
   begin
     -- the supervisor
     submit_processing
@@ -1346,28 +1472,15 @@ $end
     );
     if l_job_name_tab.count > 0 -- excluding supervisor
     then
-      for i_idx in l_job_name_tab.first .. l_job_name_tab.last
+      for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
       loop
-        split_job_name
-        ( p_job_name => l_job_name_tab(i_idx)
-        , p_processing_package => l_processing_package_dummy
-        , p_program_name => l_program_name_dummy
-        , p_worker_nr => l_worker_nr 
+        submit_processing
+        ( p_processing_package => p_processing_package
+        , p_groups_to_process_list => l_groups_to_process_list
+        , p_nr_workers => l_job_name_tab.count
+        , p_worker_nr => i_worker_nr
+        , p_end_date => l_end_date
         );
-
-        -- submit but when job already exists: ignore
-        begin
-          submit_processing
-          ( p_processing_package => p_processing_package
-          , p_groups_to_process_list => l_groups_to_process_list
-          , p_nr_workers => l_job_name_tab.count
-          , p_worker_nr => l_worker_nr
-          , p_end_date => l_end_date
-          );
-        exception
-          when e_job_already_running
-          then null;
-        end;
       end loop;
     end if;
   end start_jobs;
