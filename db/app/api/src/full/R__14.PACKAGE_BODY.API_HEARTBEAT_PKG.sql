@@ -403,7 +403,7 @@ is
   l_timestamp_tab timestamp_tab_t;
   l_first_timestamp_tab timestamp_tab_t;
   l_silent_worker_tab silent_worker_tab_t;
-  l_timeout constant integer := 1;
+  l_timeout constant integer := 5;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.UT_PING_PONG');
