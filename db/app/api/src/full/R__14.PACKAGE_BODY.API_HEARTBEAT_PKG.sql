@@ -475,7 +475,7 @@ $end
         );
         ut.expect(l_timestamp_tab(0), 'last supervisor timestamp #' || i_case).to_be_greater_than(l_first_timestamp_tab(0));    
         ut.expect(l_timestamp_tab(1), 'last worker timestamp #' || i_case).to_be_greater_than(l_first_timestamp_tab(1));    
-        ut.expect(l_silent_worker_tab.count, 'silent worker count #' || i_case).to_equal(0);
+        ut.expect(l_silent_worker_tab.count, 'silent worker count #' || i_case).to_equal(1); -- worker is too late
     end case;
 
     -- common checks
