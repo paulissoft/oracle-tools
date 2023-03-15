@@ -20,9 +20,13 @@ c_max_silence_threshold constant oracle_tools.api_time_pkg.seconds_t := 60;
 e_job_does_not_exist exception;
 pragma exception_init(e_job_does_not_exist, -27476);
 
--- sqlerrm: ORA-27475: unknown job "BC_API"."MSG_AQ_PKG$PROCESSING_LAUNCHER#1"
+-- ORA-27475: unknown job "BC_API"."MSG_AQ_PKG$PROCESSING_LAUNCHER#1"
 e_job_unknown exception;
 pragma exception_init(e_job_unknown, -27475);
+
+-- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+e_invalid_end_date exception;
+pragma exception_init(e_invalid_end_date, -27483);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
  
@@ -489,77 +493,95 @@ $end
       )
     );
   end if;
-  
-  PRAGMA INLINE (does_job_exist, 'YES');
-  if not(does_job_exist(l_job_name))
-  then  
-    if not(does_program_exist(c_program_worker_group))
-    then
-      create_program(c_program_worker_group);
-    end if;
 
-    -- use inline schedule
-    dbms_scheduler.create_job
-    ( job_name => l_job_name
-    , program_name => c_program_worker_group
-    , start_date => null
-      -- will never repeat
-    , repeat_interval => null
-    , end_date => p_end_date
-    , job_class => msg_constants_pkg.c_job_class_worker
-    , enabled => false -- so we can set job arguments
-    , auto_drop => true -- one-off jobs
-    , comments => 'Worker job for processing messages.'
-    , job_style => msg_constants_pkg.c_job_style_worker
-    , credential_name => null
-    , destination_name => null
-    );
-  else
-    dbms_scheduler.disable(l_job_name);    
-  end if;
-  
-  -- set the actual arguments
-
-  for r in
-  ( select  a.argument_name
-    from    user_scheduler_jobs j
-            inner join user_scheduler_program_args a
-            on a.program_name = j.program_name
-    where   j.job_name = l_job_name
-    order by
-            a.argument_position
-  )
+  -- GJP 2023-03-15 Try to enable an existing job, but drop it otherwise and try again
+  -- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+  <<try_loop>>
+  for i_try in 1..2
   loop
+    PRAGMA INLINE (does_job_exist, 'YES');
+    if not(does_job_exist(l_job_name))
+    then  
+      if not(does_program_exist(c_program_worker_group))
+      then
+        create_program(c_program_worker_group);
+      end if;
+
+      -- use inline schedule
+      dbms_scheduler.create_job
+      ( job_name => l_job_name
+      , program_name => c_program_worker_group
+      , start_date => null
+        -- will never repeat
+      , repeat_interval => null
+      , end_date => p_end_date
+      , job_class => msg_constants_pkg.c_job_class_worker
+      , enabled => false -- so we can set job arguments
+      , auto_drop => true -- one-off jobs
+      , comments => 'Worker job for processing messages.'
+      , job_style => msg_constants_pkg.c_job_style_worker
+      , credential_name => null
+      , destination_name => null
+      );
+    else
+      dbms_scheduler.disable(l_job_name);    
+    end if;
+    
+    -- set the actual arguments
+
+    for r in
+    ( select  a.argument_name
+      from    user_scheduler_jobs j
+              inner join user_scheduler_program_args a
+              on a.program_name = j.program_name
+      where   j.job_name = l_job_name
+      order by
+              a.argument_position
+    )
+    loop
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'argument name: %s', r.argument_name);
+      dbug.print(dbug."info", 'argument name: %s', r.argument_name);
 $end
 
-    case r.argument_name
-      when 'P_PROCESSING_PACKAGE'
-      then l_argument_value := p_processing_package;
-      when 'P_GROUPS_TO_PROCESS_LIST'
-      then l_argument_value := p_groups_to_process_list;
-      when 'P_NR_WORKERS'
-      then l_argument_value := to_char(p_nr_workers);
-      when 'P_WORKER_NR'
-      then l_argument_value := to_char(p_worker_nr);
-      when 'P_END_DATE'
-      then l_argument_value := oracle_tools.api_time_pkg.timestamp2str(p_end_date);
-    end case;
+      case r.argument_name
+        when 'P_PROCESSING_PACKAGE'
+        then l_argument_value := p_processing_package;
+        when 'P_GROUPS_TO_PROCESS_LIST'
+        then l_argument_value := p_groups_to_process_list;
+        when 'P_NR_WORKERS'
+        then l_argument_value := to_char(p_nr_workers);
+        when 'P_WORKER_NR'
+        then l_argument_value := to_char(p_worker_nr);
+        when 'P_END_DATE'
+        then l_argument_value := oracle_tools.api_time_pkg.timestamp2str(p_end_date);
+      end case;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'argument value: %s', l_argument_value);
+      dbug.print(dbug."info", 'argument value: %s', l_argument_value);
 $end
 
-    dbms_scheduler.set_job_argument_value
-    ( job_name => l_job_name
-    , argument_name => r.argument_name
-    , argument_value => l_argument_value
-    );
-  end loop;
+      dbms_scheduler.set_job_argument_value
+      ( job_name => l_job_name
+      , argument_name => r.argument_name
+      , argument_value => l_argument_value
+      );
+    end loop;
+
+    begin
+      dbms_scheduler.enable(l_job_name);
+      exit try_loop; -- we made it :)
+    exception
+      when e_invalid_end_date
+      then
+        if i_try = 1
+        then
+          admin_scheduler_pkg.drop_job(l_job_name);
+        else
+          raise;
+        end if;
+    end;
+  end loop try_loop;
   
-  dbms_scheduler.enable(l_job_name);
-
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
@@ -1144,66 +1166,83 @@ $end
     raise too_many_rows;
   end if;
 
-  PRAGMA INLINE (does_job_exist, 'YES');
-  if not(does_job_exist(l_job_name_do))
-  then
-    PRAGMA INLINE (does_program_exist, 'YES');
-    if not(does_program_exist(c_program_do))
+  -- GJP 2023-03-15 Try to enable an existing job, but drop it otherwise and try again
+  -- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+  <<try_loop>>
+  for i_try in 1..2
+  loop
+    PRAGMA INLINE (does_job_exist, 'YES');
+    if not(does_job_exist(l_job_name_do))
     then
-      create_program(c_program_do);
+      PRAGMA INLINE (does_program_exist, 'YES');
+      if not(does_program_exist(c_program_do))
+      then
+        create_program(c_program_do);
+      end if;
+
+      dbms_scheduler.create_job
+      ( job_name => l_job_name_do
+      , program_name => c_program_do
+      , job_class => 'DEFAULT_JOB_CLASS'
+      , enabled => false -- so we can set job arguments
+      , auto_drop => false
+      , comments => 'A job for executing commands.'
+      , job_style => 'REGULAR'
+      , credential_name => null
+      , destination_name => null
+      );
+    else
+      dbms_scheduler.disable(l_job_name_do); -- stop the job so we can give it job arguments
     end if;
 
-    dbms_scheduler.create_job
-    ( job_name => l_job_name_do
-    , program_name => c_program_do
-    , job_class => 'DEFAULT_JOB_CLASS'
-    , enabled => false -- so we can set job arguments
-    , auto_drop => false
-    , comments => 'A job for executing commands.'
-    , job_style => 'REGULAR'
-    , credential_name => null
-    , destination_name => null
-    );
-  else
-    dbms_scheduler.disable(l_job_name_do); -- stop the job so we can give it job arguments
-  end if;
-
-  -- set arguments
-  for r in
-  ( select  a.argument_name
-    from    user_scheduler_jobs j
-            inner join user_scheduler_program_args a
-            on a.program_name = j.program_name
-    where   job_name = l_job_name_do
-    order by
-            a.argument_position 
-  )
-  loop
-    case r.argument_name
-      when 'P_COMMAND'
-      then l_argument_value := p_command;
-      when 'P_PROCESSING_PACKAGE'
-      then l_argument_value := p_processing_package;
-    end case;
+    -- set arguments
+    for r in
+    ( select  a.argument_name
+      from    user_scheduler_jobs j
+              inner join user_scheduler_program_args a
+              on a.program_name = j.program_name
+      where   job_name = l_job_name_do
+      order by
+              a.argument_position 
+    )
+    loop
+      case r.argument_name
+        when 'P_COMMAND'
+        then l_argument_value := p_command;
+        when 'P_PROCESSING_PACKAGE'
+        then l_argument_value := p_processing_package;
+      end case;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print
-    ( dbug."info"
-    , 'argument name: %s; argument value: %s'
-    , r.argument_name
-    , l_argument_value
-    );
+      dbug.print
+      ( dbug."info"
+      , 'argument name: %s; argument value: %s'
+      , r.argument_name
+      , l_argument_value
+      );
 $end
 
-    dbms_scheduler.set_job_argument_value
-    ( job_name => l_job_name_do
-    , argument_name => r.argument_name
-    , argument_value => l_argument_value
-    );
-  end loop;
+      dbms_scheduler.set_job_argument_value
+      ( job_name => l_job_name_do
+      , argument_name => r.argument_name
+      , argument_value => l_argument_value
+      );
+    end loop;
 
-  -- start the job
-  dbms_scheduler.enable(l_job_name_do); 
+    begin
+      dbms_scheduler.enable(l_job_name_do);
+      exit try_loop; -- we made it :)
+    exception
+      when e_invalid_end_date
+      then
+        if i_try = 1
+        then
+          admin_scheduler_pkg.drop_job(l_job_name_do);
+        else
+          raise;
+        end if;
+    end;
+  end loop try_loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1323,7 +1362,7 @@ $end
     );
   end loop;
 
-  -- start the job
+  -- start the job (there is no end date so need to drop and try again)
   dbms_scheduler.enable(l_job_name_launcher); 
 
 $if oracle_tools.cfg_pkg.c_debugging $then
