@@ -429,7 +429,7 @@ $end
   l_timestamp_tab := l_first_timestamp_tab;
 
   -- send twice a heartbeat without a supervisor receiving it
-  for i_case in 1..3
+  for i_case in 1..4
   loop
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'i_case: %s', i_case);

@@ -8,7 +8,7 @@ subtype seconds_t is number; -- before the decimal the number of seconds, after 
 
 subtype timestamp_str_t is varchar2(40);
 
-c_timestamp_format constant timestamp_str_t := 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"';
+c_timestamp_format constant timestamp_str_t := 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"TZH:TZM';
 
 
 /**
