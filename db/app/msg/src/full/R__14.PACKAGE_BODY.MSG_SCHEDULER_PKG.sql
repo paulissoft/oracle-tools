@@ -973,7 +973,7 @@ is
       when 'shutdown' -- try to stop gracefully
       then sys.odcivarchar2list(p_command, 'check_jobs_not_running')
       when 'stop'
-      then sys.odcivarchar2list('shutdown', p_command, 'check_jobs_not_running')
+      then sys.odcivarchar2list(p_command, 'check_jobs_not_running')
       when 'restart'
       then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'start')
       when 'drop'
