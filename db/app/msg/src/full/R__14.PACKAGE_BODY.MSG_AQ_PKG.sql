@@ -1245,6 +1245,53 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_processing_method: %s', p_processing_method);
 $end
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+
+  if l_msg_tab is not null and l_msg_tab.count > 0
+  then
+    for i_idx in l_msg_tab.first .. l_msg_tab.last
+    loop
+      dbug.print
+      ( dbug."info"
+      , 'msg type: %s; group$: %s; default processing method: %s; queue name: %s'
+      , l_msg_tab(i_idx).get_type()
+      , l_msg_tab(i_idx).group$
+      , l_msg_tab(i_idx).default_processing_method()
+      , msg_pkg.get_object_name(p_object_name => msg_aq_pkg.get_queue_name(l_msg_tab(i_idx)), p_what => 'queue')
+      );
+    end loop;
+  end if;
+  
+  for r in
+  ( select  sr.subscription_name
+    from    user_subscr_registrations sr
+  )
+  loop
+    dbug.print(dbug."info", 'subscription registration name: %s', r.subscription_name);
+  end loop;
+
+  for r in
+  ( select  msg_pkg.get_object_name(p_object_name => q.name, p_what => 'queue') as fq_queue_name
+    from    user_queues q
+    where   q.queue_type = 'NORMAL_QUEUE'
+    and     q.queue_table = trim('"' from c_queue_table)
+    and     trim(q.dequeue_enabled) = 'YES'
+    minus
+    select  case
+              when sr.subscription_name like '%:%'
+              then substr(sr.subscription_name, 1, instr(sr.subscription_name, ':', -1) - 1)
+              else sr.subscription_name
+            end as fq_queue_name -- "OWNER"."QUEUE"
+    from    user_subscr_registrations sr
+    order by
+            fq_queue_name
+  )
+  loop
+    dbug.print(dbug."info", 'fq queue name: %s', r.fq_queue_name);
+  end loop;
+
+$end
+
   select  distinct
           t.group$
   bulk collect
