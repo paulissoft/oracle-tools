@@ -1098,6 +1098,15 @@ $end
 
         when 'stop'
         then
+          -- try a graceful shutdown but wait just 1 second
+          oracle_tools.api_heartbeat_pkg.shutdown(p_supervisor_channel => $$PLSQL_UNIT);
+
+          PRAGMA INLINE (get_jobs, 'YES');
+          if get_jobs(p_job_name_expr => l_job_name_prefix || '%', p_state => 'RUNNING').count > 0
+          then
+            dbms_session.sleep(1);
+          end if;
+          
           PRAGMA INLINE (get_jobs, 'YES');
           l_job_names := get_jobs(p_job_name_expr => l_job_name_prefix || '%');
           if l_job_names.count > 0
