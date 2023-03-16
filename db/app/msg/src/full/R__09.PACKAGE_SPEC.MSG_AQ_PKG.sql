@@ -267,7 +267,7 @@ procedure processing
 , p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
 , p_worker_nr in positiven -- the worker number
 , p_end_date in timestamp with time zone -- the end date
-, p_silence_threshold in number -- the number of seconds the supervisor may be silent before exception oracle_tools.api_heartbeat_pkg.e_heartbeat_silent_workers is raised
+, p_silence_threshold in number -- the number of seconds the supervisor may be silent before exception oracle_tools.api_heartbeat_pkg.e_silent_workers_found is raised
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).

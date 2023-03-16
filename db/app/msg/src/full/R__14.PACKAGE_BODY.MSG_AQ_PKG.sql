@@ -1361,7 +1361,7 @@ $end
       if l_silent_worker_tab.count > 0
       then
         raise_application_error
-        ( oracle_tools.api_heartbeat_pkg.c_heartbeat_silent_workers
+        ( oracle_tools.api_heartbeat_pkg.c_silent_workers_found
         , 'The supervisor is silent since at least ' || p_silence_threshold || ' seconds.'
         );
       end if;
@@ -1516,13 +1516,19 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
   dbug.leave;
+$end  
 exception
+  when oracle_tools.api_heartbeat_pkg.e_shutdown_request_received
+  then
+    cleanup;
+    -- no re-raise
   when others
   then
     cleanup;
+$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
-    raise;
 $end
+    raise;
 end processing;
 
 end msg_aq_pkg;

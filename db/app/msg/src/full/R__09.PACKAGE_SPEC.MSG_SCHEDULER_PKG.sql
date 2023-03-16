@@ -41,7 +41,7 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 **/
 
 procedure do
-( p_command in varchar2 -- check_jobs_not_running / start / stop / restart / drop
+( p_command in varchar2 -- check_jobs_not_running / start / shutdown / stop / restart / drop
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 );
 /**
@@ -72,7 +72,7 @@ p_command = drop:
 **/
 
 procedure submit_do
-( p_command in varchar2 -- check_jobs_not_running / start / stop / restart / drop
+( p_command in varchar2 -- check_jobs_not_running / start / shutdown / stop / restart / drop
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 );
 /**

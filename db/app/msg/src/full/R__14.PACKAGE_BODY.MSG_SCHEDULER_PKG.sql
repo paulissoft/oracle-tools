@@ -701,7 +701,7 @@ $end
     then
       submit_do('restart', p_processing_package);
       raise_application_error
-      ( oracle_tools.api_heartbeat_pkg.c_heartbeat_silent_workers
+      ( oracle_tools.api_heartbeat_pkg.c_silent_workers_found
       , utl_lms.format_message
         ( 'There are %s workers silent since at least %s seconds.'
         , to_char(p_silent_worker_tab.count)
@@ -739,6 +739,7 @@ $end
     l_now oracle_tools.api_time_pkg.timestamp_t;
     l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
     -- for the heartbeat
+    l_shutdown boolean := false;
     l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
     l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
 
@@ -785,7 +786,8 @@ $end
                                   ( 1 -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
                                   , trunc(l_ttl - l_elapsed_time)
                                   )
-                                ) 
+                                )
+      , p_shutdown => l_shutdown                          
       , p_timestamp_tab =>l_timestamp_tab
       , p_silent_worker_tab => l_silent_worker_tab
       );
@@ -798,6 +800,11 @@ $end
 
     cleanup;
   exception
+    when oracle_tools.api_heartbeat_pkg.e_shutdown_request_completed
+    then
+      cleanup;
+      -- no re-raise
+      
     when others
     then
       cleanup;
@@ -830,7 +837,7 @@ call %s.processing( p_controlling_package => :1
           
         exit processing_loop; -- no error so stop
       exception
-        when oracle_tools.api_heartbeat_pkg.e_heartbeat_silent_workers
+        when oracle_tools.api_heartbeat_pkg.e_silent_workers_found
         then
           -- just the supervisor is silent
           restart_workers
@@ -929,8 +936,10 @@ is
     case lower(p_command)
       when 'start'
       then sys.odcivarchar2list('check_jobs_not_running', p_command)
-      when 'stop'
+      when 'shutdown' -- try to stop gracefully
       then sys.odcivarchar2list(p_command, 'check_jobs_not_running')
+      when 'stop'
+      then sys.odcivarchar2list('shutdown', p_command, 'check_jobs_not_running')
       when 'restart'
       then sys.odcivarchar2list('stop', 'check_jobs_not_running', 'start')
       when 'drop'
@@ -1040,10 +1049,23 @@ $end
             then null;
           end;
 
+        when 'shutdown'
+        then
+          oracle_tools.api_heartbeat_pkg.shutdown(p_supervisor_channel => $$PLSQL_UNIT);
+
+          <<sleep_loop>>
+          for i_sleep in 1 .. msg_constants_pkg.c_time_between_heartbeats
+          loop
+            PRAGMA INLINE (get_jobs, 'YES');
+            exit sleep_loop when get_jobs(p_job_name_expr => l_job_name_prefix || '%', p_state => 'RUNNING').count = 0;
+
+            dbms_session.sleep(1);
+          end loop;
+
         when 'stop'
         then
           PRAGMA INLINE (get_jobs, 'YES');
-          l_job_names := get_jobs( p_job_name_expr => l_job_name_prefix || '%');
+          l_job_names := get_jobs(p_job_name_expr => l_job_name_prefix || '%');
           if l_job_names.count > 0
           then
             <<job_loop>>
