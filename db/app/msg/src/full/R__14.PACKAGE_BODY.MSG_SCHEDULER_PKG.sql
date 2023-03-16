@@ -240,6 +240,38 @@ begin
   order by
           job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
   ;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  for r in
+  ( select  j.job_name
+    ,       j.state
+    from    user_scheduler_jobs j
+    order by
+            job_name
+  )
+  loop
+    dbug.print(dbug."info", 'all jobs; job name: %s; state: %s', r.job_name, r.state);
+  end loop;
+
+  for r in
+  ( select  j.job_name
+    ,       'RUNNING' as state
+    from    user_scheduler_running_jobs j
+    order by
+            job_name
+  )
+  loop
+    dbug.print(dbug."info", 'all running jobs; job name: %s; state: %s', r.job_name, r.state);
+  end loop;
+
+  dbug.print
+  ( dbug."info"
+  , q'[get_jobs(p_job_name_expr => '%s', p_state => '%s', p_only_workers => %s): '%s']'
+  , p_job_name_expr
+  , p_state
+  , p_only_workers
+  , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => ',', p_ignore_null => 1)
+  );
+$end
   return l_job_names;
 end get_jobs;
 
@@ -248,9 +280,19 @@ function does_job_exist
 )
 return boolean
 is
-begin
   PRAGMA INLINE (get_jobs, 'YES');
-  return get_jobs(p_job_name).count = 1;
+  l_job_names constant sys.odcivarchar2list := get_jobs(p_job_name);
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , q'[does_job_exist(p_job_name => '%s'): '%s']'
+  , p_job_name
+  , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => ',', p_ignore_null => 1)
+  );
+$end
+
+  return l_job_names.count = 1;
 end does_job_exist;
 
 function is_job_running
