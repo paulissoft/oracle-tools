@@ -3,10 +3,24 @@ is
 
 c_use_package constant all_objects.object_name%type := 'DBMS_PIPE'; -- package to implement this: you need execute privileges on it
 
-c_heartbeat_silent_workers constant pls_integer := -20100;
+c_shutdown_msg_int constant integer := -1;
+c_shutdown_msg_str constant varchar2(8 char) := 'SHUTDOWN';
 
-e_heartbeat_silent_workers exception;
-pragma exception_init(e_heartbeat_silent_workers, -20100);
+c_silent_workers_found constant pls_integer := -20100;
+e_silent_workers_found exception;
+pragma exception_init(e_silent_workers_found, -20100);
+
+c_shutdown_request_failed constant pls_integer := -20101;
+e_shutdown_request_failed exception;
+pragma exception_init(e_shutdown_request_failed, -20101);
+
+c_shutdown_request_completed constant pls_integer := -20102;
+e_shutdown_request_completed exception;
+pragma exception_init(e_shutdown_request_completed, -20102);
+
+c_shutdown_request_received constant pls_integer := -20103;
+e_shutdown_request_received exception;
+pragma exception_init(e_shutdown_request_received, -20103);
 
 subtype supervisor_channel_t is varchar2(128 char); -- a database pipe when DBMS_PIPE is used
 subtype timestamp_tab_t is dbms_sql.timestamp_with_time_zone_table;
@@ -74,6 +88,10 @@ procedure done
 );
 /** Cleanup the channel for a worker or supervisor. */
 
+procedure shutdown
+( p_supervisor_channel in supervisor_channel_t
+);
+
 procedure send
 ( p_supervisor_channel in supervisor_channel_t
 , p_worker_nr in positiven -- the worker number
@@ -88,16 +106,18 @@ The actions:
 2. if that fails, stop processing and go to the last step.
 3. receive a response on the response channel while waiting for p_first_recv_timeout seconds the first time.
 4. if that fails, stop processing and go to the last step.
-5. record the timestamp in the timestamp table (index 0 since it is the supervisor).
-6. go back to 3 for another message to receive.
-7. determine the silent workers (just one, the supervisor).
+5. the rest of the send/receive operations will be non-blocking.
+6. if the message is a shutdown message (c_shutdown_str as the first item): fail with the shutdown request received exception.
+7. record the timestamp in the timestamp table (index 0 since it is the supervisor).
+8. go back to 3 for the next message to receive.
+9. determine the silent workers (just one, the supervisor).
 
 The contents of the message sent to the supervisor:
 - the worker number
 - the current timestamp of the worker
 
 The contents of the response message received from the supervisor:
-- the current timestamp of the supervisor
+- the current timestamp of the supervisor (or shutdown message)
 
 See also recv() below.
 */
@@ -106,19 +126,24 @@ procedure recv
 ( p_supervisor_channel in supervisor_channel_t
 , p_silence_threshold in api_time_pkg.seconds_t -- the number of seconds the supervisor may be silent before being added to the silent workers
 , p_first_recv_timeout in naturaln default 0 -- first receive timeout in seconds
+, p_shutdown in out nocopy boolean -- is a shutdown in progress?
 , p_timestamp_tab in out nocopy timestamp_tab_t
 , p_silent_worker_tab out nocopy silent_worker_tab_t
 );
 /**
 The actions:
-1. receive a worker heartbeat message on the supervisor channel with a timeout of p_first_recv_timeout seconds the first time.
-2. if that fails, stop processing and go to the last step.
-3. the rest of the operations will be non-blocking.
-4. send a response with the current timestamp of the supervisor.
-5. if that fails, stop processing and go to the last step.
-6. record the timestamp in the timestamp table.
-7. go back to 1 for another message to receive.
-8. determine the silent workers.
+1.  receive a worker heartbeat message on the supervisor channel with a timeout of p_first_recv_timeout seconds the first time.
+2.  if that fails, stop processing and go to the last step.
+3.  the rest of the send/receive operations will be non-blocking.
+4a. if the (first part of the) message is the shutdown message:
+    set the shutdown parameter to true (supervisor turns into shutdown mode) and go back to step 1 to receive the next message.
+4b. otherwise, the (first part of the) message is the worker number and the next part is the timestamp.
+5.  send a response with the current timestamp of the supervisor (or a shutdown message when in shutdown mode)
+6.  if that fails, stop processing and go to the last step.
+7a. in normal mode: record the timestamp in the timestamp table.
+7b. in shutdown mode: remove the worker entry from the timestamp table and if there are none left raise the shutdown request completed exception.
+8.  go back to 1 for the next message to receive.
+9.  determine the silent workers.
 
 The contents of the messages received from the worker:
 - the worker number
@@ -137,6 +162,14 @@ $if cfg_pkg.c_testing $then
 
 --%test
 procedure ut_ping_pong;
+
+--%test
+--%throws(api_heartbeat_pkg.e_shutdown_request_received)
+procedure ut_shutdown_worker;
+
+--%test
+--%throws(api_heartbeat_pkg.e_shutdown_request_completed)
+procedure ut_shutdown_supervisor;
 
 $end
 
