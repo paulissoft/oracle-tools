@@ -219,15 +219,6 @@ return varchar2
 is
   l_expr constant varchar2(4000 char) := replace(replace(p_expr, '_', '\_'), '\\_', '\_');
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , q'[to_like_expr(p_expr => '%s') = '%s')]'
-  , p_expr
-  , l_expr
-  );
-$end  
-
   return l_expr;
 end to_like_expr;
 
@@ -562,10 +553,11 @@ $end
               a.argument_position
     )
     loop
+/*
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'argument name: %s', r.argument_name);
 $end
-
+*/
       case r.argument_name
         when 'P_PROCESSING_PACKAGE'
         then l_argument_value := p_processing_package;
@@ -578,11 +570,11 @@ $end
         when 'P_END_DATE'
         then l_argument_value := oracle_tools.api_time_pkg.timestamp2str(l_end_date);
       end case;
-
+/*
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'argument value: %s', l_argument_value);
 $end
-
+*/
       dbms_scheduler.set_job_argument_value
       ( job_name => l_job_name
       , argument_name => r.argument_name
@@ -1276,7 +1268,7 @@ $end
       when 'P_PROCESSING_PACKAGE'
       then l_argument_value := p_processing_package;
     end case;
-
+/*
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
@@ -1285,7 +1277,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     , l_argument_value
     );
 $end
-
+*/
     dbms_scheduler.set_job_argument_value
     ( job_name => l_job_name_do
     , argument_name => r.argument_name
@@ -1396,7 +1388,7 @@ $end
       when 'P_NR_WORKERS_EXACT'
       then l_argument_value := to_char(p_nr_workers_exact);
     end case;
-
+/*
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
@@ -1405,7 +1397,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     , l_argument_value
     );
 $end
-
+*/
     dbms_scheduler.set_job_argument_value
     ( job_name => l_job_name_launcher
     , argument_name => r.argument_name
