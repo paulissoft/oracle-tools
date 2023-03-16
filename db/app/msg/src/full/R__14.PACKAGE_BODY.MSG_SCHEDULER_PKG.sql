@@ -19,8 +19,6 @@ c_schedule_launcher constant user_scheduler_programs.program_name%type := 'LAUNC
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
-c_max_silence_threshold constant oracle_tools.api_time_pkg.seconds_t := 60;
-
 -- EXCEPTIONs
 
 -- ORA-27476: "MSG_AQ_PKG$PROCESSING_LAUNCHER#1" does not exist
@@ -723,7 +721,7 @@ $end
       raise program_error;
     end if;
 
-    if p_silence_threshold >= c_max_silence_threshold
+    if p_silence_threshold >= msg_constants_pkg.c_max_silence_threshold
     then
       submit_do('restart', p_processing_package);
       raise_application_error
