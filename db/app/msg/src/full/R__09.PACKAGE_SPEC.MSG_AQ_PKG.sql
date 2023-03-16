@@ -9,6 +9,10 @@ c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
+/*
+-- The following exceptions are all defined by Oracle.
+*/
+
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
 pragma exception_init(e_queue_table_does_not_exist, -24002);
@@ -46,6 +50,10 @@ pragma exception_init(e_subscriber_does_not_exist, -24035);
 -- ORA-25228: timeout or end-of-fetch during message dequeue from ...
 e_dequeue_timeout exception;
 pragma exception_init(e_dequeue_timeout, -25228);
+
+-- ORA-25254: time-out in LISTEN while waiting for a message
+e_listen_timeout exception;
+pragma exception_init(e_listen_timeout, -25254);
 
 /**
 
@@ -255,14 +263,21 @@ The latter case indicates that dbms_aq.unregister() has been invoked so someone 
 **/
 
 procedure processing
-( p_groups_to_process_tab in sys.odcivarchar2list
-, p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
+( p_controlling_package in varchar2 -- the controlling package, i.e. the one who invoked this procedure
+, p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
+, p_worker_nr in positiven -- the worker number
+, p_end_date in timestamp with time zone -- the end date
+, p_silence_threshold in number -- the number of seconds the supervisor may be silent before exception oracle_tools.api_heartbeat_pkg.e_silent_workers_found is raised
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
 Performs the processing of a worker job.
+
+A worker runs till the end date (will check himself) and listens to the queues
+derived from the groups to process.  Every X seconds (X = time between
+heartbeats) it must also send a heartbeat to the supervisor.  This means
+that it can listen at most X seconds for messages to arrive before it sends a
+heartbeat.
 **/
 
 end msg_aq_pkg;

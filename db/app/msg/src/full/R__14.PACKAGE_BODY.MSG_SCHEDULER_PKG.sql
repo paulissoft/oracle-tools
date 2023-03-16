@@ -1,34 +1,46 @@
 CREATE OR REPLACE PACKAGE BODY "MSG_SCHEDULER_PKG" AS
 
+-- TYPEs
+
 subtype job_name_t is user_scheduler_jobs.job_name%type;
-subtype job_suffix_t is varchar2(14 char); -- to_char(sysdate, "yyyymmddhh24miss")
+subtype t_dbug_channel_tab is msg_pkg.t_boolean_lookup_tab;
+
+-- CONSTANTs
 
 "yyyymmddhh24miss" constant varchar2(16) := 'yyyymmddhh24miss';
+"yyyy-mm-dd hh24:mi:ss" constant varchar2(21) := 'yyyy-mm-dd hh24:mi:ss';
 
-c_program_supervisor constant user_scheduler_programs.program_name%type := 'PROCESSING_SUPERVISOR';
-c_program_worker constant user_scheduler_programs.program_name%type := 'PROCESSING';
+-- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
+c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
+c_program_worker_group constant user_scheduler_programs.program_name%type := 'PROCESSING';
+c_program_do constant user_scheduler_programs.program_name%type := 'DO';
 
-c_schedule_supervisor constant user_scheduler_programs.program_name%type := 'SCHEDULE_SUPERVISOR';
+c_schedule_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_SCHEDULE';
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
--- ORA-27476: "MSG_AQ_PKG$PROCESSING_SUPERVISOR$20230301114922#1" does not exist
+c_max_silence_threshold constant oracle_tools.api_time_pkg.seconds_t := 60;
+
+-- EXCEPTIONs
+
+-- ORA-27476: "MSG_AQ_PKG$PROCESSING_LAUNCHER#1" does not exist
 e_job_does_not_exist exception;
 pragma exception_init(e_job_does_not_exist, -27476);
 
--- sqlerrm: ORA-27475: unknown job "BC_API"."MSG_AQ_PKG$PROCESSING_SUPERVISOR#1"
+-- ORA-27475: unknown job "BC_API"."MSG_AQ_PKG$PROCESSING_LAUNCHER#1"
 e_job_unknown exception;
 pragma exception_init(e_job_unknown, -27475);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
- 
-subtype t_dbug_channel_tab is msg_pkg.t_boolean_lookup_tab;
+-- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+e_invalid_end_date exception;
+pragma exception_init(e_invalid_end_date, -27483);
 
-g_dbug_channel_tab t_dbug_channel_tab;
 
-$end -- $if oracle_tools.cfg_pkg.c_debugging $then
+-- ROUTINEs
 
 procedure init
+( p_dbug_channel_tab out nocopy t_dbug_channel_tab
+)
 is
 $if oracle_tools.cfg_pkg.c_debugging $then
   l_dbug_channel_active_tab constant sys.odcivarchar2list := msg_constants_pkg.c_dbug_channel_active_tab;
@@ -38,7 +50,7 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   for i_idx in l_dbug_channel_active_tab.first .. l_dbug_channel_active_tab.last
   loop
-    g_dbug_channel_tab(l_dbug_channel_active_tab(i_idx)) := dbug.active(l_dbug_channel_active_tab(i_idx));
+    p_dbug_channel_tab(l_dbug_channel_active_tab(i_idx)) := dbug.active(l_dbug_channel_active_tab(i_idx));
 
     dbug.activate
     ( l_dbug_channel_active_tab(i_idx)
@@ -48,7 +60,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 
   for i_idx in l_dbug_channel_inactive_tab.first .. l_dbug_channel_inactive_tab.last
   loop
-    g_dbug_channel_tab(l_dbug_channel_inactive_tab(i_idx)) := dbug.active(l_dbug_channel_inactive_tab(i_idx));
+    p_dbug_channel_tab(l_dbug_channel_inactive_tab(i_idx)) := dbug.active(l_dbug_channel_inactive_tab(i_idx));
 
     dbug.activate
     ( l_dbug_channel_inactive_tab(i_idx)
@@ -64,7 +76,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 
 procedure profiler_report
 is
-  l_dbug_channel all_objects.object_name%type := g_dbug_channel_tab.first;
 begin
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PROFILER_REPORT');
 
@@ -97,34 +108,41 @@ end profiler_report;
 $end -- $if oracle_tools.cfg_pkg.c_debugging $then
 
 procedure done
+( p_dbug_channel_tab in t_dbug_channel_tab
+)
 is
 $if oracle_tools.cfg_pkg.c_debugging $then
-  l_dbug_channel all_objects.object_name%type := g_dbug_channel_tab.first;
+  l_dbug_channel all_objects.object_name%type := p_dbug_channel_tab.first;
 $end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
+/* GJP 2023-03-13 Getting dbug errors. */
+/*
   if dbug.active('PROFILER')
   then
     profiler_report;
   end if;
+*/  
 $end  
 
   msg_pkg.done;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+/* GJP 2023-03-13 Do not change dbug settings anymore. */
+/*
   while l_dbug_channel is not null
   loop
-    dbug.activate(l_dbug_channel, g_dbug_channel_tab(l_dbug_channel));
+    dbug.activate(l_dbug_channel, p_dbug_channel_tab(l_dbug_channel));
     
-    l_dbug_channel := g_dbug_channel_tab.next(l_dbug_channel);
+    l_dbug_channel := p_dbug_channel_tab.next(l_dbug_channel);
   end loop;
+*/  
 $end -- $if oracle_tools.cfg_pkg.c_debugging $then  
 end done;
 
-function get_job_name
+function join_job_name
 ( p_processing_package in varchar2
 , p_program_name in varchar2
-, p_job_suffix in varchar2 default null
 , p_worker_nr in positive default null
 )
 return job_name_t
@@ -135,21 +153,19 @@ begin
     p_processing_package ||
     '$' ||
     p_program_name ||
-    case when p_job_suffix is not null then '$' || p_job_suffix end ||
     case when p_worker_nr is not null then '#' || to_char(p_worker_nr) end;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'get_job_name: %s', l_job_name);
+  dbug.print(dbug."info", 'join_job_name: %s', l_job_name);
 $end
 
   return l_job_name;
-end get_job_name;
+end join_job_name;
 
 procedure split_job_name
 ( p_job_name in job_name_t
 , p_processing_package out nocopy varchar2
 , p_program_name out nocopy varchar2
-, p_job_suffix out nocopy job_suffix_t
 , p_worker_nr out nocopy positive
 )
 is
@@ -158,7 +174,6 @@ is
 begin
   p_processing_package := null;
   p_program_name := null;
-  p_job_suffix := null;
   p_worker_nr := null;
   
   l_pos$ := instr(p_job_name, '$'); -- first $
@@ -167,47 +182,30 @@ begin
     p_processing_package := substr(p_job_name, 1, l_pos$ - 1);
     p_program_name := substr(p_job_name, l_pos$ + 1); -- rest of the job name
     
-    l_pos$ := instr(p_program_name, '$'); -- second $ ?
     l_pos# := instr(p_program_name, '#'); -- first #
     case
-      when l_pos$ is null or l_pos# is null -- p_program_name is null
+      when l_pos# is null -- p_program_name is null
       then
         null;
         
-      when l_pos$ = 0 and l_pos# = 0
+      when l_pos# = 0
       then
         null;
         
-      when l_pos$ = 0 and l_pos# > 0
+      when l_pos# > 0
       then
         p_worker_nr := to_number(substr(p_program_name, l_pos# + 1));
         p_program_name := substr(p_program_name, 1, l_pos# - 1);
-        
-      when l_pos$ > 0 and l_pos# = 0
-      then
-        p_job_suffix := substr(p_program_name, l_pos$ + 1);
-        p_program_name := substr(p_program_name, 1, l_pos$ - 1);
-        
-      when l_pos$ > 0 and l_pos# > l_pos$
-      then
-        p_job_suffix := substr(p_program_name, l_pos$ + 1, l_pos# - l_pos$ - 1);
-        p_worker_nr := to_number(substr(p_program_name, l_pos# + 1));
-        p_program_name := substr(p_program_name, 1, l_pos$ - 1);
-        
-      when l_pos$ > 0 and l_pos# <= l_pos$
-      then
-        raise value_error; -- strange job name
     end case;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , q'[split_job_name(p_job_name => '%s', p_processing_package => '%s', p_program_name => '%s', p_job_suffix => '%s', p_worker_nr => %s)]'
+  , q'[split_job_name(p_job_name => '%s', p_processing_package => '%s', p_program_name => '%s', p_worker_nr => %s)]'
   , p_job_name
   , p_processing_package
   , p_program_name
-  , p_job_suffix
   , p_worker_nr
   );
 $end  
@@ -221,22 +219,13 @@ return varchar2
 is
   l_expr constant varchar2(4000 char) := replace(replace(p_expr, '_', '\_'), '\\_', '\_');
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , q'[to_like_expr(p_expr => '%s') = '%s')]'
-  , p_expr
-  , l_expr
-  );
-$end  
-
   return l_expr;
 end to_like_expr;
 
 function get_jobs
 ( p_job_name_expr in varchar2
 , p_state in user_scheduler_jobs.state%type default null
-, p_only_workers in integer default null -- 0: only supervisors; 1: only workers; null: any
+, p_only_workers in integer default null -- 0: only launchers; 1: only workers; null: any
 )
 return sys.odcivarchar2list
 is
@@ -251,7 +240,7 @@ begin
   and     ( p_state is null or j.state = p_state )
   and     ( p_only_workers is null or p_only_workers = sign(instr(j.job_name, '#')) )
   order by
-          job_name -- permanent supervisor first, then its workers jobs, next temporary supervisors and their workers
+          job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
   ;
   return l_job_names;
 end get_jobs;
@@ -327,7 +316,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   -- Is this session running as a job?
-  -- If not, just create a job name supervisor to be used by the worker jobs.
+  -- If not, just create a job name launcher to be used by the worker jobs.
   begin
     select  j.job_name
     into    l_job_name
@@ -363,18 +352,18 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   case l_program_name
-    when c_program_supervisor
+    when c_program_launcher
     then
       dbms_scheduler.create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
       , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
-      , number_of_arguments => 4
+      , number_of_arguments => 3
       , enabled => false
-      , comments => 'Main program for processing messages that spawns other worker in-memory jobs and supervises them.'
+      , comments => 'Main program for processing messages by spawning worker jobs.'
       );
 
-      for i_par_idx in 1..4
+      for i_par_idx in 1..3
       loop
         dbms_scheduler.define_program_argument
         ( program_name => l_program_name
@@ -382,24 +371,22 @@ $end
                              when 1 then 'P_PROCESSING_PACKAGE'
                              when 2 then 'P_NR_WORKERS_EACH_GROUP'
                              when 3 then 'P_NR_WORKERS_EXACT'
-                             when 4 then 'P_TTL'
                            end
         , argument_position => i_par_idx
         , argument_type => case 
-                             when i_par_idx <= 1
+                             when i_par_idx = 1
                              then 'VARCHAR2'
                              else 'NUMBER'
                            end
         , default_value => case i_par_idx
                              when 2 then to_char(msg_constants_pkg.c_nr_workers_each_group)
                              when 3 then to_char(msg_constants_pkg.c_nr_workers_exact)
-                             when 4 then to_char(msg_constants_pkg.c_ttl)
                              else null
                            end
         );
       end loop;
 
-    when c_program_worker
+    when c_program_worker_group
     then
       dbms_scheduler.create_program
       ( program_name => l_program_name
@@ -417,16 +404,44 @@ $end
         , argument_name => case i_par_idx
                              when 1 then 'P_PROCESSING_PACKAGE'
                              when 2 then 'P_GROUPS_TO_PROCESS_LIST'
-                             when 3 then 'P_WORKER_NR'
-                             when 4 then 'P_TTL'
-                             when 5 then 'P_JOB_NAME_SUPERVISOR'
+                             when 3 then 'P_NR_WORKERS'
+                             when 4 then 'P_WORKER_NR'
+                             when 5 then 'P_END_DATE'
                            end
         , argument_position => i_par_idx
-        , argument_type => case 
-                             when i_par_idx between 3 and 4
+        , argument_type => -- informational only
+                           case 
+                             when i_par_idx <= 2
+                             then 'VARCHAR2'
+                             when i_par_idx <= 4
                              then 'NUMBER'
                              else 'VARCHAR2'
                            end
+        , default_value => null
+        );
+      end loop;
+      
+    when c_program_do
+    then
+      dbms_scheduler.create_program
+      ( program_name => l_program_name
+      , program_type => 'STORED_PROCEDURE'
+      , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , number_of_arguments => 2
+      , enabled => false
+      , comments => 'Main program for executing commands.'
+      );
+
+      for i_par_idx in 1..2
+      loop
+        dbms_scheduler.define_program_argument
+        ( program_name => l_program_name
+        , argument_name => case i_par_idx
+                             when 1 then 'P_COMMAND'
+                             when 2 then 'P_PROCESSING_PACKAGE'
+                           end
+        , argument_position => i_par_idx
+        , argument_type => 'VARCHAR2'
         , default_value => null
         );
       end loop;
@@ -439,102 +454,162 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end create_program;
 
+procedure get_next_end_date
+( p_job_name_launcher in job_name_t
+, p_state out nocopy user_scheduler_jobs.state%type
+, p_end_date out nocopy user_scheduler_jobs.next_run_date%type
+)
+is
+begin
+  /* the job name launcher must have been scheduled, so we determine the time till the next run (minus some delay) */
+  select  j.state
+  ,       j.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND') as end_date
+  into    p_state
+  ,       p_end_date
+  from    user_scheduler_jobs j
+  where   j.job_name = p_job_name_launcher;
+end get_next_end_date;  
+
 procedure submit_processing
 ( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2
-, p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
+, p_nr_workers in positiven
+, p_worker_nr in positive
+, p_end_date in user_scheduler_jobs.end_date%type
 )
 is
-  l_job_name_worker constant job_name_t := p_job_name_supervisor || '#' || to_char(p_worker_nr);
+  l_job_name constant job_name_t := join_job_name(p_processing_package, c_program_worker_group, p_worker_nr);
   l_argument_value user_scheduler_program_args.default_value%type;
+  l_state user_scheduler_jobs.state%type;
+  l_end_date user_scheduler_jobs.end_date%type := p_end_date;
 begin  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING');
+  dbug.print
+  ( dbug."input"
+  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_worker: %s; p_worker_nr: %s; p_end_date: %s'
+  , p_processing_package
+  , p_groups_to_process_list
+  , p_nr_workers
+  , p_worker_nr
+  , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")
+  );
+$end
+
   PRAGMA INLINE (is_job_running, 'YES');
-  if is_job_running(l_job_name_worker)
+  if is_job_running(l_job_name)
   then
     raise_application_error
     ( c_job_already_running
     , utl_lms.format_message
       ( c_job_already_running_msg
-      , l_job_name_worker
+      , l_job_name
       )
     );
   end if;
-  
-  PRAGMA INLINE (does_job_exist, 'YES');
-  if not(does_job_exist(l_job_name_worker))
-  then  
-    if not(does_program_exist(c_program_worker))
-    then
-      create_program(c_program_worker);
-    end if;
 
-    -- use inline schedule
-    dbms_scheduler.create_job
-    ( job_name => l_job_name_worker
-    , program_name => c_program_worker
-    , start_date => null
-      -- will never repeat
-    , repeat_interval => null
-      -- GJP 2023-03-07 Due to failing ORA-27483: "BC_API"."MSG_AQ_PKG$PROCESSING_SUPERVISOR$20230307111848#1" has an invalid END_DATE 
-      -- , end_date => sysdate + (p_ttl / (24 * 60 * 60)) -- as precaution
-    , end_date => null
-    , job_class => msg_constants_pkg.c_job_class_worker
-    , enabled => false -- so we can set job arguments
-    , auto_drop => true -- one-off jobs
-    , comments => 'Worker job for processing messages.'
-    , job_style => msg_constants_pkg.c_job_style_worker
-    , credential_name => null
-    , destination_name => null
-    );
-  else
-    dbms_scheduler.disable(l_job_name_worker);    
-  end if;
-  
-  -- set the actual arguments
-
-  for r in
-  ( select  a.argument_name
-    from    user_scheduler_jobs j
-            inner join user_scheduler_program_args a
-            on a.program_name = j.program_name
-    where   j.job_name = l_job_name_worker
-    order by
-            a.argument_position
-  )
+  -- GJP 2023-03-15 Try to enable an existing job, but drop it otherwise and try again
+  -- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+  <<try_loop>>
+  for i_try in 1..2
   loop
-    case r.argument_name
-      when 'P_PROCESSING_PACKAGE'
-      then l_argument_value := p_processing_package;
-      when 'P_GROUPS_TO_PROCESS_LIST'
-      then l_argument_value := p_groups_to_process_list;
-      when 'P_WORKER_NR'
-      then l_argument_value := to_char(p_worker_nr);
-      when 'P_TTL'
-      then l_argument_value := to_char(p_ttl);
-      when 'P_JOB_NAME_SUPERVISOR'
-      then l_argument_value := p_job_name_supervisor;
-    end case;
+    PRAGMA INLINE (does_job_exist, 'YES');
+    if not(does_job_exist(l_job_name))
+    then  
+      if not(does_program_exist(c_program_worker_group))
+      then
+        create_program(c_program_worker_group);
+      end if;
 
+      -- use inline schedule
+      dbms_scheduler.create_job
+      ( job_name => l_job_name
+      , program_name => c_program_worker_group
+      , start_date => null
+        -- will never repeat
+      , repeat_interval => null
+      , end_date => l_end_date
+      , job_class => msg_constants_pkg.c_job_class_worker
+      , enabled => false -- so we can set job arguments
+      , auto_drop => true -- one-off jobs
+      , comments => 'Worker job for processing messages.'
+      , job_style => msg_constants_pkg.c_job_style_worker
+      , credential_name => null
+      , destination_name => null
+      );
+    else
+      dbms_scheduler.disable(l_job_name);    
+    end if;
+    
+    -- set the actual arguments
 
+    for r in
+    ( select  a.argument_name
+      from    user_scheduler_jobs j
+              inner join user_scheduler_program_args a
+              on a.program_name = j.program_name
+      where   j.job_name = l_job_name
+      order by
+              a.argument_position
+    )
+    loop
+/*
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print
-    ( dbug."info"
-    , 'argument name: %s; argument value: %s'
-    , r.argument_name
-    , l_argument_value
-    );
+      dbug.print(dbug."info", 'argument name: %s', r.argument_name);
 $end
+*/
+      case r.argument_name
+        when 'P_PROCESSING_PACKAGE'
+        then l_argument_value := p_processing_package;
+        when 'P_GROUPS_TO_PROCESS_LIST'
+        then l_argument_value := p_groups_to_process_list;
+        when 'P_NR_WORKERS'
+        then l_argument_value := to_char(p_nr_workers);
+        when 'P_WORKER_NR'
+        then l_argument_value := to_char(p_worker_nr);
+        when 'P_END_DATE'
+        then l_argument_value := oracle_tools.api_time_pkg.timestamp2str(l_end_date);
+      end case;
+/*
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'argument value: %s', l_argument_value);
+$end
+*/
+      dbms_scheduler.set_job_argument_value
+      ( job_name => l_job_name
+      , argument_name => r.argument_name
+      , argument_value => l_argument_value
+      );
+    end loop;
 
-    dbms_scheduler.set_job_argument_value
-    ( job_name => l_job_name_worker
-    , argument_name => r.argument_name
-    , argument_value => l_argument_value
-    );
-  end loop;
+    begin
+      dbms_scheduler.enable(l_job_name);
+      exit try_loop; -- we made it :)
+    exception
+      when e_invalid_end_date
+      then
+        if i_try = 1
+        then
+          dbms_scheduler.disable(l_job_name);
+          admin_scheduler_pkg.drop_job(l_job_name);
+          get_next_end_date
+          ( p_job_name_launcher =>
+              join_job_name
+              ( p_processing_package => p_processing_package
+              , p_program_name => c_program_launcher
+              )
+          , p_state => l_state
+          , p_end_date => l_end_date
+          );
+        else
+          raise;
+        end if;
+    end;
+  end loop try_loop;
   
-  dbms_scheduler.enable(l_job_name_worker);
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end submit_processing;
 
 function determine_processing_package
@@ -550,211 +625,6 @@ begin
     raise program_error;
   end if;
 end determine_processing_package;
-
-procedure job_event_send_init
-( p_job_name_supervisor in varchar2
-, p_worker_nr in positive
-)
-is
-begin
-  dbms_scheduler.set_attribute
-  ( name => p_job_name_supervisor || '#' || to_char(p_worker_nr)
-  , attribute => 'raise_events'
-  , value => dbms_scheduler.job_run_completed
-  );
-end job_event_send_init;
-
-procedure job_event_recv_init
-( p_job_name_supervisor in varchar2
-)
-is
-  -- ORA-24034: application ORACLE_TOOLS is already a subscriber for queue SYS.SCHEDULER$_EVENT_QUEUE
-  e_already_subscriber exception;  
-  pragma exception_init(e_already_subscriber, -24034);
-begin
-  dbms_scheduler.add_event_queue_subscriber;
-exception
-  when e_already_subscriber
-  then null;
-end job_event_recv_init;
-
--- Receive a job event for this supervisor.
-procedure job_event_recv
-( p_job_name_supervisor in varchar2
-, p_timeout in integer
-, p_worker_nr out nocopy positive
-, p_sqlcode out nocopy integer
-, p_sqlerrm out nocopy varchar2
-)
-is
-  pragma autonomous_transaction;
-  
-  l_dequeue_options     dbms_aq.dequeue_options_t;
-  l_message_properties  dbms_aq.message_properties_t;
-  l_message_handle      raw(16);
-  l_queue_msg           sys.scheduler$_event_info;
-
-  -- for split_job_name on the supervisor
-  l_processing_package_supervisor all_objects.object_name%type;
-  l_program_name_supervisor user_scheduler_programs.program_name%type;
-  l_job_suffix_supervisor job_suffix_t;
-  l_worker_nr_supervisor positive;
-  
-  -- for split_job_name on the completed job
-  l_job_name_worker job_name_t;
-  l_processing_package_worker all_objects.object_name%type;
-  l_program_name_worker user_scheduler_programs.program_name%type;
-  l_job_suffix_worker job_suffix_t;
-
-  l_worker_type varchar2(3 char) := null; -- null, 'my' or 'our'
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT || '.JOB_EVENT_RECV');
-  dbug.print
-  ( dbug."input"
-  , 'p_job_name_supervisor: %s; p_timeout: %s'
-  , p_job_name_supervisor
-  , p_timeout
-  );
-$end
-
-  p_worker_nr := null;
-  p_sqlcode := null;
-  p_sqlerrm := null;
-
-  PRAGMA INLINE (split_job_name, 'YES');
-  split_job_name
-  ( p_job_name => p_job_name_supervisor
-  , p_processing_package => l_processing_package_supervisor
-  , p_program_name => l_program_name_supervisor
-  , p_job_suffix => l_job_suffix_supervisor
-  , p_worker_nr => l_worker_nr_supervisor
-  );
-
-  -- some sanity checks
-  if l_program_name_supervisor = c_program_supervisor
-  then
-    null;
-  else
-    raise value_error;
-  end if;
-
-  if l_worker_nr_supervisor is null
-  then
-    null;
-  else
-    raise value_error;
-  end if;
-
-  -- The message dequeued may need to be processed by another process,
-  -- since we receive all job status events in this schema.
-  -- But since there should be only ONE supervisor running for the SAME processing package (for now there is just one: MSG_AQ_PKG),
-  -- we can REMOVE all messages for the same processing package.
-  --
-  -- The best way to ignore job events from OTHER processing packages is
-  -- to LOCK and inspect whether the concerning job is one of the workers for this processing package.
-  -- If it is one of our workers, REMOVE the message with the msgid just retrieved and COMMIT.
-  -- Otherwise, just ignore the message and ROLLBACK.
-
-  l_dequeue_options.consumer_name := $$PLSQL_UNIT_OWNER;
-
-  <<step_loop>>
-  for i_step in 1..2
-  loop
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'i_step: %s', i_step);
-$end
-
-    if i_step = 1
-    then
-      l_dequeue_options.dequeue_mode := dbms_aq.locked;
-      l_dequeue_options.wait := p_timeout;
-    else
-      l_dequeue_options.dequeue_mode := dbms_aq.remove;
-      l_dequeue_options.wait := dbms_aq.no_wait; -- no need to wait since we alreay locked the message
-      l_dequeue_options.msgid := l_message_handle;
-    end if;
-    
-    dbms_aq.dequeue
-    ( queue_name => 'SYS.SCHEDULER$_EVENT_QUEUE'
-    , dequeue_options => l_dequeue_options
-    , message_properties => l_message_properties
-    , payload => l_queue_msg
-    , msgid => l_message_handle
-    );
-
-    exit step_loop when i_step = 2;
-    
-    l_job_name_worker := l_queue_msg.object_name;
-
-    l_worker_type :=
-      case
-        when l_job_name_worker like to_like_expr(p_job_name_supervisor || '#%') escape '\'
-        then 'my'
-        when l_job_name_worker like to_like_expr
-                                    ( get_job_name
-                                      ( p_processing_package => l_processing_package_supervisor
-                                      , p_program_name => l_program_name_supervisor
-                                      ) || '%#%' -- add a second percent sign in front for all the (temporary) supervisors
-                                    ) escape '\'
-        then 'our'
-      end;
-    
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print
-    ( dbug."info"
-    , 'job name: %s; event type: %s; event timestamp: %s; worker type: %s'
-    , l_job_name_worker
-    , l_queue_msg.event_type
-    , to_char(l_queue_msg.event_timestamp, "yyyymmddhh24miss")
-    , l_worker_type
-    );
-$end
-
-    if l_worker_type = 'my'
-    then
-      -- my (and our) worker
-      
-      PRAGMA INLINE (split_job_name, 'YES');
-      split_job_name
-      ( p_job_name => l_job_name_worker
-      , p_processing_package => l_processing_package_worker
-      , p_program_name => l_program_name_worker
-      , p_job_suffix => l_job_suffix_worker
-      , p_worker_nr => p_worker_nr 
-      );
-
-      if p_worker_nr is not null
-      then
-        p_sqlcode := l_queue_msg.error_code;
-        p_sqlerrm := l_queue_msg.error_msg;
-      end if;
-    end if;
-  end loop step_loop;
-
-  if l_worker_type is not null
-  then
-    commit;
-  else
-    rollback; -- give another processing package supervisor a chance to process it
-  end if;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."output"
-  , 'p_worker_nr: %s; p_sqlcode: %s; p_sqlerrm: %s'
-  , p_worker_nr
-  , p_sqlcode
-  , p_sqlerrm
-  );  
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
-end job_event_recv;
 
 procedure stop_job
 ( p_job_name in job_name_t
@@ -776,7 +646,7 @@ $end
     PRAGMA INLINE (is_job_running, 'YES');
     exit when not(is_job_running(p_job_name));
 
-    dbms_scheduler.stop_job(job_name => p_job_name, force => case i_step when 1 then false else true end);
+    admin_scheduler_pkg.stop_job(p_job_name => p_job_name, p_force => case i_step when 1 then false else true end);
   end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -801,7 +671,7 @@ $end
 
   PRAGMA INLINE (stop_job, 'YES');
   stop_job(p_job_name);
-  dbms_scheduler.drop_job(job_name => p_job_name, force => false);
+  admin_scheduler_pkg.drop_job(p_job_name => p_job_name, p_force => false);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -822,6 +692,266 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end    
 end drop_job;
 
+procedure processing
+( p_processing_package in varchar2 
+, p_groups_to_process_list in varchar2
+, p_nr_workers in positiven
+, p_worker_nr in positive
+, p_end_date in varchar2
+)
+is
+  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
+  l_job_name constant job_name_t := session_job_name();
+  l_groups_to_process_tab sys.odcivarchar2list;
+  l_end_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.str2timestamp(p_end_date);
+  -- for the heartbeat
+  l_silence_threshold oracle_tools.api_time_pkg.seconds_t := msg_constants_pkg.c_time_between_heartbeats * 2;
+  l_dbug_channel_tab t_dbug_channel_tab;
+
+  procedure restart_workers
+  ( p_silent_worker_tab in oracle_tools.api_heartbeat_pkg.silent_worker_tab_t
+  , p_silence_threshold in out nocopy oracle_tools.api_time_pkg.seconds_t
+  )
+  is
+  begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING.RESTART_WORKERS');
+$end
+
+    if p_silent_worker_tab is null or p_silent_worker_tab.count = 0
+    then
+      raise program_error;
+    end if;
+
+    if p_silence_threshold >= c_max_silence_threshold
+    then
+      submit_do('restart', p_processing_package);
+      raise_application_error
+      ( oracle_tools.api_heartbeat_pkg.c_silent_workers_found
+      , utl_lms.format_message
+        ( 'There are %s workers silent since at least %s seconds.'
+        , to_char(p_silent_worker_tab.count)
+        , to_char(p_silence_threshold)
+        )
+      );
+    end if;
+    
+    p_silence_threshold := p_silence_threshold + msg_constants_pkg.c_time_between_heartbeats;
+ 
+    <<worker_loop>>
+    for i_idx in p_silent_worker_tab.first .. p_silent_worker_tab.last
+    loop
+      if not(is_job_running(join_job_name(p_processing_package, c_program_worker_group, p_silent_worker_tab(i_idx))))
+      then
+        submit_processing
+        ( p_processing_package => p_processing_package
+        , p_groups_to_process_list => p_groups_to_process_list
+        , p_nr_workers => p_nr_workers
+        , p_worker_nr => p_silent_worker_tab(i_idx)
+        , p_end_date => l_end_date -- all jobs in the worker group are supposed to have the same end date
+        );
+      end if;
+    end loop worker_loop;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end  
+  end restart_workers;
+
+  procedure processing_as_supervisor
+  is
+    l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
+    l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, l_end_date);
+    l_now oracle_tools.api_time_pkg.timestamp_t;
+    l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+    -- for the heartbeat
+    l_shutdown boolean := false;
+    l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
+    l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
+
+    procedure cleanup
+    is
+    begin
+      oracle_tools.api_heartbeat_pkg.done
+      ( p_supervisor_channel => $$PLSQL_UNIT
+      , p_worker_nr => null
+      );
+    end cleanup;
+  begin
+    oracle_tools.api_heartbeat_pkg.init
+    ( p_supervisor_channel => $$PLSQL_UNIT
+    , p_worker_nr => null
+    , p_max_worker_nr => p_nr_workers
+    , p_timestamp_tab => l_timestamp_tab
+    );
+    
+    <<process_loop>>
+    loop
+      l_now := oracle_tools.api_time_pkg.get_timestamp;      
+
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'elapsed time: %s (s); finished?: %s'
+      , to_char(l_elapsed_time)
+      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
+      );
+$end
+
+      /* Test whether we must end? */
+      exit process_loop when l_elapsed_time >= l_ttl;
+
+      oracle_tools.api_heartbeat_pkg.recv
+      ( p_supervisor_channel => $$PLSQL_UNIT
+      , p_silence_threshold => l_silence_threshold
+      , p_first_recv_timeout => least
+                                ( msg_constants_pkg.c_time_between_heartbeats
+                                , greatest
+                                  ( 1 -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+                                  , trunc(l_ttl - l_elapsed_time)
+                                  )
+                                )
+      , p_shutdown => l_shutdown                          
+      , p_timestamp_tab =>l_timestamp_tab
+      , p_silent_worker_tab => l_silent_worker_tab
+      );
+
+      if l_silent_worker_tab is not null and l_silent_worker_tab.count > 0
+      then
+        restart_workers(l_silent_worker_tab, l_silence_threshold);
+      end if;
+    end loop process_loop;
+
+    cleanup;
+  exception
+    when oracle_tools.api_heartbeat_pkg.e_shutdown_request_completed
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
+      cleanup;
+      -- no re-raise
+      
+    when others
+    then
+      cleanup;
+      raise;
+  end processing_as_supervisor;
+
+  procedure processing_as_worker
+  is
+    l_statement varchar2(32767 byte);
+    -- ORA-06550: line 1, column 18:
+    -- PLS-00302: component 'PROCESING' must be declared
+    e_compilation_error exception;
+    pragma exception_init(e_compilation_error, -6550);
+  begin
+    l_statement := utl_lms.format_message
+                   ( q'[
+call %s.processing( p_controlling_package => :1
+                  , p_groups_to_process_tab => :2
+                  , p_worker_nr => :3
+                  , p_end_date => :4
+                  , p_silence_threshold => :5
+                  )]'
+                   , l_processing_package -- already checked by determine_processing_package
+                   );
+    <<processing_loop>>
+    loop
+      begin
+        execute immediate l_statement
+          using in $$PLSQL_UNIT, in l_groups_to_process_tab, in p_worker_nr, in l_end_date, in l_silence_threshold;
+          
+        exit processing_loop; -- no error so stop
+      exception
+        when oracle_tools.api_heartbeat_pkg.e_silent_workers_found
+        then
+          -- just the supervisor is silent
+          restart_workers
+          ( p_silent_worker_tab => sys.odcinumberlist(null) -- null means supervisor
+          , p_silence_threshold => l_silence_threshold
+          );
+          -- no re-raise because we want to try again till the silence threshold is too large
+      end;
+    end loop processing_loop;
+    
+  exception
+    when e_compilation_error
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."error", 'statement: %s', l_statement);
+$end                  
+      raise;
+
+    when others
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
+      raise;
+  end processing_as_worker;
+  
+  procedure cleanup
+  is
+  begin
+    done(l_dbug_channel_tab);
+  end cleanup;
+begin
+  init(l_dbug_channel_tab);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
+  dbug.print
+  ( dbug."input"
+  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_workers: %s; p_worker_nr: %s; p_end_date: %s'
+  , p_processing_package
+  , p_groups_to_process_list
+  , p_nr_workers
+  , p_worker_nr
+  , to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss")
+  );
+$end
+
+  if l_job_name is null
+  then
+    raise_application_error
+    ( c_session_not_running_job
+    , utl_lms.format_message
+      ( c_session_not_running_job_msg
+      , to_char(c_session_id)
+      )
+    );
+  end if;
+
+  select  pg.column_value
+  bulk collect
+  into    l_groups_to_process_tab
+  from    table(oracle_tools.api_pkg.list2collection(p_value_list => p_groups_to_process_list, p_sep => ',', p_ignore_null => 1)) pg;
+
+  if p_worker_nr is null
+  then
+    processing_as_supervisor;
+  else
+    processing_as_worker;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end  
+
+  cleanup;
+exception
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then  
+    dbug.leave_on_error;
+$end    
+    cleanup;
+    raise;
+end processing;
+
 -- PUBLIC
 
 procedure do
@@ -835,6 +965,8 @@ is
     case lower(p_command)
       when 'start'
       then sys.odcivarchar2list('check_jobs_not_running', p_command)
+      when 'shutdown' -- try to stop gracefully
+      then sys.odcivarchar2list(p_command, 'check_jobs_not_running')
       when 'stop'
       then sys.odcivarchar2list(p_command, 'check_jobs_not_running')
       when 'restart'
@@ -845,15 +977,13 @@ is
     end;    
   l_processing_package all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
   l_processing_package_tab sys.odcivarchar2list;
-  l_job_name_supervisor job_name_t;
+  l_job_name_launcher job_name_t;
+  l_job_name_prefix job_name_t;
   l_job_names sys.odcivarchar2list;
-  l_state user_scheduler_jobs.state%type;
-  l_ttl oracle_tools.api_time_pkg.seconds_t;
 
   -- for split job name
   l_processing_package_dummy all_objects.object_name%type;
   l_program_name_dummy user_scheduler_programs.program_name%type;
-  l_job_suffix job_suffix_t;
   l_worker_nr positive;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -888,11 +1018,15 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
 $end
 
-    l_job_name_supervisor :=
-      get_job_name
+    l_job_name_launcher :=
+      join_job_name
+      ( p_processing_package => l_processing_package
+      , p_program_name => c_program_launcher
+      );
+    l_job_name_prefix :=
+      join_job_name
       ( p_processing_package => l_processing_package 
-      , p_program_name => c_program_supervisor
-      , p_job_suffix => null
+      , p_program_name => c_program_worker_group
       , p_worker_nr => null
       );
 
@@ -902,18 +1036,19 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'l_command_tab(%s): %s', i_command_idx, l_command_tab(i_command_idx));
 $end
+
       case l_command_tab(i_command_idx)
         when 'check_jobs_not_running'
         then
           PRAGMA INLINE (get_jobs, 'YES');
-          l_job_names := get_jobs(l_job_name_supervisor || '%', 'RUNNING');
+          l_job_names := get_jobs(l_job_name_prefix || '%', 'RUNNING');
           if l_job_names.count > 0
           then
             raise_application_error
             ( c_there_are_running_jobs
             , utl_lms.format_message
               ( c_there_are_running_jobs_msg
-              , l_job_name_supervisor || '%'
+              , l_job_name_prefix || '%'
               , chr(10) || oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => chr(10), p_ignore_null => 1)
               )
             );
@@ -923,117 +1058,92 @@ $end
         then
           begin
             -- respect the fact that the job is there with its current job arguments (maybe a DBA did that)
-            dbms_scheduler.disable(l_job_name_supervisor);
-            dbms_scheduler.enable(l_job_name_supervisor);
+            dbms_scheduler.disable(l_job_name_launcher);
+            dbms_scheduler.enable(l_job_name_launcher);
           exception
             when others
             then
 $if oracle_tools.cfg_pkg.c_debugging $then
               dbug.on_error;
 $end
-              submit_processing_supervisor(p_processing_package => l_processing_package);
+              submit_launcher_processing(p_processing_package => l_processing_package);
           end;
 
-          select  j.state
-          ,       oracle_tools.api_time_pkg.delta(oracle_tools.api_time_pkg.get_timestamp, j.next_run_date) as ttl
-          into    l_state
-          ,       l_ttl
-          from    user_scheduler_jobs j
-          where   j.job_name = l_job_name_supervisor;
-          
-          if l_state = 'SCHEDULED'
-          then
-            l_ttl := trunc(l_ttl) - msg_constants_pkg.c_time_between_runs;
-            if l_ttl > 0
-            then
-              submit_processing_supervisor
-              ( p_processing_package => l_processing_package
-              , p_ttl => l_ttl
-              , p_repeat_interval => null
-              );
-            end if;
-          elsif l_state = 'RUNNING'
-          then
-            null; -- OK
-          else
-            raise_application_error
-            ( c_unexpected_job_state
-            , utl_lms.format_message
-              ( c_unexpected_job_state_msg
-              , l_job_name_supervisor
-              , l_state
-              )
-            );
-          end if;
+          -- But since the next run may take some time, we must schedule the jobs till then.
+          -- Job is running or scheduled, but we may have to run workers between now and the next run date
+          begin
+            launcher_processing(p_processing_package => l_processing_package);
+          exception
+            when e_no_groups_to_process
+            then null;
+          end;
+
+        when 'shutdown'
+        then
+          oracle_tools.api_heartbeat_pkg.shutdown(p_supervisor_channel => $$PLSQL_UNIT);
+
+          <<sleep_loop>>
+          for i_sleep in 1 .. msg_constants_pkg.c_time_between_heartbeats * 2 -- give some leeway
+          loop
+            PRAGMA INLINE (get_jobs, 'YES');
+            exit sleep_loop when get_jobs(p_job_name_expr => l_job_name_prefix || '%', p_state => 'RUNNING').count = 0;
+
+            dbms_session.sleep(1);
+          end loop;
 
         when 'stop'
         then
-          -- This is a bit tricky: when you stop supervisors and workers in one run, there may be new workers stopped during that process.
-          -- So, just stop all supervisors first, next the workers.
-          -- And: always get a fresh list!
-          <<supervisors_then_workers_loop>>
-          for i_only_workers in 0..1
-          loop
-            PRAGMA INLINE (get_jobs, 'YES');
-            l_job_names :=
-              get_jobs
-              ( p_job_name_expr => l_job_name_supervisor || '%'
-              , p_state => case i_only_workers when 0 then 'RUNNING' else null end -- only running supervisors but all workers to get rid of left-overs
-              , p_only_workers => i_only_workers
+          -- try a graceful shutdown but wait just 1 second
+          oracle_tools.api_heartbeat_pkg.shutdown(p_supervisor_channel => $$PLSQL_UNIT);
+
+          PRAGMA INLINE (get_jobs, 'YES');
+          if get_jobs(p_job_name_expr => l_job_name_prefix || '%', p_state => 'RUNNING').count > 0
+          then
+            dbms_session.sleep(1);
+          end if;
+          
+          PRAGMA INLINE (get_jobs, 'YES');
+          l_job_names := get_jobs(p_job_name_expr => l_job_name_prefix || '%');
+          if l_job_names.count > 0
+          then
+            <<job_loop>>
+            for i_job_idx in l_job_names.first .. l_job_names.last
+            loop
+              PRAGMA INLINE (split_job_name, 'YES');
+              split_job_name
+              ( p_job_name => l_job_names(i_job_idx)
+              , p_processing_package => l_processing_package_dummy
+              , p_program_name => l_program_name_dummy
+              , p_worker_nr => l_worker_nr
               );
 
-            if l_job_names.count > 0
-            then
-              <<job_loop>>
-              for i_job_idx in l_job_names.first .. l_job_names.last
-              loop
-                PRAGMA INLINE (split_job_name, 'YES');
-                split_job_name
-                ( p_job_name => l_job_names(i_job_idx)
-                , p_processing_package => l_processing_package_dummy
-                , p_program_name => l_program_name_dummy
-                , p_job_suffix => l_job_suffix
-                , p_worker_nr => l_worker_nr
-                );
-
 $if oracle_tools.cfg_pkg.c_debugging $then
-                dbug.print
-                ( dbug."info"
-                , 'trying to %s%s%s job %s'
-                , case when l_job_suffix is null and l_worker_nr is null then 'stop and disable' else 'drop' end
-                , case when l_job_suffix is not null then ' temporary ' else ' ' end
-                , case when l_worker_nr is null then 'supervisor' else 'worker' end
-                , l_job_names(i_job_idx)
-                );
+              dbug.print
+              ( dbug."info"
+              , 'trying to drop %s job %s'
+              , case when l_worker_nr is null then 'supervisor' else 'worker' end
+              , l_job_names(i_job_idx)
+              );
 $end
 
-                -- kill
-                begin                  
-                  if l_job_suffix is null and l_worker_nr is null
-                  then
-                    -- stop and disable a supervisor job unless it is temporary
-                    PRAGMA INLINE (stop_job, 'YES');
-                    stop_job(l_job_names(i_job_idx));
-                    dbms_scheduler.disable(l_job_names(i_job_idx));
-                  else
-                    -- drop temporary and/or worker jobs
-                    PRAGMA INLINE (drop_job, 'YES');
-                    drop_job(l_job_names(i_job_idx));
-                  end if;
-                exception
-                  when e_job_does_not_exist
-                  then null;
-                  
-                  when others
-                  then
+              -- kill
+              begin                  
+                -- drop worker jobs
+                PRAGMA INLINE (drop_job, 'YES');
+                drop_job(l_job_names(i_job_idx));
+              exception
+                when e_job_does_not_exist
+                then null;
+                
+                when others
+                then
 $if oracle_tools.cfg_pkg.c_debugging $then
-                    dbug.on_error;
+                  dbug.on_error;
 $end
-                    null;
-                end;
-              end loop job_loop;
-            end if;
-          end loop supervisors_then_workers_loop;
+                  null;
+              end;
+            end loop job_loop;
+          end if;
 
         when 'drop'
         then
@@ -1041,7 +1151,7 @@ $end
           for i_force in 0..1 -- 0: force false
           loop
             PRAGMA INLINE (get_jobs, 'YES');
-            l_job_names := get_jobs(p_job_name_expr => l_job_name_supervisor || '%');
+            l_job_names := get_jobs(p_job_name_expr => l_job_name_prefix || '%');
 
             if l_job_names.count > 0
             then
@@ -1091,83 +1201,161 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end do;
 
-procedure submit_processing_supervisor
-( p_processing_package in varchar2
-, p_nr_workers_each_group in positive
-, p_nr_workers_exact in positive
-, p_ttl in positiven
-, p_repeat_interval in varchar2
+procedure submit_do
+( p_command in varchar2
+, p_processing_package in varchar2
 )
 is
-  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
-  l_job_name_supervisor job_name_t;
+  l_job_name_do job_name_t;
   l_argument_value user_scheduler_program_args.default_value%type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING_SUPERVISOR');
-  dbug.print
-  ( dbug."input"
-  , 'p_processing_package: %s; p_nr_workers_each_group: %s; p_nr_workers_exact: %s; p_ttl: %s; p_repeat_interval: %s'
-  , p_processing_package
-  , p_nr_workers_each_group
-  , p_nr_workers_exact
-  , p_ttl
-  , p_repeat_interval
-  );
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_DO');
+  dbug.print(dbug."input", 'p_command: %s; p_processing_package: %s', p_command, p_processing_package);
 $end
 
-  l_job_name_supervisor :=
-    get_job_name
-    ( p_processing_package => l_processing_package
-    , p_program_name => c_program_supervisor
-    , p_job_suffix => case when p_repeat_interval is null then to_char(sysdate, "yyyymmddhh24miss") end
+  l_job_name_do :=
+    join_job_name
+    ( p_processing_package => p_processing_package
+    , p_program_name => c_program_do
     );
 
   PRAGMA INLINE (is_job_running, 'YES');
-  if is_job_running(l_job_name_supervisor)
+  if is_job_running(l_job_name_do)
   then
     raise too_many_rows;
   end if;
 
   PRAGMA INLINE (does_job_exist, 'YES');
-  if not(does_job_exist(l_job_name_supervisor))
+  if not(does_job_exist(l_job_name_do))
   then
-    if not(does_program_exist(c_program_supervisor))
+    PRAGMA INLINE (does_program_exist, 'YES');
+    if not(does_program_exist(c_program_do))
     then
-      create_program(c_program_supervisor);
+      create_program(c_program_do);
+    end if;
+
+    dbms_scheduler.create_job
+    ( job_name => l_job_name_do
+    , program_name => c_program_do
+    , end_date => null
+    , job_class => 'DEFAULT_JOB_CLASS'
+    , enabled => false -- so we can set job arguments
+    , auto_drop => false
+    , comments => 'A job for executing commands.'
+    , job_style => 'REGULAR'
+    , credential_name => null
+    , destination_name => null
+    );
+  else
+    dbms_scheduler.disable(l_job_name_do); -- stop the job so we can give it job arguments
+  end if;
+
+  -- set arguments
+  for r in
+  ( select  a.argument_name
+    from    user_scheduler_jobs j
+            inner join user_scheduler_program_args a
+            on a.program_name = j.program_name
+    where   job_name = l_job_name_do
+    order by
+            a.argument_position 
+  )
+  loop
+    case r.argument_name
+      when 'P_COMMAND'
+      then l_argument_value := p_command;
+      when 'P_PROCESSING_PACKAGE'
+      then l_argument_value := p_processing_package;
+    end case;
+/*
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'argument name: %s; argument value: %s'
+    , r.argument_name
+    , l_argument_value
+    );
+$end
+*/
+    dbms_scheduler.set_job_argument_value
+    ( job_name => l_job_name_do
+    , argument_name => r.argument_name
+    , argument_value => l_argument_value
+    );
+  end loop;
+
+  dbms_scheduler.enable(l_job_name_do);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end submit_do;
+
+procedure submit_launcher_processing
+( p_processing_package in varchar2
+, p_nr_workers_each_group in positive
+, p_nr_workers_exact in positive
+, p_repeat_interval in varchar2
+)
+is
+  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
+  l_job_name_launcher job_name_t;
+  l_argument_value user_scheduler_program_args.default_value%type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_LAUNCHER_PROCESSING');
+  dbug.print
+  ( dbug."input"
+  , 'p_processing_package: %s; p_nr_workers_each_group: %s; p_nr_workers_exact: %s; p_repeat_interval: %s'
+  , p_processing_package
+  , p_nr_workers_each_group
+  , p_nr_workers_exact
+  , p_repeat_interval
+  );
+$end
+
+  l_job_name_launcher :=
+    join_job_name
+    ( p_processing_package => l_processing_package
+    , p_program_name => c_program_launcher
+    );
+
+  PRAGMA INLINE (is_job_running, 'YES');
+  if is_job_running(l_job_name_launcher)
+  then
+    raise too_many_rows;
+  end if;
+
+  PRAGMA INLINE (does_job_exist, 'YES');
+  if not(does_job_exist(l_job_name_launcher))
+  then
+    PRAGMA INLINE (does_program_exist, 'YES');
+    if not(does_program_exist(c_program_launcher))
+    then
+      create_program(c_program_launcher);
     end if;
 
     if p_repeat_interval is null
     then
-      -- a non-repeating job
-      dbms_scheduler.create_job
-      ( job_name => l_job_name_supervisor
-      , program_name => c_program_supervisor
-      , job_class => 'DEFAULT_JOB_CLASS'
-      , enabled => false -- so we can set job arguments
-      , auto_drop => true
-      , comments => 'Temporary job for processing messages.'
-      , job_style => 'REGULAR'
-      , credential_name => null
-      , destination_name => null
-      );
+      raise program_error;
     else
       -- a repeating job
-      if not(does_schedule_exist(c_schedule_supervisor))
+      if not(does_schedule_exist(c_schedule_launcher))
       then
         dbms_scheduler.create_schedule
-        ( schedule_name => c_schedule_supervisor
+        ( schedule_name => c_schedule_launcher
         , start_date => null
         , repeat_interval => p_repeat_interval
         , end_date => null
-        , comments => 'Supervisor job schedule'
+        , comments => 'Launcher job schedule'
         );
       end if;
 
       dbms_scheduler.create_job
-      ( job_name => l_job_name_supervisor
-      , program_name => c_program_supervisor
-      , schedule_name => c_schedule_supervisor
+      ( job_name => l_job_name_launcher
+      , program_name => c_program_launcher
+      , schedule_name => c_schedule_launcher
       , job_class => 'DEFAULT_JOB_CLASS'
       , enabled => false -- so we can set job arguments
       , auto_drop => false
@@ -1178,7 +1366,7 @@ $end
       );
     end if;
   else
-    dbms_scheduler.disable(l_job_name_supervisor); -- stop the job so we can give it job arguments
+    dbms_scheduler.disable(l_job_name_launcher); -- stop the job so we can give it job arguments
   end if;
 
   -- set arguments
@@ -1187,7 +1375,7 @@ $end
     from    user_scheduler_jobs j
             inner join user_scheduler_program_args a
             on a.program_name = j.program_name
-    where   job_name = l_job_name_supervisor
+    where   job_name = l_job_name_launcher
     order by
             a.argument_position 
   )
@@ -1199,10 +1387,8 @@ $end
       then l_argument_value := to_char(p_nr_workers_each_group);
       when 'P_NR_WORKERS_EXACT'
       then l_argument_value := to_char(p_nr_workers_exact);
-      when 'P_TTL'
-      then l_argument_value := to_char(p_ttl);
     end case;
-
+/*
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
@@ -1211,39 +1397,42 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     , l_argument_value
     );
 $end
-
+*/
     dbms_scheduler.set_job_argument_value
-    ( job_name => l_job_name_supervisor
+    ( job_name => l_job_name_launcher
     , argument_name => r.argument_name
     , argument_value => l_argument_value
     );
   end loop;
-  
-  dbms_scheduler.enable(l_job_name_supervisor); -- start the job
+
+  -- start the job (there is no end date so need to drop and try again)
+  dbms_scheduler.enable(l_job_name_launcher); 
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end submit_processing_supervisor;
+end submit_launcher_processing;
 
-procedure processing_supervisor
+procedure launcher_processing
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive
 , p_nr_workers_exact in positive
-, p_ttl in positiven
 )
 is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
-  l_job_name_supervisor job_name_t := null;
+  l_job_name_launcher job_name_t := null;
+  l_end_date user_scheduler_jobs.end_date%type := null;
   l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_groups_to_process_tab sys.odcivarchar2list;
   l_groups_to_process_list varchar2(4000 char);
   l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
   l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+  l_dbug_channel_tab t_dbug_channel_tab;
 
   procedure check_input_and_state
   is
     l_statement varchar2(32767 byte);
+    l_state user_scheduler_jobs.state%type;
   begin
     case
       when ( p_nr_workers_each_group is not null and p_nr_workers_exact is null ) or
@@ -1261,11 +1450,11 @@ is
     end case;
 
     -- Is this session running as a job?
-    -- If not, just create a job name supervisor to be used by the worker jobs.
+    -- If not, just create a job name launcher to be used by the worker jobs.
     
-    l_job_name_supervisor := session_job_name();
+    l_job_name_launcher := session_job_name();
     
-    if l_job_name_supervisor is null
+    if l_job_name_launcher is null
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print
@@ -1277,23 +1466,44 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       );
 $end
         
-      l_job_name_supervisor := 
-        get_job_name
+      l_job_name_launcher := 
+        join_job_name
         ( p_processing_package => l_processing_package
-        , p_program_name => c_program_supervisor
-        , p_job_suffix => to_char(sysdate, "yyyymmddhh24miss")
+        , p_program_name => c_program_launcher
         );
+    elsif l_job_name_launcher <>
+          join_job_name
+          ( p_processing_package => l_processing_package
+          , p_program_name => c_program_launcher
+          )
+    then
+      raise value_error;
+    end if;
+
+    get_next_end_date(l_job_name_launcher, l_state, l_end_date);
+    
+    if l_state in ('SCHEDULED', 'RUNNING', 'DISABLED')
+    then
+      null; -- OK
+    else
+      raise_application_error
+      ( c_unexpected_job_state
+      , utl_lms.format_message
+        ( c_unexpected_job_state_msg
+        , l_job_name_launcher
+        , l_state
+        )
+      );
     end if;
 
     l_statement := utl_lms.format_message
-                   ( q'[begin :1 := %s.get_groups_to_process('package://%s.%s'); end;]'
+                   ( q'[begin :1 := %s.get_groups_to_process(:2); end;]'
                    , l_processing_package -- already checked by determine_processing_package
-                   , $$PLSQL_UNIT_OWNER
-                   , $$PLSQL_UNIT
                    );
 
     begin
-      execute immediate l_statement using out l_groups_to_process_tab;      
+      execute immediate l_statement
+        using out l_groups_to_process_tab, in utl_lms.format_message('package://%s.%s', $$PLSQL_UNIT_OWNER, $$PLSQL_UNIT);      
 $if oracle_tools.cfg_pkg.c_debugging $then
     exception
       when others
@@ -1315,171 +1525,67 @@ $end
     l_groups_to_process_list := oracle_tools.api_pkg.collection2list(p_value_tab => l_groups_to_process_tab, p_sep => ',', p_ignore_null => 1);
   end check_input_and_state;
 
-  procedure define_workers
+  procedure define_jobs
   is
   begin
     -- Create the workers
     for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_each_group * l_groups_to_process_tab.count)
     loop
       l_job_name_tab.extend(1);
-      l_job_name_tab(l_job_name_tab.last) := l_job_name_supervisor || '#' || to_char(i_worker); -- the # indicates a worker job
-    end loop;  
-  end define_workers;
+      l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker_group, i_worker);
+    end loop;
+  end define_jobs;
 
-  procedure stop_worker
-  ( p_job_name_worker in varchar2
-  )
+  procedure start_jobs
   is
   begin
-    PRAGMA INLINE (does_job_exist, 'YES');
-    if does_job_exist(p_job_name_worker)
+    -- the supervisor
+    submit_processing
+    ( p_processing_package => p_processing_package
+    , p_groups_to_process_list => l_groups_to_process_list
+    , p_nr_workers => l_job_name_tab.count
+    , p_worker_nr => null
+    , p_end_date => l_end_date
+    );
+    if l_job_name_tab.count > 0 -- excluding supervisor
     then
-      PRAGMA INLINE (drop_job, 'YES');
-      drop_job(p_job_name_worker);
-    end if;
-  exception
-    when e_job_does_not_exist -- strange
-    then null;
-  end stop_worker;
-
-  procedure start_worker
-  ( p_job_name_worker in varchar2
-  )
-  is
-    l_worker_nr constant positiven := to_number(substr(p_job_name_worker, instr(p_job_name_worker, '#') + 1));
-  begin
-    -- submit but when job already exists: stop it and retry
-    <<try_loop>>
-    for i_try in 1..2
-    loop
-      begin
+      for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
+      loop
         submit_processing
         ( p_processing_package => p_processing_package
         , p_groups_to_process_list => l_groups_to_process_list
-        , p_worker_nr => l_worker_nr
-        , p_ttl => p_ttl
-        , p_job_name_supervisor => l_job_name_supervisor
+        , p_nr_workers => l_job_name_tab.count
+        , p_worker_nr => i_worker_nr
+        , p_end_date => l_end_date
         );
-        exit try_loop; -- OK
-      exception
-        when e_job_already_running
-        then
-          if i_try = 1
-          then
-            stop_worker(p_job_name_worker);
-          else
-            raise;
-          end if;
-      end;
-    end loop try_loop;
-  end start_worker;
-  
-  procedure start_workers
-  is
-  begin
-    job_event_recv_init(l_job_name_supervisor);
-    
-    if l_job_name_tab.count > 0
-    then
-      for i_worker in l_job_name_tab.first .. l_job_name_tab.last
-      loop
-        start_worker(p_job_name_worker => l_job_name_tab(i_worker));
       end loop;
     end if;
-  end start_workers;
+  end start_jobs;
 
-  procedure supervise_workers
-  is
-    l_now date;
-    l_worker_nr positive;
-    l_sqlcode integer;
-    l_sqlerrm varchar2(4000 char);
-  begin    
-    loop
-      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'elapsed time: %s seconds', to_char(l_elapsed_time));
-$end
-
-      exit when l_elapsed_time >= p_ttl;
-
-      -- get the status
-
-      job_event_recv
-      ( p_job_name_supervisor => l_job_name_supervisor
-      , p_timeout => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-      , p_worker_nr => l_worker_nr 
-      , p_sqlcode => l_sqlcode
-      , p_sqlerrm => l_sqlerrm
-      );
-
-      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
-
-      exit when l_elapsed_time >= p_ttl;
-
-      if l_worker_nr is not null
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print
-        ( case when l_sqlerrm is null then dbug."info" else dbug."error" end
-        , 'Worker %s stopped with error code %s'
-        , l_worker_nr
-        , l_sqlcode
-        );
-        if l_sqlerrm is not null
-        then
-          dbug.print(dbug."error", l_sqlerrm);
-        end if;
-$end
-
-        start_worker(p_job_name_worker => l_job_name_supervisor || '#' || l_worker_nr);
-      end if;
-    end loop;
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Stopped supervising workers after %s seconds', to_char(l_elapsed_time));
-$end
-  end supervise_workers;
-
-  procedure stop_workers
-  is
-  begin
-    if l_job_name_tab.count > 0
-    then
-      for i_worker in l_job_name_tab.first .. l_job_name_tab.last
-      loop        
-        stop_worker(p_job_name_worker => l_job_name_tab(i_worker));
-      end loop;
-    end if;
-  end stop_workers;
-  
   procedure cleanup
   is
   begin
-    stop_workers;
-    done;
+    done(l_dbug_channel_tab);
   end cleanup;
 begin
-  init;
+  init(l_dbug_channel_tab);
   
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_SUPERVISOR');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.LAUNCHER_PROCESSING');
   dbug.print
   ( dbug."input"
   , utl_lms.format_message
-    ( 'p_processing_package: %s; p_nr_workers_each_group: %d; p_nr_workers_exact: %d; p_ttl: %d'
+    ( 'p_processing_package: %s; p_nr_workers_each_group: %d; p_nr_workers_exact: %d'
     , p_processing_package
     , p_nr_workers_each_group
     , p_nr_workers_exact
-    , p_ttl
     )
   );
 $end
 
   check_input_and_state;
-  define_workers;
-  start_workers;
-  supervise_workers;
+  define_jobs;
+  start_jobs;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1488,15 +1594,6 @@ $end
   cleanup; -- after dbug.leave since the done inside will change dbug state
 
 exception
-  when msg_aq_pkg.e_dequeue_timeout
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then  
-    dbug.leave_on_error;
-$end
-
-    cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
-    -- no reraise necessary
-    
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then  
@@ -1505,104 +1602,7 @@ $end
 
     cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     raise;
-end processing_supervisor;
-
-procedure processing
-( p_processing_package in varchar2 
-, p_groups_to_process_list in varchar2
-, p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
-)
-is
-  l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
-  l_job_name_worker constant job_name_t := session_job_name();
-  l_statement varchar2(32767 byte);
-  l_groups_to_process_tab sys.odcivarchar2list;
-
-  procedure cleanup
-  is
-  begin
-    done;
-  end cleanup;
-begin
-  job_event_send_init
-  ( p_job_name_supervisor => p_job_name_supervisor
-  , p_worker_nr => p_worker_nr
-  );
-  init;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
-  dbug.print
-  ( dbug."input"
-  , 'p_groups_to_process_list: %s; p_worker_nr: %s; p_ttl: %s; p_job_name_supervisor: %s'
-  , p_groups_to_process_list
-  , p_worker_nr
-  , p_ttl
-  , p_job_name_supervisor
-  );
-$end
-
-  if l_job_name_worker is null
-  then
-    raise_application_error
-    ( c_session_not_running_job
-    , utl_lms.format_message
-      ( c_session_not_running_job_msg
-      , to_char(c_session_id)
-      )
-    );
-  else
-    select  pg.column_value
-    bulk collect
-    into    l_groups_to_process_tab
-    from    table(oracle_tools.api_pkg.list2collection(p_value_list => p_groups_to_process_list, p_sep => ',', p_ignore_null => 1)) pg;
-
-    l_statement := utl_lms.format_message
-                   ( 'call %s.processing(p_groups_to_process_tab => :1, p_worker_nr => :2, p_ttl => :3, p_job_name_supervisor => :4)'
-                   , l_processing_package -- already checked by determine_processing_package
-                   );
-    declare
-      -- ORA-06550: line 1, column 18:
-      -- PLS-00302: component 'PROCESING' must be declared
-      e_compilation_error exception;
-      pragma exception_init(e_compilation_error, -6550);
-    begin
-      execute immediate l_statement
-        using in l_groups_to_process_tab, in p_worker_nr, in p_ttl, in p_job_name_supervisor;
-    exception
-      when e_compilation_error
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print(dbug."error", 'statement: %s', l_statement);
-        dbug.on_error;
-$end                  
-        raise;
-        
-      when others
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.on_error;
-$end
-        raise;
-    end;
-  end if;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-$end  
-
-  cleanup;
-exception
-  when others
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then  
-    dbug.leave_on_error;
-$end    
-    cleanup;
-    raise;
-end processing;
+end launcher_processing;
 
 end msg_scheduler_pkg;
 /

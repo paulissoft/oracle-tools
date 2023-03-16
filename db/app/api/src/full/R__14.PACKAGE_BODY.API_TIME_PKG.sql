@@ -92,6 +92,24 @@ begin
   return elapsed_time(p_start, p_end);
 end delta;
 
+function timestamp2str
+( p_val in timestamp_t
+)
+return timestamp_str_t
+is
+begin
+  return to_char(p_val, c_timestamp_format);
+end timestamp2str;
+
+function str2timestamp
+( p_val in timestamp_str_t
+)
+return timestamp_t
+is
+begin
+  return to_timestamp_tz(p_val, c_timestamp_format);
+end str2timestamp;
+
 end API_TIME_PKG;
 /
 

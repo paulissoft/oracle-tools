@@ -2,6 +2,8 @@ CREATE OR REPLACE PACKAGE BODY "MSG_AQ_PKG" AS
 
 -- private stuff
 
+subtype queue_name_t is user_queues.name%type;
+
 c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
 "plsql://" constant varchar2(10) := 'plsql://';
@@ -39,7 +41,7 @@ begin
            when dbms_aq.persistent then 'PERSISTENT'
            when dbms_aq.buffered then 'BUFFERED'
            when dbms_aq.persistent_or_buffered then 'PERSISTENT_OR_BUFFERED'
-           else 'UNKNOWN delivey mode (' || to_char(p_delivery_mode) || ')'
+           else 'UNKNOWN delivery mode (' || to_char(p_delivery_mode) || ')'
          end;
 end delivery_mode_descr;
 
@@ -1037,6 +1039,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   p_msg.print();
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave;
+    raise;
 $end
 end dequeue;
 
@@ -1086,6 +1093,11 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave;
+    raise;
 $end
 end dequeue_and_process;
 
@@ -1168,6 +1180,11 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave;
+    raise;
 $end
 end dequeue;
 
@@ -1210,7 +1227,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    dbug.leave_on_error;
+    dbug.leave;
     raise;
 $end
 end dequeue_and_process;
@@ -1272,48 +1289,109 @@ $end
 end get_groups_to_process;
 
 procedure processing
-( p_groups_to_process_tab in sys.odcivarchar2list
+( p_controlling_package in varchar2
+, p_groups_to_process_tab in sys.odcivarchar2list
 , p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
+, p_end_date in timestamp with time zone
+, p_silence_threshold in number
 )
 is
+  l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
+  l_next_heartbeat oracle_tools.api_time_pkg.timestamp_t := l_start_date;
+  l_now oracle_tools.api_time_pkg.timestamp_t;
+  l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+  l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, p_end_date);
   l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_agent_list dbms_aq.aq$_agent_list_t;
   l_queue_name_idx positiven := 1;
   l_agent sys.aq$_agent;
   l_message_delivery_mode pls_integer;
-  l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
-  l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+  l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
+  l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
 
-  -- to be able to profile this call just create a procedure and use dbug.enter/dbug.leave
+  -- Use a simple procedure and dbug.enter/dbug.leave to be able to profile this dbms_aq.listen call.
   procedure dbms_aq_listen
   is
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter('DBMS_AQ.LISTEN');
 $end
+
     dbms_aq.listen
     ( agent_list => l_agent_list
-    , wait => greatest(1, trunc(p_ttl - l_elapsed_time)) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-    , listen_delivery_mode => dbms_aq.persistent_or_buffered
+    , wait => least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time))) -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
+    , listen_delivery_mode => dbms_aq.persistent
     , agent => l_agent
     , message_delivery_mode => l_message_delivery_mode
     );
+
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
 $end
+  exception
+    when e_listen_timeout
+    then
+      l_agent := sys.aq$_agent(null, null, null);
+      l_message_delivery_mode := null;
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.leave;
+$end
+        
+    when others
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.leave;
+$end      
+      raise;
   end dbms_aq_listen;
+
+  procedure send_next_heartbeat
+  is
+  begin
+    if l_now >= l_next_heartbeat
+    then
+      oracle_tools.api_heartbeat_pkg.send
+      ( p_supervisor_channel => p_controlling_package
+      , p_worker_nr => p_worker_nr
+      , p_silence_threshold => p_silence_threshold
+      , p_first_recv_timeout => 0 -- non-blocking
+      , p_timestamp_tab => l_timestamp_tab
+      , p_silent_worker_tab => l_silent_worker_tab
+      );
+      if l_silent_worker_tab.count > 0
+      then
+        raise_application_error
+        ( oracle_tools.api_heartbeat_pkg.c_silent_workers_found
+        , 'The supervisor is silent since at least ' || p_silence_threshold || ' seconds.'
+        );
+      end if;
+      
+      loop
+        l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');
+        exit when l_next_heartbeat > l_now;
+      end loop;
+    end if;
+  end send_next_heartbeat;
+  
+  procedure cleanup
+  is
+  begin
+    oracle_tools.api_heartbeat_pkg.done
+    ( p_supervisor_channel => p_controlling_package
+    , p_worker_nr => p_worker_nr
+    );
+  end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
   dbug.print
   ( dbug."input"
-  , 'p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_ttl: %s; p_job_name_supervisor: %s'
+  , 'p_controlling_package: %s; p_groups_to_process_tab.count: %s; p_worker_nr; %s; p_end_date: %s; p_silence_threshold: %s'
+  , p_controlling_package
   , case when p_groups_to_process_tab is not null then p_groups_to_process_tab.count end
   , p_worker_nr
-  , p_ttl
-  , p_job_name_supervisor
+  , to_char(p_end_date, 'yyyy-mm-dd hh24:mi:ss')
+  , p_silence_threshold
   );
 $end
 
@@ -1323,6 +1401,13 @@ $end
   else
     raise value_error;
   end if;
+
+  oracle_tools.api_heartbeat_pkg.init
+  ( p_supervisor_channel => p_controlling_package
+  , p_worker_nr => p_worker_nr
+  , p_max_worker_nr => 0
+  , p_timestamp_tab => l_timestamp_tab
+  );
 
   <<queue_loop>>
   for i_idx in p_groups_to_process_tab.first .. p_groups_to_process_tab.last
@@ -1345,7 +1430,8 @@ $end
     then
       raise program_error;
     end if;
-    
+
+    -- assume single consumer queues
     l_agent_list(l_agent_list.count+1) :=
       sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
 
@@ -1368,24 +1454,32 @@ $end
   loop
     <<listen_then_dequeue_loop>>
     for i_step in 1..2
-    loop
-      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start, oracle_tools.api_time_pkg.get_time);
+    loop        
+      l_now := oracle_tools.api_time_pkg.get_timestamp;      
+
+      l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print
       ( dbug."info"
       , 'elapsed time: %s (s); finished?: %s'
       , to_char(l_elapsed_time)
-      , dbug.cast_to_varchar2(l_elapsed_time >= p_ttl)
+      , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
       );
 $end
 
-      exit process_loop when l_elapsed_time >= p_ttl;
+      /* Test whether we must end? */
+      exit process_loop when l_elapsed_time >= l_ttl;
+
+      /* Test whether we must send a heartbeat? */
+      send_next_heartbeat;
 
       case i_step
         when 1
         then
           dbms_aq_listen;
+          -- Did we get a timeout? If so continue with the next listen action
+          exit listen_then_dequeue_loop when l_agent is null or l_agent.address is null;
           
         when 2
         then
@@ -1416,16 +1510,29 @@ $end
       end case;
     end loop listen_then_dequeue_loop;
   end loop process_loop;
+
+  cleanup;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
   dbug.leave;
+$end  
 exception
+  when oracle_tools.api_heartbeat_pkg.e_shutdown_request_received
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.on_error;
+$end
+    cleanup;
+    -- no re-raise
+    
   when others
   then
+    cleanup;
+$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
-    raise;
 $end
+    raise;
 end processing;
 
 end msg_aq_pkg;

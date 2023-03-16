@@ -6,6 +6,11 @@ subtype timestamp_t is timestamp(6) with time zone; -- return value of systimest
 subtype timestamp_diff_t is interval day(9) to second(6);
 subtype seconds_t is number; -- before the decimal the number of seconds, after the decimal the fractional seconds
 
+subtype timestamp_str_t is varchar2(40);
+
+c_timestamp_format constant timestamp_str_t := 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"TZH:TZM';
+
+
 /**
 Package to give a rough estimate of the elapsed time in seconds and fractional seconds. The granularity is what is returned by dbms_utility.get_time, i.e hundredths of seconds.
 **/
@@ -60,6 +65,18 @@ function delta
 )
 return seconds_t; -- in seconds with fractions (not hundredths of seconds!)
 /** Just another name for elapsed_time above. **/
+
+function timestamp2str
+( p_val in timestamp_t
+)
+return timestamp_str_t;
+/** Return the timestamp value in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format. */
+
+function str2timestamp
+( p_val in timestamp_str_t
+)
+return timestamp_t;
+/** Return the timestamp string value (in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format) as a timestamp with time zone. */
 
 end API_TIME_PKG;
 /

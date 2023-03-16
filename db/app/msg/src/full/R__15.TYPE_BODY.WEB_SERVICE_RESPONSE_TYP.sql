@@ -252,13 +252,6 @@ begin
     end;
 end has_not_null_lob;
 
-static function default_group
-return varchar2
-is
-begin
-  return 'WEB_SERVICE_RESPONSE';
-end default_group;
-
 overriding
 member function default_processing_method
 ( self in web_service_response_typ
@@ -268,6 +261,13 @@ is
 begin
   return null;
 end default_processing_method;
+
+static function default_group
+return varchar2
+is
+begin
+  return 'WEB_SERVICE_RESPONSE';
+end default_group;
 
 end;
 /
