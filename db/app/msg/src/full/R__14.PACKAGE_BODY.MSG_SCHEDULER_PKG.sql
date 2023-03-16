@@ -575,6 +575,7 @@ $end
       then
         if i_try = 1
         then
+          dbms_scheduler.disable(l_job_name);
           admin_scheduler_pkg.drop_job(l_job_name);
         else
           raise;
@@ -1259,6 +1260,7 @@ $end
       then
         if i_try = 1
         then
+          dbms_scheduler.disable(l_job_name_do);
           admin_scheduler_pkg.drop_job(l_job_name_do);
         else
           raise;
