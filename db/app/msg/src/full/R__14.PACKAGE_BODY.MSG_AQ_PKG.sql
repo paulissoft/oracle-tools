@@ -1520,8 +1520,12 @@ $end
 exception
   when oracle_tools.api_heartbeat_pkg.e_shutdown_request_received
   then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.on_error;
+$end
     cleanup;
     -- no re-raise
+    
   when others
   then
     cleanup;
