@@ -28,7 +28,7 @@ is
   l_delta api_time_pkg.seconds_t;
   l_silent_worker boolean;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.DETERMINE_SILENT_WORKERS');
   dbug.print
   ( dbug."input"
@@ -46,7 +46,7 @@ $end
     l_delta := api_time_pkg.delta(p_timestamp_tab(l_worker_nr), l_current_timestamp);
     l_silent_worker := ( p_timestamp_tab(l_worker_nr) is null or l_delta > p_silence_threshold );
         
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print
     ( dbug."info"
     , 'silent worker %s; last timestamp received: %s; delta: %s; add silent worker: %s'
@@ -66,7 +66,7 @@ $end
     l_worker_nr := p_timestamp_tab.next(l_worker_nr);
   end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_silent_worker_tab.count: %s', p_silent_worker_tab.count);
   dbug.leave;
 exception
@@ -91,7 +91,7 @@ begin
   case dbms_pipe.next_item_type
     when 0 -- No more items
     then      
-$if oracle_tools.cfg_pkg.c_debugging $then      
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then      
       dbug.print(dbug."info", 'no more items');
 $end
       raise no_data_found;
@@ -99,7 +99,7 @@ $end
     when 6 -- NUMBER
     then
       dbms_pipe.unpack_message(l_number);
-$if oracle_tools.cfg_pkg.c_debugging $then      
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then      
       dbug.print(dbug."info", 'next item is a number: %s', to_char(l_number));
 $end
       return to_char(l_number);
@@ -107,7 +107,7 @@ $end
     when 9 -- VARCHAR2
     then
       dbms_pipe.unpack_message(l_varchar2);
-$if oracle_tools.cfg_pkg.c_debugging $then      
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then      
       dbug.print(dbug."info", 'next item is a varchar2: %s', l_varchar2);
 $end
       return l_varchar2;
@@ -115,7 +115,7 @@ $end
     when 11 -- ROWID
     then      
       dbms_pipe.unpack_message(l_rowid);
-$if oracle_tools.cfg_pkg.c_debugging $then      
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then      
       dbug.print(dbug."info", 'next item is a rowid: %s', l_rowid);
 $end
       return rowidtochar(l_rowid);
@@ -123,7 +123,7 @@ $end
     when 12 -- DATE
     then
       dbms_pipe.unpack_message(l_date);
-$if oracle_tools.cfg_pkg.c_debugging $then      
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then      
       dbug.print(dbug."info", 'next item is a date: %s', to_char(l_date, "yyyy-mm-dd hh24:mi:ss"));
 $end
       return to_char(l_date, "yyyy-mm-dd hh24:mi:ss");
@@ -131,7 +131,7 @@ $end
     when 23 -- RAW
     then      
       dbms_pipe.unpack_message(l_raw);
-$if oracle_tools.cfg_pkg.c_debugging $then      
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then      
       dbug.print(dbug."info", 'next item is a raw: %s', utl_raw.cast_to_varchar2(l_raw));
 $end
       return utl_raw.cast_to_varchar2(l_raw);
@@ -154,7 +154,7 @@ is
   l_pipename constant pipename_t := get_pipename(p_supervisor_channel, p_worker_nr);
   l_current_timestamp constant api_time_pkg.timestamp_t := api_time_pkg.get_timestamp;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.INIT');
   dbug.print
   ( dbug."input"
@@ -186,7 +186,7 @@ $end
     p_timestamp_tab(i_idx) := l_current_timestamp;
   end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_timestamp_tab.count: %s', p_timestamp_tab.count);
   dbug.leave;
 exception
@@ -219,7 +219,7 @@ is
   l_send_pipe constant pipename_t := get_pipename(p_supervisor_channel, null);
   l_send_timeout constant naturaln := 0;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SHUTDOWN');
   dbug.print(dbug."input", 'p_supervisor_channel: %s', p_supervisor_channel);
 $end
@@ -227,7 +227,7 @@ $end
   dbms_pipe.reset_buffer;
   dbms_pipe.pack_message(c_shutdown_msg_int);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
 
@@ -246,7 +246,7 @@ $end
     );
   end if;  
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.leave;
 exception
   when others
@@ -277,7 +277,7 @@ is
   l_recv_timeout naturaln := p_first_recv_timeout;
   l_msg timestamp_str_t;
 begin  
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SEND');
   dbug.print
   ( dbug."input"
@@ -295,7 +295,7 @@ $end
   dbms_pipe.pack_message(p_worker_nr);
   dbms_pipe.pack_message(l_send_timestamp_str);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."info", 'current timestamp to send to supervisor: %s', l_send_timestamp_str);
   dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
@@ -309,7 +309,7 @@ $end
       dbms_pipe.reset_buffer;
       l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => l_recv_timeout);
       
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'dbms_pipe.receive_message(pipename => %s, timeout => %s): %s', l_recv_pipe, l_recv_timeout, l_result);
 $end
       -- step 4
@@ -327,11 +327,11 @@ $end
       
       -- step 7
       l_recv_timestamp_str := l_msg;
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'timestamp received from supervisor: %s', l_recv_timestamp_str);
 $end
       p_timestamp_tab(0) := api_time_pkg.str2timestamp(l_recv_timestamp_str);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'p_timestamp_tab(0): %s', l_recv_timestamp_str);
 $end
 
@@ -342,7 +342,7 @@ $end
   -- step 9
   determine_silent_workers(p_silence_threshold, p_timestamp_tab, p_silent_worker_tab);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
   , 'p_timestamp_tab.count: %s; p_silent_worker_tab.count: %s'
@@ -379,7 +379,7 @@ is
   l_worker_nr positive;
   l_msg pls_integer;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.RECV');
   dbug.print
   ( dbug."input"
@@ -400,7 +400,7 @@ $end
     -- step 1 (see the package specification for the step description)
     dbms_pipe.reset_buffer;
     l_result := dbms_pipe.receive_message(pipename => l_recv_pipe, timeout => l_recv_timeout);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print(dbug."info", 'dbms_pipe.receive_message(pipename => %s, timeout => %s): %s', l_recv_pipe, l_recv_timeout, l_result);
 $end
 
@@ -423,7 +423,7 @@ $end
       l_worker_nr := l_msg;
       dbms_pipe.unpack_message(l_recv_timestamp_str);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'timestamp received from worker: %s', l_recv_timestamp_str);
 $end
     end if;
@@ -440,7 +440,7 @@ $end
       l_current_timestamp := api_time_pkg.get_timestamp;
       l_send_timestamp_str := api_time_pkg.timestamp2str(l_current_timestamp);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'current timestamp to send to worker: %s', l_send_timestamp_str);
 $end
       dbms_pipe.pack_message(l_send_timestamp_str);
@@ -450,7 +450,7 @@ $end
     pragma inline (get_pipename, 'YES');
     l_send_pipe := get_pipename(p_supervisor_channel, l_worker_nr);
     l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
 
@@ -461,7 +461,7 @@ $end
     then
       -- step 7a
       p_timestamp_tab(l_worker_nr) := api_time_pkg.str2timestamp(l_recv_timestamp_str);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'p_timestamp_tab(%s): %s', l_worker_nr, l_recv_timestamp_str);
 $end
     else
@@ -470,7 +470,7 @@ $end
       then
         p_timestamp_tab.delete(l_worker_nr);
       end if;
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'p_timestamp_tab(%s) deleted', l_worker_nr);
 $end
       if p_timestamp_tab.count = 0
@@ -485,7 +485,7 @@ $end
   -- step 9
   determine_silent_workers(p_silence_threshold, p_timestamp_tab, p_silent_worker_tab);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print
   ( dbug."output"
   , 'p_shutdown: %s; p_timestamp_tab.count: %s; p_silent_worker_tab.count: %s'
@@ -502,7 +502,7 @@ exception
 $end
 end recv;    
 
-$if cfg_pkg.c_testing $then
+$if oracle_tools.cfg_pkg.c_testing $then
 
 procedure ut_ping_pong
 is
@@ -513,7 +513,7 @@ is
   l_timeout constant integer := 5;
   l_shutdown boolean := false;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.UT_PING_PONG');
 $end
 
@@ -539,7 +539,7 @@ $end
   -- send twice a heartbeat without a supervisor receiving it
   for i_case in 1..4
   loop
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print(dbug."info", 'i_case: %s', i_case);
 $end
     case
@@ -597,7 +597,7 @@ $end
     end if;
   end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.leave;
 exception
   when others
@@ -616,7 +616,7 @@ is
   l_silent_worker_tab silent_worker_tab_t;
   l_shutdown boolean := false;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.UT_SHUTDOWN_WORKER');
 $end
 
@@ -642,7 +642,7 @@ $end
   , p_timestamp_tab => l_worker2_timestamp_tab
   );
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."info", 'part 1');
 $end
 
@@ -682,7 +682,7 @@ $end
   );
   ut.expect(l_shutdown, 'shutdown mode').to_be_true();
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."info", 'part 2');
 $end
 
@@ -726,7 +726,7 @@ $end
       );
   end;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."info", 'part 3');
 $end
 
@@ -758,7 +758,7 @@ $end
   , p_silent_worker_tab => l_silent_worker_tab
   );
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.leave;
 exception
   when others
@@ -777,7 +777,7 @@ is
   l_silent_worker_tab silent_worker_tab_t;
   l_shutdown boolean := false;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.UT_SHUTDOWN_SUPERVISOR');
 $end
 
@@ -839,7 +839,7 @@ $end
   , p_silent_worker_tab => l_silent_worker_tab
   );
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.leave;
 exception
   when others

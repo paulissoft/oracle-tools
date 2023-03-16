@@ -1,6 +1,9 @@
 CREATE OR REPLACE PACKAGE "API_HEARTBEAT_PKG" AUTHID DEFINER
 is
 
+-- reduce dbug clutter
+c_debugging constant boolean := false; -- oracle_tools.cfg_pkg.c_debugging
+
 c_use_package constant all_objects.object_name%type := 'DBMS_PIPE'; -- package to implement this: you need execute privileges on it
 
 c_shutdown_msg_int constant integer := -1;
@@ -155,7 +158,7 @@ The contents of the response message sent to the worker:
 See also send() above.
 */
 
-$if cfg_pkg.c_testing $then
+$if oracle_tools.cfg_pkg.c_testing $then
 
 --%suitepath(API)
 --%suite
