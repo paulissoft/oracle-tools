@@ -1536,26 +1536,31 @@ $end
 
   procedure start_jobs
   is
-  begin
-    -- the supervisor
-    submit_processing
-    ( p_processing_package => p_processing_package
-    , p_groups_to_process_list => l_groups_to_process_list
-    , p_nr_workers => l_job_name_tab.count
-    , p_worker_nr => null
-    , p_end_date => l_end_date
-    );
+    -- ORA-27477: "MSG_AQ_PKG$PROCESSING" already exists
+    e_job_already_exists exception;
+    pragma exception_init(e_job_already_exists, -27477);
+  begin    
     if l_job_name_tab.count > 0 -- excluding supervisor
     then
-      for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
+      -- submit also the supervisor (index 0 but must have p_worker_nr null)
+      for i_worker_nr in 0 .. l_job_name_tab.count
       loop
-        submit_processing
-        ( p_processing_package => p_processing_package
-        , p_groups_to_process_list => l_groups_to_process_list
-        , p_nr_workers => l_job_name_tab.count
-        , p_worker_nr => i_worker_nr
-        , p_end_date => l_end_date
-        );
+        begin
+          submit_processing
+          ( p_processing_package => p_processing_package
+          , p_groups_to_process_list => l_groups_to_process_list
+          , p_nr_workers => l_job_name_tab.count
+          , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
+          , p_end_date => l_end_date
+          );
+        exception
+          when e_job_already_exists
+          then
+$if oracle_tools.cfg_pkg.c_debugging $then  
+            dbug.on_error;
+$end
+            null;            
+        end;
       end loop;
     end if;
   end start_jobs;
