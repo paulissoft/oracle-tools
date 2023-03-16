@@ -51,6 +51,7 @@ begin
     when no_data_found
     then
       l_session_id := null;
+  end;    
 
   dbms_scheduler.drop_job(job_name => sys_context('USERENV', 'SESSION_USER') || '.' || p_job_name, force => p_force, defer => p_defer, commit_semantics => p_commit_semantics);
 
