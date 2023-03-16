@@ -31,7 +31,7 @@ pragma exception_init(e_job_does_not_exist, -27476);
 e_job_unknown exception;
 pragma exception_init(e_job_unknown, -27475);
 
--- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+-- ORA-27483: "MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
 e_invalid_end_date exception;
 pragma exception_init(e_invalid_end_date, -27483);
 
@@ -509,7 +509,7 @@ $end
   end if;
 
   -- GJP 2023-03-15 Try to enable an existing job, but drop it otherwise and try again
-  -- ORA-27483: "ORACLE_TOOLS"."MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
+  -- ORA-27483: "MSG_AQ_PKG$PROCESSING" has an invalid END_DATE
   <<try_loop>>
   for i_try in 1..2
   loop
