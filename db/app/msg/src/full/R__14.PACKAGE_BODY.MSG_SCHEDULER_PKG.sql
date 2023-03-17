@@ -515,6 +515,7 @@ is
   l_worker_nr positive;
   l_state user_scheduler_jobs.state%type := null;
   l_end_date user_scheduler_jobs.next_run_date%type := null;
+  l_job_names sys.odcivarchar2list;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_JOB');
@@ -532,10 +533,18 @@ $end
   , p_worker_nr => l_worker_nr
   );
 
-  PRAGMA INLINE (is_job_running, 'YES');
-  if is_job_running(p_job_name)
+  PRAGMA INLINE (get_jobs, 'YES');
+  l_job_names := get_jobs(p_job_name, 'RUNNING');
+  if l_job_names.count > 0
   then
-    raise too_many_rows;
+    raise_application_error
+    ( c_there_are_running_jobs
+    , utl_lms.format_message
+      ( c_there_are_running_jobs_msg
+      , p_job_name
+      , ' ' || oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => ' ', p_ignore_null => 1)
+      )
+    );
   end if;
 
   if l_program_name in ( c_program_supervisor, c_program_worker )
@@ -823,7 +832,7 @@ $end
       );
       set_attributes
       ( p_job_name => l_job_name
-      , p_end_date => p_end_date
+      , p_end_date => p_end_date -- override with the end date
       , p_schedule_name => l_schedule_name
       , p_start_date => l_start_date
       , p_repeat_interval => l_repeat_interval
