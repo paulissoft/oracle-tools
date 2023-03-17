@@ -1370,6 +1370,7 @@ is
     l_job_name job_name_t;
     l_job_names sys.odcivarchar2list;
     l_nr_groups natural;
+    l_nr_workers natural;
   begin
     l_job_name :=
       join_job_name
@@ -1490,8 +1491,14 @@ $end
       when 'shutdown'
       then
         l_nr_groups := get_groups_to_process(l_processing_package).count;
-
-        oracle_tools.api_heartbeat_pkg.shutdown(p_supervisor_channel => $$PLSQL_UNIT, p_nr_workers => get_nr_workers(p_nr_groups => l_nr_groups));
+        l_nr_workers := get_nr_workers(p_nr_groups => l_nr_groups);
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", 'nr groups: %s; nr workers: %s', l_nr_groups, l_nr_workers);
+$end
+        oracle_tools.api_heartbeat_pkg.shutdown
+        ( p_supervisor_channel => $$PLSQL_UNIT
+        , p_nr_workers => case when l_nr_workers > 0 then l_nr_workers end
+        );
 
         <<sleep_loop>>
         for i_sleep in 1 .. msg_constants_pkg.c_time_between_heartbeats -- give some leeway
