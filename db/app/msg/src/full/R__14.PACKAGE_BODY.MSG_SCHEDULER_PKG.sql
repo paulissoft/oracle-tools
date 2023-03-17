@@ -41,6 +41,10 @@ pragma exception_init(e_invalid_end_date, -27483);
 e_invalid_schedule exception;
 pragma exception_init(e_invalid_schedule, -27481);
 
+-- ORA-27468: "MSG_AQ_PKG$PROCESSING" is locked by another process
+e_procobj_locked exception;
+pragma exception_init(e_procobj_locked, -27468);
+
 -- ROUTINEs
 
 procedure init
@@ -280,7 +284,7 @@ begin
   ( dbug."info"
   , q'[get_jobs(p_job_name_expr => '%s'): '%s']'
   , '%'
-  , oracle_tools.api_pkg.collection2list(p_value_tab => get_jobs('%'), p_sep => ',', p_ignore_null => 1)
+  , oracle_tools.api_pkg.collection2list(p_value_tab => get_jobs('%'), p_sep => ' ', p_ignore_null => 1)
   );
 end show_jobs;
 
@@ -559,25 +563,42 @@ $end
       when c_program_worker_group
       then
         -- use inline schedule
-        begin
-          dbms_scheduler.create_job
-          ( job_name => p_job_name
-          , program_name => l_program_name
-          , start_date => null
-          , repeat_interval => null
-          , end_date => l_end_date
-          , enabled => false -- so we can set job arguments
-          , auto_drop => false
-          , comments => 'Worker job for processing messages.'
-          );
-        exception
-          when e_procobj_already_exists
-          then
+        <<try_loop>>
+        for i_try in 1..2
+        loop
+          begin
+            dbms_scheduler.create_job
+            ( job_name => p_job_name
+            , program_name => l_program_name
+            , start_date => null
+            , repeat_interval => null
+            , end_date => l_end_date
+            , enabled => false -- so we can set job arguments
+            , auto_drop => false
+            , comments => 'Worker job for processing messages.'
+            );
+            exit try_loop;
+          exception
+            when e_procobj_already_exists
+            then
+              if i_try = 2
+              then
+                raise;
+              end if;
+              
 $if oracle_tools.cfg_pkg.c_debugging $then
-            show_jobs;
+              dbug.on_error;
+              show_jobs;
 $end
-            raise;
-        end;
+              begin
+                admin_scheduler_pkg.drop_job(p_job_name, true); -- , false, 'ABSORB_ERRORS');
+              exception
+                when e_procobj_locked
+                then
+                  exit try_loop; -- we can not drop it, so stop trying to create it
+              end;
+          end;
+        end loop try_loop;
         
       when c_program_do
       then
