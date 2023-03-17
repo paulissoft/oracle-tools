@@ -230,7 +230,6 @@ end to_like_expr;
 function get_jobs
 ( p_job_name_expr in varchar2
 , p_state in user_scheduler_jobs.state%type default null
-, p_only_workers in integer default null -- 0: only launchers; 1: only workers; null: any
 )
 return sys.odcivarchar2list
 is
@@ -243,46 +242,49 @@ begin
   from    user_scheduler_jobs j
   where   j.job_name like l_job_name_expr escape '\'
   and     ( p_state is null or j.state = p_state )
-  and     ( p_only_workers is null or p_only_workers = sign(instr(j.job_name, '#')) )
   order by
           job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
   ;
 
-$if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
+  return l_job_names;
+end get_jobs;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+
+procedure show_jobs
+is
+begin
   for r in
   ( select  j.job_name
     ,       j.state
+    ,       j.enabled
     from    user_scheduler_jobs j
     order by
             job_name
   )
   loop
-    dbug.print(dbug."info", 'all jobs; job name: %s; state: %s', r.job_name, r.state);
+    dbug.print(dbug."info", 'all jobs; job name: %s; state: %s; enabled: %s', r.job_name, r.state, r.enabled);
   end loop;
 
   for r in
   ( select  j.job_name
-    ,       'RUNNING' as state
     from    user_scheduler_running_jobs j
     order by
             job_name
   )
   loop
-    dbug.print(dbug."info", 'all running jobs; job name: %s; state: %s', r.job_name, r.state);
+    dbug.print(dbug."info", 'all running jobs; job name: %s', r.job_name);
   end loop;
 
   dbug.print
   ( dbug."info"
-  , q'[get_jobs(p_job_name_expr => '%s', p_state => '%s', p_only_workers => %s): '%s']'
-  , p_job_name_expr
-  , p_state
-  , p_only_workers
-  , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => ',', p_ignore_null => 1)
+  , q'[get_jobs(p_job_name_expr => '%s'): '%s']'
+  , '%'
+  , oracle_tools.api_pkg.collection2list(p_value_tab => get_jobs('%'), p_sep => ',', p_ignore_null => 1)
   );
-$end
+end show_jobs;
 
-  return l_job_names;
-end get_jobs;
+$end
 
 function does_job_exist
 ( p_job_name in job_name_t
@@ -572,14 +574,9 @@ $end
           when e_procobj_already_exists
           then
 $if oracle_tools.cfg_pkg.c_debugging $then
-            dbug.print
-            ( dbug."info"
-            , q'[get_jobs(p_job_name_expr => '%s'): '%s']'
-            , '%'
-            , oracle_tools.api_pkg.collection2list(p_value_tab => get_jobs('%'), p_sep => ',', p_ignore_null => 1)
-            );
+            show_jobs;
 $end
-          raise;
+            raise;
         end;
         
       when c_program_do
@@ -1302,16 +1299,16 @@ is
     l_program_name_dummy user_scheduler_programs.program_name%type;
     l_worker_nr positive;
   begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'p_command: %s; p_program_name: %s', p_command, p_program_name);
-$end
-
     l_job_name :=
       join_job_name
       ( p_processing_package => l_processing_package 
       , p_program_name => p_program_name
       , p_worker_nr => null
       );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'command: %s; program name: %s; job name: %s', p_command, p_program_name, l_job_name);
+$end
 
     case p_command
       when 'create-jobs'
@@ -1334,6 +1331,10 @@ $end
         loop
           PRAGMA INLINE (get_jobs, 'YES');
           l_job_names := get_jobs(p_job_name_expr => l_job_name || '%');
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print(dbug."info", q'[jobs found matching '%s%': %s]', l_job_name, l_job_names.count);
+$end
 
           if l_job_names.count > 0
           then
@@ -1364,6 +1365,7 @@ $end
       then
         PRAGMA INLINE (get_jobs, 'YES');
         l_job_names := get_jobs(l_job_name || '%', 'RUNNING');
+
         if l_job_names.count = 0
         then
           raise_application_error
@@ -1439,6 +1441,11 @@ $end
         
         PRAGMA INLINE (get_jobs, 'YES');
         l_job_names := get_jobs(p_job_name_expr => l_job_name || '%');
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", q'[jobs found matching '%s%': %s]', l_job_name, l_job_names.count);
+$end
+
         if l_job_names.count > 0
         then
           <<job_loop>>
@@ -1772,8 +1779,9 @@ $end
         exception
           when e_procobj_already_exists
           then
-$if oracle_tools.cfg_pkg.c_debugging $then  
+$if oracle_tools.cfg_pkg.c_debugging $then
             dbug.on_error;
+            show_jobs;
 $end
             null;            
         end;
