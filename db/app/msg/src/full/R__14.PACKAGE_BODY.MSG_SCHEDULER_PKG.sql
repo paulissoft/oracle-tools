@@ -1335,12 +1335,16 @@ is
     , c_program_supervisor
     , c_program_worker
     );
-
   l_schedule_tab constant sys.odcivarchar2list :=
     sys.odcivarchar2list
     ( c_schedule_launcher
     );
-
+  l_shutdown_timeout constant positiven :=
+     case
+       when lower(p_command) = 'shutdown'
+       then msg_constants_pkg.c_time_between_heartbeats -- give some leeway
+       else 1
+     end;
   l_command_tab constant sys.odcivarchar2list :=
     case lower(p_command)
       -- create / drop scheduler objects
@@ -1501,7 +1505,7 @@ $end
         );
 
         <<sleep_loop>>
-        for i_sleep in 1 .. msg_constants_pkg.c_time_between_heartbeats -- give some leeway
+        for i_sleep in 1 .. l_shutdown_timeout
         loop
           PRAGMA INLINE (get_jobs, 'YES');
           exit sleep_loop when get_jobs(p_job_name_expr => l_job_name || '%', p_state => 'RUNNING').count = 0;
