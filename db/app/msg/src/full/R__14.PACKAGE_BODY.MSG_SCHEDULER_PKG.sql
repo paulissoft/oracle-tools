@@ -12,7 +12,8 @@ subtype t_dbug_channel_tab is msg_pkg.t_boolean_lookup_tab;
 
 -- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
 c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
-c_program_worker_group constant user_scheduler_programs.program_name%type := 'PROCESSING';
+c_program_supervisor constant user_scheduler_programs.program_name%type := 'PROCESSING_AS_SUPERVISOR';
+c_program_worker constant user_scheduler_programs.program_name%type := 'PROCESSING_AS_WORKER';
 c_program_do constant user_scheduler_programs.program_name%type := 'DO';
 
 c_schedule_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_SCHEDULE';
@@ -378,8 +379,8 @@ procedure create_program
 is
   l_program_name constant all_objects.object_name%type := upper(p_program_name);
 begin
-  case l_program_name
-    when c_program_launcher
+  case 
+    when l_program_name = c_program_launcher
     then
       dbms_scheduler.create_program
       ( program_name => l_program_name
@@ -416,15 +417,15 @@ begin
         );
       end loop;
 
-    when c_program_worker_group
+    when l_program_name in ( c_program_supervisor, c_program_worker )
     then
       dbms_scheduler.create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
-      , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
+      , program_action => $$PLSQL_UNIT || '.' || 'PROCESSING' -- they share the same stored procedure
       , number_of_arguments => 5
       , enabled => false
-      , comments => 'Worker program for processing messages supervised by the main job.'
+      , comments => case when l_program_name = c_program_supervisor then 'Supervisor' else 'Worker' end || ' program for processing messages.'
       );
   
       for i_par_idx in 1..5
@@ -451,7 +452,7 @@ begin
         );
       end loop;
       
-    when c_program_do
+    when l_program_name = c_program_do
     then
       dbms_scheduler.create_program
       ( program_name => l_program_name
@@ -528,7 +529,7 @@ $end
     raise too_many_rows;
   end if;
 
-  if l_program_name = c_program_worker_group
+  if l_program_name in ( c_program_supervisor, c_program_worker )
   then
     -- launcher must exist
     get_next_end_date
@@ -559,48 +560,21 @@ $end
       create_program(l_program_name);
     end if;
 
-    case l_program_name
-      when c_program_worker_group
+    case 
+      when l_program_name in ( c_program_supervisor, c_program_worker )
       then
-        -- use inline schedule
-        <<try_loop>>
-        for i_try in 1..2
-        loop
-          begin
-            dbms_scheduler.create_job
-            ( job_name => p_job_name
-            , program_name => l_program_name
-            , start_date => null
-            , repeat_interval => null
-            , end_date => l_end_date
-            , enabled => false -- so we can set job arguments
-            , auto_drop => false
-            , comments => 'Worker job for processing messages.'
-            );
-            exit try_loop;
-          exception
-            when e_procobj_already_exists
-            then
-              if i_try = 2
-              then
-                raise;
-              end if;
-              
-$if oracle_tools.cfg_pkg.c_debugging $then
-              dbug.on_error;
-              show_jobs;
-$end
-              begin
-                admin_scheduler_pkg.drop_job(p_job_name, true); -- , false, 'ABSORB_ERRORS');
-              exception
-                when e_procobj_locked
-                then
-                  exit try_loop; -- we can not drop it, so stop trying to create it
-              end;
-          end;
-        end loop try_loop;
+        dbms_scheduler.create_job
+        ( job_name => p_job_name
+        , program_name => l_program_name
+        , start_date => null
+        , repeat_interval => null
+        , end_date => l_end_date
+        , enabled => false -- so we can set job arguments
+        , auto_drop => false
+        , comments => case when l_program_name = c_program_supervisor then 'Supervisor' else 'Worker' end || ' job for processing messages.'
+        );
         
-      when c_program_do
+      when l_program_name = c_program_do
       then
         dbms_scheduler.create_job
         ( job_name => p_job_name
@@ -613,7 +587,7 @@ $end
         , comments => 'A job for executing commands.'
         );
         
-      when c_program_launcher
+      when l_program_name = c_program_launcher
       then
         -- a repeating job
         if not(does_schedule_exist(c_schedule_launcher))
@@ -771,7 +745,12 @@ procedure submit_processing
 , p_end_date in user_scheduler_jobs.end_date%type
 )
 is
-  l_job_name constant job_name_t := join_job_name(p_processing_package, c_program_worker_group, p_worker_nr);
+  l_job_name constant job_name_t :=
+    join_job_name
+    ( p_processing_package
+    , case when p_worker_nr is null then c_program_supervisor else c_program_worker end
+    , p_worker_nr
+    );
 begin  
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING');
@@ -974,7 +953,15 @@ $end
     <<worker_loop>>
     for i_idx in p_silent_worker_tab.first .. p_silent_worker_tab.last
     loop
-      if not(is_job_running(join_job_name(p_processing_package, c_program_worker_group, p_silent_worker_tab(i_idx))))
+      if not
+         ( is_job_running
+           ( join_job_name
+             ( p_processing_package
+             , case when p_silent_worker_tab(i_idx) > 0 then c_program_worker else c_program_supervisor end
+             , p_silent_worker_tab(i_idx)
+             )
+           )
+         )
       then
         submit_processing
         ( p_processing_package => p_processing_package
@@ -1279,7 +1266,8 @@ is
     sys.odcivarchar2list
     ( c_program_launcher
     , c_program_do
-    , c_program_worker_group -- prefix
+    , c_program_supervisor
+    , c_program_worker
     );
 
   l_schedule_tab constant sys.odcivarchar2list :=
@@ -1777,7 +1765,7 @@ $end
     for i_worker in 1 .. nvl(p_nr_workers_exact, p_nr_workers_each_group * l_groups_to_process_tab.count)
     loop
       l_job_name_tab.extend(1);
-      l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker_group, i_worker);
+      l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker, i_worker);
     end loop;
   end define_jobs;
 
