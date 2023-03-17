@@ -163,11 +163,19 @@ function join_job_name
 ( p_processing_package in varchar2
 , p_program_name in varchar2
 , p_worker_nr in positive default null
+, p_check in boolean default true
 )
 return job_name_t
 is
   l_job_name job_name_t;
 begin
+  if p_check and
+     ( ( p_program_name = c_program_worker and p_worker_nr is null ) or
+       ( p_program_name <> c_program_worker and p_worker_nr is not null ) )
+  then
+    raise program_error;
+  end if;
+
   l_job_name :=
     p_processing_package ||
     '$' ||
@@ -216,6 +224,12 @@ begin
         p_worker_nr := to_number(substr(p_program_name, l_pos# + 1));
         p_program_name := substr(p_program_name, 1, l_pos# - 1);
     end case;
+  end if;
+
+  if ( p_program_name = c_program_worker and p_worker_nr is null ) or
+     ( p_program_name <> c_program_worker and p_worker_nr is not null )
+  then
+    raise program_error;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
@@ -1381,6 +1395,7 @@ is
       ( p_processing_package => l_processing_package 
       , p_program_name => p_program_name
       , p_worker_nr => null
+      , p_check => false
       );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1390,7 +1405,10 @@ $end
     case p_command
       when 'create-jobs'
       then
-        create_job(l_job_name);
+        if p_program_name <> c_program_worker
+        then
+          create_job(l_job_name);
+        end if;
         
       when 'drop-programs'
       then
