@@ -17,9 +17,9 @@ c_shutdown_request_failed constant pls_integer := -20101;
 e_shutdown_request_failed exception;
 pragma exception_init(e_shutdown_request_failed, -20101);
 
-c_shutdown_request_completed constant pls_integer := -20102;
-e_shutdown_request_completed exception;
-pragma exception_init(e_shutdown_request_completed, -20102);
+c_shutdown_request_forwarded constant pls_integer := -20102;
+e_shutdown_request_forwarded exception;
+pragma exception_init(e_shutdown_request_forwarded, -20102);
 
 c_shutdown_request_received constant pls_integer := -20103;
 e_shutdown_request_received exception;
@@ -83,17 +83,23 @@ procedure init
 , p_max_worker_nr in naturaln -- 0 for the worker initialisation; the number of workers for the supervisor
 , p_timestamp_tab out nocopy timestamp_tab_t
 );
-/** Initialize the channel for a worker or supervisor. */
+/** Initialize the channel for a worker or supervisor, a mandatory action. */
 
 procedure done
 ( p_supervisor_channel in supervisor_channel_t
 , p_worker_nr in positive default null -- null for the supervisor
 );
-/** Cleanup the channel for a worker or supervisor. */
+/** Cleanup the channel for a worker or supervisor, an optional action. */
 
 procedure shutdown
 ( p_supervisor_channel in supervisor_channel_t
+, p_nr_workers in positive default null -- send the workers from 1 till p_nr_workers a shutdown request too (if not null)
 );
+/**
+Send the supervisor and workers a shutdown request.
+It is more efficient to specify the number of workers so that worker heartbeat send routine can pick up the request immediately.
+Otherwise the supervisor will send it when it receives a shutdown request.
+*/
 
 procedure send
 ( p_supervisor_channel in supervisor_channel_t
@@ -120,7 +126,7 @@ The contents of the message sent to the supervisor:
 - the current timestamp of the worker
 
 The contents of the response message received from the supervisor:
-- the current timestamp of the supervisor (or shutdown message)
+- the current timestamp of the supervisor (or shutdown message c_shutdown_msg_str)
 
 See also recv() below.
 */
@@ -129,7 +135,6 @@ procedure recv
 ( p_supervisor_channel in supervisor_channel_t
 , p_silence_threshold in api_time_pkg.seconds_t -- the number of seconds the supervisor may be silent before being added to the silent workers
 , p_first_recv_timeout in naturaln default 0 -- first receive timeout in seconds
-, p_shutdown in out nocopy boolean -- is a shutdown in progress?
 , p_timestamp_tab in out nocopy timestamp_tab_t
 , p_silent_worker_tab out nocopy silent_worker_tab_t
 );
@@ -139,18 +144,17 @@ The actions:
 2.  if that fails, stop processing and go to the last step.
 3.  the rest of the send/receive operations will be non-blocking.
 4a. if the (first part of the) message is the shutdown message:
-    set the shutdown parameter to true (supervisor turns into shutdown mode) and go back to step 1 to receive the next message.
+    raise the shutdown request forwarded exception.
 4b. otherwise, the (first part of the) message is the worker number and the next part is the timestamp.
-5.  send a response with the current timestamp of the supervisor (or a shutdown message when in shutdown mode)
+5.  send a response with the current timestamp of the supervisor
 6.  if that fails, stop processing and go to the last step.
-7a. in normal mode: record the timestamp in the timestamp table.
-7b. in shutdown mode: remove the worker entry from the timestamp table and if there are none left raise the shutdown request completed exception.
+7.  record the timestamp in the timestamp table.
 8.  go back to 1 for the next message to receive.
 9.  determine the silent workers.
 
-The contents of the messages received from the worker:
-- the worker number
-- the current timestamp of the worker
+The contents of the messages received (from the send() or the shutdown() routine):
+- the worker number (or the shutdown message c_shutdown_msg_int)
+- the current timestamp of the worker (only for a worker)
 
 The contents of the response message sent to the worker:
 - the current timestamp of the supervisor
@@ -171,7 +175,7 @@ procedure ut_ping_pong;
 procedure ut_shutdown_worker;
 
 --%test
---%throws(api_heartbeat_pkg.e_shutdown_request_completed)
+--%throws(api_heartbeat_pkg.e_shutdown_request_forwarded)
 procedure ut_shutdown_supervisor;
 
 $end
