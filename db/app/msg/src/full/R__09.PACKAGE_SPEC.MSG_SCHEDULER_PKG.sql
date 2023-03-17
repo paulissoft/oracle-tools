@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AUTHID DEFINER AS 
 
+c_debugging constant naturaln := 1; -- can be 0, 1, 2, ...
+
 c_job_already_running simple_integer := -20200;
 e_job_already_running exception;
 pragma exception_init(e_job_already_running, -20200);
@@ -34,6 +36,16 @@ c_session_not_running_job simple_integer := c_job_already_running - 6;
 e_session_not_running_job exception;
 pragma exception_init(e_session_not_running_job, -20206);
 c_session_not_running_job_msg constant varchar2(2000 char) := 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.';
+
+c_there_are_no_running_jobs simple_integer := c_job_already_running - 7;
+e_there_are_no_running_jobs exception;
+pragma exception_init(e_there_are_no_running_jobs, -20207);
+c_there_are_no_running_jobs_msg constant varchar2(2000 char) := 'There should be running jobs matching "%s" but there are none';
+
+c_unexpected_program simple_integer := c_job_already_running - 8;
+e_unexpected_program exception;
+pragma exception_init(e_unexpected_program, -20208);
+c_unexpected_program_msg constant varchar2(2000 char) := 'Unexpected program: "%s"';
 
 /**
 Package to (re)start, stop or drop the process that will process the groups for which the default processing method is "package://<schema>.MSG_SCHEDULER_PKG"
@@ -81,27 +93,15 @@ Submits do() as a non-repeating job, starting immediately.
 
 procedure submit_launcher_processing
 ( p_processing_package in varchar2
-, p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
-, p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
-, p_repeat_interval in varchar2 default msg_constants_pkg.c_repeat_interval -- used to create a schedule if not null (a repeating job)
 );
 /**
-Submits the launcher, see launcher_processing() below, that will submit its workers and then finish.
-
-The administrator MAY create a job by calling this procedure, although that
-will already be done implicitly by the processing package (for instance
-msg_aq_pkg.enqueue(p_force => true)).
-
-A repeating job (p_repeat_interval not null) will create the schedule first and then submit it.
-It may not run immediately due to the schedule: do('start') will then run a temporary non-repeating job till the next run time of the repeating job.
-
-A non-repeating job (p_repeat_interval null) will just create a job that will be auto dropped.
+Submits the launcher, see launcher_processing() below, that will submit the supervisor and its workers and then finish.
 **/
 
 procedure launcher_processing
 ( p_processing_package in varchar2
-, p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group -- the total number of workers will be this number multiplied by the number of groups
-, p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact -- the total number of workers will be this number
+, p_nr_workers_each_group in positive
+, p_nr_workers_exact in positive
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test

@@ -371,10 +371,13 @@ $end
     if l_msg = c_shutdown_msg_int
     then
       -- step 4a
-      l_worker_nr := null;
-      for i_worker_nr in 1..p_timestamp_tab.count
+      -- We have to send a shutdown request to all the workers, i.e. all the entries  in p_timestamp_tab.
+      -- Maybe some new workers have arrived after the init() leaving holes, so check all the indexes.
+      l_worker_nr := p_timestamp_tab.first;
+      while l_worker_nr is not null
       loop
-        l_result_dummy := send_shutdown(p_supervisor_channel => p_supervisor_channel, p_worker_nr => i_worker_nr);
+        l_result_dummy := send_shutdown(p_supervisor_channel => p_supervisor_channel, p_worker_nr => l_worker_nr);
+        l_worker_nr := p_timestamp_tab.next(l_worker_nr);
       end loop;
       raise_application_error(c_shutdown_request_forwarded, 'Shutdown request forwarded.');
     else
