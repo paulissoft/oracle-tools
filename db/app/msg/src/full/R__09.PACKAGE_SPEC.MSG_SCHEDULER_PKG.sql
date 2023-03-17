@@ -53,7 +53,7 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 **/
 
 procedure do
-( p_command in varchar2 -- check_jobs_not_running / start / shutdown / stop / restart / drop
+( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 );
 /**
@@ -61,31 +61,34 @@ Runs in an autonomous transaction.
 
 This procedure should be used to manage the jobs instead of directly calling DBMS_SCHEDULER.
 
-p_command = check_jobs_not_running:
-- Check that there are no running jobs that have been started by this package. If so, an error is raised.
+p_command = create / drop:
+- Create or drop all the scheduler objects like jobs, programs, schedules.
+- Worker jobs are not created though since they need to be created by the launcher job.
 
 p_command = start:
-- Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
+- Check that there are no jubs running (equivalent to do('check-jobs-not-running')).
 - Start the launcher job (submit_launcher_processing()) if it does not exist,
   otherwise disable and enable (i.e. start).
 
+p_command = shutdown:
+- Gracefuly stop all the running jobs launched by this package.
+- Check that there are no jubs running (equivalent to do('check-jobs-not-running')).
+
 p_command = stop:
 - Stop all the running jobs launched by this package.
-  Worker jobs will disappear due to the auto_drop parameter in DBMS_SCHEDULER.CREATE_JOB being true,
-  the launcher job will be disabled.
-- Check that there are no jubs running (equivalent to do('check_jobs_not_running')).
+- Check that there are no jubs running (equivalent to do('check-jobs-not-running')).
 
 p_command = restart:
 - Stop and start, equivalent to do('stop') followed by do('start').
 
-p_command = drop:
-- Stop the running jobs, equivalent to do('stop').
-- Drop the jobs, first with force false, next with force true if necessary.
+p_command = check-jobs-not-running/ check-jobs-not-running:
+- Check that there are (no) running jobs that have been started by this package. If so, an error is raised.
+
 **/
 
 procedure submit_do
-( p_command in varchar2 -- check_jobs_not_running / start / shutdown / stop / restart / drop
-, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+( p_command in varchar2 -- same as for do() above
+, p_processing_package in varchar2 default '%' -- same as for do() above
 );
 /**
 Submits do() as a non-repeating job, starting immediately.
