@@ -1245,7 +1245,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_processing_method: %s', p_processing_method);
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and msg_aq_pkg.c_debugging >= 2 $then
 
   if l_msg_tab is not null and l_msg_tab.count > 0
   then

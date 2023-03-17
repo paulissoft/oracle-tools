@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AUTHID DEFINER AS 
 
+c_debugging constant naturaln := 2; -- can be 0, 1, 2, ...
+
 c_job_already_running simple_integer := -20200;
 e_job_already_running exception;
 pragma exception_init(e_job_already_running, -20200);

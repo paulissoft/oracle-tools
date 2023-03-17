@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
+c_debugging constant naturaln := 1; -- can be 0, 1, 2, ...
+
 -- You can tweak the constants thru MSG_CONSTANTS_PKG, you are not supposed to do it here.
 c_buffered_messaging constant boolean := msg_constants_pkg.c_buffered_messaging;
 c_multiple_consumers constant boolean := msg_constants_pkg.c_multiple_consumers;

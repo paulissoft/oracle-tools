@@ -160,7 +160,7 @@ begin
     p_program_name ||
     case when p_worker_nr is not null then '#' || to_char(p_worker_nr) end;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
   dbug.print(dbug."info", 'join_job_name: %s', l_job_name);
 $end
 
@@ -204,7 +204,7 @@ begin
     end case;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
   dbug.print
   ( dbug."info"
   , q'[split_job_name(p_job_name => '%s', p_processing_package => '%s', p_program_name => '%s', p_worker_nr => %s)]'
@@ -247,7 +247,8 @@ begin
   order by
           job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
   ;
-$if oracle_tools.cfg_pkg.c_debugging $then
+
+$if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
   for r in
   ( select  j.job_name
     ,       j.state
@@ -279,6 +280,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => ',', p_ignore_null => 1)
   );
 $end
+
   return l_job_names;
 end get_jobs;
 
@@ -290,15 +292,6 @@ is
   PRAGMA INLINE (get_jobs, 'YES');
   l_job_names constant sys.odcivarchar2list := get_jobs(p_job_name);
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , q'[does_job_exist(p_job_name => '%s'): '%s']'
-  , p_job_name
-  , oracle_tools.api_pkg.collection2list(p_value_tab => l_job_names, p_sep => ',', p_ignore_null => 1)
-  );
-$end
-
   return l_job_names.count = 1;
 end does_job_exist;
 
@@ -564,16 +557,30 @@ $end
       when c_program_worker_group
       then
         -- use inline schedule
-        dbms_scheduler.create_job
-        ( job_name => p_job_name
-        , program_name => l_program_name
-        , start_date => null
-        , repeat_interval => null
-        , end_date => l_end_date
-        , enabled => false -- so we can set job arguments
-        , auto_drop => false
-        , comments => 'Worker job for processing messages.'
-        );
+        begin
+          dbms_scheduler.create_job
+          ( job_name => p_job_name
+          , program_name => l_program_name
+          , start_date => null
+          , repeat_interval => null
+          , end_date => l_end_date
+          , enabled => false -- so we can set job arguments
+          , auto_drop => false
+          , comments => 'Worker job for processing messages.'
+          );
+        exception
+          when e_procobj_already_exists
+          then
+$if oracle_tools.cfg_pkg.c_debugging $then
+            dbug.print
+            ( dbug."info"
+            , q'[get_jobs(p_job_name_expr => '%s'): '%s']'
+            , '%'
+            , oracle_tools.api_pkg.collection2list(p_value_tab => get_jobs('%'), p_sep => ',', p_ignore_null => 1)
+            );
+$end
+          raise;
+        end;
         
       when c_program_do
       then
@@ -630,6 +637,9 @@ is
   l_processing_package all_objects.object_name%type;
   l_program_name user_scheduler_programs.program_name%type;
   l_worker_nr positive;
+
+$if msg_scheduler_pkg.c_debugging >= 2 $then
+
   -- check schedule related attributes
   l_end_date user_scheduler_jobs.end_date%type := null;
   l_schedule_name user_scheduler_jobs.schedule_name%type := null;
@@ -642,7 +652,7 @@ is
     , 'start_date'
     , 'repeat_interval'
     );
-
+    
   procedure get_attributes
   is
   begin
@@ -674,6 +684,9 @@ $end
    when others
    then null;
   end get_attributes;
+  
+$end -- $if msg_scheduler_pkg.c_debugging >= 2 $then
+
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENABLE_JOB');
@@ -686,6 +699,8 @@ $end
   , p_program_name => l_program_name
   , p_worker_nr => l_worker_nr
   );
+
+$if msg_scheduler_pkg.c_debugging >= 2 $then
 
   /*
   -- attribute schedule_name:
@@ -714,7 +729,9 @@ $end
     dbms_scheduler.set_attribute(p_job_name, 'schedule_name', l_schedule_name);
   end if;
 
-  get_attributes;  
+  get_attributes;
+
+$end -- $if msg_scheduler_pkg.c_debugging >= 2 $then
 
   dbms_scheduler.enable(p_job_name);
 
