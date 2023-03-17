@@ -1342,8 +1342,8 @@ is
   l_shutdown_timeout constant positiven :=
      case
        when lower(p_command) = 'shutdown'
-       then msg_constants_pkg.c_time_between_heartbeats -- give some leeway
-       else 1
+       then msg_constants_pkg.c_time_between_heartbeats * 2 -- give some leeway
+       else 1 -- but not when we want to stop quickly
      end;
   l_command_tab constant sys.odcivarchar2list :=
     case lower(p_command)
