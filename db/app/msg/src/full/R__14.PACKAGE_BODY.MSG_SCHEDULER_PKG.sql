@@ -805,7 +805,6 @@ $end
     l_now oracle_tools.api_time_pkg.timestamp_t;
     l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
     -- for the heartbeat
-    l_shutdown boolean := false;
     l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
     l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
 
@@ -853,7 +852,6 @@ $end
                                   , trunc(l_ttl - l_elapsed_time)
                                   )
                                 )
-      , p_shutdown => l_shutdown                          
       , p_timestamp_tab =>l_timestamp_tab
       , p_silent_worker_tab => l_silent_worker_tab
       );
@@ -866,14 +864,6 @@ $end
 
     cleanup;
   exception
-    when oracle_tools.api_heartbeat_pkg.e_shutdown_request_completed
-    then
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.on_error;
-$end
-      cleanup;
-      -- no re-raise
-      
     when others
     then
       cleanup;
