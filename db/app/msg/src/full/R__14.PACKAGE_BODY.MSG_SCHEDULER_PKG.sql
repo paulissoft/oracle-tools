@@ -929,7 +929,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 exception
-  when e_job_unknown -- when the job is stopped it may disappear due to auto_drop true
+  when e_job_unknown
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
