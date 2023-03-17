@@ -45,7 +45,6 @@ e_unexpected_program exception;
 pragma exception_init(e_unexpected_program, -20208);
 c_unexpected_program_msg constant varchar2(2000 char) := 'Unexpected program: "%s"';
 
-
 /**
 Package to (re)start, stop or drop the process that will process the groups for which the default processing method is "package://<schema>.MSG_SCHEDULER_PKG"
 and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOTIFICATION_PRC".
