@@ -1352,10 +1352,11 @@ is
   l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
   l_next_heartbeat oracle_tools.api_time_pkg.timestamp_t := l_start_date;
   l_now oracle_tools.api_time_pkg.timestamp_t;
-  l_elapsed_time oracle_tools.api_time_pkg.seconds_t;
   l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, p_end_date);
+  l_elapsed_time oracle_tools.api_time_pkg.seconds_t := 0;
   l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
-  l_agent sys.aq$_agent;
+  l_agent sys.aq$_agent :=
+    sys.aq$_agent(null, get_queue_name(p_groups_to_process_tab(p_groups_to_process_tab.first)), null); -- no subscriber, just a queue address
   l_message_delivery_mode pls_integer;
   l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
   l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
@@ -1498,7 +1499,6 @@ $end
     else
       l_listen_now := false;
       l_message_delivery_mode := dbms_aq.persistent_or_buffered;
-      l_agent := sys.aq$_agent(null, l_queue_name_tab(l_queue_name_tab.first), null); -- no subscriber, just a queue address
     end if;
 
     l_navigation := dbms_aq.first_message;
@@ -1514,8 +1514,10 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print
       ( dbug."info"
-      , 'elapsed time: %s (s); finished?: %s'
+      , 'wait time; %s; elapsed time: %s (s); ttl: %s; finished (elapsed >= ttl)?: %s'
+      , to_char(l_wait)
       , to_char(l_elapsed_time)
+      , to_char(l_ttl)
       , dbug.cast_to_varchar2(l_elapsed_time >= l_ttl)
       );
 $end
