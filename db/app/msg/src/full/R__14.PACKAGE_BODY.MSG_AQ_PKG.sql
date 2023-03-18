@@ -398,19 +398,27 @@ end drop_queue;
 
 procedure start_queue
 ( p_queue_name in varchar2
+, p_enqueue in boolean
+, p_dequeue in boolean
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.START_QUEUE');
-  dbug.print(dbug."input", 'p_queue_name: %s', p_queue_name);
+  dbug.print
+  ( dbug."input"
+  , 'p_queue_name: %s; p_enqueue: %s; p_dequeue: %s'
+  , p_queue_name
+  , dbug.cast_to_varchar2(p_enqueue)
+  , dbug.cast_to_varchar2(p_dequeue)
+  );
 $end
 
   dbms_aqadm.start_queue
   ( queue_name => l_queue_name
-  , enqueue => true
-  , dequeue => true
+  , enqueue => p_enqueue
+  , dequeue => p_dequeue
   );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -421,6 +429,8 @@ end start_queue;
 procedure stop_queue
 ( p_queue_name in varchar2
 , p_wait in boolean
+, p_enqueue in boolean
+, p_dequeue in boolean
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
@@ -429,16 +439,18 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.STOP_QUEUE');
   dbug.print
   ( dbug."input"
-  , 'p_queue_name: %s; p_waits: %s'
+  , 'p_queue_name: %s; p_waits: %s; p_enqueue: %s; p_dequeue: %s'
   , p_queue_name
   , dbug.cast_to_varchar2(p_wait)
+  , dbug.cast_to_varchar2(p_enqueue)
+  , dbug.cast_to_varchar2(p_dequeue)
   );
 $end
 
   dbms_aqadm.stop_queue
   ( queue_name => l_queue_name
-  , enqueue => true
-  , dequeue => true
+  , enqueue => p_enqueue
+  , dequeue => p_dequeue
   , wait => p_wait
   );
 

@@ -538,7 +538,8 @@ $if msg_aq_pkg.c_testing $then
 -- PRIVATE
 
 procedure ut_rest_web_service_get_bulk
-( p_count in positiven
+( p_count in positiven default 1
+, p_stop_dequeue_before_enqueue in boolean default false
 )
 is
   pragma autonomous_transaction;
@@ -561,6 +562,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_BULK');
 $end
 
+  -- stop queue for dequeue only
+  if p_stop_dequeue_before_enqueue
+  then
+    msg_aq_pkg.stop_queue(p_queue_name => 'WEB_SERVICE_REQUEST', p_enqueue => false, p_dequeue => true);
+  end if;
+  
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- % curl https://jsonplaceholder.typicode.com/todos/1
@@ -591,6 +598,12 @@ $end
 
     commit;
   end loop;
+
+  -- restart queue for enqueue and dequeue
+  if p_stop_dequeue_before_enqueue
+  then
+    msg_aq_pkg.start_queue(p_queue_name => 'WEB_SERVICE_REQUEST', p_enqueue => true, p_dequeue => true);
+  end if;
 
   -- now the dequeue in reversed order
   for i_idx in reverse l_correlation_tab.first .. l_correlation_tab.last
@@ -655,7 +668,7 @@ end ut_rest_web_service_get_bulk;
 procedure ut_rest_web_service_get
 is
 begin
-  ut_rest_web_service_get_bulk(1);
+  ut_rest_web_service_get_bulk;
 end ut_rest_web_service_get;
 
 -- PUBLIC

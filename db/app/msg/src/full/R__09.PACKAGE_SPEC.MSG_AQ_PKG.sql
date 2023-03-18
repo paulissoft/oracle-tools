@@ -105,12 +105,16 @@ procedure drop_queue
 
 procedure start_queue
 ( p_queue_name in varchar2 -- Must be a simple SQL name
+, p_enqueue in boolean default true
+, p_dequeue in boolean default true
 );
 /** Start the queue with enqueue and dequeue enabled. **/
 
 procedure stop_queue
 ( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_wait in boolean default true
+, p_enqueue in boolean default true
+, p_dequeue in boolean default true
 );
 /** Stop the queue with enqueue and dequeue disabled. **/
 
