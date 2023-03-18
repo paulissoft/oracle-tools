@@ -729,6 +729,9 @@ end ut_setup;
 procedure ut_teardown
 is
   pragma autonomous_transaction;
+
+  l_request_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_request_typ.default_group());
+  l_response_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_response_typ.default_group());
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_TEARDOWN');
@@ -736,17 +739,35 @@ $end
   if msg_constants_pkg.c_default_processing_method like 'plsql://%'
   then
     msg_aq_pkg.register
-    ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+    ( p_queue_name => l_request_queue_name
     , p_subscriber => null
     , p_plsql_callback => replace(msg_constants_pkg.c_default_processing_method, 'plsql://')
     );
   else
     msg_aq_pkg.unregister
-    ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+    ( p_queue_name => l_request_queue_name
     , p_subscriber => null
     , p_plsql_callback => '%'
     );
   end if;
+
+  -- empty the response queue by registering a notification procedure
+  msg_aq_pkg.register
+  ( p_queue_name => l_response_queue_name
+  , p_subscriber => null
+  , p_plsql_callback => replace(msg_constants_pkg.c_default_processing_method, 'plsql://')
+  );
+
+  -- give it some time
+  dbms_session.sleep(5);
+
+  -- and back to nothing
+  msg_aq_pkg.unregister
+  ( p_queue_name => l_response_queue_name
+  , p_subscriber => null
+  , p_plsql_callback => '%'
+  );
+
   commit;
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
