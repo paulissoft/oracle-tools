@@ -597,6 +597,11 @@ $end
     l_rest_web_service_request.process; -- invoke indirectly
 
     commit;
+
+    if mod(i_idx, 10) = 0
+    then
+      dbms_session.sleep(1);
+    end if;
   end loop;
 
   -- restart queue for enqueue and dequeue
@@ -652,6 +657,11 @@ $end
     else
       ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);  
       ut.expect(l_web_service_response.sql_error_message, 'sql error message').to_equal('ORA-29273: HTTP request failed');  
+    end if;
+
+    if mod(i_idx, 10) = 0
+    then
+      dbms_session.sleep(1);
     end if;
   end loop;
 
@@ -894,7 +904,7 @@ $end
   , p_subscriber => null
   , p_plsql_callback => '%'
   );
-  ut_rest_web_service_get_bulk(10);
+  ut_rest_web_service_get_bulk(100, true);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
