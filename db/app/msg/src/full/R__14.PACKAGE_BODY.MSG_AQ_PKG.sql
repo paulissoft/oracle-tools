@@ -778,7 +778,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_correlation
   , dbug.cast_to_varchar2(p_force)
   );
+$if msg_pkg.c_debugging >= 1 $then
   p_msg.print();
+$end  
 $end
 
   if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) -- option 1 from the spec
@@ -1049,7 +1051,9 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
+$if msg_pkg.c_debugging >= 1 $then
   p_msg.print();
+$end  
   dbug.leave;
 exception
   when others

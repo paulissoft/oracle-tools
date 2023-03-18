@@ -538,8 +538,8 @@ $if msg_aq_pkg.c_testing $then
 -- PRIVATE
 
 procedure ut_rest_web_service_get_bulk
-( p_count in positiven default 1
-, p_stop_dequeue_before_enqueue in boolean default false
+( p_count in positiven
+, p_stop_dequeue_before_enqueue in boolean
 )
 is
   pragma autonomous_transaction;
@@ -634,7 +634,9 @@ $end
     , p_msg => l_msg
     );
 
+$if msg_pkg.c_debugging >= 1 $then
     l_msg.print();
+$end    
   
     commit;
 
@@ -678,7 +680,7 @@ end ut_rest_web_service_get_bulk;
 procedure ut_rest_web_service_get
 is
 begin
-  ut_rest_web_service_get_bulk;
+  ut_rest_web_service_get_bulk(1, true);
 end ut_rest_web_service_get;
 
 -- PUBLIC
@@ -857,7 +859,9 @@ $end
   , p_msg => l_msg
   );
 
+$if msg_pkg.c_debugging >= 1 $then
   l_msg.print();
+$end  
 
   commit;
 
@@ -904,7 +908,7 @@ $end
   , p_subscriber => null
   , p_plsql_callback => '%'
   );
-  ut_rest_web_service_get_bulk(100, true);
+  ut_rest_web_service_get_bulk(100, false);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
