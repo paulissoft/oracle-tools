@@ -504,7 +504,7 @@ end create_program;
 procedure get_next_end_date
 ( p_job_name_launcher in job_name_t
 , p_state out nocopy user_scheduler_jobs.state%type
-, p_end_date out nocopy user_scheduler_jobs.next_run_date%type
+, p_end_date out nocopy user_scheduler_jobs.end_date%type
 )
 is
 begin
@@ -517,6 +517,103 @@ begin
   where   j.job_name = p_job_name_launcher;
 end get_next_end_date;  
 
+function get_end_date
+( p_job_name in job_name_t
+, p_processing_package in varchar2
+, p_program_name in varchar2
+)
+return user_scheduler_jobs.end_date%type
+is
+  l_state user_scheduler_jobs.state%type := null;
+  l_end_date user_scheduler_jobs.end_date%type := null;
+begin
+  if p_program_name in ( c_program_supervisor, c_program_worker )
+  then
+    -- launcher must exist
+    PRAGMA INLINE (get_next_end_date, 'YES');
+    get_next_end_date
+    ( p_job_name_launcher => join_job_name(p_processing_package => p_processing_package, p_program_name => c_program_launcher)
+    , p_state => l_state
+    , p_end_date => l_end_date
+    );
+  end if;
+  
+  return l_end_date;
+end get_end_date;  
+
+function get_end_date
+( p_job_name in job_name_t
+)
+return user_scheduler_jobs.end_date%type
+is
+  l_processing_package all_objects.object_name%type;
+  l_program_name user_scheduler_programs.program_name%type;
+  l_worker_nr positive;
+  l_end_date user_scheduler_jobs.end_date%type := null;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_END_DATE');
+  dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
+$end
+
+  PRAGMA INLINE (split_job_name, 'YES');
+  split_job_name
+  ( p_job_name => p_job_name
+  , p_processing_package => l_processing_package
+  , p_program_name => l_program_name
+  , p_worker_nr => l_worker_nr
+  );
+
+  PRAGMA INLINE (get_end_date, 'YES');
+  l_end_date :=
+    get_end_date
+    ( p_job_name => p_job_name
+    , p_processing_package => l_processing_package
+    , p_program_name => l_program_name
+    );
+    
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'return: %s', to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss"));
+  dbug.leave;
+$end
+
+  return l_end_date;
+exception
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    raise;
+end get_end_date;
+
+procedure set_end_date
+( p_job_name in job_name_t
+, p_end_date in user_scheduler_jobs.end_date%type
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SET_END_DATE');
+  dbug.print(dbug."input", 'p_job_name: %s; p_end_date', p_job_name, to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss"));
+$end
+
+  dbms_scheduler.set_attribute
+  ( name => p_job_name
+  , attribute => 'end_date'
+  , value => p_end_date
+  );
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end set_end_date;
+
 procedure create_job
 ( p_job_name in job_name_t
 )
@@ -524,8 +621,7 @@ is
   l_processing_package all_objects.object_name%type;
   l_program_name user_scheduler_programs.program_name%type;
   l_worker_nr positive;
-  l_state user_scheduler_jobs.state%type := null;
-  l_end_date user_scheduler_jobs.next_run_date%type := null;
+  l_end_date user_scheduler_jobs.end_date%type := null;
   l_job_names sys.odcivarchar2list;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -537,6 +633,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
+  PRAGMA INLINE (split_job_name, 'YES');
   split_job_name
   ( p_job_name => p_job_name
   , p_processing_package => l_processing_package
@@ -560,12 +657,13 @@ $end
 
   if l_program_name in ( c_program_supervisor, c_program_worker )
   then
-    -- launcher must exist
-    get_next_end_date
-    ( p_job_name_launcher => join_job_name(p_processing_package => l_processing_package, p_program_name => c_program_launcher)
-    , p_state => l_state
-    , p_end_date => l_end_date
-    );
+    PRAGMA INLINE (get_end_date, 'YES');
+    l_end_date :=
+      get_end_date
+      ( p_job_name => p_job_name
+      , p_processing_package => l_processing_package
+      , p_program_name => l_program_name
+      );
   end if;
 
   PRAGMA INLINE (does_job_exist, 'YES');
@@ -573,15 +671,8 @@ $end
   then  
     dbms_scheduler.disable(p_job_name);
 
-    if l_end_date is not null
-    then
-      dbms_scheduler.set_attribute
-      ( name => p_job_name
-      , attribute => 'end_date'
-      , value => l_end_date
-      );
-    end if;
-
+    PRAGMA INLINE (set_end_date, 'YES');
+    set_end_date(p_job_name, l_end_date);
   else
     PRAGMA INLINE (does_program_exist, 'YES');
     if not(does_program_exist(l_program_name))
@@ -723,23 +814,20 @@ procedure enable_job
 ( p_job_name in job_name_t
 )
 is
-  l_processing_package all_objects.object_name%type;
-  l_program_name user_scheduler_programs.program_name%type;
-  l_worker_nr positive;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENABLE_JOB');
   dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
 $end
 
-  split_job_name
-  ( p_job_name => p_job_name
-  , p_processing_package => l_processing_package
-  , p_program_name => l_program_name
-  , p_worker_nr => l_worker_nr
-  );
-
-  dbms_scheduler.enable(p_job_name);
+  begin
+    dbms_scheduler.enable(p_job_name);
+  exception
+    when e_invalid_end_date
+    then
+      set_end_date(p_job_name, get_end_date(p_job_name));
+      dbms_scheduler.enable(p_job_name);
+  end;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
