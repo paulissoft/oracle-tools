@@ -96,6 +96,8 @@ Submits do() as a non-repeating job, starting immediately.
 
 procedure submit_launcher_processing
 ( p_processing_package in varchar2
+, p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group
+, p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact
 );
 /**
 Submits the launcher, see launcher_processing() below, that will submit the supervisor and its workers and then finish.
@@ -103,8 +105,8 @@ Submits the launcher, see launcher_processing() below, that will submit the supe
 
 procedure launcher_processing
 ( p_processing_package in varchar2
-, p_nr_workers_each_group in positive
-, p_nr_workers_exact in positive
+, p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group
+, p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact
 );
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test
