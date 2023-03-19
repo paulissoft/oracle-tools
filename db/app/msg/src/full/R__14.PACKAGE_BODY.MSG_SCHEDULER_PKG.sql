@@ -1092,10 +1092,16 @@ $end
   exception
     when oracle_tools.api_heartbeat_pkg.e_shutdown_request_forwarded
     then
+      -- log the shutdown anyhow (although it is okay) otherwise the error gets lost
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
       cleanup;
       -- no re-raise since it is a normal way to stop working
+      
     when others
     then
+      -- error gets logged below
       cleanup;
       raise;
   end processing_as_supervisor;
@@ -1147,15 +1153,12 @@ $end
 
     when oracle_tools.api_heartbeat_pkg.e_shutdown_request_received
     then
-      null;
-      -- no re-raise since it is a normal way to stop working
-      
-    when others
-    then
+      -- log the shutdown anyhow (although it is okay) otherwise the error gets lost
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.on_error;
 $end
-      raise;
+      null;
+      -- no re-raise since it is a normal way to stop working
   end processing_as_worker;
   
   procedure cleanup
