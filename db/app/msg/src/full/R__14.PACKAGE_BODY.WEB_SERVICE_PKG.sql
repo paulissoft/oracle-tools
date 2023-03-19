@@ -751,21 +751,10 @@ $end
     );
   end if;
 
-  -- empty the response queue by registering a notification procedure
-  msg_aq_pkg.register
+  -- empty the response queue
+  msg_aq_pkg.empty_queue
   ( p_queue_name => l_response_queue_name
-  , p_subscriber => null
-  , p_plsql_callback => replace(msg_constants_pkg.c_default_processing_method, 'plsql://')
-  );
-
-  -- give it some time
-  dbms_session.sleep(5);
-
-  -- and back to nothing
-  msg_aq_pkg.unregister
-  ( p_queue_name => l_response_queue_name
-  , p_subscriber => null
-  , p_plsql_callback => '%'
+  , p_dequeue_and_process => false
   );
 
   commit;

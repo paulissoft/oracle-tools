@@ -110,6 +110,16 @@ procedure start_queue
 );
 /** Start the queue with enqueue and dequeue enabled. **/
 
+procedure empty_queue
+( p_queue_name in varchar2 -- Must be a simple SQL name
+, p_dequeue_and_process in boolean default false
+);
+/**
+Empty the queue in non-blocking mode with dequeue() or dequeue_and_process(), see below.
+Every dequeue will be committed and this call is an autonomous transaction.
+A dequeue timeout will be ignored.
+**/
+
 procedure stop_queue
 ( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_wait in boolean default true

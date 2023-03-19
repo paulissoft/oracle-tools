@@ -426,6 +426,81 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end start_queue;
 
+procedure empty_queue
+( p_queue_name in varchar2
+, p_dequeue_and_process in boolean
+)
+is
+  pragma autonomous_transaction;
+  
+  l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
+  l_msgid raw(16);
+  l_message_properties dbms_aq.message_properties_t;
+  l_msg msg_typ;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.EMPTY_QUEUE');
+  dbug.print(dbug."input", 'p_queue_name: %s', p_queue_name);
+$end
+
+  -- the loop should end by a dequeue timeout
+  loop
+    if p_dequeue_and_process
+    then
+      dequeue_and_process
+      ( p_queue_name => l_queue_name
+      , p_delivery_mode => null
+      , p_visibility => null
+      , p_subscriber => null
+      , p_dequeue_mode => dbms_aq.remove
+      , p_navigation => dbms_aq.next_message
+      , p_wait => 0
+      , p_correlation => null
+      , p_deq_condition => null
+      , p_force => false
+      , p_commit => true
+      );
+    else
+      -- reset in/out parameter
+      l_msgid := null;
+      dequeue
+      ( p_queue_name => l_queue_name
+      , p_delivery_mode => null
+      , p_visibility => null
+      , p_subscriber => null
+      , p_dequeue_mode => dbms_aq.remove
+      , p_navigation => dbms_aq.next_message
+      , p_wait => 0
+      , p_correlation => null
+      , p_deq_condition => null
+      , p_force => false
+      , p_msgid => l_msgid
+      , p_message_properties => l_message_properties
+      , p_msg => l_msg
+      );
+      commit;
+    end if;
+  end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+exception
+  when e_dequeue_timeout
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
+    null; -- normal behaviour
+    
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    raise;
+end empty_queue;
+
 procedure stop_queue
 ( p_queue_name in varchar2
 , p_wait in boolean

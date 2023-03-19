@@ -1090,6 +1090,10 @@ $end
 
     cleanup;
   exception
+    when oracle_tools.api_heartbeat_pkg.e_shutdown_request_forwarded
+    then
+      cleanup;
+      -- no re-raise since it is a normal way to stop working
     when others
     then
       cleanup;
@@ -1098,22 +1102,22 @@ $end
 
   procedure processing_as_worker
   is
-    l_statement varchar2(32767 byte);
-    -- ORA-06550: line 1, column 18:
-    -- PLS-00302: component 'PROCESING' must be declared
-    e_compilation_error exception;
-    pragma exception_init(e_compilation_error, -6550);
-  begin
-    l_statement := utl_lms.format_message
-                   ( q'[
+    l_statement constant varchar2(32767 byte) :=
+      utl_lms.format_message
+      ( q'[
 call %s.processing( p_controlling_package => :1
                   , p_groups_to_process_tab => :2
                   , p_worker_nr => :3
                   , p_end_date => :4
                   , p_silence_threshold => :5
                   )]'
-                   , l_processing_package -- already checked by determine_processing_package
-                   );
+      , l_processing_package -- already checked by determine_processing_package
+      );    
+    -- ORA-06550: line 1, column 18:
+    -- PLS-00302: component 'PROCESING' must be declared
+    e_compilation_error exception;
+    pragma exception_init(e_compilation_error, -6550);
+  begin
     <<processing_loop>>
     loop
       begin
@@ -1141,6 +1145,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end                  
       raise;
 
+    when oracle_tools.api_heartbeat_pkg.e_shutdown_request_received
+    then
+      null;
+      -- no re-raise since it is a normal way to stop working
+      
     when others
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
