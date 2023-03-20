@@ -537,20 +537,56 @@ end get_job_info;
 
 procedure get_next_end_date
 ( p_job_name_launcher in job_name_t
+, p_is_launcher_session in boolean
 , p_state out nocopy user_scheduler_jobs.state%type
 , p_end_date out nocopy user_scheduler_jobs.end_date%type
 )
 is
 begin
-  /* the job name launcher must have been scheduled, so we determine the time till the next run (minus some delay) */
-  select  j.state
-  ,       j.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND') as end_date
-  into    p_state
-  ,       p_end_date
-  from    user_scheduler_jobs j
-  where   j.job_name = p_job_name_launcher
-  and     j.enabled = 'TRUE' -- otherwise we may get an old date
-  ;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_NEXT_END_DATE');
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name_launcher: %s; p_is_launcher_session: %s'
+  , p_job_name_launcher
+  , dbug.cast_to_varchar2(p_is_launcher_session)
+  );
+$end
+
+  if p_is_launcher_session
+  then
+    /* the job name launcher must have been scheduled, so we determine the time till the next run (minus some delay) */
+    select  j.state
+    ,       j.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND') +
+            -- the next run date is still the old one so adjust it with the time elapsed since the last start date
+            ( j.next_run_date - j.last_start_date ) as end_date
+    into    p_state
+    ,       p_end_date
+    from    user_scheduler_jobs j
+    where   j.job_name = p_job_name_launcher
+    and     j.enabled = 'TRUE' -- otherwise we may get an old date
+    ;
+  else
+    /* the job name launcher must have been scheduled, so we determine the time till the next run (minus some delay) */
+    select  j.state
+    ,       j.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND') as end_date
+    into    p_state
+    ,       p_end_date
+    from    user_scheduler_jobs j
+    where   j.job_name = p_job_name_launcher
+    and     j.enabled = 'TRUE' -- otherwise we may get an old date
+    ;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."output", 'p_state: %s; p_end_date: %s', p_state, to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss"));
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end get_next_end_date;  
 
 $if msg_scheduler_pkg.c_use_job_end_date $then
@@ -930,9 +966,18 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if p_end_date <= systimestamp()
+  if p_end_date > systimestamp()
   then
-    raise e_invalid_end_date;
+    null;
+  else
+    raise_application_error
+    ( c_end_date_not_in_the_future
+    , utl_lms.format_message
+      ( c_end_date_not_in_the_future_msg
+      , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")
+      , to_char(systimestamp(), "yyyy-mm-dd hh24:mi:ss")
+      )
+    );
   end if;
 
   PRAGMA INLINE (is_job_running, 'YES');
@@ -1660,13 +1705,30 @@ $end
     end if;
 
     -- the job exists and is enabled or even running so the next call will return the next end date
-    get_next_end_date(l_job_name_launcher, l_state, l_end_date);
+    get_next_end_date(l_job_name_launcher, l_session_job_name is not null, l_state, l_end_date);
 
-    if l_end_date <= systimestamp()
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'system date: %s', to_char(systimestamp, "yyyy-mm-dd hh24:mi:ss"));
+$end
+
+    if l_end_date > systimestamp()
     then
-      raise e_invalid_end_date;
-    elsif l_state not in ('SCHEDULED', 'RUNNING')
+      null;
+    else
+      raise_application_error
+      ( c_end_date_not_in_the_future
+      , utl_lms.format_message
+        ( c_end_date_not_in_the_future_msg
+        , to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss")
+        , to_char(systimestamp(), "yyyy-mm-dd hh24:mi:ss")
+        )
+      );
+    end if;
+
+    if l_state in ('SCHEDULED', 'RUNNING')
     then
+      null;
+    else
       raise_application_error
       ( c_unexpected_job_state
       , utl_lms.format_message
@@ -2026,9 +2088,18 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if l_end_date <= systimestamp()
+  if l_end_date > systimestamp()
   then
-    raise e_invalid_end_date;
+    null;
+  else
+    raise_application_error
+    ( c_end_date_not_in_the_future
+    , utl_lms.format_message
+      ( c_end_date_not_in_the_future_msg
+      , to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss")
+      , to_char(systimestamp(), "yyyy-mm-dd hh24:mi:ss")
+      )
+    );
   end if;
 
   if l_job_name is null
