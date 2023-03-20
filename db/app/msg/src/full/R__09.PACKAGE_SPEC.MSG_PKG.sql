@@ -3,7 +3,7 @@ CREATE OR REPLACE PACKAGE "MSG_PKG" AUTHID DEFINER AS
 -- Do we want to print enqueued / dequeued messages? >= 1 is true
 c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end;
 
-type t_boolean_lookup_tab is table of boolean index by varchar2(4000 char);
+type boolean_lookup_tab_t is table of boolean index by varchar2(4000 char);
 
 type msg_tab_t is table of msg_typ;
 
