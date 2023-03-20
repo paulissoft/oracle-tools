@@ -1508,7 +1508,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
         );
 $end
 
-        l_queue_name_tab(l_queue_name_idx) := null;
+        -- Only the last round we check that all queues have been used
+        if agent_list_by_group_idx = l_queue_name_tab.count - 1
+        then
+          l_queue_name_tab(l_queue_name_idx) := null;
+        end if;
       end loop agent_loop;
       l_agent_list_by_group(agent_list_by_group_idx) := l_agent_list;
       l_agent_list.delete;
