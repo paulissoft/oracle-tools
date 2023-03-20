@@ -548,7 +548,9 @@ begin
   into    p_state
   ,       p_end_date
   from    user_scheduler_jobs j
-  where   j.job_name = p_job_name_launcher;
+  where   j.job_name = p_job_name_launcher
+  and     j.enabled = 'TRUE' -- otherwise we may get an old date
+  ;
 end get_next_end_date;  
 
 $if msg_scheduler_pkg.c_use_job_end_date $then
@@ -1302,16 +1304,7 @@ $end
         if p_program_name = c_program_launcher
         then
           begin
-            change_job(p_job_name => l_job_name, p_enabled => true);
-          exception
-            when others
-            then
-              submit_launcher_processing(p_processing_package => l_processing_package);
-          end;
-
-          -- But since the next run may take some time, we must schedule the jobs till then.
-          -- Job is running or scheduled, but we may have to run workers between now and the next run date
-          begin
+            -- this will create the job too if necessary
             launcher_processing(p_processing_package => l_processing_package);
           exception
             when e_no_groups_to_process
@@ -1644,6 +1637,19 @@ $end
         ( p_processing_package => l_processing_package
         , p_program_name => c_program_launcher
         );
+
+      -- This session is not a running job: maybe the job does not exist yet so create/enable it to get a next_run_date
+      if does_job_exist(l_job_name_launcher)
+      then
+        change_job(p_job_name => l_job_name_launcher, p_enabled => true);
+      else
+        submit_launcher_processing
+        ( p_processing_package => p_processing_package
+        , p_nr_workers_each_group => p_nr_workers_each_group
+        , p_nr_workers_exact => p_nr_workers_exact
+        );
+      end if;
+
     elsif l_job_name_launcher <>
           join_job_name
           ( p_processing_package => l_processing_package
@@ -1653,12 +1659,14 @@ $end
       raise value_error;
     end if;
 
+    -- the job exists and is enabled or even running so the next call will return the next end date
     get_next_end_date(l_job_name_launcher, l_state, l_end_date);
-    
-    if l_state in ('SCHEDULED', 'RUNNING', 'DISABLED')
+
+    if l_end_date <= systimestamp()
     then
-      null; -- OK
-    else
+      raise e_invalid_end_date;
+    elsif l_state not in ('SCHEDULED', 'RUNNING')
+    then
       raise_application_error
       ( c_unexpected_job_state
       , utl_lms.format_message
