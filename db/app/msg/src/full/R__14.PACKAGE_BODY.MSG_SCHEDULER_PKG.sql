@@ -9,7 +9,7 @@ subtype job_info_rec_t is user_scheduler_jobs%rowtype;
 -- CONSTANTs
 
 "yyyymmddhh24miss" constant varchar2(16) := 'yyyymmddhh24miss';
-"yyyy-mm-dd hh24:mi:ss" constant varchar2(21) := 'yyyy-mm-dd hh24:mi:ss';
+"yyyy-mm-dd hh24:mi:ss" constant varchar2(21) := oracle_tools.api_time_pkg.c_timestamp_format; -- 'yyyy-mm-dd hh24:mi:ss';
 
 -- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
 c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
@@ -525,57 +525,63 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
   dbug.print
   ( dbug."info"
-  , 'get_job_info (2); enabled: %s; state: %s; next run date: %s; run count: %s; failure count: %s'
+  , 'get_job_info (2); enabled: %s; state: %s; last start date: %s; next run date: %s; run count: %s'
   , p_job_info_rec.enabled
   , p_job_info_rec.state
+  , to_char(p_job_info_rec.last_start_date, "yyyy-mm-dd hh24:mi:ss")
   , to_char(p_job_info_rec.next_run_date, "yyyy-mm-dd hh24:mi:ss")
   , p_job_info_rec.run_count
-  , p_job_info_rec.failure_count
   );
 $end
 end get_job_info;  
 
 procedure get_next_end_date
 ( p_job_name_launcher in job_name_t
-, p_is_launcher_session in boolean
 , p_state out nocopy user_scheduler_jobs.state%type
 , p_end_date out nocopy user_scheduler_jobs.end_date%type
 )
 is
+  l_job_info_rec job_info_rec_t;
+  l_end_date user_scheduler_jobs.end_date%type;
+  l_now constant user_scheduler_jobs.end_date%type := current_timestamp();
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_NEXT_END_DATE');
-  dbug.print
-  ( dbug."input"
-  , 'p_job_name_launcher: %s; p_is_launcher_session: %s'
-  , p_job_name_launcher
-  , dbug.cast_to_varchar2(p_is_launcher_session)
-  );
+  dbug.print(dbug."input", 'p_job_name_launcher: %s', p_job_name_launcher);
 $end
 
-  if p_is_launcher_session
+  get_job_info
+  ( p_job_name => p_job_name_launcher 
+  , p_job_info_rec => l_job_info_rec
+  );
+  if l_job_info_rec.enabled = 'TRUE'
   then
-    /* the job name launcher must have been scheduled, so we determine the time till the next run (minus some delay) */
-    select  j.state
-    ,       j.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND') +
-            -- the next run date is still the old one so adjust it with the time elapsed since the last start date
-            ( j.next_run_date - j.last_start_date ) as end_date
-    into    p_state
-    ,       p_end_date
-    from    user_scheduler_jobs j
-    where   j.job_name = p_job_name_launcher
-    and     j.enabled = 'TRUE' -- otherwise we may get an old date
-    ;
-  else
-    /* the job name launcher must have been scheduled, so we determine the time till the next run (minus some delay) */
-    select  j.state
-    ,       j.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND') as end_date
-    into    p_state
-    ,       p_end_date
-    from    user_scheduler_jobs j
-    where   j.job_name = p_job_name_launcher
-    and     j.enabled = 'TRUE' -- otherwise we may get an old date
-    ;
+    p_state := l_job_info_rec.state;
+    p_end_date := l_job_info_rec.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND');
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'proposed end date: %s; now: %s'
+    , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")
+    , to_char(l_now, "yyyy-mm-dd hh24:mi:ss")
+    );
+$end
+
+    -- Add interval between next run date and last start date, i.e. the interval between runs.
+    while p_end_date <= l_now
+    loop
+      l_end_date := p_end_date + ( l_job_info_rec.next_run_date - l_job_info_rec.last_start_date );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'new proposed end date: %s', to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss"));
+$end
+
+      -- Make sure you do not get an endless loop.
+      exit when l_end_date is null or l_end_date <= p_end_date;
+
+      p_end_date := l_end_date;
+    end loop;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1705,7 +1711,7 @@ $end
     end if;
 
     -- the job exists and is enabled or even running so the next call will return the next end date
-    get_next_end_date(l_job_name_launcher, l_session_job_name is not null, l_state, l_end_date);
+    get_next_end_date(l_job_name_launcher, l_state, l_end_date);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'system date: %s', to_char(systimestamp, "yyyy-mm-dd hh24:mi:ss"));
@@ -1784,7 +1790,7 @@ $end
           , p_end_date => l_end_date
           );
         exception
-          when e_procobj_already_exists
+          when e_procobj_already_exists or e_job_already_running
           then
 $if oracle_tools.cfg_pkg.c_debugging $then
             dbug.on_error;
