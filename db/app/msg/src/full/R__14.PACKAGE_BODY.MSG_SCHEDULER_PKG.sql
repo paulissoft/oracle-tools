@@ -613,107 +613,6 @@ exception
 $end
 end get_next_end_date;  
 
-$if msg_scheduler_pkg.c_use_job_end_date $then
-
-function get_end_date
-( p_job_name in job_name_t
-, p_processing_package in varchar2
-, p_program_name in varchar2
-)
-return user_scheduler_jobs.end_date%type
-is
-  l_state user_scheduler_jobs.state%type := null;
-  l_end_date user_scheduler_jobs.end_date%type := null;
-begin
-  if p_program_name in ( c_program_supervisor, c_program_worker )
-  then
-    -- launcher must exist
-    PRAGMA INLINE (get_next_end_date, 'YES');
-    get_next_end_date
-    ( p_job_name_launcher => join_job_name(p_processing_package => p_processing_package, p_program_name => c_program_launcher)
-    , p_state => l_state
-    , p_end_date => l_end_date
-    );
-  end if;
-  
-  return l_end_date;
-end get_end_date;  
-
-function get_end_date
-( p_job_name in job_name_t
-)
-return user_scheduler_jobs.end_date%type
-is
-  l_processing_package all_objects.object_name%type;
-  l_program_name user_scheduler_programs.program_name%type;
-  l_worker_nr positive;
-  l_end_date user_scheduler_jobs.end_date%type := null;
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_END_DATE');
-  dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
-$end
-
-  PRAGMA INLINE (split_job_name, 'YES');
-  split_job_name
-  ( p_job_name => p_job_name
-  , p_processing_package => l_processing_package
-  , p_program_name => l_program_name
-  , p_worker_nr => l_worker_nr
-  );
-
-  PRAGMA INLINE (get_end_date, 'YES');
-  l_end_date :=
-    get_end_date
-    ( p_job_name => p_job_name
-    , p_processing_package => l_processing_package
-    , p_program_name => l_program_name
-    );
-    
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."output", 'return: %s', to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss"));
-  dbug.leave;
-$end
-
-  return l_end_date;
-exception
-  when others
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave_on_error;
-$end
-    raise;
-end get_end_date;
-
-procedure set_end_date
-( p_job_name in job_name_t
-, p_end_date in user_scheduler_jobs.end_date%type
-)
-is
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SET_END_DATE');
-  dbug.print(dbug."input", 'p_job_name: %s; p_end_date', p_job_name, to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss"));
-$end
-
-  dbms_scheduler.set_attribute
-  ( name => p_job_name
-  , attribute => 'end_date'
-  , value => p_end_date
-  );
-  
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
-end set_end_date;
-
-$end -- $if msg_scheduler_pkg.c_use_job_end_date $then
-
 procedure change_job
 ( p_job_name in job_name_t
 , p_enabled in boolean
@@ -796,27 +695,10 @@ $end
     );
   end if;
 
-$if msg_scheduler_pkg.c_use_job_end_date $then
-  if l_program_name in ( c_program_supervisor, c_program_worker )
-  then
-    PRAGMA INLINE (get_end_date, 'YES');
-    l_end_date :=
-      get_end_date
-      ( p_job_name => p_job_name
-      , p_processing_package => l_processing_package
-      , p_program_name => l_program_name
-      );
-  end if;
-$end
-
   PRAGMA INLINE (does_job_exist, 'YES');
   if does_job_exist(p_job_name)
   then  
     change_job(p_job_name => p_job_name, p_enabled => false);
-$if msg_scheduler_pkg.c_use_job_end_date $then
-    PRAGMA INLINE (set_end_date, 'YES');
-    set_end_date(p_job_name, l_end_date);
-$end    
   else
     PRAGMA INLINE (does_program_exist, 'YES');
     if not(does_program_exist(l_program_name))
@@ -886,78 +768,6 @@ exception
 $end
 end create_job;
 
-$if msg_scheduler_pkg.c_use_job_end_date $then
-
-procedure get_attributes
-( p_job_name in job_name_t
-, p_end_date out nocopy user_scheduler_jobs.end_date%type
-, p_schedule_name out nocopy user_scheduler_jobs.schedule_name%type
-, p_start_date out nocopy user_scheduler_jobs.start_date%type
-, p_repeat_interval out nocopy user_scheduler_jobs.repeat_interval%type
-)
-is
-begin
-  for i_idx in c_attribute_tab.first .. c_attribute_tab.last
-  loop
-    case c_attribute_tab(i_idx)
-      when 'end_date'
-      then dbms_scheduler.get_attribute(p_job_name, c_attribute_tab(i_idx), p_end_date);
-      when 'schedule_name'
-      then dbms_scheduler.get_attribute(p_job_name, c_attribute_tab(i_idx), p_schedule_name);
-      when 'start_date'
-      then dbms_scheduler.get_attribute(p_job_name, c_attribute_tab(i_idx), p_start_date);
-      when 'repeat_interval'
-      then dbms_scheduler.get_attribute(p_job_name, c_attribute_tab(i_idx), p_repeat_interval);
-    end case;
-  end loop;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , 'start date: %s; end date: %s; repeat interval: %s; schedule name: %s'
-  , p_start_date
-  , p_end_date
-  , p_repeat_interval
-  , p_schedule_name
-  );
-$end
-exception
-  when others
-  then null;
-end get_attributes;
-
-procedure set_attributes
-( p_job_name in job_name_t
-, p_end_date in user_scheduler_jobs.end_date%type
-, p_schedule_name in user_scheduler_jobs.schedule_name%type
-, p_start_date in user_scheduler_jobs.start_date%type
-, p_repeat_interval in user_scheduler_jobs.repeat_interval%type
-)
-is
-begin
-  /*
-  -- attribute schedule_name:
-  -- The name of a schedule, window, or group of type WINDOW to use as the
-  -- schedule for this job. If this is set, end_date, start_date and
-  -- repeat_interval should all be NULL.
-  */
-  for i_idx in c_attribute_tab.first .. c_attribute_tab.last
-  loop
-    case c_attribute_tab(i_idx)
-      when 'end_date'
-      then dbms_scheduler.set_attribute(p_job_name, c_attribute_tab(i_idx), p_end_date);
-      when 'schedule_name'
-      then dbms_scheduler.set_attribute(p_job_name, c_attribute_tab(i_idx), p_schedule_name);
-      when 'start_date'
-      then dbms_scheduler.set_attribute(p_job_name, c_attribute_tab(i_idx), p_start_date);
-      when 'repeat_interval'
-      then dbms_scheduler.set_attribute(p_job_name, c_attribute_tab(i_idx), p_repeat_interval);
-    end case;
-  end loop;
-end set_attributes;
-
-$end -- $if msg_scheduler_pkg.c_use_job_end_date $then
-
 procedure submit_processing
 ( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2
@@ -1004,6 +814,7 @@ $end
     );
   end if;
 
+/*
   PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name)
   then
@@ -1015,10 +826,11 @@ $end
       )
     );
   end if;
+*/
 
   create_job(p_job_name => l_job_name);
     
-  -- set the actual arguments
+  -- Set the actual arguments for the next run.  
   for r in
   ( select  a.argument_name
     from    user_scheduler_jobs j
@@ -1050,29 +862,7 @@ $end
   end loop;
 
   -- GO
-  begin
-    change_job(p_job_name => l_job_name, p_enabled => true);
-$if msg_scheduler_pkg.c_use_job_end_date $then
-  exception
-    when e_invalid_schedule
-    then
-      get_attributes
-      ( p_job_name => l_job_name
-      , p_end_date => l_end_date
-      , p_schedule_name => l_schedule_name
-      , p_start_date => l_start_date
-      , p_repeat_interval => l_repeat_interval
-      );
-      set_attributes
-      ( p_job_name => l_job_name
-      , p_end_date => p_end_date -- override with the end date
-      , p_schedule_name => l_schedule_name
-      , p_start_date => l_start_date
-      , p_repeat_interval => l_repeat_interval
-      );
-      change_job(p_job_name => l_job_name, p_enabled => true);
-$end      
-  end;
+  change_job(p_job_name => l_job_name, p_enabled => true);
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1543,7 +1333,7 @@ $end
 
   create_job(l_job_name_do);
 
-  -- set arguments
+  -- Set the actual arguments for the next run.  
   for r in
   ( select  a.argument_name
     from    user_scheduler_jobs j
@@ -1608,7 +1398,7 @@ $end
 
   create_job(p_job_name => l_job_name_launcher);
 
-  -- set arguments
+  -- Set the actual arguments for the next run.  
   for r in
   ( select  a.argument_name
     from    user_scheduler_jobs j
@@ -1808,13 +1598,13 @@ $end
           , p_end_date => l_end_date
           );
         exception
-          when e_procobj_already_exists or e_job_already_running
+          when e_procobj_already_exists
           then
 $if oracle_tools.cfg_pkg.c_debugging $then
             dbug.on_error;
             show_jobs;
 $end
-            null;            
+            null;
         end;
       end loop;
     end if;
