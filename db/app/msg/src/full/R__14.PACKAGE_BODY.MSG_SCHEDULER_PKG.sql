@@ -814,7 +814,6 @@ $end
     );
   end if;
 
-/*
   PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name)
   then
@@ -826,7 +825,6 @@ $end
       )
     );
   end if;
-*/
 
   create_job(p_job_name => l_job_name);
     
@@ -1447,7 +1445,7 @@ is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name_launcher job_name_t := null;
   l_end_date user_scheduler_jobs.end_date%type := null;
-  l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
+  l_job_name_tab dbms_sql.varchar2s;
   l_groups_to_process_tab sys.odcivarchar2list;
   l_groups_to_process_list varchar2(4000 char);
   l_start constant oracle_tools.api_time_pkg.time_t := oracle_tools.api_time_pkg.get_time;
@@ -1569,44 +1567,61 @@ $end
   procedure define_jobs
   is
   begin
-    -- Create the workers
-    for i_worker in 1 .. get_nr_workers
+    -- Create the supervisor and workers
+    for i_worker_nr in 0 .. get_nr_workers
                          ( p_nr_groups => l_groups_to_process_tab.count
                          , p_nr_workers_each_group => p_nr_workers_each_group
                          , p_nr_workers_exact => p_nr_workers_exact
                          )
     loop
-      l_job_name_tab.extend(1);
-      l_job_name_tab(l_job_name_tab.last) := join_job_name(p_processing_package, c_program_worker, i_worker);
+      l_job_name_tab(i_worker_nr) :=
+        join_job_name
+        ( p_processing_package
+        , c_program_worker
+        , case when i_worker_nr = 0 then null else i_worker_nr end
+        , false
+        );
     end loop;
   end define_jobs;
 
   procedure start_jobs
   is
   begin    
-    if l_job_name_tab.count > 0 -- excluding supervisor
+    if l_job_name_tab.count > 1 -- exclude supervisor
     then
       -- submit also the supervisor (index 0 but must have p_worker_nr null)
-      for i_worker_nr in 0 .. l_job_name_tab.count
+      <<worker_loop>>
+      for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
       loop
-        begin
-          submit_processing
-          ( p_processing_package => p_processing_package
-          , p_groups_to_process_list => l_groups_to_process_list
-          , p_nr_workers => l_job_name_tab.count
-          , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
-          , p_end_date => l_end_date
-          );
-        exception
-          when e_procobj_already_exists
-          then
+        <<try_loop>>
+        for i_try in 1..2
+        loop
+          begin
+            submit_processing
+            ( p_processing_package => p_processing_package
+            , p_groups_to_process_list => l_groups_to_process_list
+            , p_nr_workers => l_job_name_tab.count
+            , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
+            , p_end_date => l_end_date
+            );
+            exit try_loop;
+          exception
+            when e_job_already_running
+            then
 $if oracle_tools.cfg_pkg.c_debugging $then
-            dbug.on_error;
-            show_jobs;
+              dbug.on_error;
+              show_jobs;
 $end
-            null;
-        end;
-      end loop;
+              if i_try = 2
+              then
+                raise;
+              end if;
+
+              -- stop the job so we can change its job arguments
+              stop_job(l_job_name_tab(i_worker_nr));
+          end;
+        end loop try_loop;
+      end loop worker_loop;
     end if;
   end start_jobs;
 
