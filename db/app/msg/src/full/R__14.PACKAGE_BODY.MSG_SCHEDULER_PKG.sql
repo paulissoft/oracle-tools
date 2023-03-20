@@ -9,7 +9,7 @@ subtype job_info_rec_t is user_scheduler_jobs%rowtype;
 -- CONSTANTs
 
 "yyyymmddhh24miss" constant varchar2(16) := 'yyyymmddhh24miss';
-"yyyy-mm-dd hh24:mi:ss" constant varchar2(21) := oracle_tools.api_time_pkg.c_timestamp_format; -- 'yyyy-mm-dd hh24:mi:ss';
+"yyyy-mm-dd hh24:mi:ss" constant varchar2(40) := oracle_tools.api_time_pkg.c_timestamp_format; -- 'yyyy-mm-dd hh24:mi:ss';
 
 -- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
 c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
@@ -543,6 +543,7 @@ procedure get_next_end_date
 is
   l_job_info_rec job_info_rec_t;
   l_end_date user_scheduler_jobs.end_date%type;
+  l_interval oracle_tools.api_time_pkg.timestamp_diff_t;
   l_now constant user_scheduler_jobs.end_date%type := current_timestamp();
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -554,6 +555,7 @@ $end
   ( p_job_name => p_job_name_launcher 
   , p_job_info_rec => l_job_info_rec
   );
+  
   if l_job_info_rec.enabled = 'TRUE'
   then
     p_state := l_job_info_rec.state;
@@ -568,20 +570,36 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     );
 $end
 
-    -- Add interval between next run date and last start date, i.e. the interval between runs.
-    while p_end_date <= l_now
-    loop
-      l_end_date := p_end_date + ( l_job_info_rec.next_run_date - l_job_info_rec.last_start_date );
+    if p_end_date <= l_now
+    then
+      -- Add interval between next run date and last start date, i.e. the interval between runs.
+      select  max(d.req_start_date) - min(d.req_start_date)
+      into    l_interval
+      from    ( select  d.req_start_date
+                from    user_scheduler_job_run_details d
+                where   d.job_name = p_job_name_launcher
+                order by
+                        log_date desc
+              ) d
+      where   rownum <= 2 -- get the last two entries and the time between them is the interval to add
+      ;
+
+      <<next_end_date_loop>>
+      while p_end_date <= l_now
+      loop      
+        l_end_date := p_end_date + l_interval;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'new proposed end date: %s', to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss"));
+        dbug.print(dbug."info", 'new proposed end date: %s', to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss"));
 $end
 
-      -- Make sure you do not get an endless loop.
-      exit when l_end_date is null or l_end_date <= p_end_date;
+        -- going down?
+        exit next_end_date_loop when l_end_date is null or l_end_date <= p_end_date;
 
-      p_end_date := l_end_date;
-    end loop;
+        -- l_end_date > p_end_date;
+        p_end_date := l_end_date;
+      end loop;
+    end if;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
