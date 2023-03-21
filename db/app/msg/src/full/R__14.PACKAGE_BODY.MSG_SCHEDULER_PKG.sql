@@ -1220,18 +1220,22 @@ $if oracle_tools.cfg_pkg.c_debugging $then
             );
 $end
 
-            -- stop and disable
+            -- stop
             begin                  
-              change_job(p_job_name => l_job_names(i_job_idx), p_enabled => false);
               PRAGMA INLINE (stop_job, 'YES');
               stop_job(l_job_names(i_job_idx));
             exception
-              when e_procobj_does_not_exist
-              then null;
-              
               when others
-              then
-                null;
+              then null;
+            end;
+            
+            -- disable
+            begin                  
+              PRAGMA INLINE (change_job, 'YES');
+              change_job(p_job_name => l_job_names(i_job_idx), p_enabled => false);
+            exception
+              when others
+              then null;
             end;
           end loop job_loop;
         end if;
