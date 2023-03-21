@@ -137,26 +137,26 @@ $end
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
 /* GJP 2023-03-13 Getting dbug errors. */
-/*
+--/*
   if dbug.active('PROFILER')
   then
     profiler_report;
   end if;
-*/  
+--*/  
 $end  
 
   msg_pkg.done;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
 /* GJP 2023-03-13 Do not change dbug settings anymore. */
-/*
+--/*
   while l_dbug_channel is not null
   loop
     dbug.activate(l_dbug_channel, p_dbug_channel_tab(l_dbug_channel));
     
     l_dbug_channel := p_dbug_channel_tab.next(l_dbug_channel);
   end loop;
-*/  
+--*/  
 $end -- $if oracle_tools.cfg_pkg.c_debugging $then  
 end done;
 
@@ -537,7 +537,6 @@ end get_job_info;
 
 procedure get_next_end_date
 ( p_job_name_launcher in job_name_t
-, p_state out nocopy user_scheduler_jobs.state%type
 , p_end_date out nocopy user_scheduler_jobs.end_date%type
 )
 is
@@ -548,31 +547,49 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_NEXT_END_DATE');
-  dbug.print(dbug."input", 'p_job_name_launcher: %s', p_job_name_launcher);
+  dbug.print
+  ( dbug."input"
+  , 'p_job_name_launcher: %s; now: %s'
+  , p_job_name_launcher
+  , to_char(l_now, "yyyy-mm-dd hh24:mi:ss")
+  );
 $end
 
   get_job_info
   ( p_job_name => p_job_name_launcher 
   , p_job_info_rec => l_job_info_rec
   );
-  
-  if l_job_info_rec.enabled = 'TRUE'
+
+  -- the next run date for a scheduled job is supposed to be okay (at least when it is in the future)
+  if l_job_info_rec.next_run_date > l_now
   then
-    p_state := l_job_info_rec.state;
-    p_end_date := l_job_info_rec.next_run_date - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND');
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print
-    ( dbug."info"
-    , 'proposed end date: %s; now: %s'
-    , to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss")
-    , to_char(l_now, "yyyy-mm-dd hh24:mi:ss")
-    );
-$end
-
-    if p_end_date <= l_now
+    null; -- OK
+  else
+    -- to start with
+    l_job_info_rec.next_run_date := l_now;
+    
+    if l_job_info_rec.repeat_interval is null and
+       l_job_info_rec.schedule_owner is not null and
+       l_job_info_rec.schedule_name is not null
     then
-      -- Add interval between next run date and last start date, i.e. the interval between runs.
+      select  s.repeat_interval
+      into    l_job_info_rec.repeat_interval
+      from    all_scheduler_schedules s
+      where   s.owner = l_job_info_rec.schedule_owner
+      and     s.schedule_name = l_job_info_rec.schedule_name;
+    end if;
+
+    if l_job_info_rec.repeat_interval is not null
+    then
+      dbms_scheduler.evaluate_calendar_string
+      ( calendar_string => l_job_info_rec.repeat_interval
+      , start_date => l_job_info_rec.start_date -- date at which the schedule became active
+      , return_date_after => l_job_info_rec.next_run_date
+      , next_run_date => l_job_info_rec.next_run_date
+      );
+    else
+      -- Final resort: check last two log entries for the interval between runs.      
+      -- Add interval between last two start dates, i.e. the interval between runs.
       select  max(d.req_start_date) - min(d.req_start_date)
       into    l_interval
       from    ( select  d.req_start_date
@@ -584,26 +601,17 @@ $end
       where   rownum <= 2 -- get the last two entries and the time between them is the interval to add
       ;
 
-      <<next_end_date_loop>>
-      while p_end_date <= l_now
-      loop      
-        l_end_date := p_end_date + l_interval;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print(dbug."info", 'new proposed end date: %s', to_char(l_end_date, "yyyy-mm-dd hh24:mi:ss"));
-$end
-
-        -- going down?
-        exit next_end_date_loop when l_end_date is null or l_end_date <= p_end_date;
-
-        -- l_end_date > p_end_date;
-        p_end_date := l_end_date;
-      end loop;
+      l_job_info_rec.next_run_date := l_job_info_rec.next_run_date + l_interval;
     end if;
   end if;
 
+  p_end_date := greatest
+                ( l_now + numtodsinterval(1, 'SECOND')
+                , nvl(l_job_info_rec.next_run_date, l_now) - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND')
+                );
+
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."output", 'p_state: %s; p_end_date: %s', p_state, to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss"));
+  dbug.print(dbug."output", 'p_end_date: %s', to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss"));
   dbug.leave;
 exception
   when others
@@ -1207,16 +1215,17 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
             dbug.print
             ( dbug."info"
-            , 'trying to drop job %s'
+            --, 'trying to drop job %s'
+            , 'trying to stop job %s'
             , l_job_names(i_job_idx)
             );
 $end
 
-            -- kill
+            -- stop -- kill
             begin                  
-              -- drop worker jobs
-              PRAGMA INLINE (drop_job, 'YES');
-              drop_job(l_job_names(i_job_idx));
+              -- stop worker jobs -- drop worker jobs
+              PRAGMA INLINE (stop_job, 'YES');
+              stop_job(l_job_names(i_job_idx));
             exception
               when e_procobj_does_not_exist
               then null;
@@ -1455,7 +1464,6 @@ is
 
   procedure check_input_and_state
   is
-    l_state user_scheduler_jobs.state%type;
   begin
     case
       when ( p_nr_workers_each_group is not null and p_nr_workers_exact is null ) or
@@ -1517,7 +1525,7 @@ $end
     end if;
 
     -- the job exists and is enabled or even running so the next call will return the next end date
-    get_next_end_date(l_job_name_launcher, l_state, l_end_date);
+    get_next_end_date(l_job_name_launcher, l_end_date);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'system date: %s', to_char(systimestamp, "yyyy-mm-dd hh24:mi:ss"));
@@ -1537,20 +1545,6 @@ $end
       );
     end if;
 
-    if l_state in ('SCHEDULED', 'RUNNING')
-    then
-      null;
-    else
-      raise_application_error
-      ( c_unexpected_job_state
-      , utl_lms.format_message
-        ( c_unexpected_job_state_msg
-        , l_job_name_launcher
-        , l_state
-        )
-      );
-    end if;
-
     l_groups_to_process_tab := get_groups_to_process(l_processing_package);
 
     if l_groups_to_process_tab.count = 0
@@ -1561,27 +1555,54 @@ $end
       );
     end if;
 
-    l_groups_to_process_list := oracle_tools.api_pkg.collection2list(p_value_tab => l_groups_to_process_tab, p_sep => ',', p_ignore_null => 1);
+    l_groups_to_process_list :=
+      oracle_tools.api_pkg.collection2list
+      ( p_value_tab => l_groups_to_process_tab
+      , p_sep => ','
+      , p_ignore_null => 1
+      );
   end check_input_and_state;
 
   procedure define_jobs
   is
+    -- nr of workers must be > 0
+    l_nr_workers constant positiven :=
+      get_nr_workers
+      ( p_nr_groups => l_groups_to_process_tab.count
+      , p_nr_workers_each_group => p_nr_workers_each_group
+      , p_nr_workers_exact => p_nr_workers_exact
+      );
   begin
-    -- Create the supervisor and workers
-    for i_worker_nr in 0 .. get_nr_workers
-                         ( p_nr_groups => l_groups_to_process_tab.count
-                         , p_nr_workers_each_group => p_nr_workers_each_group
-                         , p_nr_workers_exact => p_nr_workers_exact
-                         )
+    -- Create the job name list of supervisor and workers
+    for i_worker_nr in 0 .. l_nr_workers
     loop
       l_job_name_tab(i_worker_nr) :=
         join_job_name
-        ( p_processing_package
-        , c_program_worker
-        , case when i_worker_nr = 0 then null else i_worker_nr end
-        , false
+        ( p_processing_package => p_processing_package
+        , p_program_name => case when i_worker_nr = 0 then c_program_supervisor else c_program_worker end
+        , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
         );
     end loop;
+    
+    -- Shutdown supervisor and workers, if any
+    oracle_tools.api_heartbeat_pkg.shutdown
+    ( p_supervisor_channel => $$PLSQL_UNIT
+    , p_nr_workers => l_nr_workers
+    );
+    
+    <<job_loop>>
+    for i_job_idx in l_job_name_tab.first .. l_job_name_tab.last
+    loop
+      begin                  
+        -- stop worker jobs
+        PRAGMA INLINE (stop_job, 'YES');
+        stop_job(l_job_name_tab(i_job_idx));
+      exception
+        when others
+        then
+          null;
+      end;
+    end loop job_loop;
   end define_jobs;
 
   procedure start_jobs
@@ -1593,34 +1614,13 @@ $end
       <<worker_loop>>
       for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
       loop
-        <<try_loop>>
-        for i_try in 1..2
-        loop
-          begin
-            submit_processing
-            ( p_processing_package => p_processing_package
-            , p_groups_to_process_list => l_groups_to_process_list
-            , p_nr_workers => l_job_name_tab.count
-            , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
-            , p_end_date => l_end_date
-            );
-            exit try_loop;
-          exception
-            when e_job_already_running
-            then
-$if oracle_tools.cfg_pkg.c_debugging $then
-              dbug.on_error;
-              show_jobs;
-$end
-              if i_try = 2
-              then
-                raise;
-              end if;
-
-              -- stop the job so we can change its job arguments
-              stop_job(l_job_name_tab(i_worker_nr));
-          end;
-        end loop try_loop;
+        submit_processing
+        ( p_processing_package => p_processing_package
+        , p_groups_to_process_list => l_groups_to_process_list
+        , p_nr_workers => l_job_name_tab.count
+        , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
+        , p_end_date => l_end_date
+        );
       end loop worker_loop;
     end if;
   end start_jobs;
