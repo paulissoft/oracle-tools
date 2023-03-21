@@ -72,7 +72,7 @@ p_command = create / drop:
 
 p_command = start:
 - Check that there are no jubs running (equivalent to do('check-jobs-not-running')).
-- Start the launcher job (submit_launcher_processing()) if it does not exist,
+- Start the launcher job (submit_processing_launcher()) if it does not exist,
   otherwise disable and enable (i.e. start).
 
 p_command = shutdown:
@@ -99,16 +99,16 @@ procedure submit_do
 Submits do() as a non-repeating job, starting immediately.
 */
 
-procedure submit_launcher_processing
+procedure submit_processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact
 );
 /**
-Submits the launcher, see launcher_processing() below, that will submit the supervisor and its workers and then finish.
+Submits the launcher, see processing_launcher() below, that will submit the supervisor and its workers and then finish.
 **/
 
-procedure launcher_processing
+procedure processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group
 , p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact
@@ -116,7 +116,7 @@ procedure launcher_processing
 /**
 This procedure is meant to be used by DBMS_SCHEDULER jobs or for test
 purposes, never use it in application code: use 
-submit_launcher_processing() above!
+submit_processing_launcher() above!
 
 So the administrator should NEVER create a job based on this procedure.
 
@@ -158,7 +158,7 @@ This procedure is meant to be used by (indirectly) DBMS_SCHEDULER jobs, not by Y
 
 So the administrator should NEVER create a job based on this procedure.
 
-This is the worker routine, started as a job by launcher_processing(). 
+This is the worker routine, started as a job by processing_launcher(). 
 
 The processing package must have this routine that will be invoked by dynamic SQL:
 

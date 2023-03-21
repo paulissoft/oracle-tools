@@ -12,12 +12,12 @@ subtype job_info_rec_t is user_scheduler_jobs%rowtype;
 "yyyy-mm-dd hh24:mi:ss" constant varchar2(40) := oracle_tools.api_time_pkg.c_timestamp_format; -- 'yyyy-mm-dd hh24:mi:ss';
 
 -- let the launcher program (that is used for job names too) start with LAUNCHER so a wildcard search for worker group jobs does not return the launcher job
-c_program_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_PROCESSING';
-c_program_supervisor constant user_scheduler_programs.program_name%type := 'PROCESSING_AS_SUPERVISOR';
-c_program_worker constant user_scheduler_programs.program_name%type := 'PROCESSING_AS_WORKER';
+c_program_launcher constant user_scheduler_programs.program_name%type := 'PROCESSING_LAUNCHER';
+c_program_supervisor constant user_scheduler_programs.program_name%type := 'PROCESSING_SUPERVISOR';
+c_program_worker constant user_scheduler_programs.program_name%type := 'PROCESSING_WORKER';
 c_program_do constant user_scheduler_programs.program_name%type := 'DO';
 
-c_schedule_launcher constant user_scheduler_programs.program_name%type := 'LAUNCHER_SCHEDULE';
+c_schedule_launcher constant user_scheduler_programs.program_name%type := 'SCHEDULE_LAUNCHER';
 
 c_session_id constant user_scheduler_running_jobs.session_id%type := to_number(sys_context('USERENV', 'SID'));
 
@@ -1170,7 +1170,7 @@ $end
         then
           begin
             -- this will create the job too if necessary
-            launcher_processing(p_processing_package => l_processing_package);
+            processing_launcher(p_processing_package => l_processing_package);
           exception
             when e_no_groups_to_process
             then null;
@@ -1215,15 +1215,14 @@ $end
 $if oracle_tools.cfg_pkg.c_debugging $then
             dbug.print
             ( dbug."info"
-            --, 'trying to drop job %s'
             , 'trying to stop job %s'
             , l_job_names(i_job_idx)
             );
 $end
 
-            -- stop -- kill
+            -- stop
             begin                  
-              -- stop worker jobs -- drop worker jobs
+              -- stop worker jobs
               PRAGMA INLINE (stop_job, 'YES');
               stop_job(l_job_names(i_job_idx));
             exception
@@ -1377,7 +1376,7 @@ exception
 $end
 end submit_do;
 
-procedure submit_launcher_processing
+procedure submit_processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive
 , p_nr_workers_exact in positive
@@ -1387,7 +1386,7 @@ is
   l_job_name_launcher job_name_t;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_LAUNCHER_PROCESSING');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING_LAUNCHER');
   dbug.print
   ( dbug."input"
   , 'p_processing_package: %s; p_nr_workers_each_group: %s; p_nr_workers_exact: %s'
@@ -1443,9 +1442,9 @@ exception
     dbug.leave_on_error;
     raise;
 $end
-end submit_launcher_processing;
+end submit_processing_launcher;
 
-procedure launcher_processing
+procedure processing_launcher
 ( p_processing_package in varchar2
 , p_nr_workers_each_group in positive
 , p_nr_workers_exact in positive
@@ -1508,7 +1507,7 @@ $end
       then
         change_job(p_job_name => l_job_name_launcher, p_enabled => true);
       else
-        submit_launcher_processing
+        submit_processing_launcher
         ( p_processing_package => p_processing_package
         , p_nr_workers_each_group => p_nr_workers_each_group
         , p_nr_workers_exact => p_nr_workers_exact
@@ -1640,7 +1639,7 @@ begin
   end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.LAUNCHER_PROCESSING');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_LAUNCHER');
   dbug.print
   ( dbug."input"
   , utl_lms.format_message
@@ -1671,7 +1670,7 @@ $end
 
     cleanup; -- after dbug.leave_on_error since the done inside will change dbug state
     raise;
-end launcher_processing;
+end processing_launcher;
 
 procedure processing
 ( p_processing_package in varchar2 
@@ -1753,7 +1752,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end  
   end restart_workers;
 
-  procedure processing_as_supervisor
+  procedure processing_supervisor
   is
     l_start_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.get_timestamp;
     l_ttl constant positiven := oracle_tools.api_time_pkg.delta(l_start_date, l_end_date);
@@ -1833,9 +1832,9 @@ $end
       -- error gets logged below
       cleanup;
       raise;
-  end processing_as_supervisor;
+  end processing_supervisor;
 
-  procedure processing_as_worker
+  procedure processing_worker
   is
     l_statement constant varchar2(32767 byte) :=
       utl_lms.format_message
@@ -1888,7 +1887,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
       null;
       -- no re-raise since it is a normal way to stop working
-  end processing_as_worker;
+  end processing_worker;
   
   procedure cleanup
   is
@@ -1949,9 +1948,9 @@ $end
 
   if p_worker_nr is null
   then
-    processing_as_supervisor;
+    processing_supervisor;
   else
-    processing_as_worker;
+    processing_worker;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
