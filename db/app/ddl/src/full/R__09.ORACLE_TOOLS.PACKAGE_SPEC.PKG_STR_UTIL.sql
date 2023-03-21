@@ -244,6 +244,9 @@ $if oracle_tools.cfg_pkg.c_testing $then
 --%suite
 
 --%test
+procedure ut_dbms_lob_substr;
+
+--%test
 procedure ut_split1;
 
 --%test
@@ -286,6 +289,10 @@ procedure ut_text2clob2;
 --%test
 --%disabled
 procedure ut_clob2text;
+
+--%test
+--%throws(value_error)
+procedure ut_split2_line_too_large;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

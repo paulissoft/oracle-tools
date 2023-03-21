@@ -45,12 +45,17 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
     dbug.print(dbug."info", 'l_offset: %s; l_amount: %s', l_offset, l_amount);
 $end
 
-    l_chunk :=
-      dbms_lob.substr
-      ( lob_loc => p_clob
-      , offset => l_offset
-      , amount => l_amount
-      );
+    begin
+      l_chunk :=
+        dbms_lob.substr
+        ( lob_loc => p_clob
+        , offset => l_offset
+        , amount => l_amount
+        );
+    exception
+      when value_error
+      then exit buffer_loop;
+    end;
 
     l_chunk_length := nvl(length(l_chunk), 0);
 
@@ -78,7 +83,7 @@ end dbms_lob_substr;
 
 procedure split
 ( p_str in varchar2
-, p_delimiter in varchar2 := ','
+, p_delimiter in varchar2
 , p_str_tab out nocopy dbms_sql.varchar2a
 )
 is
@@ -89,6 +94,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
   dbug.enter(g_package_prefix || 'SPLIT (1)');
   dbug.print(dbug."input", 'p_str: %s; p_delimiter: "%s"', p_str, p_delimiter);
 $end
+
+  if p_delimiter is null
+  then
+    raise value_error;
+  end if;
 
   l_start := 1;
 
@@ -118,12 +128,14 @@ end split;
 
 procedure split
 ( p_str in clob
-, p_delimiter in varchar2 := ','
+, p_delimiter in varchar2
+  -- type varchar2a is table of varchar2(32767) index by binary_integer;
 , p_str_tab out nocopy dbms_sql.varchar2a
 )
 is
   l_pos pls_integer;
   l_start positiven := 1; -- never null
+  l_amount simple_integer := 0; -- never null
   l_str_length constant naturaln := nvl(dbms_lob.getlength(p_str), 0);
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
@@ -143,12 +155,17 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
       dbug.print(dbug."info", 'l_start: %s; l_pos: %s', l_start, l_pos);
 $end
 
+      l_amount := case when l_pos > 0 then l_pos - l_start else 32767 end;
       p_str_tab(p_str_tab.count+1) :=
         dbms_lob_substr
         ( p_clob => p_str
         , p_offset => l_start
-        , p_amount => case when l_pos > 0 then l_pos - l_start else 32767 end
+        , p_amount => l_amount
         );
+      if l_pos > 0 and nvl(length(p_str_tab(p_str_tab.count+0)), 0) <> l_amount
+      then
+        raise value_error; -- could not read the whole substring in one line
+      end if;
       l_start := l_start + nvl(length(p_str_tab(p_str_tab.count+0)), 0) + nvl(length(p_delimiter), 0);
     end loop;
     -- everything has been read BUT ...
@@ -323,10 +340,10 @@ $end
     loop
       if instr
          ( p_set
-         , dbms_lob_substr
-           ( p_clob => p_str
-           , p_offset => i_start
-           , p_amount => 1
+         , dbms_lob.substr
+           ( lob_loc => p_str
+           , offset => i_start
+           , amount => 1
            )
          ) > 0
       then
@@ -351,10 +368,10 @@ $end
     loop
       if instr
          ( p_set
-         , dbms_lob_substr
-           ( p_clob => p_str
-           , p_offset => i_end
-           , p_amount => 1
+         , dbms_lob.substr
+           ( lob_loc => p_str
+           , offset => i_end
+           , amount => 1
            )
          ) > 0
       then
@@ -566,8 +583,8 @@ $end
     exit char_loop;
   elsif (l_str1_length is null or l_char_idx > l_str1_length) or
         (l_str2_length is null or l_char_idx > l_str2_length) or
-        dbms_lob_substr(p_clob => p_str1_tab(l_line_idx), p_offset => l_char_idx, p_amount => 1) !=
-        dbms_lob_substr(p_clob => p_str2_tab(l_line_idx), p_offset => l_char_idx, p_amount => 1)
+        dbms_lob.substr(lob_loc => p_str1_tab(l_line_idx), offset => l_char_idx, amount => 1) !=
+        dbms_lob.substr(lob_loc => p_str2_tab(l_line_idx), offset => l_char_idx, amount => 1)
   then
     p_first_line_not_equal := l_line_idx;
     p_first_char_not_equal := l_char_idx;
@@ -967,12 +984,12 @@ $end
     if pi_trim <> 0
     then
       -- skip whitespace at the begin
-      while l_first <= l_last and dbms_lob_substr(p_clob => pi_clob, p_offset => l_first, p_amount => 1) in (chr(9), chr(10), chr(13), chr(32))
+      while l_first <= l_last and dbms_lob.substr(lob_loc => pi_clob, offset => l_first, amount => 1) in (chr(9), chr(10), chr(13), chr(32))
       loop
         l_first := l_first + 1;
       end loop;
       -- skip whitespace at the end
-      while l_first <= l_last and dbms_lob_substr(p_clob => pi_clob, p_offset => l_last, p_amount => 1) in (chr(9), chr(10), chr(13), chr(32))
+      while l_first <= l_last and dbms_lob.substr(lob_loc => pi_clob, offset => l_last, amount => 1) in (chr(9), chr(10), chr(13), chr(32))
       loop
         l_last := l_last - 1;
       end loop;
@@ -1010,12 +1027,35 @@ end clob2text;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
--- test functions
+procedure ut_dbms_lob_substr
+is
+  l_str_act varchar2(32767);
+  l_str_exp varchar2(32767);
+begin
+  dbms_lob.trim(g_clob_test, 0);
 
---%suitepath(DDL)
---%suite
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', 32767, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', 32767, 'b')));
 
---%test
+  for i_part in 1..3
+  loop
+    for i_case in 1..4
+    loop
+      l_str_act := dbms_lob_substr(g_clob_test, 32763 + i_case, 1+32767*(i_part-1));
+      l_str_exp := dbms_lob.substr(g_clob_test, 32763 + i_case, 1+32767*(i_part-1));
+      if i_case = 1 or i_part = 3
+      then
+        ut.expect(l_str_act, 'test contents ' || i_part || '.' || i_case).to_equal(l_str_exp);
+        ut.expect(length(l_str_act), 'test length ' || i_part || '.' || i_case).to_equal(length(l_str_exp));
+      else
+        ut.expect(l_str_act, 'test contents ' || i_part || '.' || i_case).not_to_equal(l_str_exp);
+        ut.expect(length(l_str_act), 'test length ' || i_part || '.' || i_case).not_to_equal(length(l_str_exp));
+      end if;
+    end loop;
+  end loop;
+end;
+
 procedure ut_split1
 is
   l_str_tab dbms_sql.varchar2a;
@@ -1027,10 +1067,14 @@ procedure split
 , p_str_tab out nocopy dbms_sql.varchar2a
 );
 */
-  split("null", "null", l_str_tab);
-
-  ut.expect(l_str_tab.count, 'test 1.1').to_equal(1);
-  ut.expect(l_str_tab(1), 'test 1.2').to_be_null();
+  begin
+    split("null", "null", l_str_tab);
+    raise program_error; -- should not come here since a value_error (ORA-06502) must be raised 
+  exception
+    when others
+    then
+      ut.expect(sqlcode, 'test 1.1').to_equal(-06502);
+  end;
 
   split("null", "lf", l_str_tab);
 
@@ -1059,7 +1103,6 @@ procedure split
   ut.expect(l_str_tab(2), 'test 5.3').to_equal('efgh');
 end;
 
---%test
 procedure ut_split2
 is
   l_str_tab dbms_sql.varchar2a;
@@ -1128,7 +1171,6 @@ procedure split
   ut.expect(l_str_tab(2), 'test 7.3').to_equal(rpad('b', 32767, 'b'));
 end;
 
---%test
 procedure ut_split3
 is
   l_str_tab t_clob_tab;
@@ -1196,7 +1238,6 @@ procedure split
   ut.expect(l_str_tab(1), 'test 7.2').to_equal(g_clob_test);
 end;
 
---%test
 procedure ut_trim1
 is
 begin
@@ -1243,60 +1284,79 @@ trim
   ut.expect(g_clob_test, 'test 5').to_equal(to_clob('abcd' || "crlf" || 'dcba'));
 end;
 
---%test
 procedure ut_trim2
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_compare1
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_compare2
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_append_text1
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_append_text2
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_text2clob1
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_text2clob2
 is
 begin
   raise program_error;
 end;
 
---%test
 procedure ut_clob2text
 is
 begin
   raise program_error;
+end;
+
+procedure ut_split2_line_too_large
+is
+  l_str_tab dbms_sql.varchar2a;
+  l_responses1 constant varchar2(32767 char) := '
+    "responses" : "[
+        {
+            \"title_code\":\"ONB_CONTACT_EMAIL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":\"^\\\\w+([\\\\.-]?\\\\w+)*@\\\\w+([\\\\.-]?\\\\w+)*(\\\\.\\\\w{2,4})+$\"},{\"title_code\":\"ONB_CUST_TYPE_ID_Q\",\"answer\":\"1\",\"readonly\":false,\"refresh\":true,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"Private\",\"i\":null},{\"v\":\"2\",\"d\":\"Company\",\"i\":null}]},{\"title_code\":\"ONB_COMPANY_NAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_KVK_NUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BTW_NUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_SALUATION_Q\",\"answer\":\"De heer\",\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"De heer\",\"d\":\"Mr.\",\"i\":null},{\"v\":\"Mevrouw\",\"d\":\"Mrs.\",\"i\":null}]},{\"title_code\":\"ONB_CONTACT_FIRSTNAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_LASTNAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_COUNTRY_CODE_Q\",\"answer\":\"BE\",\"readonly\":false,\"refresh\":true,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"BE\",\"d\":\"België\",\"i\":null},{\"v\":\"DE\",\"d\":\"Duitsland\",\"i\":null},{\"v\":\"LU\",\"d\":\"Luxemburg\",\"i\":null},{\"v\":\"NL\",\"d\":\"Nederland\",\"i\":null}]},{\"title_code\":\"ONB_CONTACT_ZIP_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_HOUSENUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_STREET_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_CITY_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CONTACT_TELEPHONE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_LOCATION_SAME_Q\",\"answer\":\"1\",\"readonly\":false,\"refresh\":true,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"Yes\",\"i\":null},{\"v\":\"0\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_LOCATION_COUNTRY_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"BE\",\"d\":\"België\",\"i\":null},{\"v\":\"DE\",\"d\":\"Duitsland\",\"i\":null},{\"v\":\"LU\",\"d\":\"Luxemburg\",\"i\":null},{\"v\":\"NL\",\"d\":\"Nederland\",\"i\":null}]},{\"title_code\":\"ONB_LOCATION_ZIP_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_LOCATION_HOUSENUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_LOCATION_STREET_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_LOCATION_CITY_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_LOCATION_TELEPHONE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_TECHNICAL_SALUATION_Q\",\"answer\":\"De heer\",\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"De heer\",\"d\":\"Mr.\",\"i\":null},{\"v\":\"Mevrouw\",\"d\":\"Mrs.\",\"i\":null}]},{\"title_code\":\"ONB_TECHNICAL_FIRSTNAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_TECHNICAL_LASTNAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_TECHNICAL_EMAIL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":\"^\\\\w+([\\\\.-]?\\\\w+)*@\\\\w+([\\\\.-]?\\\\w+)*(\\\\.\\\\w{2,4})+$\"},{\"title_code\":\"ONB_TECHNICAL_TELEPHONE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_TYPE_Q\",\"answer\":\"BASIS\",\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"BASIS\",\"d\":\"Basic support\",\"i\":\"https://xqor3b69vfiecdt-dbsmart01.adb.eu-frankfurt-1.oraclecloudapps.com/ords/bcp_api/api/v1/onboarding-image/ONB_SUBSCRIPTION_TYPE_Q/BASIS/content\"},{\"v\":\"EXTENDED\",\"d\":\"Extended support\",\"i\":\"https://xqor3b69vfiecdt-dbsmart01.adb.eu-frankfurt-1.oraclecloudapps.com/ords/bcp_api/api/v1/onboarding-image/ONB_SUBSCRIPTION_TYPE_Q/EXTENDED/content\"},{\"v\":\"FULL\",\"d\":\"Full support\",\"i\":\"https://xqor3b69vfiecdt-dbsmart01.adb.eu-frankfurt-1.oraclecloudapps.com/ords/bcp_api/api/v1/onboarding-image/ONB_SUBSCRIPTION_TYPE_Q/FULL/content\"}]},{\"title_code\":\"ONB_START_DATE_CONTRACT_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_SAME_Q\",\"answer\":\"1\",\"readonly\":false,\"refresh\":true,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"Yes\",\"i\":null},{\"v\":\"0\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_SUBSCRIPTION_NAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_EMAIL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":\"^\\\\w+([\\\\.-]?\\\\w+)*@\\\\w+([\\\\.-]?\\\\w+)*(\\\\.\\\\w{2,4})+$\"},{\"title_code\":\"ONB_SUBSCRIPTION_COUNTRY_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"BE\",\"d\":\"België\",\"i\":null},{\"v\":\"DE\",\"d\":\"Duitsland\",\"i\":null},{\"v\":\"LU\",\"d\":\"Luxemburg\",\"i\":null},{\"v\":\"NL\",\"d\":\"Nederland\",\"i\":null}]},{\"title_code\":\"ONB_SUBSCRIPTION_ZIP_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_HOUSENUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_STREET_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_CITY_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SUBSCRIPTION_REFERENCE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_IBAN_BENEFICIARY_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BENEFICIARY_REFERENCE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BENEFICIARY_PERIOD_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"monthly\",\"d\":\"Payment each month\",\"i\":null},{\"v\":\"quarterly\",\"d\":\"Payment each 3 months\",\"i\":null},{\"v\":\"yearly\",\"d\":\"Payment each 12 months\",\"i\":null}]},{\"title_code\":\"ONB_BENEFICIARY_SAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":true,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"Yes\",\"i\":null},{\"v\":\"0\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_BENEFICIARY_NAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BENEFICIARY_EMAIL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":\"^\\\\w+([\\\\.-]?\\\\w+)*@\\\\w+([\\\\.-]?\\\\w+)*(\\\\.\\\\w{2,4})+$\"},';
+  l_responses2 constant varchar2(32767 char) := '{\"title_code\":\"ONB_BENEFICIARY_COUNTRY_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"BE\",\"d\":\"België\",\"i\":null},{\"v\":\"DE\",\"d\":\"Duitsland\",\"i\":null},{\"v\":\"LU\",\"d\":\"Luxemburg\",\"i\":null},{\"v\":\"NL\",\"d\":\"Nederland\",\"i\":null}]},{\"title_code\":\"ONB_BENEFICIARY_ZIP_CODE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BENEFICIARY_HOUSENUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BENEFICIARY_STREET_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_BENEFICIARY_CITY_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_PUBLISH_YN_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"Y\",\"d\":\"Yes\",\"i\":null},{\"v\":\"N\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_PLUG_AND_CHARGE_YN_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"Y\",\"d\":\"Yes\",\"i\":null},{\"v\":\"N\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_GUEST_USAGE_YN_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"Y\",\"d\":\"Yes\",\"i\":null},{\"v\":\"N\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_FIRST_PASS_NUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_SECOND_PASS_NUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_FREE_CHARGING_ADDITIONAL_CARDS_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"Y\",\"d\":\"Yes\",\"i\":null},{\"v\":\"N\",\"d\":\"No\",\"i\":null}]},{\"title_code\":\"ONB_FINANCIAL_CHARGING_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"free\",\"d\":\"All passes can be used for free\",\"i\":null},{\"v\":\"paying\",\"d\":\"For each pass you have to pay\",\"i\":null}]},{\"title_code\":\"ONB_CHARGE_POINT_RATE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"NLBCUT74\",\"d\":\"10,89 cent incl (9 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT12\",\"d\":\"12 cent incl (9,92 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT48\",\"d\":\"12,1 cent incl (10 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT49\",\"d\":\"13,31 cent incl (11 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT50\",\"d\":\"14,52 cent incl (12 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT51\",\"d\":\"15,73 cent incl (13 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT52\",\"d\":\"16,94 cent incl (14 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT53\",\"d\":\"18,15 cent incl (15 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT7\",\"d\":\"19 cent incl (15,7 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT54\",\"d\":\"19,36 cent incl (16 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT2\",\"d\":\"20 cent incl (16,53 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT55\",\"d\":\"20,57 cent incl (17 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT20\",\"d\":\"21 cent incl (17,36 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT56\",\"d\":\"21,78 cent incl (18 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT47\",\"d\":\"22 cent incl (18,18 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT23\",\"d\":\"22,44 cent incl (18,55 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT57\",\"d\":\"22,99 cent incl (19 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT3\",\"d\":\"24 cent incl (19,83 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT58\",\"d\":\"24,2  cent incl (20 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT79\",\"d\":\"25 cent incl (20,66 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT59\",\"d\":\"25,41 cent incl (21 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT19\",\"d\":\"25,59 cent incl (21,15 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT45\",\"d\":\"26 cent incl (21,49 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT60\",\"d\":\"26,62 cent incl (22 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT11\",\"d\":\"27 cent incl (22,31 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT61\",\"d\":\"27,83 cent incl (23 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT16\",\"d\":\"28 cent incl (23,14 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT4\",\"d\":\"29 cent incl (23,97 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT62\",\"d\":\"29,04 cent incl (24 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT10\",\"d\":\"30 cent incl (24,79 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT63\",\"d\":\"30,25 cent incl (25 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT14\",\"d\":\"31 cent incl (25,62 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT64\",\"d\":\"31,46 cent incl (26 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT21\",\"d\":\"32 cent incl (26,45 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT65\",\"d\":\"32,67 cent incl (27 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT13\",\"d\":\"33 cent incl (27,27 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT66\",\"d\":\"33,88 cent incl (28 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT8\",\"d\":\"34 cent incl (28,1 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT5\",\"d\":\"35 cent incl (28,93 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT6\",\"d\":\"35 cent incl, Start tarief: 1.50 euro (21%)\",\"i\":null},{\"v\":\"NLBCUT67\",\"d\":\"35,09 cent incl (29 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT46\",\"d\":\"35,45 cent incl (29,3 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT9\",\"d\":\"36 cent incl (29,75 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT68\",\"d\":\"36,3 cent incl (30 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT77\",\"d\":\"37 cent incl (30,58 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT78\",\"d\":\"37 cent incl, Start tarief: 1.50 euro (21%)\",\"i\":null},{\"v\":\"NLBCUT69\",\"d\":\"37,51 cent incl (31 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT122\",\"d\":\"38 cent incl (31,4 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT70\",\"d\":\"38,72 cent incl (32 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT15\",\"d\":\"39 cent incl (32,23 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT71\",\"d\":\"39,93 cent incl (33 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT24\",\"d\":\"40 cent incl (33,06 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT25\",\"d\":\"41 cent incl (33,88 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT72\",\"d\":\"41,14 cent incl (34 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT26\",\"d\":\"42 cent incl (34,71 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT73\",\"d\":\"42,35 cent incl (35 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT27\",\"d\":\"43 cent incl (35,54 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT95\",\"d\":\"43,56 cent incl (36 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT28\",\"d\":\"44 cent incl (36,36 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT96\",\"d\":\"44,77 cent incl (37 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT29\",\"d\":\"45 cent incl (37,19 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT97\",\"d\":\"45,98 cent incl (38 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT30\",\"d\":\"46 cent incl (38,02 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT31\",\"d\":\"47 cent incl (38,84 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT98\",\"d\":\"47,19 cent incl (39 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT32\",\"d\":\"48 cent incl (39,67 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT99\",\"d\":\"48,40 cent incl (40 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT33\",\"d\":\"49 cent incl (40,5 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT100\",\"d\":\"49,61 cent incl (41 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT34\",\"d\":\"50 cent incl (41,32 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT101\",\"d\":\"50,82 cent incl (42 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT35\",\"d\":\"51 cent incl (42,15 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT36\",\"d\":\"52 cent incl (42,98 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT102\",\"d\":\"52,03 cent incl (43 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT37\",\"d\":\"53 cent incl (43,8 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT103\",\"d\":\"53,24 cent incl (44 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT38\",\"d\":\"54 cent incl (44,63 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT104\",\"d\":\"54,45 cent incl (45 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT39\",\"d\":\"55 cent incl (45,45 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT105\",\"d\":\"55,66 cent incl (46 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT40\",\"d\":\"56 cent incl (46,28 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT106\",\"d\":\"56,87 cent incl (47 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT41\",\"d\":\"57 cent incl (47,11 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT42\",\"d\":\"58 cent incl (47,93 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT107\",\"d\":\"58,08 cent incl (48 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT43\",\"d\":\"59 cent incl (48,76 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT108\",\"d\":\"59,29 cent incl (49 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT22\",\"d\":\"6 cent incl (4,96 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT44\",\"d\":\"60 cent incl (49,59 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT109\",\"d\":\"60,50 cent incl (50 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT110\",\"d\":\"61,71 cent incl (51 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT111\",\"d\":\"62,92 cent incl (52 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT87\",\"d\":\"62,95 cent incl (52,03 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT112\",\"d\":\"64,13 cent incl (53 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT113\",\"d\":\"65,34 cent incl (54 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT114\",\"d\":\"66,55 cent incl (55 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT115\",\"d\":\"67,76 cent incl (56 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT116\",\"d\":\"68,97 cent incl (57 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT117\",\"d\":\"70,18 cent incl (58 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT118\",\"d\":\"71,39 cent incl (59 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT119\",\"d\":\"72,60 cent incl (60 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT17\",\"d\":\"73,205 cent incl (60,5 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT125\",\"d\":\"75,02 cent incl (62 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT121\",\"d\":\"78,65 cent incl (65 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT76\",\"d\":\"8,47 cent incl (7 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT120\",\"d\":\"81,07 cent incl (67 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT124\",\"d\":\"83,49 cent incl (69 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT123\",\"d\":\"87,12 cent incl (72 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT75\",\"d\":\"9,68 cent incl (8 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT126\",\"d\":\"94,38 cent incl (78 cent excl) (21%)\",\"i\":null},{\"v\":\"NLBCUT1\",\"d\":\"Gratis laden\",\"i\":null}]},{\"title_code\":\"ONB_ORDER_DATE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_DELIVERY_DATE_CAR_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_DRIVER_FIRSTNAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_DRIVER_LASTNAME_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_DRIVER_EMAIL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":true,\"regexp\":\"^\\\\w+([\\\\.-]?\\\\w+)*@\\\\w+([\\\\.-]?\\\\w+)*(\\\\.\\\\w{2,4})+$\"},{\"title_code\":\"ONB_MOBILE_NUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CAR_BRAND_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CAR_TYPE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":false,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_TARIFF_EX_VAT_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"1\",\"i\":null},{\"v\":\"2\",\"d\":\"2\",\"i\":null},{\"v\":\"3\",\"d\":\"3\",\"i\":null},{\"v\":\"4\",\"d\":\"4\",\"i\":null},{\"v\":\"5\",\"d\":\"5\",\"i\":null},{\"v\":\"6\",\"d\":\"6\",\"i\":null},{\"v\":\"7\",\"d\":\"7\",\"i\":null},{\"v\":\"8\",\"d\":\"8\",\"i\":null},{\"v\":\"9\",\"d\":\"9\",\"i\":null},{\"v\":\"10\",\"d\":\"10\",\"i\":null},{\"v\":\"11\",\"d\":\"11\",\"i\":null},{\"v\":\"12\",\"d\":\"12\",\"i\":null},{\"v\":\"13\",\"d\":\"13\",\"i\":null},{\"v\":\"14\",\"d\":\"14\",\"i\":null},{\"v\":\"15\",\"d\":\"15\",\"i\":null},{\"v\":\"16\",\"d\":\"16\",\"i\":null},{\"v\":\"17\",\"d\":\"17\",\"i\":null},{\"v\":\"18\",\"d\":\"18\",\"i\":null},{\"v\":\"19\",\"d\":\"19\",\"i\":null},{\"v\":\"20\",\"d\":\"20\",\"i\":null},{\"v\":\"21\",\"d\":\"21\",\"i\":null},{\"v\":\"22\",\"d\":\"22\",\"i\":null},{\"v\":\"23\",\"d\":\"23\",\"i\":null},{\"v\":\"24\",\"d\":\"24\",\"i\":null},{\"v\":\"25\",\"d\":\"25\",\"i\":null},{\"v\":\"26\",\"d\":\"26\",\"i\":null},{\"v\":\"27\",\"d\":\"27\",\"i\":null},{\"v\":\"28\",\"d\":\"28\",\"i\":null},{\"v\":\"29\",\"d\":\"29\",\"i\":null},{\"v\":\"30\",\"d\":\"30\",\"i\":null}]},{\"title_code\":\"ONB_IBAN_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_PRODUCT_Q\",\"answer\":null,\"readonly\":false,\"refresh\":true,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"426\",\"d\":\"EVE vaste kabel 8m (Product)\",\"i\":null}]},{\"title_code\":\"ONB_CUSTOM_COLOUR_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_INSTALLATION_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"634\",\"d\":\"Afmontage laadpunt wand (Installation)\",\"i\":null},{\"v\":\"423\",\"d\":\"Extra datakabel (Installation)\",\"i\":null},{\"v\":\"428\",\"d\":\"Fulfilment (Installation)\",\"i\":null},{\"v\":\"391\",\"d\":\"Installatiekosten wandmontage incl fulfilment (Installation)\",\"i\":null},{\"v\":\"429\",\"d\":\"P1 splitter leveren en plaatsen (Installation)\",\"i\":null},{\"v\":\"430\",\"d\":\"Verhuizen paalmontage incl fulfilment (Installation)\",\"i\":null},{\"v\":\"431\",\"d\":\"Verhuizen wandmontage incl fulfilment (Installation)\",\"i\":null},{\"v\":\"424\",\"d\":\"Vervangen meterkast (Installation)\",\"i\":null}]},{\"title_code\":\"ONB_SMART_CHARGING_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null,\"lov\":[{\"v\":\"427\",\"d\":\"EVE smart charging (Smartcharging)\",\"i\":null}]},{\"title_code\":\"ONB_POLE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null,\"lov\":[{\"v\":\"392\",\"d\":\"EVE paal (Pole)\",\"i\":null}]},{\"title_code\":\"ONB_SUBSCRIPTION_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CAPACITY_INSTL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1-25\",\"d\":\"1 phase - 25A\",\"i\":null},{\"v\":\"1-35\",\"d\":\"1 phase - 35A\",\"i\":null},{\"v\":\"1-40\",\"d\":\"1 phase - 40A\",\"i\":null},{\"v\":\"3-25\",\"d\":\"3 phase - 25A\",\"i\":null},{\"v\":\"UNSURE\",\"d\":\"Different / Not sure\",\"i\":null},{\"v\":\"3-40\",\"d\":\"3 phase - 40A\",\"i\":null},{\"v\":\"3-63\",\"d\":\"3 phase - 63A\",\"i\":null},{\"v\":\"3-80\",\"d\":\"3 phase - 80A\",\"i\":null},{\"v\":\"3-35\",\"d\":\"3 phase - 35A\",\"i\":null}]},{\"title_code\":\"ONB_NUMBER_PHASE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"3 PHASE\",\"d\":\"3 Phase (> 10 kW)\",\"i\":null},{\"v\":\"1 PHASE\",\"d\":\"1 Phase (< 10 kW)\",\"i\":null}]},{\"title_code\":\"ONB_TYPE_SMART_METER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"IskraAM550_OK_3\",\"d\":\"Iskra AM550 (suitable)\",\"i\":null},{\"v\":\"IskraME382_NO_1\",\"d\":\"Iskra ME382 (not suitable)\",\"i\":null},{\"v\":\"IskraMT382_NO_3\",\"d\":\"Iskra MT382 (not suitable)\",\"i\":null},{\"v\":\"KaifaE0003_NO_3\",\"d\":\"Kaifa E0003 (not suitable)\",\"i\":null},{\"v\":\"KaifaE0025_OK_1\",\"d\":\"Kaifa E0025 (suitable)\",\"i\":null},{\"v\":\"KaifaE0026_OK_3\",\"d\":\"Kaifa E0026 (suitable)\",\"i\":null},{\"v\":\"KaifaMA105_NO_1\",\"d\":\"Kaifa MA105 (not suitable)\",\"i\":null},{\"v\":\"KaifaMA105C_OK_1\",\"d\":\"Kaifa MA105C (suitable)\",\"i\":null},{\"v\":\"KaifaMA304_NO_3\",\"d\":\"Kaifa MA304 (suitable)\",\"i\":null},{\"v\":\"KaifaMA304C_OK_3\",\"d\":\"Kaifa MA304C (suitable)\",\"i\":null},{\"v\":\"Kamstrup162_NO_1\",\"d\":\"Kamstrup 162 (not suitable)\",\"i\":null},{\"v\":\"Kamstrup351_NO_3\",\"d\":\"Kamstrup 351 (not suitable)\",\"i\":null},{\"v\":\"Kamstrup382_NO_3\",\"d\":\"Kamstrup 382 (not suitable)\",\"i\":null},{\"v\":\"LandisE360SMR50_OK_1-3\",\"d\":\"Landis E360 SMR 5.0 (suitable)\",\"i\":null},{\"v\":\"LandisZCF_NO_1\",\"d\":\"Landis ZCF DSMR4.0 (not suitable)\",\"i\":null},{\"v\":\"LandisZCF_OK_1\",\"d\":\"Landis ZCF DSMR4.2 (suitable)\",\"i\":null},{\"v\":\"LandisZFF_NO_3\",\"d\":\"Landis ZFF (not suitable)\",\"i\":null},{\"v\":\"LandisZMF100_NO_1-3\",\"d\":\"Landis ZMF100 (not suitable)\",\"i\":null},{\"v\":\"LandisZMF110CB_OK_3\",\"d\":\"Landis ZMF110CB (suitable)\",\"i\":null},{\"v\":\"LandisZMF110CC_OK_3\",\"d\":\"Landis ZMF110CC (suitable)\",\"i\":null},{\"v\":\"other\",\"d\":\"Other (upload photo)\",\"i\":null},{\"v\":\"SagemcomT210_OK_3\",\"d\":\"Sagemcom T210 (suitable)\",\"i\":null}]},{\"title_code\":\"ONB_METER_NUMBER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_ETHERNET_CONN_AVL_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"YES-ETHERNET\",\"d\":\"Yes, ethernet\",\"i\":null},{\"v\":\"YES-WIFI\",\"d\":\"Yes, strong WIFI signal\",\"i\":null},{\"v\":\"NO-ELSE\",\"d\":\"No, different location\",\"i\":null},{\"v\":\"NO\",\"d\":\"No internet possible\",\"i\":null}]},{\"title_code\":\"ONB_DISTANCE_FUSE_TO_CHARGER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CRAWL_SPACE_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null,\"lov\":[{\"v\":\"Y\",\"d\":\"Crawl space available?\",\"i\":null}]},{\"title_code\":\"ONB_CRAWL_SPACE_DRY_YN_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null,\"lov\":[{\"v\":\"Y\",\"d\":\"Crawl space dry?\",\"i\":null}]},{\"title_code\":\"ONB_METERS_DIGGING_TYPE1_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"1\",\"i\":null},{\"v\":\"2\",\"d\":\"2\",\"i\":null},{\"v\":\"3\",\"d\":\"3\",\"i\":null},{\"v\":\"4\",\"d\":\"4\",\"i\":null},{\"v\":\"5\",\"d\":\"5\",\"i\":null},{\"v\":\"6\",\"d\":\"6\",\"i\":null},{\"v\":\"7\",\"d\":\"7\",\"i\":null},{\"v\":\"8\",\"d\":\"8\",\"i\":null},{\"v\":\"9\",\"d\":\"9\",\"i\":null},{\"v\":\"10\",\"d\":\"10\",\"i\":null},{\"v\":\"11\",\"d\":\"11\",\"i\":null},{\"v\":\"12\",\"d\":\"12\",\"i\":null},{\"v\":\"13\",\"d\":\"13\",\"i\":null},{\"v\":\"14\",\"d\":\"14\",\"i\":null},{\"v\":\"15\",\"d\":\"15\",\"i\":null},{\"v\":\"16\",\"d\":\"16\",\"i\":null},{\"v\":\"17\",\"d\":\"17\",\"i\":null},{\"v\":\"18\",\"d\":\"18\",\"i\":null},{\"v\":\"19\",\"d\":\"19\",\"i\":null},{\"v\":\"20\",\"d\":\"20\",\"i\":null},{\"v\":\"21\",\"d\":\"21\",\"i\":null},{\"v\":\"22\",\"d\":\"22\",\"i\":null},{\"v\":\"23\",\"d\":\"23\",\"i\":null},{\"v\":\"24\",\"d\":\"24\",\"i\":null},{\"v\":\"25\",\"d\":\"25\",\"i\":null}]},{\"title_code\":\"ONB_METERS_DIGGING_TYPE2_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"1\",\"i\":null},{\"v\":\"2\",\"d\":\"2\",\"i\":null},{\"v\":\"3\",\"d\":\"3\",\"i\":null},{\"v\":\"4\",\"d\":\"4\",\"i\":null},{\"v\":\"5\",\"d\":\"5\",\"i\":null},{\"v\":\"6\",\"d\":\"6\",\"i\":null},{\"v\":\"7\",\"d\":\"7\",\"i\":null},{\"v\":\"8\",\"d\":\"8\",\"i\":null},{\"v\":\"9\",\"d\":\"9\",\"i\":null},{\"v\":\"10\",\"d\":\"10\",\"i\":null},{\"v\":\"11\",\"d\":\"11\",\"i\":null},{\"v\":\"12\",\"d\":\"12\",\"i\":null},{\"v\":\"13\",\"d\":\"13\",\"i\":null},{\"v\":\"14\",\"d\":\"14\",\"i\":null},{\"v\":\"15\",\"d\":\"15\",\"i\":null},{\"v\":\"16\",\"d\":\"16\",\"i\":null},{\"v\":\"17\",\"d\":\"17\",\"i\":null},{\"v\":\"18\",\"d\":\"18\",\"i\":null},{\"v\":\"19\",\"d\":\"19\",\"i\":null},{\"v\":\"20\",\"d\":\"20\",\"i\":null},{\"v\":\"21\",\"d\":\"21\",\"i\":null},{\"v\":\"22\",\"d\":\"22\",\"i\":null},{\"v\":\"23\",\"d\":\"23\",\"i\":null},{\"v\":\"24\",\"d\":\"24\",\"i\":null},{\"v\":\"25\",\"d\":\"25\",\"i\":null}]},{\"title_code\":\"ONB_METERS_DIGGING_TYPE3_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":true,\"regexp\":null,\"lov\":[{\"v\":\"1\",\"d\":\"1\",\"i\":null},{\"v\":\"2\",\"d\":\"2\",\"i\":null},{\"v\":\"3\",\"d\":\"3\",\"i\":null},{\"v\":\"4\",\"d\":\"4\",\"i\":null},{\"v\":\"5\",\"d\":\"5\",\"i\":null},{\"v\":\"6\",\"d\":\"6\",\"i\":null},{\"v\":\"7\",\"d\":\"7\",\"i\":null},{\"v\":\"8\",\"d\":\"8\",\"i\":null},{\"v\":\"9\",\"d\":\"9\",\"i\":null},{\"v\":\"10\",\"d\":\"10\",\"i\":null},{\"v\":\"11\",\"d\":\"11\",\"i\":null},{\"v\":\"12\",\"d\":\"12\",\"i\":null},{\"v\":\"13\",\"d\":\"13\",\"i\":null},{\"v\":\"14\",\"d\":\"14\",\"i\":null},{\"v\":\"15\",\"d\":\"15\",\"i\":null},{\"v\":\"16\",\"d\":\"16\",\"i\":null},{\"v\":\"17\",\"d\":\"17\",\"i\":null},{\"v\":\"18\",\"d\":\"18\",\"i\":null},{\"v\":\"19\",\"d\":\"19\",\"i\":null},{\"v\":\"20\",\"d\":\"20\",\"i\":null},{\"v\":\"21\",\"d\":\"21\",\"i\":null},{\"v\":\"22\",\"d\":\"22\",\"i\":null},{\"v\":\"23\",\"d\":\"23\",\"i\":null},{\"v\":\"24\",\"d\":\"24\",\"i\":null},{\"v\":\"25\",\"d\":\"25\",\"i\":null}]},{\"title_code\":\"ONB_PHOTO_FUSE_BOX_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_PHOTO_LOCATION_CP_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_PHOTO_PAVEMENT_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_PHOTO_SMART_METER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_PHOTO_OTHER_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null},{\"title_code\":\"ONB_CUSTOMER_REMARKS_Q\",\"answer\":null,\"readonly\":false,\"refresh\":false,\"display\":true,\"mandatory\":false,\"regexp\":null}]"';
+  l_error_messages constant varchar2(32767) := '
+    "error_messages": "[{\"name\":\"ANSWER_BUT_EMPTY_DOMAIN\",\"message_text\":\"Question \\\"<p1>\\\" has answer \\\"<p2>\\\" but no allowable values\"},{\"name\":\"ANSWER_DOES_NOT_MATCH_REGEXP\",\"message_text\":\"Question \\\"<p1>\\\" has an answer \\\"<p2>\\\" that does not match regular expression \\\"<p3>\\\"\"},{\"name\":\"ANSWER_MANDATORY\",\"message_text\":\"Question \\\"<p1>\\\" must have an answer\"},{\"name\":\"ANSWER_NOT_IN_DOMAIN\",\"message_text\":\"Question \\\"<p1>\\\" has an answer \\\"<p2>\\\" that is not part of the allowed values (<p3>)\"}]"';
+begin
+  /*
+procedure split
+( p_str in clob
+, p_delimiter in varchar2 := ','
+, p_str_tab out nocopy dbms_sql.varchar2a
+);
+*/
+  dbms_lob.trim(g_clob_test, 0);
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob('{' || "lf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(l_responses1));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(l_responses2 || ',' || "lf"));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(l_error_messages || "lf" || '}'));
+
+  split(g_clob_test, "lf", l_str_tab);
 end;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
