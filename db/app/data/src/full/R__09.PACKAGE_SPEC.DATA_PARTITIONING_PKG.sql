@@ -88,7 +88,9 @@ pipelined;
  
 Return the partitions and their range as stored in ALL_TAB_PARTITIONS.
 
-The HIGH_VALUE in that dictionary view is a LONG like TIMESTAMP' 2021-08-26 00:00:00'.
+The HIGH_VALUE in that dictionary view is a LONG like:
+- TIMESTAMP' 2021-08-26 00:00:00' (data type TIMESTAMP)
+- TO_DATE(' 2021-04-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN') (data type DATE)
 
 **/
 
@@ -107,6 +109,24 @@ Find the partitions with respect to the reference timestamp and operator:
 - for operator '=' we return the partition where the reference timestamp lies inside the range (lwb_incl <= p_reference_timestamp < upb_excl, both ends may be null).
 - for operator '<' we will return all partitions where the exclusive upper bound (may not be empty) is at most the reference timestamp
 - for operator '>' we will return all partitions where the inclusive lower bound (may not be empty) is greater than the reference timestamp
+
+**/
+
+function find_partitions_range
+( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_reference_date in date -- the reference date to find the reference partition
+, p_operator in varchar2 default '=' -- '<', '=' or '>'
+)
+return t_range_tab
+pipelined;
+
+/**
+ 
+Find the partitions with respect to the reference date and operator:
+- for operator '=' we return the partition where the reference date lies inside the range (lwb_incl <= p_reference_date < upb_excl, both ends may be null).
+- for operator '<' we will return all partitions where the exclusive upper bound (may not be empty) is at most the reference date
+- for operator '>' we will return all partitions where the inclusive lower bound (may not be empty) is greater than the reference date
 
 **/
 
@@ -131,7 +151,29 @@ ALTER TABLE "<p_table_owner>"."<p_table_name>" ADD PARTITION "<new partition>" V
 ```
 
 **/
-                           
+
+procedure create_new_partitions 
+( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_reference_date in date -- create partitions where the last one created will includes this date
+, p_update_index_clauses in varchar2 default 'UPDATE GLOBAL INDEXES' -- can be empty or UPDATE GLOBAL INDEXES
+, p_nr_days_per_partition in positiven default 1 -- the number of days per partition
+);
+
+/**
+ 
+Create new range partitions until the reference date lies inside the last created partition.
+
+Only meant for a range partitioned table without an interval (ALL_PART_TABLES.PARTITIONING_TYPE = 'RANGE' and ALL_PART_TABLES.INTERVAL is null).
+
+One of the statements to create a partition: 
+
+```sql
+ALTER TABLE "<p_table_owner>"."<p_table_name>" ADD PARTITION "<new partition>" VALUES LESS THAN (TO_DATE('<date>', 'YYYY-MM-DD')) <p_update_index_clauses>
+```
+
+**/
+
 procedure drop_old_partitions
 ( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
@@ -192,8 +234,16 @@ ALTER TABLE "<p_table_owner>"."<p_table_name>" DROP PARTITION "<old partition>" 
 
 See also [Updating indexes with partition maintenance](https://connor-mcdonald.com/2017/09/20/updating-indexes-with-partition-maintenance/).
 
-
 **/
+
+procedure drop_old_partitions
+( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
+, p_reference_date in date -- the reference date to find the reference partition (that will NOT be dropped)
+, p_update_index_clauses in varchar2 default 'UPDATE INDEXES' -- can be empty or UPDATE GLOBAL INDEXES as well
+, p_backup in boolean default false -- if true, a backup table will be used for each exchanged partition, before the drop
+);
+/** See drop_old_partitions for TIMESTAMPs. */
 
 end data_partitioning_pkg;
 /
