@@ -557,6 +557,14 @@ $end
   and     (t.interval is null or p.interval = 'YES')
   ;
 
+$if cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'l_partition_lt_reference_tab.count: %s'
+  , l_partition_lt_reference_tab.count
+  );
+$end
+
   if l_partition_lt_reference_tab.count > 0
   then
     for i_idx in l_partition_lt_reference_tab.first .. l_partition_lt_reference_tab.last

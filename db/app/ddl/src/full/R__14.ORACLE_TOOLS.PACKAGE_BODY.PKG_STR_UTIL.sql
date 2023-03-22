@@ -60,13 +60,21 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
     dbug.print(dbug."info", 'l_offset: %s; l_amount: %s', l_offset, l_amount);
 $end
 
+    l_chunk :=
+      dbms_lob.substr
+      ( lob_loc => p_clob
+      , offset => l_offset
+      , amount => l_amount
+      );
+
+    l_chunk_length := nvl(length(l_chunk), 0);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
+    dbug.print(dbug."info", 'l_chunk_length: %s', l_chunk_length);
+$end
+
     begin
-      l_chunk :=
-        dbms_lob.substr
-        ( lob_loc => p_clob
-        , offset => l_offset
-        , amount => l_amount
-        );
+      l_buffer := l_buffer || l_chunk;
     exception
       when value_error
       then
@@ -75,14 +83,6 @@ $end
         else exit buffer_loop;
         end if;
     end;
-
-    l_chunk_length := nvl(length(l_chunk), 0);
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'l_chunk_length: %s', l_chunk_length);
-$end
-
-    l_buffer := l_buffer || l_chunk;
 
     -- nothing read: stop;
     -- buffer length at least p_amount: stop
@@ -1397,6 +1397,14 @@ procedure split
   dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(l_responses2 || ',' || "lf"));
   dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(l_error_messages || "lf" || '}'));
 
+  begin
+    split(g_clob_test, null, l_str_tab); -- just a chunked read must succeed
+  exception
+    when others
+    then raise program_error; -- this is not the expected thrown exception
+  end;
+
+  -- this one should throw value_error
   split(g_clob_test, "lf", l_str_tab);
 end;
 
