@@ -155,6 +155,64 @@ begin
   end if;
 end partition_in_range;
 
+procedure find_partitions_range
+( p_table_owner in varchar2
+, p_table_name in varchar2
+, p_operator in varchar2
+, p_reference_timestamp in timestamp
+, p_reference_date in date
+, p_range_tab out nocopy t_range_tab
+)
+is
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.FIND_PARTITIONS_RANGE');
+  dbug.print
+  ( dbug."input"
+  , 'p_table_name: %s; p_operator: %s; p_reference_timestamp: %s; p_reference_date: %s'
+  , p_table_name
+  , p_operator
+  , to_char(p_reference_timestamp, "yyyy-mm-dd hh24:mi:ss.ff9")
+  , to_char(p_reference_date, "yyyy-mm-dd hh24:mi:ss")
+  );
+$end
+
+  p_range_tab := t_range_tab();
+
+  <<find_loop>>
+  for r in
+  ( select  t.*
+    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner => p_table_owner, p_table_name => p_table_name)) t
+  )
+  loop
+    if ( p_reference_timestamp is not null and
+         partition_in_range(p_range_rec => r, p_operator => p_operator, p_reference_timestamp => p_reference_timestamp)
+       ) or
+       ( p_reference_date is not null and
+         partition_in_range(p_range_rec => r, p_operator => p_operator, p_reference_date => p_reference_date)
+       )
+    then
+$if cfg_pkg.c_debugging $then
+      print(r);
+$end
+
+      p_range_tab.extend(1);
+      p_range_tab(p_range_tab.last) := r;
+
+      exit find_loop when p_operator = '='; -- small optimalization
+    end if;
+  end loop find_loop;
+
+$if cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_range_tab.count: %s'
+  , p_range_tab.count
+  );
+  dbug.leave;
+$end
+end find_partitions_range;
+
 procedure create_new_partitions 
 ( p_table_owner in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
 , p_table_name in varchar2 -- checked by DATA_API_PKG.DBMS_ASSERT$SIMPLE_SQL_NAME()
@@ -173,6 +231,7 @@ is
   l_upb_excl_timestamp timestamp := null;
   l_upb_excl_date date := null;
   l_ddl varchar2(32767 char) := null;
+  l_range_tab t_range_tab;
 
   -- ORA-14074: partition bound must collate higher than that of the last partition
   -- See also https://community.oracle.com/tech/developers/discussion/2194501/ora-14074-partition-bound-must-collate-higher-than-that-of-the-last-partit
@@ -238,57 +297,40 @@ $end
   for i_case in 1..3
   loop
     begin
-      select  p.partition_name
-      ,       p.partition_position
-      ,       p.interval
-      ,       p.lwb_incl
-      ,       p.upb_excl
+      if p_reference_timestamp is not null
+      then
+        find_partitions_range
+        ( p_table_owner => l_table_owner
+        , p_table_name => l_table_name
+        , p_reference_timestamp => p_reference_timestamp
+        , p_reference_date => null
+        , p_operator => case i_case when 1 then '=' when 2 then '>' when 3 then '<' end
+        , p_range_tab => l_range_tab
+        );
+      else
+        find_partitions_range
+        ( p_table_owner => l_table_owner
+        , p_table_name => l_table_name
+        , p_reference_timestamp => null
+        , p_reference_date => p_reference_date
+        , p_operator => case i_case when 1 then '=' when 2 then '>' when 3 then '<' end
+        , p_range_tab => l_range_tab
+        );
+      end if;
+                          
+      select  p.*
       into    l_partition_last_rec
       from    ( select  p.*
-                ,       case i_case
-                          when 3
-                          then -1 -- order by decreasing p.partition_position for <
-                          else +1 -- order by increasing p.partition_position for = and >
-                        end * p.partition_position as order_by
-                from    table
-                        ( oracle_tools.data_partitioning_pkg.find_partitions_range
-                          ( l_table_owner
-                          , l_table_name
-                          , p_reference_timestamp
-                          , case i_case
-                              when 1 then '='
-                              when 2 then '>'
-                              when 3 then '<'
-                            end
-                          )
-                        ) p
-                where   p_reference_timestamp is not null
-                union all
-                select  p.*
-                ,       case i_case
-                          when 3
-                          then -1 -- order by decreasing p.partition_position for <
-                          else +1 -- order by increasing p.partition_position for = and >
-                        end * p.partition_position as order_by
-                from    table
-                        ( oracle_tools.data_partitioning_pkg.find_partitions_range
-                          ( l_table_owner
-                          , l_table_name
-                          , p_reference_date
-                          , case i_case
-                              when 1 then '='
-                              when 2 then '>'
-                              when 3 then '<'
-                            end
-                          )
-                        ) p
-                where   p_reference_date is not null        
+                from    table(l_range_tab) p
                 order by
-                        order_by asc
+                        case i_case
+                          when 3
+                          then -1 -- order by decreasing p.partition_position for <
+                          else +1 -- order by increasing p.partition_position for = and >
+                        end * p.partition_position asc
               ) p
       where   rownum = 1
       ;
-
 
 $if cfg_pkg.c_debugging $then
       print(l_partition_last_rec);
@@ -459,7 +501,8 @@ is
   l_ddl varchar2(32767 char) := null;
   l_tablespace_name all_tables.tablespace_name%type;
   l_partition_name all_tab_partitions.partition_name%type;
-
+  l_range_tab t_range_tab;
+  
   procedure cleanup
   is
   begin
@@ -521,37 +564,34 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
+  if p_reference_timestamp is not null
+  then
+    find_partitions_range
+    ( p_table_owner => l_table_owner
+    , p_table_name => l_table_name
+    , p_reference_timestamp => p_reference_timestamp
+    , p_reference_date => null
+    , p_operator => '<'
+    , p_range_tab => l_range_tab
+    );
+  else
+    find_partitions_range
+    ( p_table_owner => l_table_owner
+    , p_table_name => l_table_name
+    , p_reference_timestamp => null
+    , p_reference_date => p_reference_date
+    , p_operator => '<'
+    , p_range_tab => l_range_tab
+    );
+  end if;
+
   -- retrieve the partition list before dropping them so we are 100% sure the list won't change while dropping
   select  p.* 
   bulk collect
   into    l_partition_lt_reference_tab
-  from    table
-          ( oracle_tools.data_partitioning_pkg.find_partitions_range
-            ( l_table_owner
-            , l_table_name
-            , p_reference_timestamp
-            , '<'
-            )
-          ) p
+  from    table(l_range_tab) p
           cross join all_part_tables t
-  where   p_reference_timestamp is not null
-  and     t.owner = trim('"' from l_table_owner)
-  and     t.table_name = trim('"' from l_table_name)
-  and     t.partitioning_type = 'RANGE'
-  and     (t.interval is null or p.interval = 'YES')
-  union all
-  select  p.* 
-  from    table
-          ( oracle_tools.data_partitioning_pkg.find_partitions_range
-            ( l_table_owner
-            , l_table_name
-            , p_reference_date
-            , '<'
-            )
-          ) p
-          cross join all_part_tables t
-  where   p_reference_date is not null
-  and     t.owner = trim('"' from l_table_owner)
+  where   t.owner = trim('"' from l_table_owner)
   and     t.table_name = trim('"' from l_table_name)
   and     t.partitioning_type = 'RANGE'
   and     (t.interval is null or p.interval = 'YES')
@@ -728,12 +768,34 @@ and     p.table_name = '%s'
     , l_table_name
     );
   l_cnt simple_integer := 0;
+  l_found pls_integer;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SHOW_PARTITIONS_RANGE');
   dbug.print(dbug."input", 'p_table_owner: %s; p_table_name: %s', p_table_owner, p_table_name);
   dbug.print(dbug."info", 'l_query: %s', l_query);
 $end
+
+  begin
+    select  1
+    into    l_found
+    from    all_part_tables t
+    where   t.owner = l_table_owner
+    and     t.table_name = l_table_name
+    and     t.partitioning_type = 'RANGE';
+  exception
+    when no_data_found
+    then
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'Table "%s"."%s" is not a range partitioned table.'
+        , l_table_owner
+        , l_table_name
+        )
+      , true
+      );
+  end;
 
   for r in
   ( with high_values as
@@ -797,7 +859,7 @@ $end
   <<find_loop>>
   for r in
   ( select  t.*
-    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner, p_table_name)) t
+    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner => p_table_owner, p_table_name => p_table_name)) t
   )
   loop
     if partition_in_range(p_range_rec => r, p_operator => p_operator, p_reference_timestamp => p_reference_timestamp)
@@ -842,7 +904,7 @@ $end
   <<find_loop>>
   for r in
   ( select  t.*
-    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner, p_table_name)) t
+    from    table(oracle_tools.data_partitioning_pkg.show_partitions_range(p_table_owner => p_table_owner, p_table_name => p_table_name)) t
   )
   loop
     if partition_in_range(p_range_rec => r, p_operator => p_operator, p_reference_date => p_reference_date)
