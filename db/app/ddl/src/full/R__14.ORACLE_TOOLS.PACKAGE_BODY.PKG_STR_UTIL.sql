@@ -22,6 +22,7 @@ function dbms_lob_substr
 ( p_clob in clob
 , p_amount in naturaln
 , p_offset in positiven
+, p_check in varchar2
 )
 return varchar2
 is
@@ -34,8 +35,22 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter(g_package_prefix || 'DBMS_LOB_SUBSTR');
-  dbug.print(dbug."input", 'p_clob length: %s; p_amount: %s; p_offset: %s', l_clob_length, p_amount, p_offset);
+  dbug.print
+  ( dbug."input"
+  , 'p_clob length: %s; p_amount: %s; p_offset: %s; p_check: %s'
+  , l_clob_length
+  , p_amount
+  , p_offset
+  , p_check
+  );
 $end
+
+  if p_check is null or p_check in ('O', 'L', 'OL')
+  then
+    null; -- OK
+  else
+    raise program_error;
+  end if;
 
   -- read till this entry is full (during testing I got 32764 instead of 32767)
   <<buffer_loop>>
@@ -54,7 +69,11 @@ $end
         );
     exception
       when value_error
-      then exit buffer_loop;
+      then
+        if p_check in ('O', 'OL')
+        then raise; -- overflow
+        else exit buffer_loop;
+        end if;
     end;
 
     l_chunk_length := nvl(length(l_chunk), 0);
@@ -73,6 +92,14 @@ $end
     l_amount := l_amount - l_chunk_length;
   end loop buffer_loop;
 
+  if p_check in ('L', 'OL')
+  then
+    if nvl(length(l_buffer), 0) = p_amount
+    then null; -- buffer length is amount requested, i.e. OK
+    else raise value_error;
+    end if;
+  end if;
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.print(dbug."output", 'return length: %s', length(l_buffer));
   dbug.leave;
@@ -80,6 +107,18 @@ $end
 
   return l_buffer;
 end dbms_lob_substr;
+
+function dbms_lob$substr
+( p_clob in clob
+, p_amount in naturaln
+, p_offset in positiven
+)
+return varchar2
+is
+begin
+  pragma inline (dbms_lob_substr, 'YES');
+  return dbms_lob_substr(p_clob => p_clob, p_amount => p_amount, p_offset => p_offset, p_check => null);
+end dbms_lob$substr;
 
 procedure split
 ( p_str in varchar2
@@ -97,7 +136,7 @@ $end
 
   if p_delimiter is null
   then
-    raise value_error;
+    raise program_error;
   end if;
 
   l_start := 1;
@@ -161,17 +200,14 @@ $end
         ( p_clob => p_str
         , p_offset => l_start
         , p_amount => l_amount
+        , p_check => case when l_pos > 0 then 'OL' end
         );
-      if l_pos > 0 and nvl(length(p_str_tab(p_str_tab.count+0)), 0) <> l_amount
-      then
-        raise value_error; -- could not read the whole substring in one line
-      end if;
       l_start := l_start + nvl(length(p_str_tab(p_str_tab.count+0)), 0) + nvl(length(p_delimiter), 0);
     end loop;
     -- everything has been read BUT ...
     if l_pos > 0
     then
-      -- the delimiter string is just at the end of p_str, so add another empty line so a join() can reconstruct exactly the same clob
+      -- the delimiter string is just at the end of p_str, hence add another empty line so a join() can reconstruct exactly the same clob
       p_str_tab(p_str_tab.count+1) := null;
     end if;
   end if;
@@ -1013,6 +1049,7 @@ $end
                           then 4000
                           else (l_last - l_first + 1) - (i_chunk-1) * 4000
                         end
+          , p_check => 'OL'              
           );
       end loop;
     end if;
@@ -1040,17 +1077,21 @@ begin
 
   for i_part in 1..3
   loop
-    for i_case in 1..4
+    for i_case in 1..5 -- include 32768 as well
     loop
       l_str_act := dbms_lob_substr(g_clob_test, 32763 + i_case, 1+32767*(i_part-1));
       l_str_exp := dbms_lob.substr(g_clob_test, 32763 + i_case, 1+32767*(i_part-1));
       if i_case = 1 or i_part = 3
       then
-        ut.expect(l_str_act, 'test contents ' || i_part || '.' || i_case).to_equal(l_str_exp);
-        ut.expect(length(l_str_act), 'test length ' || i_part || '.' || i_case).to_equal(length(l_str_exp));
+        ut.expect(l_str_act, 'test contents dbms_lob_substr ' || i_part || '.' || i_case).to_equal(l_str_exp);
+        ut.expect(length(l_str_act), 'test length dbms_lob_substr ' || i_part || '.' || i_case).to_equal(length(l_str_exp));
+      elsif i_case = 5
+      then
+        ut.expect(l_str_act, 'test contents dbms_lob_substr ' || i_part || '.' || i_case).to_be_null();
+        ut.expect(l_str_exp, 'test contents dbms_lob.substr ' || i_part || '.' || i_case).to_be_null();
       else
-        ut.expect(l_str_act, 'test contents ' || i_part || '.' || i_case).not_to_equal(l_str_exp);
-        ut.expect(length(l_str_act), 'test length ' || i_part || '.' || i_case).not_to_equal(length(l_str_exp));
+        ut.expect(l_str_act, 'test contents dbms_lob_substr ' || i_part || '.' || i_case).not_to_equal(l_str_exp);
+        ut.expect(length(l_str_act), 'test length dbms_lob_substr ' || i_part || '.' || i_case).not_to_equal(length(l_str_exp));
       end if;
     end loop;
   end loop;
@@ -1069,11 +1110,11 @@ procedure split
 */
   begin
     split("null", "null", l_str_tab);
-    raise program_error; -- should not come here since a value_error (ORA-06502) must be raised 
+    raise value_error; -- should not come here since a program_error (ORA-06501) must be raised 
   exception
     when others
     then
-      ut.expect(sqlcode, 'test 1.1').to_equal(-06502);
+      ut.expect(sqlcode, 'test 1.1').to_equal(-06501);
   end;
 
   split("null", "lf", l_str_tab);
