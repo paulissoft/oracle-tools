@@ -2,7 +2,7 @@
 layout: default
 title: MSG database objects
 parent: PL/SQL objects
-nav_order: 6
+nav_order: 7
 has_toc: false
 ---
 - [package MSG_AQ_PKG](R__09.PACKAGE_SPEC.MSG_AQ_PKG.html)

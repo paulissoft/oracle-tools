@@ -16,7 +16,7 @@ and     r.job_name = p_job_name
 ``
 
 See also [Killing Oracle Sessions (ALTER SYSTEM KILL / DISCONNECT SESSION)](https://oracle-base.com/articles/misc/killing-oracle-sessions).
-*/
+**/
 
 procedure stop_job 
 ( p_job_name in varchar2
@@ -26,7 +26,7 @@ procedure stop_job
 /**
 Invokes DBMS_SCHEDULER.STOP_JOB() when the job name is a running job for the session user.
 It will also kill the session using ADMIN_SYSTEM_PKG.KILL_SESSION(), if any.
-*/
+**/
    
 procedure drop_job
 ( p_job_name in varchar2
@@ -37,7 +37,7 @@ procedure drop_job
 /**
 Invokes DBMS_SCHEDULER.DROP_JOB() when the job name is a job for the session user.
 It will also kill the session using ADMIN_SYSTEM_PKG.KILL_SESSION(), if any.
-*/
+**/
 
 end admin_scheduler_pkg;
 /

@@ -2,7 +2,7 @@
 layout: default
 title: EXT database objects
 parent: PL/SQL objects
-nav_order: 5
+nav_order: 6
 has_toc: false
 ---
 <!--
