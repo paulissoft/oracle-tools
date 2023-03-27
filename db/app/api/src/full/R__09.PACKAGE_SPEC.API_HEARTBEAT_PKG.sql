@@ -75,7 +75,7 @@ Please note that this is a valid, probably even preferred, WAY of WORKING for th
     increase the silence threshold for the next run.
 4.  when that threshold is above some limit,
     stop the supervisor and workers and restart the whole process (supervisor and workers).
-*/
+**/
 
 procedure init
 ( p_supervisor_channel in supervisor_channel_t
@@ -83,13 +83,13 @@ procedure init
 , p_max_worker_nr in naturaln -- 0 for the worker initialisation; the number of workers for the supervisor
 , p_timestamp_tab out nocopy timestamp_tab_t
 );
-/** Initialize the channel for a worker or supervisor, a mandatory action. */
+/** Initialize the channel for a worker or supervisor, a mandatory action. **/
 
 procedure done
 ( p_supervisor_channel in supervisor_channel_t
 , p_worker_nr in positive default null -- null for the supervisor
 );
-/** Cleanup the channel for a worker or supervisor, an optional action. */
+/** Cleanup the channel for a worker or supervisor, an optional action. **/
 
 procedure shutdown
 ( p_supervisor_channel in supervisor_channel_t
@@ -99,7 +99,7 @@ procedure shutdown
 Send the supervisor and workers a shutdown request.
 It is more efficient to specify the number of workers so that worker heartbeat send routine can pick up the request immediately.
 Otherwise the supervisor will send it when it receives a shutdown request.
-*/
+**/
 
 procedure send
 ( p_supervisor_channel in supervisor_channel_t
@@ -129,7 +129,7 @@ The contents of the response message received from the supervisor:
 - the current timestamp of the supervisor (or shutdown message c_shutdown_msg_str)
 
 See also recv() below.
-*/
+**/
 
 procedure recv
 ( p_supervisor_channel in supervisor_channel_t
@@ -160,7 +160,7 @@ The contents of the response message sent to the worker:
 - the current timestamp of the supervisor
 
 See also send() above.
-*/
+**/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
