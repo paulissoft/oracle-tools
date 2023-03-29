@@ -7,6 +7,8 @@ subtype timestamp_str_t is api_time_pkg.timestamp_str_t;
 
 "yyyy-mm-dd hh24:mi:ss" constant varchar2(30) := 'yyyy-mm-dd hh24:mi:ss';
 
+c_process_heartbeats_since constant api_time_pkg.timestamp_t := api_time_pkg.get_timestamp;
+
 function get_pipename
 ( p_supervisor_channel in supervisor_channel_t
 , p_worker_nr in positive
@@ -87,6 +89,8 @@ is
   pragma inline (get_pipename, 'YES');
   l_send_pipe constant pipename_t := get_pipename(p_supervisor_channel, p_worker_nr);
   l_send_timeout constant naturaln := 0;
+  l_current_timestamp constant api_time_pkg.timestamp_t := api_time_pkg.get_timestamp;
+  l_send_timestamp_str constant timestamp_str_t := api_time_pkg.timestamp2str(l_current_timestamp);
 begin
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SEND_SHUTDOWN');
@@ -100,9 +104,12 @@ $end
   else
     dbms_pipe.pack_message(c_shutdown_msg_str); -- send to worker
   end if;
+  dbms_pipe.pack_message(l_send_timestamp_str);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
+  dbug.print(dbug."info", 'current timestamp to send: %s', l_send_timestamp_str);
+  dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
   dbug.leave;
 $end
 
@@ -284,7 +291,15 @@ $end
       dbms_pipe.unpack_message(l_msg);
       if l_msg = c_shutdown_msg_str
       then
-        raise_application_error(c_shutdown_request_received, 'Shutdown request received.');
+        dbms_pipe.unpack_message(l_recv_timestamp_str);
+        raise_application_error
+        ( c_shutdown_request_received
+        , utl_lms.format_message
+          ( 'Shutdown request (dating from "%s") received at "%s".'
+          , l_recv_timestamp_str
+          , l_send_timestamp_str
+          )
+        );
       end if;
       
       -- step 7
@@ -368,6 +383,7 @@ $end
 
     -- step 4
     dbms_pipe.unpack_message(l_msg);
+    dbms_pipe.unpack_message(l_recv_timestamp_str);
     if l_msg = c_shutdown_msg_int
     then
       -- step 4a
@@ -379,11 +395,17 @@ $end
         l_result_dummy := send_shutdown(p_supervisor_channel => p_supervisor_channel, p_worker_nr => l_worker_nr);
         l_worker_nr := p_timestamp_tab.next(l_worker_nr);
       end loop;
-      raise_application_error(c_shutdown_request_forwarded, 'Shutdown request forwarded.');
+      raise_application_error
+      ( c_shutdown_request_forwarded
+      , utl_lms.format_message
+        ( 'Shutdown request (dating from "%s") forwarded at "%s".'
+        , l_recv_timestamp_str
+        , api_time_pkg.timestamp2str(api_time_pkg.get_timestamp)
+        )
+      );
     else
       -- step 4b
       l_worker_nr := l_msg;
-      dbms_pipe.unpack_message(l_recv_timestamp_str);
 
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'timestamp received from worker: %s', l_recv_timestamp_str);
