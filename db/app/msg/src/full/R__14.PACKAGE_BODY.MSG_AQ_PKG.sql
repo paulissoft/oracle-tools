@@ -1330,13 +1330,31 @@ return sys.odcivarchar2list
 is
   l_msg_tab constant msg_pkg.msg_tab_t := msg_pkg.get_msg_tab;
   l_groups_to_process_tab sys.odcivarchar2list := sys.odcivarchar2list();
+  l_fq_queue_name_tab sys.odcivarchar2list;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_GROUPS_TO_PROCESS');
   dbug.print(dbug."input", 'p_processing_method: %s', p_processing_method);
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging and msg_aq_pkg.c_debugging >= 2 $then
+  select  msg_pkg.get_object_name(p_object_name => q.name, p_what => 'queue') as fq_queue_name
+  bulk collect
+  into    l_fq_queue_name_tab  
+  from    user_queues q
+  where   q.queue_type = 'NORMAL_QUEUE'
+  and     q.queue_table = trim('"' from c_queue_table)
+  and     trim(q.dequeue_enabled) = 'YES'
+  minus
+  select  case
+            when sr.subscription_name like '%:%'
+            then substr(sr.subscription_name, 1, instr(sr.subscription_name, ':', -1) - 1)
+            else sr.subscription_name
+          end as fq_queue_name -- "OWNER"."QUEUE"
+  from    user_subscr_registrations sr
+  order by
+          fq_queue_name;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
 
   if l_msg_tab is not null and l_msg_tab.count > 0
   then
@@ -1360,48 +1378,22 @@ $if oracle_tools.cfg_pkg.c_debugging and msg_aq_pkg.c_debugging >= 2 $then
   loop
     dbug.print(dbug."info", 'subscription registration name: %s', r.subscription_name);
   end loop;
+  
+  if l_fq_queue_name_tab.count is not null and l_fq_queue_name_tab.count > 0
+  then
+    for i_idx in l_fq_queue_name_tab.first .. l_fq_queue_name_tab.last
+    loop
+      dbug.print(dbug."info", '[%s] normal queue open for dequeue: %s', i_idx, l_fq_queue_name_tab(i_idx));
+    end loop;
+  end if;
 
-  for r in
-  ( select  msg_pkg.get_object_name(p_object_name => q.name, p_what => 'queue') as fq_queue_name
-    from    user_queues q
-    where   q.queue_type = 'NORMAL_QUEUE'
-    and     q.queue_table = trim('"' from c_queue_table)
-    and     trim(q.dequeue_enabled) = 'YES'
-    minus
-    select  case
-              when sr.subscription_name like '%:%'
-              then substr(sr.subscription_name, 1, instr(sr.subscription_name, ':', -1) - 1)
-              else sr.subscription_name
-            end as fq_queue_name -- "OWNER"."QUEUE"
-    from    user_subscr_registrations sr
-    order by
-            fq_queue_name
-  )
-  loop
-    dbug.print(dbug."info", 'fq queue name: %s', r.fq_queue_name);
-  end loop;
-
-$end
+$end -- $if oracle_tools.cfg_pkg.c_debugging $then
 
   select  distinct
           t.group$
   bulk collect
   into    l_groups_to_process_tab
-  from    ( select  msg_pkg.get_object_name(p_object_name => q.name, p_what => 'queue') as fq_queue_name
-            from    user_queues q
-            where   q.queue_type = 'NORMAL_QUEUE'
-            and     q.queue_table = trim('"' from c_queue_table)
-            and     trim(q.dequeue_enabled) = 'YES'
-            minus
-            select  case
-                      when sr.subscription_name like '%:%'
-                      then substr(sr.subscription_name, 1, instr(sr.subscription_name, ':', -1) - 1)
-                      else sr.subscription_name
-                    end as fq_queue_name -- "OWNER"."QUEUE"
-            from    user_subscr_registrations sr
-            order by
-                    fq_queue_name
-          ) q
+  from    ( select t.column_value as fq_queue_name from table(l_fq_queue_name_tab) t ) q
           inner join table(l_msg_tab) t
           on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.get_queue_name(value(t)), p_what => 'queue')
   where   ( t.default_processing_method() = p_processing_method or t.default_processing_method() like "plsql://" || '%' )

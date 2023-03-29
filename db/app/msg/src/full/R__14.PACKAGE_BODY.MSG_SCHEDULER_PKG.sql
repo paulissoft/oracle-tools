@@ -1173,7 +1173,13 @@ $end
             processing_launcher(p_processing_package => l_processing_package);
           exception
             when e_no_groups_to_process
-            then null;
+            then
+              if msg_constants_pkg.c_default_processing_method like 'plsql://%'
+              then
+                null; -- use PL/SQL notifications hence this is plausible
+              else
+                raise;
+              end if;
           end;
         end if;
 
@@ -1588,10 +1594,15 @@ $end
     end loop;
     
     -- Shutdown supervisor and workers, if any
-    oracle_tools.api_heartbeat_pkg.shutdown
-    ( p_supervisor_channel => $$PLSQL_UNIT
-    , p_nr_workers => l_nr_workers
-    );
+    begin
+      oracle_tools.api_heartbeat_pkg.shutdown
+      ( p_supervisor_channel => $$PLSQL_UNIT
+      , p_nr_workers => l_nr_workers
+      );
+    exception
+      when oracle_tools.api_heartbeat_pkg.e_shutdown_request_failed
+      then null;
+    end;
     
     <<job_loop>>
     for i_job_idx in l_job_name_tab.first .. l_job_name_tab.last
