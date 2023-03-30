@@ -83,7 +83,12 @@ $end
       end;
     end if;
   end loop;
-  
+
+  if l_msg_tab.count = 0
+  then
+    raise program_error;
+  end if;
+
   return l_msg_tab;
 end get_msg_tab;
 
