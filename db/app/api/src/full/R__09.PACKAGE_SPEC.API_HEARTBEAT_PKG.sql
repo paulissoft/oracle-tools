@@ -6,9 +6,6 @@ c_debugging constant boolean := false; -- oracle_tools.cfg_pkg.c_debugging
 
 c_use_package constant all_objects.object_name%type := 'DBMS_PIPE'; -- package to implement this: you need execute privileges on it
 
-c_shutdown_msg_int constant integer := -1;
-c_shutdown_msg_str constant varchar2(8 char) := 'SHUTDOWN';
-
 c_silent_workers_found constant pls_integer := -20100;
 e_silent_workers_found exception;
 pragma exception_init(e_silent_workers_found, -20100);
@@ -96,7 +93,7 @@ procedure shutdown
 , p_nr_workers in positive default null -- send the workers from 1 till p_nr_workers a shutdown request too (if not null)
 );
 /**
-Send the supervisor and workers a shutdown request.
+Send the supervisor and workers a shutdown request but first empty the channel so you can not have time-out on sending the shutdown because of previous (shutdown) messages and also because the receiving processes must ignore older shutdowns.
 It is more efficient to specify the number of workers so that worker heartbeat send routine can pick up the request immediately.
 Otherwise the supervisor will send it when it receives a shutdown request.
 **/
@@ -111,22 +108,24 @@ procedure send
 );
 /**
 The actions:
-1. send a heartbeat to the supervisor channel with a timeout of 0 seconds.
-2. if that fails, stop processing and go to the last step.
-3. receive a response on the response channel while waiting for p_first_recv_timeout seconds the first time.
-4. if that fails, stop processing and go to the last step.
-5. the rest of the send/receive operations will be non-blocking.
-6. if the message is a shutdown message (c_shutdown_str as the first item): fail with the shutdown request received exception.
-7. record the timestamp in the timestamp table (index 0 since it is the supervisor).
-8. go back to 3 for the next message to receive.
-9. determine the silent workers (just one, the supervisor).
+ 1. send a heartbeat to the supervisor channel with a timeout of 0 seconds.
+ 2. if that fails, stop processing and go to the last step.
+ 3. receive a response on the response channel while waiting for p_first_recv_timeout seconds the first time.
+ 4. if that fails, stop processing and go to the last step.
+ 5. the rest of the send/receive operations will be non-blocking.
+ 6. if the message is too old: ignore it and go back to 3.
+ 7. if the message is a shutdown message: fail with the shutdown request received exception.
+ 8. record the timestamp in the timestamp table (index 0 since it is the supervisor).
+ 9. go back to 3 for the next message to receive.
+10. determine the silent workers (just one, the supervisor).
 
 The contents of the message sent to the supervisor:
-- the worker number
 - the current timestamp of the worker
+- the worker number > 0 (or -1 to indicate shutdown)
 
 The contents of the response message received from the supervisor:
-- the current timestamp of the supervisor (or shutdown message c_shutdown_msg_str)
+- the current timestamp of the supervisor
+- the supervisor number 0 (or -1 to indicate shutdown)
 
 See also recv() below.
 **/
@@ -140,24 +139,26 @@ procedure recv
 );
 /**
 The actions:
-1.  receive a worker heartbeat message on the supervisor channel with a timeout of p_first_recv_timeout seconds the first time.
-2.  if that fails, stop processing and go to the last step.
-3.  the rest of the send/receive operations will be non-blocking.
-4a. if the (first part of the) message is the shutdown message:
-    raise the shutdown request forwarded exception.
-4b. otherwise, the (first part of the) message is the worker number and the next part is the timestamp.
-5.  send a response with the current timestamp of the supervisor
-6.  if that fails, stop processing and go to the last step.
-7.  record the timestamp in the timestamp table.
-8.  go back to 1 for the next message to receive.
-9.  determine the silent workers.
+ 1.  receive a worker heartbeat message on the supervisor channel with a timeout of p_first_recv_timeout seconds the first time.
+ 2.  if that fails, stop processing and go to the last step.
+ 3.  the rest of the send/receive operations will be non-blocking.
+ 4.  if the message is too old: ignore it and go back to 1.
+ 5a. if the message is a shutdown message:
+     raise the shutdown request forwarded exception.
+ 5b. otherwise, the message contains the timestamp and worker number.
+ 6.  send a response with the current timestamp of the supervisor
+ 7.  if that fails, stop processing and go to the last step.
+ 8.  record the timestamp in the timestamp table.
+ 9.  go back to 1 for the next message to receive.
+10.  determine the silent workers.
 
 The contents of the messages received (from the send() or the shutdown() routine):
-- the worker number (or the shutdown message c_shutdown_msg_int)
-- the current timestamp of the worker (only for a worker)
+- the current timestamp of the worker
+- the worker number > 0 (or -1 to indicate shutdown)
 
 The contents of the response message sent to the worker:
 - the current timestamp of the supervisor
+- the supervisor number 0 (or -1 to indicate shutdown)
 
 See also send() above.
 **/
@@ -177,6 +178,10 @@ procedure ut_shutdown_worker;
 --%test
 --%throws(api_heartbeat_pkg.e_shutdown_request_forwarded)
 procedure ut_shutdown_supervisor;
+
+--%test
+--%throws(no_data_found)
+procedure ut_shutdown_multiple_times;
 
 $end
 

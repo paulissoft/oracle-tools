@@ -111,6 +111,15 @@ begin
   return to_timestamp_tz(p_val, c_timestamp_format);
 end str2timestamp;
 
+function get_timestamp_str
+return timestamp_str_t
+is
+begin
+  PRAGMA INLINE (get_timestamp, 'YES'); -- speed it up!
+  PRAGMA INLINE (timestamp2str, 'YES'); -- speed it up!
+  return timestamp2str(p_val => get_timestamp);
+end get_timestamp_str;
+
 $if oracle_tools.cfg_pkg.c_testing $then
 
 procedure ut_get_timestamp

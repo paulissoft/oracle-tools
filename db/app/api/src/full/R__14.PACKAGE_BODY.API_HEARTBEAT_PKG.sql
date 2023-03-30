@@ -8,6 +8,7 @@ subtype timestamp_str_t is api_time_pkg.timestamp_str_t;
 "yyyy-mm-dd hh24:mi:ss" constant varchar2(30) := 'yyyy-mm-dd hh24:mi:ss';
 
 c_process_heartbeats_since constant api_time_pkg.timestamp_t := api_time_pkg.get_timestamp;
+c_shutdown_msg_int constant integer := -1;
 
 function get_pipename
 ( p_supervisor_channel in supervisor_channel_t
@@ -79,9 +80,40 @@ exception
 $end
 end determine_silent_workers;
 
+function ignore_message
+( p_send_timestamp_str in timestamp_str_t
+, p_origin in pls_integer
+)
+return boolean
+is
+begin
+  return not(p_send_timestamp_str is not null and api_time_pkg.str2timestamp(p_send_timestamp_str) > c_process_heartbeats_since);
+end ignore_message;
+
+procedure pack_message
+( p_send_timestamp_str in timestamp_str_t
+, p_origin in pls_integer default 0 -- the supervisor
+)
+is
+begin
+  dbms_pipe.pack_message(p_send_timestamp_str);
+  dbms_pipe.pack_message(p_origin);
+end pack_message;
+
+procedure unpack_message
+( p_recv_timestamp_str out nocopy timestamp_str_t
+, p_origin out nocopy pls_integer
+)
+is
+begin
+  dbms_pipe.unpack_message(p_recv_timestamp_str);
+  dbms_pipe.unpack_message(p_origin);
+end unpack_message;
+
 function send_shutdown
 ( p_supervisor_channel in supervisor_channel_t
 , p_worker_nr in positive
+, p_empty_channel in boolean
 )
 return pls_integer
 is
@@ -94,17 +126,21 @@ is
 begin
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SEND_SHUTDOWN');
-  dbug.print(dbug."input", 'p_supervisor_channel: %s; p_worker_nr: %s', p_supervisor_channel, p_worker_nr);
+  dbug.print
+  ( dbug."input"
+  , 'p_supervisor_channel: %s; p_worker_nr: %s; p_empty_channel: %s'
+  , p_supervisor_channel
+  , p_worker_nr
+  , dbug.cast_to_varchar2(p_empty_channel)
+  );
 $end
 
   dbms_pipe.reset_buffer;
-  if p_worker_nr is null
+  pack_message(l_send_timestamp_str, c_shutdown_msg_int);
+  if p_empty_channel
   then
-    dbms_pipe.pack_message(c_shutdown_msg_int); -- send to supervisor
-  else
-    dbms_pipe.pack_message(c_shutdown_msg_str); -- send to worker
+    dbms_pipe.purge(pipename => l_send_pipe);
   end if;
-  dbms_pipe.pack_message(l_send_timestamp_str);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
@@ -115,6 +151,52 @@ $end
 
   return l_result;
 end send_shutdown;
+
+procedure shutdown
+( p_supervisor_channel in supervisor_channel_t
+, p_nr_workers in positive
+, p_empty_channel in boolean
+)
+is
+  l_result pls_integer;
+begin
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.SHUTDOWN');
+  dbug.print
+  ( dbug."input"
+  , 'p_supervisor_channel: %s; p_empty_channel'
+  , p_supervisor_channel
+  , dbug.cast_to_varchar2(p_empty_channel)
+  );
+$end
+
+  for i_worker_nr in 0 .. nvl(p_nr_workers, 0)
+  loop
+    l_result := send_shutdown(p_supervisor_channel, case when i_worker_nr > 0 then i_worker_nr end, p_empty_channel);
+    if l_result = 0
+    then
+      null; -- OK
+    else
+      raise_application_error
+      ( c_shutdown_request_failed
+      , utl_lms.format_message
+        ( q'[Failed to send shutdown request for %s. DBMS_PIPE.SEND_MESSAGE returned status %d.]'
+        , case when i_worker_nr > 0 then 'worker #' || i_worker_nr else 'supervisor' end
+        , l_result -- %d should work for pls_integer
+        )
+      );
+    end if;
+  end loop;
+
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end shutdown;
 
 -- public
 
@@ -190,39 +272,8 @@ procedure shutdown
 , p_nr_workers in positive
 )
 is
-  l_result pls_integer;
 begin
-$if oracle_tools.api_heartbeat_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT || '.SHUTDOWN');
-  dbug.print(dbug."input", 'p_supervisor_channel: %s', p_supervisor_channel);
-$end
-
-  for i_worker_nr in 0 .. nvl(p_nr_workers, 0)
-  loop
-    l_result := send_shutdown(p_supervisor_channel, case when i_worker_nr > 0 then i_worker_nr end);
-    if l_result = 0
-    then
-      null; -- OK
-    else
-      raise_application_error
-      ( c_shutdown_request_failed
-      , utl_lms.format_message
-        ( q'[Failed to send shutdown request for %s. DBMS_PIPE.SEND_MESSAGE returned status %d.]'
-        , case when i_worker_nr > 0 then 'worker #' || i_worker_nr else 'supervisor' end
-        , l_result -- %d should work for pls_integer
-        )
-      );
-    end if;
-  end loop;
-
-$if oracle_tools.api_heartbeat_pkg.c_debugging $then
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
+  shutdown(p_supervisor_channel => p_supervisor_channel, p_nr_workers => p_nr_workers, p_empty_channel => true);
 end shutdown;
 
 procedure send
@@ -244,7 +295,7 @@ is
   pragma inline (get_pipename, 'YES');
   l_recv_pipe constant pipename_t := get_pipename(p_supervisor_channel, p_worker_nr);
   l_recv_timeout naturaln := p_first_recv_timeout;
-  l_msg timestamp_str_t;
+  l_origin pls_integer;
 begin  
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.SEND');
@@ -261,8 +312,7 @@ $end
 
   -- step 1 (see the package specification for the step description)
   dbms_pipe.reset_buffer;
-  dbms_pipe.pack_message(p_worker_nr);
-  dbms_pipe.pack_message(l_send_timestamp_str);
+  pack_message(l_send_timestamp_str, p_worker_nr);
   l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
   dbug.print(dbug."info", 'current timestamp to send to supervisor: %s', l_send_timestamp_str);
@@ -288,10 +338,13 @@ $end
       l_recv_timeout := 0;
 
       -- step 6
-      dbms_pipe.unpack_message(l_msg);
-      if l_msg = c_shutdown_msg_str
+      unpack_message(l_recv_timestamp_str, l_origin);
+
+      continue recv_loop when ignore_message(l_recv_timestamp_str, l_origin);
+
+      -- step 7
+      if l_origin = c_shutdown_msg_int
       then
-        dbms_pipe.unpack_message(l_recv_timestamp_str);
         raise_application_error
         ( c_shutdown_request_received
         , utl_lms.format_message
@@ -302,8 +355,7 @@ $end
         );
       end if;
       
-      -- step 7
-      l_recv_timestamp_str := l_msg;
+      -- step 8
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'timestamp received from supervisor: %s', l_recv_timestamp_str);
 $end
@@ -312,11 +364,11 @@ $if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'p_timestamp_tab(0): %s', l_recv_timestamp_str);
 $end
 
-      -- step 8
+      -- step 9
     end loop recv_loop;
   end if;
 
-  -- step 9
+  -- step 10
   determine_silent_workers(p_silence_threshold, p_timestamp_tab, p_silent_worker_tab);
 
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
@@ -353,7 +405,7 @@ is
   l_recv_pipe constant pipename_t := get_pipename(p_supervisor_channel, null);
   l_recv_timeout naturaln := p_first_recv_timeout;
   l_worker_nr positive;
-  l_msg pls_integer;
+  l_origin pls_integer;
   l_result_dummy pls_integer;
 begin
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
@@ -367,6 +419,7 @@ $if oracle_tools.api_heartbeat_pkg.c_debugging $then
   );
 $end
 
+  <<recv_loop>>
   loop
     -- step 1 (see the package specification for the step description)
     dbms_pipe.reset_buffer;
@@ -376,23 +429,26 @@ $if oracle_tools.api_heartbeat_pkg.c_debugging $then
 $end
 
     -- step 2
-    exit when nvl(l_result, -1) <> 0;
+    exit recv_loop when nvl(l_result, -1) <> 0;
 
     -- step 3
     l_recv_timeout := 0;
 
     -- step 4
-    dbms_pipe.unpack_message(l_msg);
-    dbms_pipe.unpack_message(l_recv_timestamp_str);
-    if l_msg = c_shutdown_msg_int
+    unpack_message(l_recv_timestamp_str, l_origin);
+
+    continue recv_loop when ignore_message(l_recv_timestamp_str, l_origin);
+
+    -- step 5
+    if l_origin = c_shutdown_msg_int
     then
-      -- step 4a
-      -- We have to send a shutdown request to all the workers, i.e. all the entries  in p_timestamp_tab.
+      -- step 5a
+      -- We have to send a shutdown request to all the workers, i.e. all the entries in p_timestamp_tab.
       -- Maybe some new workers have arrived after the init() leaving holes, so check all the indexes.
       l_worker_nr := p_timestamp_tab.first;
       while l_worker_nr is not null
       loop
-        l_result_dummy := send_shutdown(p_supervisor_channel => p_supervisor_channel, p_worker_nr => l_worker_nr);
+        l_result_dummy := send_shutdown(p_supervisor_channel => p_supervisor_channel, p_worker_nr => l_worker_nr, p_empty_channel => true);
         l_worker_nr := p_timestamp_tab.next(l_worker_nr);
       end loop;
       raise_application_error
@@ -404,8 +460,8 @@ $end
         )
       );
     else
-      -- step 4b
-      l_worker_nr := l_msg;
+      -- step 5b
+      l_worker_nr := l_origin;
 
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
       dbug.print(dbug."info", 'timestamp received from worker: %s', l_recv_timestamp_str);
@@ -417,7 +473,7 @@ $end
       raise program_error;
     end if;
 
-    -- step 5
+    -- step 6
     dbms_pipe.reset_buffer;
     l_current_timestamp := api_time_pkg.get_timestamp;
     l_send_timestamp_str := api_time_pkg.timestamp2str(l_current_timestamp);
@@ -425,7 +481,7 @@ $end
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print(dbug."info", 'current timestamp to send to worker: %s', l_send_timestamp_str);
 $end
-    dbms_pipe.pack_message(l_send_timestamp_str);
+    pack_message(l_send_timestamp_str);
     pragma inline (get_pipename, 'YES');
     l_send_pipe := get_pipename(p_supervisor_channel, l_worker_nr);
     l_result := dbms_pipe.send_message(pipename => l_send_pipe, timeout => l_send_timeout);
@@ -433,19 +489,19 @@ $if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print(dbug."info", 'dbms_pipe.send_message(pipename => %s, timeout => %s): %s', l_send_pipe, l_send_timeout, l_result);
 $end
 
-    -- step 6
-    exit when nvl(l_result, -1) <> 0;
-
     -- step 7
+    exit recv_loop when nvl(l_result, -1) <> 0;
+
+    -- step 8
     p_timestamp_tab(l_worker_nr) := api_time_pkg.str2timestamp(l_recv_timestamp_str);
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
     dbug.print(dbug."info", 'p_timestamp_tab(%s): %s', l_worker_nr, l_recv_timestamp_str);
 $end
 
-    -- step 8
-  end loop;
+    -- step 9
+  end loop recv_loop;
 
-  -- step 9
+  -- step 10
   determine_silent_workers(p_silence_threshold, p_timestamp_tab, p_silent_worker_tab);
 
 $if oracle_tools.api_heartbeat_pkg.c_debugging $then
@@ -788,6 +844,63 @@ exception
     raise;
 $end
 end ut_shutdown_supervisor;
+
+procedure ut_shutdown_multiple_times
+is
+  l_supervisor_channel constant supervisor_channel_t := $$PLSQL_UNIT;
+  l_supervisor_timestamp_tab timestamp_tab_t;
+  l_silent_worker_tab silent_worker_tab_t;
+begin
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.UT_SHUTDOWN_MULTIPLE_TIMES');
+$end
+
+  -- supervisor
+  init
+  ( p_supervisor_channel => l_supervisor_channel
+  , p_worker_nr => null
+  , p_max_worker_nr => 2
+  , p_timestamp_tab => l_supervisor_timestamp_tab
+  );
+
+  <<case_loop>>
+  for i_case in 0..1 -- 0: do not empty; 1: do empty
+  loop
+    <<shutdown_loop>>
+    for i_idx in 1..200 -- should stop after 179 times when i_case = 0
+    loop
+      begin
+        shutdown(p_supervisor_channel => l_supervisor_channel, p_nr_workers => null, p_empty_channel => i_case = 1);
+      exception
+        when e_shutdown_request_failed
+        then
+          -- shutdown fails after 179 times when the channel is not emptied
+          if i_idx = 179 and i_case = 0
+          then
+            continue case_loop; -- next case
+          else
+            raise;
+          end if;
+      end;
+    end loop shutdown_loop;
+    -- should not come here for case 0
+    if i_case = 0
+    then
+      raise program_error;
+    end if;
+  end loop case_loop;
+
+  raise no_data_found; -- utPLSQL must check this
+
+$if oracle_tools.api_heartbeat_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end ut_shutdown_multiple_times;
 
 $end
 

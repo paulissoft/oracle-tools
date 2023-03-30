@@ -5,7 +5,6 @@ subtype time_t is number; -- return value of dbms_utility.get_time()
 subtype timestamp_t is timestamp(6) with time zone; -- return value of systimestamp()
 subtype timestamp_diff_t is interval day(9) to second(6);
 subtype seconds_t is number; -- before the decimal the number of seconds, after the decimal the fractional seconds
-
 subtype timestamp_str_t is varchar2(33 char);
 
 c_timestamp_format constant varchar2(37 char) := 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"TZH:TZM';
@@ -81,6 +80,10 @@ function str2timestamp
 )
 return timestamp_t;
 /** Return the timestamp string value (in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format) as a timestamp with time zone. */
+
+function get_timestamp_str
+return timestamp_str_t;
+/** Get the current timestamp as a string. Just returns systimestamp() (in 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"' format). **/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
