@@ -58,7 +58,7 @@ function alter_table_range_partitioning
 return varchar2;
 
 /**
- 
+
 Return the DDL for turning a non-partitioned table into a range (interval) partitioned one.
 
 It returns something like:
@@ -85,7 +85,7 @@ return t_range_tab
 pipelined;
 
 /**
- 
+
 Return the partitions and their range as stored in ALL_TAB_PARTITIONS.
 
 The HIGH_VALUE in that dictionary view is a LONG like:
@@ -104,7 +104,7 @@ return t_range_tab
 pipelined;
 
 /**
- 
+
 Find the partitions with respect to the reference timestamp and operator:
 - for operator '=' we return the partition where the reference timestamp lies inside the range (lwb_incl <= p_reference_timestamp < upb_excl, both ends may be null).
 - for operator '<' we will return all partitions where the exclusive upper bound (may not be empty) is at most the reference timestamp
@@ -122,7 +122,7 @@ return t_range_tab
 pipelined;
 
 /**
- 
+
 Find the partitions with respect to the reference date and operator:
 - for operator '=' we return the partition where the reference date lies inside the range (lwb_incl <= p_reference_date < upb_excl, both ends may be null).
 - for operator '<' we will return all partitions where the exclusive upper bound (may not be empty) is at most the reference date
@@ -139,7 +139,7 @@ procedure create_new_partitions
 );
 
 /**
- 
+
 Create new range partitions until the reference timestamp lies inside the last created partition.
 
 Only meant for a range partitioned table without an interval (ALL_PART_TABLES.PARTITIONING_TYPE = 'RANGE' and ALL_PART_TABLES.INTERVAL is null).
@@ -161,7 +161,7 @@ procedure create_new_partitions
 );
 
 /**
- 
+
 Create new range partitions until the reference date lies inside the last created partition.
 
 Only meant for a range partitioned table without an interval (ALL_PART_TABLES.PARTITIONING_TYPE = 'RANGE' and ALL_PART_TABLES.INTERVAL is null).
@@ -183,7 +183,7 @@ procedure drop_old_partitions
 );
 
 /**
- 
+
 Drop (and optionally backup) partitions before the reference timestamp.
 
 For a partitioned table with an interval (ALL_PART_TABLES.INTERVAL is not null) only the partitions with ALL_TAB_PARTITIONS.INTERVAL = 'YES' are dropped.
