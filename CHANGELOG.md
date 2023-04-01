@@ -13,7 +13,15 @@ Types of changes:
 - **Fixed** for any bug fixes.
 - **Security** in case of vulnerabilities.
 
-[Unreleased]
+## [Unreleased]
+
+## [2.0.0] - 2023-04-01
+
+This is the first release of Paulissoft Application Tools for Oracle (PATO) after publishing my e-book ["How to build an Oracle database application", Leanpub](https://leanpub.com/build-oracle-apex-application).
+
+### Added
+
+- [Add heartbeat mechanism in order to keep jobs alive.](https://github.com/paulissoft/oracle-tools/pull/120)
 
 ## [1.11.0] - 2023-03-06
 
