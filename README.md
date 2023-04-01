@@ -57,7 +57,7 @@ See folder `db/app/admin/src/full`.
  
 ### Do It Yourself message subsystem
 
-A Object Oriented based message susbsytem where you can either decide to process a message now (synchronuous) or later (asynchronuous). It uses Oracle Advanced Queueing and Oracle Scheduler jobs to achieve this.
+A Object Oriented based message subsystem where you can either decide to process a message now (synchronous) or later (asynchronous). It uses Oracle Advanced Queuing and Oracle Scheduler jobs to achieve this.
 
 Oracle Query Notification was deemed to be too limited (only PL/SQL notifications, registration difficult, etcetera).
 
@@ -65,7 +65,7 @@ See the files in folder `db/app/msg/src/full`.
 
 ### Heartbeat mechanism
 
-The message subsystem has supervisor and worer jobs that listen on the various queues. In order to gracefully shut them down and to keep them running when one process is accidently stopped or killed, this heartbeat mechanism based on `DBMS_PIPE` has been built.
+The message subsystem has supervisor and worker jobs that listen on the various queues. In order to gracefully shut them down and to keep them running when one process is accidently stopped or killed, this heartbeat mechanism based on `DBMS_PIPE` has been built.
 
 See the files for package `API_HEARTBEAT_PKG` in folder `db/app/api/src/full`.
 

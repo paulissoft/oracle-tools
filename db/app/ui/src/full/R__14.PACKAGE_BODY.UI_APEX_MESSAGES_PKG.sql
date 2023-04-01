@@ -245,18 +245,42 @@ $end
   case p_action
     when 'I'
     then
-      apex_lang.create_message
-      ( p_application_id => p_application_id
-      , p_name => p_name
-      , p_language => lower(p_language)
-      , p_message_text => p_message_text
-      );
-      p_id := get_message
-              ( p_application_id => p_application_id
-              , p_name => p_name
-              , p_language => p_language
-              );
-              
+      -- GJP 2023-04-01
+      -- This is what you get for a duplicate create_message on APEX 22.2:
+      --
+      -- ORA-06502: PL/SQL: numeric or value error: character to number conversion error
+      -- ORA-06512: at "APEX_220200.WWV_IMP_UTIL", line 131
+      -- ORA-06512: at "APEX_220200.WWV_FLOW_IMP_SHARED", line 103
+      -- ORA-06512: at "APEX_220200.WWV_FLOW_IMP_SHARED", line 6407
+      -- ORA-06512: at "APEX_220200.WWV_FLOW_IMP_SHARED", line 6400
+      -- ORA-06512: at "APEX_220200.WWV_FLOW_LANG", line 1177
+      -- ORA-06512: at "APEX_220200.HTMLDB_LANG", line 157
+      -- ORA-06512: at "ORACLE_TOOLS.UI_APEX_MESSAGES_PKG", line 248
+      --
+      -- In order to mimic the old behaviour (dup_val_on_index):
+      -- 1. first get the mssage id
+      --    a. if found raise dup_val_on_index
+      --    b. if not found (no_data_found) just add it
+      -- 2. get the message id again
+      <<try_loop>>
+      for i_try in 1..2
+      loop
+        begin
+          p_id := get_message(p_application_id => p_application_id, p_name => p_name, p_language => p_language);
+          if i_try = 1 then raise dup_val_on_index; end if;
+          exit try_loop;
+        exception
+          when no_data_found
+          then
+            if i_try = 2 then raise; end if;
+            apex_lang.create_message
+            ( p_application_id => p_application_id
+            , p_name => p_name
+            , p_language => lower(p_language)
+            , p_message_text => p_message_text
+            );
+        end;
+      end loop try_loop;
     when 'U'
     then
       apex_lang.update_message
