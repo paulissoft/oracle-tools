@@ -12,7 +12,7 @@ c_default_subscriber constant varchar2(30 char) := 'DEFAULT_SUBSCRIBER';
 -- c_default_processing_method can be:
 -- 1) 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
 -- 2) 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG'
-c_default_processing_method constant varchar(128 char) := 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG';
+c_default_processing_method constant varchar(128 char) := 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
 
 /*
 -- for MSG_SCHEDULER_PKG

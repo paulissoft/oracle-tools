@@ -4,7 +4,8 @@ is
 -- reduce dbug clutter
 c_debugging constant boolean := false; -- oracle_tools.cfg_pkg.c_debugging
 
-c_use_package constant all_objects.object_name%type := 'DBMS_PIPE'; -- package to implement this: you need execute privileges on it
+-- system package used to implement heartbeats: you need execute privileges on it
+c_use_package constant all_objects.object_name%type := 'DBMS_PIPE';
 
 c_silent_workers_found constant pls_integer := -20100;
 e_silent_workers_found exception;
