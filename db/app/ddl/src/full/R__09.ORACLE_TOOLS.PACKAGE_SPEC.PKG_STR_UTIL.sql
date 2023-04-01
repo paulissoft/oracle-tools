@@ -14,6 +14,7 @@ function dbms_lob_substr
 ( p_clob in clob
 , p_amount in naturaln := 32767
 , p_offset in positiven := 1
+, p_check in varchar2 default 'O' -- check for buffer (O)verflow and/or (L)ength returned equal to the amount requested
 )
 return varchar2;
 
@@ -24,6 +25,21 @@ An enhancement for dbms_lob.substr().
 It appears that dbms_lob.substr(amount => 32767) returns at most 32764 characters.
 
 This function corrects that.
+
+**/
+
+function dbms_lob$substr
+( p_clob in clob
+, p_amount in naturaln := 32767
+, p_offset in positiven := 1
+)
+return varchar2;
+
+/**
+
+An enhancement for dbms_lob.substr().
+
+Invokes dbms_lob_substr(..., p_check => null), i.e. no check for buffer overflow nor length returned equal to the amount requested.
 
 **/
 
@@ -244,6 +260,9 @@ $if oracle_tools.cfg_pkg.c_testing $then
 --%suite
 
 --%test
+procedure ut_dbms_lob_substr;
+
+--%test
 procedure ut_split1;
 
 --%test
@@ -286,6 +305,10 @@ procedure ut_text2clob2;
 --%test
 --%disabled
 procedure ut_clob2text;
+
+--%test
+--%throws(value_error)
+procedure ut_split2_line_too_large;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

@@ -256,11 +256,11 @@ is
   l_collection sys.odcivarchar2list;
   l_max_pos constant integer := 32767; -- or 4000
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
-  dbug.enter($$PLSQL_UNIT || '.LIST2COLLECTION');
-  dbug.print(dbug."input", 'p_sep: %s; p_value_list: %s; p_ignore_null: %s', p_sep, p_value_list, p_ignore_null);
-$end
-
+  if p_sep is null
+  then
+    raise value_error;
+  end if;
+  
   select  t.val
   bulk collect
   into    l_collection
@@ -277,11 +277,6 @@ $end
           ) t
   where   ( p_ignore_null = 0 or t.val is not null );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
-  dbug.print(dbug."output", 'l_collection.count: %s', case when l_collection is not null then l_collection.count end);
-  dbug.leave;
-$end
-
   return l_collection;
 end list2collection;
 
@@ -293,12 +288,35 @@ function collection2list
 return varchar2
 deterministic
 is
-  l_values_list varchar2(32767) := null;
+  l_values_list varchar2(32767 byte) := null;
 begin
+  if p_sep is null
+  then
+    raise value_error;
+  end if;
+  
+  /* GJP 2023-03-19 Why slow when it can be more efficient :) */
+  /*
   select  listagg(t.column_value, p_sep) within group (order by t.column_value)
   into    l_values_list
   from    table(p_value_tab) t
   where   ( p_ignore_null = 0 or t.column_value is not null );
+  */
+  if p_value_tab is not null and p_value_tab.count > 0
+  then
+    for i_idx in p_value_tab.first .. p_value_tab.last
+    loop
+      if p_ignore_null = 0 or p_value_tab(i_idx) is not null
+      then
+        if l_values_list is null
+        then
+          l_values_list := p_value_tab(i_idx);
+        else
+          l_values_list := l_values_list || p_sep || p_value_tab(i_idx);
+        end if;
+      end if;
+    end loop;
+  end if;
   
   return l_values_list;
 end collection2list;

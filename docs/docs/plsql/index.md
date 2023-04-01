@@ -6,6 +6,7 @@ has_children: true
 has_toc: false
 ---
 The PATO contains lots of PL/SQL objects (packages, procedures, functions and types) whose documentation you can find below:
+- [ADMIN database objects](admin/index.html)
 - [API database objects](api/index.html)
 - [CFG database objects](cfg/index.html)
 - [DATA database objects](data/index.html)

@@ -235,8 +235,19 @@ end has_not_null_lob;
 member function response
 return web_service_response_typ
 is
+  l_web_service_response web_service_response_typ;
 begin
-  return web_service_pkg.make_rest_request(self);
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.RESPONSE');
+$end
+
+  l_web_service_response := web_service_pkg.make_rest_request(self);
+  
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+
+  return l_web_service_response;
 end response;
 
 end;

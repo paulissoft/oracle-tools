@@ -221,6 +221,8 @@ is
     end;
   l_web_service_response web_service_response_typ := null;
 
+$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+
   function simple_request
   return boolean
   is
@@ -395,6 +397,8 @@ $end
       p_body_blob := g_body_blob;
     end if;
   end utl_http_request;
+
+$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
@@ -409,79 +413,89 @@ $end
     end loop;
   end if;
 
-  web_service_pkg.json2data(l_cookies, apex_web_service.g_request_cookies);
-  web_service_pkg.json2data(l_http_headers, apex_web_service.g_request_headers);
+  pragma inline (json2data, 'YES');
+  json2data(l_cookies, apex_web_service.g_request_cookies);
+  pragma inline (json2data, 'YES');
+  json2data(l_http_headers, apex_web_service.g_request_headers);
 
-  -- Prefer utl_http over apex_web_service since it is more performant.
+  -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
-  if simple_request
-  then
+  case
+$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+  
+    when simple_request
+    then
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
+      dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
 $end
 
-    utl_http_request
-    ( p_body_clob => l_body_clob
-    , p_body_blob => l_body_blob
-    , p_request_cookies => apex_web_service.g_request_cookies
-    , p_request_headers => apex_web_service.g_request_headers
-    , p_response_cookies => apex_web_service.g_response_cookies
-    , p_response_headers => apex_web_service.g_headers
-    , p_status_code => apex_web_service.g_status_code
-    );
-  elsif p_request.binary_response = 0
-  then
+      utl_http_request
+      ( p_body_clob => l_body_clob
+      , p_body_blob => l_body_blob
+      , p_request_cookies => apex_web_service.g_request_cookies
+      , p_request_headers => apex_web_service.g_request_headers
+      , p_response_cookies => apex_web_service.g_response_cookies
+      , p_response_headers => apex_web_service.g_headers
+      , p_status_code => apex_web_service.g_status_code
+      );
+$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+      
+    when p_request.binary_response = 0
+    then
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
+      dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
 $end
 
-    l_body_clob := apex_web_service.make_rest_request
-                   ( p_url => p_request.url
-                   , p_http_method => p_request.http_method
-                   , p_username => null
-                   , p_password => null
-                   , p_scheme => p_request.scheme
-                   , p_proxy_override => p_request.proxy_override
-                   , p_transfer_timeout => p_request.transfer_timeout
-                   , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
-                   , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
-                   , p_parm_name => l_parm_names
-                   , p_parm_value => l_parm_values
-                   , p_wallet_path => p_request.wallet_path
-                   , p_wallet_pwd => null
-                   , p_https_host => p_request.https_host
-                   , p_credential_static_id => p_request.credential_static_id
-                   , p_token_url => p_request.token_url
-                   );
-    l_body_blob := null;
-  else
+      l_body_clob := apex_web_service.make_rest_request
+                     ( p_url => p_request.url
+                     , p_http_method => p_request.http_method
+                     , p_username => null
+                     , p_password => null
+                     , p_scheme => p_request.scheme
+                     , p_proxy_override => p_request.proxy_override
+                     , p_transfer_timeout => p_request.transfer_timeout
+                     , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
+                     , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+                     , p_parm_name => l_parm_names
+                     , p_parm_value => l_parm_values
+                     , p_wallet_path => p_request.wallet_path
+                     , p_wallet_pwd => null
+                     , p_https_host => p_request.https_host
+                     , p_credential_static_id => p_request.credential_static_id
+                     , p_token_url => p_request.token_url
+                     );
+      l_body_blob := null;
+
+    else
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST_B to issue the REST webservice');
+      dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST_B to issue the REST webservice');
 $end
 
-    l_body_blob := apex_web_service.make_rest_request_b
-                   ( p_url => p_request.url
-                   , p_http_method => p_request.http_method
-                   , p_username => null
-                   , p_password => null
-                   , p_scheme => p_request.scheme
-                   , p_proxy_override => p_request.proxy_override
-                   , p_transfer_timeout => p_request.transfer_timeout
-                   , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
-                   , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
-                   , p_parm_name => l_parm_names
-                   , p_parm_value => l_parm_values
-                   , p_wallet_path => p_request.wallet_path
-                   , p_wallet_pwd => null
-                   , p_https_host => p_request.https_host
-                   , p_credential_static_id => p_request.credential_static_id
-                   , p_token_url => p_request.token_url
-                   );
-    l_body_clob := null;
-  end if;
+      l_body_blob := apex_web_service.make_rest_request_b
+                     ( p_url => p_request.url
+                     , p_http_method => p_request.http_method
+                     , p_username => null
+                     , p_password => null
+                     , p_scheme => p_request.scheme
+                     , p_proxy_override => p_request.proxy_override
+                     , p_transfer_timeout => p_request.transfer_timeout
+                     , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
+                     , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+                     , p_parm_name => l_parm_names
+                     , p_parm_value => l_parm_values
+                     , p_wallet_path => p_request.wallet_path
+                     , p_wallet_pwd => null
+                     , p_https_host => p_request.https_host
+                     , p_credential_static_id => p_request.credential_static_id
+                     , p_token_url => p_request.token_url
+                     );
+      l_body_clob := null;
+  end case;
 
-  web_service_pkg.data2json(apex_web_service.g_response_cookies, l_cookies);
-  web_service_pkg.data2json(apex_web_service.g_headers, l_http_headers);
+  pragma inline (data2json, 'YES');
+  data2json(apex_web_service.g_response_cookies, l_cookies);
+  pragma inline (data2json, 'YES');
+  data2json(apex_web_service.g_headers, l_http_headers);
 
   l_web_service_response :=
     web_service_response_typ
@@ -523,11 +537,14 @@ $if msg_aq_pkg.c_testing $then
 
 -- PRIVATE
 
-procedure ut_rest_web_service_get
+procedure ut_rest_web_service_get_bulk
+( p_count in positiven
+, p_stop_dequeue_before_enqueue in boolean
+)
 is
   pragma autonomous_transaction;
 
-  l_correlation constant varchar2(128) := web_service_request_typ.generate_unique_id();
+  l_correlation_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_msgid raw(16) := null;
   l_message_properties dbms_aq.message_properties_t;
   l_msg msg_typ;
@@ -542,9 +559,15 @@ is
 }');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_BULK');
 $end
 
+  -- stop queue for dequeue only
+  if p_stop_dequeue_before_enqueue
+  then
+    msg_aq_pkg.stop_queue(p_queue_name => 'WEB_SERVICE_REQUEST', p_enqueue => false, p_dequeue => true);
+  end if;
+  
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- % curl https://jsonplaceholder.typicode.com/todos/1
@@ -556,60 +579,93 @@ $end
   --   "completed": false
   -- }%
 
-  -- will just get enqueued here
-  l_rest_web_service_request :=
-    rest_web_service_request_typ
-    ( p_context$ => l_correlation
-    , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
-    , p_http_method => 'GET'
+  for i_idx in 1..p_count
+  loop
+    l_correlation_tab.extend(1);
+    l_correlation_tab(l_correlation_tab.last) := web_service_request_typ.generate_unique_id();
+
+    -- will just get enqueued here
+    l_rest_web_service_request :=
+      rest_web_service_request_typ
+      ( p_context$ => l_correlation_tab(l_correlation_tab.last)
+      , p_url => 'https://jsonplaceholder.typicode.com/todos/1'
+      , p_http_method => 'GET'
+      );
+
+    l_rest_web_service_request.response().print; -- just invoke directly and print
+
+    l_rest_web_service_request.process; -- invoke indirectly
+
+    commit;
+
+    if mod(i_idx, 10) = 0
+    then
+      dbms_session.sleep(1);
+    end if;
+  end loop;
+
+  -- restart queue for enqueue and dequeue
+  if p_stop_dequeue_before_enqueue
+  then
+    msg_aq_pkg.start_queue(p_queue_name => 'WEB_SERVICE_REQUEST', p_enqueue => true, p_dequeue => true);
+  end if;
+
+  -- now the dequeue in reversed order
+  for i_idx in reverse l_correlation_tab.first .. l_correlation_tab.last
+  loop
+    l_msgid := null;
+    msg_aq_pkg.dequeue
+    ( p_queue_name => web_service_response_typ.default_group()
+    , p_delivery_mode => dbms_aq.persistent_or_buffered
+    , p_visibility => dbms_aq.immediate
+    , p_subscriber => null
+    , p_dequeue_mode => dbms_aq.remove
+      /*
+      -- The correlation attribute specifies the correlation identifier of the dequeued message.
+      -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
+      */
+    , p_navigation => dbms_aq.first_message
+    , p_wait => c_wait_timeout
+    , p_correlation => l_correlation_tab(i_idx)
+    , p_deq_condition => null
+    , p_force => true
+    , p_msgid => l_msgid
+    , p_message_properties => l_message_properties
+    , p_msg => l_msg
     );
 
-  l_rest_web_service_request.response().print; -- just invoke directly and print
-
-  l_rest_web_service_request.process; -- invoke indirectly
-
-  commit;
-
-  -- and dequeued here
-  msg_aq_pkg.dequeue
-  ( p_queue_name => web_service_response_typ.default_group()
-  , p_delivery_mode => dbms_aq.persistent_or_buffered
-  , p_visibility => dbms_aq.immediate
-  , p_subscriber => null
-  , p_dequeue_mode => dbms_aq.remove
-    /*
-    -- The correlation attribute specifies the correlation identifier of the dequeued message.
-    -- The correlation identifier cannot be changed between successive dequeue calls without specifying the FIRST_MESSAGE navigation option.
-    */
-  , p_navigation => dbms_aq.first_message
-  , p_wait => c_wait_timeout
-  , p_correlation => l_correlation
-  , p_deq_condition => null
-  , p_force => true
-  , p_msgid => l_msgid
-  , p_message_properties => l_message_properties
-  , p_msg => l_msg
-  );
-
-  l_msg.print();
+$if msg_pkg.c_debugging >= 1 $then
+    l_msg.print();
+$end    
   
-  commit;
+    commit;
 
-  ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
+    ut.expect(l_msg is of (web_service_response_typ), 'web service response object type').to_be_true();
 
-  l_web_service_response := treat(l_msg as web_service_response_typ);
+    l_web_service_response := treat(l_msg as web_service_response_typ);
 
-  -- ORA-29273: HTTP request failed?
-  -- In bc_dev yes, on pato no
-  if l_web_service_response.sql_code = 0
-  then
-    msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+    -- ORA-29273: HTTP request failed?
+    -- In bc_dev only when msg_constants_pkg.c_prefer_to_use_utl_http is true, on pato never
+  
+$if not(msg_constants_pkg.c_prefer_to_use_utl_http) $then
+    ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
+$end  
 
-    ut.expect(l_json_act, 'json').to_equal(l_json_exp);
-  else
-    ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);  
-    ut.expect(l_web_service_response.sql_error_message, 'sql error message').to_equal('ORA-29273: HTTP request failed');  
-  end if;
+    if l_web_service_response.sql_code = 0
+    then
+      msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
+
+      ut.expect(l_json_act, 'json').to_equal(l_json_exp);
+    else
+      ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);  
+      ut.expect(l_web_service_response.sql_error_message, 'sql error message').to_equal('ORA-29273: HTTP request failed');  
+    end if;
+
+    if mod(i_idx, 10) = 0
+    then
+      dbms_session.sleep(1);
+    end if;
+  end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -619,6 +675,12 @@ exception
     dbug.leave_on_error;
     raise;
 $end
+end ut_rest_web_service_get_bulk;
+
+procedure ut_rest_web_service_get
+is
+begin
+  ut_rest_web_service_get_bulk(1, true);
 end ut_rest_web_service_get;
 
 -- PUBLIC
@@ -667,6 +729,9 @@ end ut_setup;
 procedure ut_teardown
 is
   pragma autonomous_transaction;
+
+  l_request_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_request_typ.default_group());
+  l_response_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_response_typ.default_group());
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_TEARDOWN');
@@ -674,17 +739,24 @@ $end
   if msg_constants_pkg.c_default_processing_method like 'plsql://%'
   then
     msg_aq_pkg.register
-    ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+    ( p_queue_name => l_request_queue_name
     , p_subscriber => null
     , p_plsql_callback => replace(msg_constants_pkg.c_default_processing_method, 'plsql://')
     );
   else
     msg_aq_pkg.unregister
-    ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+    ( p_queue_name => l_request_queue_name
     , p_subscriber => null
     , p_plsql_callback => '%'
     );
   end if;
+
+  -- empty the response queue
+  msg_aq_pkg.empty_queue
+  ( p_queue_name => l_response_queue_name
+  , p_dequeue_and_process => false
+  );
+
   commit;
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -797,7 +869,9 @@ $end
   , p_msg => l_msg
   );
 
+$if msg_pkg.c_debugging >= 1 $then
   l_msg.print();
+$end  
 
   commit;
 
@@ -806,7 +880,12 @@ $end
   l_web_service_response := treat(l_msg as web_service_response_typ);
 
   -- ORA-29273: HTTP request failed?
-  -- In bc_dev yes, on pato no
+  -- In bc_dev only when msg_constants_pkg.c_prefer_to_use_utl_http is true, on pato never
+  
+$if not(msg_constants_pkg.c_prefer_to_use_utl_http) $then
+  ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
+$end  
+
   if l_web_service_response.sql_code = 0
   then
     msg_pkg.msg2data(l_web_service_response.body_vc, l_web_service_response.body_clob, l_json_act);
@@ -826,6 +905,30 @@ exception
     raise;
 $end
 end ut_rest_web_service_post;
+
+procedure ut_rest_web_service_get_job_bulk
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_JOB_BULK');
+$end
+
+  msg_aq_pkg.unregister
+  ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
+  , p_subscriber => null
+  , p_plsql_callback => '%'
+  );
+  ut_rest_web_service_get_bulk(100, false);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end ut_rest_web_service_get_job_bulk;
 
 $end -- $if msg_aq_pkg.c_testing $then
 

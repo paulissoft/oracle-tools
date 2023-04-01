@@ -2,6 +2,8 @@ CREATE TYPE "WEB_SERVICE_RESPONSE_TYP" under msg_typ
 ( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]).
   -- However, no sensitive information like username or password is stored.
   web_service_request web_service_request_typ
+, sql_code integer -- sqlcode
+, sql_error_message varchar2(4000 byte) -- sqlerrm
 , http_status_code integer -- apex_web_service.g_status_code
 , body_vc varchar2(4000 byte)
 , body_clob clob
@@ -23,6 +25,8 @@ This type stores the response of a web service request.
   , p_group$ in varchar2 default null -- use default_group() from below
   , p_context$ in varchar2 default null
   , p_web_service_request in web_service_request_typ
+  , p_sql_code in integer
+  , p_sql_error_message in varchar2
   , p_http_status_code in integer  
   , p_body_clob in clob default null
   , p_body_blob in blob default null
@@ -41,6 +45,8 @@ This type stores the response of a web service request.
   , p_group$ in varchar2
   , p_context$ in varchar2
   , p_web_service_request in web_service_request_typ
+  , p_sql_code in integer
+  , p_sql_error_message in varchar2
   , p_http_status_code in integer  
   , p_body_clob in clob
   , p_body_blob in blob

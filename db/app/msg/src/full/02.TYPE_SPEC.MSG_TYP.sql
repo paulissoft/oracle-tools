@@ -1,7 +1,7 @@
 CREATE TYPE "MSG_TYP" AUTHID DEFINER AS OBJECT
 ( group$ varchar2(128 char) -- to group together messages, for instance a qualified table name
 , context$ varchar2(128 char) -- may be (I)nsert/(U)pdate/(D)elete on DML
-, created_utc$ timestamp -- creation timestamp in UTC
+, created$ varchar2(33 char) -- creation timestamp (oracle_tools.api_time_pkg.get_timestamp() converted to string by oracle_tools.api_time_pkg.timestamp2str())
 /**
 This type stores (meta-)information about a message. It is intended as a
 generic type that can be used in Oracle Advanced Queueing (AQ).
@@ -17,6 +17,9 @@ enqueued.
 
 Therefore there are some member functions that determine whether a type may
 have not null LOBs or a specific object may have them.
+
+The created$ attribute is not a TIMESTAMP [ WITH [ LOCAL ] TIME ZONE ] since
+that may pose problems later on.
 **/
 
 , final member procedure construct
@@ -31,8 +34,7 @@ type constructor like this:
 
 (self as msg_typ).construct(p_group$, p_context$);
 
-This procedure also sets created_utc$ to the system timestamp in UTC using
-SYS_EXTRACT_UTC(SYSTIMESTAMP()).
+This procedure also sets created$ to the system timestamp as a string using oracle_tools.api_time_pkg.timestamp2str().
 **/
 
 , member procedure process

@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
+c_debugging constant naturaln := 1; -- can be 0, 1, 2, ...
+
 -- You can tweak the constants thru MSG_CONSTANTS_PKG, you are not supposed to do it here.
 c_buffered_messaging constant boolean := msg_constants_pkg.c_buffered_messaging;
 c_multiple_consumers constant boolean := msg_constants_pkg.c_multiple_consumers;
@@ -8,6 +10,10 @@ c_default_subscriber constant varchar2(30 char) := msg_constants_pkg.c_default_s
 c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
+
+/*
+-- The following exceptions are all defined by Oracle.
+*/
 
 -- ORA-24002: QUEUE_TABLE does not exist
 e_queue_table_does_not_exist exception;
@@ -46,6 +52,10 @@ pragma exception_init(e_subscriber_does_not_exist, -24035);
 -- ORA-25228: timeout or end-of-fetch during message dequeue from ...
 e_dequeue_timeout exception;
 pragma exception_init(e_dequeue_timeout, -25228);
+
+-- ORA-25254: time-out in LISTEN while waiting for a message
+e_listen_timeout exception;
+pragma exception_init(e_listen_timeout, -25254);
 
 /**
 
@@ -95,12 +105,26 @@ procedure drop_queue
 
 procedure start_queue
 ( p_queue_name in varchar2 -- Must be a simple SQL name
+, p_enqueue in boolean default true
+, p_dequeue in boolean default true
 );
 /** Start the queue with enqueue and dequeue enabled. **/
+
+procedure empty_queue
+( p_queue_name in varchar2 -- Must be a simple SQL name
+, p_dequeue_and_process in boolean default false
+);
+/**
+Empty the queue in non-blocking mode with dequeue() or dequeue_and_process(), see below.
+Every dequeue will be committed and this call is an autonomous transaction.
+A dequeue timeout will be ignored.
+**/
 
 procedure stop_queue
 ( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_wait in boolean default true
+, p_enqueue in boolean default true
+, p_dequeue in boolean default true
 );
 /** Stop the queue with enqueue and dequeue disabled. **/
 
@@ -255,14 +279,21 @@ The latter case indicates that dbms_aq.unregister() has been invoked so someone 
 **/
 
 procedure processing
-( p_groups_to_process_tab in sys.odcivarchar2list
-, p_worker_nr in positiven
-, p_ttl in positiven
-, p_job_name_supervisor in varchar2
+( p_controlling_package in varchar2 -- the controlling package, i.e. the one who invoked this procedure
+, p_groups_to_process_tab in sys.odcivarchar2list -- the groups to process
+, p_worker_nr in positiven -- the worker number
+, p_end_date in timestamp with time zone -- the end date
+, p_silence_threshold in number -- the number of seconds the supervisor may be silent before exception oracle_tools.api_heartbeat_pkg.e_silent_workers_found is raised
 );
 /**
 Will be invoked by MSG_SCHEDULER_PKG (or alternatives).
 Performs the processing of a worker job.
+
+A worker runs till the end date (will check himself) and listens to the queues
+derived from the groups to process.  Every X seconds (X = time between
+heartbeats) it must also send a heartbeat to the supervisor.  This means
+that it can listen at most X seconds for messages to arrive before it sends a
+heartbeat.
 **/
 
 end msg_aq_pkg;

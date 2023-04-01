@@ -1,10 +1,12 @@
 # PATO (Paulissoft Application Tools for Oracle)
 
+If you are interested in the ideas behind this project and more in-depth knowledge about PATO, you may want to buy my e-book ["How to Build an Oracle Database Application", Leanpub](https://leanpub.com/build-oracle-apex-application).
+
+![Quick but not dirty](https://d2sofvawe08yqg.cloudfront.net/build-oracle-apex-application/s_hero?1680348922)
+
 This project contains:
 - Maven build software for deploying Oracle software (database and Apex).
 - Apex and database tools installed by the build software.
-
-For people interested in the ideas behind this project and more in-depth knowledge about PATO there is [a book on Leanpub.com](https://leanpub.com/build-oracle-apex-application).
 
 ## Maven build
 
@@ -21,6 +23,10 @@ A set of application tools for Oracle developers.
 Currently it includes:
 - a PL/SQL DDL generator (that can be used to describe your deployment).
 - an Apex application to load spreadsheet files into a database table/view.
+- a table partition package to make it easy to drop (and backup) old partitions.
+- ADMIN packages to kill sessions and stop jobs.
+- a Do It Yourself message subsystem as a replacement for Oracle Query Notification.
+- a heartbeat mechanism for keeping related processes (jobs) alive or shut them down gracefully.
 - various PL/SQL utilities to help with development.
 
 ### PL/SQL DDL generator
@@ -37,11 +43,37 @@ The following MIME spreadsheet types (with extension between parentheses) are su
 
 This project depends on the [ExcelTable GitHub project](https://github.com/mbleron/ExcelTable.git).
 
+See also the folder `db/app/ext` for the back-end part.
+
+### Table partition package
+
+See the files for package `DATA_PARTITIONING_PKG` in folder `db/app/data/src/full`.
+
+### ADMIN packages to kill sessions and stop jobs
+
+When a job session is blocking due to `DBMS_AQ.listen` or similar calls, it is not sufficient to stop the jobs using `DBMS_SCHEDULER.stop_job` since the slave session process may keep on running somehow. The packages `ADMIN_SYSTEM_PKG` and `ADMIN_SCHEDULER_PKG` will really stop the job and kill the session (only for the session user).
+
+See folder `db/app/admin/src/full`.
+ 
+### Do It Yourself message subsystem
+
+A Object Oriented based message subsystem where you can either decide to process a message now (synchronous) or later (asynchronous). It uses Oracle Advanced Queuing and Oracle Scheduler jobs to achieve this.
+
+Oracle Query Notification was deemed to be too limited (only PL/SQL notifications, registration difficult, etcetera).
+
+See the files in folder `db/app/msg/src/full`.
+
+### Heartbeat mechanism
+
+The message subsystem has supervisor and worker jobs that listen on the various queues. In order to gracefully shut them down and to keep them running when one process is accidently stopped or killed, this heartbeat mechanism based on `DBMS_PIPE` has been built.
+
+See the files for package `API_HEARTBEAT_PKG` in folder `db/app/api/src/full`.
+
 ### Various PL/SQL utilities
 
 Utilities to enable/disable constraints, manage Apex messages and so on.
 
-See the sub folders in `db/app/`.
+See the sub folders in `db/app`.
 
 ## Installation of all the tools
 

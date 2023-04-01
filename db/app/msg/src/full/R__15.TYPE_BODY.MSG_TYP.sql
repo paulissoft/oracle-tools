@@ -10,7 +10,7 @@ is
 begin
   self.group$ := p_group$;
   self.context$ := p_context$;
-  self.created_utc$ := sys_extract_utc(systimestamp);
+  self.created$ := oracle_tools.api_time_pkg.timestamp2str(oracle_tools.api_time_pkg.get_timestamp());
 end construct;  
 
 member procedure process
@@ -145,7 +145,7 @@ begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
   p_json_object.put('GROUP$', self.group$);
   p_json_object.put('CONTEXT$', self.context$);
-  p_json_object.put('CREATED_UTC$', self.created_utc$);
+  p_json_object.put('CREATED$', self.created$);
 end serialize;
 
 member function repr

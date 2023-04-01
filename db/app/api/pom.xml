@@ -14,17 +14,22 @@
   <description>Build API component</description>
   
   <properties>
+    <!-- to stop and start the message susbsystem for updating the heartbeat package -->
+    <db.src.callbacks.scripts>${db.src.scripts}/callbacks</db.src.callbacks.scripts>
     <flyway.table>schema_version_tools_api</flyway.table>
     <db.include.objects>
 :OBJECT_GRANT::ORACLE_TOOLS::API_CALL_STACK_PKG::*:*:*
+:OBJECT_GRANT::ORACLE_TOOLS::API_HEARTBEAT_PKG::*:*:*
 :OBJECT_GRANT::ORACLE_TOOLS::API_LONGOPS_PKG::*:*:*
 :OBJECT_GRANT::ORACLE_TOOLS::API_PKG::*:*:*
 :OBJECT_GRANT::ORACLE_TOOLS::API_TIME_PKG::*:*:*
 ORACLE_TOOLS:PACKAGE_BODY:API_CALL_STACK_PKG:::::::
+ORACLE_TOOLS:PACKAGE_BODY:API_HEARTBEAT_PKG:::::::
 ORACLE_TOOLS:PACKAGE_BODY:API_LONGOPS_PKG:::::::
 ORACLE_TOOLS:PACKAGE_BODY:API_PKG:::::::
 ORACLE_TOOLS:PACKAGE_BODY:API_TIME_PKG:::::::
 ORACLE_TOOLS:PACKAGE_SPEC:API_CALL_STACK_PKG:::::::
+ORACLE_TOOLS:PACKAGE_SPEC:API_HEARTBEAT_PKG:::::::
 ORACLE_TOOLS:PACKAGE_SPEC:API_LONGOPS_PKG:::::::
 ORACLE_TOOLS:PACKAGE_SPEC:API_PKG:::::::
 ORACLE_TOOLS:PACKAGE_SPEC:API_TIME_PKG:::::::

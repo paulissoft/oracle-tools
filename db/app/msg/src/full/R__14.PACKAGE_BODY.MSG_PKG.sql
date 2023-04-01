@@ -59,7 +59,7 @@ begin
     ,       ut.supertype_name
     from    user_types ut
     connect by prior
-            ut.type_name = ut.supertype_name and ut.supertype_owner = user
+            ut.type_name = ut.supertype_name and ut.supertype_owner = $$PLSQL_UNIT_OWNER -- GJP 2023-03-29 do not use USER
     start with
             ut.type_name = 'MSG_TYP'
   )
@@ -83,7 +83,12 @@ $end
       end;
     end if;
   end loop;
-  
+
+  if l_msg_tab.count = 0
+  then
+    raise program_error;
+  end if;
+
   return l_msg_tab;
 end get_msg_tab;
 
