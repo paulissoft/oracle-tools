@@ -8,7 +8,7 @@
 -- target database link: 
 -- object type         : 
 -- object names include: 1
--- object names        : DATA_SESSION_USERNAME,DATA_TIMESTAMP,DATA_API_PKG,DATA_BR_PKG,DATA_PARTITIONING_PKG,DATA_TABLE_MGMT_PKG
+-- object names        : DATA_SESSION_USERNAME,DATA_SESSION_ID,DATA_TIMESTAMP,DATA_API_PKG,DATA_BR_PKG,DATA_PARTITIONING_PKG,DATA_TABLE_MGMT_PKG
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v4
 -- transform params    : 
@@ -42,43 +42,47 @@ REVOKE EXECUTE ON "DATA_TABLE_MGMT_PKG" FROM "PUBLIC";
 call dbms_application_info.set_action('SQL statement 6');
 REVOKE EXECUTE ON "DATA_TIMESTAMP" FROM "PUBLIC";
 
-/* SQL statement 7 (DROP;ORACLE_TOOLS;FUNCTION;DATA_SESSION_USERNAME;;;;;;;;2) */
+/* SQL statement 7 (DROP;ORACLE_TOOLS;FUNCTION;DATA_SESSION_ID;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 7');
+DROP FUNCTION DATA_SESSION_ID;
+
+/* SQL statement 8 (DROP;ORACLE_TOOLS;FUNCTION;DATA_SESSION_USERNAME;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 8');
 DROP FUNCTION DATA_SESSION_USERNAME;
 
-/* SQL statement 8 (DROP;ORACLE_TOOLS;FUNCTION;DATA_TIMESTAMP;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 8');
+/* SQL statement 9 (DROP;ORACLE_TOOLS;FUNCTION;DATA_TIMESTAMP;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 9');
 DROP FUNCTION DATA_TIMESTAMP;
 
-/* SQL statement 9 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_API_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 9');
+/* SQL statement 10 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_API_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 10');
 DROP PACKAGE BODY DATA_API_PKG;
 
-/* SQL statement 10 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_BR_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 10');
+/* SQL statement 11 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_BR_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 11');
 DROP PACKAGE BODY DATA_BR_PKG;
 
-/* SQL statement 11 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_PARTITIONING_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 11');
+/* SQL statement 12 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_PARTITIONING_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 12');
 DROP PACKAGE BODY DATA_PARTITIONING_PKG;
 
-/* SQL statement 12 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 12');
+/* SQL statement 13 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 13');
 DROP PACKAGE BODY DATA_TABLE_MGMT_PKG;
 
-/* SQL statement 13 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_API_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 13');
+/* SQL statement 14 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_API_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 14');
 DROP PACKAGE DATA_API_PKG;
 
-/* SQL statement 14 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_BR_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 14');
+/* SQL statement 15 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_BR_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 15');
 DROP PACKAGE DATA_BR_PKG;
 
-/* SQL statement 15 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_PARTITIONING_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 15');
+/* SQL statement 16 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_PARTITIONING_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 16');
 DROP PACKAGE DATA_PARTITIONING_PKG;
 
-/* SQL statement 16 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 16');
+/* SQL statement 17 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 17');
 DROP PACKAGE DATA_TABLE_MGMT_PKG;
 
