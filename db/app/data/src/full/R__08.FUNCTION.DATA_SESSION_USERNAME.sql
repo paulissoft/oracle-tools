@@ -1,11 +1,13 @@
 CREATE OR REPLACE FUNCTION "DATA_SESSION_USERNAME" 
 return varchar2 as
 begin
-  return coalesce
-         ( sys_context('APEX$SESSION', 'app_user')
-         , regexp_substr(sys_context('userenv', 'client_identifier'), '^[^:]*')
-         , sys_context('userenv', 'session_user')
-         );
+  return case
+           when sys_context('APEX$SESSION', 'APP_USER') is not null
+           then 'APEX-' || sys_context('APEX$SESSION', 'APP_USER')
+           when sys_context('USERENV', 'CLIENT_IDENTIFIER') is not null
+           then 'CLNT-' || regexp_substr(sys_context('USERENV', 'CLIENT_IDENTIFIER'), '^[^:]*')
+           else 'ORCL-' || sys_context('USERENV', 'SESSION_USER')
+         end;
 end;
 /
 
