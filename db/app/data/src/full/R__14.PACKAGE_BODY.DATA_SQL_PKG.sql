@@ -6,7 +6,7 @@ procedure do
 , p_table_name in varchar2
 , p_column_name in varchar2 -- the column name to query
 , p_column_value in anydata -- the column value to query
-, p_query in statement_t -- if null it will default to 'select * from <table>'
+, p_statement in statement_t -- if null it will default to 'select * from <table>'
 , p_order_by in varchar2
 , p_owner in varchar2 -- the owner of the table
 , p_max_row_count in positive default null
@@ -14,9 +14,9 @@ procedure do
 )
 is
   l_bind_variable constant all_tab_columns.column_name%type := ':' || p_column_name;
-  l_query statement_t :=
+  l_statement constant statement_t :=
     nvl
-    ( p_query
+    ( p_statement
     , utl_lms.format_message
       ( 'select * from "%s"."%s"%s'
       , p_owner
@@ -84,7 +84,7 @@ is
     case p_operation
       when 'S'
       then
-        l_stmt := l_stmt || chr(10) || 'from    (' || l_query || ')';
+        l_stmt := l_stmt || chr(10) || 'from    (' || l_statement || ')';
       else
         raise e_unimplemented_feature;
     end case;
@@ -165,14 +165,9 @@ $end
         l_rows := l_rows - 1;
         l_row_nr := l_row_nr + 1; -- current row number
         
-        if l_row_nr > p_max_row_count -- fetch one more than needed for too_many_rows
+        if p_max_row_count = 1 and l_row_nr > p_max_row_count -- must fetch one more than needed for too_many_rows
         then
-          if p_max_row_count = 1
-          then
-            raise too_many_rows;
-          else
-            exit fetch_loop;
-          end if;
+          raise too_many_rows;
         end if;
 
         <<column_loop>>
@@ -225,6 +220,11 @@ $end
               raise e_unimplemented_feature;
           end case;
         end loop column_loop;
+        
+        if p_max_row_count > 1 and l_row_nr >= p_max_row_count -- no need to fetch more
+        then
+          exit fetch_loop;
+        end if;      
       end loop row_loop;
     end loop fetch_loop;
 
@@ -300,7 +300,7 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
   dbug.print
   ( dbug."input"
-  , 'p_operation: %s; table: %s; column filter: %s; p_query: %s; p_max_row_count: %s'
+  , 'p_operation: %s; table: %s; column filter: %s; p_statement: %s; p_max_row_count: %s'
   , p_operation
   , '"' || p_owner || '"."' || p_table_name || '"'
   , case
@@ -314,7 +314,7 @@ $if cfg_pkg.c_debugging $then
           when 'SYS.VARCHAR2' then dbms_assert.enquote_literal(p_column_value.AccessVarchar2())
         end
     end      
-  , p_query
+  , p_statement
   , p_max_row_count
   );
 $end
@@ -370,13 +370,38 @@ $end
     raise;
 end do;
 
+function empty_column_name_tab
+return column_name_tab_t
+is
+  l_column_name_tab column_name_tab_t;
+begin
+  return l_column_name_tab;
+end;
+
+function empty_statement_tab
+return statement_tab_t
+is
+  l_statement_tab statement_tab_t;
+begin
+  return l_statement_tab;
+end;
+
+function empty_max_row_count_tab
+return max_row_count_tab_t
+is
+  l_max_row_count_tab max_row_count_tab_t;
+begin
+  return l_max_row_count_tab;
+end;
+
 procedure do
-( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
-, p_common_key_name_tab in common_key_name_tab_t -- per table the common key column name
-, p_common_key_value in anydata -- tables are related by this common key value
-, p_query_tab in query_tab_t -- per table a query: if null it will default to 'select * from <table>'
-, p_order_by_tab in query_tab_t -- per table an order by
-, p_owner in varchar2 -- the owner of the table
+( p_operation in varchar2
+, p_parent_table_name in varchar2
+, p_common_key_name_tab in column_name_tab_t
+, p_common_key_value in anydata
+, p_statement_tab in statement_tab_t
+, p_order_by_tab in statement_tab_t
+, p_owner in varchar2
 , p_max_row_count_tab in max_row_count_tab_t
 , p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 )

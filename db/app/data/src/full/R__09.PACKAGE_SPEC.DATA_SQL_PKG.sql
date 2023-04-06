@@ -26,12 +26,12 @@ any schema to which this package has been granted.
 e_unimplemented_feature exception;
 pragma exception_init(e_unimplemented_feature, -3001);
 
-type common_key_name_tab_t is table of all_tab_columns.column_name%type index by all_tab_columns.table_name%type;
+type column_name_tab_t is table of all_tab_columns.column_name%type index by all_tab_columns.table_name%type;
 /** Either the name of the primary key column of the parent table or the foreign key column name for a child table. **/
 
 subtype statement_t is varchar2(32767 byte); -- max length supported by dbms_sql.parse
 
-type query_tab_t is table of statement_t index by all_tab_columns.table_name%type;
+type statement_tab_t is table of statement_t index by all_tab_columns.table_name%type;
 /** Sometimes a parent or child table may have a selection not so simple as "select * from <table>". **/
 
 type max_row_count_tab_t is table of positive index by all_tab_columns.table_name%type;
@@ -45,7 +45,7 @@ procedure do
 , p_table_name in varchar2 -- the table name
 , p_column_name in varchar2 -- the column name to query
 , p_column_value in anydata default null -- the column value to query
-, p_query in statement_t default null -- if null it will default to 'select * from <table>'
+, p_statement in statement_t default null -- if null it will default to 'select * from <table>' for a (S)elect
 , p_order_by in varchar2 default null -- to be added after the (default) query (without ORDER BY)
 , p_owner in varchar2 default user -- the owner of the table
 , p_max_row_count in positive default null
@@ -59,15 +59,24 @@ The value for p_max_row_count determines how and how much rows is retrieved for 
 - when null: unlimited number of fetches and store them in arrays (even though at most 1 row may be fetched)
 - when greater than 1: fetch at most this amount of rows and store them in arrays (even though at most 1 row may be fetched)
 **/
+function empty_column_name_tab
+return column_name_tab_t;
+
+function empty_statement_tab
+return statement_tab_t;
+
+function empty_max_row_count_tab
+return max_row_count_tab_t;
 
 procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
-, p_common_key_name_tab in common_key_name_tab_t -- per table the common key column name
+, p_parent_table_name in varchar2
+, p_common_key_name_tab in column_name_tab_t -- per table the common key column name
 , p_common_key_value in anydata -- tables are related by this common key value
-, p_query_tab in query_tab_t -- per table a query: if null it will default to 'select * from <table>'
-, p_order_by_tab in query_tab_t -- per table an order by
-, p_owner in varchar2 default user -- the owner of the table
-, p_max_row_count_tab in max_row_count_tab_t
+, p_statement_tab in statement_tab_t default empty_statement_tab -- per table a query (if any): if none or null it will default to 'select * from <table>' for a (S)elect
+, p_order_by_tab in statement_tab_t default empty_statement_tab -- per table an order by (if any)
+, p_owner in varchar2 default user -- the owner of the table(s)
+, p_max_row_count_tab in max_row_count_tab_t default empty_max_row_count_tab -- per table a max row count (if any)
 , p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 );
 /**
