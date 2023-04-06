@@ -7,6 +7,7 @@ procedure do
 , p_column_name in varchar2 -- the column name to query
 , p_column_value in anydata -- the column value to query
 , p_query in statement_t -- if null it will default to 'select * from <table>'
+, p_order_by in varchar2
 , p_owner in varchar2 -- the owner of the table
 , p_max_row_count in positive default null
 , p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
@@ -25,7 +26,11 @@ is
           then utl_lms.format_message(' where "%s" = %s', p_column_name, l_bind_variable)
         end
       )
-    );
+    ) ||
+    case
+      when p_order_by is not null
+      then ' order by ' || p_order_by
+    end;
   l_stmt statement_t := null;
   l_cursor integer := null;
   l_nr_rows_processed pls_integer;
@@ -66,9 +71,9 @@ is
         then
           if l_stmt is null
           then
-            l_stmt := 'select ';
+            l_stmt := 'select  ';
           else
-            l_stmt := l_stmt || ',';
+            l_stmt := l_stmt || chr(10) || ',       ';
           end if;
           l_stmt := l_stmt || '"' || r.column_name || '"';
         else
@@ -79,10 +84,14 @@ is
     case p_operation
       when 'S'
       then
-        l_stmt := l_stmt || ' from (' || l_query || ')';
+        l_stmt := l_stmt || chr(10) || 'from    (' || l_query || ')';
       else
         raise e_unimplemented_feature;
     end case;
+
+$if cfg_pkg.c_debugging $then
+    dbug.print(dbug."debug", 'statement: %s', l_stmt);
+$end  
   end construct_statement;
 
   procedure set_bind_variable
@@ -313,8 +322,17 @@ $end
   construct_statement;
   
   l_cursor := dbms_sql.open_cursor;
- 
-  dbms_sql.parse(l_cursor, l_stmt, dbms_sql.native);
+
+  begin
+    dbms_sql.parse(l_cursor, l_stmt, dbms_sql.native);
+$if cfg_pkg.c_debugging $then
+  exception
+    when others
+    then
+      dbug.print(dbug."error", 'statement: %s', l_stmt);
+      raise;
+$end      
+  end;
 
   if p_column_name is not null and p_column_value is not null
   then
@@ -357,6 +375,7 @@ procedure do
 , p_common_key_name_tab in common_key_name_tab_t -- per table the common key column name
 , p_common_key_value in anydata -- tables are related by this common key value
 , p_query_tab in query_tab_t -- per table a query: if null it will default to 'select * from <table>'
+, p_order_by_tab in query_tab_t -- per table an order by
 , p_owner in varchar2 -- the owner of the table
 , p_max_row_count_tab in max_row_count_tab_t
 , p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
@@ -453,6 +472,7 @@ $end
   , p_table_name => 'MY_EMP'
   , p_column_name => 'DEPTNO'
   , p_column_value => anydata.ConvertNumber(20)
+  , p_order_by => 'EMPNO'
   , p_column_value_tab => l_column_value_tab
   );
 

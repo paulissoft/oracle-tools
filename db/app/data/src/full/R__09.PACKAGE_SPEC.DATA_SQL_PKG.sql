@@ -46,6 +46,7 @@ procedure do
 , p_column_name in varchar2 -- the column name to query
 , p_column_value in anydata default null -- the column value to query
 , p_query in statement_t default null -- if null it will default to 'select * from <table>'
+, p_order_by in varchar2 default null -- to be added after the (default) query (without ORDER BY)
 , p_owner in varchar2 default user -- the owner of the table
 , p_max_row_count in positive default null
 , p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
@@ -63,7 +64,8 @@ procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
 , p_common_key_name_tab in common_key_name_tab_t -- per table the common key column name
 , p_common_key_value in anydata -- tables are related by this common key value
-, p_query_tab in query_tab_t  -- per table a query: if null it will default to 'select * from <table>'
+, p_query_tab in query_tab_t -- per table a query: if null it will default to 'select * from <table>'
+, p_order_by_tab in query_tab_t -- per table an order by
 , p_owner in varchar2 default user -- the owner of the table
 , p_max_row_count_tab in max_row_count_tab_t
 , p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
