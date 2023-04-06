@@ -138,14 +138,34 @@ is
   procedure fetch_rows_and_columns
   is
     l_rows pls_integer;
+    l_row_nr pls_integer := 0;
   begin
     <<fetch_loop>>
     loop
       l_rows := dbms_sql.fetch_rows(l_cursor);
 
+$if cfg_pkg.c_debugging $then
+      dbug.print(dbug."debug", '# rows fetched: %s', l_rows);
+$end  
+
+      exit fetch_loop when l_rows = 0;
+
       <<row_loop>>
       while l_rows > 0
       loop
+        l_rows := l_rows - 1;
+        l_row_nr := l_row_nr + 1; -- current row number
+        
+        if l_row_nr > p_max_row_count -- fetch one more than needed for too_many_rows
+        then
+          if p_max_row_count = 1
+          then
+            raise too_many_rows;
+          else
+            exit fetch_loop;
+          end if;
+        end if;
+
         <<column_loop>>
         for i_idx in l_column_tab.first .. l_column_tab.last
         loop
@@ -154,22 +174,48 @@ is
             then
               l_column_date_tab(i_idx).extend(1);
               dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last));
+$if cfg_pkg.c_debugging $then
+              dbug.print
+              ( dbug."debug"
+              , 'row: %s; column: %s; value: %s'
+              , l_row_nr
+              , l_column_tab(i_idx).column_name
+              , to_char(l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last), 'yyyy-mm-dd hh24:mi:ss')
+              );
+$end  
               
             when 'NUMBER'
             then
               l_column_number_tab(i_idx).extend(1);
               dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last));
+$if cfg_pkg.c_debugging $then
+              dbug.print
+              ( dbug."debug"
+              , 'row: %s; column: %s; value: %s'
+              , l_row_nr
+              , l_column_tab(i_idx).column_name
+              , to_char(l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last))
+              );
+$end  
 
             when 'VARCHAR2'
             then
               l_column_varchar2_tab(i_idx).extend(1);
               dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last));
+$if cfg_pkg.c_debugging $then
+              dbug.print
+              ( dbug."debug"
+              , 'row: %s; column: %s; value: %s'
+              , l_row_nr
+              , l_column_tab(i_idx).column_name
+              , l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last)
+              );
+$end  
               
             else
               raise e_unimplemented_feature;
           end case;
         end loop column_loop;
-        l_rows := l_rows - 1;
       end loop row_loop;
     end loop fetch_loop;
 
@@ -205,7 +251,7 @@ is
               then null;
               else raise too_many_rows;
             end case;
-            p_column_value_tab(l_column_tab(i_idx).column_name) := anydata.ConvertVarchar2(l_column_number_tab(i_idx)(1));
+            p_column_value_tab(l_column_tab(i_idx).column_name) := anydata.ConvertNumber(l_column_number_tab(i_idx)(1));
           else
             p_column_value_tab(l_column_tab(i_idx).column_name) := anydata.ConvertCollection(l_column_number_tab(i_idx));
           end if;
@@ -221,7 +267,7 @@ is
               then null;
               else raise too_many_rows;
             end case;
-            p_column_value_tab(l_column_tab(i_idx).column_name) := anydata.ConvertNumber(l_column_varchar2_tab(i_idx)(1));
+            p_column_value_tab(l_column_tab(i_idx).column_name) := anydata.ConvertVarchar2(l_column_varchar2_tab(i_idx)(1));
           else
             p_column_value_tab(l_column_tab(i_idx).column_name) := anydata.ConvertCollection(l_column_varchar2_tab(i_idx));
           end if;
@@ -241,6 +287,29 @@ is
     end if;
   end cleanup;
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_operation: %s; table: %s; column filter: %s; p_query: %s; p_max_row_count: %s'
+  , p_operation
+  , '"' || p_owner || '"."' || p_table_name || '"'
+  , case
+      when p_column_name is not null and p_column_value is not null
+      then
+        p_column_name ||
+        ' = ' ||
+        case p_column_value.gettypename()
+          when 'SYS.DATE'     then dbms_assert.enquote_literal(to_char(p_column_value.AccessDate(), 'yyyy-mm-dd hh24:mi:ss'))
+          when 'SYS.NUMBER'   then p_column_value.AccessNumber()
+          when 'SYS.VARCHAR2' then dbms_assert.enquote_literal(p_column_value.AccessVarchar2())
+        end
+    end      
+  , p_query
+  , p_max_row_count
+  );
+$end
+
   construct_statement;
   
   l_cursor := dbms_sql.open_cursor;
@@ -269,10 +338,17 @@ begin
   end case;
 
   cleanup;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 exception
   when others
   then
     cleanup;
+$if cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
     raise;
 end do;
 
@@ -289,6 +365,184 @@ is
 begin
   raise e_unimplemented_feature;
 end do;
+
+$if cfg_pkg.c_testing $then
+
+--%suitepath(DATA)
+--%suite
+
+--%beforeall
+procedure ut_setup
+is
+  pragma autonomous_transaction;
+begin
+  execute immediate '
+CREATE TABLE MY_DEPT (
+  DEPTNO NUMBER(2) CONSTRAINT PK_DEPT PRIMARY KEY,
+  DNAME VARCHAR2(14),
+  LOC VARCHAR2(13)
+)';
+
+  execute immediate '
+CREATE TABLE MY_EMP (
+  EMPNO NUMBER(4) CONSTRAINT PK_EMP PRIMARY KEY,
+  ENAME VARCHAR2(10),
+  JOB VARCHAR2(9),
+  MGR NUMBER(4),
+  HIREDATE DATE,
+  SAL NUMBER(7,2),
+  COMM NUMBER(7,2),
+  DEPTNO NUMBER(2) CONSTRAINT FK_DEPTNO REFERENCES MY_DEPT
+)';
+
+execute immediate q'[
+begin
+  insert into my_dept values (10,'ACCOUNTING','NEW YORK');
+  insert into my_dept values (20,'RESEARCH','DALLAS');
+  insert into my_dept values (30,'SALES','CHICAGO');
+  insert into my_dept values (40,'OPERATIONS','BOSTON');
+
+  insert into my_emp values (7369,'SMITH','CLERK',7902,to_date('17-12-1980','dd-mm-yyyy'),800,null,20);
+  insert into my_emp values (7499,'ALLEN','SALESMAN',7698,to_date('20-2-1981','dd-mm-yyyy'),1600,300,30);
+  insert into my_emp values (7521,'WARD','SALESMAN',7698,to_date('22-2-1981','dd-mm-yyyy'),1250,500,30);
+  insert into my_emp values (7566,'JONES','MANAGER',7839,to_date('2-4-1981','dd-mm-yyyy'),2975,null,20);
+  insert into my_emp values (7654,'MARTIN','SALESMAN',7698,to_date('28-9-1981','dd-mm-yyyy'),1250,1400,30); 
+  insert into my_emp values (7698,'BLAKE','MANAGER',7839,to_date('1-5-1981','dd-mm-yyyy'),2850,null,30);
+  insert into my_emp values (7782,'CLARK','MANAGER',7839,to_date('9-6-1981','dd-mm-yyyy'),2450,null,10);
+  insert into my_emp values (7788,'SCOTT','ANALYST',7566,to_date('13-JUL-87','dd-mm-rr')-85,3000,null,20);
+  insert into my_emp values (7839,'KING','PRESIDENT',null,to_date('17-11-1981','dd-mm-yyyy'),5000,null,10);
+  insert into my_emp values (7844,'TURNER','SALESMAN',7698,to_date('8-9-1981','dd-mm-yyyy'),1500,0,30);
+  insert into my_emp values (7876,'ADAMS','CLERK',7788,to_date('13-JUL-87', 'dd-mm-rr')-51,1100,null,20);
+  insert into my_emp values (7900,'JAMES','CLERK',7698,to_date('3-12-1981','dd-mm-yyyy'),950,null,30);
+  insert into my_emp values (7902,'FORD','ANALYST',7566,to_date('3-12-1981','dd-mm-yyyy'),3000,null,20);
+  insert into my_emp values (7934,'MILLER','CLERK',7782,to_date('23-1-1982','dd-mm-yyyy'),1300,null,10);
+end;]';
+
+  commit;
+end ut_setup;
+
+procedure ut_teardown
+is
+  pragma autonomous_transaction;
+begin
+  execute immediate 'drop table my_emp purge';
+  execute immediate 'drop table my_dept purge';
+  
+  commit;
+end ut_teardown;
+
+procedure ut_do_emp
+is
+  l_column_value_tab column_value_tab_t;
+  l_column_value all_tab_columns.column_name%type;
+  l_date_tab sys.odcidatelist;
+  l_number_tab sys.odcinumberlist;
+  l_varchar2_tab sys.odcivarchar2list;
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP');
+$end
+
+  l_column_value_tab('EMPNO') := null;
+  l_column_value_tab('JOB') := null;
+  l_column_value_tab('HIREDATE') := null;
+  l_column_value_tab('DEPTNO') := null;
+  
+  do
+  ( p_operation => 'S'
+  , p_table_name => 'MY_EMP'
+  , p_column_name => 'DEPTNO'
+  , p_column_value => anydata.ConvertNumber(20)
+  , p_column_value_tab => l_column_value_tab
+  );
+
+  ut.expect(l_column_value_tab.count, '# columns').to_equal(4);
+
+  l_column_value := l_column_value_tab.first;
+  while l_column_value is not null
+  loop
+    case
+      when l_column_value in ('EMPNO', 'DEPTNO')
+      then
+        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCINUMBERLIST');
+        ut.expect(l_column_value_tab(l_column_value).GetCollection(l_number_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_number_tab.count, 'collection count ' || l_column_value).to_equal(5);
+        
+      when l_column_value in ('JOB')
+      then
+        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCIVARCHAR2LIST');
+        ut.expect(l_column_value_tab(l_column_value).GetCollection(l_varchar2_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_varchar2_tab.count, 'collection count ' || l_column_value).to_equal(5);
+        
+      when l_column_value in ('HIREDATE')
+      then
+        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCIDATELIST');
+        ut.expect(l_column_value_tab(l_column_value).GetCollection(l_date_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_date_tab.count, 'collection count ' || l_column_value).to_equal(5);
+    end case;
+
+    l_column_value := l_column_value_tab.next(l_column_value);
+  end loop;
+
+  -- get employees for department 0 (i_try 0), all (i_try 1) or 20 (i_try 2) check no_data_found / too_many_rows
+  for i_try in 0..2
+  loop
+    begin
+      do
+      ( p_operation => 'S'
+      , p_table_name => 'MY_EMP'
+      , p_column_name => 'DEPTNO'
+      , p_column_value => case when i_try <> 1 then anydata.ConvertNumber(i_try * 10) else null end
+      , p_max_row_count => case when i_try < 2 then 1 else 5 end
+      , p_column_value_tab => l_column_value_tab
+      );
+      if i_try <> 2
+      then
+        raise program_error; -- should not come here
+      end if;
+    exception
+      when no_data_found
+      then if i_try <> 0 then raise; end if;
+      when too_many_rows
+      then if i_try <> 1 then raise; end if;
+    end;
+  end loop;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end;
+
+procedure ut_do_dept
+is
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_DEPT');
+$end
+
+  raise e_unimplemented_feature;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end;
+
+--%test
+procedure ut_do_emp_dept
+is
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP_DEPT');
+$end
+
+  raise e_unimplemented_feature;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end;
+
+$end
 
 end data_sql_pkg;
 /

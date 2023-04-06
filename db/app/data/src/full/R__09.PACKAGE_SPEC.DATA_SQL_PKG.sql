@@ -72,6 +72,32 @@ procedure do
 Perform SQL for a set of related tables.
 **/
 
+$if cfg_pkg.c_testing $then
+
+--%suitepath(DATA)
+--%suite
+
+--%beforeall
+--%rollback(manual)
+procedure ut_setup;
+
+--%afterall
+--%rollback(manual)
+procedure ut_teardown;
+
+--%test
+procedure ut_do_emp;
+
+--%test
+--%disabled
+procedure ut_do_dept;
+
+--%test
+--%disabled
+procedure ut_do_emp_dept;
+
+$end
+
 end data_sql_pkg;
 /
 
