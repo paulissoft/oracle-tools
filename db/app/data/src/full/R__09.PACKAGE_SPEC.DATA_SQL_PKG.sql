@@ -3,6 +3,9 @@ CREATE OR REPLACE PACKAGE "DATA_SQL_PKG" authid current_user is
 -- SYS.STANDARD defines TIME_UNCONSTRAINED and TIME_TZ_UNCONSTRAINED but there is no anydata.Convert* function for it.
 c_support_time constant boolean := false;
 
+-- use SYS.ODCINUMBERLIST and so on
+c_use_odci constant boolean := false;
+
 /**
 Use dynamic SQL to retrieve data as either scalars or arrays by using SYS.ANYDATA.
 It is essentially created to enable SQL on a set of related tables, i.e. tables with a foreign key relation.

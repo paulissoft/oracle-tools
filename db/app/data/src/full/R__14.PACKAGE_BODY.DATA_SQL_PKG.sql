@@ -36,9 +36,15 @@ is
   l_nr_rows_processed pls_integer;
   l_column_name all_tab_columns.column_name%type;
 
+$if data_sql_pkg.c_use_odci $then
   type column_date_tab_t is table of sys.odcidatelist index by binary_integer;
   type column_number_tab_t is table of sys.odcinumberlist index by binary_integer;
   type column_varchar2_tab_t is table of sys.odcivarchar2list index by binary_integer;
+$else
+  type column_date_tab_t is table of dbms_sql.date_table index by binary_integer;
+  type column_number_tab_t is table of dbms_sql.number_table index by binary_integer;
+  type column_varchar2_tab_t is table of dbms_sql.varchar2_table index by binary_integer;
+$end
 
   l_column_date_tab column_date_tab_t;
   l_column_number_tab column_number_tab_t;
@@ -124,17 +130,32 @@ $end
         when 'DATE'
         then
           dbms_sql.define_column(l_cursor, l_column_id, l_date);
+$if data_sql_pkg.c_use_odci $then
           l_column_date_tab(l_column_id) := sys.odcidatelist(); -- column_value will put it in here
+$else          
+          l_column_date_tab(l_column_id)(1) := null; -- column_value will put it in here
+          l_column_date_tab(l_column_id).delete;
+$end          
           
         when 'NUMBER'
         then
           dbms_sql.define_column(l_cursor, l_column_id, l_number);
+$if data_sql_pkg.c_use_odci $then
           l_column_number_tab(l_column_id) := sys.odcinumberlist();
+$else          
+          l_column_number_tab(l_column_id)(1) := null;
+          l_column_number_tab(l_column_id).delete;
+$end          
 
         when 'VARCHAR2'
         then
           dbms_sql.define_column(l_cursor, l_column_id, l_varchar2, r.data_length);
+$if data_sql_pkg.c_use_odci $then
           l_column_varchar2_tab(l_column_id) := sys.odcivarchar2list();
+$else          
+          l_column_varchar2_tab(l_column_id)(1) := null;
+          l_column_varchar2_tab(l_column_id).delete;
+$end          
           
         else
           raise e_unimplemented_feature;
@@ -176,7 +197,11 @@ $end
           case l_column_tab(i_idx).data_type
             when 'DATE'
             then
+$if data_sql_pkg.c_use_odci $then
               l_column_date_tab(i_idx).extend(1);
+$else              
+              l_column_date_tab(i_idx)(l_column_date_tab(i_idx).count+1) := null;
+$end              
               dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last));
 $if cfg_pkg.c_debugging $then
               dbug.print
@@ -190,7 +215,11 @@ $end
               
             when 'NUMBER'
             then
+$if data_sql_pkg.c_use_odci $then
               l_column_number_tab(i_idx).extend(1);
+$else              
+              l_column_number_tab(i_idx)(l_column_number_tab(i_idx).count+1) := null;
+$end              
               dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last));
 $if cfg_pkg.c_debugging $then
               dbug.print
@@ -204,7 +233,11 @@ $end
 
             when 'VARCHAR2'
             then
+$if data_sql_pkg.c_use_odci $then
               l_column_varchar2_tab(i_idx).extend(1);
+$else              
+              l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).count+1) := null;
+$end              
               dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last));
 $if cfg_pkg.c_debugging $then
               dbug.print
@@ -479,9 +512,15 @@ procedure ut_do_emp
 is
   l_column_value_tab column_value_tab_t;
   l_column_value all_tab_columns.column_name%type;
+$if data_sql_pkg.c_use_odci $then
   l_date_tab sys.odcidatelist;
   l_number_tab sys.odcinumberlist;
   l_varchar2_tab sys.odcivarchar2list;
+$else  
+  l_date_tab dbms_sql.date_table;
+  l_number_tab dbms_sql.number_table;
+  l_varchar2_tab dbms_sql.varchar2_table;
+$end  
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP');
@@ -509,21 +548,39 @@ $end
     case
       when l_column_value in ('EMPNO', 'DEPTNO')
       then
+$if data_sql_pkg.c_use_odci $then
         ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCINUMBERLIST');
+$else        
+        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.NUMBER_TABLE');
+$end        
         ut.expect(l_column_value_tab(l_column_value).GetCollection(l_number_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
         ut.expect(l_number_tab.count, 'collection count ' || l_column_value).to_equal(5);
+        ut.expect(l_number_tab(1), 'element #1 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7369 else 20 end);
+        ut.expect(l_number_tab(5), 'element #5 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7902 else 20 end);
         
       when l_column_value in ('JOB')
       then
+$if data_sql_pkg.c_use_odci $then
         ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCIVARCHAR2LIST');
+$else        
+        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.VARCHAR2_TABLE');
+$end        
         ut.expect(l_column_value_tab(l_column_value).GetCollection(l_varchar2_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
         ut.expect(l_varchar2_tab.count, 'collection count ' || l_column_value).to_equal(5);
+        ut.expect(l_varchar2_tab(1), 'element #1 for column ' || l_column_value).to_equal('CLERK');
+        ut.expect(l_varchar2_tab(5), 'element #5 for column ' || l_column_value).to_equal('ANALYST');
         
       when l_column_value in ('HIREDATE')
       then
+$if data_sql_pkg.c_use_odci $then
         ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCIDATELIST');
+$else        
+        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.DATE_TABLE');
+$end
         ut.expect(l_column_value_tab(l_column_value).GetCollection(l_date_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
         ut.expect(l_date_tab.count, 'collection count ' || l_column_value).to_equal(5);
+        ut.expect(l_date_tab(1), 'element #1 for column ' || l_column_value).to_equal(to_date('17-12-1980','dd-mm-yyyy'));
+        ut.expect(l_date_tab(5), 'element #5 for column ' || l_column_value).to_equal(to_date('3-12-1981','dd-mm-yyyy'));
     end case;
 
     l_column_value := l_column_value_tab.next(l_column_value);
