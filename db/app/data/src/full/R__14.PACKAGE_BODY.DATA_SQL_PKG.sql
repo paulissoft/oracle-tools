@@ -71,7 +71,9 @@ $end
     for r in c_col
     loop
       continue when not(p_column_value_tab.exists(r.column_name));
-      
+
+      l_column_tab(l_column_tab.count+1) := r;
+
       case p_operation
         when 'S'
         then
@@ -101,12 +103,15 @@ $end
   end construct_statement;
 
   procedure set_bind_variable
+  ( p_bind_variable in varchar2
+  , p_column_value in anydata
+  )
   is
   begin
     case p_column_value.gettypename()
-      when 'SYS.DATE'     then dbms_sql.bind_variable(l_cursor, l_bind_variable, p_column_value.AccessDate());
-      when 'SYS.NUMBER'   then dbms_sql.bind_variable(l_cursor, l_bind_variable, p_column_value.AccessNumber());
-      when 'SYS.VARCHAR2' then dbms_sql.bind_variable(l_cursor, l_bind_variable, p_column_value.AccessVarchar2());
+      when 'SYS.DATE'     then dbms_sql.bind_variable(l_cursor, p_bind_variable, p_column_value.AccessDate());
+      when 'SYS.NUMBER'   then dbms_sql.bind_variable(l_cursor, p_bind_variable, p_column_value.AccessNumber());
+      when 'SYS.VARCHAR2' then dbms_sql.bind_variable(l_cursor, p_bind_variable, p_column_value.AccessVarchar2());
         
       else raise e_unimplemented_feature;
     end case;
@@ -114,54 +119,47 @@ $end
 
   procedure define_columns
   is
-    l_column_id all_tab_columns.column_id%type;
     l_date date;
     l_number number;
     l_varchar2 varchar2(4000);
   begin
-    l_column_id := 1;
-    for r in c_col
+    <<column_loop>>
+    for i_idx in l_column_tab.first .. l_column_tab.last
     loop
-      continue when not(p_column_value_tab.exists(r.column_name));
-
-      l_column_tab(l_column_id) := r;
-
-      case r.data_type
+      case l_column_tab(i_idx).data_type
         when 'DATE'
         then
-          dbms_sql.define_column(l_cursor, l_column_id, l_date);
+          dbms_sql.define_column(l_cursor, i_idx, l_date);
 $if data_sql_pkg.c_use_odci $then
-          l_column_date_tab(l_column_id) := sys.odcidatelist(); -- column_value will put it in here
+          l_column_date_tab(i_idx) := sys.odcidatelist(); -- column_value will put it in here
 $else          
-          l_column_date_tab(l_column_id)(1) := null; -- column_value will put it in here
-          l_column_date_tab(l_column_id).delete;
+          l_column_date_tab(i_idx)(1) := null; -- column_value will put it in here
+          l_column_date_tab(i_idx).delete;
 $end          
           
         when 'NUMBER'
         then
-          dbms_sql.define_column(l_cursor, l_column_id, l_number);
+          dbms_sql.define_column(l_cursor, i_idx, l_number);
 $if data_sql_pkg.c_use_odci $then
-          l_column_number_tab(l_column_id) := sys.odcinumberlist();
+          l_column_number_tab(i_idx) := sys.odcinumberlist();
 $else          
-          l_column_number_tab(l_column_id)(1) := null;
-          l_column_number_tab(l_column_id).delete;
+          l_column_number_tab(i_idx)(1) := null;
+          l_column_number_tab(i_idx).delete;
 $end          
 
         when 'VARCHAR2'
         then
-          dbms_sql.define_column(l_cursor, l_column_id, l_varchar2, r.data_length);
+          dbms_sql.define_column(l_cursor, i_idx, l_varchar2, l_column_tab(i_idx).data_length);
 $if data_sql_pkg.c_use_odci $then
-          l_column_varchar2_tab(l_column_id) := sys.odcivarchar2list();
+          l_column_varchar2_tab(i_idx) := sys.odcivarchar2list();
 $else          
-          l_column_varchar2_tab(l_column_id)(1) := null;
-          l_column_varchar2_tab(l_column_id).delete;
+          l_column_varchar2_tab(i_idx)(1) := null;
+          l_column_varchar2_tab(i_idx).delete;
 $end          
           
         else
           raise e_unimplemented_feature;
       end case;
-    
-      l_column_id := l_column_id + 1;
     end loop;    
   end define_columns;
 
@@ -369,7 +367,7 @@ $end
 
   if p_column_name is not null and p_column_value is not null
   then
-    set_bind_variable;
+    set_bind_variable(l_bind_variable, p_column_value);
   end if;
   
   -- query? define columns
