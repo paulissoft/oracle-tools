@@ -128,7 +128,7 @@ $if data_sql_pkg.c_use_bulk_fetch $then
         then 100
         when p_max_row_count = 1
         then 2 -- to detect too many rows
-        else p_max_row_count
+        else least(100, p_max_row_count)
       end;        
 $else
     return 1;
@@ -216,40 +216,31 @@ $end -- $if data_sql_pkg.c_use_bulk_fetch $then
 
   procedure fetch_rows_and_columns
   is
-    l_rows pls_integer;
-    l_row_nr pls_integer := 0;
-
-    e_fetch_out_of_sequence exception;
-    pragma exception_init(e_fetch_out_of_sequence , -1002);
+    l_rows_fetched pls_integer; -- # rows fetched for last dbms_sql.fetch_rows()
+    l_row_count pls_integer := 0; -- total row count
   begin
     <<fetch_loop>>
     loop
-      begin
-        l_rows := dbms_sql.fetch_rows(l_cursor);
-      exception
-        -- we must actually check number in define_array against rows fetched: if not equal we can stop
-        when e_fetch_out_of_sequence
-        then raise; exit fetch_loop;
-      end;
+      l_rows_fetched := dbms_sql.fetch_rows(l_cursor);
 
 $if cfg_pkg.c_debugging $then
-      dbug.print(dbug."debug", '# rows fetched: %s', l_rows);
+      dbug.print(dbug."debug", '# rows fetched: %s', l_rows_fetched);
 $end  
 
-      exit fetch_loop when l_rows = 0;
+      exit fetch_loop when l_rows_fetched = 0;
 
 $if not(data_sql_pkg.c_use_bulk_fetch) $then
 
-      if l_rows <> 1
+      if l_rows_fetched <> 1
       then
         raise program_error;
       end if;
 
 $end
 
-      l_row_nr := l_row_nr + l_rows; -- current row number
+      l_row_count := l_row_count + l_rows_fetched;
       
-      if p_max_row_count = 1 and l_row_nr > p_max_row_count -- must fetch one more than needed for too_many_rows
+      if p_max_row_count = 1 and l_row_count > p_max_row_count -- must fetch one more than needed for too_many_rows
       then
         raise too_many_rows;
       end if;
@@ -279,11 +270,16 @@ $if cfg_pkg.c_debugging $then
             dbug.print
             ( dbug."debug"
             , 'row: %s; column: %s; value: %s'
-            , l_row_nr
+            , l_row_count
             , l_column_tab(i_idx).column_name
             , to_char(l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last), 'yyyy-mm-dd hh24:mi:ss')
             );
-$end  
+$end
+
+            if l_column_date_tab(i_idx).count <> l_row_count
+            then
+              raise program_error;
+            end if;
               
           when 'NUMBER'
           then
@@ -306,11 +302,16 @@ $if cfg_pkg.c_debugging $then
             dbug.print
             ( dbug."debug"
             , 'row: %s; column: %s; value: %s'
-            , l_row_nr
+            , l_row_count
             , l_column_tab(i_idx).column_name
             , to_char(l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last))
             );
 $end  
+
+            if l_column_number_tab(i_idx).count <> l_row_count
+            then
+              raise program_error;
+            end if;
 
           when 'VARCHAR2'
           then
@@ -333,24 +334,29 @@ $if cfg_pkg.c_debugging $then
             dbug.print
             ( dbug."debug"
             , 'row: %s; column: %s; value: %s'
-            , l_row_nr
+            , l_row_count
             , l_column_tab(i_idx).column_name
             , l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last)
             );
 $end  
-              
+
+            if l_column_varchar2_tab(i_idx).count <> l_row_count
+            then
+              raise program_error;
+            end if;
+
           else
             raise e_unimplemented_feature;
         end case;
       end loop column_loop;
       
-      if p_max_row_count > 1 and l_row_nr >= p_max_row_count -- no need to fetch more
+      if p_max_row_count > 1 and l_row_count >= p_max_row_count -- no need to fetch more
       then
         exit fetch_loop;
       end if;      
 
 $if data_sql_pkg.c_use_bulk_fetch $then
-      exit fetch_loop when l_rows < fetch_limit;
+      exit fetch_loop when l_rows_fetched < fetch_limit;
 $end
     end loop fetch_loop;
 
