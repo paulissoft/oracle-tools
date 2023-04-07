@@ -13,7 +13,7 @@ procedure do
 , p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 )
 is
-  l_bind_variable constant all_tab_columns.column_name%type := ':' || p_column_name;
+  l_bind_variable constant all_tab_columns.column_name%type := ':B_' || p_column_name || '$';
   l_statement constant statement_t :=
     nvl
     ( p_statement
@@ -585,6 +585,240 @@ $end
 $if cfg_pkg.c_debugging $then
   dbug.leave;
 $end
+end;
+
+procedure ut_check_types
+is
+  l_clob_table1 dbms_sql.clob_table;
+  l_clob_table2 dbms_sql.clob_table;
+  l_binary_float_table1 dbms_sql.binary_float_table;
+  l_binary_float_table2 dbms_sql.binary_float_table;
+  l_binary_double_table1 dbms_sql.binary_double_table;
+  l_binary_double_table2 dbms_sql.binary_double_table;
+  l_blob_table1 dbms_sql.blob_table;
+  l_blob_table2 dbms_sql.blob_table;
+  l_bfile_table1 dbms_sql.bfile_table;
+  l_bfile_table2 dbms_sql.bfile_table;
+  l_date_table1 dbms_sql.date_table;
+  l_date_table2 dbms_sql.date_table;
+  l_number_table1 dbms_sql.number_table;
+  l_number_table2 dbms_sql.number_table;
+  l_urowid_table1 dbms_sql.urowid_table;
+  l_urowid_table2 dbms_sql.urowid_table;
+  l_varchar2_table1 dbms_sql.varchar2_table;
+  l_varchar2_table2 dbms_sql.varchar2_table;
+$if data_sql_pkg.c_support_time $then  
+  l_time_table1 dbms_sql.time_table;
+  l_time_table2 dbms_sql.time_table;
+  l_time_with_time_zone_table1 dbms_sql.time_with_time_zone_table;
+  l_time_with_time_zone_table2 dbms_sql.time_with_time_zone_table;
+$end  
+  l_timestamp_table1 dbms_sql.timestamp_table;
+  l_timestamp_table2 dbms_sql.timestamp_table;
+  l_timestamp_with_ltz_table1 dbms_sql.timestamp_with_ltz_table;
+  l_timestamp_with_ltz_table2 dbms_sql.timestamp_with_ltz_table;
+  l_timestamp_with_time_zone_table1 dbms_sql.timestamp_with_time_zone_table;
+  l_timestamp_with_time_zone_table2 dbms_sql.timestamp_with_time_zone_table;
+  l_interval_day_to_second_table1 dbms_sql.interval_day_to_second_table;
+  l_interval_day_to_second_table2 dbms_sql.interval_day_to_second_table;
+  l_interval_year_to_month_table1 dbms_sql.interval_year_to_month_table;
+  l_interval_year_to_month_table2 dbms_sql.interval_year_to_month_table;
+  l_data anydata;
+begin
+  for i_idx in 1..16
+  loop
+    case i_idx
+      when  1 then l_clob_table1(i_idx) := null; l_clob_table1(i_idx+1) := null; l_clob_table1(i_idx+3) := null;
+      when  2 then l_binary_float_table1(i_idx) := null; l_binary_float_table1(i_idx+1) := null; l_binary_float_table1(i_idx+3) := null;
+      when  3 then l_binary_double_table1(i_idx) := null; l_binary_double_table1(i_idx+1) := null; l_binary_double_table1(i_idx+3) := null;
+      when  4 then l_blob_table1(i_idx) := null; l_blob_table1(i_idx+1) := null; l_blob_table1(i_idx+3) := null;
+      when  5 then l_bfile_table1(i_idx) := null; l_bfile_table1(i_idx+1) := null; l_bfile_table1(i_idx+3) := null;
+      when  6 then l_date_table1(i_idx) := null; l_date_table1(i_idx+1) := null; l_date_table1(i_idx+3) := null;
+      when  7 then l_number_table1(i_idx) := null; l_number_table1(i_idx+1) := null; l_number_table1(i_idx+3) := null;
+      when  8 then l_urowid_table1(i_idx) := null; l_urowid_table1(i_idx+1) := null; l_urowid_table1(i_idx+3) := null;
+      when  9 then l_varchar2_table1(i_idx) := null; l_varchar2_table1(i_idx+1) := null; l_varchar2_table1(i_idx+3) := null;
+$if data_sql_pkg.c_support_time $then          
+      when 10 then l_time_table1(i_idx) := null; l_time_table1(i_idx+1) := null; l_time_table1(i_idx+3) := null;
+      when 11 then l_time_with_time_zone_table1(i_idx) := null; l_time_with_time_zone_table1(i_idx+1) := null; l_time_with_time_zone_table1(i_idx+3) := null;
+$end        
+      when 12 then l_timestamp_table1(i_idx) := null; l_timestamp_table1(i_idx+1) := null; l_timestamp_table1(i_idx+3) := null;
+      when 13 then l_timestamp_with_ltz_table1(i_idx) := null; l_timestamp_with_ltz_table1(i_idx+1) := null; l_timestamp_with_ltz_table1(i_idx+3) := null;
+      when 14 then l_timestamp_with_time_zone_table1(i_idx) := null; l_timestamp_with_time_zone_table1(i_idx+1) := null; l_timestamp_with_time_zone_table1(i_idx+3) := null;
+      when 15 then l_interval_day_to_second_table1(i_idx) := null; l_interval_day_to_second_table1(i_idx+1) := null; l_interval_day_to_second_table1(i_idx+3) := null;
+      when 16 then l_interval_year_to_month_table1(i_idx) := null; l_interval_year_to_month_table1(i_idx+1) := null; l_interval_year_to_month_table1(i_idx+3) := null;
+$if not(data_sql_pkg.c_support_time) $then          
+      else
+        null;
+$end        
+    end case;
+    
+    case i_idx
+      when  1
+      then
+        l_data := anydata.ConvertCollection(l_clob_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.CLOB_TABLE');
+        ut.expect(l_data.GetCollection(l_clob_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_clob_table2.count, 'count ' || to_char(i_idx)).to_equal(3);
+        ut.expect(l_clob_table2(i_idx), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_clob_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_clob_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  2
+      then
+        l_data := anydata.ConvertCollection(l_binary_float_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.BINARY_FLOAT_TABLE');
+        ut.expect(l_data.GetCollection(l_binary_float_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_binary_float_table2.count, 'count ' || to_char(i_idx)).to_equal(l_binary_float_table1.count);
+        ut.expect(l_binary_float_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_binary_float_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_binary_float_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  3
+      then
+        l_data := anydata.ConvertCollection(l_binary_double_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.BINARY_DOUBLE_TABLE');
+        ut.expect(l_data.GetCollection(l_binary_double_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_binary_double_table2.count, 'count ' || to_char(i_idx)).to_equal(l_binary_double_table1.count);
+        ut.expect(l_binary_double_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_binary_double_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_binary_double_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  4
+      then
+        l_data := anydata.ConvertCollection(l_blob_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.BLOB_TABLE');
+        ut.expect(l_data.GetCollection(l_blob_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_blob_table2.count, 'count ' || to_char(i_idx)).to_equal(l_blob_table1.count);
+        ut.expect(l_blob_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_blob_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_blob_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  5
+      then
+        l_data := anydata.ConvertCollection(l_bfile_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.BFILE_TABLE');
+        ut.expect(l_data.GetCollection(l_bfile_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_bfile_table2.count, 'count ' || to_char(i_idx)).to_equal(l_bfile_table1.count);
+        -- ut.expect does not support BFILE checks
+        /*
+        ut.expect(l_bfile_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_bfile_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_bfile_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+        */
+      when  6
+      then
+        l_data := anydata.ConvertCollection(l_date_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.DATE_TABLE');
+        ut.expect(l_data.GetCollection(l_date_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_date_table2.count, 'count ' || to_char(i_idx)).to_equal(l_date_table1.count);
+        ut.expect(l_date_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_date_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_date_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  7
+      then
+        l_data := anydata.ConvertCollection(l_number_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.NUMBER_TABLE');
+        ut.expect(l_data.GetCollection(l_number_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_number_table2.count, 'count ' || to_char(i_idx)).to_equal(l_number_table1.count);
+        ut.expect(l_number_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_number_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_number_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  8
+      then
+        l_data := anydata.ConvertCollection(l_urowid_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.UROWID_TABLE');
+        ut.expect(l_data.GetCollection(l_urowid_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_urowid_table2.count, 'count ' || to_char(i_idx)).to_equal(l_urowid_table1.count);
+        ut.expect(l_urowid_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_urowid_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_urowid_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when  9
+      then
+        l_data := anydata.ConvertCollection(l_varchar2_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.VARCHAR2_TABLE');
+        ut.expect(l_data.GetCollection(l_varchar2_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_varchar2_table2.count, 'count ' || to_char(i_idx)).to_equal(l_varchar2_table1.count);
+        ut.expect(l_varchar2_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_varchar2_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_varchar2_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when 10
+      then
+$if data_sql_pkg.c_support_time $then          
+        l_data := anydata.ConvertCollection(l_time_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.TIME_TABLE');
+        ut.expect(l_data.GetCollection(l_time_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_time_table2.count, 'count ' || to_char(i_idx)).to_equal(l_time_table1.count);
+        ut.expect(l_time_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_time_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_time_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+$else
+        null;
+$end        
+      when 11
+      then
+$if data_sql_pkg.c_support_time $then          
+        l_data := anydata.ConvertCollection(l_time_with_time_zone_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.TIME_WITH_TIME_ZONE_TABLE');
+        ut.expect(l_data.GetCollection(l_time_with_time_zone_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_time_with_time_zone_table2.count, 'count ' || to_char(i_idx)).to_equal(l_time_with_time_zone_table1.count);
+        ut.expect(l_time_with_time_zone_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_time_with_time_zone_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_time_with_time_zone_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+$else
+        null;
+$end        
+      when 12
+      then
+        l_data := anydata.ConvertCollection(l_timestamp_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.TIMESTAMP_TABLE');
+        ut.expect(l_data.GetCollection(l_timestamp_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_timestamp_table2.count, 'count ' || to_char(i_idx)).to_equal(l_timestamp_table1.count);
+        ut.expect(l_timestamp_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_timestamp_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_timestamp_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when 13
+      then
+        l_data := anydata.ConvertCollection(l_timestamp_with_ltz_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.TIMESTAMP_WITH_LTZ_TABLE');
+        ut.expect(l_data.GetCollection(l_timestamp_with_ltz_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_timestamp_with_ltz_table2.count, 'count ' || to_char(i_idx)).to_equal(l_timestamp_with_ltz_table1.count);
+        ut.expect(l_timestamp_with_ltz_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_timestamp_with_ltz_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_timestamp_with_ltz_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when 14
+      then
+        l_data := anydata.ConvertCollection(l_timestamp_with_time_zone_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.TIMESTAMP_WITH_TIME_ZONE_TABLE');
+        ut.expect(l_data.GetCollection(l_timestamp_with_time_zone_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_timestamp_with_time_zone_table2.count, 'count ' || to_char(i_idx)).to_equal(l_timestamp_with_time_zone_table1.count);
+        ut.expect(l_timestamp_with_time_zone_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_timestamp_with_time_zone_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_timestamp_with_time_zone_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when 15
+      then
+        l_data := anydata.ConvertCollection(l_interval_day_to_second_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.INTERVAL_DAY_TO_SECOND_TABLE');
+        ut.expect(l_data.GetCollection(l_interval_day_to_second_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_interval_day_to_second_table2.count, 'count ' || to_char(i_idx)).to_equal(l_interval_day_to_second_table1.count);
+        ut.expect(l_interval_day_to_second_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_interval_day_to_second_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_interval_day_to_second_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+      when 16
+      then
+        l_data := anydata.ConvertCollection(l_interval_year_to_month_table1); ut.expect(l_data.gettypename(), 'array ' || to_char(i_idx)).to_equal('SYS.INTERVAL_YEAR_TO_MONTH_TABLE');
+        ut.expect(l_data.GetCollection(l_interval_year_to_month_table2), 'collection ' || to_char(i_idx)).to_equal(DBMS_TYPES.SUCCESS);
+        ut.expect(l_interval_year_to_month_table2.count, 'count ' || to_char(i_idx)).to_equal(l_interval_year_to_month_table1.count);
+        ut.expect(l_interval_year_to_month_table2(i_idx+0), 'first element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_interval_year_to_month_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
+        ut.expect(l_interval_year_to_month_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
+    end case;
+    
+    case i_idx
+      when  1 then l_data := anydata.ConvertClob(l_clob_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.CLOB');
+      when  2 then l_data := anydata.ConvertBFloat(l_binary_float_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.BINARY_FLOAT');
+      when  3 then l_data := anydata.ConvertBDouble(l_binary_double_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.BINARY_DOUBLE');
+      when  4 then l_data := anydata.ConvertBlob(l_blob_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.BLOB');
+      when  5 then l_data := anydata.ConvertBfile(l_bfile_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.BFILE');
+      when  6 then l_data := anydata.ConvertDate(l_date_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.DATE');
+      when  7 then l_data := anydata.ConvertNumber(l_number_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.NUMBER');
+      when  8 then l_data := anydata.ConvertURowid(l_urowid_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.UROWID');
+      when  9 then l_data := anydata.ConvertVarchar2(l_varchar2_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.VARCHAR2');
+$if data_sql_pkg.c_support_time $then          
+      when 10 then l_data := anydata.ConvertTimestamp(l_time_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.TIME');
+      when 11 then l_data := anydata.ConvertTimestampTZ(l_time_with_time_zone_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.TIME_WITH_TIME_ZONE');
+$end        
+      when 12 then l_data := anydata.ConvertTimestamp(l_timestamp_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.TIMESTAMP');
+      when 13 then l_data := anydata.ConvertTimestampLTZ(l_timestamp_with_ltz_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.TIMESTAMP_WITH_LTZ');
+      when 14 then l_data := anydata.ConvertTimestampTZ(l_timestamp_with_time_zone_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.TIMESTAMP_WITH_TIMEZONE');
+      when 15 then l_data := anydata.ConvertIntervalDS(l_interval_day_to_second_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.INTERVAL_DAY_SECOND');
+      when 16 then l_data := anydata.ConvertIntervalYM(l_interval_year_to_month_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.INTERVAL_YEAR_MONTH');
+$if not(data_sql_pkg.c_support_time) $then
+      else
+        null;
+$end        
+    end case;
+  end loop;
 end;
 
 $end

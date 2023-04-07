@@ -1,24 +1,63 @@
 CREATE OR REPLACE PACKAGE "DATA_SQL_PKG" authid current_user is
 
+-- SYS.STANDARD defines TIME_UNCONSTRAINED and TIME_TZ_UNCONSTRAINED but there is no anydata.Convert* function for it.
+c_support_time constant boolean := false;
+
 /**
 Use dynamic SQL to retrieve data as either scalars or arrays by using SYS.ANYDATA.
 It is essentially created to enable SQL on a set of related tables, i.e. tables with a foreign key relation.
 
+Only (scalar and array) types supported by DBMS_SQL and ANYDATA are supported by this package.
 
-Scalar data types supported:
-- DATE
-- NUMBER
-- VARCHAR2(4000)
+Scalar data types supported (from anydata.gettypename(), see 1 below for SQL type names):
+- SYS.CLOB
+- SYS.BINARY_FLOAT
+- SYS.BINARY_DOUBLE
+- SYS.BLOB
+- SYS.BFILE
+- SYS.DATE
+- SYS.NUMBER
+- SYS.UROWID
+- SYS.VARCHAR2
+- SYS.TIMESTAMP
+- SYS.TIMESTAMP_WITH_LTZ      (see 2)
+- SYS.TIMESTAMP_WITH_TIMEZONE (see 3)
+- SYS.INTERVAL_DAY_SECOND     (see 4)
+- SYS.INTERVAL_YEAR_MONTH     (see 5)
 
-Array types supported:
-- SYS.ODCIDATELIST
-- SYS.ODCINUMBERLIST
-- SYS.ODCIVARCHAR2LIST
+SQL type names:
+1. In PL/SQL you use NORMALLY the type name without 'SYS.', hence CLOB, BINARY_FLOAT and so on but with some exceptions:
+2. TIMESTAMP WITH LOCAL TIME ZONE
+3. TIMESTAMP WITH LOCAL TIME ZONE
+4. INTERVAL DAY TO SECOND
+5. INTERVAL YEAR TO MONTH
+ 
+Array types supported (see 1 below for PL/SQL type names):
+- SYS.CLOB_TABLE
+- SYS.BINARY_FLOAT_TABLE
+- SYS.BINARY_DOUBLE_TABLE
+- SYS.BLOB_TABLE
+- SYS.BFILE_TABLE
+- SYS.DATE_TABLE
+- SYS.NUMBER_TABLE
+- SYS.UROWID_TABLE
+- SYS.VARCHAR2_TABLE
+- SYS.TIMESTAMP_TABLE
+- SYS.TIMESTAMP_WITH_LTZ_TABLE
+- SYS.TIMESTAMP_WITH_TIME_ZONE_TABLE (see 2)
+- SYS.INTERVAL_DAY_TO_SECOND_TABLE (see 3)
+- SYS.INTERVAL_YEAR_TO_MONTH_TABLE (see 4)
 
+PL/SQL type names (not supported in SQL!):
+1. Please note that it is usually the scalar type name with '_TABLE' as suffix but with some exceptions:
+2. Not SYS.TIMESTAMP_WITH_TIMEZONE_TABLE
+3. Not SYS.INTERVAL_DAY_SECOND_TABLE
+4. Not SYS.INTERVAL_YEAR_MONTH_TABLE
+
+In PL/SQL you replace SYS. by DBMS_SQL. (they are all defined there), so DBMS_SQL.CLOB_TABLE, DBMS_SQL.BINARY_FLOAT_TABLE and so on.
+ 
 This package has AUTHID CURRENT_USER so that it can be used by 
 any schema to which this package has been granted.
-
-
 
 **/
 
@@ -106,6 +145,9 @@ procedure ut_do_dept;
 --%test
 --%disabled
 procedure ut_do_emp_dept;
+
+--%test
+procedure ut_check_types;
 
 $end
 
