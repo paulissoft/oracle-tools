@@ -6,6 +6,9 @@ c_support_time constant boolean := false;
 -- use SYS.ODCINUMBERLIST and so on
 c_use_odci constant boolean := false;
 
+-- use bulk fetch?
+c_use_bulk_fetch constant boolean := true;
+
 /**
 Use dynamic SQL to retrieve data as either scalars or arrays by using SYS.ANYDATA.
 It is essentially created to enable SQL on a set of related tables, i.e. tables with a foreign key relation.

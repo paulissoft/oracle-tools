@@ -117,11 +117,31 @@ $end
     end case;
   end;
 
+  function fetch_limit
+  return positiven
+  is
+  begin
+$if data_sql_pkg.c_use_bulk_fetch $then
+    return
+      case
+        when p_max_row_count is null
+        then 100
+        when p_max_row_count = 1
+        then 2 -- to detect too many rows
+        else p_max_row_count
+      end;        
+$else
+    return 1;
+$end
+  end;
+
   procedure define_columns
   is
+$if not(data_sql_pkg.c_use_bulk_fetch) $then
     l_date date;
     l_number number;
     l_varchar2 varchar2(4000);
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
   begin
     <<column_loop>>
     for i_idx in l_column_tab.first .. l_column_tab.last
@@ -129,16 +149,34 @@ $end
       case l_column_tab(i_idx).data_type
         when 'DATE'
         then
+$if data_sql_pkg.c_use_bulk_fetch $then
+
+          l_column_date_tab(i_idx)(1) := null; -- column_value will put it in here
+          l_column_date_tab(i_idx).delete;
+          dbms_sql.define_array(c => l_cursor, position => i_idx, d_tab => l_column_date_tab(i_idx), cnt => fetch_limit, lower_bound => 1);
+          
+$else
+
           dbms_sql.define_column(l_cursor, i_idx, l_date);
 $if data_sql_pkg.c_use_odci $then
           l_column_date_tab(i_idx) := sys.odcidatelist(); -- column_value will put it in here
 $else          
           l_column_date_tab(i_idx)(1) := null; -- column_value will put it in here
           l_column_date_tab(i_idx).delete;
-$end          
+$end
+
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
           
         when 'NUMBER'
         then
+$if data_sql_pkg.c_use_bulk_fetch $then
+
+          l_column_number_tab(i_idx)(1) := null;
+          l_column_number_tab(i_idx).delete;
+          dbms_sql.define_array(c => l_cursor, position => i_idx, n_tab => l_column_number_tab(i_idx), cnt => fetch_limit, lower_bound => 1);
+
+$else
+
           dbms_sql.define_column(l_cursor, i_idx, l_number);
 $if data_sql_pkg.c_use_odci $then
           l_column_number_tab(i_idx) := sys.odcinumberlist();
@@ -147,16 +185,29 @@ $else
           l_column_number_tab(i_idx).delete;
 $end          
 
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+
         when 'VARCHAR2'
         then
+$if data_sql_pkg.c_use_bulk_fetch $then
+
+          l_column_varchar2_tab(i_idx)(1) := null;
+          l_column_varchar2_tab(i_idx).delete;
+          dbms_sql.define_array(c => l_cursor, position => i_idx, c_tab => l_column_varchar2_tab(i_idx), cnt => fetch_limit, lower_bound => 1);
+
+$else
+
           dbms_sql.define_column(l_cursor, i_idx, l_varchar2, l_column_tab(i_idx).data_length);
+
 $if data_sql_pkg.c_use_odci $then
           l_column_varchar2_tab(i_idx) := sys.odcivarchar2list();
 $else          
           l_column_varchar2_tab(i_idx)(1) := null;
           l_column_varchar2_tab(i_idx).delete;
 $end          
-          
+
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+
         else
           raise e_unimplemented_feature;
       end case;
@@ -167,10 +218,19 @@ $end
   is
     l_rows pls_integer;
     l_row_nr pls_integer := 0;
+
+    e_fetch_out_of_sequence exception;
+    pragma exception_init(e_fetch_out_of_sequence , -1002);
   begin
     <<fetch_loop>>
     loop
-      l_rows := dbms_sql.fetch_rows(l_cursor);
+      begin
+        l_rows := dbms_sql.fetch_rows(l_cursor);
+      exception
+        -- we must actually check number in define_array against rows fetched: if not equal we can stop
+        when e_fetch_out_of_sequence
+        then raise; exit fetch_loop;
+      end;
 
 $if cfg_pkg.c_debugging $then
       dbug.print(dbug."debug", '# rows fetched: %s', l_rows);
@@ -178,85 +238,120 @@ $end
 
       exit fetch_loop when l_rows = 0;
 
-      <<row_loop>>
-      while l_rows > 0
+$if not(data_sql_pkg.c_use_bulk_fetch) $then
+
+      if l_rows <> 1
+      then
+        raise program_error;
+      end if;
+
+$end
+
+      l_row_nr := l_row_nr + l_rows; -- current row number
+      
+      if p_max_row_count = 1 and l_row_nr > p_max_row_count -- must fetch one more than needed for too_many_rows
+      then
+        raise too_many_rows;
+      end if;
+
+      <<column_loop>>
+      for i_idx in l_column_tab.first .. l_column_tab.last
       loop
-        l_rows := l_rows - 1;
-        l_row_nr := l_row_nr + 1; -- current row number
-        
-        if p_max_row_count = 1 and l_row_nr > p_max_row_count -- must fetch one more than needed for too_many_rows
-        then
-          raise too_many_rows;
-        end if;
+        case l_column_tab(i_idx).data_type
+          when 'DATE'
+          then
+$if data_sql_pkg.c_use_bulk_fetch $then
 
-        <<column_loop>>
-        for i_idx in l_column_tab.first .. l_column_tab.last
-        loop
-          case l_column_tab(i_idx).data_type
-            when 'DATE'
-            then
+            dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx));
+              
+$else
+
 $if data_sql_pkg.c_use_odci $then
-              l_column_date_tab(i_idx).extend(1);
+            l_column_date_tab(i_idx).extend(1);
 $else              
-              l_column_date_tab(i_idx)(l_column_date_tab(i_idx).count+1) := null;
+            l_column_date_tab(i_idx)(l_column_date_tab(i_idx).count+1) := null;
 $end              
-              dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last));
+            dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last));
+              
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+              
 $if cfg_pkg.c_debugging $then
-              dbug.print
-              ( dbug."debug"
-              , 'row: %s; column: %s; value: %s'
-              , l_row_nr
-              , l_column_tab(i_idx).column_name
-              , to_char(l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last), 'yyyy-mm-dd hh24:mi:ss')
-              );
+            dbug.print
+            ( dbug."debug"
+            , 'row: %s; column: %s; value: %s'
+            , l_row_nr
+            , l_column_tab(i_idx).column_name
+            , to_char(l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last), 'yyyy-mm-dd hh24:mi:ss')
+            );
 $end  
               
-            when 'NUMBER'
-            then
+          when 'NUMBER'
+          then
+$if data_sql_pkg.c_use_bulk_fetch $then
+
+            dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx));
+
+$else
+
 $if data_sql_pkg.c_use_odci $then
-              l_column_number_tab(i_idx).extend(1);
+            l_column_number_tab(i_idx).extend(1);
 $else              
-              l_column_number_tab(i_idx)(l_column_number_tab(i_idx).count+1) := null;
+            l_column_number_tab(i_idx)(l_column_number_tab(i_idx).count+1) := null;
 $end              
-              dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last));
+            dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last));
+
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+
 $if cfg_pkg.c_debugging $then
-              dbug.print
-              ( dbug."debug"
-              , 'row: %s; column: %s; value: %s'
-              , l_row_nr
-              , l_column_tab(i_idx).column_name
-              , to_char(l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last))
-              );
+            dbug.print
+            ( dbug."debug"
+            , 'row: %s; column: %s; value: %s'
+            , l_row_nr
+            , l_column_tab(i_idx).column_name
+            , to_char(l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last))
+            );
 $end  
 
-            when 'VARCHAR2'
-            then
+          when 'VARCHAR2'
+          then
+$if data_sql_pkg.c_use_bulk_fetch $then
+
+            dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx));
+              
+$else
+
 $if data_sql_pkg.c_use_odci $then
-              l_column_varchar2_tab(i_idx).extend(1);
+            l_column_varchar2_tab(i_idx).extend(1);
 $else              
-              l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).count+1) := null;
+            l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).count+1) := null;
 $end              
-              dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last));
+            dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last));
+
+$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+
 $if cfg_pkg.c_debugging $then
-              dbug.print
-              ( dbug."debug"
-              , 'row: %s; column: %s; value: %s'
-              , l_row_nr
-              , l_column_tab(i_idx).column_name
-              , l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last)
-              );
+            dbug.print
+            ( dbug."debug"
+            , 'row: %s; column: %s; value: %s'
+            , l_row_nr
+            , l_column_tab(i_idx).column_name
+            , l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last)
+            );
 $end  
               
-            else
-              raise e_unimplemented_feature;
-          end case;
-        end loop column_loop;
-        
-        if p_max_row_count > 1 and l_row_nr >= p_max_row_count -- no need to fetch more
-        then
-          exit fetch_loop;
-        end if;      
-      end loop row_loop;
+          else
+            raise e_unimplemented_feature;
+        end case;
+      end loop column_loop;
+      
+      if p_max_row_count > 1 and l_row_nr >= p_max_row_count -- no need to fetch more
+      then
+        exit fetch_loop;
+      end if;      
+
+$if data_sql_pkg.c_use_bulk_fetch $then
+      exit fetch_loop when l_rows < fetch_limit;
+$end
     end loop fetch_loop;
 
     -- now copy the arrays to p_column_value_tab
