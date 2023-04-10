@@ -15,28 +15,25 @@ It is essentially created to enable SQL on a set of related tables, i.e. tables 
 
 Only (scalar and array) types supported by DBMS_SQL and ANYDATA are supported by this package.
 
-Scalar data types supported (from anydata.gettypename(), see 1 below for SQL type names):
-- SYS.CLOB
-- SYS.BINARY_FLOAT
-- SYS.BINARY_DOUBLE
-- SYS.BLOB
-- SYS.BFILE
-- SYS.DATE
-- SYS.NUMBER
-- SYS.UROWID
-- SYS.VARCHAR2
-- SYS.TIMESTAMP
-- SYS.TIMESTAMP_WITH_LTZ      (see 2)
-- SYS.TIMESTAMP_WITH_TIMEZONE (see 3)
-- SYS.INTERVAL_DAY_SECOND     (see 4)
-- SYS.INTERVAL_YEAR_MONTH     (see 5)
+Scalar data types supported:
 
-SQL type names:
-1. In PL/SQL you use NORMALLY the type name without 'SYS.', hence CLOB, BINARY_FLOAT and so on but with some exceptions:
-2. TIMESTAMP WITH LOCAL TIME ZONE
-3. TIMESTAMP WITH LOCAL TIME ZONE
-4. INTERVAL DAY TO SECOND
-5. INTERVAL YEAR TO MONTH
+| SQL data type | Convert to anydata function | ANYDATA type |
+| :------------ | :-------------------------- | :----------- |
+| CLOB | | SYS.CLOB
+| BINARY_FLOAT || SYS.BINARY_FLOAT |
+| BINARY_DOUBLE || SYS.BINARY_DOUBLE |
+| BLOB || SYS.BLOB |
+| BFILE || SYS.BFILE |
+| DATE || SYS.DATE |
+| NUMBER || SYS.NUMBER |
+| UROWID || SYS.UROWID |
+| VARCHAR2 || SYS.VARCHAR2 |
+| TIMESTAMP || SYS.TIMESTAMP |
+| TIMESTAMP(6) WITH LOCAL TIME ZONE || SYS.TIMESTAMP_WITH_LTZ |
+| TIMESTAMP(6) WITH TIME ZONE || SYS.TIMESTAMP_WITH_TIMEZONE |
+| INTERVAL DAY(2) TO SECOND(6) || SYS.INTERVAL_DAY_SECOND |
+| INTERVAL YEAR(2) TO MONTH || SYS.INTERVAL_YEAR_MONTH |
+
  
 Array types supported (see 1 below for PL/SQL type names):
 - SYS.CLOB_TABLE
@@ -82,14 +79,70 @@ type statement_tab_t is table of statement_t index by all_tab_columns.table_name
 type max_row_count_tab_t is table of positive index by all_tab_columns.table_name%type;
 /** Specify the maximum row count to fetch for a table. **/
 
-type column_value_tab_t is table of anydata index by all_tab_columns.column_name%type;
+type column_value_t is record
+( data_type all_tab_columns.data_type%type
+, is_table boolean default false
+
+, clob$                clob
+, clob$_table          dbms_sql.clob_table
+
+, binary_float$        binary_float
+, binary_float$_table  dbms_sql.binary_float_table
+
+, binary_double$       binary_double
+, binary_double$_table dbms_sql.binary_double_table
+
+, blob$                blob
+, blob$_table          dbms_sql.blob_table
+
+, bfile$               bfile
+, bfile$_table         dbms_sql.bfile_table
+
+, date$                date
+, date$_table          dbms_sql.date_table
+
+, number$              number
+, number$_table        dbms_sql.number_table
+
+, urowid$              urowid
+, urowid$_table        dbms_sql.urowid_table
+
+, varchar2$            varchar2(4000 char)
+, varchar2$_table      dbms_sql.varchar2_table
+
+, timestamp$           timestamp
+, timestamp$_table     dbms_sql.timestamp_table
+
+, timestamp_ltz$       timestamp with local time zone
+, timestamp_ltz$_table dbms_sql.timestamp_with_ltz_table
+
+, timestamp_tz$        timestamp with time zone
+, timestamp_tz$_table  dbms_sql.timestamp_with_time_zone_table 
+
+, interval_ds$         interval day to second
+, interval_ds$_table   dbms_sql.interval_day_to_second_table
+
+, interval_ym$         interval year to month
+, interval_ym$_table   dbms_sql.interval_year_to_month_table 
+);
+
+
+subtype anydata_t is sys.anydata;
+-- subtype anydata_t is column_value_t;
+
+c_column_value_is_anydata constant boolean := true;
+
+type column_value_tab_t is table of anydata_t index by all_tab_columns.column_name%type;
 type table_column_value_tab_t is table of column_value_tab_t index by all_tab_columns.table_name%type;
+
+function empty_anydata
+return anydata_t;
 
 procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
 , p_table_name in varchar2 -- the table name
 , p_column_name in varchar2 -- the column name to query
-, p_column_value in anydata default null -- the column value to query
+, p_column_value in anydata_t default empty_anydata -- the column value to query
 , p_statement in statement_t default null -- if null it will default to 'select * from <table>' for a (S)elect
 , p_order_by in varchar2 default null -- to be added after the (default) query (without ORDER BY)
 , p_owner in varchar2 default user -- the owner of the table
@@ -117,7 +170,7 @@ procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
 , p_parent_table_name in varchar2
 , p_common_key_name_tab in column_name_tab_t -- per table the common key column name
-, p_common_key_value in anydata -- tables are related by this common key value
+, p_common_key_value in anydata_t -- tables are related by this common key value
 , p_statement_tab in statement_tab_t default empty_statement_tab -- per table a query (if any): if none or null it will default to 'select * from <table>' for a (S)elect
 , p_order_by_tab in statement_tab_t default empty_statement_tab -- per table an order by (if any)
 , p_owner in varchar2 default user -- the owner of the table(s)

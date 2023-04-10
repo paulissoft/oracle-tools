@@ -1,11 +1,18 @@
 CREATE OR REPLACE PACKAGE BODY "DATA_SQL_PKG" 
 is
 
+function empty_anydata
+return anydata_t
+is
+begin
+  return null;
+end;
+
 procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
 , p_table_name in varchar2
 , p_column_name in varchar2 -- the column name to query
-, p_column_value in anydata -- the column value to query
+, p_column_value in anydata_t -- the column value to query
 , p_statement in statement_t -- if null it will default to 'select * from <table>'
 , p_order_by in varchar2
 , p_owner in varchar2 -- the owner of the table
@@ -104,7 +111,7 @@ $end
 
   procedure set_bind_variable
   ( p_bind_variable in varchar2
-  , p_column_value in anydata
+  , p_column_value in anydata_t
   )
   is
   begin
@@ -530,7 +537,7 @@ procedure do
 ( p_operation in varchar2
 , p_parent_table_name in varchar2
 , p_common_key_name_tab in column_name_tab_t
-, p_common_key_value in anydata
+, p_common_key_value in anydata_t
 , p_statement_tab in statement_tab_t
 , p_order_by_tab in statement_tab_t
 , p_owner in varchar2
@@ -779,7 +786,7 @@ $end
   l_interval_day_to_second_table2 dbms_sql.interval_day_to_second_table;
   l_interval_year_to_month_table1 dbms_sql.interval_year_to_month_table;
   l_interval_year_to_month_table2 dbms_sql.interval_year_to_month_table;
-  l_data anydata;
+  l_data anydata_t;
 begin
   for i_idx in 1..16
   loop
