@@ -52,7 +52,7 @@ Array types supported (see 1 below for PL/SQL type names):
 - SYS.INTERVAL_YEAR_TO_MONTH_TABLE (see 4)
 
 PL/SQL type names (not supported in SQL!):
-1. Please note that it is usually the scalar type name with '_TABLE' as suffix but with some exceptions:
+1. Please note that it is usually the anydata scalar type name with '_TABLE' as suffix but with some exceptions:
 2. Not SYS.TIMESTAMP_WITH_TIMEZONE_TABLE
 3. Not SYS.INTERVAL_DAY_SECOND_TABLE
 4. Not SYS.INTERVAL_YEAR_MONTH_TABLE
@@ -80,8 +80,8 @@ type max_row_count_tab_t is table of positive index by all_tab_columns.table_nam
 /** Specify the maximum row count to fetch for a table. **/
 
 type column_value_t is record
-( data_type all_tab_columns.data_type%type
-, is_table boolean default false
+( data_type all_tab_columns.data_type%type -- determines which field records are valid
+, is_table boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
 
 , clob$                clob
 , clob$_table          dbms_sql.clob_table
