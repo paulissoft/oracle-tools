@@ -8,7 +8,9 @@ cursor c_col
 , b_table_name in varchar2
 )
 is
-  select  tc.column_name
+  select  tc.owner
+  ,       tc.table_name
+  ,       tc.column_name
   ,       tc.data_type
   ,       tc.data_length
   ,       cc.pk_key_position
@@ -1456,13 +1458,81 @@ end;
 --%test
 procedure ut_do_emp_dept
 is
+  l_table_bind_variable_tab table_column_value_tab_t;
+  l_max_row_count_tab max_row_count_tab_t;
+  l_table_column_value_tab table_column_value_tab_t;
+  l_count pls_integer;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP_DEPT');
 $end
 
-  raise e_unimplemented_feature;
+  set_column_value
+  ( p_data_type => 'NUMBER'
+  , p_number$ => 20
+  , p_column_value => l_table_bind_variable_tab('MY_DEPT')('DEPTNO')
+  );
+  l_max_row_count_tab('MY_DEPT') := 1;
+  for r_col in c_col(user, 'MY_DEPT')
+  loop
+    set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
+  end loop;
+  
+  set_column_value
+  ( p_data_type => 'NUMBER'
+  , p_number$ => 20
+  , p_column_value => l_table_bind_variable_tab('MY_EMP')('DEPTNO')
+  );
+  l_max_row_count_tab('MY_EMP') := null;
+  for r_col in c_col(user, 'MY_EMP')
+  loop
+    set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
+  end loop;
 
+  do
+  ( p_operation => 'S'
+  , p_parent_table_name => 'MY_DEPT'
+  , p_table_bind_variable_tab => l_table_bind_variable_tab
+  , p_max_row_count_tab => l_max_row_count_tab
+  , p_table_column_value_tab => l_table_column_value_tab
+  );
+
+  -- use output from previous call as input for bind variables but just the PK columns
+  l_table_bind_variable_tab.delete;
+  l_table_bind_variable_tab('MY_DEPT')('DEPTNO') := l_table_column_value_tab('MY_DEPT')('DEPTNO');
+  l_table_bind_variable_tab('MY_EMP')('EMPNO') := l_table_column_value_tab('MY_EMP')('EMPNO');
+  do
+  ( p_operation => 'D'
+  , p_parent_table_name => 'MY_DEPT'
+  , p_table_bind_variable_tab => l_table_bind_variable_tab
+  , p_max_row_count_tab => l_max_row_count_tab
+  , p_table_column_value_tab => l_table_column_value_tab
+  );
+
+  execute immediate 'select count(*) from my_dept where deptno = 20' using out l_count;
+
+  ut.expect(l_count, 'my_dept count after delete').to_equal(0);
+
+  execute immediate 'select count(*) from my_emp where deptno = 20' using out l_count;
+
+  ut.expect(l_count, 'my_emp count after delete').to_equal(0);
+
+  do
+  ( p_operation => 'M'
+  , p_parent_table_name => 'MY_DEPT'
+  , p_table_bind_variable_tab => l_table_bind_variable_tab
+  , p_max_row_count_tab => l_max_row_count_tab
+  , p_table_column_value_tab => l_table_column_value_tab
+  );
+
+  execute immediate 'select count(*) from my_dept where deptno = 20' using out l_count;
+  
+  ut.expect(l_count, 'my_dept count after delete').to_equal(1);
+  
+  execute immediate 'select count(*) from my_emp where deptno = 20' using out l_count;
+
+  ut.expect(l_count, 'my_emp count after delete').to_equal(5);
+  
 $if cfg_pkg.c_debugging $then
   dbug.leave;
 $end

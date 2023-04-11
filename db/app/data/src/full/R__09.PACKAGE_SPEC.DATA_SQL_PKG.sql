@@ -272,7 +272,6 @@ procedure ut_do_emp;
 procedure ut_do_dept;
 
 --%test
---%disabled
 procedure ut_do_emp_dept;
 
 --%test
