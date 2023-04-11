@@ -66,6 +66,18 @@ procedure set_bind_variable
 is
   l_bind_variable constant all_tab_columns.column_name%type := bind_variable(p_column_name, p_bind_variable_type);
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SET_BIND_VARIABLE');
+  dbug.print
+  ( dbug."input"
+  , 'p_column_name: %s; p_column_value.data_type: %s; p_column_value.is_table: %s; p_bind_variable_type: %s'
+  , p_column_name
+  , p_column_value.data_type
+  , dbug.cast_to_varchar2(p_column_value.is_table)
+  , p_bind_variable_type
+  );
+$end
+
 $if data_sql_pkg.c_column_value_is_anydata $then
 
   case p_column_value.gettypename()
@@ -117,6 +129,14 @@ $else
       end if;
     when 'NUMBER'
     then
+$if cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."input"
+      , 'bind variable: %s; value: %s'
+      , l_bind_variable
+      , p_column_value.number$
+      );
+$end
       if p_column_value.is_table
       then dbms_sql.bind_array(p_cursor, l_bind_variable, p_column_value.number$_table);
       else dbms_sql.bind_variable(p_cursor, l_bind_variable, p_column_value.number$);
@@ -169,6 +189,10 @@ $else
   end case;
   
 $end -- $if data_sql_pkg.c_column_value_is_anydata $then  
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
 end set_bind_variable;
 
 procedure construct_statement
@@ -755,64 +779,78 @@ $end -- $if data_sql_pkg.c_column_value_is_anydata $then
       case l_output_column_tab(i_idx).data_type
         when 'CLOB'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table, l_fetch_limit, 1);
           
         when 'BINARY_FLOAT'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table, l_fetch_limit, 1);
           
         when 'BINARY_DOUBLE'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table, l_fetch_limit, 1);
           
         when 'BLOB'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table, l_fetch_limit, 1);
           
         when 'BFILE'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table, l_fetch_limit, 1);
           
         when 'DATE'
         then
-          dbms_sql.define_array(c => l_cursor, position => i_idx, d_tab => p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table, cnt => l_fetch_limit, lower_bound => 1);
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table, l_fetch_limit, 1);
 
         when 'NUMBER'
         then
-          dbms_sql.define_array(c => l_cursor, position => i_idx, n_tab => p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table, cnt => l_fetch_limit, lower_bound => 1);
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table, l_fetch_limit, 1);
 
         when 'UROWID'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table, l_fetch_limit, 1);
           
         when 'VARCHAR2'
         then
-          dbms_sql.define_array(c => l_cursor, position => i_idx, c_tab => p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table, cnt => l_fetch_limit, lower_bound => 1);
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table, l_fetch_limit, 1);
 
         when 'TIMESTAMP'
         then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table, l_fetch_limit, 1);
 
         else
           case
             when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
             then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table, l_fetch_limit, 1);
               
             when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
             then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table, l_fetch_limit, 1);
               
             when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
             then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table, l_fetch_limit, 1);
               
             when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
             then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table, l_fetch_limit, 1);
             
             else
-              raise e_unimplemented_feature;
+              raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
           end case;
       end case;
     end loop;    
@@ -829,6 +867,9 @@ $end -- $if data_sql_pkg.c_column_value_is_anydata $then
     )
     is
     begin
+$if cfg_pkg.c_debugging $then
+      dbug.print(dbug."debug", 'p_count: %s', p_count);
+$end  
       case p_count
         when 0
         then raise no_data_found;
@@ -930,7 +971,7 @@ $end
                 dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
               
               else
-                raise e_unimplemented_feature;
+                raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
             end case;
         end case;
       end loop column_loop;
@@ -987,11 +1028,22 @@ $if data_sql_pkg.c_column_value_is_anydata $then
 
 $else
 
-    l_column_name := p_column_value_tab.first;
     <<column_loop>>
-    while l_column_name is not null
+    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
     loop
+      l_column_name := l_output_column_tab(i_idx).column_name;
+
+      p_column_value_tab(l_column_name).data_type := l_output_column_tab(i_idx).data_type;
       p_column_value_tab(l_column_name).is_table := case when p_max_row_count = 1 then false else true end;
+
+$if cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'l_column_name: %s; data type: %s'
+      , l_column_name
+      , p_column_value_tab(l_column_name).data_type
+      );
+$end
 
       if not(p_column_value_tab(l_column_name).is_table)
       then
@@ -1055,11 +1107,11 @@ $else
               then
                 check_row_count(p_column_value_tab(l_column_name).interval_ym$_table.count);
                 p_column_value_tab(l_column_name).interval_ym$ := p_column_value_tab(l_column_name).interval_ym$_table(1);
+              else
+                raise_application_error(-20000, 'Unknown data type "' || p_column_value_tab(l_column_name).data_type || '"');
             end case;
         end case;
       end if;
-
-      l_column_name := p_column_value_tab.next(l_column_name);
     end loop column_loop;
     
 $end -- $if data_sql_pkg.c_column_value_is_anydata $then
@@ -1132,7 +1184,7 @@ $end -- $if data_sql_pkg.c_column_value_is_anydata $then
               dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
             
             else
-              raise e_unimplemented_feature;
+              raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
           end case;
       end case;
     end loop;    
