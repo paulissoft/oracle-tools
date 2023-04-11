@@ -213,7 +213,7 @@ function empty_column_value_tab
 return column_value_tab_t;
 
 procedure do
-( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
+( p_operation in varchar2 -- (S)elect, (M)erge or (D)elete
 , p_table_name in varchar2 -- the table name
 , p_bind_variable_tab in column_value_tab_t default empty_column_value_tab -- only when an entry exists that table column will be used in the query or DML
 , p_statement in statement_t default null -- if null it will default to 'select * from <table>' for a (S)elect
@@ -238,7 +238,7 @@ function empty_max_row_count_tab
 return max_row_count_tab_t;
 
 procedure do
-( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
+( p_operation in varchar2 -- (S)elect, (M)erge or (D)elete
 , p_parent_table_name in varchar2 -- we must start with this
 , p_table_bind_variable_tab in table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 , p_statement_tab in statement_tab_t default empty_statement_tab -- per table a query (if any): if none or null it will default to 'select * from <table>' for a (S)elect
