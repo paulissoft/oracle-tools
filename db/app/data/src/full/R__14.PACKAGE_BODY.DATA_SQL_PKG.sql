@@ -1,18 +1,18 @@
 CREATE OR REPLACE PACKAGE BODY "DATA_SQL_PKG" 
 is
 
-function empty_anydata
-return anydata_t
+function empty_column_value_tab
+return column_value_tab_t
 is
+  l_column_value_tab column_value_tab_t;
 begin
-  return null;
+  return l_column_value_tab;
 end;
 
 procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
 , p_table_name in varchar2
-, p_column_name in varchar2 -- the column name to query
-, p_column_value in anydata_t -- the column value to query
+, p_bind_variable_tab in column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 , p_statement in statement_t -- if null it will default to 'select * from <table>'
 , p_order_by in varchar2
 , p_owner in varchar2 -- the owner of the table
@@ -20,56 +20,67 @@ procedure do
 , p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 )
 is
-  l_bind_variable constant all_tab_columns.column_name%type := ':B_' || p_column_name || '$';
-  l_statement constant statement_t :=
-    nvl
-    ( p_statement
-    , utl_lms.format_message
-      ( 'select * from "%s"."%s"%s'
-      , p_owner
-      , p_table_name
-      , case
-          when p_column_name is not null and p_column_value is not null
-          then utl_lms.format_message(' where "%s" = %s', p_column_name, l_bind_variable)
-        end
-      )
-    ) ||
-    case
-      when p_order_by is not null
-      then ' order by ' || p_order_by
-    end;
+  l_where_clause statement_t := null;
+  l_statement statement_t := null;
   l_stmt statement_t := null;
   l_cursor integer := null;
   l_nr_rows_processed pls_integer;
   l_column_name all_tab_columns.column_name%type;
 
-$if data_sql_pkg.c_use_odci $then
-  type column_date_tab_t is table of sys.odcidatelist index by binary_integer;
-  type column_number_tab_t is table of sys.odcinumberlist index by binary_integer;
-  type column_varchar2_tab_t is table of sys.odcivarchar2list index by binary_integer;
-$else
+$if data_sql_pkg.c_column_value_is_anydata $then
+
   type column_date_tab_t is table of dbms_sql.date_table index by binary_integer;
   type column_number_tab_t is table of dbms_sql.number_table index by binary_integer;
   type column_varchar2_tab_t is table of dbms_sql.varchar2_table index by binary_integer;
-$end
 
   l_column_date_tab column_date_tab_t;
   l_column_number_tab column_number_tab_t;
   l_column_varchar2_tab column_varchar2_tab_t;
 
+$end -- $if data_sql_pkg.c_column_value_is_anydata $then
+
   cursor c_col is
-    select  c.column_name
-    ,       c.data_type
-    ,       c.data_length
-    from    all_tab_columns c
-    where   c.owner = p_owner
-    and     c.table_name = p_table_name
+    select  tc.column_name
+    ,       tc.data_type
+    ,       tc.data_length
+    ,       cc.pk_key_position
+    from    all_tab_columns tc
+            left outer join 
+            ( select  cc.owner
+              ,       cc.table_name
+              ,       cc.column_name
+              ,       cc.position as pk_key_position
+              from    all_cons_columns cc
+                      inner join all_constraints c
+                      on c.owner = cc.owner and c.table_name = cc.table_name and c.constraint_type = 'P'
+            ) cc
+            on cc.owner = tc.owner and cc.table_name = tc.table_name and cc.column_name = tc.column_name
+    where   tc.owner = p_owner
+    and     tc.table_name = p_table_name
     order by
-            c.column_id;
+            tc.column_id;
 
   type column_tab_t is table of c_col%rowtype index by binary_integer;
 
   l_column_tab column_tab_t;
+
+  function bind_variable
+  ( p_column_name in varchar2
+  )
+  return varchar2
+  is
+  begin
+    return ':B_' || p_column_name || '$';
+  end bind_variable;
+
+  function empty_bind_variable
+  ( p_column_value in anydata_t
+  )
+  return boolean
+  is
+  begin
+    return p_column_value is null;
+  end empty_bind_variable;
 
   procedure construct_statement
   is
@@ -99,6 +110,37 @@ $end
     case p_operation
       when 'S'
       then
+        l_column_name := p_bind_variable_tab.first;
+        while l_column_name is not null
+        loop
+          if not(empty_bind_variable(p_bind_variable_tab(l_column_name)))
+          then
+            l_where_clause := 
+              utl_lms.format_message
+              ( '%s"%s" = %s'
+              , case when l_where_clause is null then ' where ' else ' and ' end
+              , l_column_name
+              , bind_variable(l_column_name)
+              );
+          end if;
+          l_column_name := p_bind_variable_tab.next(l_column_name);
+        end loop;
+
+        l_statement :=
+          nvl
+          ( p_statement
+          , utl_lms.format_message
+            ( 'select * from "%s"."%s"%s'
+            , p_owner
+            , p_table_name
+            , l_where_clause
+            )
+          ) ||
+          case
+            when p_order_by is not null
+            then ' order by ' || p_order_by
+          end;
+
         l_stmt := l_stmt || chr(10) || 'from    (' || l_statement || ')';
       else
         raise e_unimplemented_feature;
@@ -109,26 +151,42 @@ $if cfg_pkg.c_debugging $then
 $end  
   end construct_statement;
 
-  procedure set_bind_variable
-  ( p_bind_variable in varchar2
-  , p_column_value in anydata_t
-  )
+  procedure set_bind_variables
   is
+    procedure set_bind_variable
+    ( p_column_name in varchar2
+    , p_column_value in anydata_t
+    )
+    is
+      l_bind_variable constant all_tab_columns.column_name%type := bind_variable(p_column_name);
+    begin
+      case p_column_value.gettypename()
+        when 'SYS.DATE'     then dbms_sql.bind_variable(l_cursor, l_bind_variable, p_column_value.AccessDate());
+        when 'SYS.NUMBER'   then dbms_sql.bind_variable(l_cursor, l_bind_variable, p_column_value.AccessNumber());
+        when 'SYS.VARCHAR2' then dbms_sql.bind_variable(l_cursor, l_bind_variable, p_column_value.AccessVarchar2());
+          
+        else raise e_unimplemented_feature;
+      end case;
+    end set_bind_variable;
   begin
-    case p_column_value.gettypename()
-      when 'SYS.DATE'     then dbms_sql.bind_variable(l_cursor, p_bind_variable, p_column_value.AccessDate());
-      when 'SYS.NUMBER'   then dbms_sql.bind_variable(l_cursor, p_bind_variable, p_column_value.AccessNumber());
-      when 'SYS.VARCHAR2' then dbms_sql.bind_variable(l_cursor, p_bind_variable, p_column_value.AccessVarchar2());
-        
-      else raise e_unimplemented_feature;
-    end case;
+    l_column_name := p_bind_variable_tab.first;
+    while l_column_name is not null
+    loop
+      if not(empty_bind_variable(p_bind_variable_tab(l_column_name)))
+      then
+        set_bind_variable
+        ( l_column_name
+        , p_bind_variable_tab(l_column_name)
+        );
+      end if;
+      l_column_name := p_bind_variable_tab.next(l_column_name);
+    end loop;
   end;
 
   function fetch_limit
   return positiven
   is
   begin
-$if data_sql_pkg.c_use_bulk_fetch $then
     return
       case
         when p_max_row_count is null
@@ -137,18 +195,11 @@ $if data_sql_pkg.c_use_bulk_fetch $then
         then 2 -- to detect too many rows
         else least(100, p_max_row_count)
       end;        
-$else
-    return 1;
-$end
-  end;
+  end fetch_limit;
 
   procedure define_columns
   is
-$if not(data_sql_pkg.c_use_bulk_fetch) $then
-    l_date date;
-    l_number number;
-    l_varchar2 varchar2(4000);
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+    l_fetch_limit constant positiven := fetch_limit;
   begin
     <<column_loop>>
     for i_idx in l_column_tab.first .. l_column_tab.last
@@ -156,64 +207,21 @@ $end -- $if data_sql_pkg.c_use_bulk_fetch $then
       case l_column_tab(i_idx).data_type
         when 'DATE'
         then
-$if data_sql_pkg.c_use_bulk_fetch $then
-
           l_column_date_tab(i_idx)(1) := null; -- column_value will put it in here
           l_column_date_tab(i_idx).delete;
-          dbms_sql.define_array(c => l_cursor, position => i_idx, d_tab => l_column_date_tab(i_idx), cnt => fetch_limit, lower_bound => 1);
-          
-$else
-
-          dbms_sql.define_column(l_cursor, i_idx, l_date);
-$if data_sql_pkg.c_use_odci $then
-          l_column_date_tab(i_idx) := sys.odcidatelist(); -- column_value will put it in here
-$else          
-          l_column_date_tab(i_idx)(1) := null; -- column_value will put it in here
-          l_column_date_tab(i_idx).delete;
-$end
-
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+          dbms_sql.define_array(c => l_cursor, position => i_idx, d_tab => l_column_date_tab(i_idx), cnt => l_fetch_limit, lower_bound => 1);
           
         when 'NUMBER'
         then
-$if data_sql_pkg.c_use_bulk_fetch $then
-
           l_column_number_tab(i_idx)(1) := null;
           l_column_number_tab(i_idx).delete;
-          dbms_sql.define_array(c => l_cursor, position => i_idx, n_tab => l_column_number_tab(i_idx), cnt => fetch_limit, lower_bound => 1);
-
-$else
-
-          dbms_sql.define_column(l_cursor, i_idx, l_number);
-$if data_sql_pkg.c_use_odci $then
-          l_column_number_tab(i_idx) := sys.odcinumberlist();
-$else          
-          l_column_number_tab(i_idx)(1) := null;
-          l_column_number_tab(i_idx).delete;
-$end          
-
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+          dbms_sql.define_array(c => l_cursor, position => i_idx, n_tab => l_column_number_tab(i_idx), cnt => l_fetch_limit, lower_bound => 1);
 
         when 'VARCHAR2'
         then
-$if data_sql_pkg.c_use_bulk_fetch $then
-
           l_column_varchar2_tab(i_idx)(1) := null;
           l_column_varchar2_tab(i_idx).delete;
-          dbms_sql.define_array(c => l_cursor, position => i_idx, c_tab => l_column_varchar2_tab(i_idx), cnt => fetch_limit, lower_bound => 1);
-
-$else
-
-          dbms_sql.define_column(l_cursor, i_idx, l_varchar2, l_column_tab(i_idx).data_length);
-
-$if data_sql_pkg.c_use_odci $then
-          l_column_varchar2_tab(i_idx) := sys.odcivarchar2list();
-$else          
-          l_column_varchar2_tab(i_idx)(1) := null;
-          l_column_varchar2_tab(i_idx).delete;
-$end          
-
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
+          dbms_sql.define_array(c => l_cursor, position => i_idx, c_tab => l_column_varchar2_tab(i_idx), cnt => l_fetch_limit, lower_bound => 1);
 
         else
           raise e_unimplemented_feature;
@@ -225,6 +233,7 @@ $end -- $if data_sql_pkg.c_use_bulk_fetch $then
   is
     l_rows_fetched pls_integer; -- # rows fetched for last dbms_sql.fetch_rows()
     l_row_count pls_integer := 0; -- total row count
+    l_fetch_limit constant positiven := fetch_limit;
   begin
     <<fetch_loop>>
     loop
@@ -235,15 +244,6 @@ $if cfg_pkg.c_debugging $then
 $end  
 
       exit fetch_loop when l_rows_fetched = 0;
-
-$if not(data_sql_pkg.c_use_bulk_fetch) $then
-
-      if l_rows_fetched <> 1
-      then
-        raise program_error;
-      end if;
-
-$end
 
       l_row_count := l_row_count + l_rows_fetched;
       
@@ -258,20 +258,7 @@ $end
         case l_column_tab(i_idx).data_type
           when 'DATE'
           then
-$if data_sql_pkg.c_use_bulk_fetch $then
-
             dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx));
-              
-$else
-
-$if data_sql_pkg.c_use_odci $then
-            l_column_date_tab(i_idx).extend(1);
-$else              
-            l_column_date_tab(i_idx)(l_column_date_tab(i_idx).count+1) := null;
-$end              
-            dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx)(l_column_date_tab(i_idx).last));
-              
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
               
 $if cfg_pkg.c_debugging $then
             dbug.print
@@ -290,20 +277,7 @@ $end
               
           when 'NUMBER'
           then
-$if data_sql_pkg.c_use_bulk_fetch $then
-
             dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx));
-
-$else
-
-$if data_sql_pkg.c_use_odci $then
-            l_column_number_tab(i_idx).extend(1);
-$else              
-            l_column_number_tab(i_idx)(l_column_number_tab(i_idx).count+1) := null;
-$end              
-            dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx)(l_column_number_tab(i_idx).last));
-
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
 
 $if cfg_pkg.c_debugging $then
             dbug.print
@@ -322,20 +296,7 @@ $end
 
           when 'VARCHAR2'
           then
-$if data_sql_pkg.c_use_bulk_fetch $then
-
             dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx));
-              
-$else
-
-$if data_sql_pkg.c_use_odci $then
-            l_column_varchar2_tab(i_idx).extend(1);
-$else              
-            l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).count+1) := null;
-$end              
-            dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx)(l_column_varchar2_tab(i_idx).last));
-
-$end -- $if data_sql_pkg.c_use_bulk_fetch $then
 
 $if cfg_pkg.c_debugging $then
             dbug.print
@@ -362,9 +323,7 @@ $end
         exit fetch_loop;
       end if;      
 
-$if data_sql_pkg.c_use_bulk_fetch $then
-      exit fetch_loop when l_rows_fetched < fetch_limit;
-$end
+      exit fetch_loop when l_rows_fetched < l_fetch_limit;
     end loop fetch_loop;
 
     -- now copy the arrays to p_column_value_tab
@@ -439,20 +398,9 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
   dbug.print
   ( dbug."input"
-  , 'p_operation: %s; table: %s; column filter: %s; p_statement: %s; p_max_row_count: %s'
+  , 'p_operation: %s; table: %s; p_statement: %s; p_max_row_count: %s'
   , p_operation
   , '"' || p_owner || '"."' || p_table_name || '"'
-  , case
-      when p_column_name is not null and p_column_value is not null
-      then
-        p_column_name ||
-        ' = ' ||
-        case p_column_value.gettypename()
-          when 'SYS.DATE'     then dbms_assert.enquote_literal(to_char(p_column_value.AccessDate(), 'yyyy-mm-dd hh24:mi:ss'))
-          when 'SYS.NUMBER'   then p_column_value.AccessNumber()
-          when 'SYS.VARCHAR2' then dbms_assert.enquote_literal(p_column_value.AccessVarchar2())
-        end
-    end      
   , p_statement
   , p_max_row_count
   );
@@ -473,9 +421,9 @@ $if cfg_pkg.c_debugging $then
 $end      
   end;
 
-  if p_column_name is not null and p_column_value is not null
-  then
-    set_bind_variable(l_bind_variable, p_column_value);
+  if p_bind_variable_tab.count > 0
+  then  
+    set_bind_variables;
   end if;
   
   -- query? define columns
@@ -509,21 +457,13 @@ $end
     raise;
 end do;
 
-function empty_column_name_tab
-return column_name_tab_t
-is
-  l_column_name_tab column_name_tab_t;
-begin
-  return l_column_name_tab;
-end;
-
 function empty_statement_tab
 return statement_tab_t
 is
   l_statement_tab statement_tab_t;
 begin
   return l_statement_tab;
-end;
+end empty_statement_tab;
 
 function empty_max_row_count_tab
 return max_row_count_tab_t
@@ -531,22 +471,62 @@ is
   l_max_row_count_tab max_row_count_tab_t;
 begin
   return l_max_row_count_tab;
-end;
+end empty_max_row_count_tab;
 
 procedure do
 ( p_operation in varchar2
 , p_parent_table_name in varchar2
-, p_common_key_name_tab in column_name_tab_t
-, p_common_key_value in anydata_t
+, p_table_bind_variable_tab in table_column_value_tab_t
 , p_statement_tab in statement_tab_t
 , p_order_by_tab in statement_tab_t
 , p_owner in varchar2
 , p_max_row_count_tab in max_row_count_tab_t
-, p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+, p_table_column_value_tab in out nocopy table_column_value_tab_t
 )
 is
+  l_table_name all_tab_columns.table_name%type;
+  l_table_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
 begin
-  raise e_unimplemented_feature;
+  -- parent at the beginning unless p_operation = 'D' -- Delete
+  if p_operation <> 'D'
+  then
+    l_table_name_tab.extend(1);
+    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
+  end if;
+
+  l_table_name := p_table_column_value_tab.first;
+  while l_table_name is not null
+  loop
+    if l_table_name <> p_parent_table_name
+    then
+      l_table_name_tab.extend(1);
+      l_table_name_tab(l_table_name_tab.last) := l_table_name;
+    end if;
+    
+    l_table_name := p_table_column_value_tab.next(l_table_name);
+  end loop;
+
+  -- parent at the beginning for p_operation = 'D' -- Delete
+  if p_operation = 'D'
+  then
+    l_table_name_tab.extend(1);
+    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
+  end if;
+
+  for i_idx in l_table_name_tab.first .. l_table_name_tab.last
+  loop
+    l_table_name := l_table_name_tab(i_idx);
+    do
+    ( p_operation => p_operation
+    , p_table_name => l_table_name
+    , p_bind_variable_tab => case when p_table_bind_variable_tab.exists(l_table_name) then p_table_bind_variable_tab(l_table_name) else empty_column_value_tab end
+    , p_statement => case when p_statement_tab.exists(l_table_name) then p_statement_tab(l_table_name) end
+    , p_order_by => case when p_order_by_tab.exists(l_table_name) then p_order_by_tab(l_table_name) end
+    , p_owner => p_owner
+    , p_max_row_count => case when p_max_row_count_tab.exists(l_table_name) then p_max_row_count_tab(l_table_name) end
+    , p_column_value_tab => p_table_column_value_tab(l_table_name)
+    );
+  end loop;
 end do;
 
 $if cfg_pkg.c_testing $then
@@ -616,21 +596,19 @@ end ut_teardown;
 
 procedure ut_do_emp
 is
+  l_bind_variable_tab column_value_tab_t;
   l_column_value_tab column_value_tab_t;
   l_column_value all_tab_columns.column_name%type;
-$if data_sql_pkg.c_use_odci $then
-  l_date_tab sys.odcidatelist;
-  l_number_tab sys.odcinumberlist;
-  l_varchar2_tab sys.odcivarchar2list;
-$else  
   l_date_tab dbms_sql.date_table;
   l_number_tab dbms_sql.number_table;
   l_varchar2_tab dbms_sql.varchar2_table;
-$end  
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP');
 $end
+
+
+  l_bind_variable_tab('DEPTNO') := anydata.ConvertNumber(20);
 
   l_column_value_tab('EMPNO') := null;
   l_column_value_tab('JOB') := null;
@@ -640,8 +618,7 @@ $end
   do
   ( p_operation => 'S'
   , p_table_name => 'MY_EMP'
-  , p_column_name => 'DEPTNO'
-  , p_column_value => anydata.ConvertNumber(20)
+  , p_bind_variable_tab => l_bind_variable_tab
   , p_order_by => 'EMPNO'
   , p_column_value_tab => l_column_value_tab
   );
@@ -654,11 +631,7 @@ $end
     case
       when l_column_value in ('EMPNO', 'DEPTNO')
       then
-$if data_sql_pkg.c_use_odci $then
-        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCINUMBERLIST');
-$else        
         ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.NUMBER_TABLE');
-$end        
         ut.expect(l_column_value_tab(l_column_value).GetCollection(l_number_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
         ut.expect(l_number_tab.count, 'collection count ' || l_column_value).to_equal(5);
         ut.expect(l_number_tab(1), 'element #1 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7369 else 20 end);
@@ -666,11 +639,7 @@ $end
         
       when l_column_value in ('JOB')
       then
-$if data_sql_pkg.c_use_odci $then
-        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCIVARCHAR2LIST');
-$else        
         ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.VARCHAR2_TABLE');
-$end        
         ut.expect(l_column_value_tab(l_column_value).GetCollection(l_varchar2_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
         ut.expect(l_varchar2_tab.count, 'collection count ' || l_column_value).to_equal(5);
         ut.expect(l_varchar2_tab(1), 'element #1 for column ' || l_column_value).to_equal('CLERK');
@@ -678,11 +647,7 @@ $end
         
       when l_column_value in ('HIREDATE')
       then
-$if data_sql_pkg.c_use_odci $then
-        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.ODCIDATELIST');
-$else        
         ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.DATE_TABLE');
-$end
         ut.expect(l_column_value_tab(l_column_value).GetCollection(l_date_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
         ut.expect(l_date_tab.count, 'collection count ' || l_column_value).to_equal(5);
         ut.expect(l_date_tab(1), 'element #1 for column ' || l_column_value).to_equal(to_date('17-12-1980','dd-mm-yyyy'));
@@ -696,11 +661,11 @@ $end
   for i_try in 0..2
   loop
     begin
+      l_bind_variable_tab('DEPTNO') := case when i_try <> 1 then anydata.ConvertNumber(i_try * 10) else null end;
       do
       ( p_operation => 'S'
       , p_table_name => 'MY_EMP'
-      , p_column_name => 'DEPTNO'
-      , p_column_value => case when i_try <> 1 then anydata.ConvertNumber(i_try * 10) else null end
+      , p_bind_variable_tab => l_bind_variable_tab
       , p_max_row_count => case when i_try < 2 then 1 else 5 end
       , p_column_value_tab => l_column_value_tab
       );
