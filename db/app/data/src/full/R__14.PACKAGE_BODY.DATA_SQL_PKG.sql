@@ -246,7 +246,7 @@ $end
             end ||
             'd."' || r.column_name || '" = ' || 's."' || r.column_name || '"';
         end if;
-      elsif p_operation = 'D'
+      elsif p_operation in ('I', 'U', 'D')
       then
         if r.pk_key_position is not null
         then
@@ -312,6 +312,82 @@ $end
         end ||
         ') s';       
 
+    when 'I'
+    then
+      p_statement_lines(p_statement_lines.count+1) :=
+        'insert into ' || '"' || p_owner || '"."' || p_table_name || '"';
+
+      -- list columns
+      l_column_idx := p_input_column_tab.first;
+      while l_column_idx is not null
+      loop
+        l_column_name := p_input_column_tab(l_column_idx).column_name;
+        p_statement_lines(p_statement_lines.count+1) :=
+          utl_lms.format_message
+          ( '%s "%s"'
+          , case
+              when l_column_idx = p_input_column_tab.first
+              then '('
+              else ','
+            end            
+          , l_column_name
+          );
+        l_column_idx := p_input_column_tab.next(l_column_idx);
+      end loop;
+      p_statement_lines(p_statement_lines.count+1) :=
+        ')';
+        
+      p_statement_lines(p_statement_lines.count+1) :=
+        'values';
+      l_column_idx := p_input_column_tab.first;
+      while l_column_idx is not null
+      loop
+        l_column_name := p_input_column_tab(l_column_idx).column_name;
+        p_statement_lines(p_statement_lines.count+1) :=
+          utl_lms.format_message
+          ( '%s %s'
+          , case
+              when l_column_idx = p_input_column_tab.first
+              then '('
+              else ','
+            end            
+          , bind_variable(l_column_name)
+          );
+        l_column_idx := p_input_column_tab.next(l_column_idx);
+      end loop;
+      p_statement_lines(p_statement_lines.count+1) :=
+        ')';
+
+    when 'U'
+    then
+      p_statement_lines(p_statement_lines.count+1) :=
+        'update  ' || '"' || p_owner || '"."' || p_table_name || '" d';
+
+      l_column_idx := p_input_column_tab.first;
+      l_first := true;
+      while l_column_idx is not null
+      loop
+        l_column_name := p_input_column_tab(l_column_idx).column_name;
+        if p_input_column_tab(l_column_idx).pk_key_position is null -- can not update columns from ON clause
+        then
+          p_statement_lines(p_statement_lines.count+1) :=
+            utl_lms.format_message
+            ( '%s d."%s" = %s'
+            , case
+                when l_first
+                then 'set'
+                else ',  '
+              end
+            , l_column_name
+            , bind_variable(l_column_name)
+            );
+          l_first := false;
+        end if;
+        l_column_idx := p_input_column_tab.next(l_column_idx);
+      end loop;
+      p_statement_lines(p_statement_lines.count+1) :=
+        'where   ' || l_where_clause;
+
     when 'M'
     then
       p_statement_lines(p_statement_lines.count+1) :=
@@ -338,7 +414,9 @@ $end
         l_column_idx := p_input_column_tab.next(l_column_idx);
       end loop;
       p_statement_lines(p_statement_lines.count+1) :=
-        ')';
+        '  from    dual';
+      p_statement_lines(p_statement_lines.count+1) :=
+        ') s';
       p_statement_lines(p_statement_lines.count+1) :=
         'on ( ' || l_where_clause || ' )';
 
@@ -428,8 +506,9 @@ $end
       raise e_unimplemented_feature;
   end case;
 
-  -- returning into clause for Merge and Delete
-  if p_operation in ( 'M', 'D' ) and p_column_value_tab.count > 0
+  -- returning into clause for Insert, Update and Delete
+  -- for merge it is not allowed
+  if p_operation in ('I', 'U', 'D') and p_column_value_tab.count > 0
   then
     -- returning
     l_column_name := p_column_value_tab.first;
@@ -469,7 +548,7 @@ $end
 $if cfg_pkg.c_debugging $then
   for i_idx in p_statement_lines.first .. p_statement_lines.last
   loop
-    dbug.print(dbug."debug", 'p_statement_lines(%s): %s', i_idx, p_statement_lines(i_idx));
+    dbug.print(dbug."debug", 'p_statement_lines(%s): %s', to_char(i_idx, 'FM000'), p_statement_lines(i_idx));
   end loop;
   dbug.leave;
 $end
@@ -730,7 +809,7 @@ $end -- $if data_sql_pkg.c_column_value_is_anydata $then
     end loop;
 
     -- for DML, l_output_column_tab defines output variables (RETURNING clause)
-    if p_operation in ( 'M', 'D' ) and l_output_column_tab.count > 0
+    if p_operation in ('I', 'U', 'D') and l_output_column_tab.count > 0
     then
       l_column_idx := l_output_column_tab.first;
       while l_column_idx is not null
@@ -1243,6 +1322,10 @@ $end
   case p_operation
     when 'S'
     then define_columns;
+    when 'I'
+    then null;
+    when 'U'
+    then null;
     when 'M'
     then null;
     when 'D'
@@ -1256,7 +1339,7 @@ $end
   case 
     when p_operation = 'S'
     then fetch_rows_and_columns;
-    when p_operation in ( 'M', 'D' )
+    when p_operation in ('I', 'U', 'M', 'D')
     then variable_values;
     else raise e_unimplemented_feature;
   end case;
@@ -1564,6 +1647,8 @@ is
   l_max_row_count_tab max_row_count_tab_t;
   l_table_column_value_tab table_column_value_tab_t;
   l_count pls_integer;
+  l_cursor sys_refcursor;
+  l_table_name all_tab_columns.table_name%type;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP_DEPT');
@@ -1611,29 +1696,35 @@ $end
   , p_table_column_value_tab => l_table_column_value_tab
   );
 
-  execute immediate 'select count(*) from my_dept where deptno = 20' using out l_count;
+  for i_idx in 1..2
+  loop
+    l_table_name := case i_idx when 1 then 'MY_DEPT' else 'MY_EMP' end;
+    open l_cursor for 'select count(*) from ' || l_table_name || ' where deptno = 20';
+    fetch l_cursor into l_count;
+    close l_cursor;
 
-  ut.expect(l_count, 'my_dept count after delete').to_equal(0);
+    ut.expect(l_count, l_table_name || ' count after delete').to_equal(0);
+  end loop;
 
-  execute immediate 'select count(*) from my_emp where deptno = 20' using out l_count;
-
-  ut.expect(l_count, 'my_emp count after delete').to_equal(0);
-
+  -- use output from previous call as input for bind variables but just the PK columns
+  l_table_bind_variable_tab := l_table_column_value_tab;
   do
-  ( p_operation => 'M'
+  ( p_operation => 'I'
   , p_parent_table_name => 'MY_DEPT'
   , p_table_bind_variable_tab => l_table_bind_variable_tab
   , p_max_row_count_tab => l_max_row_count_tab
   , p_table_column_value_tab => l_table_column_value_tab
   );
 
-  execute immediate 'select count(*) from my_dept where deptno = 20' using out l_count;
-  
-  ut.expect(l_count, 'my_dept count after delete').to_equal(1);
-  
-  execute immediate 'select count(*) from my_emp where deptno = 20' using out l_count;
+  for i_idx in 1..2
+  loop
+    l_table_name := case i_idx when 1 then 'MY_DEPT' else 'MY_EMP' end;
+    open l_cursor for 'select count(*) from ' || l_table_name || ' where deptno = 20';
+    fetch l_cursor into l_count;
+    close l_cursor;
 
-  ut.expect(l_count, 'my_emp count after delete').to_equal(5);
+    ut.expect(l_count, l_table_name || ' count after delete').to_equal(case i_idx when 1 then 1 else 5 end);
+  end loop;
   
 $if cfg_pkg.c_debugging $then
   dbug.leave;
