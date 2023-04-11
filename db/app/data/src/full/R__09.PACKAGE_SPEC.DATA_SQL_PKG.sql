@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "DATA_SQL_PKG" authid current_user is
 
+c_column_value_is_anydata constant boolean := false; -- true;
+
 -- SYS.STANDARD defines TIME_UNCONSTRAINED and TIME_TZ_UNCONSTRAINED but there is no anydata.Convert* function for it.
 c_support_time constant boolean := false;
 
@@ -119,13 +121,16 @@ type column_value_t is record
 );
 
 
-subtype anydata_t is sys.anydata;
--- subtype anydata_t is column_value_t;
-
-c_column_value_is_anydata constant boolean := true;
+-- subtype anydata_t is sys.anydata;
+subtype anydata_t is column_value_t;
 
 type column_value_tab_t is table of anydata_t index by all_tab_columns.column_name%type;
 type table_column_value_tab_t is table of column_value_tab_t index by all_tab_columns.table_name%type;
+
+-- public routines
+
+function empty_anydata
+return anydata_t;
 
 function empty_column_value_tab
 return column_value_tab_t;
