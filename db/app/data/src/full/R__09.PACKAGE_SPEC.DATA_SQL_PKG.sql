@@ -129,6 +129,83 @@ type table_column_value_tab_t is table of column_value_tab_t index by all_tab_co
 
 -- public routines
 
+function empty_clob_table
+return dbms_sql.clob_table;
+
+function empty_binary_float_table
+return dbms_sql.binary_float_table;
+
+function empty_binary_double_table
+return dbms_sql.binary_double_table;
+
+function empty_blob_table
+return dbms_sql.blob_table;
+
+function empty_bfile_table
+return dbms_sql.bfile_table;
+
+function empty_date_table
+return dbms_sql.date_table;
+
+function empty_number_table
+return dbms_sql.number_table;
+
+function empty_urowid_table
+return dbms_sql.urowid_table;
+
+function empty_varchar2_table
+return dbms_sql.varchar2_table;
+
+function empty_timestamp_table
+return dbms_sql.timestamp_table;
+
+function empty_timestamp_ltz_table
+return dbms_sql.timestamp_with_ltz_table;
+
+function empty_timestamp_tz_table
+return dbms_sql.timestamp_with_time_zone_table;
+
+function empty_interval_ds_table
+return dbms_sql.interval_day_to_second_table;
+
+function empty_interval_ym_table
+return dbms_sql.interval_year_to_month_table;
+
+procedure set_column_value
+( p_data_type in all_tab_columns.data_type%type default null -- determines which field records are valid
+, p_is_table in boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
+, p_pk_key_position in all_cons_columns.position%type default null -- position of this column in the primary key
+, p_clob$ in clob default null
+, p_clob$_table in dbms_sql.clob_table default empty_clob_table
+, p_binary_float$ in binary_float default null
+, p_binary_float$_table in dbms_sql.binary_float_table default empty_binary_float_table
+, p_binary_double$ in binary_double default null
+, p_binary_double$_table in dbms_sql.binary_double_table default empty_binary_double_table
+, p_blob$ in blob default null
+, p_blob$_table in dbms_sql.blob_table default empty_blob_table
+, p_bfile$ in bfile default null
+, p_bfile$_table in dbms_sql.bfile_table default empty_bfile_table
+, p_date$ in date default null
+, p_date$_table in dbms_sql.date_table default empty_date_table
+, p_number$ in number default null
+, p_number$_table in dbms_sql.number_table default empty_number_table
+, p_urowid$ in urowid default null
+, p_urowid$_table in dbms_sql.urowid_table default empty_urowid_table
+, p_varchar2$ in varchar2 default null
+, p_varchar2$_table in dbms_sql.varchar2_table default empty_varchar2_table
+, p_timestamp$ in timestamp default null
+, p_timestamp$_table in dbms_sql.timestamp_table default empty_timestamp_table
+, p_timestamp_ltz$ in timestamp with local time zone default null
+, p_timestamp_ltz$_table in dbms_sql.timestamp_with_ltz_table default empty_timestamp_ltz_table
+, p_timestamp_tz$ in timestamp with time zone default null
+, p_timestamp_tz$_table in dbms_sql.timestamp_with_time_zone_table default empty_timestamp_tz_table
+, p_interval_ds$ in interval day to second default null
+, p_interval_ds$_table in dbms_sql.interval_day_to_second_table default empty_interval_ds_table
+, p_interval_ym$ in interval year to month default null
+, p_interval_ym$_table in dbms_sql.interval_year_to_month_table default empty_interval_ym_table
+, p_column_value out nocopy column_value_t
+);
+
 function empty_anydata
 return anydata_t;
 

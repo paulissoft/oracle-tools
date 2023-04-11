@@ -3,89 +3,32 @@ is
 
 -- private
 
-c_clob$_table_empty          dbms_sql.clob_table;
-c_binary_float$_table_empty  dbms_sql.binary_float_table;
-c_binary_double$_table_empty dbms_sql.binary_double_table;
-c_blob$_table_empty          dbms_sql.blob_table;
-c_bfile$_table_empty         dbms_sql.bfile_table;
-c_date$_table_empty          dbms_sql.date_table;
-c_number$_table_empty        dbms_sql.number_table;
-c_urowid$_table_empty        dbms_sql.urowid_table;
-c_varchar2$_table_empty      dbms_sql.varchar2_table;
-c_timestamp$_table_empty     dbms_sql.timestamp_table;
-c_timestamp_ltz$_table_empty dbms_sql.timestamp_with_ltz_table;
-c_timestamp_tz$_table_empty  dbms_sql.timestamp_with_time_zone_table ;
-c_interval_ds$_table_empty   dbms_sql.interval_day_to_second_table;
-c_interval_ym$_table_empty   dbms_sql.interval_year_to_month_table;
-
-procedure set_column_value
-( p_data_type in all_tab_columns.data_type%type default null -- determines which field records are valid
-, p_is_table in boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
-, p_pk_key_position in all_cons_columns.position%type default null -- position of this column in the primary key
-, p_clob$ in clob default null
-, p_clob$_table in dbms_sql.clob_table default c_clob$_table_empty
-, p_binary_float$ in binary_float default null
-, p_binary_float$_table in dbms_sql.binary_float_table default c_binary_float$_table_empty
-, p_binary_double$ in binary_double default null
-, p_binary_double$_table in dbms_sql.binary_double_table default c_binary_double$_table_empty
-, p_blob$ in blob default null
-, p_blob$_table in dbms_sql.blob_table default c_blob$_table_empty
-, p_bfile$ in bfile default null
-, p_bfile$_table in dbms_sql.bfile_table default c_bfile$_table_empty
-, p_date$ in date default null
-, p_date$_table in dbms_sql.date_table default c_date$_table_empty
-, p_number$ in number default null
-, p_number$_table in dbms_sql.number_table default c_number$_table_empty
-, p_urowid$ in urowid default null
-, p_urowid$_table in dbms_sql.urowid_table default c_urowid$_table_empty
-, p_varchar2$ in varchar2 default null
-, p_varchar2$_table in dbms_sql.varchar2_table default c_varchar2$_table_empty
-, p_timestamp$ in timestamp default null
-, p_timestamp$_table in dbms_sql.timestamp_table default c_timestamp$_table_empty
-, p_timestamp_ltz$ in timestamp with local time zone default null
-, p_timestamp_ltz$_table in dbms_sql.timestamp_with_ltz_table default c_timestamp_ltz$_table_empty
-, p_timestamp_tz$ in timestamp with time zone default null
-, p_timestamp_tz$_table in dbms_sql.timestamp_with_time_zone_table default c_timestamp_tz$_table_empty
-, p_interval_ds$ in interval day to second default null
-, p_interval_ds$_table in dbms_sql.interval_day_to_second_table default c_interval_ds$_table_empty
-, p_interval_ym$ in interval year to month default null
-, p_interval_ym$_table in dbms_sql.interval_year_to_month_table default c_interval_ym$_table_empty
-, p_column_value out nocopy column_value_t
+cursor c_col
+( b_owner in varchar2
+, b_table_name in varchar2
 )
 is
-begin
-  p_column_value.data_type:= p_data_type;
-  p_column_value.is_table:= p_is_table;
-  p_column_value.pk_key_position:= p_pk_key_position;
-  p_column_value.clob$ := p_clob$;
-  p_column_value.clob$_table := p_clob$_table;
-  p_column_value.binary_float$ := p_binary_float$;
-  p_column_value.binary_float$_table := p_binary_float$_table;
-  p_column_value.binary_double$ := p_binary_double$;
-  p_column_value.binary_double$_table := p_binary_double$_table;
-  p_column_value.blob$ := p_blob$;
-  p_column_value.blob$_table := p_blob$_table;
-  p_column_value.bfile$ := p_bfile$;
-  p_column_value.bfile$_table := p_bfile$_table;
-  p_column_value.date$ := p_date$;
-  p_column_value.date$_table := p_date$_table;
-  p_column_value.number$ := p_number$;
-  p_column_value.number$_table := p_number$_table;
-  p_column_value.urowid$ := p_urowid$;
-  p_column_value.urowid$_table := p_urowid$_table;
-  p_column_value.varchar2$ := p_varchar2$;
-  p_column_value.varchar2$_table := p_varchar2$_table;
-  p_column_value.timestamp$ := p_timestamp$;
-  p_column_value.timestamp$_table := p_timestamp$_table;
-  p_column_value.timestamp_ltz$ := p_timestamp_ltz$;
-  p_column_value.timestamp_ltz$_table := p_timestamp_ltz$_table;
-  p_column_value.timestamp_tz$ := p_timestamp_tz$;
-  p_column_value.timestamp_tz$_table := p_timestamp_tz$_table;
-  p_column_value.interval_ds$ := p_interval_ds$;
-  p_column_value.interval_ds$_table := p_interval_ds$_table;
-  p_column_value.interval_ym$ := p_interval_ym$;
-  p_column_value.interval_ym$_table := p_interval_ym$_table;
-end set_column_value;
+  select  tc.column_name
+  ,       tc.data_type
+  ,       tc.data_length
+  ,       cc.pk_key_position
+  from    all_tab_columns tc
+          left outer join 
+          ( select  cc.owner
+            ,       cc.table_name
+            ,       cc.column_name
+            ,       cc.position as pk_key_position
+            from    all_cons_columns cc
+                    inner join all_constraints c
+                    on c.owner = cc.owner and c.table_name = cc.table_name and c.constraint_type = 'P'
+          ) cc
+          on cc.owner = tc.owner and cc.table_name = tc.table_name and cc.column_name = tc.column_name
+  where   tc.owner = b_owner
+  and     tc.table_name = b_table_name
+  order by
+          tc.column_id;
+
+type column_tab_t is table of c_col%rowtype index by binary_integer;
 
 function bind_variable
 ( p_column_name in varchar2
@@ -224,7 +167,293 @@ $else
 $end -- $if data_sql_pkg.c_column_value_is_anydata $then  
 end set_bind_variable;
 
+procedure construct_statement
+( p_operation in varchar2
+, p_owner in varchar2
+, p_table_name in varchar2
+, p_statement in varchar2
+, p_order_by in varchar2
+, p_bind_variable_tab in column_value_tab_t
+, p_column_value_tab in column_value_tab_t
+, p_statement_lines out nocopy dbms_sql.varchar2a
+, p_column_tab out nocopy column_tab_t
+)
+is
+  l_where_clause statement_t := null;
+  l_statement statement_t := null;
+  l_column_name all_tab_columns.column_name%type;
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT_STATEMENT');
+  dbug.print
+  ( dbug."input"
+  , 'p_operation: %s; p_owner: %s; p_table_name: %s; p_statement: %s; p_order_by: %s'
+  , p_operation
+  , p_owner
+  , p_table_name
+  , p_statement
+  , p_order_by
+  );
+$end
+
+  -- construct statement
+  for r in c_col(p_owner, p_table_name)
+  loop
+    continue when not(p_column_value_tab.exists(r.column_name));
+
+    p_column_tab(p_column_tab.count+1) := r;
+
+    case p_operation
+      when 'S'
+      then
+        p_statement_lines(p_statement_lines.count+1) :=
+          case
+            when p_statement_lines.count = 0
+            then 'select  '
+            else ',       '
+          end ||
+          '"' ||
+          r.column_name ||
+          '"';
+      else
+        raise e_unimplemented_feature;
+    end case;
+  end loop;
+
+  case p_operation
+    when 'S'
+    then
+      l_column_name := p_bind_variable_tab.first;
+      while l_column_name is not null
+      loop
+        if not(empty_bind_variable(p_bind_variable_tab(l_column_name)))
+        then
+          l_where_clause := 
+            utl_lms.format_message
+            ( '%s"%s" = %s'
+            , case when l_where_clause is null then ' where ' else ' and ' end
+            , l_column_name
+            , bind_variable(l_column_name)
+            );
+        end if;
+        l_column_name := p_bind_variable_tab.next(l_column_name);
+      end loop;
+
+      l_statement :=
+        nvl
+        ( p_statement
+        , utl_lms.format_message
+          ( 'select * from "%s"."%s"%s'
+          , p_owner
+          , p_table_name
+          , l_where_clause
+          )
+        ) ||
+        case
+          when p_order_by is not null
+          then ' order by ' || p_order_by
+        end;
+
+      p_statement_lines(p_statement_lines.count+1) := 'from    (' || l_statement || ')';
+    else
+      raise e_unimplemented_feature;
+  end case;
+
+$if cfg_pkg.c_debugging $then
+  for i_idx in p_statement_lines.first .. p_statement_lines.last
+  loop
+    dbug.print(dbug."debug", 'p_statement_lines(%s): %s', i_idx, p_statement_lines(i_idx));
+  end loop;
+  dbug.leave;
+$end
+exception
+  when others
+  then
+    if c_col%isopen then close c_col; end if;
+end construct_statement;
+
 -- public routines
+
+function empty_clob_table
+return dbms_sql.clob_table
+is
+  l_table dbms_sql.clob_table;
+begin
+  return l_table;
+end;
+
+function empty_binary_float_table
+return dbms_sql.binary_float_table
+is
+  l_table dbms_sql.binary_float_table;
+begin
+  return l_table;
+end;
+
+function empty_binary_double_table
+return dbms_sql.binary_double_table
+is
+  l_table dbms_sql.binary_double_table;
+begin
+  return l_table;
+end;
+
+function empty_blob_table
+return dbms_sql.blob_table
+is
+  l_table dbms_sql.blob_table;
+begin
+  return l_table;
+end;
+
+function empty_bfile_table
+return dbms_sql.bfile_table
+is
+  l_table dbms_sql.bfile_table;
+begin
+  return l_table;
+end;
+
+function empty_date_table
+return dbms_sql.date_table
+is
+  l_table dbms_sql.date_table;
+begin
+  return l_table;
+end;
+
+function empty_number_table
+return dbms_sql.number_table
+is
+  l_table dbms_sql.number_table;
+begin
+  return l_table;
+end;
+
+function empty_urowid_table
+return dbms_sql.urowid_table
+is
+  l_table dbms_sql.urowid_table;
+begin
+  return l_table;
+end;
+
+function empty_varchar2_table
+return dbms_sql.varchar2_table
+is
+  l_table dbms_sql.varchar2_table;
+begin
+  return l_table;
+end;
+
+function empty_timestamp_table
+return dbms_sql.timestamp_table
+is
+  l_table dbms_sql.timestamp_table;
+begin
+  return l_table;
+end;
+
+function empty_timestamp_ltz_table
+return dbms_sql.timestamp_with_ltz_table
+is
+  l_table dbms_sql.timestamp_with_ltz_table;
+begin
+  return l_table;
+end;
+
+function empty_timestamp_tz_table
+return dbms_sql.timestamp_with_time_zone_table
+is
+  l_table dbms_sql.timestamp_with_time_zone_table;
+begin
+  return l_table;
+end;
+
+function empty_interval_ds_table
+return dbms_sql.interval_day_to_second_table
+is
+  l_table dbms_sql.interval_day_to_second_table;
+begin
+  return l_table;
+end;
+
+function empty_interval_ym_table
+return dbms_sql.interval_year_to_month_table
+is
+  l_table dbms_sql.interval_year_to_month_table;
+begin
+  return l_table;
+end;
+
+procedure set_column_value
+( p_data_type in all_tab_columns.data_type%type
+, p_is_table in boolean
+, p_pk_key_position in all_cons_columns.position%type
+, p_clob$ in clob
+, p_clob$_table in dbms_sql.clob_table
+, p_binary_float$ in binary_float
+, p_binary_float$_table in dbms_sql.binary_float_table
+, p_binary_double$ in binary_double
+, p_binary_double$_table in dbms_sql.binary_double_table
+, p_blob$ in blob
+, p_blob$_table in dbms_sql.blob_table
+, p_bfile$ in bfile
+, p_bfile$_table in dbms_sql.bfile_table
+, p_date$ in date
+, p_date$_table in dbms_sql.date_table
+, p_number$ in number
+, p_number$_table in dbms_sql.number_table
+, p_urowid$ in urowid
+, p_urowid$_table in dbms_sql.urowid_table
+, p_varchar2$ in varchar2
+, p_varchar2$_table in dbms_sql.varchar2_table
+, p_timestamp$ in timestamp
+, p_timestamp$_table in dbms_sql.timestamp_table
+, p_timestamp_ltz$ in timestamp with local time zone
+, p_timestamp_ltz$_table in dbms_sql.timestamp_with_ltz_table
+, p_timestamp_tz$ in timestamp with time zone
+, p_timestamp_tz$_table in dbms_sql.timestamp_with_time_zone_table
+, p_interval_ds$ in interval day to second
+, p_interval_ds$_table in dbms_sql.interval_day_to_second_table
+, p_interval_ym$ in interval year to month
+, p_interval_ym$_table in dbms_sql.interval_year_to_month_table
+, p_column_value out nocopy column_value_t
+)
+is
+begin
+  p_column_value.data_type:= p_data_type;
+  p_column_value.is_table:= p_is_table;
+  p_column_value.pk_key_position:= p_pk_key_position;
+  p_column_value.clob$ := p_clob$;
+  p_column_value.clob$_table := p_clob$_table;
+  p_column_value.binary_float$ := p_binary_float$;
+  p_column_value.binary_float$_table := p_binary_float$_table;
+  p_column_value.binary_double$ := p_binary_double$;
+  p_column_value.binary_double$_table := p_binary_double$_table;
+  p_column_value.blob$ := p_blob$;
+  p_column_value.blob$_table := p_blob$_table;
+  p_column_value.bfile$ := p_bfile$;
+  p_column_value.bfile$_table := p_bfile$_table;
+  p_column_value.date$ := p_date$;
+  p_column_value.date$_table := p_date$_table;
+  p_column_value.number$ := p_number$;
+  p_column_value.number$_table := p_number$_table;
+  p_column_value.urowid$ := p_urowid$;
+  p_column_value.urowid$_table := p_urowid$_table;
+  p_column_value.varchar2$ := p_varchar2$;
+  p_column_value.varchar2$_table := p_varchar2$_table;
+  p_column_value.timestamp$ := p_timestamp$;
+  p_column_value.timestamp$_table := p_timestamp$_table;
+  p_column_value.timestamp_ltz$ := p_timestamp_ltz$;
+  p_column_value.timestamp_ltz$_table := p_timestamp_ltz$_table;
+  p_column_value.timestamp_tz$ := p_timestamp_tz$;
+  p_column_value.timestamp_tz$_table := p_timestamp_tz$_table;
+  p_column_value.interval_ds$ := p_interval_ds$;
+  p_column_value.interval_ds$_table := p_interval_ds$_table;
+  p_column_value.interval_ym$ := p_interval_ym$;
+  p_column_value.interval_ym$_table := p_interval_ym$_table;
+end set_column_value;
 
 function empty_anydata
 return anydata_t
@@ -247,19 +476,17 @@ begin
 end;
 
 procedure do
-( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate or (D)elete
+( p_operation in varchar2
 , p_table_name in varchar2
-, p_bind_variable_tab in column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
-, p_statement in statement_t -- if null it will default to 'select * from <table>'
+, p_bind_variable_tab in column_value_tab_t
+, p_statement in statement_t
 , p_order_by in varchar2
-, p_owner in varchar2 -- the owner of the table
+, p_owner in varchar2
 , p_max_row_count in positive default null
-, p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+, p_column_value_tab in out nocopy column_value_tab_t
 )
 is
-  l_where_clause statement_t := null;
-  l_statement statement_t := null;
-  l_stmt statement_t := null;
+  l_statement_lines dbms_sql.varchar2a;
   l_cursor integer := null;
   l_nr_rows_processed pls_integer;
   l_column_name all_tab_columns.column_name%type;
@@ -276,99 +503,7 @@ $if data_sql_pkg.c_column_value_is_anydata $then
 
 $end -- $if data_sql_pkg.c_column_value_is_anydata $then
 
-  cursor c_col is
-    select  tc.column_name
-    ,       tc.data_type
-    ,       tc.data_length
-    ,       cc.pk_key_position
-    from    all_tab_columns tc
-            left outer join 
-            ( select  cc.owner
-              ,       cc.table_name
-              ,       cc.column_name
-              ,       cc.position as pk_key_position
-              from    all_cons_columns cc
-                      inner join all_constraints c
-                      on c.owner = cc.owner and c.table_name = cc.table_name and c.constraint_type = 'P'
-            ) cc
-            on cc.owner = tc.owner and cc.table_name = tc.table_name and cc.column_name = tc.column_name
-    where   tc.owner = p_owner
-    and     tc.table_name = p_table_name
-    order by
-            tc.column_id;
-
-  type column_tab_t is table of c_col%rowtype index by binary_integer;
-
   l_column_tab column_tab_t;
-
-  procedure construct_statement
-  is
-  begin
-    -- construct statement
-    for r in c_col
-    loop
-      continue when not(p_column_value_tab.exists(r.column_name));
-
-      l_column_tab(l_column_tab.count+1) := r;
-
-      case p_operation
-        when 'S'
-        then
-          if l_stmt is null
-          then
-            l_stmt := 'select  ';
-          else
-            l_stmt := l_stmt || chr(10) || ',       ';
-          end if;
-          l_stmt := l_stmt || '"' || r.column_name || '"';
-        else
-          raise e_unimplemented_feature;
-      end case;
-    end loop;
-
-    case p_operation
-      when 'S'
-      then
-        l_column_name := p_bind_variable_tab.first;
-        while l_column_name is not null
-        loop
-          if not(empty_bind_variable(p_bind_variable_tab(l_column_name)))
-          then
-            l_where_clause := 
-              utl_lms.format_message
-              ( '%s"%s" = %s'
-              , case when l_where_clause is null then ' where ' else ' and ' end
-              , l_column_name
-              , bind_variable(l_column_name)
-              );
-          end if;
-          l_column_name := p_bind_variable_tab.next(l_column_name);
-        end loop;
-
-        l_statement :=
-          nvl
-          ( p_statement
-          , utl_lms.format_message
-            ( 'select * from "%s"."%s"%s'
-            , p_owner
-            , p_table_name
-            , l_where_clause
-            )
-          ) ||
-          case
-            when p_order_by is not null
-            then ' order by ' || p_order_by
-          end;
-
-        l_stmt := l_stmt || chr(10) || 'from    (' || l_statement || ')';
-      else
-        raise e_unimplemented_feature;
-    end case;
-
-$if cfg_pkg.c_debugging $then
-    dbug.print(dbug."debug", 'statement: %s', l_stmt);
-$end  
-  end construct_statement;
 
   procedure set_bind_variables
   is
@@ -676,19 +811,29 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
-  construct_statement;
+  construct_statement
+  ( p_operation => p_operation
+  , p_owner => p_owner
+  , p_table_name => p_table_name
+  , p_statement => p_statement
+  , p_order_by => p_order_by
+  , p_bind_variable_tab => p_bind_variable_tab
+  , p_column_value_tab => p_column_value_tab
+  , p_statement_lines => l_statement_lines
+  , p_column_tab => l_column_tab
+  );
   
   l_cursor := dbms_sql.open_cursor;
 
   begin
-    dbms_sql.parse(l_cursor, l_stmt, dbms_sql.native);
-$if cfg_pkg.c_debugging $then
-  exception
-    when others
-    then
-      dbug.print(dbug."error", 'statement: %s', l_stmt);
-      raise;
-$end      
+    dbms_sql.parse
+    ( c => l_cursor
+    , statement => l_statement_lines
+    , lb => l_statement_lines.first
+    , ub => l_statement_lines.last
+    , lfflg => true
+    , language_flag => dbms_sql.native
+    );    
   end;
 
   if p_bind_variable_tab.count > 0
