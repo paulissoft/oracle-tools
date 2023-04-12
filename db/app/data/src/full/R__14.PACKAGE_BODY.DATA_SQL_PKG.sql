@@ -185,9 +185,13 @@ $end
     from    table(oracle_tools.data_sql_pkg.get_column_info(p_owner, p_table_name))
   )
   loop
-    if p_bind_variable_tab.exists(r.column_name) and
-       not(empty_bind_variable(p_bind_variable_tab(r.column_name)))
+    if p_bind_variable_tab.exists(r.column_name)
     then
+      if empty_bind_variable(p_bind_variable_tab(r.column_name))
+      then
+        raise value_error;
+      end if;
+      
       p_input_column_tab(p_input_column_tab.count+1) := r;
 
       if p_operation = 'M'
@@ -324,7 +328,7 @@ $end
       while l_column_idx is not null
       loop
         l_column_name := p_input_column_tab(l_column_idx).column_name;
-        if p_input_column_tab(l_column_idx).pk_key_position is null -- can not update columns from ON clause
+        if p_input_column_tab(l_column_idx).pk_key_position is null -- will not update key columns
         then
           p_statement_lines(p_statement_lines.count+1) :=
             utl_lms.format_message
@@ -1515,7 +1519,7 @@ $end
       case
         when i_try <> 1
         then set_column_value( p_data_type => 'NUMBER', p_number$ => i_try * 10, p_column_value => l_bind_variable_tab('DEPTNO') );
-        else set_column_value( p_column_value => l_bind_variable_tab('DEPTNO') );
+        else l_bind_variable_tab.delete;
       end case;      
 
       l_row_count := case when i_try < 2 then 1 else 5 end;
@@ -1541,7 +1545,7 @@ $end
 $if cfg_pkg.c_debugging $then
   dbug.leave;
 $end
-end;
+end ut_do_emp;
 
 procedure ut_do_dept
 is
