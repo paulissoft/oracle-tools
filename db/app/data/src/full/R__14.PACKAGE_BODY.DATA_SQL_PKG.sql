@@ -1220,7 +1220,10 @@ begin
               ,       cc.position as pk_key_position
               from    all_cons_columns cc
                       inner join all_constraints c
-                      on c.owner = cc.owner and c.table_name = cc.table_name and c.constraint_type = 'P'
+                      on c.owner = cc.owner and
+                         c.table_name = cc.table_name and
+                         c.constraint_name = cc.constraint_name and
+                         c.constraint_type = 'P'
             ) cc
             on cc.owner = tc.owner and cc.table_name = tc.table_name and cc.column_name = tc.column_name
     where   tc.owner = p_owner
