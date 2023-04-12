@@ -295,193 +295,213 @@ $end
 
     when 'I'
     then
-      p_statement_lines(p_statement_lines.count+1) :=
-        'insert into ' || '"' || p_owner || '"."' || p_table_name || '"';
+      if p_statement is not null
+      then
+        p_statement_lines(p_statement_lines.count+1) := p_statement;
+      else
+        p_statement_lines(p_statement_lines.count+1) :=
+          'insert into ' || '"' || p_owner || '"."' || p_table_name || '"';
 
-      -- list columns
-      l_column_idx := p_input_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
+        -- list columns
+        l_column_idx := p_input_column_tab.first;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
+          p_statement_lines(p_statement_lines.count+1) :=
+            utl_lms.format_message
+            ( '%s "%s"'
+            , case
+                when l_column_idx = p_input_column_tab.first
+                then '('
+                else ','
+              end            
+            , l_column_name
+            );
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
         p_statement_lines(p_statement_lines.count+1) :=
-          utl_lms.format_message
-          ( '%s "%s"'
-          , case
-              when l_column_idx = p_input_column_tab.first
-              then '('
-              else ','
-            end            
-          , l_column_name
-          );
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-      p_statement_lines(p_statement_lines.count+1) :=
-        ')';
-        
-      p_statement_lines(p_statement_lines.count+1) :=
-        'values';
-      l_column_idx := p_input_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
+          ')';
+          
         p_statement_lines(p_statement_lines.count+1) :=
-          utl_lms.format_message
-          ( '%s %s'
-          , case
-              when l_column_idx = p_input_column_tab.first
-              then '('
-              else ','
-            end            
-          , bind_variable(l_column_name)
-          );
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-      p_statement_lines(p_statement_lines.count+1) :=
-        ')';
+          'values';
+        l_column_idx := p_input_column_tab.first;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
+          p_statement_lines(p_statement_lines.count+1) :=
+            utl_lms.format_message
+            ( '%s %s'
+            , case
+                when l_column_idx = p_input_column_tab.first
+                then '('
+                else ','
+              end            
+            , bind_variable(l_column_name)
+            );
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
+        p_statement_lines(p_statement_lines.count+1) :=
+          ')';
+      end if;
 
     when 'U'
     then
-      p_statement_lines(p_statement_lines.count+1) :=
-        'update  ' || '"' || p_owner || '"."' || p_table_name || '" d';
+      if p_statement is not null
+      then
+        p_statement_lines(p_statement_lines.count+1) := p_statement;
+      else
+        p_statement_lines(p_statement_lines.count+1) :=
+          'update  ' || '"' || p_owner || '"."' || p_table_name || '" d';
 
-      l_column_idx := p_input_column_tab.first;
-      l_first := true;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
-        if p_input_column_tab(l_column_idx).pk_key_position is null -- will not update key columns
-        then
-          p_statement_lines(p_statement_lines.count+1) :=
-            utl_lms.format_message
-            ( '%s     d."%s" = %s'
-            , case
-                when l_first
-                then 'set'
-                else ',  '
-              end
-            , l_column_name
-            , bind_variable(l_column_name)
-            );
-          l_first := false;
-        end if;
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-      p_statement_lines(p_statement_lines.count+1) :=
-        'where   ' || l_where_clause;
+        l_column_idx := p_input_column_tab.first;
+        l_first := true;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
+          if p_input_column_tab(l_column_idx).pk_key_position is null -- will not update key columns
+          then
+            p_statement_lines(p_statement_lines.count+1) :=
+              utl_lms.format_message
+              ( '%s     d."%s" = %s'
+              , case
+                  when l_first
+                  then 'set'
+                  else ',  '
+                end
+              , l_column_name
+              , bind_variable(l_column_name)
+              );
+            l_first := false;
+          end if;
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
+        p_statement_lines(p_statement_lines.count+1) :=
+          'where   ' || l_where_clause;
+      end if;
 
     when 'M'
     then
-      p_statement_lines(p_statement_lines.count+1) :=
-        'merge into ' || '"' || p_owner || '"."' || p_table_name || '" d';
-      p_statement_lines(p_statement_lines.count+1) :=
-        'using';
-        
-      -- set up USING with bind variables
-      l_column_idx := p_input_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
+      if p_statement is not null
+      then
+        p_statement_lines(p_statement_lines.count+1) := p_statement;
+      else
         p_statement_lines(p_statement_lines.count+1) :=
-          utl_lms.format_message
-          ( '%s  %s as "%s"'
-          , case
-              when l_column_idx = p_input_column_tab.first
-              then '( select'
-              else '  ,     '
-            end            
-          , bind_variable(l_column_name)
-          , l_column_name
-          );
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-      p_statement_lines(p_statement_lines.count+1) :=
-        '  from    dual';
-      p_statement_lines(p_statement_lines.count+1) :=
-        ') s';
-      p_statement_lines(p_statement_lines.count+1) :=
-        'on ( ' || l_where_clause || ' )';
-
-      /*
-      -- use bind variables for insert clause (when not matched)
-      */
-      -- insert
-      p_statement_lines(p_statement_lines.count+1) :=
-        'when not matched then';
-      l_column_idx := p_input_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
+          'merge into ' || '"' || p_owner || '"."' || p_table_name || '" d';
         p_statement_lines(p_statement_lines.count+1) :=
-          utl_lms.format_message
-          ( '%s "%s"'
-          , case
-              when l_column_idx = p_input_column_tab.first
-              then '  insert ('
-              else '         ,'
-            end
-          , l_column_name
-          , l_column_name
-          );
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-      p_statement_lines(p_statement_lines.count+1) :=
-        '         )';
-
-      -- values
-      l_column_idx := p_input_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
-        p_statement_lines(p_statement_lines.count+1) :=
-          utl_lms.format_message
-          ( '%s s."%s"'
-          , case
-              when l_column_idx = p_input_column_tab.first
-              then '  values ('
-              else '         ,'
-            end
-          , l_column_name
-          , l_column_name
-          );
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-      p_statement_lines(p_statement_lines.count+1) :=
-        '         )';
-
-      /*
-      -- use bind variables for update clause (when matched)
-      */
-      p_statement_lines(p_statement_lines.count+1) :=
-        'when matched then';
-      l_column_idx := p_input_column_tab.first;
-      l_first := true;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
-        if p_input_column_tab(l_column_idx).pk_key_position is null -- can not update columns from ON clause
-        then
+          'using';
+          
+        -- set up USING with bind variables
+        l_column_idx := p_input_column_tab.first;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
           p_statement_lines(p_statement_lines.count+1) :=
             utl_lms.format_message
-            ( '%s d."%s" = s."%s"'
+            ( '%s  %s as "%s"'
             , case
-                when l_first
-                then '  update  set'
-                else '          ,  '
+                when l_column_idx = p_input_column_tab.first
+                then '( select'
+                else '  ,     '
+              end            
+            , bind_variable(l_column_name)
+            , l_column_name
+            );
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
+        p_statement_lines(p_statement_lines.count+1) :=
+          '  from    dual';
+        p_statement_lines(p_statement_lines.count+1) :=
+          ') s';
+        p_statement_lines(p_statement_lines.count+1) :=
+          'on ( ' || l_where_clause || ' )';
+
+        /*
+        -- use bind variables for insert clause (when not matched)
+        */
+        -- insert
+        p_statement_lines(p_statement_lines.count+1) :=
+          'when not matched then';
+        l_column_idx := p_input_column_tab.first;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
+          p_statement_lines(p_statement_lines.count+1) :=
+            utl_lms.format_message
+            ( '%s "%s"'
+            , case
+                when l_column_idx = p_input_column_tab.first
+                then '  insert ('
+                else '         ,'
               end
             , l_column_name
             , l_column_name
             );
-          l_first := false;
-        end if;
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
+        p_statement_lines(p_statement_lines.count+1) :=
+          '         )';
+
+        -- values
+        l_column_idx := p_input_column_tab.first;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
+          p_statement_lines(p_statement_lines.count+1) :=
+            utl_lms.format_message
+            ( '%s s."%s"'
+            , case
+                when l_column_idx = p_input_column_tab.first
+                then '  values ('
+                else '         ,'
+              end
+            , l_column_name
+            , l_column_name
+            );
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
+        p_statement_lines(p_statement_lines.count+1) :=
+          '         )';
+
+        /*
+        -- use bind variables for update clause (when matched)
+        */
+        p_statement_lines(p_statement_lines.count+1) :=
+          'when matched then';
+        l_column_idx := p_input_column_tab.first;
+        l_first := true;
+        while l_column_idx is not null
+        loop
+          l_column_name := p_input_column_tab(l_column_idx).column_name;
+          if p_input_column_tab(l_column_idx).pk_key_position is null -- can not update columns from ON clause
+          then
+            p_statement_lines(p_statement_lines.count+1) :=
+              utl_lms.format_message
+              ( '%s d."%s" = s."%s"'
+              , case
+                  when l_first
+                  then '  update  set'
+                  else '          ,  '
+                end
+              , l_column_name
+              , l_column_name
+              );
+            l_first := false;
+          end if;
+          l_column_idx := p_input_column_tab.next(l_column_idx);
+        end loop;
+      end if;
 
     when 'D'
     then
-      p_statement_lines(p_statement_lines.count+1) :=
-        'delete from ' || '"' || p_owner || '"."' || p_table_name || '" d';
-      p_statement_lines(p_statement_lines.count+1) :=
-        'where ' || l_where_clause;
+      if p_statement is not null
+      then
+        p_statement_lines(p_statement_lines.count+1) := p_statement;
+      else
+        p_statement_lines(p_statement_lines.count+1) :=
+          'delete from ' || '"' || p_owner || '"."' || p_table_name || '" d';
+        p_statement_lines(p_statement_lines.count+1) :=
+          'where ' || l_where_clause;
+      end if;
 
     else
       raise e_unimplemented_feature;
@@ -489,7 +509,7 @@ $end
 
   -- returning into clause for Insert, Update and Delete
   -- for merge it is not allowed
-  if p_operation in ('I', 'U', 'D') and p_column_value_tab.count > 0
+  if p_operation in ('I', 'U', 'D') and p_column_value_tab.count > 0 and p_statement is null
   then
     -- returning
     l_column_name := p_column_value_tab.first;
