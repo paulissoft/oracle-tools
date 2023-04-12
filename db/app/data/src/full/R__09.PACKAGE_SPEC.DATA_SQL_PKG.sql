@@ -1,7 +1,5 @@
 CREATE OR REPLACE PACKAGE "DATA_SQL_PKG" authid current_user is
 
--- c_column_value_is_anydata constant boolean := false; -- true;
-
 -- SYS.STANDARD defines TIME_UNCONSTRAINED and TIME_TZ_UNCONSTRAINED but there is no anydata.Convert* function for it.
 c_support_time constant boolean := false;
 
@@ -19,20 +17,20 @@ Scalar data types supported:
 
 | SQL data type                     | Convert to anydata function | ANYDATA type                |
 | :------------                     | :-------------------------- | :-----------                |
-| CLOB                              |                             | SYS.CLOB                    |               
-| BINARY_FLOAT                      |                             | SYS.BINARY_FLOAT            |
-| BINARY_DOUBLE                     |                             | SYS.BINARY_DOUBLE           |
-| BLOB                              |                             | SYS.BLOB                    |
-| BFILE                             |                             | SYS.BFILE                   |
-| DATE                              |                             | SYS.DATE                    |
-| NUMBER                            |                             | SYS.NUMBER                  |
-| UROWID                            |                             | SYS.UROWID                  |
-| VARCHAR2                          |                             | SYS.VARCHAR2                |
-| TIMESTAMP                         |                             | SYS.TIMESTAMP               |
-| TIMESTAMP(6) WITH LOCAL TIME ZONE |                             | SYS.TIMESTAMP_WITH_LTZ      |
-| TIMESTAMP(6) WITH TIME ZONE       |                             | SYS.TIMESTAMP_WITH_TIMEZONE |
-| INTERVAL DAY(2) TO SECOND(6)      |                             | SYS.INTERVAL_DAY_SECOND     |
-| INTERVAL YEAR(2) TO MONTH         |                             | SYS.INTERVAL_YEAR_MONTH     |
+| CLOB                              | anydata.ConvertClob         | SYS.CLOB                    |               
+| BINARY_FLOAT                      | anydata.ConvertBFloat       | SYS.BINARY_FLOAT            |
+| BINARY_DOUBLE                     | anydata.ConvertBDouble      | SYS.BINARY_DOUBLE           |
+| BLOB                              | anydata.ConvertBlob         | SYS.BLOB                    |
+| BFILE                             | anydata.ConvertBfile        | SYS.BFILE                   |
+| DATE                              | anydata.ConvertDate         | SYS.DATE                    |
+| NUMBER                            | anydata.ConvertNumber       | SYS.NUMBER                  |
+| UROWID                            | anydata.ConvertURowid       | SYS.UROWID                  |
+| VARCHAR2                          | anydata.ConvertVarchar2     | SYS.VARCHAR2                |
+| TIMESTAMP                         | anydata.ConvertTimestamp    | SYS.TIMESTAMP               |
+| TIMESTAMP(6) WITH LOCAL TIME ZONE | anydata.ConvertTimestampLTZ | SYS.TIMESTAMP_WITH_LTZ      |
+| TIMESTAMP(6) WITH TIME ZONE       | anydata.ConvertTimestampTZ  | SYS.TIMESTAMP_WITH_TIMEZONE |
+| INTERVAL DAY(2) TO SECOND(6)      | anydata.ConvertIntervalDS   | SYS.INTERVAL_DAY_SECOND     |
+| INTERVAL YEAR(2) TO MONTH         | anydata.ConvertIntervalYM   | SYS.INTERVAL_YEAR_MONTH     |
 
  
 Array types supported (see 1 below for PL/SQL type names):
@@ -119,8 +117,6 @@ type column_value_t is record
 , interval_ym$_table   dbms_sql.interval_year_to_month_table 
 );
 
-
--- subtype anydata_t is sys.anydata;
 subtype anydata_t is column_value_t;
 
 type column_value_tab_t is table of anydata_t index by all_tab_columns.column_name%type;
@@ -188,6 +184,7 @@ function get_column_info
 )
 return column_info_tab_t
 pipelined;
+/** Get column information for a table. **/
 
 function empty_clob_table
 return dbms_sql.clob_table;
@@ -264,6 +261,7 @@ procedure set_column_value
 , p_interval_ym$_table in dbms_sql.interval_year_to_month_table default empty_interval_ym_table
 , p_column_value out nocopy column_value_t
 );
+/** Set a column value. **/
 
 $if cfg_pkg.c_testing $then
 
