@@ -194,7 +194,20 @@ $end
       
       p_input_column_tab(p_input_column_tab.count+1) := r;
 
-      if p_operation = 'M'
+      if p_operation = 'S'
+      then
+        l_where_clause := 
+          l_where_clause ||
+          utl_lms.format_message
+          ( '%s"%s" = %s'
+          , case
+              when l_where_clause is not null
+              then ' and '
+            end
+          , r.column_name
+          , bind_variable(r.column_name)
+          );
+      elsif p_operation = 'M'
       then
         if r.pk_key_position is not null
         then
@@ -236,25 +249,30 @@ $end
           's."' || r.column_name || '"';
       end if;
     end if;          
+$if cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."debug"
+    , 'r.column_name: %s; r.pk_key_position: %s; bind variable?: %s; column value?: %s; where clause: "%s"'
+    , r.column_name
+    , r.pk_key_position
+    , dbug.cast_to_varchar2(p_bind_variable_tab.exists(r.column_name))
+    , dbug.cast_to_varchar2(p_column_value_tab.exists(r.column_name))
+    , l_where_clause
+    );
+$end
   end loop;
+
+$if cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."debug"
+  , 'where clause after get_column_info: "%s"'
+  , l_where_clause
+  );
+$end
 
   case p_operation
     when 'S'
     then
-      l_column_idx := p_input_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := p_input_column_tab(l_column_idx).column_name;
-        l_where_clause := 
-          utl_lms.format_message
-          ( '%s"%s" = %s'
-          , case when l_where_clause is null then ' where ' else ' and ' end
-          , l_column_name
-          , bind_variable(l_column_name)
-          );
-        l_column_idx := p_input_column_tab.next(l_column_idx);
-      end loop;
-
       p_statement_lines(p_statement_lines.count+1) :=
         'from    (' ||
         nvl
@@ -263,7 +281,10 @@ $end
           ( 'select * from "%s"."%s"%s'
           , p_owner
           , p_table_name
-          , l_where_clause
+          , case
+              when l_where_clause is not null
+              then ' where ' || l_where_clause
+            end
           )
         ) ||
         case
@@ -1035,7 +1056,22 @@ $end
     , ub => l_statement_lines.last
     , lfflg => true
     , language_flag => dbms_sql.native
-    );    
+    );
+$if cfg_pkg.c_debugging $then
+  exception
+    when others
+    then
+      dbug.on_error;
+      dbug.print(dbug."error", 'error at position: %s', dbms_sql.last_error_position);
+      if l_statement_lines.count > 0
+      then
+        for i_idx in l_statement_lines.first .. l_statement_lines.last
+        loop
+          dbug.print(dbug."error", 'statement line %s: %s', to_char(i_idx, 'FM000'), l_statement_lines(i_idx));
+        end loop;
+      end if;
+      raise;
+$end      
   end;
 
   set_bind_variables;
