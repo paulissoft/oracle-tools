@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "DATA_SQL_PKG" authid current_user is
 
-c_column_value_is_anydata constant boolean := false; -- true;
+-- c_column_value_is_anydata constant boolean := false; -- true;
 
 -- SYS.STANDARD defines TIME_UNCONSTRAINED and TIME_TZ_UNCONSTRAINED but there is no anydata.Convert* function for it.
 c_support_time constant boolean := false;
@@ -69,13 +69,13 @@ subtype statement_t is varchar2(32767 byte); -- max length supported by dbms_sql
 type statement_tab_t is table of statement_t index by all_tab_columns.table_name%type;
 /** Sometimes a parent or child table may have a selection not so simple as "select * from <table>". **/
 
-type max_row_count_tab_t is table of positive index by all_tab_columns.table_name%type;
-/** Specify the maximum row count to fetch for a table. **/
+type row_count_tab_t is table of natural index by all_tab_columns.table_name%type;
+/** Input: specify the maximum row count to fetch for a table. Output: the number of rows retrieved / processed. **/
 
 type column_value_t is record
 ( data_type all_tab_columns.data_type%type -- determines which field records are valid
 , is_table boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
-, pk_key_position all_cons_columns.position%type -- position of this column in the primary key
+--TBD, pk_key_position all_cons_columns.position%type -- position of this column in the primary key
 
 , clob$                clob
 , clob$_table          dbms_sql.clob_table
@@ -129,6 +129,67 @@ type table_column_value_tab_t is table of column_value_tab_t index by all_tab_co
 
 -- public routines
 
+function empty_anydata
+return anydata_t;
+
+function empty_column_value_tab
+return column_value_tab_t;
+
+procedure do
+( p_operation in varchar2 -- (S)elect, (M)erge or (D)elete
+, p_table_name in varchar2 -- the table name
+, p_bind_variable_tab in column_value_tab_t default empty_column_value_tab -- only when an entry exists that table column will be used in the query or DML
+, p_statement in statement_t default null -- if null it will default to 'select * from <table>' for a (S)elect
+, p_order_by in varchar2 default null -- to be added after the (default) query (without ORDER BY)
+, p_owner in varchar2 default user -- the owner of the table
+, p_row_count in out nocopy natural
+, p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+);
+/**
+Perform SQL for a single table.
+
+The input value for p_row_count determines how and how much rows is retrieved for a query (select):
+- when 1: select just a single row (and raise exceptions no_data_found / too_many_rows when no or more than 1 row is fetched) and store them in scalars
+- when null: unlimited number of fetches and store them in arrays (even though at most 1 row may be fetched)
+- when greater than 1: fetch at most this amount of rows and store them in arrays (even though at most 1 row may be fetched)
+**/
+
+function empty_statement_tab
+return statement_tab_t;
+
+procedure do
+( p_operation in varchar2 -- (S)elect, (M)erge or (D)elete
+, p_parent_table_name in varchar2 -- we must start with this
+, p_table_bind_variable_tab in table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+, p_statement_tab in statement_tab_t default empty_statement_tab -- per table a query (if any): if none or null it will default to 'select * from <table>' for a (S)elect
+, p_order_by_tab in statement_tab_t default empty_statement_tab -- per table an order by (if any)
+, p_owner in varchar2 default user -- the owner of the table(s)
+, p_row_count_tab in out nocopy row_count_tab_t -- per table a max row count (if any) on input
+, p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+);
+/**
+Perform SQL for a set of related tables.
+**/
+
+type column_info_rec_t is record
+( owner all_tab_columns.owner%type
+, table_name all_tab_columns.table_name%type
+, column_name all_tab_columns.column_name%type
+, data_type all_tab_columns.data_type%type
+, data_length all_tab_columns.data_length%type
+, pk_key_position all_cons_columns.position%type
+);
+
+type column_info_tab_t is table of column_info_rec_t;
+
+function get_column_info
+( p_owner in all_tab_columns.owner%type
+, p_table_name in all_tab_columns.table_name%type
+, p_column_name_list in all_tab_columns.column_name%type default '%' -- comma separated list of column names (wildcards allowed)
+)
+return column_info_tab_t
+pipelined;
+
 function empty_clob_table
 return dbms_sql.clob_table;
 
@@ -174,7 +235,7 @@ return dbms_sql.interval_year_to_month_table;
 procedure set_column_value
 ( p_data_type in all_tab_columns.data_type%type default null -- determines which field records are valid
 , p_is_table in boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
-, p_pk_key_position in all_cons_columns.position%type default null -- position of this column in the primary key
+--TBD, p_pk_key_position in all_cons_columns.position%type default null -- position of this column in the primary key
 , p_clob$ in clob default null
 , p_clob$_table in dbms_sql.clob_table default empty_clob_table
 , p_binary_float$ in binary_float default null
@@ -205,51 +266,6 @@ procedure set_column_value
 , p_interval_ym$_table in dbms_sql.interval_year_to_month_table default empty_interval_ym_table
 , p_column_value out nocopy column_value_t
 );
-
-function empty_anydata
-return anydata_t;
-
-function empty_column_value_tab
-return column_value_tab_t;
-
-procedure do
-( p_operation in varchar2 -- (S)elect, (M)erge or (D)elete
-, p_table_name in varchar2 -- the table name
-, p_bind_variable_tab in column_value_tab_t default empty_column_value_tab -- only when an entry exists that table column will be used in the query or DML
-, p_statement in statement_t default null -- if null it will default to 'select * from <table>' for a (S)elect
-, p_order_by in varchar2 default null -- to be added after the (default) query (without ORDER BY)
-, p_owner in varchar2 default user -- the owner of the table
-, p_max_row_count in positive default null
-, p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
-);
-/**
-Perform SQL for a single table.
-
-The value for p_max_row_count determines how and how much rows is retrieved for a query (select):
-- when 1: select just a single row (and raise exceptions no_data_found / too_many_rows when no or more than 1 row is fetched) and store them in scalars
-- when null: unlimited number of fetches and store them in arrays (even though at most 1 row may be fetched)
-- when greater than 1: fetch at most this amount of rows and store them in arrays (even though at most 1 row may be fetched)
-**/
-
-function empty_statement_tab
-return statement_tab_t;
-
-function empty_max_row_count_tab
-return max_row_count_tab_t;
-
-procedure do
-( p_operation in varchar2 -- (S)elect, (M)erge or (D)elete
-, p_parent_table_name in varchar2 -- we must start with this
-, p_table_bind_variable_tab in table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
-, p_statement_tab in statement_tab_t default empty_statement_tab -- per table a query (if any): if none or null it will default to 'select * from <table>' for a (S)elect
-, p_order_by_tab in statement_tab_t default empty_statement_tab -- per table an order by (if any)
-, p_owner in varchar2 default user -- the owner of the table(s)
-, p_max_row_count_tab in max_row_count_tab_t default empty_max_row_count_tab -- per table a max row count (if any)
-, p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
-);
-/**
-Perform SQL for a set of related tables.
-**/
 
 $if cfg_pkg.c_testing $then
 

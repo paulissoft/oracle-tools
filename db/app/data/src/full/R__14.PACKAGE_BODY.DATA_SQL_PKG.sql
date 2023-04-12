@@ -3,34 +3,7 @@ is
 
 -- private
 
-cursor c_col
-( b_owner in varchar2
-, b_table_name in varchar2
-)
-is
-  select  tc.owner
-  ,       tc.table_name
-  ,       tc.column_name
-  ,       tc.data_type
-  ,       tc.data_length
-  ,       cc.pk_key_position
-  from    all_tab_columns tc
-          left outer join 
-          ( select  cc.owner
-            ,       cc.table_name
-            ,       cc.column_name
-            ,       cc.position as pk_key_position
-            from    all_cons_columns cc
-                    inner join all_constraints c
-                    on c.owner = cc.owner and c.table_name = cc.table_name and c.constraint_type = 'P'
-          ) cc
-          on cc.owner = tc.owner and cc.table_name = tc.table_name and cc.column_name = tc.column_name
-  where   tc.owner = b_owner
-  and     tc.table_name = b_table_name
-  order by
-          tc.column_id;
-
-type column_tab_t is table of c_col%rowtype index by binary_integer;
+type column_tab_t is table of column_info_rec_t index by binary_integer;
 
 function bind_variable
 ( p_column_name in varchar2
@@ -50,11 +23,7 @@ return boolean
 deterministic
 is
 begin
-$if data_sql_pkg.c_column_value_is_anydata $then
-  return p_column_value is null;
-$else  
   return p_column_value.data_type is null;
-$end  
 end empty_bind_variable;
 
 procedure set_bind_variable
@@ -77,18 +46,6 @@ $if cfg_pkg.c_debugging $then
   , p_bind_variable_type
   );
 $end
-
-$if data_sql_pkg.c_column_value_is_anydata $then
-
-  case p_column_value.gettypename()
-    when 'SYS.DATE'     then dbms_sql.bind_variable(p_cursor, l_bind_variable, p_column_value.AccessDate());
-    when 'SYS.NUMBER'   then dbms_sql.bind_variable(p_cursor, l_bind_variable, p_column_value.AccessNumber());
-    when 'SYS.VARCHAR2' then dbms_sql.bind_variable(p_cursor, l_bind_variable, p_column_value.AccessVarchar2());
-      
-    else raise e_unimplemented_feature;
-  end case;
-  
-$else
 
   case p_column_value.data_type
     when 'CLOB'
@@ -129,14 +86,6 @@ $else
       end if;
     when 'NUMBER'
     then
-$if cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."input"
-      , 'bind variable: %s; value: %s'
-      , l_bind_variable
-      , p_column_value.number$
-      );
-$end
       if p_column_value.is_table
       then dbms_sql.bind_array(p_cursor, l_bind_variable, p_column_value.number$_table);
       else dbms_sql.bind_variable(p_cursor, l_bind_variable, p_column_value.number$);
@@ -187,8 +136,6 @@ $end
           end if;
       end case;
   end case;
-  
-$end -- $if data_sql_pkg.c_column_value_is_anydata $then  
 
 $if cfg_pkg.c_debugging $then
   dbug.leave;
@@ -202,7 +149,7 @@ procedure construct_statement
 , p_statement in varchar2
 , p_order_by in varchar2
 , p_bind_variable_tab in column_value_tab_t
-, p_column_value_tab in column_value_tab_t
+, p_column_value_tab in out nocopy column_value_tab_t
 , p_statement_lines out nocopy dbms_sql.varchar2a
 , p_input_column_tab out nocopy column_tab_t
 , p_output_column_tab out nocopy column_tab_t
@@ -226,8 +173,17 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
+  -- Merge does not allow for a RETURNING clause
+  if p_operation = 'M'
+  then
+    p_column_value_tab.delete;
+  end if;
+
   -- construct statement while defining the column table
-  for r in c_col(p_owner, p_table_name)
+  for r in
+  ( select  *
+    from    table(oracle_tools.data_sql_pkg.get_column_info(p_owner, p_table_name))
+  )
   loop
     if p_bind_variable_tab.exists(r.column_name) and
        not(empty_bind_variable(p_bind_variable_tab(r.column_name)))
@@ -552,13 +508,680 @@ $if cfg_pkg.c_debugging $then
   end loop;
   dbug.leave;
 $end
-exception
-  when others
-  then
-    if c_col%isopen then close c_col; end if;
 end construct_statement;
 
 -- public routines
+
+function empty_anydata
+return anydata_t
+is
+  l_anydata anydata_t;
+begin
+  return l_anydata;
+end empty_anydata;
+
+function empty_column_value_tab
+return column_value_tab_t
+is
+  l_column_value_tab column_value_tab_t;
+begin
+  return l_column_value_tab;
+end;
+
+procedure do
+( p_operation in varchar2
+, p_table_name in varchar2
+, p_bind_variable_tab in column_value_tab_t
+, p_statement in statement_t
+, p_order_by in varchar2
+, p_owner in varchar2
+, p_row_count in out nocopy natural
+, p_column_value_tab in out nocopy column_value_tab_t
+)
+is
+  l_max_row_count positive;
+  l_statement_lines dbms_sql.varchar2a;
+  l_cursor integer := null;
+  l_column_name all_tab_columns.column_name%type;
+  l_input_column_tab column_tab_t;
+  l_output_column_tab column_tab_t;
+
+  procedure set_bind_variables
+  is
+    l_column_idx pls_integer;
+  begin
+    l_column_idx := l_input_column_tab.first;
+    while l_column_idx is not null
+    loop
+      l_column_name := l_input_column_tab(l_column_idx).column_name;
+      set_bind_variable
+      ( l_cursor
+      , l_column_name
+      , p_bind_variable_tab(l_column_name)
+      );
+      l_column_idx := l_input_column_tab.next(l_column_idx);
+    end loop;
+
+    -- for DML, l_output_column_tab defines output variables (RETURNING clause)
+    if p_operation in ('I', 'U', 'D') and l_output_column_tab.count > 0
+    then
+      l_column_idx := l_output_column_tab.first;
+      while l_column_idx is not null
+      loop
+        l_column_name := l_output_column_tab(l_column_idx).column_name;
+        set_column_value
+        ( p_data_type => l_output_column_tab(l_column_idx).data_type
+        , p_is_table => true
+--TBD        , p_pk_key_position => l_output_column_tab(l_column_idx).pk_key_position
+        , p_column_value => p_column_value_tab(l_column_name)
+        );
+
+        -- Use empty values for output bind variable
+        set_column_value    
+        ( p_data_type => p_column_value_tab(l_column_name).data_type
+        , p_is_table => p_column_value_tab(l_column_name).is_table
+        , p_column_value => p_column_value_tab(l_column_name)
+        );
+
+        set_bind_variable
+        ( l_cursor
+        , l_column_name
+        , p_column_value_tab(l_column_name)
+        , 'O' -- output
+        );
+
+        l_column_idx := l_output_column_tab.next(l_column_idx);
+      end loop;
+    end if;
+  end set_bind_variables;
+
+  function fetch_limit
+  return positiven
+  is
+  begin
+    return
+      case
+        when l_max_row_count is null
+        then 100
+        when l_max_row_count = 1
+        then 2 -- to detect too many rows
+        else least(100, l_max_row_count)
+      end;        
+  end fetch_limit;
+
+  procedure define_columns
+  is
+    l_fetch_limit constant positiven := fetch_limit;
+  begin
+    <<column_loop>>
+    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
+    loop
+      case l_output_column_tab(i_idx).data_type
+        when 'CLOB'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table, l_fetch_limit, 1);
+          
+        when 'BINARY_FLOAT'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table, l_fetch_limit, 1);
+          
+        when 'BINARY_DOUBLE'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table, l_fetch_limit, 1);
+          
+        when 'BLOB'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table, l_fetch_limit, 1);
+          
+        when 'BFILE'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table, l_fetch_limit, 1);
+          
+        when 'DATE'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table, l_fetch_limit, 1);
+
+        when 'NUMBER'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table, l_fetch_limit, 1);
+
+        when 'UROWID'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table, l_fetch_limit, 1);
+          
+        when 'VARCHAR2'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table, l_fetch_limit, 1);
+
+        when 'TIMESTAMP'
+        then
+          p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table.delete;
+          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table, l_fetch_limit, 1);
+
+        else
+          case
+            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
+            then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table.delete;
+              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table, l_fetch_limit, 1);
+              
+            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
+            then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table.delete;
+              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table, l_fetch_limit, 1);
+              
+            when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
+            then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table.delete;
+              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table, l_fetch_limit, 1);
+              
+            when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
+            then
+              p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table.delete;
+              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table, l_fetch_limit, 1);
+            
+            else
+              raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
+          end case;
+      end case;
+    end loop;    
+  end define_columns;
+
+  procedure fetch_rows_and_columns
+  is
+    l_rows_fetched pls_integer; -- # rows fetched for last dbms_sql.fetch_rows()
+    l_row_count pls_integer := 0; -- total row count
+    l_fetch_limit constant positiven := fetch_limit;
+
+    procedure check_row_count
+    ( p_count in naturaln
+    )
+    is
+    begin
+$if cfg_pkg.c_debugging $then
+      dbug.print(dbug."debug", 'p_count: %s', p_count);
+$end  
+      case p_count
+        when 0
+        then raise no_data_found;
+        when 1
+        then null;
+        else raise too_many_rows;
+      end case;
+      p_row_count := p_count;
+    end check_row_count;
+  begin
+    <<fetch_loop>>
+    loop
+      l_rows_fetched := dbms_sql.fetch_rows(l_cursor);
+
+$if cfg_pkg.c_debugging $then
+      dbug.print(dbug."debug", '# rows fetched: %s', l_rows_fetched);
+$end  
+
+      exit fetch_loop when l_rows_fetched = 0;
+
+      l_row_count := l_row_count + l_rows_fetched;
+      
+      if l_max_row_count = 1 and l_row_count > l_max_row_count -- must fetch one more than needed for too_many_rows
+      then
+        raise too_many_rows;
+      end if;
+
+      <<column_loop>>
+      for i_idx in l_output_column_tab.first .. l_output_column_tab.last
+      loop
+        case l_output_column_tab(i_idx).data_type
+          when 'CLOB'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table);
+            
+          when 'BINARY_FLOAT'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table);
+            
+          when 'BINARY_DOUBLE'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table);
+            
+          when 'BLOB'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table);
+            
+          when 'BFILE'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table);
+            
+          when 'DATE'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table);
+              
+          when 'NUMBER'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table);
+
+          when 'UROWID'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table);
+            
+          when 'VARCHAR2'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table);
+
+          when 'TIMESTAMP'
+          then
+            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table);
+
+          else
+            case
+              when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
+              then
+                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table);
+                
+              when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
+              then
+                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table);
+                
+              when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
+              then
+                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table);
+                
+              when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
+              then
+                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
+              
+              else
+                raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
+            end case;
+        end case;
+      end loop column_loop;
+      
+      if l_max_row_count > 1 and l_row_count >= l_max_row_count -- no need to fetch more
+      then
+        exit fetch_loop;
+      end if;      
+
+      exit fetch_loop when l_rows_fetched < l_fetch_limit;
+    end loop fetch_loop;
+
+    <<column_loop>>
+    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
+    loop
+      l_column_name := l_output_column_tab(i_idx).column_name;
+
+      p_column_value_tab(l_column_name).data_type := l_output_column_tab(i_idx).data_type;
+      p_column_value_tab(l_column_name).is_table := case when l_max_row_count = 1 then false else true end;
+
+$if cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'l_column_name: %s; data type: %s'
+      , l_column_name
+      , p_column_value_tab(l_column_name).data_type
+      );
+$end
+
+      if not(p_column_value_tab(l_column_name).is_table)
+      then
+        -- now copy the first array element to the scalar
+        case p_column_value_tab(l_column_name).data_type
+          when 'CLOB'
+          then
+            check_row_count(p_column_value_tab(l_column_name).clob$_table.count);
+            p_column_value_tab(l_column_name).clob$ := p_column_value_tab(l_column_name).clob$_table(1);
+          when 'BINARY_FLOAT'
+          then
+            check_row_count(p_column_value_tab(l_column_name).binary_float$_table.count);
+            p_column_value_tab(l_column_name).binary_float$ := p_column_value_tab(l_column_name).binary_float$_table(1);
+          when 'BINARY_DOUBLE'
+          then
+            check_row_count(p_column_value_tab(l_column_name).binary_double$_table.count);
+            p_column_value_tab(l_column_name).binary_double$ := p_column_value_tab(l_column_name).binary_double$_table(1);
+          when 'BLOB'
+          then
+            check_row_count(p_column_value_tab(l_column_name).blob$_table.count);
+            p_column_value_tab(l_column_name).blob$ := p_column_value_tab(l_column_name).blob$_table(1);
+          when 'BFILE'
+          then
+            check_row_count(p_column_value_tab(l_column_name).bfile$_table.count);
+            p_column_value_tab(l_column_name).bfile$ := p_column_value_tab(l_column_name).bfile$_table(1);
+          when 'DATE'
+          then
+            check_row_count(p_column_value_tab(l_column_name).date$_table.count);
+            p_column_value_tab(l_column_name).date$ := p_column_value_tab(l_column_name).date$_table(1);
+          when 'NUMBER'
+          then
+            check_row_count(p_column_value_tab(l_column_name).number$_table.count);
+            p_column_value_tab(l_column_name).number$ := p_column_value_tab(l_column_name).number$_table(1);
+          when 'UROWID'
+          then
+            check_row_count(p_column_value_tab(l_column_name).urowid$_table.count);
+            p_column_value_tab(l_column_name).urowid$ := p_column_value_tab(l_column_name).urowid$_table(1);
+          when 'VARCHAR2'
+          then
+            check_row_count(p_column_value_tab(l_column_name).varchar2$_table.count);
+            p_column_value_tab(l_column_name).varchar2$ := p_column_value_tab(l_column_name).varchar2$_table(1);
+          when 'TIMESTAMP'
+          then
+            check_row_count(p_column_value_tab(l_column_name).timestamp$_table.count);
+            p_column_value_tab(l_column_name).timestamp$ := p_column_value_tab(l_column_name).timestamp$_table(1);
+          else
+            case
+              when p_column_value_tab(l_column_name).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
+              then
+                check_row_count(p_column_value_tab(l_column_name).timestamp_ltz$_table.count);
+                p_column_value_tab(l_column_name).timestamp_ltz$ := p_column_value_tab(l_column_name).timestamp_ltz$_table(1);
+              when p_column_value_tab(l_column_name).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
+              then
+                check_row_count(p_column_value_tab(l_column_name).timestamp_tz$_table.count);
+                p_column_value_tab(l_column_name).timestamp_tz$ := p_column_value_tab(l_column_name).timestamp_tz$_table(1);
+              when p_column_value_tab(l_column_name).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
+              then
+                check_row_count(p_column_value_tab(l_column_name).interval_ds$_table.count);
+                p_column_value_tab(l_column_name).interval_ds$ := p_column_value_tab(l_column_name).interval_ds$_table(1);
+              when p_column_value_tab(l_column_name).data_type like 'INTERVAL YEAR(_%) TO MONTH'
+              then
+                check_row_count(p_column_value_tab(l_column_name).interval_ym$_table.count);
+                p_column_value_tab(l_column_name).interval_ym$ := p_column_value_tab(l_column_name).interval_ym$_table(1);
+              else
+                raise_application_error(-20000, 'Unknown data type "' || p_column_value_tab(l_column_name).data_type || '"');
+            end case;
+        end case;
+      end if;
+    end loop column_loop;
+  end fetch_rows_and_columns;
+
+  procedure variable_values
+  is
+  begin
+    <<column_loop>>
+    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
+    loop
+      case l_output_column_tab(i_idx).data_type
+        when 'CLOB'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table);
+          
+        when 'BINARY_FLOAT'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table);
+          
+        when 'BINARY_DOUBLE'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table);
+          
+        when 'BLOB'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table);
+          
+        when 'BFILE'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table);
+          
+        when 'DATE'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table);
+
+        when 'NUMBER'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table);
+
+        when 'UROWID'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table);
+          
+        when 'VARCHAR2'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table);
+
+        when 'TIMESTAMP'
+        then
+          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table);
+
+        else
+          case
+            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
+            then
+              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table);
+              
+            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
+            then
+              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table);
+              
+            when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
+            then
+              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table);
+              
+            when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
+            then
+              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
+            
+            else
+              raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
+          end case;
+      end case;
+    end loop;    
+  end variable_values;
+
+  procedure cleanup
+  is
+  begin
+    if dbms_sql.is_open(l_cursor)
+    then
+      dbms_sql.close_cursor(l_cursor);
+    end if;
+  end cleanup;
+begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_operation: %s; table: %s; p_statement: %s; p_row_count: %s'
+  , p_operation
+  , '"' || p_owner || '"."' || p_table_name || '"'
+  , p_statement
+  , p_row_count
+  );
+$end
+
+  l_max_row_count := p_row_count;
+
+  construct_statement
+  ( p_operation => p_operation
+  , p_owner => p_owner
+  , p_table_name => p_table_name
+  , p_statement => p_statement
+  , p_order_by => p_order_by
+  , p_bind_variable_tab => p_bind_variable_tab
+  , p_column_value_tab => p_column_value_tab
+  , p_statement_lines => l_statement_lines
+  , p_input_column_tab => l_input_column_tab
+  , p_output_column_tab => l_output_column_tab
+  );
+  
+  l_cursor := dbms_sql.open_cursor;
+
+  begin
+    dbms_sql.parse
+    ( c => l_cursor
+    , statement => l_statement_lines
+    , lb => l_statement_lines.first
+    , ub => l_statement_lines.last
+    , lfflg => true
+    , language_flag => dbms_sql.native
+    );    
+  end;
+
+  set_bind_variables;
+  
+  -- query? define columns
+  case p_operation
+    when 'S'
+    then define_columns;
+    when 'I'
+    then null;
+    when 'U'
+    then null;
+    when 'M'
+    then null;
+    when 'D'
+    then null;
+    else raise e_unimplemented_feature;
+  end case;
+
+  p_row_count := dbms_sql.execute(l_cursor);
+
+  -- query? fetch rows and columns
+  case 
+    when p_operation = 'S'
+    then fetch_rows_and_columns;
+    when p_operation in ('I', 'U', 'M', 'D')
+    then variable_values;
+    else raise e_unimplemented_feature;
+  end case;
+
+  cleanup;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+exception
+  when others
+  then
+    cleanup;
+$if cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    raise;
+end do;
+
+function empty_statement_tab
+return statement_tab_t
+is
+  l_statement_tab statement_tab_t;
+begin
+  return l_statement_tab;
+end empty_statement_tab;
+
+procedure do
+( p_operation in varchar2
+, p_parent_table_name in varchar2
+, p_table_bind_variable_tab in table_column_value_tab_t
+, p_statement_tab in statement_tab_t
+, p_order_by_tab in statement_tab_t
+, p_owner in varchar2
+, p_row_count_tab in out nocopy row_count_tab_t
+, p_table_column_value_tab in out nocopy table_column_value_tab_t
+)
+is
+  l_table_name all_tab_columns.table_name%type;
+  l_table_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
+begin
+  -- parent at the beginning unless p_operation = 'D' -- Delete
+  if p_operation <> 'D'
+  then
+    l_table_name_tab.extend(1);
+    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
+  end if;
+
+  l_table_name := p_table_column_value_tab.first;
+  while l_table_name is not null
+  loop
+    if l_table_name <> p_parent_table_name
+    then
+      l_table_name_tab.extend(1);
+      l_table_name_tab(l_table_name_tab.last) := l_table_name;
+    end if;
+    
+    l_table_name := p_table_column_value_tab.next(l_table_name);
+  end loop;
+
+  -- parent at the beginning for p_operation = 'D' -- Delete
+  if p_operation = 'D'
+  then
+    l_table_name_tab.extend(1);
+    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
+  end if;
+
+  for i_idx in l_table_name_tab.first .. l_table_name_tab.last
+  loop
+    l_table_name := l_table_name_tab(i_idx);
+    if not(p_row_count_tab.exists(l_table_name))
+    then
+      p_row_count_tab(l_table_name) := null;
+    end if;
+    do
+    ( p_operation => p_operation
+    , p_table_name => l_table_name
+    , p_bind_variable_tab => case when p_table_bind_variable_tab.exists(l_table_name) then p_table_bind_variable_tab(l_table_name) else empty_column_value_tab end
+    , p_statement => case when p_statement_tab.exists(l_table_name) then p_statement_tab(l_table_name) end
+    , p_order_by => case when p_order_by_tab.exists(l_table_name) then p_order_by_tab(l_table_name) end
+    , p_owner => p_owner
+    , p_row_count => p_row_count_tab(l_table_name)
+    , p_column_value_tab => p_table_column_value_tab(l_table_name)
+    );
+  end loop;
+end do;
+
+function get_column_info
+( p_owner in all_tab_columns.owner%type
+, p_table_name in all_tab_columns.table_name%type
+, p_column_name_list in all_tab_columns.column_name%type
+)
+return column_info_tab_t
+pipelined
+is
+begin
+  for r in
+  ( select  tc.owner
+    ,       tc.table_name
+    ,       tc.column_name
+    ,       tc.data_type
+    ,       tc.data_length
+    ,       cc.pk_key_position
+    from    all_tab_columns tc
+            inner join
+            ( select  e.column_value as column_name_expr
+              from    table
+                      ( oracle_tools.api_pkg.list2collection
+                        ( p_value_list => p_column_name_list
+                        , p_sep => ','
+                        , p_ignore_null => 1
+                        )
+                      ) e
+            ) e
+            on tc.column_name like e.column_name_expr escape '\'
+            left outer join 
+            ( select  cc.owner
+              ,       cc.table_name
+              ,       cc.column_name
+              ,       cc.position as pk_key_position
+              from    all_cons_columns cc
+                      inner join all_constraints c
+                      on c.owner = cc.owner and c.table_name = cc.table_name and c.constraint_type = 'P'
+            ) cc
+            on cc.owner = tc.owner and cc.table_name = tc.table_name and cc.column_name = tc.column_name
+    where   tc.owner = p_owner
+    and     tc.table_name = p_table_name
+    order by
+            cc.pk_key_position nulls last
+    ,       tc.column_id
+  )
+  loop
+    pipe row (r);
+  end loop;
+
+  return;
+end get_column_info;
 
 function empty_clob_table
 return dbms_sql.clob_table
@@ -675,7 +1298,7 @@ end;
 procedure set_column_value
 ( p_data_type in all_tab_columns.data_type%type
 , p_is_table in boolean
-, p_pk_key_position in all_cons_columns.position%type
+--TBD, p_pk_key_position in all_cons_columns.position%type
 , p_clob$ in clob
 , p_clob$_table in dbms_sql.clob_table
 , p_binary_float$ in binary_float
@@ -710,7 +1333,7 @@ is
 begin
   p_column_value.data_type:= p_data_type;
   p_column_value.is_table:= p_is_table;
-  p_column_value.pk_key_position:= p_pk_key_position;
+--TBD  p_column_value.pk_key_position:= p_pk_key_position;
   p_column_value.clob$ := p_clob$;
   p_column_value.clob$_table := p_clob$_table;
   p_column_value.binary_float$ := p_binary_float$;
@@ -740,696 +1363,6 @@ begin
   p_column_value.interval_ym$ := p_interval_ym$;
   p_column_value.interval_ym$_table := p_interval_ym$_table;
 end set_column_value;
-
-function empty_anydata
-return anydata_t
-is
-$if data_sql_pkg.c_column_value_is_anydata $then
-  l_anydata anydata_t := null;
-$else  
-  l_anydata anydata_t;
-$end  
-begin
-  return l_anydata;
-end empty_anydata;
-
-function empty_column_value_tab
-return column_value_tab_t
-is
-  l_column_value_tab column_value_tab_t;
-begin
-  return l_column_value_tab;
-end;
-
-procedure do
-( p_operation in varchar2
-, p_table_name in varchar2
-, p_bind_variable_tab in column_value_tab_t
-, p_statement in statement_t
-, p_order_by in varchar2
-, p_owner in varchar2
-, p_max_row_count in positive default null
-, p_column_value_tab in out nocopy column_value_tab_t
-)
-is
-  l_statement_lines dbms_sql.varchar2a;
-  l_cursor integer := null;
-  l_nr_rows_processed pls_integer;
-  l_column_name all_tab_columns.column_name%type;
-
-$if data_sql_pkg.c_column_value_is_anydata $then
-
-  type column_date_tab_t is table of dbms_sql.date_table index by binary_integer;
-  type column_number_tab_t is table of dbms_sql.number_table index by binary_integer;
-  type column_varchar2_tab_t is table of dbms_sql.varchar2_table index by binary_integer;
-
-  l_column_date_tab column_date_tab_t;
-  l_column_number_tab column_number_tab_t;
-  l_column_varchar2_tab column_varchar2_tab_t;
-
-$end -- $if data_sql_pkg.c_column_value_is_anydata $then
-
-  l_input_column_tab column_tab_t;
-  l_output_column_tab column_tab_t;
-
-  procedure set_bind_variables
-  is
-    l_column_idx pls_integer;
-  begin
-    l_column_idx := l_input_column_tab.first;
-    while l_column_idx is not null
-    loop
-      l_column_name := l_input_column_tab(l_column_idx).column_name;
-      set_bind_variable
-      ( l_cursor
-      , l_column_name
-      , p_bind_variable_tab(l_column_name)
-      );
-      l_column_idx := l_input_column_tab.next(l_column_idx);
-    end loop;
-
-    -- for DML, l_output_column_tab defines output variables (RETURNING clause)
-    if p_operation in ('I', 'U', 'D') and l_output_column_tab.count > 0
-    then
-      l_column_idx := l_output_column_tab.first;
-      while l_column_idx is not null
-      loop
-        l_column_name := l_output_column_tab(l_column_idx).column_name;
-        set_column_value
-        ( p_data_type => l_output_column_tab(l_column_idx).data_type
-        , p_is_table => true
-        , p_pk_key_position => l_output_column_tab(l_column_idx).pk_key_position
-        , p_column_value => p_column_value_tab(l_column_name)
-        );
-        
-        set_bind_variable
-        ( l_cursor
-        , l_column_name
-        , p_column_value_tab(l_column_name)
-        , 'O' -- output
-        );
-
-        l_column_idx := l_output_column_tab.next(l_column_idx);
-      end loop;
-    end if;
-  end set_bind_variables;
-
-  function fetch_limit
-  return positiven
-  is
-  begin
-    return
-      case
-        when p_max_row_count is null
-        then 100
-        when p_max_row_count = 1
-        then 2 -- to detect too many rows
-        else least(100, p_max_row_count)
-      end;        
-  end fetch_limit;
-
-  procedure define_columns
-  is
-    l_fetch_limit constant positiven := fetch_limit;
-  begin
-    <<column_loop>>
-    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
-    loop
-      case l_output_column_tab(i_idx).data_type
-        when 'CLOB'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table, l_fetch_limit, 1);
-          
-        when 'BINARY_FLOAT'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table, l_fetch_limit, 1);
-          
-        when 'BINARY_DOUBLE'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table, l_fetch_limit, 1);
-          
-        when 'BLOB'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table, l_fetch_limit, 1);
-          
-        when 'BFILE'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table, l_fetch_limit, 1);
-          
-        when 'DATE'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table, l_fetch_limit, 1);
-
-        when 'NUMBER'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table, l_fetch_limit, 1);
-
-        when 'UROWID'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table, l_fetch_limit, 1);
-          
-        when 'VARCHAR2'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table, l_fetch_limit, 1);
-
-        when 'TIMESTAMP'
-        then
-          p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table.delete;
-          dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table, l_fetch_limit, 1);
-
-        else
-          case
-            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
-            then
-              p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table.delete;
-              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table, l_fetch_limit, 1);
-              
-            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
-            then
-              p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table.delete;
-              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table, l_fetch_limit, 1);
-              
-            when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
-            then
-              p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table.delete;
-              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table, l_fetch_limit, 1);
-              
-            when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
-            then
-              p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table.delete;
-              dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table, l_fetch_limit, 1);
-            
-            else
-              raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
-          end case;
-      end case;
-    end loop;    
-  end define_columns;
-
-  procedure fetch_rows_and_columns
-  is
-    l_rows_fetched pls_integer; -- # rows fetched for last dbms_sql.fetch_rows()
-    l_row_count pls_integer := 0; -- total row count
-    l_fetch_limit constant positiven := fetch_limit;
-
-    procedure check_row_count
-    ( p_count in naturaln
-    )
-    is
-    begin
-$if cfg_pkg.c_debugging $then
-      dbug.print(dbug."debug", 'p_count: %s', p_count);
-$end  
-      case p_count
-        when 0
-        then raise no_data_found;
-        when 1
-        then null;
-        else raise too_many_rows;
-      end case;
-    end check_row_count;
-  begin
-    <<fetch_loop>>
-    loop
-      l_rows_fetched := dbms_sql.fetch_rows(l_cursor);
-
-$if cfg_pkg.c_debugging $then
-      dbug.print(dbug."debug", '# rows fetched: %s', l_rows_fetched);
-$end  
-
-      exit fetch_loop when l_rows_fetched = 0;
-
-      l_row_count := l_row_count + l_rows_fetched;
-      
-      if p_max_row_count = 1 and l_row_count > p_max_row_count -- must fetch one more than needed for too_many_rows
-      then
-        raise too_many_rows;
-      end if;
-
-      <<column_loop>>
-      for i_idx in l_output_column_tab.first .. l_output_column_tab.last
-      loop
-        case l_output_column_tab(i_idx).data_type
-          when 'DATE'
-          then
-$if data_sql_pkg.c_column_value_is_anydata $then          
-            dbms_sql.column_value(l_cursor, i_idx, l_column_date_tab(i_idx));
-$else
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table);
-$end            
-              
-          when 'NUMBER'
-          then
-$if data_sql_pkg.c_column_value_is_anydata $then          
-            dbms_sql.column_value(l_cursor, i_idx, l_column_number_tab(i_idx));
-$else
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table);
-$end            
-
-          when 'VARCHAR2'
-          then
-$if data_sql_pkg.c_column_value_is_anydata $then          
-            dbms_sql.column_value(l_cursor, i_idx, l_column_varchar2_tab(i_idx));
-$else
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table);
-$end            
-
-          when 'CLOB'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table);
-            
-          when 'BINARY_FLOAT'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table);
-            
-          when 'BINARY_DOUBLE'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table);
-            
-          when 'BLOB'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table);
-            
-          when 'BFILE'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table);
-            
-          when 'UROWID'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table);
-            
-          when 'TIMESTAMP'
-          then
-            dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table);
-
-          else
-            case
-              when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
-              then
-                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table);
-                
-              when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
-              then
-                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table);
-                
-              when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
-              then
-                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table);
-                
-              when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
-              then
-                dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
-              
-              else
-                raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
-            end case;
-        end case;
-      end loop column_loop;
-      
-      if p_max_row_count > 1 and l_row_count >= p_max_row_count -- no need to fetch more
-      then
-        exit fetch_loop;
-      end if;      
-
-      exit fetch_loop when l_rows_fetched < l_fetch_limit;
-    end loop fetch_loop;
-
-$if data_sql_pkg.c_column_value_is_anydata $then
-
-    -- now copy the arrays to p_column_value_tab
-    <<column_loop>>
-    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
-    loop
-      case l_output_column_tab(i_idx).data_type
-        when 'DATE'
-        then
-          if p_max_row_count = 1
-          then
-            check_row_count(l_column_date_tab(i_idx).count);
-            p_column_value_tab(l_output_column_tab(i_idx).column_name) := anydata.ConvertDate(l_column_date_tab(i_idx)(1));
-          else
-            p_column_value_tab(l_output_column_tab(i_idx).column_name) := anydata.ConvertCollection(l_column_date_tab(i_idx));
-          end if;
-          
-        when 'NUMBER'
-        then
-          if p_max_row_count = 1
-          then
-            check_row_count(l_column_number_tab(i_idx).count);
-            p_column_value_tab(l_output_column_tab(i_idx).column_name) := anydata.ConvertNumber(l_column_number_tab(i_idx)(1));
-          else
-            p_column_value_tab(l_output_column_tab(i_idx).column_name) := anydata.ConvertCollection(l_column_number_tab(i_idx));
-          end if;
-
-        when 'VARCHAR2'
-        then
-          if p_max_row_count = 1
-          then
-            check_row_count(l_column_varchar2_tab(i_idx).count);
-            p_column_value_tab(l_output_column_tab(i_idx).column_name) := anydata.ConvertVarchar2(l_column_varchar2_tab(i_idx)(1));
-          else
-            p_column_value_tab(l_output_column_tab(i_idx).column_name) := anydata.ConvertCollection(l_column_varchar2_tab(i_idx));
-          end if;
-          
-        else
-          raise e_unimplemented_feature;
-      end case;
-    end loop column_loop;
-
-$else
-
-    <<column_loop>>
-    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
-    loop
-      l_column_name := l_output_column_tab(i_idx).column_name;
-
-      p_column_value_tab(l_column_name).data_type := l_output_column_tab(i_idx).data_type;
-      p_column_value_tab(l_column_name).is_table := case when p_max_row_count = 1 then false else true end;
-
-$if cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , 'l_column_name: %s; data type: %s'
-      , l_column_name
-      , p_column_value_tab(l_column_name).data_type
-      );
-$end
-
-      if not(p_column_value_tab(l_column_name).is_table)
-      then
-        -- now copy the first array element to the scalar
-        case p_column_value_tab(l_column_name).data_type
-          when 'CLOB'
-          then
-            check_row_count(p_column_value_tab(l_column_name).clob$_table.count);
-            p_column_value_tab(l_column_name).clob$ := p_column_value_tab(l_column_name).clob$_table(1);
-          when 'BINARY_FLOAT'
-          then
-            check_row_count(p_column_value_tab(l_column_name).binary_float$_table.count);
-            p_column_value_tab(l_column_name).binary_float$ := p_column_value_tab(l_column_name).binary_float$_table(1);
-          when 'BINARY_DOUBLE'
-          then
-            check_row_count(p_column_value_tab(l_column_name).binary_double$_table.count);
-            p_column_value_tab(l_column_name).binary_double$ := p_column_value_tab(l_column_name).binary_double$_table(1);
-          when 'BLOB'
-          then
-            check_row_count(p_column_value_tab(l_column_name).blob$_table.count);
-            p_column_value_tab(l_column_name).blob$ := p_column_value_tab(l_column_name).blob$_table(1);
-          when 'BFILE'
-          then
-            check_row_count(p_column_value_tab(l_column_name).bfile$_table.count);
-            p_column_value_tab(l_column_name).bfile$ := p_column_value_tab(l_column_name).bfile$_table(1);
-          when 'DATE'
-          then
-            check_row_count(p_column_value_tab(l_column_name).date$_table.count);
-            p_column_value_tab(l_column_name).date$ := p_column_value_tab(l_column_name).date$_table(1);
-          when 'NUMBER'
-          then
-            check_row_count(p_column_value_tab(l_column_name).number$_table.count);
-            p_column_value_tab(l_column_name).number$ := p_column_value_tab(l_column_name).number$_table(1);
-          when 'UROWID'
-          then
-            check_row_count(p_column_value_tab(l_column_name).urowid$_table.count);
-            p_column_value_tab(l_column_name).urowid$ := p_column_value_tab(l_column_name).urowid$_table(1);
-          when 'VARCHAR2'
-          then
-            check_row_count(p_column_value_tab(l_column_name).varchar2$_table.count);
-            p_column_value_tab(l_column_name).varchar2$ := p_column_value_tab(l_column_name).varchar2$_table(1);
-          when 'TIMESTAMP'
-          then
-            check_row_count(p_column_value_tab(l_column_name).timestamp$_table.count);
-            p_column_value_tab(l_column_name).timestamp$ := p_column_value_tab(l_column_name).timestamp$_table(1);
-          else
-            case
-              when p_column_value_tab(l_column_name).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
-              then
-                check_row_count(p_column_value_tab(l_column_name).timestamp_ltz$_table.count);
-                p_column_value_tab(l_column_name).timestamp_ltz$ := p_column_value_tab(l_column_name).timestamp_ltz$_table(1);
-              when p_column_value_tab(l_column_name).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
-              then
-                check_row_count(p_column_value_tab(l_column_name).timestamp_tz$_table.count);
-                p_column_value_tab(l_column_name).timestamp_tz$ := p_column_value_tab(l_column_name).timestamp_tz$_table(1);
-              when p_column_value_tab(l_column_name).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
-              then
-                check_row_count(p_column_value_tab(l_column_name).interval_ds$_table.count);
-                p_column_value_tab(l_column_name).interval_ds$ := p_column_value_tab(l_column_name).interval_ds$_table(1);
-              when p_column_value_tab(l_column_name).data_type like 'INTERVAL YEAR(_%) TO MONTH'
-              then
-                check_row_count(p_column_value_tab(l_column_name).interval_ym$_table.count);
-                p_column_value_tab(l_column_name).interval_ym$ := p_column_value_tab(l_column_name).interval_ym$_table(1);
-              else
-                raise_application_error(-20000, 'Unknown data type "' || p_column_value_tab(l_column_name).data_type || '"');
-            end case;
-        end case;
-      end if;
-    end loop column_loop;
-    
-$end -- $if data_sql_pkg.c_column_value_is_anydata $then
-
-  end fetch_rows_and_columns;
-
-  procedure variable_values
-  is
-  begin
-    <<column_loop>>
-    for i_idx in l_output_column_tab.first .. l_output_column_tab.last
-    loop
-      case l_output_column_tab(i_idx).data_type
-        when 'CLOB'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table);
-          
-        when 'BINARY_FLOAT'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table);
-          
-        when 'BINARY_DOUBLE'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table);
-          
-        when 'BLOB'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table);
-          
-        when 'BFILE'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table);
-          
-        when 'DATE'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table);
-
-        when 'NUMBER'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table);
-
-        when 'UROWID'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table);
-          
-        when 'VARCHAR2'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table);
-
-        when 'TIMESTAMP'
-        then
-          dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp$_table);
-
-        else
-          case
-            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
-            then
-              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table);
-              
-            when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
-            then
-              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table);
-              
-            when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
-            then
-              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table);
-              
-            when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
-            then
-              dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
-            
-            else
-              raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
-          end case;
-      end case;
-    end loop;    
-  end variable_values;
-
-  procedure cleanup
-  is
-  begin
-    if dbms_sql.is_open(l_cursor)
-    then
-      dbms_sql.close_cursor(l_cursor);
-    end if;
-  end cleanup;
-begin
-$if cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
-  dbug.print
-  ( dbug."input"
-  , 'p_operation: %s; table: %s; p_statement: %s; p_max_row_count: %s'
-  , p_operation
-  , '"' || p_owner || '"."' || p_table_name || '"'
-  , p_statement
-  , p_max_row_count
-  );
-$end
-
-  construct_statement
-  ( p_operation => p_operation
-  , p_owner => p_owner
-  , p_table_name => p_table_name
-  , p_statement => p_statement
-  , p_order_by => p_order_by
-  , p_bind_variable_tab => p_bind_variable_tab
-  , p_column_value_tab => p_column_value_tab
-  , p_statement_lines => l_statement_lines
-  , p_input_column_tab => l_input_column_tab
-  , p_output_column_tab => l_output_column_tab
-  );
-  
-  l_cursor := dbms_sql.open_cursor;
-
-  begin
-    dbms_sql.parse
-    ( c => l_cursor
-    , statement => l_statement_lines
-    , lb => l_statement_lines.first
-    , ub => l_statement_lines.last
-    , lfflg => true
-    , language_flag => dbms_sql.native
-    );    
-  end;
-
-  set_bind_variables;
-  
-  -- query? define columns
-  case p_operation
-    when 'S'
-    then define_columns;
-    when 'I'
-    then null;
-    when 'U'
-    then null;
-    when 'M'
-    then null;
-    when 'D'
-    then null;
-    else raise e_unimplemented_feature;
-  end case;
-
-  l_nr_rows_processed := dbms_sql.execute(l_cursor);
-
-  -- query? fetch rows and columns
-  case 
-    when p_operation = 'S'
-    then fetch_rows_and_columns;
-    when p_operation in ('I', 'U', 'M', 'D')
-    then variable_values;
-    else raise e_unimplemented_feature;
-  end case;
-
-  cleanup;
-
-$if cfg_pkg.c_debugging $then
-  dbug.leave;
-$end
-exception
-  when others
-  then
-    cleanup;
-$if cfg_pkg.c_debugging $then
-    dbug.leave_on_error;
-$end
-    raise;
-end do;
-
-function empty_statement_tab
-return statement_tab_t
-is
-  l_statement_tab statement_tab_t;
-begin
-  return l_statement_tab;
-end empty_statement_tab;
-
-function empty_max_row_count_tab
-return max_row_count_tab_t
-is
-  l_max_row_count_tab max_row_count_tab_t;
-begin
-  return l_max_row_count_tab;
-end empty_max_row_count_tab;
-
-procedure do
-( p_operation in varchar2
-, p_parent_table_name in varchar2
-, p_table_bind_variable_tab in table_column_value_tab_t
-, p_statement_tab in statement_tab_t
-, p_order_by_tab in statement_tab_t
-, p_owner in varchar2
-, p_max_row_count_tab in max_row_count_tab_t
-, p_table_column_value_tab in out nocopy table_column_value_tab_t
-)
-is
-  l_table_name all_tab_columns.table_name%type;
-  l_table_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
-begin
-  -- parent at the beginning unless p_operation = 'D' -- Delete
-  if p_operation <> 'D'
-  then
-    l_table_name_tab.extend(1);
-    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
-  end if;
-
-  l_table_name := p_table_column_value_tab.first;
-  while l_table_name is not null
-  loop
-    if l_table_name <> p_parent_table_name
-    then
-      l_table_name_tab.extend(1);
-      l_table_name_tab(l_table_name_tab.last) := l_table_name;
-    end if;
-    
-    l_table_name := p_table_column_value_tab.next(l_table_name);
-  end loop;
-
-  -- parent at the beginning for p_operation = 'D' -- Delete
-  if p_operation = 'D'
-  then
-    l_table_name_tab.extend(1);
-    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
-  end if;
-
-  for i_idx in l_table_name_tab.first .. l_table_name_tab.last
-  loop
-    l_table_name := l_table_name_tab(i_idx);
-    do
-    ( p_operation => p_operation
-    , p_table_name => l_table_name
-    , p_bind_variable_tab => case when p_table_bind_variable_tab.exists(l_table_name) then p_table_bind_variable_tab(l_table_name) else empty_column_value_tab end
-    , p_statement => case when p_statement_tab.exists(l_table_name) then p_statement_tab(l_table_name) end
-    , p_order_by => case when p_order_by_tab.exists(l_table_name) then p_order_by_tab(l_table_name) end
-    , p_owner => p_owner
-    , p_max_row_count => case when p_max_row_count_tab.exists(l_table_name) then p_max_row_count_tab(l_table_name) end
-    , p_column_value_tab => p_table_column_value_tab(l_table_name)
-    );
-  end loop;
-end do;
 
 $if cfg_pkg.c_testing $then
 
@@ -1504,20 +1437,13 @@ is
   l_date_tab dbms_sql.date_table;
   l_number_tab dbms_sql.number_table;
   l_varchar2_tab dbms_sql.varchar2_table;
+  l_row_count natural := null;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP');
 $end
 
-$if data_sql_pkg.c_column_value_is_anydata $then
-
-  l_bind_variable_tab('DEPTNO') := anydata.ConvertNumber(20);
-
-$else
-
   set_column_value( p_data_type => 'NUMBER', p_number$ => 20, p_column_value => l_bind_variable_tab('DEPTNO') );
-
-$end -- $if data_sql_pkg.c_column_value_is_anydata $then
 
   l_column_value_tab('EMPNO') := null;
   l_column_value_tab('JOB') := null;
@@ -1529,6 +1455,7 @@ $end -- $if data_sql_pkg.c_column_value_is_anydata $then
   , p_table_name => 'MY_EMP'
   , p_bind_variable_tab => l_bind_variable_tab
   , p_order_by => 'EMPNO'
+  , p_row_count => l_row_count
   , p_column_value_tab => l_column_value_tab
   );
 
@@ -1540,42 +1467,27 @@ $end -- $if data_sql_pkg.c_column_value_is_anydata $then
     case
       when l_column_value in ('EMPNO', 'DEPTNO')
       then
-$if data_sql_pkg.c_column_value_is_anydata $then
-        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.NUMBER_TABLE');
-        ut.expect(l_column_value_tab(l_column_value).GetCollection(l_number_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
-$else        
         ut.expect(l_column_value_tab(l_column_value).data_type, 'data type ' || l_column_value).to_equal('NUMBER');
         ut.expect(l_column_value_tab(l_column_value).is_table, 'is table ' || l_column_value).to_be_true();
         l_number_tab := l_column_value_tab(l_column_value).number$_table;
-$end        
         ut.expect(l_number_tab.count, 'collection count ' || l_column_value).to_equal(5);
         ut.expect(l_number_tab(1), 'element #1 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7369 else 20 end);
         ut.expect(l_number_tab(5), 'element #5 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7902 else 20 end);
         
       when l_column_value in ('JOB')
       then
-$if data_sql_pkg.c_column_value_is_anydata $then
-        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.VARCHAR2_TABLE');
-        ut.expect(l_column_value_tab(l_column_value).GetCollection(l_varchar2_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
-$else        
         ut.expect(l_column_value_tab(l_column_value).data_type, 'data type ' || l_column_value).to_equal('VARCHAR2');
         ut.expect(l_column_value_tab(l_column_value).is_table, 'is table ' || l_column_value).to_be_true();
         l_varchar2_tab := l_column_value_tab(l_column_value).varchar2$_table;
-$end        
         ut.expect(l_varchar2_tab.count, 'collection count ' || l_column_value).to_equal(5);
         ut.expect(l_varchar2_tab(1), 'element #1 for column ' || l_column_value).to_equal('CLERK');
         ut.expect(l_varchar2_tab(5), 'element #5 for column ' || l_column_value).to_equal('ANALYST');
         
       when l_column_value in ('HIREDATE')
       then
-$if data_sql_pkg.c_column_value_is_anydata $then
-        ut.expect(l_column_value_tab(l_column_value).gettypename(), 'data type ' || l_column_value).to_equal('SYS.DATE_TABLE');
-        ut.expect(l_column_value_tab(l_column_value).GetCollection(l_date_tab), 'get collection ' || l_column_value).to_equal(DBMS_TYPES.SUCCESS);
-$else        
         ut.expect(l_column_value_tab(l_column_value).data_type, 'data type ' || l_column_value).to_equal('DATE');
         ut.expect(l_column_value_tab(l_column_value).is_table, 'is table ' || l_column_value).to_be_true();
         l_date_tab := l_column_value_tab(l_column_value).date$_table;
-$end        
         ut.expect(l_date_tab.count, 'collection count ' || l_column_value).to_equal(5);
         ut.expect(l_date_tab(1), 'element #1 for column ' || l_column_value).to_equal(to_date('17-12-1980','dd-mm-yyyy'));
         ut.expect(l_date_tab(5), 'element #5 for column ' || l_column_value).to_equal(to_date('3-12-1981','dd-mm-yyyy'));
@@ -1588,25 +1500,18 @@ $end
   for i_try in 0..2
   loop
     begin
-$if data_sql_pkg.c_column_value_is_anydata $then
-
-      l_bind_variable_tab('DEPTNO') := case when i_try <> 1 then anydata.ConvertNumber(i_try * 10) else empty_anydata end;
-
-$else
-     
       case
         when i_try <> 1
         then set_column_value( p_data_type => 'NUMBER', p_number$ => i_try * 10, p_column_value => l_bind_variable_tab('DEPTNO') );
         else set_column_value( p_column_value => l_bind_variable_tab('DEPTNO') );
       end case;      
 
-$end -- $if data_sql_pkg.c_column_value_is_anydata $then
-
+      l_row_count := case when i_try < 2 then 1 else 5 end;
       do
       ( p_operation => 'S'
       , p_table_name => 'MY_EMP'
       , p_bind_variable_tab => l_bind_variable_tab
-      , p_max_row_count => case when i_try < 2 then 1 else 5 end
+      , p_row_count => l_row_count
       , p_column_value_tab => l_column_value_tab
       );
       if i_try <> 2
@@ -1644,7 +1549,7 @@ end;
 procedure ut_do_emp_dept
 is
   l_table_bind_variable_tab table_column_value_tab_t;
-  l_max_row_count_tab max_row_count_tab_t;
+  l_row_count_tab row_count_tab_t;
   l_table_column_value_tab table_column_value_tab_t;
   l_count pls_integer;
   l_cursor sys_refcursor;
@@ -1659,8 +1564,8 @@ $end
   , p_number$ => 20
   , p_column_value => l_table_bind_variable_tab('MY_DEPT')('DEPTNO')
   );
-  l_max_row_count_tab('MY_DEPT') := 1;
-  for r_col in c_col(user, 'MY_DEPT')
+  l_row_count_tab('MY_DEPT') := 1;
+  for r_col in ( select * from table(data_sql_pkg.get_column_info(user, 'MY_DEPT')) )
   loop
     set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
   end loop;
@@ -1670,8 +1575,8 @@ $end
   , p_number$ => 20
   , p_column_value => l_table_bind_variable_tab('MY_EMP')('DEPTNO')
   );
-  l_max_row_count_tab('MY_EMP') := null;
-  for r_col in c_col(user, 'MY_EMP')
+  l_row_count_tab('MY_EMP') := null;
+  for r_col in ( select * from table(data_sql_pkg.get_column_info(user, 'MY_EMP')) )
   loop
     set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
   end loop;
@@ -1680,7 +1585,7 @@ $end
   ( p_operation => 'S'
   , p_parent_table_name => 'MY_DEPT'
   , p_table_bind_variable_tab => l_table_bind_variable_tab
-  , p_max_row_count_tab => l_max_row_count_tab
+  , p_row_count_tab => l_row_count_tab
   , p_table_column_value_tab => l_table_column_value_tab
   );
 
@@ -1688,11 +1593,12 @@ $end
   l_table_bind_variable_tab.delete;
   l_table_bind_variable_tab('MY_DEPT')('DEPTNO') := l_table_column_value_tab('MY_DEPT')('DEPTNO');
   l_table_bind_variable_tab('MY_EMP')('EMPNO') := l_table_column_value_tab('MY_EMP')('EMPNO');
+  l_row_count_tab.delete;
   do
   ( p_operation => 'D'
   , p_parent_table_name => 'MY_DEPT'
   , p_table_bind_variable_tab => l_table_bind_variable_tab
-  , p_max_row_count_tab => l_max_row_count_tab
+  , p_row_count_tab => l_row_count_tab
   , p_table_column_value_tab => l_table_column_value_tab
   );
 
@@ -1708,11 +1614,12 @@ $end
 
   -- use output from previous call as input for bind variables but just the PK columns
   l_table_bind_variable_tab := l_table_column_value_tab;
+  l_row_count_tab.delete;
   do
   ( p_operation => 'I'
   , p_parent_table_name => 'MY_DEPT'
   , p_table_bind_variable_tab => l_table_bind_variable_tab
-  , p_max_row_count_tab => l_max_row_count_tab
+  , p_row_count_tab => l_row_count_tab
   , p_table_column_value_tab => l_table_column_value_tab
   );
 
