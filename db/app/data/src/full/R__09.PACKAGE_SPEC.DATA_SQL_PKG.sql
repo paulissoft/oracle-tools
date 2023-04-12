@@ -75,7 +75,6 @@ type row_count_tab_t is table of natural index by all_tab_columns.table_name%typ
 type column_value_t is record
 ( data_type all_tab_columns.data_type%type -- determines which field records are valid
 , is_table boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
---TBD, pk_key_position all_cons_columns.position%type -- position of this column in the primary key
 
 , clob$                clob
 , clob$_table          dbms_sql.clob_table
@@ -235,7 +234,6 @@ return dbms_sql.interval_year_to_month_table;
 procedure set_column_value
 ( p_data_type in all_tab_columns.data_type%type default null -- determines which field records are valid
 , p_is_table in boolean default false -- determines whether the scalar (FALSE) or array variant (TRUE) is valid
---TBD, p_pk_key_position in all_cons_columns.position%type default null -- position of this column in the primary key
 , p_clob$ in clob default null
 , p_clob$_table in dbms_sql.clob_table default empty_clob_table
 , p_binary_float$ in binary_float default null
@@ -284,7 +282,6 @@ procedure ut_teardown;
 procedure ut_do_emp;
 
 --%test
---%disabled
 procedure ut_do_dept;
 
 --%test
