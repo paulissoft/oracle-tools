@@ -1,5 +1,8 @@
 CREATE OR REPLACE PACKAGE "DATA_SQL_PKG" authid current_user is
 
+-- 0: no debugging; 1: normal; 2: extra
+c_debugging constant naturaln := $if cfg_pkg.c_debugging $then 2 $else 0 $end;
+
 -- SYS.STANDARD defines TIME_UNCONSTRAINED and TIME_TZ_UNCONSTRAINED but there is no anydata.Convert* function for it.
 c_support_time constant boolean := false;
 
@@ -262,6 +265,22 @@ procedure set_column_value
 , p_column_value out nocopy column_value_t
 );
 /** Set a column value. **/
+
+$if cfg_pkg.c_debugging $then
+
+procedure print
+( p_what in varchar2
+, p_column_value_tab in column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+);
+/** Print the column values with a heading using dbug.print(). **/
+
+procedure print
+( p_what in varchar2
+, p_table_column_value_tab in table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
+);
+/** Print the tables and their column values with a heading using dbug.print(). **/
+
+$end -- $if cfg_pkg.c_debugging $then
 
 $if cfg_pkg.c_testing $then
 

@@ -35,7 +35,7 @@ procedure set_bind_variable
 is
   l_bind_variable constant all_tab_columns.column_name%type := bind_variable(p_column_name, p_bind_variable_type);
 begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SET_BIND_VARIABLE');
   dbug.print
   ( dbug."input"
@@ -137,7 +137,7 @@ $end
       end case;
   end case;
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 end set_bind_variable;
@@ -160,7 +160,7 @@ is
   l_column_name all_tab_columns.column_name%type;
   l_column_idx pls_integer;
 begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT_STATEMENT');
   dbug.print
   ( dbug."input"
@@ -249,7 +249,7 @@ $end
           's."' || r.column_name || '"';
       end if;
     end if;          
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
     dbug.print
     ( dbug."debug"
     , 'r.column_name: %s; r.pk_key_position: %s; bind variable?: %s; column value?: %s; where clause: "%s"'
@@ -262,7 +262,7 @@ $if cfg_pkg.c_debugging $then
 $end
   end loop;
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.print
   ( dbug."debug"
   , 'where clause after get_column_info: "%s"'
@@ -546,7 +546,7 @@ $end
     end loop;  
   end if;
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   for i_idx in p_statement_lines.first .. p_statement_lines.last
   loop
     dbug.print(dbug."debug", 'p_statement_lines(%s): %s', to_char(i_idx, 'FM000'), p_statement_lines(i_idx));
@@ -750,7 +750,7 @@ is
     )
     is
     begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
       dbug.print(dbug."debug", 'p_count: %s', p_count);
 $end  
       case p_count
@@ -768,7 +768,7 @@ $end
     loop
       l_rows_fetched := dbms_sql.fetch_rows(l_cursor);
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
       dbug.print(dbug."debug", '# rows fetched: %s', l_rows_fetched);
 $end  
 
@@ -865,7 +865,7 @@ $end
       p_column_value_tab(l_column_name).data_type := l_output_column_tab(i_idx).data_type;
       p_column_value_tab(l_column_name).is_table := case when l_max_row_count = 1 then false else true end;
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
       dbug.print
       ( dbug."info"
       , 'l_column_name: %s; data type: %s'
@@ -947,7 +947,7 @@ $end
   procedure variable_values
   is
   begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.VARIABLE_VALUES');
 $end
 
@@ -1022,7 +1022,7 @@ $end
       end loop;
     end if;
     
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
     dbug.leave;
 $end
   end variable_values;
@@ -1036,7 +1036,7 @@ $end
     end if;
   end cleanup;
 begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
   dbug.print
   ( dbug."input"
@@ -1046,6 +1046,10 @@ $if cfg_pkg.c_debugging $then
   , p_statement
   , p_row_count
   );
+$if data_sql_pkg.c_debugging >= 2 $then
+  print('bind variables', p_bind_variable_tab);
+  print('column values', p_column_value_tab);
+$end
 $end
 
   if p_operation = 'S'
@@ -1077,7 +1081,7 @@ $end
     , lfflg => true
     , language_flag => dbms_sql.native
     );
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   exception
     when others
     then
@@ -1124,14 +1128,14 @@ $end
 
   cleanup;
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 exception
   when others
   then
     cleanup;
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
     dbug.leave_on_error;
 $end
     raise;
@@ -1159,6 +1163,10 @@ is
   l_table_name all_tab_columns.table_name%type;
   l_table_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
 begin
+$if data_sql_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (2)');
+$end
+
   -- parent at the beginning unless p_operation = 'D' -- Delete
   if p_operation <> 'D'
   then
@@ -1203,6 +1211,15 @@ begin
     , p_column_value_tab => p_table_column_value_tab(l_table_name)
     );
   end loop;
+
+$if data_sql_pkg.c_debugging >= 1 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end do;
 
 function get_column_info
@@ -1438,6 +1455,78 @@ begin
   p_column_value.interval_ym$_table := p_interval_ym$_table;
 end set_column_value;
 
+$if data_sql_pkg.c_debugging >= 1 $then
+
+procedure print
+( p_what in varchar2
+, p_column_value_tab in column_value_tab_t
+)
+is
+  l_column_value all_tab_columns.column_name%type;
+  l_column_idx pls_integer := 0;
+begin
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PRINT (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_what: %s'
+  , p_what
+  );
+
+  l_column_value := p_column_value_tab.first;
+  while l_column_value is not null
+  loop
+    l_column_idx := l_column_idx + 1;
+    dbug.print
+    ( dbug."input"
+    , 'column %s: %s; data type: %s; is_table: %s; (first) value: %s'
+    , to_char(l_column_idx, 'FM000')
+    , l_column_value
+    , p_column_value_tab(l_column_value).data_type
+    , dbug.cast_to_varchar2(p_column_value_tab(l_column_value).is_table)
+    , case
+        when p_column_value_tab(l_column_value).data_type = 'NUMBER' and p_column_value_tab(l_column_value).is_table and p_column_value_tab(l_column_value).number$_table.count > 0
+        then to_char(p_column_value_tab(l_column_value).number$_table(1))
+        when p_column_value_tab(l_column_value).data_type = 'NUMBER' and not(p_column_value_tab(l_column_value).is_table)
+        then to_char(p_column_value_tab(l_column_value).number$)
+        when p_column_value_tab(l_column_value).data_type = 'VARCHAR2' and p_column_value_tab(l_column_value).is_table and p_column_value_tab(l_column_value).varchar2$_table.count > 0
+        then p_column_value_tab(l_column_value).varchar2$_table(1)
+        when p_column_value_tab(l_column_value).data_type = 'VARCHAR2' and not(p_column_value_tab(l_column_value).is_table)
+        then p_column_value_tab(l_column_value).varchar2$
+        when p_column_value_tab(l_column_value).data_type = 'DATE' and p_column_value_tab(l_column_value).is_table and p_column_value_tab(l_column_value).date$_table.count > 0
+        then to_char(p_column_value_tab(l_column_value).date$_table(1), 'yyyy-mm-dd hh24:mi:ss')
+        when p_column_value_tab(l_column_value).data_type = 'DATE' and not(p_column_value_tab(l_column_value).is_table)
+        then to_char(p_column_value_tab(l_column_value).date$, 'yyyy-mm-dd hh24:mi:ss')
+      end
+    );
+  
+    l_column_value := p_column_value_tab.next(l_column_value);
+  end loop;
+  
+  dbug.leave;
+end print;
+
+procedure print
+( p_what in varchar2
+, p_table_column_value_tab in table_column_value_tab_t
+)
+is
+  l_table_name all_tab_columns.table_name%type;
+begin
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PRINT (1)');
+  
+  l_table_name := p_table_column_value_tab.first;
+  while l_table_name is not null
+  loop
+    print(p_what, p_table_column_value_tab(l_table_name));
+    
+    l_table_name := p_table_column_value_tab.next(l_table_name);
+  end loop;
+  dbug.leave;
+end print;
+
+$end -- $if data_sql_pkg.c_debugging >= 1 $then
+
+
 $if cfg_pkg.c_testing $then
 
 --%suitepath(DATA)
@@ -1513,7 +1602,7 @@ is
   l_varchar2_tab dbms_sql.varchar2_table;
   l_row_count natural := null;
 begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP');
 $end
 
@@ -1601,7 +1690,7 @@ $end
     end;
   end loop;
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 end ut_do_emp;
@@ -1623,7 +1712,7 @@ is
   l_input_column_tab column_tab_t;
   l_output_column_tab column_tab_t;
 begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_DEPT');
 $end
 
@@ -1680,7 +1769,7 @@ $end
 
   ut.expect(l_actual).to_equal(l_expected);
 
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 end;
@@ -1694,7 +1783,7 @@ is
   l_cursor sys_refcursor;
   l_table_name all_tab_columns.table_name%type;
 begin
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_DO_EMP_DEPT');
 $end
 
@@ -1772,7 +1861,7 @@ $end
     ut.expect(l_count, l_table_name || ' count after delete').to_equal(case i_idx when 1 then 1 else 5 end);
   end loop;
   
-$if cfg_pkg.c_debugging $then
+$if data_sql_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 end;
