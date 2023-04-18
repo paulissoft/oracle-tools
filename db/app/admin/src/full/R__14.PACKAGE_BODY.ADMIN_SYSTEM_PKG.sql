@@ -13,7 +13,7 @@ begin
     from    v$session s
     where   s.sid = p_sid
     and     ( p_serial# is null or s.serial# = p_serial# )
-    and     s.username = sys_context('USERENV', 'SESSION_USER')
+    and     sys_context('USERENV', 'SESSION_USER') in ( s.username, $$PLSQL_UNIT_OWNER ) -- ADMIN may kill anything
   )
   loop
     execute immediate utl_lms.format_message
@@ -38,7 +38,7 @@ begin
     from    v$session s
     where   s.sid = p_sid
     and     ( p_serial# is null or s.serial# = p_serial# )
-    and     s.username = sys_context('USERENV', 'SESSION_USER')
+    and     sys_context('USERENV', 'SESSION_USER') in ( s.username, $$PLSQL_UNIT_OWNER ) -- ADMIN may kill anything
   )
   loop
     execute immediate utl_lms.format_message
@@ -65,7 +65,7 @@ begin
     where   s.sid = p_sid
     and     ( p_serial# is null or s.serial# = p_serial# )
     and     s.sql_id = p_sql_id
-    and     s.username = sys_context('USERENV', 'SESSION_USER')
+    and     sys_context('USERENV', 'SESSION_USER') in ( s.username, $$PLSQL_UNIT_OWNER ) -- ADMIN may kill anything
   )
   loop
     execute immediate utl_lms.format_message
