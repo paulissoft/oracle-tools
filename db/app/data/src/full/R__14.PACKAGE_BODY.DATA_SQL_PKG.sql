@@ -1513,15 +1513,22 @@ procedure print
 is
   l_table_name all_tab_columns.table_name%type;
 begin
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PRINT (1)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PRINT (2)');
+  dbug.print
+  ( dbug."input"
+  , 'p_what: %s; # tables: %s'
+  , p_what
+  , p_table_column_value_tab.count
+  );
   
   l_table_name := p_table_column_value_tab.first;
   while l_table_name is not null
   loop
-    print(p_what, p_table_column_value_tab(l_table_name));
+    print('table ' || l_table_name, p_table_column_value_tab(l_table_name));
     
     l_table_name := p_table_column_value_tab.next(l_table_name);
   end loop;
+  
   dbug.leave;
 end print;
 
