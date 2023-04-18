@@ -1468,8 +1468,9 @@ begin
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PRINT (1)');
   dbug.print
   ( dbug."input"
-  , 'p_what: %s'
+  , 'p_what: %s; # columns: %s'
   , p_what
+  , p_column_value_tab.count
   );
 
   l_column_value := p_column_value_tab.first;
