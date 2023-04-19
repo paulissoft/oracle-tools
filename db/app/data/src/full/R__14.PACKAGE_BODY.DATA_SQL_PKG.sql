@@ -1196,10 +1196,17 @@ $end
   for i_idx in l_table_name_tab.first .. l_table_name_tab.last
   loop
     l_table_name := l_table_name_tab(i_idx);
+    
     if not(p_row_count_tab.exists(l_table_name))
     then
       p_row_count_tab(l_table_name) := null;
     end if;
+
+    if not(p_table_column_value_tab.exists(l_table_name))
+    then
+      p_table_column_value_tab(l_table_name) := empty_column_value_tab;
+    end if;
+
     do
     ( p_operation => p_operation
     , p_table_name => l_table_name
