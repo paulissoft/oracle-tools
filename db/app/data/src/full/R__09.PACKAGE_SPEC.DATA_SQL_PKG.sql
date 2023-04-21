@@ -266,6 +266,22 @@ procedure set_column_value
 );
 /** Set a column value. **/
 
+type column_tab_t is table of column_info_rec_t index by binary_integer;
+
+procedure construct_statement
+( p_operation in varchar2
+, p_owner in varchar2
+, p_table_name in varchar2
+, p_statement in varchar2
+, p_order_by in varchar2
+, p_bind_variable_tab in column_value_tab_t
+, p_column_value_tab in out nocopy column_value_tab_t
+, p_statement_lines out nocopy dbms_sql.varchar2a
+, p_input_column_tab out nocopy column_tab_t
+, p_output_column_tab out nocopy column_tab_t
+);
+/** Construct the SQL statement. **/
+
 $if cfg_pkg.c_debugging $then
 
 procedure print
