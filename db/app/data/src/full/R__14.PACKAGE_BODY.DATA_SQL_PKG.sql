@@ -747,41 +747,66 @@ procedure do
 is
   l_table_name all_tab_columns.table_name%type;
   l_table_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
+
+  procedure add_table
+  ( p_table_name in varchar2
+  )
+  is
+  begin
+    l_table_name_tab.extend(1);
+    l_table_name_tab(l_table_name_tab.last) := p_table_name;
+$if data_sql_pkg.c_debugging >= 1 $then
+    dbug.print(dbug."info", 'adding table "%s"', p_table_name);
+$end
+  end add_table;
 begin
 $if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (2)');
+  dbug.print
+  ( dbug."input"
+  , 'p_table_bind_variable_tab.count: %s; p_statement_tab.count: %s; p_order_by_tab.count: %s; p_row_count_tab.count: %s; p_table_column_value_tab.count: %s'
+  , p_table_bind_variable_tab.count
+  , p_statement_tab.count
+  , p_order_by_tab.count
+  , p_row_count_tab.count
+  , p_table_column_value_tab.count
+  );
 $end
 
   -- parent at the beginning unless p_operation = 'D' -- Delete
   if p_operation <> 'D'
   then
-    l_table_name_tab.extend(1);
-    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
+    add_table(p_parent_table_name);
   end if;
 
-  l_table_name := p_table_column_value_tab.first;
+  l_table_name := case p_operation when 'S' then p_table_column_value_tab.first else p_table_bind_variable_tab.first end;
   while l_table_name is not null
   loop
+$if data_sql_pkg.c_debugging >= 1 $then
+    dbug.print(dbug."info", 'checking table "%s"', l_table_name);
+$end
     if l_table_name <> p_parent_table_name
     then
-      l_table_name_tab.extend(1);
-      l_table_name_tab(l_table_name_tab.last) := l_table_name;
+      add_table(l_table_name);
     end if;
     
-    l_table_name := p_table_column_value_tab.next(l_table_name);
+    l_table_name := case p_operation when 'S' then p_table_column_value_tab.next(l_table_name) else p_table_bind_variable_tab.next(l_table_name) end;
   end loop;
 
   -- parent at the beginning for p_operation = 'D' -- Delete
   if p_operation = 'D'
   then
-    l_table_name_tab.extend(1);
-    l_table_name_tab(l_table_name_tab.last) := p_parent_table_name;
+    add_table(p_parent_table_name);
   end if;
 
   for i_idx in l_table_name_tab.first .. l_table_name_tab.last
   loop
     l_table_name := l_table_name_tab(i_idx);
-    
+
+$if data_sql_pkg.c_debugging >= 1 $then
+    dbug.print(dbug."info", 'processing table "%s"', l_table_name);
+$end
+
     if not(p_row_count_tab.exists(l_table_name))
     then
       p_row_count_tab(l_table_name) := null;
@@ -805,6 +830,12 @@ $end
   end loop;
 
 $if data_sql_pkg.c_debugging >= 1 $then
+  dbug.print
+  ( dbug."output"
+  , 'p_row_count_tab.count: %s; p_table_column_value_tab.count: %s'
+  , p_row_count_tab.count
+  , p_table_column_value_tab.count
+  );
   dbug.leave;
 exception
   when others
@@ -1469,6 +1500,69 @@ procedure print
 is
   l_column_value all_tab_columns.column_name%type;
   l_column_idx pls_integer := 0;
+
+  function value_range(p_anydata in anydata_t)
+  return varchar2
+  is
+  begin
+    return
+      case
+        when not(p_anydata.is_table)
+        then 'N/A'
+        when p_anydata.data_type = 'NUMBER' and p_anydata.is_table
+        then p_anydata.number$_table.first||'..'||p_anydata.number$_table.last
+        when p_anydata.data_type = 'VARCHAR2' and p_anydata.is_table
+        then p_anydata.varchar2$_table.first||'..'||p_anydata.varchar2$_table.last
+        when p_anydata.data_type = 'DATE' and p_anydata.is_table
+        then p_anydata.date$_table.first||'..'||p_anydata.date$_table.last
+      end;
+  end value_range;
+  
+  function value_list(p_anydata in anydata_t)
+  return varchar2
+  is
+    l_value_list varchar2(32767) := null;
+  begin
+    case
+      when p_anydata.data_type = 'NUMBER' and p_anydata.is_table and p_anydata.number$_table.first is not null
+      then
+        for i_idx in p_anydata.number$_table.first .. least(10, p_anydata.number$_table.last)
+        loop
+          l_value_list := l_value_list || case when i_idx > p_anydata.number$_table.first then ',' end || to_char(p_anydata.number$_table(i_idx));
+        end loop;
+        
+      when p_anydata.data_type = 'NUMBER' and not(p_anydata.is_table)
+      then
+        l_value_list := to_char(p_anydata.number$);
+        
+      when p_anydata.data_type = 'VARCHAR2' and p_anydata.is_table and p_anydata.varchar2$_table.first is not null
+      then 
+        for i_idx in p_anydata.varchar2$_table.first .. least(10, p_anydata.varchar2$_table.last)
+        loop
+          l_value_list := l_value_list || case when i_idx > p_anydata.varchar2$_table.first then ',' end || p_anydata.varchar2$_table(i_idx);
+        end loop;
+        
+      when p_anydata.data_type = 'VARCHAR2' and not(p_anydata.is_table)
+      then
+        l_value_list := p_anydata.varchar2$;
+        
+      when p_anydata.data_type = 'DATE' and p_anydata.is_table and p_anydata.date$_table.first is not null
+      then
+        for i_idx in p_anydata.date$_table.first .. least(10, p_anydata.date$_table.last)
+        loop
+          l_value_list := l_value_list || case when i_idx > p_anydata.date$_table.first then ',' end || to_char(p_anydata.date$_table(i_idx), 'yyyy-mm-dd hh24:mi:ss');
+        end loop;
+        
+      when p_anydata.data_type = 'DATE' and not(p_anydata.is_table)
+      then
+        l_value_list := to_char(p_anydata.date$, 'yyyy-mm-dd hh24:mi:ss');
+        
+      else
+        null;
+    end case;
+    
+    return l_value_list;
+  end value_list;
 begin
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PRINT (1)');
   dbug.print
@@ -1484,39 +1578,12 @@ begin
     l_column_idx := l_column_idx + 1;
     dbug.print
     ( dbug."input" -- no typo
-    , 'column %s: %s; data type: %s; is_table: %s; row count: %s'
+    , 'column %s: %s; data type: %s; range: %s; value(s) (max 10): %s'
     , to_char(l_column_idx, 'FM000')
     , l_column_value
     , p_column_value_tab(l_column_value).data_type
-    , dbug.cast_to_varchar2(p_column_value_tab(l_column_value).is_table)
-    , case
-        when not(p_column_value_tab(l_column_value).is_table)
-        then 1
-        when p_column_value_tab(l_column_value).data_type = 'NUMBER' and p_column_value_tab(l_column_value).is_table
-        then p_column_value_tab(l_column_value).number$_table.count
-        when p_column_value_tab(l_column_value).data_type = 'VARCHAR2' and p_column_value_tab(l_column_value).is_table
-        then p_column_value_tab(l_column_value).varchar2$_table.count
-        when p_column_value_tab(l_column_value).data_type = 'DATE' and p_column_value_tab(l_column_value).is_table
-        then p_column_value_tab(l_column_value).date$_table.count
-      end
-    );
-    dbug.print
-    ( dbug."input" -- no typo
-    , '(first) value: %s'
-    , case
-        when p_column_value_tab(l_column_value).data_type = 'NUMBER' and p_column_value_tab(l_column_value).is_table and p_column_value_tab(l_column_value).number$_table.count > 0
-        then to_char(p_column_value_tab(l_column_value).number$_table(1))
-        when p_column_value_tab(l_column_value).data_type = 'NUMBER' and not(p_column_value_tab(l_column_value).is_table)
-        then to_char(p_column_value_tab(l_column_value).number$)
-        when p_column_value_tab(l_column_value).data_type = 'VARCHAR2' and p_column_value_tab(l_column_value).is_table and p_column_value_tab(l_column_value).varchar2$_table.count > 0
-        then p_column_value_tab(l_column_value).varchar2$_table(1)
-        when p_column_value_tab(l_column_value).data_type = 'VARCHAR2' and not(p_column_value_tab(l_column_value).is_table)
-        then p_column_value_tab(l_column_value).varchar2$
-        when p_column_value_tab(l_column_value).data_type = 'DATE' and p_column_value_tab(l_column_value).is_table and p_column_value_tab(l_column_value).date$_table.count > 0
-        then to_char(p_column_value_tab(l_column_value).date$_table(1), 'yyyy-mm-dd hh24:mi:ss')
-        when p_column_value_tab(l_column_value).data_type = 'DATE' and not(p_column_value_tab(l_column_value).is_table)
-        then to_char(p_column_value_tab(l_column_value).date$, 'yyyy-mm-dd hh24:mi:ss')
-      end
+    , value_range(p_column_value_tab(l_column_value))
+    , value_list(p_column_value_tab(l_column_value))
     );
   
     l_column_value := p_column_value_tab.next(l_column_value);
