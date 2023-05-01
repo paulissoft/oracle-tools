@@ -623,17 +623,11 @@ $end
 begin
 $if data_sql_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
-  dbug.print
-  ( dbug."input"
-  , 'p_operation: %s; table: %s; p_statement: %s; p_row_count: %s'
-  , p_operation
-  , '"' || p_owner || '"."' || p_table_name || '"'
-  , p_statement
-  , p_row_count
-  );
+  -- operation, owner, table and statement are displayed in construct_statement so skip them here
+  dbug.print(dbug."input", 'p_row_count: %s', p_row_count);
 $if data_sql_pkg.c_debugging >= 2 $then
   print('bind variables', p_bind_variable_tab);
-  print('column values', p_column_value_tab);
+  print('input column values', p_column_value_tab);
 $end
 $end
 
@@ -714,6 +708,9 @@ $end
   cleanup;
 
 $if data_sql_pkg.c_debugging >= 1 $then
+$if data_sql_pkg.c_debugging >= 2 $then
+  print('output column values', p_column_value_tab);
+$end
   dbug.leave;
 $end
 exception
@@ -1197,6 +1194,49 @@ $if data_sql_pkg.c_debugging >= 1 $then
     );
 $end
   end loop;
+
+  -- some sanity checks
+  if p_operation = 'S'
+  then
+    -- query
+    if p_statement_lines.count = 0
+    then
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'There are no output columns (SELECT clause) for this query on "%s"."%s".'
+        , p_owner
+        , p_table_name
+        )
+      );
+    end if;
+  else
+    -- DML
+    if l_where_clause is null
+    then
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'There is no WHERE clause for this DML operation (%s) on "%s"."%s" since there are no key columns as bind variable.'
+        , p_operation
+        , p_owner
+        , p_table_name
+        )
+      );
+    end if;
+    if p_operation <> 'D' and p_input_column_tab.count = 0
+    then
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'There are no columns to operate on for this DML operation (%s) on "%s"."%s".'
+        , p_operation
+        , p_owner
+        , p_table_name
+        )
+      );
+    end if;
+  end if;
 
 $if data_sql_pkg.c_debugging >= 1 $then
   dbug.print
