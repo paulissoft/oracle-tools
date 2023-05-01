@@ -30,7 +30,6 @@
     <module>api</module>
     <module>ddl</module>
     <module>ext</module>
-    <module>msg</module>
     <module>ui</module>
   </modules>
 
@@ -40,6 +39,13 @@
       <id>admin</id>
       <modules>
         <module>admin</module>
+      </modules>
+    </profile>
+    <profile>
+      <!-- when you want to use the msg module -->
+      <id>msg</id>
+      <modules>
+        <module>msg</module>
       </modules>
     </profile>
   </profiles>

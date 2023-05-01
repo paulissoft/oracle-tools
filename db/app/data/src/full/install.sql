@@ -10,6 +10,9 @@ whenever sqlerror exit failure
 set define off sqlblanklines on
 ALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';
 
+prompt @@R__08.FUNCTION.DATA_SESSION_ID.sql
+@@R__08.FUNCTION.DATA_SESSION_ID.sql
+show errors FUNCTION "DATA_SESSION_ID"
 prompt @@R__08.FUNCTION.DATA_SESSION_USERNAME.sql
 @@R__08.FUNCTION.DATA_SESSION_USERNAME.sql
 show errors FUNCTION "DATA_SESSION_USERNAME"
