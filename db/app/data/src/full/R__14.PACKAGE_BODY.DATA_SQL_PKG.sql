@@ -1522,7 +1522,7 @@ $if data_sql_pkg.c_debugging >= 1 $then
 $end
 end construct_statement;
 
-$if data_sql_pkg.c_debugging >= 1 $then
+$if cfg_pkg.c_debugging $then
 
 procedure print
 ( p_what in varchar2
@@ -1650,7 +1650,7 @@ begin
   dbug.leave;
 end print;
 
-$end -- $if data_sql_pkg.c_debugging >= 1 $then
+$end -- $if cfg_pkg.c_debugging $then
 
 
 $if cfg_pkg.c_testing $then
