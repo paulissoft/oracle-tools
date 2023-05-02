@@ -335,7 +335,7 @@ is
     )
     is
     begin
-$if data_sql_pkg.c_debugging >= 1 $then
+$if data_sql_pkg.c_debugging >= 2 $then
       dbug.print(dbug."debug", 'p_count: %s', p_count);
 $end  
       case p_count
@@ -354,7 +354,7 @@ $end
       l_rows_fetched := dbms_sql.fetch_rows(l_cursor);
 
 $if data_sql_pkg.c_debugging >= 1 $then
-      dbug.print(dbug."debug", '# rows fetched: %s', l_rows_fetched);
+      dbug.print(dbug."info", '# rows fetched: %s', l_rows_fetched);
 $end  
 
       exit fetch_loop when l_rows_fetched = 0;
@@ -449,15 +449,6 @@ $end
 
       p_column_value_tab(l_column_name).data_type := l_output_column_tab(i_idx).data_type;
       p_column_value_tab(l_column_name).is_table := case when l_max_row_count = 1 then false else true end;
-
-$if data_sql_pkg.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'l_column_name: %s; data type: %s'
-      , l_column_name
-      , p_column_value_tab(l_column_name).data_type
-      );
-$end
 
       if not(p_column_value_tab(l_column_name).is_table)
       then
@@ -1184,7 +1175,7 @@ $end
     end if;          
 $if data_sql_pkg.c_debugging >= 1 $then
     dbug.print
-    ( dbug."debug"
+    ( dbug."info"
     , 'r.column_name: %s; r.pk_key_position: %s; bind variable?: %s; column value?: %s; where clause: "%s"'
     , r.column_name
     , r.pk_key_position
@@ -1238,7 +1229,7 @@ $end
     end if;
   end if;
 
-$if data_sql_pkg.c_debugging >= 1 $then
+$if data_sql_pkg.c_debugging >= 2 $then
   dbug.print
   ( dbug."debug"
   , 'where clause after get_column_info: "%s"'
@@ -1525,7 +1516,7 @@ $end
 $if data_sql_pkg.c_debugging >= 1 $then
   for i_idx in p_statement_lines.first .. p_statement_lines.last
   loop
-    dbug.print(dbug."debug", 'p_statement_lines(%s): %s', to_char(i_idx, 'FM000'), p_statement_lines(i_idx));
+    dbug.print(dbug."info", 'p_statement_lines(%s): %s', to_char(i_idx, 'FM000'), p_statement_lines(i_idx));
   end loop;
   dbug.leave;
 $end
@@ -1540,6 +1531,7 @@ procedure print
 is
   l_column_value all_tab_columns.column_name%type;
   l_column_idx pls_integer := 0;
+  c_max_items constant positiven := 10;
 
   function value_range(p_anydata in anydata_t)
   return varchar2
@@ -1566,7 +1558,7 @@ is
     case
       when p_anydata.data_type = 'NUMBER' and p_anydata.is_table and p_anydata.number$_table.first is not null
       then
-        for i_idx in p_anydata.number$_table.first .. least(10, p_anydata.number$_table.last)
+        for i_idx in p_anydata.number$_table.first .. least(c_max_items, p_anydata.number$_table.last)
         loop
           l_value_list := l_value_list || case when i_idx > p_anydata.number$_table.first then ',' end || to_char(p_anydata.number$_table(i_idx));
         end loop;
@@ -1577,7 +1569,7 @@ is
         
       when p_anydata.data_type = 'VARCHAR2' and p_anydata.is_table and p_anydata.varchar2$_table.first is not null
       then 
-        for i_idx in p_anydata.varchar2$_table.first .. least(10, p_anydata.varchar2$_table.last)
+        for i_idx in p_anydata.varchar2$_table.first .. least(c_max_items, p_anydata.varchar2$_table.last)
         loop
           l_value_list := l_value_list || case when i_idx > p_anydata.varchar2$_table.first then ',' end || p_anydata.varchar2$_table(i_idx);
         end loop;
@@ -1588,7 +1580,7 @@ is
         
       when p_anydata.data_type = 'DATE' and p_anydata.is_table and p_anydata.date$_table.first is not null
       then
-        for i_idx in p_anydata.date$_table.first .. least(10, p_anydata.date$_table.last)
+        for i_idx in p_anydata.date$_table.first .. least(c_max_items, p_anydata.date$_table.last)
         loop
           l_value_list := l_value_list || case when i_idx > p_anydata.date$_table.first then ',' end || to_char(p_anydata.date$_table(i_idx), 'yyyy-mm-dd hh24:mi:ss');
         end loop;
@@ -1618,7 +1610,7 @@ begin
     l_column_idx := l_column_idx + 1;
     dbug.print
     ( dbug."input" -- no typo
-    , 'column %s: %s; data type: %s; range: %s; value(s) (max 10): %s'
+    , 'column %s: %s; data type: %s; range: %s; value(s) (max ' || c_max_items || '): %s'
     , to_char(l_column_idx, 'FM000')
     , l_column_value
     , p_column_value_tab(l_column_value).data_type
