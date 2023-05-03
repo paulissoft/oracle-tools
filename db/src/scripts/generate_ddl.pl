@@ -172,6 +172,13 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2023-05-03
+
+The DDL for a view with an instead of trigger should be placed into the same
+file. Due to the fact that the temporary file was removed after printing the
+view DDL, the trigger DDL later on replaced the view DDL (instead of being
+appended).
+
 =item 2023-01-05
 
 This DDL:
@@ -314,7 +321,6 @@ use Pod::Usage;
 use strict;
 use utf8;
 use warnings;
-use warnings FATAL => qw[uninitialized];
 
 # CONSTANTS
 use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
@@ -536,6 +542,11 @@ sub process_command_line () {
     if (!defined($single_output_file)) {
         pod2usage(-message => "$0: output directory does not exist. Run with --help option.\n")
             unless (defined($output_directory) && -d $output_directory);
+    }
+
+    if ($verbose <= 1) {
+        eval "use warnings FATAL => qw[uninitialized]";
+        die $@ if $@;
     }
 
     print STDERR "Command line: $0 @argv\n"
@@ -942,10 +953,9 @@ sub object_file_name ($$$) {
 }
 
 sub open_file ($$$$$$) {
-    trace((caller(0))[3]);
+    debug((caller(0))[3], @_);
     
     my ($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists, $object_type, $object_name) = @_;
-
     
     if (defined $fh_install_sql) {
         my $r_lines = \@install_sql_lines;
@@ -971,13 +981,19 @@ sub open_file ($$$$$$) {
 
     $file = File::Spec->catfile($output_directory, $file);
 
+    debug("$tmpfile exists? ", (-f $tmpfile));
+    
     # Just issue a warning till now and append
     if (-f $tmpfile) {
         warn "WARNING: File $file already exists. Duplicate objects?"
             unless ($ignore_warning_when_file_exists);
-        
+
+        debug("$tmpfile exists");
+
         $$r_fh = smart_open($tmpfile, 1); # append
     } else {
+        debug("$tmpfile does not exist");
+        
         $$r_fh = smart_open($tmpfile);
     }
 }
@@ -998,7 +1014,7 @@ sub close_file ($$) {
 
 # open file for writing
 sub smart_open ($;$) {
-    trace((caller(0))[3]);
+    debug((caller(0))[3], @_);
 
     my ($file, $append) = @_;
     my $basename = basename($file);
@@ -1040,8 +1056,9 @@ sub smart_close ($) {
         copy($tmpfile, $file) or error("Copy from '$tmpfile' to '$file' failed: $!");
         $file_modified{$file} = 1;
     }
-    # always clean up
-    unlink($tmpfile) == 1 or error("Removing '$tmpfile' failed: $!");
+    # GJP 2023-05-03
+    # Never clean up temporary files here (since we may have instead of triggers!).
+    # Files will be removed when Perl finishes (due to 'my $TMPDIR = tempdir( CLEANUP => 1 );')
 }
 
 sub add_sql_statement ($$$$;$) {
@@ -1266,6 +1283,7 @@ sub object_sql_statements_flush ($$$$$) {
                 my ($object_schema, $object_type, $object_name);
                 
                 ($object_schema, $object_name) = parse_object($+{object});
+                # $object_name = uc($object_name);
 
                 $object_type = 'VIEW';
 
