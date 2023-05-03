@@ -1533,7 +1533,7 @@ is
   l_column_idx pls_integer := 0;
   c_max_items constant positiven := 10;
 
-  function value_range(p_anydata in anydata_t)
+  function value_count(p_anydata in anydata_t)
   return varchar2
   is
   begin
@@ -1542,13 +1542,13 @@ is
         when not(p_anydata.is_table)
         then 'N/A'
         when p_anydata.data_type = 'NUMBER' and p_anydata.is_table
-        then p_anydata.number$_table.first||'..'||p_anydata.number$_table.last
+        then p_anydata.number$_table.count
         when p_anydata.data_type = 'VARCHAR2' and p_anydata.is_table
-        then p_anydata.varchar2$_table.first||'..'||p_anydata.varchar2$_table.last
+        then p_anydata.varchar2$_table.count
         when p_anydata.data_type = 'DATE' and p_anydata.is_table
-        then p_anydata.date$_table.first||'..'||p_anydata.date$_table.last
+        then p_anydata.date$_table.count
       end;
-  end value_range;
+  end value_count;
   
   function value_list(p_anydata in anydata_t)
   return varchar2
@@ -1610,11 +1610,11 @@ begin
     l_column_idx := l_column_idx + 1;
     dbug.print
     ( dbug."input" -- no typo
-    , 'column %s: %s; data type: %s; range: %s; value(s) (max ' || c_max_items || '): %s'
+    , 'column %s: %s; data type: %s; # values: %s; value(s) (max ' || c_max_items || '): %s'
     , to_char(l_column_idx, 'FM000')
     , l_column_value
     , p_column_value_tab(l_column_value).data_type
-    , value_range(p_column_value_tab(l_column_value))
+    , value_count(p_column_value_tab(l_column_value))
     , value_list(p_column_value_tab(l_column_value))
     );
   

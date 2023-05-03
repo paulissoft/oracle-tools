@@ -15,6 +15,16 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.1.0] - 2023-05-03
+
+### Added
+
+- [Functionality to use dynamic SQL for queries and DML.](https://github.com/paulissoft/oracle-tools/issues/128)
+
+### Fixed
+
+- [Instead of trigger DDL is not correctly placed in the view DDL file.](https://github.com/paulissoft/oracle-tools/issues/127)
+
 ## [2.0.0] - 2023-04-01
 
 This is the first release of Paulissoft Application Tools for Oracle (PATO) after publishing my e-book ["How to build an Oracle database application", Leanpub](https://leanpub.com/build-oracle-apex-application).
