@@ -1542,11 +1542,11 @@ is
         when not(p_anydata.is_table)
         then 'N/A'
         when p_anydata.data_type = 'NUMBER' and p_anydata.is_table
-        then p_anydata.number$_table.count
+        then to_char(p_anydata.number$_table.count)
         when p_anydata.data_type = 'VARCHAR2' and p_anydata.is_table
-        then p_anydata.varchar2$_table.count
+        then to_char(p_anydata.varchar2$_table.count)
         when p_anydata.data_type = 'DATE' and p_anydata.is_table
-        then p_anydata.date$_table.count
+        then to_char(p_anydata.date$_table.count)
       end;
   end value_count;
   
