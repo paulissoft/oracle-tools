@@ -34,7 +34,7 @@ jobs:
           images: ${{ env.IMAGE }}
       - name: Build and Push Versioned Docker Image
         id: build-and-push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         if: ${{ github.ref != 'refs/heads/main' }}
         with:
           context: ${{ env.CONTEXT }}
@@ -43,12 +43,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
       - name: Build and Push Latest Docker Image
         id: build-and-push-latest
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         if: ${{ github.ref == 'refs/heads/main' }}
         with:
           context: ${{ env.CONTEXT }}
-          push: false
+          push: true
           tags: ${{ env.IMAGE }}:latest
           labels: ${{ steps.meta.outputs.labels }}
-      - name: Docker push
-        run: docker push ${IMAGE}:${{ steps.meta.outputs.labels }}
