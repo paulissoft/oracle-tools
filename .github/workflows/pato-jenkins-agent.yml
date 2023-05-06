@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/paulissoft/pato-jenkins-agent
+  IMAGE: ghcr.io/paulissoft/pato-jenkins-agent
   CONTEXT: ./jenkins/jenkins-agent
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE }}
       - name: Build and Push Versioned Docker Image
         id: build-and-push
         uses: docker/build-push-action@v3
@@ -47,13 +47,8 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         with:
           context: ${{ env.CONTEXT }}
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
+          push: false
+          tags: ${{ env.IMAGE }}:latest
           labels: ${{ steps.meta.outputs.labels }}
-#      - name: Build and Push Latest Docker Image
-#        id: build-and-push-latest
-#        run: |
-#          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-#          echo Creating Docker image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-#          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.CONTEXT }}
-#          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Docker push
+        run: docker push ${IMAGE}:${{ steps.meta.outputs.labels }}
