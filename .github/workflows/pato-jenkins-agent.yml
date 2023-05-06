@@ -51,4 +51,4 @@ jobs:
           tags: ${{ env.IMAGE }}:latest
           labels: ${{ steps.meta.outputs.labels }}
       - name: Docker push
-        run: echo docker push ${{ env.IMAGE }}:${{ steps.meta.outputs.labels }}
+        run: docker push ${{ env.IMAGE }}:latest
