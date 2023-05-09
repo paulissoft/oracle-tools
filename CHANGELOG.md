@@ -15,6 +15,13 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.1.1] - 2023-05-09
+
+### Changed
+
+- Updated PL/SQL documentation.
+- No logging by default for package DATA_SQL_PKG.
+
 ## [2.1.0] - 2023-05-03
 
 ### Added
