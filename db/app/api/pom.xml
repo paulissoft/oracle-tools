@@ -14,8 +14,6 @@
   <description>Build API component</description>
   
   <properties>
-    <!-- to stop and start the message susbsystem for updating the heartbeat package -->
-    <db.src.callbacks.scripts>${db.src.scripts}/callbacks</db.src.callbacks.scripts>
     <flyway.table>schema_version_tools_api</flyway.table>
     <db.include.objects>
 :OBJECT_GRANT::ORACLE_TOOLS::API_CALL_STACK_PKG::*:*:*

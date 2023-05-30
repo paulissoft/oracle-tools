@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER IS
 
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+c_debugging constant boolean := true; -- oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
 subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
 
@@ -129,9 +129,43 @@ pipelined;
 
 /**
 
-Constructs a schema objetc filter based on the input parameters, then invokes the procedure get_schema_objects and returns the objects found.
+Constructs a schema object filter based on the input parameters, then invokes the procedure get_schema_objects and returns the objects found.
 
 **/
+
+type t_compiler_message_tab is table of all_errors%rowtype;
+
+function show_compiler_messages
+( p_object_schema in varchar2 default user -- The schema owner of the objects to show.
+, p_object_type in varchar2 default null -- The object type (may be a DBMS_METADATA object type).
+, p_object_names in varchar2 default null -- A comma separated list of object names.
+, p_object_names_include in integer default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_exclude_objects in clob default null -- A list of unique identification expressions to exclude where you can use O/S wild cards (* and ?).
+, p_include_objects in clob default null -- A list of unique identification expressions to include where you can use O/S wild cards (* and ?).
+, p_recompile in integer default 0 -- Do we need to recompile the objects before showing the messages? 0 means no.
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL' -- For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL' -- For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
+)
+return t_compiler_message_tab -- A list of USER_ERRORS rows ordered by name, type, sequence.
+pipelined;
+/** Show compiler messages. **/
+
+type t_message_tab is table of varchar2(4000 char);
+
+function format_compiler_messages
+( p_object_schema in varchar2 default user -- The schema owner of the objects to show.
+, p_object_type in varchar2 default null -- The object type (may be a DBMS_METADATA object type).
+, p_object_names in varchar2 default null -- A comma separated list of object names.
+, p_object_names_include in integer default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_exclude_objects in clob default null -- A list of unique identification expressions to exclude where you can use O/S wild cards (* and ?).
+, p_include_objects in clob default null -- A list of unique identification expressions to include where you can use O/S wild cards (* and ?).
+, p_recompile in integer default 0 -- Do we need to recompile the objects before showing the messages? 0 means no.
+, p_plsql_warnings in varchar2 default 'ENABLE:ALL' -- For "alter session set PLSQL_WARNINGS = '<p_plsql_warnings>'".
+, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL' -- For "alter session set PLSCOPE_SETTINGS = '<p_plscope_settings>'".
+)
+return t_message_tab -- A list of USER_ERRORS rows ordered by name, type, sequence.
+pipelined;
+/** Format compiler messages. **/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
