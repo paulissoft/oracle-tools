@@ -45,5 +45,18 @@ ALTER SYSTEM CANCEL SQL 'SID, SERIAL[, @INST_ID][, SQL_ID]'
 ```
 **/
 
+type t_object_rec is record
+( owner v$db_object_cache.owner%type
+, object_name v$db_object_cache.name%type
+, object_type v$db_object_cache.type%type
+);
+
+type t_object_tab is table of t_object_rec;
+
+function show_locked_objects
+return t_object_tab
+pipelined;
+/** Show locked objects (select * from v$db_object_cache where locks > 0) for the current session user or for the owner of this package. **/
+
 END ADMIN_SYSTEM_PKG;
 /

@@ -449,7 +449,7 @@
 
                     select t.column_value as "=== Compiler messages ==="
                     from table
-                         ( oracle_tools.pkg_schema_object_filter.format_compiler_messages
+                         ( oracle_tools.cfg_install_pkg.format_compiler_messages
                            ( p_object_schema => '${db.schema}'
                            , p_object_type => '${db.object.type}'
                            , p_object_names => '${db.object.names}'
