@@ -77,5 +77,24 @@ begin
   end loop;
 end cancel_sql;
 
+function show_locked_objects
+return t_object_tab
+pipelined
+is
+begin
+  for r in 
+  ( select  o.owner
+    ,       o.name as object_name
+    ,       o.type as object_type
+    from    v$db_object_cache o
+    where   sys_context('USERENV', 'SESSION_USER') in ( o.owner, $$PLSQL_UNIT_OWNER ) -- ADMIN may see anything
+    and     o.locks > 0
+  )
+  loop
+    pipe row (r);
+  end loop;
+  return;
+end show_locked_objects;  
+
 end admin_system_pkg;
 /

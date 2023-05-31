@@ -42,23 +42,103 @@ $end
   return l_collection;
 end list2collection;
 
+function replace_clob
+( p_clob in clob
+, p_replace_from in varchar2
+, p_replace_to in varchar2
+)
+return clob 
+is    
+  l_buffer varchar2 (32767);
+  l_amount binary_integer := 32767;
+  l_pos integer := 1;
+  l_clob_len integer;
+  l_clob clob := empty_clob;
+begin
+  -- initalize the new clob
+  dbms_lob.createtemporary( l_clob, true );
+  l_clob_len := dbms_lob.getlength (p_clob);
+  while l_pos < l_clob_len
+  loop
+    dbms_lob.read(p_clob, l_amount, l_pos, l_buffer);
+    if l_buffer is not null
+    then
+      -- replace the text
+      l_buffer := replace(l_buffer, p_replace_from, p_replace_to);
+      -- write it to the new clob
+      dbms_lob.writeappend(l_clob, length(l_buffer), l_buffer);
+    end if;
+    l_pos := l_pos + l_amount;  
+  end loop;
+   
+  return l_clob;
+end replace_clob;
+   
 -- GLOBAL
 
-procedure "afterMigrate"
-( p_compile_all in boolean
-, p_reuse_settings in boolean
+procedure "beforeMigrate"
+( p_oracle_tools_schema_msg in varchar2
 )
 is
+$if cfg_pkg.c_start_stop_msg_framework $then
+  l_found pls_integer;
+$end  
 begin
-  setup_session;
-  compile_objects(p_compile_all => p_compile_all, p_reuse_settings => p_reuse_settings);
-end "afterMigrate";
+$if cfg_pkg.c_start_stop_msg_framework $then
+  select  1
+  into    l_found
+  from    all_objects o
+  where   o.owner = $$PLSQL_UNIT_OWNER
+  and     o.object_name = 'MSG_SCHEDULER_PKG'
+  and     o.object_type = 'PACKAGE BODY'
+  and     o.status = 'VALID';
+
+  -- stop the supervisor job
+  execute immediate q'[begin ${oracle_tools_schema_msg}.msg_scheduler_pkg.do(p_command => 'stop'); end;]';
+exception
+  when others
+  then null;
+$else
+  null;
+$end  
+end "beforeMigrate";
 
 procedure "beforeEachMigrate"
 is
 begin
   setup_session;
 end "beforeEachMigrate";
+
+procedure "afterMigrate"
+( p_compile_all in boolean
+, p_reuse_settings in boolean
+, p_oracle_tools_schema_msg in varchar2
+)
+is
+$if cfg_pkg.c_start_stop_msg_framework $then
+  l_found pls_integer;
+$end  
+begin
+  setup_session;
+  compile_objects(p_compile_all => p_compile_all, p_reuse_settings => p_reuse_settings);
+$if cfg_pkg.c_start_stop_msg_framework $then
+  begin
+    select  1
+    into    l_found
+    from    all_objects o
+    where   o.owner = $$PLSQL_UNIT_OWNER
+    and     o.object_name = 'MSG_SCHEDULER_PKG'
+    and     o.object_type = 'PACKAGE BODY'
+    and     o.status = 'VALID';
+  
+    -- start the supervisor job
+    execute immediate q'[begin ${oracle_tools_schema_msg}.msg_scheduler_pkg.do(p_command => 'start'); end;]';
+  exception
+    when others
+    then null;
+  end;
+$end
+end "afterMigrate";
 
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 --
@@ -134,11 +214,6 @@ begin
   end if;
 end setup_session;
 
--- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
---
--- This procedure must be in sync with the same procedure in ../callbacks/afterMigrate.sql
---
--- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 procedure compile_objects
 ( p_compile_all in boolean
 , p_reuse_settings in boolean
@@ -155,11 +230,10 @@ begin
     begin
       select  1
       into    l_found
-      from    user_objects o
-      where   o.object_type = 'PACKAGE'
-      and     o.object_name = $$PLSQL_UNIT
+      from    table(admin_system_pkg.show_locked_objects) l
+      where   rownum = 1
       ;
-      raise_application_error(-20000, 'We can not recompile all objects if this package (' || $$PLSQL_UNIT || ') is part of the objects to recompile.');
+      raise_application_error(-20000, 'We can not recompile all objects if there are locked objects.');
     exception
       when no_data_found
       then
@@ -198,89 +272,37 @@ begin
 end compile_objects;
 
 function show_compiler_messages
-( p_object_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_recompile in integer default 0
-, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
-, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
+( p_object_schema in varchar2
+, p_object_type in varchar2
+, p_object_names in varchar2
+, p_object_names_include in integer
+, p_exclude_objects in clob
+, p_include_objects in clob
+, p_recompile in integer
+, p_plsql_warnings in varchar2
+, p_plscope_settings in varchar2
 )
 return t_compiler_message_tab
 pipelined
 is
   pragma autonomous_transaction; -- DDL is issued
 
-  l_object_type constant all_objects.object_type%type :=
-    case
-      when p_object_type like '%\_SPEC' escape '\' -- meta
-      then replace(p_object_type, '_SPEC', null)
-      when p_object_type like '%\_BODY' escape '\' -- meta
-      then replace(p_object_type, '_', ' ')
-      else p_object_type
-    end;
-    
-  l_object_name_tab constant sys.odcivarchar2list :=
-    list2collection
-    ( p_value_list => replace(replace(replace(p_object_names, chr(9)), chr(10)), chr(13))
-    , p_sep => ','
-    , p_ignore_null => 1
-    );
+  type t_obj_rec is record
+  ( owner all_objects.owner%type
+  , object_name all_objects.object_name%type
+  , object_type all_objects.object_type%type
+  , command varchar2(1000)
+  , nr_deps integer
+  , locked integer
+  );
 
-  cursor c_obj
-  ( b_object_schema in varchar2
-  , b_object_type in varchar2
-  , b_object_name_tab in sys.odcivarchar2list
-  , b_object_names_include in integer
-  , b_recompile in integer
-  )
-  is
-    select  o.owner
-    ,       o.object_name
-    ,       o.object_type
-    ,       case
-              when o.object_type in ('FUNCTION', 'PACKAGE', 'PROCEDURE', 'TRIGGER', 'TYPE', 'VIEW')
-              then 'ALTER ' || o.object_type || ' ' || o.object_name || ' COMPILE'
-              when o.object_type in ('JAVA CLASS', 'JAVA SOURCE')
-              then 'ALTER ' || o.object_type || ' "' || o.object_name || '" COMPILE'
-              when instr(o.object_type, ' BODY') > 0
-              then 'ALTER ' || replace(o.object_type, ' BODY') || ' ' || o.object_name || ' COMPILE BODY'
-            end as command
-    ,       ( select count(*) from all_dependencies d where d.owner = o.owner and d.type = o.object_type and d.name = o.object_name ) as nr_deps
-    from    all_objects o
-    where   o.object_type in
-            ( 'VIEW'
-            , 'PROCEDURE'
-            , 'FUNCTION'
-            , 'PACKAGE'
-            , 'PACKAGE BODY'
-            , 'TRIGGER'
-            , 'TYPE'
-            , 'TYPE BODY'
-            , 'JAVA SOURCE'
-            , 'JAVA CLASS'
-            )
-    and     o.object_name not like 'BIN$%' -- Oracle 10g Recycle Bin
-    and     o.owner = b_object_schema
-    and     ( b_object_type is null or o.object_type = b_object_type )                  
-    and     ( b_object_names_include is null or
-              ( b_object_names_include  = 0 and o.object_name not in ( select trim(t.column_value) from table(b_object_name_tab) t ) ) or
-              ( b_object_names_include != 0 and o.object_name     in ( select trim(t.column_value) from table(b_object_name_tab) t ) )
-            )
-    order by
-            -- it is better to recompile first those objects that have the least number of dependencies,
-            -- i.e. that impact least their dependent objects
-            case when b_recompile != 0 then nr_deps end
-    ,       o.owner
-    ,       o.object_name
-    ,       o.object_type
-    ;
+  c_obj sys_refcursor;
 
-  type t_obj_tab is table of c_obj%rowtype;
+  type t_obj_tab is table of t_obj_rec;
 
   l_obj_tab t_obj_tab;
 
-  r_obj c_obj%rowtype;
+  r_obj t_obj_rec;
 
   cursor c_compiler_messages
   ( b_owner in varchar2
@@ -616,15 +638,90 @@ is
     from    checks c
   ;
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SHOW_COMPILER_MESSAGES');
+  dbug.print
+  ( dbug."input"
+  , 'p_recompile: %s; p_plsql_warnings: %s; p_plscope_settings: %s'
+  , p_recompile
+  , p_plsql_warnings
+  , p_plscope_settings
+  );
+$end
+
   if p_recompile != 0
   then
     setup_session(p_plsql_warnings => p_plsql_warnings, p_plscope_settings => p_plscope_settings);
   end if;
 
   -- bulk fetch instead of loop because DDL is issued inside the loop which may impact the open cursor
-  open c_obj(p_object_schema, l_object_type, l_object_name_tab, nvl(p_object_names_include, 1), p_recompile);
+  open c_obj for q'[
+with obj as
+( select  /*+ materialize */
+          o.object_schema() as owner
+  ,       o.object_name() as object_name
+  ,       o.dict_object_type() as object_type
+  from    table
+          ( ]' || $$PLSQL_UNIT_OWNER || q'[.pkg_schema_object_filter.get_schema_objects
+            ( p_schema => :p_object_schema
+            , p_object_type => :p_object_type
+            , p_object_names => :p_object_names
+            , p_object_names_include => :p_object_names_include
+            , p_grantor_is_schema => 0
+            , p_exclude_objects => :p_exclude_objects 
+            , p_include_objects => :p_include_objects
+            )
+          ) o
+  where   o.dict_object_type() in
+          ( 'VIEW'
+          , 'PROCEDURE'
+          , 'FUNCTION'
+          , 'PACKAGE'
+          , 'PACKAGE BODY'
+          , 'TRIGGER'
+          , 'TYPE'
+          , 'TYPE BODY'
+          , 'JAVA SOURCE'
+          , 'JAVA CLASS'
+          )
+  and     o.object_name() not like 'BIN$%' -- Oracle 10g Recycle Bin
+)
+select  o.owner
+,       o.object_name
+,       o.object_type
+,       case
+          when o.object_type in ('FUNCTION', 'PACKAGE', 'PROCEDURE', 'TRIGGER', 'TYPE', 'VIEW')
+          then 'ALTER ' || o.object_type || ' "' || o.object_name || '" COMPILE'
+          when o.object_type in ('JAVA CLASS', 'JAVA SOURCE')
+          then 'ALTER ' || o.object_type || ' "' || o.object_name || '" COMPILE'
+          when instr(o.object_type, ' BODY') > 0
+          then 'ALTER ' || replace(o.object_type, ' BODY') || ' "' || o.object_name || '" COMPILE BODY'
+        end as command
+,       ( select count(*) from all_dependencies d where d.owner = o.owner and d.type = o.object_type and d.name = o.object_name ) as nr_deps
+,       l.locked
+from    obj o
+        left outer join ( select l.owner, l.object_name, l.object_type, 1 as locked from table(admin_system_pkg.show_locked_objects) l ) l
+        on l.owner = o.owner and l.object_name = o.object_name and l.object_type = o.object_type
+order by
+        -- it is better to recompile first those objects that have the least number of dependencies,
+        -- i.e. that impact least their dependent objects
+        nr_deps
+,       o.owner
+,       o.object_name
+,       o.object_type]'
+    using p_object_schema
+    ,     p_object_type
+    ,     p_object_names
+    ,     p_object_names_include
+    ,     replace_clob(p_exclude_objects, ' ', chr(10))
+    ,     replace_clob(p_include_objects, ' ', chr(10));
+
   fetch c_obj bulk collect into l_obj_tab;
   close c_obj;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", '# objects: %s', l_obj_tab.count);
+$end
 
   if l_obj_tab.count > 0
   then
@@ -632,7 +729,24 @@ begin
     loop
       r_obj := l_obj_tab(i_idx);
 
-      if p_recompile != 0 and r_obj.object_name != $$PLSQL_UNIT -- do not recompile this package (body)
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , 'owner: %s; object type: %s; object name: %s; command: %s; # deps: %s'
+      , r_obj.owner
+      , r_obj.object_type
+      , r_obj.object_name
+      , r_obj.command
+      , r_obj.nr_deps
+      );
+      dbug.print
+      ( dbug."info"
+      , 'locked: %s'
+      , r_obj.locked
+      );
+$end
+
+      if p_recompile != 0 and r_obj.locked is null
       then
         begin
           execute immediate r_obj.command;
@@ -665,11 +779,29 @@ begin
         ,       e.position
       )
       loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( dbug."error"
+        , 'line: %s; position: %s; text: %s'
+        , r_compiler_messages.line
+        , r_compiler_messages.position
+        , r_compiler_messages.text
+        );
+$end
         pipe row (r_compiler_messages);
       end loop;
       
       for r_compiler_messages in c_compiler_messages(r_obj.owner, r_obj.object_name, r_obj.object_type)
       loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( dbug."warning"
+        , 'line: %s; position: %s; text: %s'
+        , r_compiler_messages.line
+        , r_compiler_messages.position
+        , r_compiler_messages.text
+        );
+$end
         pipe row (r_compiler_messages);
       end loop;        
     end loop;
@@ -677,17 +809,23 @@ begin
 
   commit;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+
   return; -- essential
 end show_compiler_messages;
 
 function format_compiler_messages
-( p_object_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_recompile in integer default 0
-, p_plsql_warnings in varchar2 default 'ENABLE:ALL'
-, p_plscope_settings in varchar2 default 'IDENTIFIERS:ALL'
+( p_object_schema in varchar2
+, p_object_type in varchar2
+, p_object_names in varchar2
+, p_object_names_include in integer
+, p_exclude_objects in clob
+, p_include_objects in clob
+, p_recompile in integer
+, p_plsql_warnings in varchar2
+, p_plscope_settings in varchar2
 )
 return t_message_tab
 pipelined
@@ -695,8 +833,8 @@ is
 begin
   for r_message in
   ( select  lower(t.type) || ' ' || t.owner || '.' || t.name || ' ' ||
-            '(' || t.line ||
-            case when t.position is not null then ',' || t.position end ||
+            '(' || to_char(t.line, 'FM00000') ||
+            case when t.position is not null then ',' || to_char(t.position, 'FM000') end ||
             ') ' ||
             case
               when t.sequence is not null
@@ -711,6 +849,8 @@ begin
               , p_object_type => p_object_type
               , p_object_names => p_object_names 
               , p_object_names_include => p_object_names_include 
+              , p_exclude_objects => p_exclude_objects
+              , p_include_objects => p_include_objects
               , p_recompile => p_recompile 
               , p_plsql_warnings => p_plsql_warnings
               , p_plscope_settings => p_plscope_settings

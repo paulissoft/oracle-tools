@@ -129,7 +129,7 @@ pipelined;
 
 /**
 
-Constructs a schema objetc filter based on the input parameters, then invokes the procedure get_schema_objects and returns the objects found.
+Constructs a schema object filter based on the input parameters, then invokes the procedure get_schema_objects and returns the objects found.
 
 **/
 

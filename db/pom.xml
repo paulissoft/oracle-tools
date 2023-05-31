@@ -432,6 +432,12 @@
                     select 'db.object.names.include: ${db.object.names.include}'
                     from dual
                     union all
+                    select 'db.include.objects: ${db.include.objects}'
+                    from dual
+                    union all
+                    select 'db.exclude.objects: ${db.exclude.objects}'
+                    from dual
+                    union all
                     select 'db.recompile: ${db.recompile}'
                     from dual
                     union all
@@ -448,6 +454,8 @@
                            , p_object_type => '${db.object.type}'
                            , p_object_names => '${db.object.names}'
                            , p_object_names_include => '${db.object.names.include}'
+                           , p_include_objects => '${db.include.objects}'
+                           , p_exclude_objects => '${db.exclude.objects}'
                            , p_recompile => '${db.recompile}'
                            , p_plsql_warnings => '${db.plsql.warnings}'
                            , p_plscope_settings => '${db.plscope.settings}'
