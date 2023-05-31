@@ -833,8 +833,8 @@ is
 begin
   for r_message in
   ( select  lower(t.type) || ' ' || t.owner || '.' || t.name || ' ' ||
-            '(' || t.line ||
-            case when t.position is not null then ',' || t.position end ||
+            '(' || to_char(t.line, 'FM00000') ||
+            case when t.position is not null then ',' || to_char(t.position, 'FM000') end ||
             ') ' ||
             case
               when t.sequence is not null
