@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.2.0] - 2023-05-31
+
+### Changed
+
+- [Improve robustness of installing and code checking.](https://github.com/paulissoft/oracle-tools/issues/136)
+
 ## [2.1.1] - 2023-05-09
 
 ### Changed
