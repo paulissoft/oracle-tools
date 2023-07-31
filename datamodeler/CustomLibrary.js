@@ -574,6 +574,7 @@ function _addUKcolumns(list, table) {
 }
 
 function _addFKcolumns(list, fkeys) {
+    if (fkeys === null) return;
     _toStream(fkeys).forEach(function (fkey) {
         _toStream(fkey.getColumns())
             .filter(function (col) { return !list.contains(col); })
