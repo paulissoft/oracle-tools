@@ -2,7 +2,7 @@
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
-// date  : 2022-08-25
+// date  : 2023-07-31
 // usage : - Copy the contents of this file and paste them into a custom library
 //           (for instance CustomLibrary) in ODM. Add each function
 //           without underscore below as function / method to the ODM library.
@@ -574,7 +574,7 @@ function _addUKcolumns(list, table) {
 }
 
 function _addFKcolumns(list, fkeys) {
-    if (fkeys === null) return;
+    if (fkeys === null || fkeys.length == 0) return;
     _toStream(fkeys).forEach(function (fkey) {
         _toStream(fkey.getColumns())
             .filter(function (col) { return !list.contains(col); })
