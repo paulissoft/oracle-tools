@@ -1,58 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- File contains Custom Libraries Scripts -->
 <custom_libraries>
-  <lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
-    <script>
-      <![CDATA[// variable used to return custom message
-var ruleMessage;
-// variable used to return the type of the rule Error
-// or Warning and red/blue color will be used for result
-// if another custom type is returned (Problem in the rule below) 
-// then result is colored in yellow
-var errType;
-var table;
-function checkcomments(object){
- result = true;
- ruleMessage="";
- if(table.getCommentInRDBMS().equals("")){
-  ruleMessage="no comments in RDBMS defined";
-  errType="Problem:";
-  result = false;
- }
- if(table.getComment().equals("")){
-  if(ruleMessage.equals("")){
-   ruleMessage="no comments defined";
-  }else{
-   ruleMessage= ruleMessage +" , no comments defined";
-   }
-   // can be changed to Warning    
-   errType="Error";
-  return false;
- }
- return result;
-}
-//rule for not null constraint name
-function NotNullConstr_Name_Length(column){
- model = column.getDesignPart();
- name = column.getNotNullConstraintName();
- result = true;
- if(name!=null && !"".equals(name)){
-  holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
-  if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
-    result = false;
-  }
- }
- return result
-}]]>
-    </script>
-  </lib>
-  <lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedLogicalItems,applyStandardsForSelectedRelationalItems" >
-    <script>
-      <![CDATA[// -----------------------------------------------------------------------------
+	<lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedLogicalItems,applyStandardsForSelectedRelationalItems" >
+		<script>
+			<![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
-// date  : 2022-08-25
+// date  : 2023-07-31
 // usage : - Copy the contents of this file and paste them into a custom library
 //           (for instance CustomLibrary) in ODM. Add each function
 //           without underscore below as function / method to the ODM library.
@@ -624,6 +579,7 @@ function _addUKcolumns(list, table) {
 }
 
 function _addFKcolumns(list, fkeys) {
+    if (fkeys === null || fkeys.length == 0) return;
     _toStream(fkeys).forEach(function (fkey) {
         _toStream(fkey.getColumns())
             .filter(function (col) { return !list.contains(col); })
@@ -805,8 +761,52 @@ function applyStandardsForSelectedLogicalItems(model) {
         _msg(e.stack);
         throw(e);
     }
+}]]>
+		</script>
+	</lib>
+	<lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
+		<script>
+			<![CDATA[// variable used to return custom message
+var ruleMessage;
+// variable used to return the type of the rule Error
+// or Warning and red/blue color will be used for result
+// if another custom type is returned (Problem in the rule below) 
+// then result is colored in yellow
+var errType;
+var table;
+function checkcomments(object){
+ result = true;
+ ruleMessage="";
+ if(table.getCommentInRDBMS().equals("")){
+  ruleMessage="no comments in RDBMS defined";
+  errType="Problem:";
+  result = false;
+ }
+ if(table.getComment().equals("")){
+  if(ruleMessage.equals("")){
+   ruleMessage="no comments defined";
+  }else{
+   ruleMessage= ruleMessage +" , no comments defined";
+   }
+   // can be changed to Warning    
+   errType="Error";
+  return false;
+ }
+ return result;
 }
-]]>
-    </script>
-  </lib>
+//rule for not null constraint name
+function NotNullConstr_Name_Length(column){
+ model = column.getDesignPart();
+ name = column.getNotNullConstraintName();
+ result = true;
+ if(name!=null && !"".equals(name)){
+  holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
+  if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
+    result = false;
+  }
+ }
+ return result
+}]]>
+		</script>
+	</lib>
 </custom_libraries>
