@@ -15,6 +15,13 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.2.1] - 2023-08-28
+
+### Fixed
+
+- [The DDL generator reserves files for instead of triggers but they are not created.](https://github.com/paulissoft/oracle-tools/issues/139)
+- [Oracle Datamodeler custom library fails when the number of foreign key columns is 0.](https://github.com/paulissoft/oracle-tools/issues/138)
+
 ## [2.2.0] - 2023-05-31
 
 ### Changed
