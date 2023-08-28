@@ -466,7 +466,7 @@ sub add_sql_statement ($$$$;$);
 sub sort_sql_statements ($$$);
 sub sort_dependent_objects ($$$);
 sub all_sql_statements_flush ($$$$);
-sub object_sql_statements_flush ($$$$$);
+sub object_sql_statements_flush ($$$$$;$);
 sub sql_statement_flush ($$$$$$);
 sub print_run_info ($$);
 sub remove_cr_lf ($);
@@ -1206,12 +1206,14 @@ PREAMBLE
     }
 }
 
-sub object_sql_statements_flush ($$$$$) {
+sub object_sql_statements_flush ($$$$$;$) {
     trace((caller(0))[3]);
 
-    my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements, $object) = @_;
+    my ($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements, $object, $ignore_warning_when_file_exists) = @_;
 
-    my $ignore_warning_when_file_exists = 0;
+    $ignore_warning_when_file_exists = 0
+        unless (defined($ignore_warning_when_file_exists));
+    
     my $file = undef;
     
     debug("Flushing $object with ", scalar(@$r_sql_statements), " statement(s)");
@@ -1277,7 +1279,9 @@ sub object_sql_statements_flush ($$$$$) {
             debug("Trigger statement: $sql_statement");
 
             if ($sql_statement =~ m/\bINSTEAD\s+OF\s+((?:OR|INSERT|DELETE|UPDATE)\s+)+ON\s+(?<object>$object_expr)/i) {
-                info("Moving DDL of instead of trigger $object_schema.$object_name to DDL for view $+{object}");
+                my $comment = "Moving DDL of instead of trigger $object_schema.$object_name to DDL for view $+{object}";
+
+                info($comment);
 
                 # override $object_schema, $object_type and $object_name so that the 
                 my ($object_schema, $object_type, $object_name);
@@ -1288,9 +1292,16 @@ sub object_sql_statements_flush ($$$$$) {
                 $object_type = 'VIEW';
 
                 # put it in the VIEW file!
-                $file = object_file_name($object_schema, $object_type, $object_name);
+                # $file = object_file_name($object_schema, $object_type, $object_name);
                 # and ignore the warning
-                $ignore_warning_when_file_exists = 1;
+                # $ignore_warning_when_file_exists = 1;
+
+                object_sql_statements_flush($fh_install_sql, $r_fh, $r_nr_sql_statements, $r_sql_statements, join($object_sep, $object_schema, $object_type, $object_name), 1);
+
+                # Create an instead of trigger file with just a comment
+                my @lines = ("-- $comment");
+                
+                $r_sql_statements->[0]->{ddl} = \@lines;
             }
         }
         open_file($file, $fh_install_sql, $r_fh, $ignore_warning_when_file_exists, $object_type, $object_name);
@@ -1750,8 +1761,10 @@ sub add_object_seq ($;$) {
             error("Object sequence ($object_seq) for object '$object' must be greater than the maximum thus far ($object_seq_max)");
         }
         $object_seq_max = $object_seq;
+        debug("Maximum object sequence is set to object sequence ($object_seq) for object '$object'.");
     } else {
         $object_seq = ++$object_seq_max;
+        info("Object sequence ($object_seq) for object '$object' is set to maximum object sequence.");
     }
 
     $object_seq{$object} = $object_seq;
