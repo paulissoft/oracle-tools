@@ -1613,7 +1613,7 @@ begin
     , 'column %s: %s; data type: %s; # values: %s; value(s) (max ' || c_max_items || '): %s'
     , to_char(l_column_idx, 'FM000')
     , l_column_value
-    , p_column_value_tab(l_column_value).data_type
+    , p_column_value_tab(l_column_value).data_type || ' ' || case when p_column_value_tab(l_column_value).is_table then '(ARRAY)' else '(SCALAR)' end
     , value_count(p_column_value_tab(l_column_value))
     , value_list(p_column_value_tab(l_column_value))
     );
