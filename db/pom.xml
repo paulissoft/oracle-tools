@@ -256,6 +256,13 @@
           <groupId>org.flywaydb</groupId>
           <artifactId>flyway-maven-plugin</artifactId>
           <version>${flyway.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.flywaydb</groupId>
+              <artifactId>flyway-database-oracle</artifactId>
+              <version>${flyway.version}</version>
+            </dependency>
+          </dependencies>
           <configuration>
             <skip>${db.install.skip}</skip>
             <!-- The section below will not used since the Maven property ${flyway.locations} (set above) has a higher precedence. -->
@@ -290,6 +297,15 @@
           <groupId>org.utplsql</groupId>
           <artifactId>utplsql-maven-plugin</artifactId>
           <version>${utplsql-maven-plugin.version}</version>
+          <dependencies>
+            <!-- specify the dependent jdbc8 driver here explicitly -->
+            <dependency>
+              <groupId>${ojdbc.groupId}</groupId>
+              <artifactId>${ojdbc.artifactId}</artifactId>
+              <version>${ojdbc.version}</version>
+              <type>pom</type>
+            </dependency>
+          </dependencies>
           <configuration>
             <!-- this plugin has no skip tag -->
             <paths>
@@ -313,11 +329,12 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>sql-maven-plugin</artifactId>
           <dependencies>
-            <!-- specify the dependent jdbc driver here -->
+            <!-- specify the dependent jdbc8 driver here explicitly -->
             <dependency>
-              <groupId>com.oracle.ojdbc</groupId>
-              <artifactId>ojdbc8</artifactId>
-              <version>${ojdbc8.version}</version>
+              <groupId>${ojdbc.groupId}</groupId>
+              <artifactId>${ojdbc.artifactId}</artifactId>
+              <version>${ojdbc.version}</version>
+              <type>pom</type>
             </dependency>
           </dependencies>
           <configuration>

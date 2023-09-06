@@ -105,10 +105,18 @@
         <!-- Make sure this isn't included on any classpath-->
         <scope>provided</scope>
       </dependency>
+      <!-- https://blogs.oracle.com/developers/post/your-own-way%E2%80%8A-%E2%80%8Aoracle-jdbc-drivers-19700-on-maven%C2%A0central -->
+      <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
       <dependency>
-        <groupId>com.oracle.ojdbc</groupId>
-        <artifactId>ojdbc8</artifactId>
-        <version>${ojdbc8.version}</version>
+        <groupId>${ojdbc.groupId}</groupId>
+        <artifactId>${ojdbc.artifactId}</artifactId>
+        <version>${ojdbc.version}</version>
+        <type>pom</type>
+     </dependency>
+      <!--dependency>
+        <groupId>${ojdbc.groupId}</groupId>
+        <artifactId>${ojdbc.artifactId}</artifactId>
+        <version>${ojdbc.version}</version>
         <exclusions>
           <exclusion>
             <groupId>com.oracle.database.ha</groupId>
@@ -119,14 +127,15 @@
             <artifactId>ons</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
+      </dependency-->
     </dependencies>
   </dependencyManagement>
 
   <dependencies>
     <dependency>
-      <groupId>com.oracle.ojdbc</groupId>
-      <artifactId>ojdbc8</artifactId>
+      <groupId>${ojdbc.groupId}</groupId>
+      <artifactId>${ojdbc.artifactId}</artifactId>
+      <type>pom</type>
     </dependency>
   </dependencies>
 
@@ -162,10 +171,11 @@
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target if="${conf.show.properties}">
-                  <!-- also dbUrl, dbUser, dbPass -->
                   <echoproperties prefix="java." />
                   <echoproperties prefix="maven." />
                   <echoproperties prefix="db." />
+                  <!-- also dbUrl, dbUser -->
+                  <echoproperties regex="(dbUrl|dbUser)" />
                   <echoproperties prefix="oracle-tools." />
                   <echoproperties prefix="oracle." />
                   <echoproperties prefix="conf." />                 
@@ -284,8 +294,12 @@
                   
                   <!-- new eazy connect syntax -->
                   <!-- db info -->
-                  <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />
+
+                  <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />                  
+
                   <property name="db.url" value="jdbc:oracle:thin:@${db.connect.identifier}" />
+
+                  <echo level="${ant.log.level}" message="Executing test for connection to database ${db}" />
 
                   <!-- GJP 2022-09-02 -->
                   <!-- The Jenkins handling of (proxy) username should be more user friendly. -->
@@ -437,6 +451,9 @@
                 <target if="${conf.show.properties}">
                   <echoproperties prefix="env." />
                   <echoproperties prefix="db." />
+                  <!-- also dbUrl, dbUser -->
+                  <echoproperties regex="(dbUrl|dbUser)" />
+                  <echoproperties prefix="oracle." />
                 </target>
               </configuration>
               <goals>
