@@ -105,10 +105,18 @@
         <!-- Make sure this isn't included on any classpath-->
         <scope>provided</scope>
       </dependency>
+      <!-- https://blogs.oracle.com/developers/post/your-own-way%E2%80%8A-%E2%80%8Aoracle-jdbc-drivers-19700-on-maven%C2%A0central -->
+      <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
       <dependency>
-        <groupId>com.oracle.ojdbc</groupId>
-        <artifactId>ojdbc8</artifactId>
-        <version>${ojdbc8.version}</version>
+        <groupId>${ojdbc.groupId}</groupId>
+        <artifactId>${ojdbc.artifactId}</artifactId>
+        <version>${ojdbc.version}</version>
+        <type>pom</type>
+     </dependency>
+      <!--dependency>
+        <groupId>${ojdbc.groupId}</groupId>
+        <artifactId>${ojdbc.artifactId}</artifactId>
+        <version>${ojdbc.version}</version>
         <exclusions>
           <exclusion>
             <groupId>com.oracle.database.ha</groupId>
@@ -119,14 +127,15 @@
             <artifactId>ons</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
+      </dependency-->
     </dependencies>
   </dependencyManagement>
 
   <dependencies>
     <dependency>
-      <groupId>com.oracle.ojdbc</groupId>
-      <artifactId>ojdbc8</artifactId>
+      <groupId>${ojdbc.groupId}</groupId>
+      <artifactId>${ojdbc.artifactId}</artifactId>
+      <type>pom</type>
     </dependency>
   </dependencies>
 
@@ -286,21 +295,9 @@
                   <!-- new eazy connect syntax -->
                   <!-- db info -->
 
-                  <!-- https://docs.oracle.com/en/cloud/paas/autonomous-database/serverless/adbsb/connect-jdbc-thin-wallet.html#GUID-1640CC02-BF3E-48C2-8FFE-A596614A6A40 -->
-                  <condition property="oracle.net.tns_admin" value="${env.TNS_ADMIN}">
-                    <isset property="env.TNS_ADMIN"/>
-                  </condition>
-                  
                   <property name="db.connect.identifier" value="//${db.host}:${db.port}/${db.service}" />                  
 
-                  <condition property="db.oracle.driver" value="thin" else="thin"> <!-- TODO: else may need to be oci8? -->
-                    <or>
-                      <contains string="${db.connect.identifier}" substring=":" />
-                      <contains string="${db.connect.identifier}" substring="/" />
-                    </or>
-                  </condition>
-
-                  <property name="db.url" value="jdbc:oracle:${db.oracle.driver}:@${db.connect.identifier}" />
+                  <property name="db.url" value="jdbc:oracle:thin:@${db.connect.identifier}" />
 
                   <echo level="${ant.log.level}" message="Executing test for connection to database ${db}" />
 

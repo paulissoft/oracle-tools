@@ -150,6 +150,7 @@
                     <property name="workspace" value="${apex.workspace}" />
                     <property name="export.dir" value="${apex.application.dir}" />
                     <property name="sql.home" value="${sql.home}" />
+                    <property name="ojdbc.java.version" value="${ojdbc.java.version}" />
                     <property name="env.SQL_HOME" value="${env.SQL_HOME}" />
                     <property name="env.LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}"/>
                     <reference torefid="runtime.classpath" refid="maven.runtime.classpath"/>

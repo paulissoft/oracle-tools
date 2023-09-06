@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.3.0] - 2023-09-06
+
+### Changed
+
+- [Bump up plugin versions.](https://github.com/paulissoft/oracle-tools/issues/141)
+
 ## [2.2.1] - 2023-08-28
 
 ### Fixed

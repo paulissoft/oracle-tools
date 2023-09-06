@@ -13,6 +13,7 @@ The following properties must be set before:
 - export.dir: directory to save/retrieve install.sql
 - sql.home: the home directory of the SqlCli client (often the SQL Developer home)
 - runtime.classpath: the runtime classpath
+- ojdbc.java.version: the Java version for JDBC (8, 10, ...)
 
 The following properties are only important during export:
 - application.version: an Apex application version
@@ -99,6 +100,7 @@ The following properties are only important during export:
 
     <!-- There are environments where you can not launch SQLcl from the command line but only thru Java (Citrix for example). -->
     <property name="launch-sqlcl-java" value="false" />
+    <property name="ojdbc.java.version" value="8" />
   </target>
 
   <target name="init-split-userid">
@@ -277,16 +279,16 @@ The following properties are only important during export:
                     <include name="httpcore.jar"/>
                     <include name="orajsoda.jar"/>
                     <include name="httpclient.jar"/>
-                    <include name="orai18n-utility.jar"/>
-                    <include name="ojdbc8.jar"/>
+                    <include name="orai1${ojdbc.java.version}n-utility.jar"/>
+                    <include name="ojdbc${ojdbc.java.version}.jar"/>
                     <include name="dbtools-net.jar"/>
                     <include name="dbtools-http.jar"/>
                     <include name="dbtools-common.jar"/>
-                    <include name="orai18n-servlet.jar"/>
+                    <include name="orai1${ojdbc.java.version}n-servlet.jar"/>
                     <include name="jsch.jar"/>
                     <include name="commons-codec.jar"/>
                     <include name="jdbcrest.jar"/>
-                    <include name="orai18n-mapping.jar"/>
+                    <include name="orai1${ojdbc.java.version}n-mapping.jar"/>
                     <include name="jline.jar"/>
                     <include name="antlr-runtime.jar"/>
                     <!--include name="jansi.jar"/-->
@@ -306,20 +308,20 @@ The following properties are only important during export:
                   <!-- Start of #Sql file locations (when embedded) -->
                   <fileset dir="${my.sql.home}/..">
                     <include name="rdbms/jlib/xdb6.jar"/>
-                    <include name="jdbc/lib/ojdbc8.jar"/>
-                    <include name="jlib/orai18n-utility.jar"/>
-                    <include name="jlib/orai18n-mapping.jar"/>
-                    <include name="jlib/orai18n.jar"/>
+                    <include name="jdbc/lib/ojdbc${ojdbc.java.version}.jar"/>
+                    <include name="jlib/orai1${ojdbc.java.version}n-utility.jar"/>
+                    <include name="jlib/orai1${ojdbc.java.version}n-mapping.jar"/>
+                    <include name="jlib/orai1${ojdbc.java.version}n.jar"/>
                     <include name="modules/oracle.xdk/xmlparserv2.jar"/>
                   </fileset>
 
                   <!-- For Dataxion -->
                   <fileset dir="${my.sql.home}">
                     <include name="rdbms/jlib/xdb6.jar"/>
-                    <include name="jdbc/lib/ojdbc8.jar"/>
-                    <include name="jlib/orai18n-utility.jar"/>
-                    <include name="jlib/orai18n-mapping.jar"/>
-                    <include name="jlib/orai18n.jar"/>
+                    <include name="jdbc/lib/ojdbc${ojdbc.java.version}.jar"/>
+                    <include name="jlib/orai1${ojdbc.java.version}n-utility.jar"/>
+                    <include name="jlib/orai1${ojdbc.java.version}n-mapping.jar"/>
+                    <include name="jlib/orai1${ojdbc.java.version}n.jar"/>
                     <include name="modules/oracle.xdk/xmlparserv2.jar"/>
                   </fileset>
                   <!-- End of #Sql file locations (when embedded) -->          
