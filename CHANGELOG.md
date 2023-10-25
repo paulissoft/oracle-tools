@@ -15,6 +15,8 @@ Types of changes:
 
 ## [Unreleased]
 
+- [The ADMIN user needs SYS privileges for the package ADMIN_SYSTEM_PKG.](https://github.com/paulissoft/oracle-tools/issues/143)
+
 ## [2.3.0] - 2023-09-06
 
 ### Changed
