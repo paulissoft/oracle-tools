@@ -101,6 +101,9 @@ The following properties are only important during export:
     <!-- There are environments where you can not launch SQLcl from the command line but only thru Java (Citrix for example). -->
     <property name="launch-sqlcl-java" value="false" />
     <property name="ojdbc.java.version" value="8" />
+
+    <echo message="(synchronize.xml.init) $${launch-sqlcl-java}: ${launch-sqlcl-java}" />
+    <echo message="(synchronize.xml.init) $${ojdbc.java.version}: ${ojdbc.java.version}" />
   </target>
 
   <target name="init-split-userid">
@@ -231,6 +234,7 @@ The following properties are only important during export:
     <attribute name="sqlarg2" default=""/>
     <attribute name="sqlarg3" default=""/>
     <sequential>
+      <echo message="&gt;sqlcl"/>
       <ac:trycatch property="@{name}.error">
         <try>
           <ac:if>
@@ -339,17 +343,35 @@ The following properties are only important during export:
               </java>
             </then>
             <else>
-              <exec executable="${sql.executable}"
-                    dir="@{dir}"
-                    inputstring="${my.password}"
-                    failonerror="true">
-                <arg value="-S" /> <!-- silent -->
-                <arg value="${quote}${my.userid}${quote}" />
-                <arg value="@{sqlfile}" />
-                <arg value="@{sqlarg1}" />
-                <arg value="@{sqlarg2}" />
-                <arg value="@{sqlarg3}" />
-              </exec>
+              <!-- empty sqlarg3 gives a string index -1 error -->
+              <ac:if>
+                <equals arg1="@{sqlarg3}" arg2=""/>
+                <then>
+                  <exec executable="${sql.executable}"
+                        dir="@{dir}"
+                        inputstring="${my.password}"
+                        failonerror="true">
+                    <arg value="-S" /> <!-- silent -->
+                    <arg value="${quote}${my.userid}${quote}" />
+                    <arg value="@{sqlfile}" />
+                    <arg value="@{sqlarg1}" />
+                    <arg value="@{sqlarg2}" />
+                  </exec>
+                </then>
+                <else>
+                  <exec executable="${sql.executable}"
+                        dir="@{dir}"
+                        inputstring="${my.password}"
+                        failonerror="true">
+                    <arg value="-S" /> <!-- silent -->
+                    <arg value="${quote}${my.userid}${quote}" />
+                    <arg value="@{sqlfile}" />
+                    <arg value="@{sqlarg1}" />
+                    <arg value="@{sqlarg2}" />
+                    <arg value="@{sqlarg3}" />
+                  </exec>
+                </else>
+              </ac:if>
             </else>
           </ac:if>        
         </try>
@@ -394,6 +416,7 @@ The following properties are only important during export:
           <fail message="${@{name}.error}"/>
         </catch>
       </ac:trycatch>
+      <echo message="&lt;sqlcl"/>
     </sequential>
   </macrodef>
 
