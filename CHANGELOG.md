@@ -15,6 +15,8 @@ Types of changes:
 
 ## [Unreleased]
 
+- [Generation of BC_PORTAL scripts does no longer work.](https://github.com/paulissoft/oracle-tools/issues/146)
+
 ## [2.3.1] - 2023-10-25
 
 ### Fixed
