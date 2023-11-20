@@ -15,6 +15,26 @@ Types of changes:
 
 ## [Unreleased]
 
+- [Generation of BC_PORTAL scripts does no longer work.](https://github.com/paulissoft/oracle-tools/issues/146)
+
+## [2.4.0] - 2023-11-20
+
+### Fixed
+
+- [Installation of PATO in empty database fails.](https://github.com/paulissoft/oracle-tools/issues/148)
+
+### Added
+
+- [It must be possible to enable Flyway flag outOfOrder when the order of incremental migrations is incorrect.](https://github.com/paulissoft/oracle-tools/issues/147)
+
+## [2.3.1] - 2023-10-25
+
+### Fixed
+
+- [The SQL client does not accept an empty last parameter when a script is invoked.](https://github.com/paulissoft/oracle-tools/issues/145)
+- [The ADMIN user needs to grant execute privileges on its packages to public.](https://github.com/paulissoft/oracle-tools/issues/144)
+- [The ADMIN user needs SYS privileges for the package ADMIN_SYSTEM_PKG.](https://github.com/paulissoft/oracle-tools/issues/143)
+
 ## [2.3.0] - 2023-09-06
 
 ### Changed

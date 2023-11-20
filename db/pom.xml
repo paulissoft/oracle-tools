@@ -38,6 +38,7 @@
     <!-- compile all and reuse settings for afterMigrate.sql -->
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
     <flyway.placeholders.reuse_settings>false</flyway.placeholders.reuse_settings>
+    <flyway.outOfOrder>false</flyway.outOfOrder>
 
     <!-- ======================================================================= -->
     <!-- Properties for generate DDL (db-generate-ddl-full/db-generate-ddl-incr) -->
@@ -281,6 +282,7 @@
             <!-- The password may be set on the command line -->
             <password>${db.password}</password>
             <url>${db.url}</url>
+            <outOfOrder>${flyway.outOfOrder}</outOfOrder>
           </configuration>
           <executions>
             <execution>

@@ -133,6 +133,15 @@ return anydata_t;
 function empty_column_value_tab
 return column_value_tab_t;
 
+function list2collection
+( p_value_list in varchar2 -- A separated list of values
+, p_sep in varchar2 default ',' -- The list separator
+, p_ignore_null in naturaln default 1 -- Ignore null values (when set, value list "|" returns 0 elements instead of 2)
+)
+return sys.odcivarchar2list -- The collection of values
+deterministic;
+/** Convert a separated list into a collection. **/
+
 procedure do
 ( p_operation in varchar2 -- (S)elect, (I)nsert, (U)pdate, (M)erge or (D)elete
 , p_table_name in varchar2 -- the table name
