@@ -158,6 +158,40 @@ begin
   return l_column_value_tab;
 end;
 
+function list2collection
+( p_value_list in varchar2
+, p_sep in varchar2
+, p_ignore_null in naturaln
+)
+return sys.odcivarchar2list
+is
+  l_collection sys.odcivarchar2list;
+  l_max_pos constant integer := 32767; -- or 4000
+begin
+  if p_sep is null
+  then
+    raise value_error;
+  end if;
+  
+  select  t.val
+  bulk collect
+  into    l_collection
+  from    ( select  substr(str, pos + 1, lead(pos, 1, l_max_pos) over(order by pos) - pos - 1) val
+            from    ( select  str
+                      ,       instr(str, p_sep, 1, level) pos
+                      from    ( select  p_value_list as str
+                                from    dual
+                                where   rownum <= 1
+                              )
+                      connect by
+                              level <= length(str) - nvl(length(replace(str, p_sep)), 0) /* number of separators */ + 1
+                    )
+          ) t
+  where   ( p_ignore_null = 0 or t.val is not null );
+
+  return l_collection;
+end list2collection;
+
 procedure do
 ( p_operation in varchar2
 , p_table_name in varchar2
@@ -853,7 +887,7 @@ begin
             inner join
             ( select  e.column_value as column_name_expr
               from    table
-                      ( oracle_tools.api_pkg.list2collection
+                      ( oracle_tools.data_sql_pkg.list2collection
                         ( p_value_list => p_column_name_list
                         , p_sep => ','
                         , p_ignore_null => 1

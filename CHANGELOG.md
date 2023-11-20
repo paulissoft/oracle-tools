@@ -15,8 +15,17 @@ Types of changes:
 
 ## [Unreleased]
 
-- [It must be possible to enable Flyway flag outOfOrder when the order of incremental migrations is incorrect.](https://github.com/paulissoft/oracle-tools/issues/147)
 - [Generation of BC_PORTAL scripts does no longer work.](https://github.com/paulissoft/oracle-tools/issues/146)
+
+## [2.4.0] - 2023-11-20
+
+### Fixed
+
+- [Installation of PATO in empty database fails.](https://github.com/paulissoft/oracle-tools/issues/148)
+
+### Added
+
+- [It must be possible to enable Flyway flag outOfOrder when the order of incremental migrations is incorrect.](https://github.com/paulissoft/oracle-tools/issues/147)
 
 ## [2.3.1] - 2023-10-25
 

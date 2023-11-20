@@ -1,4 +1,4 @@
--- privileges granted to ADMIN user (or SYSTEM) by sys
+-- privileges granted to ADMIN user (or SYSTEM) by SYS
 -- not necessary on an autonomous database since the ADMIN user has them
 
 grant select on sys.v_$session to &&admin;
