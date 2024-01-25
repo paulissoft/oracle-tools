@@ -15,6 +15,9 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.5.0] - 2024-01-25
+
+- [Enhance test connection Java program.](https://github.com/paulissoft/oracle-tools/issues/149)
 - [Generation of BC_PORTAL scripts does no longer work.](https://github.com/paulissoft/oracle-tools/issues/146)
 
 ## [2.4.0] - 2023-11-20
