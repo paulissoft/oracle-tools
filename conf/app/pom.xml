@@ -11,15 +11,21 @@
   <packaging>jar</packaging>
   <description>Test JDBC connection</description>
 
+  <properties>
+    <default.goal>test</default.goal>
+    <conf.connect.skip>false</conf.connect.skip>
+    <db.schema>${oracle_tools_schema}</db.schema>
+    <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
+    <conf.test.connection>false</conf.test.connection> <!-- no recursion -->
+    <!-- Pass as environment variables for security reasons (Jenkins) -->
+    <db.username>${env.DB_USERNAME}</db.username>
+    <db.password>${env.DB_PASSWORD}</db.password>
+  </properties>
+
   <profiles>
     <profile>
       <id>test-connection</id>
       <properties>
-        <default.goal>test</default.goal>
-        <conf.connect.skip>false</conf.connect.skip>
-        <db.schema>${oracle_tools_schema}</db.schema>
-        <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
-        <conf.test.connection>false</conf.test.connection> <!-- no recursion -->
         <!-- Pass as environment variables for security reasons (Jenkins) -->
         <db.username>${env.DB_USERNAME}</db.username>
         <db.password>${env.DB_PASSWORD}</db.password>
@@ -45,6 +51,31 @@
                     <argument>${db.username}</argument>
                     <argument>${db.password}</argument>
                   </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>test-connection-menu</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>test</phase>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+                <configuration>
+                  <mainClass>TestConnection</mainClass>
                 </configuration>
               </execution>
             </executions>
