@@ -26,6 +26,8 @@
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <HikariCP.version>3.4.2</HikariCP.version>
     <lombok.version>1.18.30</lombok.version>
+    <oracle.ojdbc.artifactId>ojdbc11</oracle.ojdbc.artifactId>
+    <oracle.ucp.artifactId>ucp11</oracle.ucp.artifactId>
     <oracle.jdbc.version>23.3.0.23.09</oracle.jdbc.version>
   </properties>
 
@@ -44,13 +46,13 @@
     </dependency>
     <dependency>
       <groupId>com.oracle.database.jdbc</groupId>
-      <artifactId>ojdbc11</artifactId>
+      <artifactId>${oracle.ojdbc.artifactId}</artifactId>
       <version>${oracle.jdbc.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.oracle.database.jdbc</groupId>
-      <artifactId>ucp11</artifactId>
+      <artifactId>${oracle.ucp.artifactId}</artifactId>
       <version>${oracle.jdbc.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -87,5 +89,25 @@
   <modules>
     <module>jdbc</module>
   </modules>
+
+  <profiles>
+    <profile>
+      <id>versions-check</id>
+      <properties>
+        <default.goal>versions:display-dependency-updates versions:display-parent-updates versions:display-plugin-updates versions:display-property-updates</default.goal>
+      </properties>
+    </profile>
+    <profile>
+      <id>java8</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <oracle.ojdbc.artifactId>ojdbc8</oracle.ojdbc.artifactId>
+        <oracle.ucp.artifactId>ucp</oracle.ucp.artifactId>
+        <oracle.jdbc.version>19.7.0.0</oracle.jdbc.version>
+      </properties>
+    </profile>
+  </profiles>
 
 </project>
