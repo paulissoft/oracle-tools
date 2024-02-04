@@ -14,7 +14,27 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
     // static stuff
 
     private static final Logger logger = LoggerFactory.getLogger(PatoPoolDataSourceOracle.class);
+
+    public static final String VALIDATE_CONNECTION_ON_BORROW = "validateConnectionOnBorrow";
     
+    public static final String ABANDONED_CONNECTION_TIMEOUT = "abandonedConnectionTimeout";
+    
+    public static final String TIME_TO_LIVE_CONNECTION_TIMEOUT = "timeToLiveConnectionTimeout";
+    
+    public static final String INACTIVE_CONNECTION_TIMEOUT = "inactiveConnectionTimeout";
+    
+    public static final String TIMEOUT_CHECK_INTERVAL = "timeoutCheckInterval";
+    
+    public static final String MAX_STATEMENTS = "maxStatements";
+    
+    public static final String CONNECTION_WAIT_TIMEOUT = "connectionWaitTimeout";
+    
+    public static final String MAX_CONNECTION_REUSE_TIME = "maxConnectionReuseTime";
+    
+    public static final String SECONDS_TO_TRUST_IDLE_CONNECTION = "secondsToTrustIdleConnection";
+    
+    public static final String CONNECTION_VALIDATION_TIMEOUT = "connectionValidationTimeout";
+
     static {
         logger.info("Initializing {}", PatoPoolDataSourceOracle.class.toString());
     }
@@ -29,10 +49,9 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
     private PoolDataSource commonPoolDataSourceOracle;
     
     public PatoPoolDataSourceOracle(final PoolDataSource pds,
-                                  final Properties key,
-                                  final String username,
-                                  final String password) {
-        super(pds, key, username, password);
+                                    final String username,
+                                    final String password) {
+        super(pds, determineCommonDataSourceProperties(pds), username, password);
         
         commonPoolDataSourceOracle = (PoolDataSource) commonPoolDataSource;
 
@@ -66,7 +85,28 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
             }
         }
     }
-    
+
+    private static Properties determineCommonDataSourceProperties(final PoolDataSource pds) {
+        final Properties commonDataSourceProperties = new Properties();
+        
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CLASS, pds.getClass().getName());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.URL, pds.getURL());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getConnectionFactoryClassName());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, VALIDATE_CONNECTION_ON_BORROW, pds.getValidateConnectionOnBorrow());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, ABANDONED_CONNECTION_TIMEOUT, pds.getAbandonedConnectionTimeout());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, TIME_TO_LIVE_CONNECTION_TIMEOUT, pds.getTimeToLiveConnectionTimeout());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, INACTIVE_CONNECTION_TIMEOUT, pds.getInactiveConnectionTimeout());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, TIMEOUT_CHECK_INTERVAL, pds.getTimeoutCheckInterval());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, MAX_STATEMENTS, pds.getMaxStatements());
+        // getConnectionWaitTimeout() in oracle.ucp.jdbc.PoolDataSource has been deprecated
+        // PatoPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_WAIT_TIMEOUT, pds.getConnectionWaitTimeout());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, MAX_CONNECTION_REUSE_TIME, pds.getMaxConnectionReuseTime());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, SECONDS_TO_TRUST_IDLE_CONNECTION, pds.getSecondsToTrustIdleConnection());
+        PatoPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_VALIDATION_TIMEOUT, pds.getConnectionValidationTimeout());
+
+        return commonDataSourceProperties;
+    }
+
     @Override
     protected void printDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics, final Logger logger) {
         super.printDataSourceStatistics(myDataSourceStatistics, logger);
