@@ -78,7 +78,7 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
                     setUser(username);
                     setPassword(password);
                 }
-                setConnectionPoolName(getConnectionPoolName() + "-" + schema.toString());
+                setConnectionPoolName(getConnectionPoolName() + "-" + schema);
                 logger.info("Common pool name: {}", getConnectionPoolName());
             } catch (SQLException ex) {
                 throw new RuntimeException(ex.getMessage());

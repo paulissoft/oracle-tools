@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 
 public abstract class PatoPoolDataSource implements DataSource, Closeable {
+
     public static final String CLASS = "class";
 
     public static final String CONNECTION_FACTORY_CLASS_NAME = "connectionFactoryClassName";
@@ -44,7 +45,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     private static Method loggerDebug;
 
-    private static Properties keyDataSourceStatisticsAll = new Properties();
+    private static Properties commonDataSourcePropertiesStatisticsAll = new Properties();
 
     protected static Map<Properties, MyDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
@@ -65,8 +66,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             loggerDebug = null;
         }
 
-        setProperty(keyDataSourceStatisticsAll, USERNAME, ALL);
-        setProperty(keyDataSourceStatisticsAll, PASSWORD, "");
+        setProperty(commonDataSourcePropertiesStatisticsAll, USERNAME, ALL);
+        setProperty(commonDataSourcePropertiesStatisticsAll, PASSWORD, "");
     }
 
     private interface Overrides {
@@ -92,15 +93,15 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     // username like:
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
-    private StringBuffer proxyUsername;
+    private String proxyUsername;
     
-    protected StringBuffer schema; // needed to build the PoolName
+    protected String schema; // needed to build the PoolName
     
     // same properties for URL, username (without schema), password and data source class: same pool DataSource
-    private Properties key;
+    private Properties commonDataSourceProperties;
 
     // properties include URL, username (with an optional schema), password and data source class
-    private Properties keyDataSourceStatistics;
+    private Properties commonDataSourcePropertiesStatistics;
 
     private static Map<Properties, DataSource> dataSources = new ConcurrentHashMap<>();
 
@@ -111,72 +112,77 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     /**
      * Initialize a pool data source.
      *
-     * @param pds       A pool data source (HikariCP or UCP).
-     * @param key       The properties of the pool data source that have to be equal to create a common pool data source.
-     *                  Mandatory properties: "class" and "url".
-     * @param username  The username to connect to, may be a proxy username like BC_PROXY[BDOMAIN].
-     *                  Username must NOT be part of the key since a pool data source allows connections to different users.
-     * @param password  The password.
+     * @param pds                         A pool data source (HikariCP or UCP).
+     * @param commonDataSourceProperties  The properties of the pool data source that have to be equal to create a common pool data source.
+     *                                    Mandatory properties: CLASS and URL.
+     * @param username                    The username to connect to, may be a proxy username like BC_PROXY[BDOMAIN].
+     *                                    Username must NOT be part of the commonDataSourceProperties
+     *                                    since a pool data source allows connections to different users.
+     * @param password                    The password.
+     *                                    Must also NOT be part of the commonDataSourceProperties.
      */
     protected PatoPoolDataSource(final DataSource pds,
-                               final Properties key,
-                               final String username,
-                               final String password) {
+                                 final Properties commonDataSourceProperties,
+                                 final String username,
+                                 final String password) {
         logger.debug(">PatoPoolDataSource(pds={}, username={})", pds, username);
 
-        this.key = key;
+        this.commonDataSourceProperties = commonDataSourceProperties;
 
-        checkKeyPropertyNotNull(CLASS);
-        checkKeyPropertyNotNull(URL);
+        checkPropertyNotNull(CLASS);
+        checkPropertyNotNull(URL);
 
-        checkKeyPropertyNull(USERNAME);
-        checkKeyPropertyNull(PASSWORD);
-        checkKeyPropertyNull(POOL_NAME);
+        checkPropertyNull(USERNAME);
+        checkPropertyNull(PASSWORD);
+        checkPropertyNull(POOL_NAME);
     
         this.username = username;
         this.password = password;
         
-        this.schema = new StringBuffer(this.username.length());
-        this.proxyUsername = new StringBuffer(this.username.length());
+        final StringBuffer schema = new StringBuffer(this.username.length());
+        final StringBuffer proxyUsername = new StringBuffer(this.username.length());
 
-        getSchemaProxyUsername(this.username, this.schema, this.proxyUsername);
+        getSchemaProxyUsername(this.username, schema, proxyUsername);
 
-        this.commonPoolDataSource = dataSources.computeIfAbsent(this.key, s -> pds);
-        this.currentPoolCount.computeIfAbsent(this.key, s -> new AtomicInteger()).incrementAndGet();
-        this.maximumPoolCount.computeIfAbsent(this.key, s -> new AtomicInteger()).incrementAndGet();
+        this.schema = schema.toString();
+        this.proxyUsername = proxyUsername.toString();
+
+        this.commonPoolDataSource = dataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
+        this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
+        this.maximumPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
 
         // The statistics are measured per original data source.
         // So we include the username / password.
-        this.keyDataSourceStatistics = new Properties(this.key);
-        setProperty(this.keyDataSourceStatistics, USERNAME, this.username);
-        setProperty(this.keyDataSourceStatistics, PASSWORD, this.password);        
+        this.commonDataSourcePropertiesStatistics = new Properties(this.commonDataSourceProperties);
+        setProperty(this.commonDataSourcePropertiesStatistics, USERNAME, this.username);
+        setProperty(this.commonDataSourcePropertiesStatistics, PASSWORD, this.password);        
         // add total if not already existent
-        this.allDataSourceStatistics.computeIfAbsent(this.keyDataSourceStatisticsAll, s -> new MyDataSourceStatistics());
-        this.allDataSourceStatistics.computeIfAbsent(this.keyDataSourceStatistics, s -> new MyDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourcePropertiesStatisticsAll, s -> new MyDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourcePropertiesStatistics, s -> new MyDataSourceStatistics());
 
         logger.debug("<PatoPoolDataSource()");
     }
 
-    protected static void setProperty(final Properties key,
+    protected static void setProperty(final Properties commonDataSourceProperties,
                                       final String name,
                                       final Object value) {
         if (name != null && value != null) {
-            key.put(name, value);
+            commonDataSourceProperties.put(name, value);
         }
     }
     
-    private void checkKeyPropertyNull(final String name) {
+    private void checkPropertyNull(final String name) {
         try {
-            assert(key.get(name) == null);
+            assert(commonDataSourceProperties.get(name) == null);
         } catch (AssertionError ex) {
             System.err.println(String.format("Property ({}) must be null", name));
             throw ex;
         }
     }
     
-    private void checkKeyPropertyNotNull(final String name) {
+    private void checkPropertyNotNull(final String name) {
         try {
-            assert(key.get(name) != null);
+            assert(commonDataSourceProperties.get(name) != null);
         } catch (AssertionError ex) {
             System.err.println(String.format("Property ({}) must NOT be null", name));
             throw ex;
@@ -220,29 +226,29 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     // returns true if there are no more pool data sources hereafter
     final protected boolean done() {
-        final boolean lastPoolDataSource = currentPoolCount.get(key).decrementAndGet() == 0;
+        final boolean lastPoolDataSource = currentPoolCount.get(commonDataSourceProperties).decrementAndGet() == 0;
 
         if (statisticsEnabled) {
-            final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(keyDataSourceStatistics);
+            final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourcePropertiesStatistics);
 
             // no need to display same statistics twice (see below for ALL)
-            if (!lastPoolDataSource || maximumPoolCount.get(key).get() > 1) {
-                showDataSourceStatistics(myDataSourceStatistics, -1L, true, schema.toString());
+            if (!lastPoolDataSource || maximumPoolCount.get(commonDataSourceProperties).get() > 1) {
+                showDataSourceStatistics(myDataSourceStatistics, -1L, true, schema);
             }
-            allDataSourceStatistics.remove(keyDataSourceStatistics);
+            allDataSourceStatistics.remove(commonDataSourcePropertiesStatistics);
 
             if (lastPoolDataSource) {
-                final MyDataSourceStatistics myDataSourceStatisticsAll = allDataSourceStatistics.get(keyDataSourceStatisticsAll);
+                final MyDataSourceStatistics myDataSourceStatisticsAll = allDataSourceStatistics.get(commonDataSourcePropertiesStatisticsAll);
                 
                 // show (and remove) totals
                 showDataSourceStatistics(myDataSourceStatisticsAll, -1L, true, ALL);
-                allDataSourceStatistics.remove(keyDataSourceStatisticsAll);
+                allDataSourceStatistics.remove(commonDataSourcePropertiesStatisticsAll);
             }
         }
             
         if (lastPoolDataSource) {
             logger.info("Closing pool {}", getPoolName());
-            dataSources.remove(key);
+            dataSources.remove(commonDataSourceProperties);
             commonPoolDataSource = null;
         }
 
@@ -252,8 +258,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     public Connection getConnection() throws SQLException {
         return getConnectionSmart(this.username,
                                   this.password,
-                                  this.schema.toString(),
-                                  this.proxyUsername.toString());
+                                  this.schema,
+                                  this.proxyUsername);
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
@@ -321,7 +327,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
                 try {
                     if (statisticsEnabled) {
-                        allDataSourceStatistics.get(keyDataSourceStatistics).incrementProxySessionCount();
+                        allDataSourceStatistics.get(commonDataSourcePropertiesStatistics).incrementProxySessionCount();
                     }
                 } catch (Exception e) {
                     logger.error("MyDataSourceStatistics.incrementProxySessionCount() exception: {}", e.getMessage());
@@ -343,8 +349,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             return;
         }
         
-        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(keyDataSourceStatistics);
-        final MyDataSourceStatistics myDataSourceStatisticsAll = allDataSourceStatistics.get(keyDataSourceStatisticsAll);
+        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourcePropertiesStatistics);
+        final MyDataSourceStatistics myDataSourceStatisticsAll = allDataSourceStatistics.get(commonDataSourcePropertiesStatisticsAll);
         final Instant t2 = Instant.now();
         long timeElapsed;
 
@@ -362,8 +368,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         }
 
         // no need to display same statistics twice (see below for totals)
-        if (maximumPoolCount.get(key).get() > 1) {
-            showDataSourceStatistics(myDataSourceStatistics, timeElapsed, false, schema.toString());
+        if (maximumPoolCount.get(commonDataSourceProperties).get() > 1) {
+            showDataSourceStatistics(myDataSourceStatistics, timeElapsed, false, schema);
         }
         showDataSourceStatistics(myDataSourceStatisticsAll, timeElapsed, false, ALL);
     }
@@ -473,11 +479,11 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     protected abstract String getPoolName();
 
     protected String getConnectionFactoryClassName() {
-        return (String) key.get("connectionFactoryClassName");
+        return (String) commonDataSourceProperties.get(CONNECTION_FACTORY_CLASS_NAME);
     }
 
     protected String getUrl() {
-        return (String) key.get("url");
+        return (String) commonDataSourceProperties.get(URL);
     }
 
     protected String getUsername() {

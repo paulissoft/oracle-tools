@@ -92,7 +92,7 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
                 logger.info("maximum pool size after: {}", getMaximumPoolSize());
                 logger.info("minimum idl after: {}", getMinimumIdle());
             }
-            setPoolName(getPoolName() + "-" + schema.toString());
+            setPoolName(getPoolName() + "-" + schema);
             logger.info("Common pool name: {}", getPoolName());
         }
     }
