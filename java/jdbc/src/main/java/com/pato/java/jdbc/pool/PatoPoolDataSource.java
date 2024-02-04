@@ -164,39 +164,6 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             key.put(name, value);
         }
     }
-    /*
-    protected static void setProperty(final Properties key,
-                                      final String name,
-                                      final String value) {
-        if (name != null && value != null) {
-            key.put(name, value);
-        }
-    }
-
-    protected static void setProperty(final Properties key,
-                                      final String name,
-                                      final boolean value) {
-        if (name != null) {
-            key.put(name, new Boolean(value));
-        }
-    }
-
-    protected static void setProperty(final Properties key,
-                                      final String name,
-                                      final int value) {
-        if (name != null) {
-            key.put(name, new Integer(value));
-        }
-    }
-
-    protected static void setProperty(final Properties key,
-                                      final String name,
-                                      final long value) {
-        if (name != null) {
-            key.put(name, new Long(value));
-        }
-    }
-    */
     
     private void checkKeyPropertyNull(final String name) {
         try {
@@ -282,28 +249,11 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         return lastPoolDataSource;
     }
 
-    /*
-     * NOTE 1.
-     *
-     * HikariCP does not suppert getConnection(String username, String password).
-     * See https://github.com/brettwooldridge/HikariCP/issues/231
-     *
-     * But you can set the default username/password using setUsername()/setPassword().
-     * 
-     * Oracle has setUser()/setPassword().
-     *
-     * Just define two abstract methods that have to be defined in the implementing classes.
-     */
-
-    public abstract void setUsername(String username) throws SQLException;
-
-    public abstract void setPassword(String password) throws SQLException;
-    
     public Connection getConnection() throws SQLException {
-        return getConnection(this.username,
-                             this.password,
-                             this.schema.toString(),
-                             this.proxyUsername.toString());
+        return getConnectionSmart(this.username,
+                                  this.password,
+                                  this.schema.toString(),
+                                  this.proxyUsername.toString());
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
@@ -312,17 +262,21 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         getSchemaProxyUsername(username, schema, proxyUsername);
 
-        return getConnection(username,
-                             password,
-                             schema.toString(),
-                             proxyUsername.toString());
+        return getConnectionSmart(username,
+                                  password,
+                                  schema.toString(),
+                                  proxyUsername.toString());
     }
 
-    private Connection getConnection(final String username,
-                                     final String password,
-                                     final String schema,
-                                     final String proxyUsername) throws SQLException {
-        logger.trace(">getConnection(username={}, password={}, schema={}, proxyUsername={})",
+    protected Connection getConnectionSimple(String username, String password) throws SQLException {
+        return commonPoolDataSource.getConnection(username, password);
+    }
+    
+    private Connection getConnectionSmart(final String username,
+                                          final String password,
+                                          final String schema,
+                                          final String proxyUsername) throws SQLException {
+        logger.trace(">getConnectionSmart(username={}, password={}, schema={}, proxyUsername={})",
                      username,
                      password,
                      schema,
@@ -332,13 +286,9 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         Connection conn = null;
         
         if (proxyUsername == null || proxyUsername.length() <= 0 || singleSessionProxyModel) {
-            setUsername(username);
-            setPassword(password);
-            conn = commonPoolDataSource.getConnection(); // see NOTE 1
+            conn = getConnectionSimple(username, password);
         } else {
-            setUsername(proxyUsername);
-            setPassword(password);
-            conn = commonPoolDataSource.getConnection(); // see NOTE 1
+            conn = getConnectionSimple(proxyUsername, password); // see NOTE 1
 
             OracleConnection oraConn = conn.unwrap(OracleConnection.class);
             final String currentSchema = oraConn.getCurrentSchema();
@@ -383,7 +333,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             showElapsedTime(t1);
         }
 
-        logger.trace(">getConnection() = {}", conn);
+        logger.trace(">getConnectionSmart() = {}", conn);
 
         return conn;
     }

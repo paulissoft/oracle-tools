@@ -130,10 +130,6 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
         }
     }
 
-    public void setUsername(String username) throws SQLException {
-        setUser(username);
-    }
-
     protected String getPoolName() {
         return getConnectionPoolName();
     }

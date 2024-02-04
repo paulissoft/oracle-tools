@@ -121,6 +121,24 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
         return commonDataSourceProperties;
     }
 
+    /*
+     * NOTE 1.
+     *
+     * HikariCP does not support getConnection(String username, String password).
+     * See https://github.com/brettwooldridge/HikariCP/issues/231
+     *
+     * But you can set the default username/password using setUsername()/setPassword().
+     */
+
+    @Override
+    protected Connection getConnectionSimple(String username, String password) throws SQLException {
+        commonPoolDataSourceHikari.setUsername(username);
+        commonPoolDataSourceHikari.setPassword(password);
+
+        return commonPoolDataSourceHikari.getConnection();
+    }
+    
+
     @Override
     protected void printDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics, final Logger logger) {
         super.printDataSourceStatistics(myDataSourceStatistics, logger);
