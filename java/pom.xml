@@ -14,10 +14,22 @@
   <description>Java utilities</description>
 
   <properties>
+
+    <!-- GJP 2023-03-02 To Java 11 -->
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
+    <!-- https://winterbe.com/posts/2018/08/29/migrate-maven-projects-to-java-11-jigsaw/ -->
+    <!-- Property to set the release flag of the Java compiler (JDK 9 and above) -->
+    <maven.compiler.release>${maven.compiler.source}</maven.compiler.release>
+    <maven.compiler.force.javac>false</maven.compiler.force.javac>
+    
+    <encoding>UTF-8</encoding>
+    <project.build.sourceEncoding>${encoding}</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>${encoding}</project.reporting.outputEncoding>
+    <project.resources.sourceEncoding>${encoding}</project.resources.sourceEncoding>
+
     <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-    <java.version>8</java.version>
-    <maven.compiler.source>${java.version}</maven.compiler.source>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
+
     <lint.flag>deprecation</lint.flag>
     <!--lint.flag>unchecked</lint.flag-->
     <maven.compiler.argument>-Xlint:${lint.flag}</maven.compiler.argument>
@@ -100,9 +112,10 @@
     <profile>
       <id>java8</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
+        <maven.compiler.source>8</maven.compiler.source>
         <oracle.ojdbc.artifactId>ojdbc8</oracle.ojdbc.artifactId>
         <oracle.ucp.artifactId>ucp</oracle.ucp.artifactId>
         <oracle.jdbc.version>19.7.0.0</oracle.jdbc.version>
