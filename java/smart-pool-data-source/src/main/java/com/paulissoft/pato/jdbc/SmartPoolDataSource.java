@@ -91,8 +91,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     private boolean statisticsEnabled = false;
 
     // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
-    // true - do not use openProxySsession() but use proxyUsername[schema]
-    // false - use openProxySsession() (two sessions will appear in v$session)
+    // true - do not use openProxySession() but use proxyUsername[schema]
+    // false - use openProxySession() (two sessions will appear in v$session)
     @Getter
     @Setter
     private boolean singleSessionProxyModel = true;
@@ -254,7 +254,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                           final String schema,
                                           final String proxyUsername) throws SQLException {
         final Instant t1 = Instant.now();
-        int countOpenSession = 0, countCloseSession = 0, countOpenProxySession = 0, countCloseProxySession = 0;
+        int openProxySessionCount = 0, closeProxySessionCount = 0;
 
         logger.trace(">getConnectionSmart(username={}, password={}, schema={}, proxyUsername={})",
                      username,
@@ -266,10 +266,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         
         if (singleSessionProxyModel || proxyUsername == null || proxyUsername.length() <= 0) {
             conn = getConnectionSimple(username, password);
-            countOpenSession++;
         } else {
             conn = getConnectionSimple(proxyUsername, password);
-            countOpenSession++;
 
             OracleConnection oraConn = conn.unwrap(OracleConnection.class);
             final String currentSchema = oraConn.getCurrentSchema();
@@ -285,7 +283,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                     logger.trace("closing proxy session since the current schema is not the requested schema");
                 
                     oraConn.close(OracleConnection.PROXY_SESSION);
-                    countCloseProxySession++;
+                    closeProxySessionCount++;
                 }
             }
 
@@ -298,32 +296,28 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
                 oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
                 conn.setSchema(schema);
-                countOpenProxySession++;
+                openProxySessionCount++;
 
                 logger.trace("current schema after = {}", oraConn.getCurrentSchema());
             }
         }
 
+        logger.trace(">getConnectionSmart() = {}", conn);
+
         if (statisticsEnabled) {
             updateStatistics(conn,
                              Duration.between(t1, Instant.now()).toMillis(),
-                             countOpenSession,
-                             countCloseSession,
-                             countOpenProxySession,
-                             countCloseProxySession);
+                             openProxySessionCount,
+                             closeProxySessionCount);
         }
-
-        logger.trace(">getConnectionSmart() = {}", conn);
 
         return conn;
     }
 
     private void updateStatistics(final Connection conn,
                                   final long timeElapsed,
-                                  final int countOpenSession,
-                                  final int countCloseSession,
-                                  final int countOpenProxySession,
-                                  final int countCloseProxySession) {
+                                  final int openProxySessionCount,
+                                  final int closeProxySessionCount) {
         assert(statisticsEnabled);
         
         final int activeConnections = getActiveConnections();
@@ -336,29 +330,23 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         try {
             myDataSourceStatisticsGrandTotal.update(conn,
                                                     timeElapsed,
-                                                    countOpenSession,
-                                                    countCloseSession,
-                                                    countOpenProxySession,
-                                                    countCloseProxySession,
+                                                    openProxySessionCount,
+                                                    closeProxySessionCount,
                                                     activeConnections,
                                                     idleConnections,
                                                     totalConnections);
             myDataSourceStatisticsTotal.update(conn,
                                                timeElapsed,
-                                               countOpenSession,
-                                               countCloseSession,
-                                               countOpenProxySession,
-                                               countCloseProxySession,
+                                               openProxySessionCount,
+                                               closeProxySessionCount,
                                                activeConnections,
                                                idleConnections,
                                                totalConnections);
             // no need for active/idle and total connections because that is counted on common data source level
             myDataSourceStatistics.update(conn,
                                           timeElapsed,
-                                          countOpenSession,
-                                          countCloseSession,
-                                          countOpenProxySession,
-                                          countCloseProxySession);
+                                          openProxySessionCount,
+                                          closeProxySessionCount);
         } catch (Exception e) {
             logger.error("updateStatistics() exception: {}", e.getMessage());
         }
@@ -373,7 +361,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     protected void printDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics, final Logger logger) {
         // Only show the first time a pool has gotten a connection.
         // Not earlier because these (fixed) values may change before and after the first connection.
-        if (myDataSourceStatistics.getCountOpenSession() == 1) {
+        if (myDataSourceStatistics.getLogicalConnectionCount() == 1) {
             logger.info("poolName: {}", getPoolName());
             logger.info("connectionFactoryClassName: {}", getConnectionFactoryClassName());
             logger.info("jdbcUrl: {}", getUrl());
@@ -434,9 +422,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                  myDataSourceStatistics.getTimeElapsedMax() });
             method.invoke(logger,
                           "- physical/logical/proxy sessions opened: {}/{}/{}",
-                          (Object) new Object[]{ myDataSourceStatistics.getCountConnections(),
-                                                 myDataSourceStatistics.getCountOpenSession(),
-                                                 myDataSourceStatistics.getCountOpenProxySession() });
+                          (Object) new Object[]{ myDataSourceStatistics.getPhysicalConnectionCount(),
+                                                 myDataSourceStatistics.getLogicalConnectionCount(),
+                                                 myDataSourceStatistics.getOpenProxySessionCount() });
             if (showPool) {
                 if (!finalCall) {
                     method.invoke(logger,
@@ -558,13 +546,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         private final int DISPLAY_SCALE = 0;
 
-        private AtomicLong countOpenSession = new AtomicLong();
+        private AtomicLong logicalConnectionCount = new AtomicLong();
         
-        private AtomicLong countCloseSession = new AtomicLong();
+        private AtomicLong openProxySessionCount = new AtomicLong();
         
-        private AtomicLong countOpenProxySession = new AtomicLong();
-        
-        private AtomicLong countCloseProxySession = new AtomicLong();
+        private AtomicLong closeProxySessionCount = new AtomicLong();
 
         private AtomicLong timeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
@@ -590,27 +576,23 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-        private Set<Connection> connections;
+        private Set<Connection> physicalConnections;
 
         public MyDataSourceStatistics() {
             // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
             final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
  
-            connections = dummy.newKeySet();
+            physicalConnections = dummy.newKeySet();
         }
         
         protected void update(final Connection conn,
                               final long timeElapsed,
-                              final int countOpenSession,
-                              final int countCloseSession,
-                              final int countOpenProxySession,
-                              final int countCloseProxySession) {
+                              final int openProxySessionCount,
+                              final int closeProxySessionCount) {
             update(conn,
                    timeElapsed,
-                   countOpenSession,
-                   countCloseSession,
-                   countOpenProxySession,
-                   countCloseProxySession,
+                   openProxySessionCount,
+                   closeProxySessionCount,
                    -1,
                    -1,
                    -1);
@@ -618,23 +600,20 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         protected void update(final Connection conn,
                               final long timeElapsed,
-                              final int countOpenSession,
-                              final int countCloseSession,
-                              final int countOpenProxySession,
-                              final int countCloseProxySession,
+                              final int openProxySessionCount,
+                              final int closeProxySessionCount,
                               final int activeConnections,
                               final int idleConnections,
                               final int totalConnections) {
             // We must use count and avg from the same connection so just synchronize.
             // If we don't synchronize we risk to get the average and count from different connections.
             synchronized (this) {
-                connections.add(conn);
+                physicalConnections.add(conn);
                 
-                final BigDecimal count = new BigDecimal(this.countOpenSession.addAndGet(countOpenSession));
+                final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
 
-                this.countCloseSession.addAndGet(countCloseSession);
-                this.countOpenProxySession.addAndGet(countOpenProxySession);
-                this.countCloseProxySession.addAndGet(countCloseProxySession);
+                this.openProxySessionCount.addAndGet(openProxySessionCount);
+                this.closeProxySessionCount.addAndGet(closeProxySessionCount);
 
                 // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
                 
@@ -703,32 +682,28 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         protected boolean countersEqual(final MyDataSourceStatistics compareTo) {
             return
-                this.getCountOpenSession() == compareTo.getCountOpenSession() &&
-                this.getCountCloseSession() == compareTo.getCountCloseSession() &&
-                this.getCountOpenProxySession() == compareTo.getCountOpenProxySession() &&
-                this.getCountCloseProxySession() == compareTo.getCountCloseProxySession();
+                this.getPhysicalConnectionCount() == compareTo.getPhysicalConnectionCount() &&
+                this.getLogicalConnectionCount() == compareTo.getLogicalConnectionCount() &&
+                this.getOpenProxySessionCount() == compareTo.getOpenProxySessionCount() &&
+                this.getCloseProxySessionCount() == compareTo.getCloseProxySessionCount();
         }
         
         // getter(s)
 
-        protected int getCountConnections() {
-            return connections.size();
+        protected int getPhysicalConnectionCount() {
+            return physicalConnections.size();
         }
             
-        protected long getCountOpenSession() {
-            return countOpenSession.get();
+        protected long getLogicalConnectionCount() {
+            return logicalConnectionCount.get();
         }
 
-        protected long getCountCloseSession() {
-            return countCloseSession.get();
-        }
-
-        protected long getCountOpenProxySession() {
-            return countOpenProxySession.get();
+        protected long getOpenProxySessionCount() {
+            return openProxySessionCount.get();
         }
         
-        protected long getCountCloseProxySession() {
-            return countCloseProxySession.get();
+        protected long getCloseProxySessionCount() {
+            return closeProxySessionCount.get();
         }
         
         protected long getTimeElapsedMin() {
