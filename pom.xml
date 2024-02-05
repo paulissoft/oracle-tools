@@ -324,6 +324,7 @@
     <module>conf</module>
     <module>apex</module>
     <module>db</module>
+    <module>java</module>
   </modules>
 
 </project>
