@@ -145,7 +145,7 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
         super.printDataSourceStatistics(myDataSourceStatistics, logger);
         // Only show the first time a pool has gotten a connection.
         // Not earlier because these (fixed) values may change before and after the first connection.
-        if (myDataSourceStatistics.getCount() == 1) {
+        if (myDataSourceStatistics.getCountOpenSession() == 1) {
             logger.info("autoCommit: {}", isAutoCommit());
             logger.info("connectionTimeout: {}", getConnectionTimeout());
             logger.info("idleTimeout: {}", getIdleTimeout());

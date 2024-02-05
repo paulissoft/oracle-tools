@@ -11,7 +11,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,15 +46,13 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     private static Method loggerDebug;
 
-    private static Properties commonDataSourcePropertiesStatisticsAll = new Properties();
+    private static Properties commonDataSourceStatisticsGrandTotal = new Properties();
 
-    private static Map<Properties, MyDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Properties, MyDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
-    private static Map<Properties, DataSource> dataSources = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Properties, DataSource> dataSources = new ConcurrentHashMap<>();
 
-    private static Map<Properties, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
-
-    private static Map<Properties, AtomicInteger> maximumPoolCount = new ConcurrentHashMap<>();    
+    private static ConcurrentHashMap<Properties, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", PatoPoolDataSource.class.toString());
@@ -74,8 +71,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             loggerDebug = null;
         }
 
-        setProperty(commonDataSourcePropertiesStatisticsAll, USERNAME, ALL);
-        setProperty(commonDataSourcePropertiesStatisticsAll, PASSWORD, "");
+        setProperty(commonDataSourceStatisticsGrandTotal, USERNAME, ALL);
+        setProperty(commonDataSourceStatisticsGrandTotal, PASSWORD, "");
     }
 
     private interface Overrides {
@@ -101,11 +98,15 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     private ConnectInfo connectInfo;
 
-    // same properties for URL, username (without schema), password and data source class: same pool DataSource
-    private Properties commonDataSourceProperties;
+    // Same properties for URL, username (without schema), password and data source class: same pool DataSource.
+    private Properties commonDataSourceProperties = new Properties();
 
-    // properties include URL, username (with an optional schema), password and data source class
-    private Properties commonDataSourcePropertiesStatistics;
+    // Same as commonDataSourceProperties, i.e. total per common data source.
+    private Properties commonDataSourceStatisticsTotal = new Properties();
+
+    // Same as commonDataSourceProperties including username and password,
+    // only connection info like elapsed time, open/close sessions.
+    private Properties commonDataSourceStatistics = new Properties();
 
     /**
      * Initialize a pool data source.
@@ -125,7 +126,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
                                  final String password) {
         logger.debug(">PatoPoolDataSource(pds={}, username={})", pds, username);
 
-        this.commonDataSourceProperties = commonDataSourceProperties;
+        this.commonDataSourceProperties.putAll(commonDataSourceProperties);
 
         checkPropertyNotNull(CLASS);
         checkPropertyNotNull(URL);
@@ -138,16 +139,20 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         this.commonPoolDataSource = dataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
         this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
-        this.maximumPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
 
-        // The statistics are measured per original data source.
-        // So we include the username / password.
-        this.commonDataSourcePropertiesStatistics = new Properties(this.commonDataSourceProperties);
-        setProperty(this.commonDataSourcePropertiesStatistics, USERNAME, username);
-        setProperty(this.commonDataSourcePropertiesStatistics, PASSWORD, password);        
-        // add total if not already existent
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourcePropertiesStatisticsAll, s -> new MyDataSourceStatistics());
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourcePropertiesStatistics, s -> new MyDataSourceStatistics());
+        // The statistics are measured per original data source and per total.
+        // Total is just a copy.
+        this.commonDataSourceStatisticsTotal = this.commonDataSourceProperties;
+
+        // Per original data source, hence we include the username / password.
+        this.commonDataSourceStatistics.putAll(commonDataSourceProperties);
+        setProperty(this.commonDataSourceStatistics, USERNAME, username);
+        setProperty(this.commonDataSourceStatistics, PASSWORD, password);        
+
+        // add totals if not already existent
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsGrandTotal, s -> new MyDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsTotal, s -> new MyDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new MyDataSourceStatistics());
 
         logger.debug("<PatoPoolDataSource()");
     }
@@ -170,11 +175,11 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         }
     }
 
-    protected static void setProperty(final Properties commonDataSourceProperties,
+    protected static void setProperty(final Properties properties,
                                       final String name,
                                       final Object value) {
         if (name != null && value != null) {
-            commonDataSourceProperties.put(name, value);
+            properties.put(name, value);
         }
     }    
 
@@ -189,20 +194,27 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         final boolean lastPoolDataSource = currentPoolCount.get(commonDataSourceProperties).decrementAndGet() == 0;
 
         if (statisticsEnabled) {
-            final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourcePropertiesStatistics);
+            final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+            final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+            final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
 
-            // no need to display same statistics twice (see below for ALL)
-            if (!lastPoolDataSource || maximumPoolCount.get(commonDataSourceProperties).get() > 1) {
-                showDataSourceStatistics(myDataSourceStatistics, -1L, true, getSchema());
+            if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
+                showDataSourceStatistics(myDataSourceStatistics, getSchema());
             }
-            allDataSourceStatistics.remove(commonDataSourcePropertiesStatistics);
+            allDataSourceStatistics.remove(commonDataSourceStatistics);
 
             if (lastPoolDataSource) {
-                final MyDataSourceStatistics myDataSourceStatisticsAll = allDataSourceStatistics.get(commonDataSourcePropertiesStatisticsAll);
-                
-                // show (and remove) totals
-                showDataSourceStatistics(myDataSourceStatisticsAll, -1L, true, ALL);
-                allDataSourceStatistics.remove(commonDataSourcePropertiesStatisticsAll);
+                // show (grand) totals only when it is the last pool data source
+                showDataSourceStatistics(myDataSourceStatisticsTotal, ALL);
+                allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
+
+                // only GrandTotal left?
+                if (allDataSourceStatistics.size() == 1) {                
+                    if (!myDataSourceStatisticsGrandTotal.countersEqual(myDataSourceStatisticsTotal)) {
+                        showDataSourceStatistics(myDataSourceStatisticsGrandTotal, ALL);
+                    }
+                    allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
+                }
             }
         }
             
@@ -239,19 +251,23 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
                                           final String password,
                                           final String schema,
                                           final String proxyUsername) throws SQLException {
+        final Instant t1 = Instant.now();
+        int countOpenSession = 0, countCloseSession = 0, countOpenProxySession = 0, countCloseProxySession = 0;
+
         logger.trace(">getConnectionSmart(username={}, password={}, schema={}, proxyUsername={})",
                      username,
                      password,
                      schema,
                      proxyUsername);
 
-        final Instant t1 = Instant.now();
         Connection conn = null;
         
         if (singleSessionProxyModel || proxyUsername == null || proxyUsername.length() <= 0) {
             conn = getConnectionSimple(username, password);
+            countOpenSession++;
         } else {
             conn = getConnectionSimple(proxyUsername, password);
+            countOpenSession++;
 
             OracleConnection oraConn = conn.unwrap(OracleConnection.class);
             final String currentSchema = oraConn.getCurrentSchema();
@@ -267,6 +283,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
                     logger.trace("closing proxy session since the current schema is not the requested schema");
                 
                     oraConn.close(OracleConnection.PROXY_SESSION);
+                    countCloseProxySession++;
                 }
             }
 
@@ -279,21 +296,19 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
                 oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
                 conn.setSchema(schema);
+                countOpenProxySession++;
 
                 logger.trace("current schema after = {}", oraConn.getCurrentSchema());
-
-                try {
-                    if (statisticsEnabled) {
-                        allDataSourceStatistics.get(commonDataSourcePropertiesStatistics).incrementProxySessionCount();
-                    }
-                } catch (Exception e) {
-                    logger.error("MyDataSourceStatistics.incrementProxySessionCount() exception: {}", e.getMessage());
-                }
             }
         }
 
         if (statisticsEnabled) {
-            showElapsedTime(t1);
+            updateStatistics(conn,
+                             Duration.between(t1, Instant.now()).toMillis(),
+                             countOpenSession,
+                             countCloseSession,
+                             countOpenProxySession,
+                             countCloseProxySession);
         }
 
         logger.trace(">getConnectionSmart() = {}", conn);
@@ -301,40 +316,62 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         return conn;
     }
 
-    private void showElapsedTime(final Instant t1) {
-        if (!statisticsEnabled) {
-            return;
-        }
+    private void updateStatistics(final Connection conn,
+                                  final long timeElapsed,
+                                  final int countOpenSession,
+                                  final int countCloseSession,
+                                  final int countOpenProxySession,
+                                  final int countCloseProxySession) {
+        assert(statisticsEnabled);
         
-        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourcePropertiesStatistics);
-        final MyDataSourceStatistics myDataSourceStatisticsAll = allDataSourceStatistics.get(commonDataSourcePropertiesStatisticsAll);
-        final Instant t2 = Instant.now();
-        long timeElapsed;
+        final int activeConnections = getActiveConnections();
+        final int idleConnections = getIdleConnections();
+        final int totalConnections = getTotalConnections();
+        final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
 
         try {
-            timeElapsed = myDataSourceStatisticsAll.updateAndGetTimeElapsed(t1,
-                                                                            t2,
-                                                                            getActiveConnections(),
-                                                                            getIdleConnections(),
-                                                                            getTotalConnections());
-            myDataSourceStatistics.update(timeElapsed);
+            myDataSourceStatisticsGrandTotal.update(conn,
+                                                    timeElapsed,
+                                                    countOpenSession,
+                                                    countCloseSession,
+                                                    countOpenProxySession,
+                                                    countCloseProxySession,
+                                                    activeConnections,
+                                                    idleConnections,
+                                                    totalConnections);
+            myDataSourceStatisticsTotal.update(conn,
+                                               timeElapsed,
+                                               countOpenSession,
+                                               countCloseSession,
+                                               countOpenProxySession,
+                                               countCloseProxySession,
+                                               activeConnections,
+                                               idleConnections,
+                                               totalConnections);
+            // no need for active/idle and total connections because that is counted on common data source level
+            myDataSourceStatistics.update(conn,
+                                          timeElapsed,
+                                          countOpenSession,
+                                          countCloseSession,
+                                          countOpenProxySession,
+                                          countCloseProxySession);
         } catch (Exception e) {
-            timeElapsed = -1L;
-            
-            logger.error("getElapsedTime() exception: {}", e.getMessage());
+            logger.error("updateStatistics() exception: {}", e.getMessage());
         }
 
         // no need to display same statistics twice (see below for totals)
-        if (maximumPoolCount.get(commonDataSourceProperties).get() > 1) {
-            showDataSourceStatistics(myDataSourceStatistics, timeElapsed, false, getSchema());
+        if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
+            showDataSourceStatistics(myDataSourceStatistics, getSchema(), timeElapsed, false);
         }
-        showDataSourceStatistics(myDataSourceStatisticsAll, timeElapsed, false, ALL);
+        showDataSourceStatistics(myDataSourceStatisticsTotal, ALL, timeElapsed, false);
     }
 
     protected void printDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics, final Logger logger) {
         // Only show the first time a pool has gotten a connection.
         // Not earlier because these (fixed) values may change before and after the first connection.
-        if (myDataSourceStatistics.getCount() == 1) {
+        if (myDataSourceStatistics.getCountOpenSession() == 1) {
             logger.info("poolName: {}", getPoolName());
             logger.info("connectionFactoryClassName: {}", getConnectionFactoryClassName());
             logger.info("jdbcUrl: {}", getUrl());
@@ -358,9 +395,14 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
      * @param schema                  The schema to display after the pool name
      */
     private void showDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics,
-                                          final long timeElapsed,
-                                          final boolean finalCall,
                                           final String schema) {
+        showDataSourceStatistics(myDataSourceStatistics, schema, -1L, true);
+    }
+    
+    private void showDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics,
+                                          final String schema,
+                                          final long timeElapsed,
+                                          final boolean finalCall) {
         printDataSourceStatistics(myDataSourceStatistics, logger);
 
         if (!finalCall && !logger.isDebugEnabled()) {
@@ -380,11 +422,13 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             method.invoke(logger, "pool: {}", (Object) new Object[]{ poolName });
             if (!finalCall) {
                 method.invoke(logger,
-                              "- proxy sessions/connections: {}/{}" +
+                              "- sessions opened/closed: {}/{}; proxy sessions opened/closed: {}/{}" +
                               "; time needed to open last connection (ms): {}" +
                               "; min/avg/max connection time (ms): {}/{}/{}",
-                              (Object) new Object[]{ myDataSourceStatistics.getProxySessionCount(),
-                                                     myDataSourceStatistics.getCount(),
+                              (Object) new Object[]{ myDataSourceStatistics.getCountOpenSession(),
+                                                     myDataSourceStatistics.getCountCloseSession(),
+                                                     myDataSourceStatistics.getCountOpenProxySession(),
+                                                     myDataSourceStatistics.getCountCloseProxySession(),
                                                      timeElapsed,
                                                      myDataSourceStatistics.getTimeElapsedMin(),
                                                      myDataSourceStatistics.getTimeElapsedAvg(),
@@ -402,9 +446,12 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
                 }
             } else {
                 method.invoke(logger,
-                              "- proxy sessions/connections: {}/{}; min/avg/max connection time (ms): {}/{}/{}",
-                              (Object) new Object[]{ myDataSourceStatistics.getProxySessionCount(),
-                                                     myDataSourceStatistics.getCount(),
+                              "- sessions opened/closed: {}/{}; proxy sessions opened/closed: {}/{}" +
+                              "; min/avg/max connection time (ms): {}/{}/{}",
+                              (Object) new Object[]{ myDataSourceStatistics.getCountOpenSession(),
+                                                     myDataSourceStatistics.getCountCloseSession(),
+                                                     myDataSourceStatistics.getCountOpenProxySession(),
+                                                     myDataSourceStatistics.getCountCloseProxySession(),
                                                      myDataSourceStatistics.getTimeElapsedMin(),
                                                      myDataSourceStatistics.getTimeElapsedAvg(),
                                                      myDataSourceStatistics.getTimeElapsedMax() });
@@ -518,9 +565,13 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         private final int DISPLAY_SCALE = 0;
 
-        private AtomicLong count = new AtomicLong();
-
-        private AtomicLong proxySessionCount = new AtomicLong();
+        private AtomicLong countOpenSession = new AtomicLong();
+        
+        private AtomicLong countCloseSession = new AtomicLong();
+        
+        private AtomicLong countOpenProxySession = new AtomicLong();
+        
+        private AtomicLong countCloseProxySession = new AtomicLong();
 
         private AtomicLong timeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
@@ -546,32 +597,40 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-        protected long updateAndGetTimeElapsed(final Instant t1,
-                                               final Instant t2,
-                                               final int activeConnections,
-                                               final int idleConnections,
-                                               final int totalConnections) {
-            final long timeElapsed = Duration.between(t1, t2).toMillis();
-
-            assert(timeElapsed >= 0L);
-
-            update(timeElapsed, activeConnections, idleConnections, totalConnections);
-
-            return timeElapsed;
+        protected void update(final Connection conn,
+                              final long timeElapsed,
+                              final int countOpenSession,
+                              final int countCloseSession,
+                              final int countOpenProxySession,
+                              final int countCloseProxySession) {
+            update(conn,
+                   timeElapsed,
+                   countOpenSession,
+                   countCloseSession,
+                   countOpenProxySession,
+                   countCloseProxySession,
+                   -1,
+                   -1,
+                   -1);
         }
 
-        protected void update(final long timeElapsed) {
-            update(timeElapsed, -1, -1, -1);
-        }
-
-        private void update(final long timeElapsed,
-                            final int activeConnections,
-                            final int idleConnections,
-                            final int totalConnections) {
+        protected void update(final Connection conn,
+                              final long timeElapsed,
+                              final int countOpenSession,
+                              final int countCloseSession,
+                              final int countOpenProxySession,
+                              final int countCloseProxySession,
+                              final int activeConnections,
+                              final int idleConnections,
+                              final int totalConnections) {
             // We must use count and avg from the same connection so just synchronize.
             // If we don't synchronize we risk to get the average and count from different connections.
             synchronized (this) {
-                final BigDecimal count = new BigDecimal(this.count.incrementAndGet());
+                final BigDecimal count = new BigDecimal(this.countOpenSession.addAndGet(countOpenSession));
+
+                this.countCloseSession.addAndGet(countCloseSession);
+                this.countOpenProxySession.addAndGet(countOpenProxySession);
+                this.countCloseProxySession.addAndGet(countCloseProxySession);
 
                 // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
                 
@@ -638,13 +697,29 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             }
         }
 
+        protected boolean countersEqual(final MyDataSourceStatistics compareTo) {
+            return
+                this.getCountOpenSession() == compareTo.getCountOpenSession() &&
+                this.getCountCloseSession() == compareTo.getCountCloseSession() &&
+                this.getCountOpenProxySession() == compareTo.getCountOpenProxySession() &&
+                this.getCountCloseProxySession() == compareTo.getCountCloseProxySession();
+        }
+        
         // getter(s)
-        protected long getCount() {
-            return count.get();
+        protected long getCountOpenSession() {
+            return countOpenSession.get();
         }
 
-        protected long getProxySessionCount() {
-            return proxySessionCount.get();
+        protected long getCountCloseSession() {
+            return countCloseSession.get();
+        }
+
+        protected long getCountOpenProxySession() {
+            return countOpenProxySession.get();
+        }
+        
+        protected long getCountCloseProxySession() {
+            return countCloseProxySession.get();
         }
         
         protected long getTimeElapsedMin() {
@@ -693,11 +768,6 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         protected BigDecimal getTotalConnectionsAvg() {
             return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP);
-        }
-
-        // setter(s)
-        protected void incrementProxySessionCount() {
-            proxySessionCount.incrementAndGet();
         }
 
         /**
