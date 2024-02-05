@@ -8,8 +8,8 @@
     <artifactId>oracle-tools</artifactId>
     <version>${revision}</version>
   </parent>
-  <groupId>com.paulissoft.pato</groupId>
-  <artifactId>java</artifactId>
+  <groupId>com.paulissoft</groupId>
+  <artifactId>pato</artifactId>
   <packaging>pom</packaging>
   <description>Java utilities</description>
 
@@ -99,7 +99,7 @@
   </build>
 
   <modules>
-    <module>jdbc</module>
+    <module>smart-pool-data-source</module>
   </modules>
 
   <profiles>

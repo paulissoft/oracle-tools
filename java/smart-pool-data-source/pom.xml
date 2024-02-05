@@ -2,17 +2,17 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.paulissoft.pato</groupId>
-    <artifactId>java</artifactId>
+    <groupId>com.paulissoft</groupId>
+    <artifactId>pato</artifactId>
     <version>${revision}</version>
   </parent>
-  <groupId>com.paulissoft.pato.java</groupId>
-  <artifactId>jdbc</artifactId>
+  <groupId>com.paulissoft.pato.jdbc</groupId>
+  <artifactId>smart-pool-data-source</artifactId>
   <packaging>jar</packaging>
   <description>JDBC pool of pool data sources</description>
 
   <build>
-    <finalName>${groupId}-${artifactId}-${revision}</finalName>
+    <finalName>${project.artifactId}-${project.version}</finalName>
   </build>
 
 </project>

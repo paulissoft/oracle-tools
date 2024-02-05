@@ -1,4 +1,4 @@
-package com.paulissoft.pato.java.jdbc.pool;
+package com.paulissoft.pato.jdbc;
 
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public abstract class PatoPoolDataSource implements DataSource, Closeable {
+public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
     public static final String CLASS = "class";
 
@@ -41,7 +41,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     private static final String ALL = "*";
 
-    private static final Logger logger = LoggerFactory.getLogger(PatoPoolDataSource.class);
+    private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSource.class);
 
     private static Method loggerInfo;
 
@@ -56,7 +56,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     private static ConcurrentHashMap<Properties, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
-        logger.info("Initializing {}", PatoPoolDataSource.class.toString());
+        logger.info("Initializing {}", SmartPoolDataSource.class.toString());
         
         try {
             loggerInfo = logger.getClass().getMethod("info", String.class, Object[].class);
@@ -121,11 +121,11 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
      * @param password                    The password.
      *                                    Must also NOT be part of the commonDataSourceProperties.
      */
-    protected PatoPoolDataSource(final DataSource pds,
+    protected SmartPoolDataSource(final DataSource pds,
                                  final Properties commonDataSourceProperties,
                                  final String username,
                                  final String password) {
-        logger.debug(">PatoPoolDataSource(pds={}, username={})", pds, username);
+        logger.debug(">SmartPoolDataSource(pds={}, username={})", pds, username);
 
         this.commonDataSourceProperties.putAll(commonDataSourceProperties);
 
@@ -155,7 +155,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsTotal, s -> new MyDataSourceStatistics());
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new MyDataSourceStatistics());
 
-        logger.debug("<PatoPoolDataSource()");
+        logger.debug("<SmartPoolDataSource()");
     }
 
     private void checkPropertyNull(final String name) {

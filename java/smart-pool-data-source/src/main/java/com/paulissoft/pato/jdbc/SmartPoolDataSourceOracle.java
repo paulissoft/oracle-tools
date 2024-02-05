@@ -1,4 +1,4 @@
-package com.paulissoft.pato.java.jdbc.pool;
+package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements PoolDataSource {
+public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements PoolDataSource {
     // static stuff
 
     public static final String VALIDATE_CONNECTION_ON_BORROW = "validateConnectionOnBorrow";
@@ -33,10 +33,10 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
     
     public static final String CONNECTION_VALIDATION_TIMEOUT = "connectionValidationTimeout";
 
-    private static final Logger logger = LoggerFactory.getLogger(PatoPoolDataSourceOracle.class);
+    private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSourceOracle.class);
 
     static {
-        logger.info("Initializing {}", PatoPoolDataSourceOracle.class.toString());
+        logger.info("Initializing {}", SmartPoolDataSourceOracle.class.toString());
     }
 
     private interface Overrides {
@@ -48,7 +48,7 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
     @Delegate(excludes=Overrides.class)
     private PoolDataSource commonPoolDataSourceOracle;
     
-    public PatoPoolDataSourceOracle(final PoolDataSource pds,
+    public SmartPoolDataSourceOracle(final PoolDataSource pds,
                                     final String username,
                                     final String password) {
         super(pds, determineCommonDataSourceProperties(pds), username, password);
@@ -57,7 +57,7 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
 
         setSingleSessionProxyModel(false);
         
-        synchronized (PatoPoolDataSource.class) {
+        synchronized (SmartPoolDataSource.class) {
             try {
                 // update pool sizes and default username / password when the pool data source is added to an existing
                 if (commonPoolDataSourceOracle.equals(pds)) {
@@ -91,20 +91,20 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
     private static Properties determineCommonDataSourceProperties(final PoolDataSource pds) {
         final Properties commonDataSourceProperties = new Properties();
         
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CLASS, pds.getClass().getName());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.URL, pds.getURL());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getConnectionFactoryClassName());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, VALIDATE_CONNECTION_ON_BORROW, pds.getValidateConnectionOnBorrow());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, ABANDONED_CONNECTION_TIMEOUT, pds.getAbandonedConnectionTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, TIME_TO_LIVE_CONNECTION_TIMEOUT, pds.getTimeToLiveConnectionTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, INACTIVE_CONNECTION_TIMEOUT, pds.getInactiveConnectionTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, TIMEOUT_CHECK_INTERVAL, pds.getTimeoutCheckInterval());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, MAX_STATEMENTS, pds.getMaxStatements());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, pds.getClass().getName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, pds.getURL());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getConnectionFactoryClassName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATE_CONNECTION_ON_BORROW, pds.getValidateConnectionOnBorrow());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, ABANDONED_CONNECTION_TIMEOUT, pds.getAbandonedConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIME_TO_LIVE_CONNECTION_TIMEOUT, pds.getTimeToLiveConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, INACTIVE_CONNECTION_TIMEOUT, pds.getInactiveConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIMEOUT_CHECK_INTERVAL, pds.getTimeoutCheckInterval());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_STATEMENTS, pds.getMaxStatements());
         // getConnectionWaitTimeout() in oracle.ucp.jdbc.PoolDataSource has been deprecated
-        // PatoPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_WAIT_TIMEOUT, pds.getConnectionWaitTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, MAX_CONNECTION_REUSE_TIME, pds.getMaxConnectionReuseTime());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, SECONDS_TO_TRUST_IDLE_CONNECTION, pds.getSecondsToTrustIdleConnection());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_VALIDATION_TIMEOUT, pds.getConnectionValidationTimeout());
+        // SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_WAIT_TIMEOUT, pds.getConnectionWaitTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_CONNECTION_REUSE_TIME, pds.getMaxConnectionReuseTime());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SECONDS_TO_TRUST_IDLE_CONNECTION, pds.getSecondsToTrustIdleConnection());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_VALIDATION_TIMEOUT, pds.getConnectionValidationTimeout());
 
         return commonDataSourceProperties;
     }

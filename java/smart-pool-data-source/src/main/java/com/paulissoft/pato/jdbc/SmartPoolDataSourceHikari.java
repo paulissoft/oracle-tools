@@ -1,4 +1,4 @@
-package com.paulissoft.pato.java.jdbc.pool;
+package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
@@ -12,9 +12,9 @@ import lombok.experimental.Delegate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements HikariConfigMXBean, Closeable {
+public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements HikariConfigMXBean, Closeable {
 
-    private static final Logger logger = LoggerFactory.getLogger(PatoPoolDataSourceHikari.class);
+    private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSourceHikari.class);
 
     public static final String AUTO_COMMIT = "autoCommit";
 
@@ -41,7 +41,7 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
     public static final String LEAK_DETECTION_THRESHOLD = "leakDetectionThreshold";
     
     static {
-        logger.info("Initializing {}", PatoPoolDataSourceHikari.class.toString());
+        logger.info("Initializing {}", SmartPoolDataSourceHikari.class.toString());
     }
 
     private interface Overrides {
@@ -52,8 +52,8 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
         /*
         // To solve this error:
         //
-        // getDataSourceProperties() in nl.bluecurrent.backoffice.configuration.PatoPoolDataSourceHikari cannot override
-        // getDataSourceProperties() in nl.bluecurrent.backoffice.configuration.PatoPoolDataSource
+        // getDataSourceProperties() in nl.bluecurrent.backoffice.configuration.SmartPoolDataSourceHikari cannot override
+        // getDataSourceProperties() in nl.bluecurrent.backoffice.configuration.SmartPoolDataSource
         // return type java.util.Properties is not compatible with org.springframework.boot.autoconfigure.jdbc.DataSourceProperties
         */
         public Properties getDataSourceProperties();
@@ -62,7 +62,7 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
     @Delegate(excludes=Overrides.class)
     private HikariDataSource commonPoolDataSourceHikari = null;
 
-    public PatoPoolDataSourceHikari(final HikariDataSource pds,
+    public SmartPoolDataSourceHikari(final HikariDataSource pds,
                                     final String username,
                                     final String password) {
         super(pds, determineCommonDataSourceProperties(pds), username, password);
@@ -101,23 +101,23 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
     private static Properties determineCommonDataSourceProperties(final HikariDataSource pds) {
         final Properties commonDataSourceProperties = new Properties();
 
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CLASS, pds.getClass().getName());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.URL, pds.getJdbcUrl());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, pds.getClass().getName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, pds.getJdbcUrl());
         // by first setting getDriverClassName(), getDataSourceClassName() will overwrite that one
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getDriverClassName());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, PatoPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getDataSourceClassName());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, AUTO_COMMIT, pds.isAutoCommit());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TIMEOUT, pds.getConnectionTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, IDLE_TIMEOUT, pds.getIdleTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, MAX_LIFETIME, pds.getMaxLifetime());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TEST_QUERY, pds.getConnectionTestQuery());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, INITIALIZATION_FAIL_TIMEOUT, pds.getInitializationFailTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, ISOLATE_INTERNAL_QUERIES, pds.isIsolateInternalQueries());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, ALLOW_POOL_SUSPENSION, pds.isAllowPoolSuspension());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, READ_ONLY, pds.isReadOnly());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, REGISTER_MBEANS, pds.isRegisterMbeans());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, VALIDATION_TIMEOUT, pds.getValidationTimeout());
-        PatoPoolDataSource.setProperty(commonDataSourceProperties, LEAK_DETECTION_THRESHOLD, pds.getLeakDetectionThreshold());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getDriverClassName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getDataSourceClassName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, AUTO_COMMIT, pds.isAutoCommit());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TIMEOUT, pds.getConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, IDLE_TIMEOUT, pds.getIdleTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_LIFETIME, pds.getMaxLifetime());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TEST_QUERY, pds.getConnectionTestQuery());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, INITIALIZATION_FAIL_TIMEOUT, pds.getInitializationFailTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, ISOLATE_INTERNAL_QUERIES, pds.isIsolateInternalQueries());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, ALLOW_POOL_SUSPENSION, pds.isAllowPoolSuspension());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, READ_ONLY, pds.isReadOnly());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, REGISTER_MBEANS, pds.isRegisterMbeans());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATION_TIMEOUT, pds.getValidationTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, LEAK_DETECTION_THRESHOLD, pds.getLeakDetectionThreshold());
 
         return commonDataSourceProperties;
     }
