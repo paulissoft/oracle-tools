@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -94,7 +95,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     // false - use openProxySsession() (two sessions will appear in v$session)
     @Getter
     @Setter
-    protected boolean singleSessionProxyModel = true;
+    private boolean singleSessionProxyModel = true;
 
     private ConnectInfo connectInfo;
 
@@ -243,6 +244,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
                                   connectInfo.getProxyUsername());
     }
 
+    // can be overridden
     protected Connection getConnectionSimple(String username, String password) throws SQLException {
         return commonPoolDataSource.getConnection(username, password);
     }
@@ -422,18 +424,21 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             method.invoke(logger, "pool: {}", (Object) new Object[]{ poolName });
             if (!finalCall) {
                 method.invoke(logger,
-                              "- sessions opened/closed: {}/{}; proxy sessions opened/closed: {}/{}" +
-                              "; time needed to open last connection (ms): {}" +
-                              "; min/avg/max connection time (ms): {}/{}/{}",
-                              (Object) new Object[]{ myDataSourceStatistics.getCountOpenSession(),
-                                                     myDataSourceStatistics.getCountCloseSession(),
-                                                     myDataSourceStatistics.getCountOpenProxySession(),
-                                                     myDataSourceStatistics.getCountCloseProxySession(),
-                                                     timeElapsed,
-                                                     myDataSourceStatistics.getTimeElapsedMin(),
-                                                     myDataSourceStatistics.getTimeElapsedAvg(),
-                                                     myDataSourceStatistics.getTimeElapsedMax() });
-                if (showPool) {
+                              "- time needed to open last connection (ms): {}",
+                              (Object) new Object[]{ timeElapsed });
+            }
+            method.invoke(logger,
+                          "- min/avg/max connection time (ms): {}/{}/{}",
+                          (Object) new Object[]{ myDataSourceStatistics.getTimeElapsedMin(),
+                                                 myDataSourceStatistics.getTimeElapsedAvg(),
+                                                 myDataSourceStatistics.getTimeElapsedMax() });
+            method.invoke(logger,
+                          "- physical/logical/proxy sessions opened: {}/{}/{}",
+                          (Object) new Object[]{ myDataSourceStatistics.getCountConnections(),
+                                                 myDataSourceStatistics.getCountOpenSession(),
+                                                 myDataSourceStatistics.getCountOpenProxySession() });
+            if (showPool) {
+                if (!finalCall) {
                     method.invoke(logger,
                                   "- initial/min/max pool size: {}/{}/{}" +
                                   "; active/idle/total connections: {}/{}/{}",
@@ -443,19 +448,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
                                                          getActiveConnections(),
                                                          getIdleConnections(),
                                                          getTotalConnections() });
-                }
-            } else {
-                method.invoke(logger,
-                              "- sessions opened/closed: {}/{}; proxy sessions opened/closed: {}/{}" +
-                              "; min/avg/max connection time (ms): {}/{}/{}",
-                              (Object) new Object[]{ myDataSourceStatistics.getCountOpenSession(),
-                                                     myDataSourceStatistics.getCountCloseSession(),
-                                                     myDataSourceStatistics.getCountOpenProxySession(),
-                                                     myDataSourceStatistics.getCountCloseProxySession(),
-                                                     myDataSourceStatistics.getTimeElapsedMin(),
-                                                     myDataSourceStatistics.getTimeElapsedAvg(),
-                                                     myDataSourceStatistics.getTimeElapsedMax() });
-                if (showPool) {
+                } else {
                     method.invoke(logger,
                                   "- initial/min/max pool size: {}/{}/{}" +
                                   "; min/avg/max active connections: {}/{}/{}" +
@@ -530,7 +523,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         // * bodomain => proxyUsername = null, schema = bodomain
         private String proxyUsername;
     
-        protected String schema; // needed to build the PoolName
+        private String schema; // needed to build the PoolName
 
         /**
          * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
@@ -597,6 +590,15 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
+        private Set<Connection> connections;
+
+        public MyDataSourceStatistics() {
+            // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
+            final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
+ 
+            connections = dummy.newKeySet();
+        }
+        
         protected void update(final Connection conn,
                               final long timeElapsed,
                               final int countOpenSession,
@@ -626,6 +628,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
             // We must use count and avg from the same connection so just synchronize.
             // If we don't synchronize we risk to get the average and count from different connections.
             synchronized (this) {
+                connections.add(conn);
+                
                 final BigDecimal count = new BigDecimal(this.countOpenSession.addAndGet(countOpenSession));
 
                 this.countCloseSession.addAndGet(countCloseSession);
@@ -706,6 +710,11 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         }
         
         // getter(s)
+
+        protected int getCountConnections() {
+            return connections.size();
+        }
+            
         protected long getCountOpenSession() {
             return countOpenSession.get();
         }

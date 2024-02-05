@@ -11,4 +11,8 @@
   <packaging>jar</packaging>
   <description>JDBC pool of pool data sources</description>
 
+  <build>
+    <finalName>${groupId}-${artifactId}-${revision}</finalName>
+  </build>
+
 </project>
