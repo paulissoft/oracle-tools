@@ -1,4 +1,4 @@
-package com.pato.java.jdbc.pool;
+package com.paulissoft.pato.java.jdbc.pool;
 
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
@@ -67,7 +67,7 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
                                     final String password) {
         super(pds, determineCommonDataSourceProperties(pds), username, password);
         
-        commonPoolDataSourceHikari = (HikariDataSource) commonPoolDataSource;
+        commonPoolDataSourceHikari = (HikariDataSource) getCommonPoolDataSource();
 
         // Since it is a static pool one must use the proxy user name to connect in case
         // of proxy sessions.
@@ -78,9 +78,10 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
             if (commonPoolDataSourceHikari == pds) {
                 setPoolName("HikariPool"); // set the prefix the first time
             } else {
-                // set username/password BEFORE changing pool attributes
-                setUsername(this.username);
-                setPassword(this.password);
+                // Set new username/password combination of common data source before
+                // you augment pool size(s) since that will trigger getConnection() calls.
+                setUsername(username);
+                setPassword(password);
                 
                 logger.info("maximum pool size before: {}", getMaximumPoolSize());
                 logger.info("minimum idl before: {}", getMinimumIdle());
@@ -92,7 +93,7 @@ public class PatoPoolDataSourceHikari extends PatoPoolDataSource implements Hika
                 logger.info("maximum pool size after: {}", getMaximumPoolSize());
                 logger.info("minimum idl after: {}", getMinimumIdle());
             }
-            setPoolName(getPoolName() + "-" + schema);
+            setPoolName(getPoolName() + "-" + getSchema());
             logger.info("Common pool name: {}", getPoolName());
         }
     }

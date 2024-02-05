@@ -8,7 +8,7 @@
     <artifactId>oracle-tools</artifactId>
     <version>${revision}</version>
   </parent>
-  <groupId>com.pato</groupId>
+  <groupId>com.paulissoft.pato</groupId>
   <artifactId>java</artifactId>
   <packaging>pom</packaging>
   <description>Java utilities</description>

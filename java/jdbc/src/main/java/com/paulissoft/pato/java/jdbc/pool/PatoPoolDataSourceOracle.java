@@ -1,4 +1,4 @@
-package com.pato.java.jdbc.pool;
+package com.paulissoft.pato.java.jdbc.pool;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
 
 public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements PoolDataSource {
     // static stuff
-
-    private static final Logger logger = LoggerFactory.getLogger(PatoPoolDataSourceOracle.class);
 
     public static final String VALIDATE_CONNECTION_ON_BORROW = "validateConnectionOnBorrow";
     
@@ -35,6 +33,8 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
     
     public static final String CONNECTION_VALIDATION_TIMEOUT = "connectionValidationTimeout";
 
+    private static final Logger logger = LoggerFactory.getLogger(PatoPoolDataSourceOracle.class);
+
     static {
         logger.info("Initializing {}", PatoPoolDataSourceOracle.class.toString());
     }
@@ -53,7 +53,7 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
                                     final String password) {
         super(pds, determineCommonDataSourceProperties(pds), username, password);
         
-        commonPoolDataSourceOracle = (PoolDataSource) commonPoolDataSource;
+        commonPoolDataSourceOracle = (PoolDataSource) getCommonPoolDataSource();
 
         setSingleSessionProxyModel(false);
         
@@ -63,6 +63,11 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
                 if (commonPoolDataSourceOracle.equals(pds)) {
                     setConnectionPoolName("OraclePool"); // the prefix
                 } else {
+                    // Set new username/password combination of common data source before
+                    // you augment pool size(s) since that will trigger getConnection() calls.
+                    setUser(username);
+                    setPassword(password);
+                    
                     logger.info("initial pool size before: {}", getInitialPoolSize());
                     logger.info("max pool size before: {}", getMaxPoolSize());
                     logger.info("min pool size before: {}", getMinPoolSize());
@@ -74,11 +79,8 @@ public class PatoPoolDataSourceOracle extends PatoPoolDataSource implements Pool
                     logger.info("initial pool size after: {}", getInitialPoolSize());
                     logger.info("max pool size after: {}", getMaxPoolSize());
                     logger.info("min pool size after: {}", getMinPoolSize());
-                    
-                    setUser(username);
-                    setPassword(password);
                 }
-                setConnectionPoolName(getConnectionPoolName() + "-" + schema);
+                setConnectionPoolName(getConnectionPoolName() + "-" + getSchema());
                 logger.info("Common pool name: {}", getConnectionPoolName());
             } catch (SQLException ex) {
                 throw new RuntimeException(ex.getMessage());

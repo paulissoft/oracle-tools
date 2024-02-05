@@ -1,4 +1,4 @@
-package com.pato.java.jdbc.pool;
+package com.paulissoft.pato.java.jdbc.pool;
 
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicReference;
@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.sql.DataSource;
 import lombok.experimental.Delegate;
+import lombok.Getter;
+import lombok.Setter;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +49,13 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     private static Properties commonDataSourcePropertiesStatisticsAll = new Properties();
 
-    protected static Map<Properties, MyDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static Map<Properties, MyDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+
+    private static Map<Properties, DataSource> dataSources = new ConcurrentHashMap<>();
+
+    private static Map<Properties, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+
+    private static Map<Properties, AtomicInteger> maximumPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", PatoPoolDataSource.class.toString());
@@ -77,37 +85,27 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     }
     
     @Delegate(excludes=Overrides.class)
-    protected DataSource commonPoolDataSource = null;
+    @Getter
+    private DataSource commonPoolDataSource = null;
 
-    protected boolean statisticsEnabled = false;
+    @Getter
+    @Setter
+    private boolean statisticsEnabled = false;
 
     // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
     // true - do not use openProxySsession() but use proxyUsername[schema]
     // false - use openProxySsession() (two sessions will appear in v$session)
-    protected boolean singleSessionProxyModel = true; 
+    @Getter
+    @Setter
+    protected boolean singleSessionProxyModel = true;
 
-    protected String username;
+    private ConnectInfo connectInfo;
 
-    protected String password;
-    
-    // username like:
-    // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
-    // * bodomain => proxyUsername = null, schema = bodomain
-    private String proxyUsername;
-    
-    protected String schema; // needed to build the PoolName
-    
     // same properties for URL, username (without schema), password and data source class: same pool DataSource
     private Properties commonDataSourceProperties;
 
     // properties include URL, username (with an optional schema), password and data source class
     private Properties commonDataSourcePropertiesStatistics;
-
-    private static Map<Properties, DataSource> dataSources = new ConcurrentHashMap<>();
-
-    private static Map<Properties, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
-
-    private static Map<Properties, AtomicInteger> maximumPoolCount = new ConcurrentHashMap<>();    
 
     /**
      * Initialize a pool data source.
@@ -136,16 +134,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         checkPropertyNull(PASSWORD);
         checkPropertyNull(POOL_NAME);
     
-        this.username = username;
-        this.password = password;
-        
-        final StringBuffer schema = new StringBuffer(this.username.length());
-        final StringBuffer proxyUsername = new StringBuffer(this.username.length());
-
-        getSchemaProxyUsername(this.username, schema, proxyUsername);
-
-        this.schema = schema.toString();
-        this.proxyUsername = proxyUsername.toString();
+        connectInfo = new ConnectInfo(username, password);
 
         this.commonPoolDataSource = dataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
         this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
@@ -154,8 +143,8 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         // The statistics are measured per original data source.
         // So we include the username / password.
         this.commonDataSourcePropertiesStatistics = new Properties(this.commonDataSourceProperties);
-        setProperty(this.commonDataSourcePropertiesStatistics, USERNAME, this.username);
-        setProperty(this.commonDataSourcePropertiesStatistics, PASSWORD, this.password);        
+        setProperty(this.commonDataSourcePropertiesStatistics, USERNAME, username);
+        setProperty(this.commonDataSourcePropertiesStatistics, PASSWORD, password);        
         // add total if not already existent
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourcePropertiesStatisticsAll, s -> new MyDataSourceStatistics());
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourcePropertiesStatistics, s -> new MyDataSourceStatistics());
@@ -163,14 +152,6 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         logger.debug("<PatoPoolDataSource()");
     }
 
-    protected static void setProperty(final Properties commonDataSourceProperties,
-                                      final String name,
-                                      final Object value) {
-        if (name != null && value != null) {
-            commonDataSourceProperties.put(name, value);
-        }
-    }
-    
     private void checkPropertyNull(final String name) {
         try {
             assert(commonDataSourceProperties.get(name) == null);
@@ -189,34 +170,13 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         }
     }
 
-    /**
-     * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
-     * schema (bodomain) and proxy username (bc_proxy respectively empty).
-     *
-     * @param username       The username to connect to.
-     * @param schema         An empty (mutable) string buffer for schema.
-     * @param proxyUsername  An empty (mutable) string buffer for proxy username.
-     *
-     */    
-    private void getSchemaProxyUsername(final String username,
-                                        final StringBuffer schema,
-                                        final StringBuffer proxyUsername) {
-        assert(schema.length() <= 0);
-        assert(proxyUsername.length() <= 0);
-        
-        final int pos1 = username.indexOf("[");
-        final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
-      
-        if (pos1 >= 0 && pos2 >= pos1) {
-            // a username like bc_proxy[bodomain]
-            proxyUsername.append(username.substring(0, pos1));
-            schema.append(username.substring(pos1+1, pos2));
-        } else {
-            // a username like bodomain
-            proxyUsername.append("");
-            schema.append(username);
+    protected static void setProperty(final Properties commonDataSourceProperties,
+                                      final String name,
+                                      final Object value) {
+        if (name != null && value != null) {
+            commonDataSourceProperties.put(name, value);
         }
-    }
+    }    
 
     public void close() {
         if (done()) {
@@ -233,7 +193,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
             // no need to display same statistics twice (see below for ALL)
             if (!lastPoolDataSource || maximumPoolCount.get(commonDataSourceProperties).get() > 1) {
-                showDataSourceStatistics(myDataSourceStatistics, -1L, true, schema);
+                showDataSourceStatistics(myDataSourceStatistics, -1L, true, getSchema());
             }
             allDataSourceStatistics.remove(commonDataSourcePropertiesStatistics);
 
@@ -256,22 +216,19 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     }
 
     public Connection getConnection() throws SQLException {
-        return getConnectionSmart(this.username,
-                                  this.password,
-                                  this.schema,
-                                  this.proxyUsername);
+        return getConnectionSmart(this.connectInfo.getUsername(),
+                                  this.connectInfo.getPassword(),
+                                  this.connectInfo.getSchema(),
+                                  this.connectInfo.getProxyUsername());
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
-        final StringBuffer schema = new StringBuffer(username.length());
-        final StringBuffer proxyUsername = new StringBuffer(username.length());
+        final ConnectInfo connectInfo = new ConnectInfo(username, password);
 
-        getSchemaProxyUsername(username, schema, proxyUsername);
-
-        return getConnectionSmart(username,
-                                  password,
-                                  schema.toString(),
-                                  proxyUsername.toString());
+        return getConnectionSmart(connectInfo.getUsername(),
+                                  connectInfo.getPassword(),
+                                  connectInfo.getSchema(),
+                                  connectInfo.getProxyUsername());
     }
 
     protected Connection getConnectionSimple(String username, String password) throws SQLException {
@@ -291,10 +248,10 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
         final Instant t1 = Instant.now();
         Connection conn = null;
         
-        if (proxyUsername == null || proxyUsername.length() <= 0 || singleSessionProxyModel) {
+        if (singleSessionProxyModel || proxyUsername == null || proxyUsername.length() <= 0) {
             conn = getConnectionSimple(username, password);
         } else {
-            conn = getConnectionSimple(proxyUsername, password); // see NOTE 1
+            conn = getConnectionSimple(proxyUsername, password);
 
             OracleConnection oraConn = conn.unwrap(OracleConnection.class);
             final String currentSchema = oraConn.getCurrentSchema();
@@ -369,7 +326,7 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
         // no need to display same statistics twice (see below for totals)
         if (maximumPoolCount.get(commonDataSourceProperties).get() > 1) {
-            showDataSourceStatistics(myDataSourceStatistics, timeElapsed, false, schema);
+            showDataSourceStatistics(myDataSourceStatistics, timeElapsed, false, getSchema());
         }
         showDataSourceStatistics(myDataSourceStatisticsAll, timeElapsed, false, ALL);
     }
@@ -487,19 +444,19 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
     }
 
     protected String getUsername() {
-        return username;
+        return connectInfo.getUsername();
     }
 
     protected String getPassword() {
-        return password;
+        return connectInfo.getPassword();
     }
 
-    protected void setStatisticsEnabled(final boolean statisticsEnabled) {
-        this.statisticsEnabled = statisticsEnabled;
+    protected String getSchema() {
+        return connectInfo.getSchema();
     }
 
-    protected void setSingleSessionProxyModel(final boolean singleSessionProxyModel) {
-        this.singleSessionProxyModel = singleSessionProxyModel;
+    protected String getProxyUsername() {
+        return connectInfo.getProxyUsername();
     }
 
     protected abstract int getActiveConnections();
@@ -514,6 +471,47 @@ public abstract class PatoPoolDataSource implements DataSource, Closeable {
 
     protected abstract int getMaximumPoolSize();
 
+    @Getter
+    private class ConnectInfo {
+
+        private String username;
+
+        private String password;
+    
+        // username like:
+        // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
+        // * bodomain => proxyUsername = null, schema = bodomain
+        private String proxyUsername;
+    
+        protected String schema; // needed to build the PoolName
+
+        /**
+         * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
+         * schema (bodomain) and proxy username (bc_proxy respectively empty).
+         *
+         * @param username  The username to connect to.
+         * @param password  The pasword.
+         *
+         */    
+        public ConnectInfo(final String username, final String password) {
+            this.username = username;
+            this.password = password;
+        
+            final int pos1 = username.indexOf("[");
+            final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
+      
+            if (pos1 >= 0 && pos2 >= pos1) {
+                // a username like bc_proxy[bodomain]
+                this.proxyUsername = username.substring(0, pos1);
+                this.schema = username.substring(pos1+1, pos2);
+            } else {
+                // a username like bodomain
+                this.proxyUsername = null;
+                this.schema = username;
+            }
+        }
+    }
+    
     protected class MyDataSourceStatistics {
 
         private final int ROUND_SCALE = 32;
