@@ -122,9 +122,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
      *                                    Must also NOT be part of the commonDataSourceProperties.
      */
     protected SmartPoolDataSource(final DataSource pds,
-                                 final Properties commonDataSourceProperties,
-                                 final String username,
-                                 final String password) {
+                                  final Properties commonDataSourceProperties,
+                                  final String username,
+                                  final String password) {
         logger.debug(">SmartPoolDataSource(pds={}, username={})", pds, username);
 
         this.commonDataSourceProperties.putAll(commonDataSourceProperties);

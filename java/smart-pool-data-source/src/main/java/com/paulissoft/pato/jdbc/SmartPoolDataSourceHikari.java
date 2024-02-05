@@ -63,8 +63,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     private HikariDataSource commonPoolDataSourceHikari = null;
 
     public SmartPoolDataSourceHikari(final HikariDataSource pds,
-                                    final String username,
-                                    final String password) {
+                                     final String username,
+                                     final String password) {
         super(pds, determineCommonDataSourceProperties(pds), username, password);
         
         commonPoolDataSourceHikari = (HikariDataSource) getCommonPoolDataSource();

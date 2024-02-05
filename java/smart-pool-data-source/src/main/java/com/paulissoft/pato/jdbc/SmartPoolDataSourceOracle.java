@@ -49,8 +49,8 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
     private PoolDataSource commonPoolDataSourceOracle;
     
     public SmartPoolDataSourceOracle(final PoolDataSource pds,
-                                    final String username,
-                                    final String password) {
+                                     final String username,
+                                     final String password) {
         super(pds, determineCommonDataSourceProperties(pds), username, password);
         
         commonPoolDataSourceOracle = (PoolDataSource) getCommonPoolDataSource();
