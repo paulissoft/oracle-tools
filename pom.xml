@@ -86,16 +86,6 @@
       <name>GitHub Packages</name>
       <url>https://maven.pkg.github.com/paulissoft/oracle-tools</url>
     </repository>
-    <repository>
-      <id>internal.repo</id>
-      <name>Internal releases</name>
-      <url>file:///C:/usr/local/maven-repository/releases</url>
-    </repository>
-    <snapshotRepository>
-      <id>internal.repo</id>
-      <name>Internal snapshots</name>
-      <url>file:///C:/usr/local/maven-repository/snapshots</url>
-    </snapshotRepository>
   </distributionManagement>
   
   <build>
