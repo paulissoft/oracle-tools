@@ -227,16 +227,16 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             } else {
                 logger.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
                             getInitialPoolSize(),
-                            getMaximumPoolSize(),
-                            getMinimumPoolSize());
+                            getMinimumPoolSize(),
+                            getMaximumPoolSize());
 
                 int oldSize, newSize;
 
-                newSize = getMaximumPoolSize(pds);
-                oldSize = getMaximumPoolSize();
+                newSize = getInitialPoolSize(pds);
+                oldSize = getInitialPoolSize();
 
                 if (newSize >= 0) {
-                    setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
+                    setInitialPoolSize(newSize + Integer.max(oldSize, 0));
                 }
 
                 newSize = getMinimumPoolSize(pds);
@@ -255,8 +255,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 
                 logger.info("pool sizes after: initial/minimum/maximum: {}/{}/{}",
                             getInitialPoolSize(),
-                            getMaximumPoolSize(),
-                            getMinimumPoolSize());
+                            getMinimumPoolSize(),
+                            getMaximumPoolSize());
             }
             setPoolName(getPoolName() + "-" + connectInfo.getSchema());
             logger.info("Common pool name: {}", getPoolName());
