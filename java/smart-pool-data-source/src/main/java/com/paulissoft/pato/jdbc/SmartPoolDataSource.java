@@ -225,10 +225,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             if (this.commonPoolDataSource == pds) {
                 setPoolName(getPoolNamePrefix()); // set the prefix the first time
             } else {
-                logger.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                            getInitialPoolSize(),
-                            getMinimumPoolSize(),
-                            getMaximumPoolSize());
+                logger.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                             getInitialPoolSize(),
+                             getMinimumPoolSize(),
+                             getMaximumPoolSize());
 
                 int oldSize, newSize;
 
@@ -253,13 +253,13 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                     setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
                 }
                 
-                logger.info("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                logger.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
                             getInitialPoolSize(),
                             getMinimumPoolSize(),
                             getMaximumPoolSize());
             }
             setPoolName(getPoolName() + "-" + connectInfo.getSchema());
-            logger.info("Common pool name: {}", getPoolName());
+            logger.debug("Common pool name: {}", getPoolName());
         }
 
         printDataSourceStatistics(this.commonPoolDataSource, logger);
@@ -577,14 +577,15 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                          getTotalConnections() });
                 } else {
                     method.invoke(logger,
-                                  "- initial/min/max pool size: {}/{}/{}" +
-                                  "; min/avg/max active connections: {}/{}/{}" +
-                                  "; min/avg/max idle connections: {}/{}/{}" +
-                                  "; min/avg/max total connections: {}/{}/{}",
+                                  "- initial/min/max pool size: {}/{}/{}",
                                   (Object) new Object[]{ getInitialPoolSize(),
                                                          getMinimumPoolSize(),
-                                                         getMaximumPoolSize(),
-                                                         myDataSourceStatistics.getActiveConnectionsMin(),
+                                                         getMaximumPoolSize() });
+                    method.invoke(logger,
+                                  "- min/avg/max active connections: {}/{}/{}" +
+                                  "; min/avg/max idle connections: {}/{}/{}" +
+                                  "; min/avg/max total connections: {}/{}/{}",
+                                  (Object) new Object[]{ myDataSourceStatistics.getActiveConnectionsMin(),
                                                          myDataSourceStatistics.getActiveConnectionsAvg(),
                                                          myDataSourceStatistics.getActiveConnectionsMax(),
                                                          myDataSourceStatistics.getIdleConnectionsMin(),

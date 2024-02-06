@@ -85,16 +85,21 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          */
         super(pds, determineCommonDataSourceProperties(pds), username, password, false, true);
 
-        logger.info("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari);
+        logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari);
 
         // pool name, sizes and username / password already done in super constructor
         synchronized (commonPoolDataSourceHikari) {
             if (commonPoolDataSourceHikari != pds) {
-                logger.info("minimum idle before: {}", getMinimumIdle());
+                final int newValue = pds.getMinimumIdle();
+                final int oldValue = getMinimumIdle();
 
-                setMinimumIdle(pds.getMinimumIdle() + getMinimumIdle());
+                logger.debug("minimum idle before: {}", oldValue);
 
-                logger.info("minimum idle after: {}", getMinimumIdle());
+                if (newValue >= 0) {
+                    setMinimumIdle(newValue + Integer.max(oldValue, 0));
+                }
+
+                logger.debug("minimum idle after: {}", getMinimumIdle());
             }
         }
     }
@@ -124,44 +129,48 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     protected void printDataSourceStatistics(final DataSource poolDataSource, final Logger logger) {
+        if (!logger.isDebugEnabled()) {
+            return;
+        }
+        
         final HikariDataSource poolDataSourceHikari = ((HikariDataSource)poolDataSource);
         
-        logger.info("configuration pool data source {}:", poolDataSourceHikari.getPoolName());
-        logger.info("- driverClassName: {}", poolDataSourceHikari.getDriverClassName());
-        logger.info("- dataSourceClassName: {}", poolDataSourceHikari.getDataSourceClassName());
-        logger.info("- jdbcUrl: {}", poolDataSourceHikari.getJdbcUrl());
-        logger.info("- username: {}", poolDataSourceHikari.getUsername());
-        logger.info("- autoCommit: {}", poolDataSourceHikari.isAutoCommit());
-        logger.info("- connectionTimeout: {}", poolDataSourceHikari.getConnectionTimeout());
-        logger.info("- idleTimeout: {}", poolDataSourceHikari.getIdleTimeout());
-        logger.info("- maxLifetime: {}", poolDataSourceHikari.getMaxLifetime());
-        logger.info("- connectionTestQuery: {}", poolDataSourceHikari.getConnectionTestQuery());
-        logger.info("- minimumIdle: {}", poolDataSourceHikari.getMinimumIdle());
-        logger.info("- maximumPoolSize: {}", poolDataSourceHikari.getMaximumPoolSize());
-        logger.info("- metricRegistry: {}", poolDataSourceHikari.getMetricRegistry());
-        logger.info("- healthCheckRegistry: {}", poolDataSourceHikari.getHealthCheckRegistry());
-        logger.info("- initializationFailTimeout: {}", poolDataSourceHikari.getInitializationFailTimeout());
-        logger.info("- isolateInternalQueries: {}", poolDataSourceHikari.isIsolateInternalQueries());
-        logger.info("- allowPoolSuspension: {}", poolDataSourceHikari.isAllowPoolSuspension());
-        logger.info("- readOnly: {}", poolDataSourceHikari.isReadOnly());
-        logger.info("- registerMbeans: {}", poolDataSourceHikari.isRegisterMbeans());
-        logger.info("- catalog: {}", poolDataSourceHikari.getCatalog());
-        logger.info("- connectionInitSql: {}", poolDataSourceHikari.getConnectionInitSql());
-        logger.info("- driverClassName: {}", poolDataSourceHikari.getDriverClassName());
-        logger.info("- dataSourceClassName: {}", poolDataSourceHikari.getDataSourceClassName());
-        logger.info("- transactionIsolation: {}", poolDataSourceHikari.getTransactionIsolation());
-        logger.info("- validationTimeout: {}", poolDataSourceHikari.getValidationTimeout());
-        logger.info("- leakDetectionThreshold: {}", poolDataSourceHikari.getLeakDetectionThreshold());
-        logger.info("- dataSource: {}", poolDataSourceHikari.getDataSource());
-        logger.info("- schema: {}", poolDataSourceHikari.getSchema());
-        logger.info("- threadFactory: {}", poolDataSourceHikari.getThreadFactory());
-        logger.info("- scheduledExecutor: {}", poolDataSourceHikari.getScheduledExecutor());
+        logger.debug("configuration pool data source {}:", poolDataSourceHikari.getPoolName());
+        logger.debug("- driverClassName: {}", poolDataSourceHikari.getDriverClassName());
+        logger.debug("- dataSourceClassName: {}", poolDataSourceHikari.getDataSourceClassName());
+        logger.debug("- jdbcUrl: {}", poolDataSourceHikari.getJdbcUrl());
+        logger.debug("- username: {}", poolDataSourceHikari.getUsername());
+        logger.debug("- autoCommit: {}", poolDataSourceHikari.isAutoCommit());
+        logger.debug("- connectionTimeout: {}", poolDataSourceHikari.getConnectionTimeout());
+        logger.debug("- idleTimeout: {}", poolDataSourceHikari.getIdleTimeout());
+        logger.debug("- maxLifetime: {}", poolDataSourceHikari.getMaxLifetime());
+        logger.debug("- connectionTestQuery: {}", poolDataSourceHikari.getConnectionTestQuery());
+        logger.debug("- minimumIdle: {}", poolDataSourceHikari.getMinimumIdle());
+        logger.debug("- maximumPoolSize: {}", poolDataSourceHikari.getMaximumPoolSize());
+        logger.debug("- metricRegistry: {}", poolDataSourceHikari.getMetricRegistry());
+        logger.debug("- healthCheckRegistry: {}", poolDataSourceHikari.getHealthCheckRegistry());
+        logger.debug("- initializationFailTimeout: {}", poolDataSourceHikari.getInitializationFailTimeout());
+        logger.debug("- isolateInternalQueries: {}", poolDataSourceHikari.isIsolateInternalQueries());
+        logger.debug("- allowPoolSuspension: {}", poolDataSourceHikari.isAllowPoolSuspension());
+        logger.debug("- readOnly: {}", poolDataSourceHikari.isReadOnly());
+        logger.debug("- registerMbeans: {}", poolDataSourceHikari.isRegisterMbeans());
+        logger.debug("- catalog: {}", poolDataSourceHikari.getCatalog());
+        logger.debug("- connectionInitSql: {}", poolDataSourceHikari.getConnectionInitSql());
+        logger.debug("- driverClassName: {}", poolDataSourceHikari.getDriverClassName());
+        logger.debug("- dataSourceClassName: {}", poolDataSourceHikari.getDataSourceClassName());
+        logger.debug("- transactionIsolation: {}", poolDataSourceHikari.getTransactionIsolation());
+        logger.debug("- validationTimeout: {}", poolDataSourceHikari.getValidationTimeout());
+        logger.debug("- leakDetectionThreshold: {}", poolDataSourceHikari.getLeakDetectionThreshold());
+        logger.debug("- dataSource: {}", poolDataSourceHikari.getDataSource());
+        logger.debug("- schema: {}", poolDataSourceHikari.getSchema());
+        logger.debug("- threadFactory: {}", poolDataSourceHikari.getThreadFactory());
+        logger.debug("- scheduledExecutor: {}", poolDataSourceHikari.getScheduledExecutor());
 
         if (poolDataSourceHikari == commonPoolDataSourceHikari) {
-            logger.info("connections pool data source {}:", getPoolName());
-            logger.info("- total={}", getTotalConnections());
-            logger.info("- active={}", getActiveConnections());
-            logger.info("- idle={}", getIdleConnections());
+            logger.debug("connections pool data source {}:", getPoolName());
+            logger.debug("- total={}", getTotalConnections());
+            logger.debug("- active={}", getActiveConnections());
+            logger.debug("- idle={}", getIdleConnections());
         }
     }
 
@@ -411,13 +420,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     */
     
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
-        logger.info("setCommonPoolDataSource({})", commonPoolDataSource);
-
-        assert(commonPoolDataSource != null);
-        
         commonPoolDataSourceHikari = (HikariDataSource) commonPoolDataSource;
-
-        assert(commonPoolDataSourceHikari != null);
     }
 
     protected String getPoolNamePrefix() {
