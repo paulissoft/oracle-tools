@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import org.springframework.beans.DirectFieldAccessor;    
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
@@ -223,15 +224,15 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
     private HikariPool getHikariPool() {
+        return (HikariPool) new DirectFieldAccessor(commonPoolDataSourceHikari).getPropertyValue("pool");
         /*
-        return (HikariPool) new DirectFieldAccessor(poolDataSource).getPropertyValue("pool");
-        */
         try {
             return (HikariPool) commonPoolDataSourceHikari.getClass().getDeclaredField("pool").get(commonPoolDataSourceHikari);
         } catch (Exception ex) {
             logger.error("getHikariPool() exception: {}", ex.getMessage());
             return null;
         }
+        */
     }
 
     protected int getActiveConnections() {

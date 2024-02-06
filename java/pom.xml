@@ -41,6 +41,7 @@
     <oracle.ojdbc.artifactId>ojdbc11</oracle.ojdbc.artifactId>
     <oracle.ucp.artifactId>ucp11</oracle.ucp.artifactId>
     <oracle.jdbc.version>23.3.0.23.09</oracle.jdbc.version>
+    <spring.version>5.2.3.RELEASE</spring.version>
   </properties>
 
   <dependencies>
@@ -66,6 +67,13 @@
       <groupId>com.oracle.database.jdbc</groupId>
       <artifactId>${oracle.ucp.artifactId}</artifactId>
       <version>${oracle.jdbc.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.springframework/spring-beans -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-beans</artifactId>
+      <version>${spring.version}</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
