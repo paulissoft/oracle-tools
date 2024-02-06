@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import javax.sql.DataSource;
 import java.util.Properties;
 import lombok.experimental.Delegate;
@@ -104,6 +105,13 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         logger.info("- idle={}", getIdleConnections(poolDataSourceOracle));
     }
 
+    protected Connection getConnectionSmart(final String username,
+                                            final String password,
+                                            final String schema,
+                                            final String proxyUsername) throws SQLException {
+        throw new SQLFeatureNotSupportedException("getConnectionSmart()");
+    }
+    
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
         commonPoolDataSourceOracle = (PoolDataSource) commonPoolDataSource;
     }

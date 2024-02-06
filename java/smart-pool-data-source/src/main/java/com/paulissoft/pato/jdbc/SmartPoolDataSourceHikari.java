@@ -4,12 +4,17 @@ import org.springframework.beans.DirectFieldAccessor;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
+import com.zaxxer.hikari.pool.ProxyConnection;
 import java.io.Closeable;
 import java.sql.Connection;
+import java.util.ArrayList;
+import oracle.jdbc.OracleConnection;
 import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Properties;
 import lombok.experimental.Delegate;
+import java.time.Instant;
+import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,6 +178,105 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         }
     }
 
+    protected Connection getConnectionSmart(final String username,
+                                            final String password,
+                                            final String schema,
+                                            final String proxyUsername) throws SQLException {
+        Instant t1 = Instant.now();
+        final ArrayList<ProxyConnection> connectionsToSkip = new ArrayList<>(100);
+        ProxyConnection conn = null;
+        OracleConnection oraConn = null;
+        String currentSchema = null;
+        final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
+        final Integer closeConnectionCount = Integer.valueOf(0);
+        int openProxySessionCount = 0, closeProxySessionCount = 0;
+        int nr = 0;
+
+        try {
+            while (true) {
+                logger.debug("try: {}", ++nr);
+
+                // only update statistics do not show them here but at the end in the second updateStatistics
+                conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
+
+                if (isStatisticsEnabled()) {
+                    updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), false);
+                }
+            
+                oraConn = conn.unwrap(OracleConnection.class);
+                currentSchema = oraConn.getCurrentSchema();
+        
+                logger.debug("current schema before = {}; oracle connection = {}", currentSchema, oraConn);
+
+                logger.debug("oraConn.isProxySession(): {}; currentSchema.equals(schema): {}; getIdleConnections(): {}",
+                             oraConn.isProxySession(),
+                             currentSchema.equals(schema),
+                             getIdleConnections());
+
+                if (!oraConn.isProxySession() ||
+                    currentSchema.equals(schema) ||
+                    getIdleConnections() == 0 ||
+                    !Instant.now().isBefore(doNotConnectAfter)) {
+                    logger.debug("found a candidate after {} time(s)", nr);
+                    break;
+                }
+
+                connectionsToSkip.add(conn);                    
+
+                t1 = Instant.now(); // for the next round
+            }
+
+            assert(conn != null && oraConn != null);
+                
+            if (oraConn.isProxySession()) {
+                if (currentSchema.equals(schema)) {
+                    logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
+                
+                    oraConn = null; // we are done
+                } else {
+                    logger.debug("closing proxy session since the current schema is not the requested schema");
+                
+                    oraConn.close(OracleConnection.PROXY_SESSION);
+                    closeProxySessionCount++;
+                }
+            }
+
+            if (oraConn != null) { // set up proxy session
+                Properties proxyProperties = new Properties();
+            
+                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
+
+                logger.debug("opening proxy session");
+
+                oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+                conn.setSchema(schema);
+                openProxySessionCount++;
+
+                logger.debug("current schema after = {}", oraConn.getCurrentSchema());
+            }
+
+        } finally {
+            // (soft) close all connections that do not meet the criteria
+            connectionsToSkip.stream().forEach(c -> {
+                    try {
+                        c.close();
+                    } catch (SQLException ex) {
+                        ; // ignore
+                    } finally {
+                        closeConnectionCount.sum(closeConnectionCount.intValue(), 1);
+                    }
+                });
+        }
+        if (isStatisticsEnabled()) {
+            updateStatistics(closeConnectionCount.intValue(),
+                             openProxySessionCount,
+                             closeProxySessionCount,
+                             Duration.between(t1, Instant.now()).toMillis());
+        }
+
+        return conn;
+    }
+    
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
         logger.info("setCommonPoolDataSource({})", commonPoolDataSource);
 
