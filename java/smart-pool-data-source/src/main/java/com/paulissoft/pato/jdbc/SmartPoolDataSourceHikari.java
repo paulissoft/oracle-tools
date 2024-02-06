@@ -90,8 +90,6 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                 setMinimumIdle(pds.getMinimumIdle() + getMinimumIdle());
 
                 logger.info("minimum idle after: {}", getMinimumIdle());
-
-                pds.close(); // not needed anymore                        
             }
         }
     }

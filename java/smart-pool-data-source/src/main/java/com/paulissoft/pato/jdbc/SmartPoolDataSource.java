@@ -339,20 +339,27 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     }
 
     public Connection getConnection() throws SQLException {
-        return getConnectionSmart(this.connectInfo.getUsername(),
-                                  this.connectInfo.getPassword(),
-                                  this.connectInfo.getSchema(),
-                                  this.connectInfo.getProxyUsername());
+        final Connection conn = getConnectionSmart(this.connectInfo.getUsername(),
+                                                   this.connectInfo.getPassword(),
+                                                   this.connectInfo.getSchema(),
+                                                   this.connectInfo.getProxyUsername());
+
+        logger.debug("getConnection() = {}", conn);
+
+        return conn;
     }
 
     @Deprecated
     public Connection getConnection(String username, String password) throws SQLException {
         final ConnectInfo connectInfo = new ConnectInfo(username, password);
+        final Connection conn = getConnectionSmart(connectInfo.getUsername(),
+                                                   connectInfo.getPassword(),
+                                                   connectInfo.getSchema(),
+                                                   connectInfo.getProxyUsername());
+        
+        logger.debug("getConnection(username={}) = {}", username, conn);
 
-        return getConnectionSmart(connectInfo.getUsername(),
-                                  connectInfo.getPassword(),
-                                  connectInfo.getSchema(),
-                                  connectInfo.getProxyUsername());
+        return conn;
     }
 
     private Connection getConnectionSmart(final String username,
@@ -361,7 +368,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                           final String proxyUsername) throws SQLException {
         Instant t1 = Instant.now();
 
-        logger.trace(">getConnectionSmart(username={}, password={}, schema={}, proxyUsername={})",
+        logger.debug(">getConnectionSmart(username={}, password={}, schema={}, proxyUsername={})",
                      username,
                      password,
                      schema,
@@ -369,26 +376,38 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         Connection conn = null;
 
+        logger.debug("singleSessionProxyModel={}, connectInfo.getProxyUsername()={})",
+                     singleSessionProxyModel,
+                     connectInfo.getProxyUsername());
+        
         if (singleSessionProxyModel || connectInfo.getProxyUsername() == null) {
             // case 1 & 2
             conn = getConnectionSimple(proxyUsername, password, schema, proxyUsername, t1, true);
         } else {
-            final ArrayList<Connection> connectionsToSkip = new ArrayList<>(Integer.max(getMaximumPoolSize(), 10));
+            final ArrayList<Connection> connectionsToSkip = new ArrayList<>(100);
             OracleConnection oraConn = null;
             String currentSchema = null;
             final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
             final Integer closeConnectionCount = Integer.valueOf(0);
             int openProxySessionCount = 0, closeProxySessionCount = 0;
+            int nr = 0;
 
             try {
                 while (true) {
+                    logger.debug("try: {}", ++nr);
+
                     // only update statistics do not show them here but at the end in the second updateStatistics
                     conn = getConnectionSimple(proxyUsername, password, schema, proxyUsername, t1, false);
             
                     oraConn = conn.unwrap(OracleConnection.class);
                     currentSchema = oraConn.getCurrentSchema();
         
-                    logger.trace("current schema before = {}; oracle connection = {}", currentSchema, oraConn);
+                    logger.debug("current schema before = {}; oracle connection = {}", currentSchema, oraConn);
+
+                    logger.debug("oraConn.isProxySession(): {}; currentSchema.equals(schema): {}; getIdleConnections(): {}",
+                                 oraConn.isProxySession(),
+                                 currentSchema.equals(schema),
+                                 getIdleConnections());
 
                     if (!oraConn.isProxySession() ||
                         currentSchema.equals(schema) ||
@@ -406,11 +425,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 
                 if (oraConn.isProxySession()) {
                     if (currentSchema.equals(schema)) {
-                        logger.trace("no need to close/open a proxy session since the current schema is the requested schema");
+                        logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
                 
                         oraConn = null; // we are done
                     } else {
-                        logger.trace("closing proxy session since the current schema is not the requested schema");
+                        logger.debug("closing proxy session since the current schema is not the requested schema");
                 
                         oraConn.close(OracleConnection.PROXY_SESSION);
                         closeProxySessionCount++;
@@ -422,13 +441,13 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             
                     proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
 
-                    logger.trace("opening proxy session");
+                    logger.debug("opening proxy session");
 
                     oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
                     conn.setSchema(schema);
                     openProxySessionCount++;
 
-                    logger.trace("current schema after = {}", oraConn.getCurrentSchema());
+                    logger.debug("current schema after = {}", oraConn.getCurrentSchema());
                 }
 
             } finally {
@@ -449,7 +468,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                  Duration.between(t1, Instant.now()).toMillis());
             }
         }
-        
+
+        logger.debug("<getConnectionSmart() = {}", conn);
+
         return conn;
     }
 
@@ -473,6 +494,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         if (statisticsEnabled) {
             updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
         }
+
+        logger.debug("getConnectionSimple(username={}, password={}, schema={}, proxyUsername={}) = {}",
+                     username,
+                     password,
+                     schema,
+                     proxyUsername,
+                     conn);
+        
         return conn;
     }    
 
@@ -770,7 +799,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 this.schema = username;
             }
 
-            logger.trace("ConnectInfo(username={}, password={}) = (username={}, password={}, proxyUsername={}, schema={})",
+            logger.debug("ConnectInfo(username={}, password={}) = (username={}, password={}, proxyUsername={}, schema={})",
                          username,
                          password,
                          this.username,
