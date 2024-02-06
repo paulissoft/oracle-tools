@@ -63,7 +63,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
     
     @Delegate(excludes=Overrides.class)
-    private HikariDataSource commonPoolDataSourceHikari = null;
+    private HikariDataSource commonPoolDataSourceHikari;
 
     public SmartPoolDataSourceHikari(final HikariDataSource pds,
                                      final String username,
@@ -78,6 +78,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * will have ONE common pool data source.
          */
         super(pds, determineCommonDataSourceProperties(pds), username, password, false, true);
+
+        logger.info("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari);
 
         // pool name, sizes and username / password already done in super constructor
         synchronized (commonPoolDataSourceHikari) {
@@ -151,10 +153,12 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         logger.info("- threadFactory: {}", poolDataSourceHikari.getThreadFactory());
         logger.info("- scheduledExecutor: {}", poolDataSourceHikari.getScheduledExecutor());
 
-        logger.info("connections pool data source {}:", poolDataSourceHikari.getPoolName());
-        logger.info("- total={}", getTotalConnections(poolDataSourceHikari));
-        logger.info("- active={}", getActiveConnections(poolDataSourceHikari));
-        logger.info("- idle={}", getIdleConnections(poolDataSourceHikari));
+        if (poolDataSourceHikari == commonPoolDataSourceHikari) {
+            logger.info("connections pool data source {}:", getPoolName());
+            logger.info("- total={}", getTotalConnections());
+            logger.info("- active={}", getActiveConnections());
+            logger.info("- idle={}", getIdleConnections());
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -171,7 +175,13 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
+        logger.info("setCommonPoolDataSource({})", commonPoolDataSource);
+
+        assert(commonPoolDataSource != null);
+        
         commonPoolDataSourceHikari = (HikariDataSource) commonPoolDataSource;
+
+        assert(commonPoolDataSourceHikari != null);
     }
 
     protected String getPoolNamePrefix() {
@@ -210,42 +220,34 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return ((HikariDataSource)pds).getMaximumPoolSize();
     }
 
+
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
-    private static HikariPool getHikariPool(final HikariDataSource poolDataSource) {
+    private HikariPool getHikariPool() {
+        /*
+        return (HikariPool) new DirectFieldAccessor(poolDataSource).getPropertyValue("pool");
+        */
         try {
-            return (HikariPool) poolDataSource.getClass().getDeclaredField("pool").get(poolDataSource);
+            return (HikariPool) commonPoolDataSourceHikari.getClass().getDeclaredField("pool").get(commonPoolDataSourceHikari);
         } catch (Exception ex) {
             logger.error("getHikariPool() exception: {}", ex.getMessage());
             return null;
         }
     }
-    
+
     protected int getActiveConnections() {
-        return getActiveConnections(commonPoolDataSourceHikari);
-    }
-
-    private static int getActiveConnections(final HikariDataSource poolDataSource) {
-        final HikariPool hikariPool = getHikariPool(poolDataSource);
-
+        final HikariPool hikariPool = getHikariPool();
+        
         return hikariPool != null ? hikariPool.getActiveConnections() : -1;
     }
 
     protected int getIdleConnections() {
-        return getIdleConnections(commonPoolDataSourceHikari);
-    }
-
-    private static int getIdleConnections(final HikariDataSource poolDataSource) {
-        final HikariPool hikariPool = getHikariPool(poolDataSource);
+        final HikariPool hikariPool = getHikariPool();
         
         return hikariPool != null ? hikariPool.getIdleConnections() : -1;
     }
 
     protected int getTotalConnections() {
-        return getTotalConnections(commonPoolDataSourceHikari);
-    }
-
-    protected int getTotalConnections(final HikariDataSource poolDataSource) {
-        final HikariPool hikariPool = getHikariPool(poolDataSource);
+        final HikariPool hikariPool = getHikariPool();
         
         return hikariPool != null ? hikariPool.getTotalConnections() : -1;
     }

@@ -90,7 +90,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     }
     
     @Delegate(excludes=Overrides.class)
-    private DataSource commonPoolDataSource = null;
+    private DataSource commonPoolDataSource;
 
     @Getter
     @Setter
@@ -140,6 +140,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                      singleSessionProxyModel,
                      useFixedUsernamePassword);
 
+        assert(pds != null);
+        
         printDataSourceStatistics(pds, logger);
 
         this.commonDataSourceProperties.putAll(commonDataSourceProperties);
@@ -188,6 +190,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         }
 
         this.commonPoolDataSource = dataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
+
+        assert(this.commonPoolDataSource != null);
+        
         this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
 
         // The statistics are measured per original data source and per total.
@@ -205,10 +210,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new MyDataSourceStatistics());
 
         // generic part
-        setCommonPoolDataSource(commonPoolDataSource);
+        setCommonPoolDataSource(this.commonPoolDataSource);
 
         // update pool sizes and default username / password when the pool data source is added to an existing
-        synchronized (commonPoolDataSource) {
+        synchronized (this.commonPoolDataSource) {
             // Set new username/password combination of common data source before
             // you augment pool size(s) since that may trigger getConnection() calls.
 
@@ -218,28 +223,47 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                           connectInfo.getUsername() /* case 1 & 2 */ ));
             setPassword(connectInfo.getPassword());
 
-            if (commonPoolDataSource == pds) {
+            if (this.commonPoolDataSource == pds) {
                 setPoolName(getPoolNamePrefix()); // set the prefix the first time
             } else {
                 logger.info("pool sizes before: initial/minimum/maximum: {}",
                             getInitialPoolSize(),
                             getMaximumPoolSize(),
                             getMinimumPoolSize());
-                    
-                setMaximumPoolSize(getMaximumPoolSize(pds) + getMaximumPoolSize());
-                setMinimumPoolSize(getMinimumPoolSize(pds) + getMinimumPoolSize());
-                setInitialPoolSize(getInitialPoolSize(pds) + getInitialPoolSize());
-                    
+
+                int size1, size2;
+
+                size1 = getMaximumPoolSize(pds);
+                size2 = getMaximumPoolSize();
+
+                if (size1 >= 0 && size2 >= 0) {
+                    setMaximumPoolSize(size1 + size2);
+                }
+
+                size1 = getMinimumPoolSize(pds);
+                size2 = getMinimumPoolSize();
+
+                if (size1 >= 0 && size2 >= 0) {                
+                    setMinimumPoolSize(size1 + size2);
+                }
+                
+                size1 = getMaximumPoolSize(pds);
+                size2 = getMaximumPoolSize();
+
+                if (size1 >= 0 && size2 >= 0) {                
+                    setMaximumPoolSize(size1 + size2);
+                }
+                
                 logger.info("pool sizes after: initial/minimum/maximum: {}",
                             getInitialPoolSize(),
                             getMaximumPoolSize(),
                             getMinimumPoolSize());
             }
-            setPoolName(getPoolName() + "-" + getSchema());
+            setPoolName(getPoolName() + "-" + connectInfo.getSchema());
             logger.info("Common pool name: {}", getPoolName());
         }
 
-        printDataSourceStatistics(commonPoolDataSource, logger);
+        printDataSourceStatistics(this.commonPoolDataSource, logger);
 
         logger.debug("<SmartPoolDataSource()");
     }
@@ -286,7 +310,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
 
             if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(myDataSourceStatistics, getSchema());
+                showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema());
             }
             allDataSourceStatistics.remove(commonDataSourceStatistics);
 
@@ -349,7 +373,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             // case 1 & 2
             conn = getConnectionSimple(proxyUsername, password, schema, proxyUsername, t1, true);
         } else {
-            final ArrayList<Connection> connectionsToSkip = new ArrayList<>(getMaximumPoolSize());
+            final ArrayList<Connection> connectionsToSkip = new ArrayList<>(Integer.max(getMaximumPoolSize(), 10));
             OracleConnection oraConn = null;
             String currentSchema = null;
             final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
@@ -521,7 +545,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         if (showStatistics) {
             // no need to display same statistics twice (see below for totals)
             if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(myDataSourceStatistics, getSchema(), timeElapsed, false);
+                showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema(), timeElapsed, false);
             }
             showDataSourceStatistics(myDataSourceStatisticsTotal, ALL, timeElapsed, false);
         }
@@ -553,7 +577,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         // no need to display same statistics twice (see below for totals)
         if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
-            showDataSourceStatistics(myDataSourceStatistics, getSchema(), timeElapsed, false);
+            showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema(), timeElapsed, false);
         }
         showDataSourceStatistics(myDataSourceStatisticsTotal, ALL, timeElapsed, false);
     }
@@ -671,15 +695,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
     protected abstract void setPoolName(String poolName) throws SQLException;
 
-    protected String getUsername() {
-        return connectInfo.getUsername();
-    }
-
     protected abstract void setUsername(String username) throws SQLException;
-
-    protected String getPassword() {
-        return connectInfo.getPassword();
-    }
 
     protected abstract void setPassword(String password) throws SQLException;
         
@@ -703,20 +719,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
     protected abstract long getConnectionTimeout(); // milliseconds
 
-    protected String getConnectionFactoryClassName() {
-        return (String) commonDataSourceProperties.get(CONNECTION_FACTORY_CLASS_NAME);
-    }
-
-    protected String getUrl() {
+    protected final String getUrl() {
         return (String) commonDataSourceProperties.get(URL);
-    }
-
-    protected String getSchema() {
-        return connectInfo.getSchema();
-    }
-
-    protected String getProxyUsername() {
-        return connectInfo.getProxyUsername();
     }
 
     // statistics
@@ -765,6 +769,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 this.proxyUsername = null;
                 this.schema = username;
             }
+
+            logger.trace("ConnectInfo(username={}, password={}) = (username={}, password={}, proxyUsername={}, schema={})",
+                         username,
+                         password,
+                         this.username,
+                         this.password,
+                         this.proxyUsername,
+                         this.schema);
         }
     }
     
