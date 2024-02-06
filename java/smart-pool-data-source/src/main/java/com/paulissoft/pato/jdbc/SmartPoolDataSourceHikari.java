@@ -178,6 +178,138 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         }
     }
 
+    /**
+     * Get a connection in a smart way for proxy sessions.
+     *
+     * Retrieve a connection from the pool until one of the following conditions occurs:
+     * 1. there is a last connection and the operation timed out (not(now &lt; doNotConnectAfter))
+     * 2. there is a last connection and there are no more idle connections
+     * 3. the last connection retrieved has the same current schema as the requested schema
+     *
+     * In situation 1 or 2 the best other candidate is chosen. Best in terms of current schema equal
+     * to the username and not another proxy schema.
+     *
+     */
+    protected Connection getConnectionSmart(final String username,
+                                            final String password,
+                                            final String schema,
+                                            final String proxyUsername) throws SQLException {
+        assert(schema != null);
+
+        Instant t1 = Instant.now();
+        final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
+        final ArrayList<ProxyConnection> nonMatchingConnections = new ArrayList<>(10);
+        ProxyConnection conn = null;
+        ProxyConnection nonMatchingConnection = null;
+        OracleConnection oraConn = null;
+        boolean found = false;
+        final Integer closeConnectionCount = Integer.valueOf(0);
+        int openProxySessionCount = 0, closeProxySessionCount = 0;
+        int nr = 0;
+
+        try {
+            while (!found) {
+                logger.trace("try: {}", ++nr);
+                
+                // when there are no idle connections: pick the non matching connection
+                final boolean mustMatchSessionSchema = getIdleConnections() > 0;
+
+                if (nonMatchingConnection != null && (!mustMatchSessionSchema || !Instant.now().isBefore(doNotConnectAfter))) {
+                    // no idle connections or operation timed out: pick nonMatchingConnection
+                    conn = nonMatchingConnection;
+                    assert(nonMatchingConnections.remove(nonMatchingConnection));
+                    found = true;
+                } else {
+                    final Instant t2 = Instant.now();
+                    conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
+                    if (isStatisticsEnabled()) {
+                        updateStatistics(conn, Duration.between(t1, t2).toMillis(), false);
+                    }
+                    t1 = t2;
+                }
+            
+                oraConn = conn.unwrap(OracleConnection.class);
+
+                if (found) {
+                    // pick the non matching connection
+                    ;
+                } else if (mustMatchSessionSchema && oraConn.isProxySession() && !oraConn.getCurrentSchema().equals(schema)) {
+                    // add the connection with the non matching Oracle session so we can close it later
+                    nonMatchingConnections.add(conn);
+                
+                    if (nonMatchingConnection == null) {
+                        nonMatchingConnection = conn; // last resort
+                    }
+                } else {
+                    found = true;
+                }
+
+                if (found) {                
+                    logger.debug("found this connection after {} time(s) with current schema {} (mustMatchSessionSchema={})",
+                                 nr,
+                                 oraConn.getCurrentSchema(),
+                                 mustMatchSessionSchema);
+        
+                    final String currentSchema = oraConn.getCurrentSchema();
+        
+                    logger.debug("current schema before = {}; oracle connection = {}", currentSchema, oraConn);
+
+                    // MyProxySession.setProxy(oraConn, schema);
+                    if (oraConn.isProxySession()) {
+                        if (currentSchema.equals(schema)) {
+                            logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
+                
+                            oraConn = null; // we are done
+                        } else {
+                            logger.debug("closing proxy session since the current schema is not the requested schema");
+                
+                            oraConn.close(OracleConnection.PROXY_SESSION);
+                            closeProxySessionCount++;
+                        }
+                    }            
+
+                    if (oraConn != null) { // set up proxy session
+                        Properties proxyProperties = new Properties();
+            
+                        proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
+                        proxyProperties.setProperty(OracleConnection.CONNECTION_PROPERTY_PROXY_CLIENT_NAME, schema);
+
+                        logger.debug("opening proxy session");
+
+                        oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+                        conn.setSchema(schema);
+                        openProxySessionCount++;
+
+                        logger.debug("current schema after = {}", oraConn.getCurrentSchema());
+                    }
+                }
+            }
+
+            logger.debug("tried {} connections before finding one that meets the criteria", nonMatchingConnections.size());
+        } finally {
+            // (soft) close all connections that do not meet the criteria
+            nonMatchingConnections.stream().forEach(c -> {
+                    try {
+                        c.close();
+                    } catch (SQLException ex) {
+                        ; // ignore
+                    } finally {
+                        closeConnectionCount.sum(closeConnectionCount.intValue(), 1);
+                    }
+                });
+        }
+
+        if (isStatisticsEnabled()) {
+            updateStatistics(closeConnectionCount.intValue(),
+                             openProxySessionCount,
+                             closeProxySessionCount,
+                             Duration.between(t1, Instant.now()).toMillis());
+        }
+
+        return conn;
+    }
+
+    /*
     protected Connection getConnectionSmart(final String username,
                                             final String password,
                                             final String schema,
@@ -276,6 +408,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
         return conn;
     }
+    */
     
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
         logger.info("setCommonPoolDataSource({})", commonPoolDataSource);
