@@ -234,6 +234,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                 while (true) {
                     assert(cost != 0);
 
+                    nonMatchingConnections.add(conn);
+                
                     if (cost == 1 || found == null) {
                         found = conn;
                     }
@@ -242,8 +244,6 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                         break;
                     }
 
-                    nonMatchingConnections.add(conn);
-                
                     conn = getConnectionSimple(username,
                                                password,
                                                schema,
