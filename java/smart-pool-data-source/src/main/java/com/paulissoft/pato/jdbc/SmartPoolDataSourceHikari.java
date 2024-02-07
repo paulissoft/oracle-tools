@@ -218,7 +218,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         ProxyConnection conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
         final Instant t2 = Instant.now();
         OracleConnection oraConn = conn.unwrap(OracleConnection.class);
-        Connection found = null;
+        ProxyConnection found = null;
         int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
         int cost = determineCost(conn, oraConn, schema);
 
@@ -279,7 +279,11 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
         if (cost == 0) {
             logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
+            assert(conn == found);
         } else {
+            conn = found;            
+            oraConn = conn.unwrap(OracleConnection.class);
+            
             if (cost == 2) {
                 logger.debug("closing proxy session since the current schema is not the requested schema");
                 

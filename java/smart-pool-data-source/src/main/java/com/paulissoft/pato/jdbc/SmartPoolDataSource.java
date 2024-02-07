@@ -804,69 +804,17 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             synchronized (this) {                
                 final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
 
-                // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
-                
-                // See https://stackoverflow.com/questions/4591206/
-                //   arithmeticexception-non-terminating-decimal-expansion-no-exact-representable
-                // to prevent this error: Non-terminating decimal expansion; no exact representable decimal result.
-                if (timeElapsed >= 0L) {
-                    timeElapsedAvg.addAndGet(new BigDecimal(timeElapsed).subtract(timeElapsedAvg.get()).divide(count,
-                                                                                                               ROUND_SCALE,
-                                                                                                               RoundingMode.HALF_UP));
-                }
-                if (activeConnections >= 0) {
-                    activeConnectionsAvg.addAndGet(new BigDecimal(activeConnections).subtract(activeConnectionsAvg.get()).divide(count,
-                                                                                                                                 ROUND_SCALE,
-                                                                                                                                 RoundingMode.HALF_UP));
-                }
-                if (idleConnections >= 0) {
-                    idleConnectionsAvg.addAndGet(new BigDecimal(idleConnections).subtract(idleConnectionsAvg.get()).divide(count,
-                                                                                                                           ROUND_SCALE,
-                                                                                                                           RoundingMode.HALF_UP));
-                }
-                if (totalConnections >= 0) {
-                    totalConnectionsAvg.addAndGet(new BigDecimal(totalConnections).subtract(totalConnectionsAvg.get()).divide(count,
-                                                                                                                              ROUND_SCALE,
-                                                                                                                              RoundingMode.HALF_UP));
-                }
+                updateIterativeMean(count, timeElapsed, timeElapsedAvg);
+                updateIterativeMean(count, activeConnections, activeConnectionsAvg);
+                updateIterativeMean(count, idleConnections, idleConnectionsAvg);
+                updateIterativeMean(count, totalConnections, totalConnectionsAvg);
             }
 
             // The rest is using AtomicInteger/AtomicLong, hence concurrent.
-            if (timeElapsed >= 0L) {
-                if (timeElapsed < timeElapsedMin.get()) {
-                    timeElapsedMin.set(timeElapsed);
-                }
-                if (timeElapsed > timeElapsedMax.get()) {
-                    timeElapsedMax.set(timeElapsed);
-                }
-            }
-
-            if (activeConnections >= 0) {
-                if (activeConnections < activeConnectionsMin.get()) {
-                    activeConnectionsMin.set(activeConnections);
-                }
-                if (activeConnections > activeConnectionsMax.get()) {
-                    activeConnectionsMax.set(activeConnections);
-                }
-            }
-
-            if (idleConnections >= 0) {
-                if (idleConnections < idleConnectionsMin.get()) {
-                    idleConnectionsMin.set(idleConnections);
-                }
-                if (idleConnections > idleConnectionsMax.get()) {
-                    idleConnectionsMax.set(idleConnections);
-                }
-            }
-
-            if (totalConnections >= 0) {
-                if (totalConnections < totalConnectionsMin.get()) {
-                    totalConnectionsMin.set(totalConnections);
-                }
-                if (totalConnections > totalConnectionsMax.get()) {
-                    totalConnectionsMax.set(totalConnections);
-                }
-            }
+            updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
+            updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
+            updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
+            updateMinMax(totalConnections, totalConnectionsMin, totalConnectionsMax);
         }
 
         protected void update(final Connection conn,
@@ -882,48 +830,62 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             synchronized (this) {                
                 final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
 
-                // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
-                
-                // See https://stackoverflow.com/questions/4591206/
-                //   arithmeticexception-non-terminating-decimal-expansion-no-exact-representable
-                // to prevent this error: Non-terminating decimal expansion; no exact representable decimal result.
-                if (timeElapsed >= 0L) {
-                    timeElapsedAvg.addAndGet(new BigDecimal(timeElapsed).subtract(timeElapsedAvg.get()).divide(count,
-                                                                                                               ROUND_SCALE,
-                                                                                                               RoundingMode.HALF_UP));
-                }
-                if (timeElapsedProxy >= 0L) {
-                    timeElapsedProxyAvg.addAndGet(new BigDecimal(timeElapsedProxy).subtract(timeElapsedProxyAvg.get()).divide(count,
-                                                                                                                              ROUND_SCALE,
-                                                                                                                              RoundingMode.HALF_UP));
-                }
+                updateIterativeMean(count, timeElapsed, timeElapsedAvg);
+                updateIterativeMean(count, timeElapsedProxy, timeElapsedProxyAvg);
             }
 
             // The rest is using AtomicInteger/AtomicLong, hence concurrent.
-            if (timeElapsed >= 0L) {
-                if (timeElapsed < timeElapsedMin.get()) {
-                    timeElapsedMin.set(timeElapsed);
-                }
-                if (timeElapsed > timeElapsedMax.get()) {
-                    timeElapsedMax.set(timeElapsed);
-                }
-            }
-
-            // The rest is using AtomicInteger/AtomicLong, hence concurrent.
-            if (timeElapsedProxy >= 0L) {
-                if (timeElapsedProxy < timeElapsedProxyMin.get()) {
-                    timeElapsedProxyMin.set(timeElapsedProxy);
-                }
-                if (timeElapsedProxy > timeElapsedProxyMax.get()) {
-                    timeElapsedProxyMax.set(timeElapsedProxy);
-                }
-            }
+            updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
+            updateMinMax(timeElapsedProxy, timeElapsedProxyMin, timeElapsedProxyMax);
             
             this.logicalConnectionCountProxy.addAndGet(logicalConnectionCountProxy);
             this.openProxySessionCount.addAndGet(openProxySessionCount);
             this.closeProxySessionCount.addAndGet(closeProxySessionCount);
         }
         
+        // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
+                
+        // See https://stackoverflow.com/questions/4591206/
+        //   arithmeticexception-non-terminating-decimal-expansion-no-exact-representable
+        // to prevent this error: Non-terminating decimal expansion; no exact representable decimal result.
+        private void updateIterativeMean(final BigDecimal count, final int value, final AtomicBigDecimal avg) {
+            if (value >= 0) {
+                avg.addAndGet(new BigDecimal(value).subtract(avg.get()).divide(count,
+                                                                               ROUND_SCALE,
+                                                                               RoundingMode.HALF_UP));
+            }
+        }
+
+        private void updateIterativeMean(final BigDecimal count, final long value, final AtomicBigDecimal avg) {
+            if (value >= 0L) {
+                avg.addAndGet(new BigDecimal(value).subtract(avg.get()).divide(count,
+                                                                               ROUND_SCALE,
+                                                                               RoundingMode.HALF_UP));
+            }
+        }
+
+        private void updateMinMax(final int value, final AtomicInteger min, final AtomicInteger max) {
+            if (value >= 0) {
+                if (value < min.get()) {
+                    min.set(value);
+                }
+                if (value > max.get()) {
+                    max.set(value);
+                }
+            }
+        }
+        
+        private void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
+            if (value >= 0) {
+                if (value < min.get()) {
+                    min.set(value);
+                }
+                if (value > max.get()) {
+                    max.set(value);
+                }
+            }
+        }
+
         protected boolean countersEqual(final MyDataSourceStatistics compareTo) {
             return
                 this.getPhysicalConnectionCount() == compareTo.getPhysicalConnectionCount() &&
