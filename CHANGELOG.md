@@ -15,6 +15,10 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.6.0] - 2024-02-07
+
+- [Combine multiple Java pool data sources into one in order to reduce resources needed.](https://github.com/paulissoft/oracle-tools/issues/150)
+
 ## [2.5.0] - 2024-01-25
 
 - [Enhance test connection Java program.](https://github.com/paulissoft/oracle-tools/issues/149)

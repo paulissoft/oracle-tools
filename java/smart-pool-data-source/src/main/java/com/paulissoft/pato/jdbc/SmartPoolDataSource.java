@@ -344,12 +344,16 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             conn = getConnectionSimple(this.connectInfo.getUsername(),
                                        this.connectInfo.getPassword(),
                                        this.connectInfo.getSchema(),
-                                       this.connectInfo.getProxyUsername());
+                                       this.connectInfo.getProxyUsername(),
+                                       statisticsEnabled,
+                                       true);
         } else {
             conn = getConnectionSmart(this.connectInfo.getUsername(),
                                       this.connectInfo.getPassword(),
                                       this.connectInfo.getSchema(),
-                                      this.connectInfo.getProxyUsername());
+                                      this.connectInfo.getProxyUsername(),
+                                      statisticsEnabled,
+                                      true);
         }
 
         logger.debug("getConnection() = {}", conn);
@@ -366,12 +370,16 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             conn = getConnectionSimple(connectInfo.getUsername(),
                                        connectInfo.getPassword(),
                                        connectInfo.getSchema(),
-                                       connectInfo.getProxyUsername());
+                                       connectInfo.getProxyUsername(),
+                                       statisticsEnabled,
+                                       true);
         } else {
             conn = getConnectionSmart(connectInfo.getUsername(),
                                       connectInfo.getPassword(),
                                       connectInfo.getSchema(),
-                                      connectInfo.getProxyUsername());
+                                      connectInfo.getProxyUsername(),
+                                      statisticsEnabled,
+                                      true);
         }
         
         logger.debug("getConnection(username={}) = {}", username, conn);
@@ -379,24 +387,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         return conn;
     }
 
-    private Connection getConnectionSimple(final String username,
-                                           final String password,
-                                           final String schema,
-                                           final String proxyUsername) throws SQLException {
-        return getConnectionSimple(username,
-                                   password,
-                                   schema,
-                                   proxyUsername,
-                                   Instant.now(),
-                                   true);
-    }
-    
-    private Connection getConnectionSimple(final String username,
-                                           final String password,
-                                           final String schema,
-                                           final String proxyUsername,
-                                           final Instant t1,
-                                           final boolean showStatistics) throws SQLException {
+    // one may override this one
+    protected Connection getConnectionSimple(final String username,
+                                             final String password,
+                                             final String schema,
+                                             final String proxyUsername,
+                                             final boolean updateStatistics,
+                                             final boolean showStatistics) throws SQLException {
+        final Instant t1 = Instant.now();
         Connection conn;
         
         if (useFixedUsernamePassword) {
@@ -408,13 +406,12 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                         username /* case 1 & 2 */ ),
                                                       password);
         }
-        if (statisticsEnabled) {
+        if (updateStatistics) {
             updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
         }
 
-        logger.debug("getConnectionSimple(username={}, password={}, schema={}, proxyUsername={}) = {}",
+        logger.debug("getConnectionSimple(username={}, schema={}, proxyUsername={}) = {}",
                      username,
-                     password,
                      schema,
                      proxyUsername,
                      conn);
@@ -422,10 +419,13 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         return conn;
     }    
 
+    // you need to implement this one
     protected abstract Connection getConnectionSmart(final String username,
                                                      final String password,
                                                      final String schema,
-                                                     final String proxyUsername) throws SQLException;    
+                                                     final String proxyUsername,
+                                                     final boolean updateStatistics,
+                                                     final boolean showStatistics) throws SQLException;    
 
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,
@@ -601,6 +601,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         }
     }
 
+    protected int getCurrentPoolCount() {
+        return currentPoolCount.get(commonDataSourceProperties).get();
+    }
+
     protected abstract void printDataSourceStatistics(final DataSource poolDataSource, final Logger logger);
     
     protected abstract void setCommonPoolDataSource(final DataSource commonPoolDataSource);
@@ -686,11 +690,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 this.schema = username;
             }
 
-            logger.debug("ConnectInfo(username={}, password={}) = (username={}, password={}, proxyUsername={}, schema={})",
+            logger.debug("ConnectInfo(username={}) = (username={}, proxyUsername={}, schema={})",
                          username,
-                         password,
                          this.username,
-                         this.password,
                          this.proxyUsername,
                          this.schema);
         }

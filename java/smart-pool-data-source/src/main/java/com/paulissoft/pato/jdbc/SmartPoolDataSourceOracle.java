@@ -112,7 +112,9 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
     protected Connection getConnectionSmart(final String username,
                                             final String password,
                                             final String schema,
-                                            final String proxyUsername) throws SQLException {
+                                            final String proxyUsername,
+                                            final boolean updateStatistics,
+                                            final boolean showStatistics) throws SQLException {
         throw new SQLFeatureNotSupportedException("getConnectionSmart()");
     }
     
