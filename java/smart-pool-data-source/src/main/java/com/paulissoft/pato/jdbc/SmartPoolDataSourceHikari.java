@@ -4,7 +4,7 @@ import org.springframework.beans.DirectFieldAccessor;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
-//import com.zaxxer.hikari.pool.ProxyConnection;
+import com.zaxxer.hikari.pool.ProxyConnection;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -203,16 +203,19 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                                             final String proxyUsername,
                                             final boolean updateStatistics,
                                             final boolean showStatistics) throws SQLException {
+        logger.debug(">getConnectionSmart(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+                     username,
+                     schema,
+                     proxyUsername,
+                     updateStatistics,
+                     showStatistics);
+        
         assert(schema != null);
 
         final Instant t1 = Instant.now();
         final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-        Connection conn = getConnectionSimple(username,
-                                              password,
-                                              schema,
-                                              proxyUsername,
-                                              false,
-                                              false);
+        // ProxyConnection is essential because closing a java.sql.Connection seems to close the physical connection
+        ProxyConnection conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
         final Instant t2 = Instant.now();
         OracleConnection oraConn = conn.unwrap(OracleConnection.class);
         Connection found = null;
@@ -227,7 +230,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
             
             assert(nrGetConnectionsLeft > 0); // at least this instance
             
-            final ArrayList</*Proxy*/Connection> nonMatchingConnections = new ArrayList<>(nrGetConnectionsLeft);
+            final ArrayList<ProxyConnection> nonMatchingConnections = new ArrayList<>(nrGetConnectionsLeft);
 
             try {
                 while (true) {
@@ -243,12 +246,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                         break;
                     }
 
-                    conn = getConnectionSimple(username,
-                                               password,
-                                               schema,
-                                               proxyUsername,
-                                               false,
-                                               false);
+                    conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
                     oraConn = conn.unwrap(OracleConnection.class);
                     cost = determineCost(conn, oraConn, schema);
 
@@ -315,14 +313,16 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                              closeProxySessionCount);
         }
 
+        logger.debug("<getConnectionSmart() = {}", conn);
+
         return conn;
     }
 
     private int determineCost(final Connection conn, final OracleConnection oraConn, final String schema) throws SQLException {
-        final String currentSchema = conn.getSchema();
+        final String currentSchema = conn.getSchema();        
         int cost;
             
-        if (schema != null && currentSchema != null && schema.equals(currentSchema)) {
+        if (schema != null && currentSchema != null && schema.equalsIgnoreCase(currentSchema)) {
             cost = 0;
         } else {
             // if not a proxy session only oraConn.openProxySession() must be invoked
@@ -330,6 +330,13 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
             // hence more expensive.
             cost = (!oraConn.isProxySession() ? 1 : 2);
         }
+
+        logger.debug("determineCost(currentSchema={}, isProxySession={}, schema={}) = {}",
+                     currentSchema,
+                     oraConn.isProxySession(),
+                     schema,
+                     cost);
+        
         return cost;
     }    
     
