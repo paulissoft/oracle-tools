@@ -83,30 +83,31 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         }
         
         final PoolDataSource poolDataSourceOracle = ((PoolDataSource)poolDataSource);
+        final String prefix = INDENT_PREFIX;
         
         logger.debug("configuration pool data source {}:", poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("- connectionFactoryClassName: {}", poolDataSourceOracle.getConnectionFactoryClassName());
-        logger.debug("- URL: {}", poolDataSourceOracle.getURL());
-        logger.debug("- user: {}", poolDataSourceOracle.getUser());
-        logger.debug("- initialPoolSize={}", poolDataSourceOracle.getInitialPoolSize());
-        logger.debug("- minPoolSize={}", poolDataSourceOracle.getMinPoolSize());
-        logger.debug("- maxPoolSize={}", poolDataSourceOracle.getMaxPoolSize());        
-        logger.debug("- validateConnectionOnBorrow={}", poolDataSourceOracle.getValidateConnectionOnBorrow());
-        logger.debug("- connectionPoolName={}", poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("- abandonedConnectionTimeout={}", poolDataSourceOracle.getAbandonedConnectionTimeout());
-        logger.debug("- timeToLiveConnectionTimeout={}", poolDataSourceOracle.getTimeToLiveConnectionTimeout());
-        logger.debug("- inactiveConnectionTimeout={}", poolDataSourceOracle.getInactiveConnectionTimeout());
-        logger.debug("- timeoutCheckInterval={}", poolDataSourceOracle.getTimeoutCheckInterval());
-        logger.debug("- maxStatements={}", poolDataSourceOracle.getMaxStatements());
-        logger.debug("- connectionWaitTimeout={}", poolDataSourceOracle.getConnectionWaitTimeout());
-        logger.debug("- maxConnectionReuseTime={}", poolDataSourceOracle.getMaxConnectionReuseTime());
-        logger.debug("- secondsToTrustIdleConnection={}", poolDataSourceOracle.getSecondsToTrustIdleConnection());
-        logger.debug("- connectionValidationTimeout={}", poolDataSourceOracle.getConnectionValidationTimeout());
+        logger.debug("{}connectionFactoryClassName: {}", prefix, poolDataSourceOracle.getConnectionFactoryClassName());
+        logger.debug("{}URL: {}", prefix, poolDataSourceOracle.getURL());
+        logger.debug("{}user: {}", prefix, poolDataSourceOracle.getUser());
+        logger.debug("{}initialPoolSize={}", prefix, poolDataSourceOracle.getInitialPoolSize());
+        logger.debug("{}minPoolSize={}", prefix, poolDataSourceOracle.getMinPoolSize());
+        logger.debug("{}maxPoolSize={}", prefix, poolDataSourceOracle.getMaxPoolSize());        
+        logger.debug("{}validateConnectionOnBorrow={}", prefix, poolDataSourceOracle.getValidateConnectionOnBorrow());
+        logger.debug("{}connectionPoolName={}", prefix, poolDataSourceOracle.getConnectionPoolName());
+        logger.debug("{}abandonedConnectionTimeout={}", prefix, poolDataSourceOracle.getAbandonedConnectionTimeout());
+        logger.debug("{}timeToLiveConnectionTimeout={}", prefix, poolDataSourceOracle.getTimeToLiveConnectionTimeout());
+        logger.debug("{}inactiveConnectionTimeout={}", prefix, poolDataSourceOracle.getInactiveConnectionTimeout());
+        logger.debug("{}timeoutCheckInterval={}", prefix, poolDataSourceOracle.getTimeoutCheckInterval());
+        logger.debug("{}maxStatements={}", prefix, poolDataSourceOracle.getMaxStatements());
+        logger.debug("{}connectionWaitTimeout={}", prefix, poolDataSourceOracle.getConnectionWaitTimeout());
+        logger.debug("{}maxConnectionReuseTime={}", prefix, poolDataSourceOracle.getMaxConnectionReuseTime());
+        logger.debug("{}secondsToTrustIdleConnection={}", prefix, poolDataSourceOracle.getSecondsToTrustIdleConnection());
+        logger.debug("{}connectionValidationTimeout={}", prefix, poolDataSourceOracle.getConnectionValidationTimeout());
 
         logger.debug("connections pool data source {}:", poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("- total={}", getTotalConnections(poolDataSourceOracle));
-        logger.debug("- active={}", getActiveConnections(poolDataSourceOracle));
-        logger.debug("- idle={}", getIdleConnections(poolDataSourceOracle));
+        logger.debug("{}total={}", prefix, getTotalConnections(poolDataSourceOracle));
+        logger.debug("{}active={}", prefix, getActiveConnections(poolDataSourceOracle));
+        logger.debug("{}idle={}", prefix, getIdleConnections(poolDataSourceOracle));
     }
 
     protected Connection getConnectionSmart(final String username,

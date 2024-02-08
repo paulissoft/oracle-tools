@@ -45,7 +45,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
     public static final String MAXIMUM_POOL_SIZE = "maximumPoolSize";
 
-    private static final String ALL = "*";
+    public static final String INDENT_PREFIX = "* ";
+
+    private static final String GRAND_TOTAL = "grand total";
+
+    private static final String TOTAL = "total";
 
     private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSource.class);
 
@@ -78,8 +82,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             loggerDebug = null;
         }
 
-        setProperty(commonDataSourceStatisticsGrandTotal, USERNAME, ALL);
-        setProperty(commonDataSourceStatisticsGrandTotal, PASSWORD, "");
+        setProperty(commonDataSourceStatisticsGrandTotal, USERNAME, GRAND_TOTAL);
     }
 
     private interface Overrides {
@@ -315,13 +318,13 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
             if (lastPoolDataSource) {
                 // show (grand) totals only when it is the last pool data source
-                showDataSourceStatistics(myDataSourceStatisticsTotal, ALL);
+                showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL);
                 allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
 
                 // only GrandTotal left?
                 if (allDataSourceStatistics.size() == 1) {                
                     if (!myDataSourceStatisticsGrandTotal.countersEqual(myDataSourceStatisticsTotal)) {
-                        showDataSourceStatistics(myDataSourceStatisticsGrandTotal, ALL);
+                        showDataSourceStatistics(myDataSourceStatisticsGrandTotal, GRAND_TOTAL);
                     }
                     allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
                 }
@@ -465,7 +468,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
                 showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema(), timeElapsed, false);
             }
-            showDataSourceStatistics(myDataSourceStatisticsTotal, ALL, timeElapsed, false);
+            showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL, timeElapsed, false);
         }
     }
 
@@ -510,20 +513,20 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
                 showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema(), timeElapsed, timeElapsedProxy, false);
             }
-            showDataSourceStatistics(myDataSourceStatisticsTotal, ALL, timeElapsed, timeElapsedProxy, false);
+            showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL, timeElapsed, timeElapsedProxy, false);
         }
     }
     
     /**
-     * Show data source statistics for a schema (or ALL).
+     * Show data source statistics for a schema (or TOTAL/GRAND_TOTAL).
      *
      * Normally first the statistics of a schema are displayed and then the statistics
      * for all schemas in a pool (unless there is just one).
      *
-     * From this it follows that first the connectin is displayed (schema and then ALL) and
-     * next the pool information (ALL).
+     * From this it follows that first the connectin is displayed (schema and then TOTAL/GRAND_TOTAL) and
+     * next the pool size information (TOTAL only).
      *
-     * @param myDataSourceStatistics  The statistics for a schema (or all)
+     * @param myDataSourceStatistics  The statistics for a schema (or totals)
      * @param timeElapsed             The elapsed time
      * @param timeElapsedProxy        The elapsed time for proxy connection (after the connection)
      * @param finalCall               Is this the final call?
@@ -563,73 +566,115 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         }
 
         final String poolName = getPoolName() + " (" + schema + ")";
-        final boolean showPool = schema.equals(ALL);
+        final boolean showPoolSizes = schema.equals(TOTAL);
+        final String prefix = INDENT_PREFIX;
 
         try {
             method.invoke(logger, "pool: {}", (Object) new Object[]{ poolName });
+            
             if (!finalCall) {
-                method.invoke(logger,
-                              "- time needed to open last connection (ms): {}",
-                              (Object) new Object[]{ timeElapsed });
-                if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
+                if (timeElapsed >= 0L) {
                     method.invoke(logger,
-                                  "- time needed to open last proxy connection (ms): {}",
-                                  (Object) new Object[]{ timeElapsedProxy });
+                                  "{}time needed to open last connection (ms): {}",
+                                  (Object) new Object[]{ prefix, timeElapsed });
+                }
+                if (timeElapsedProxy >= 0L) {
+                    method.invoke(logger,
+                                  "{}time needed to open last proxy connection (ms): {}",
+                                  (Object) new Object[]{ prefix, timeElapsedProxy });
                 }
             }
-            method.invoke(logger,
-                          "- min/avg/max connection time (ms): {}/{}/{}",
-                          (Object) new Object[]{ myDataSourceStatistics.getTimeElapsedMin(),
-                                                 myDataSourceStatistics.getTimeElapsedAvg(),
-                                                 myDataSourceStatistics.getTimeElapsedMax() });
-            method.invoke(logger,
-                          "- physical/logical connections opened: {}/{}",
-                          (Object) new Object[]{ myDataSourceStatistics.getPhysicalConnectionCount(),
-                                                 myDataSourceStatistics.getLogicalConnectionCount() });
+            
+            long val1 = myDataSourceStatistics.getTimeElapsedMin();
+            long val2 = myDataSourceStatistics.getTimeElapsedAvg();
+            long val3 = myDataSourceStatistics.getTimeElapsedMax();
 
-            if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
+            if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                 method.invoke(logger,
-                              "- min/avg/max proxy connection time (ms): {}/{}/{}",
-                              (Object) new Object[]{ myDataSourceStatistics.getTimeElapsedProxyMin(),
-                                                     myDataSourceStatistics.getTimeElapsedProxyAvg(),
-                                                     myDataSourceStatistics.getTimeElapsedProxyMax() });
-                method.invoke(logger,
-                              "- proxy sessions opened/closed: {}/{}; logical connections skipped while searching for proxy session: {}",
-                              (Object) new Object[]{ myDataSourceStatistics.getOpenProxySessionCount(),
-                                                     myDataSourceStatistics.getCloseProxySessionCount(),
-                                                     myDataSourceStatistics.getLogicalConnectionCountProxy() });
+                              "{}min/avg/max connection time (ms): {}/{}/{}",
+                              (Object) new Object[]{ prefix, val1, val2, val3 });
             }
             
-            if (showPool) {
-                if (!finalCall) {
+            val1 = myDataSourceStatistics.getPhysicalConnectionCount();
+            val2 = myDataSourceStatistics.getLogicalConnectionCount();
+            
+            if (val1 >= 0L && val2 >= 0L) {
+                method.invoke(logger,
+                              "{}physical/logical connections opened: {}/{}",
+                              (Object) new Object[]{ prefix, val1, val2 });
+            }
+
+            if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
+                val1 = myDataSourceStatistics.getTimeElapsedProxyMin();
+                val2 = myDataSourceStatistics.getTimeElapsedProxyAvg();
+                val3 = myDataSourceStatistics.getTimeElapsedProxyMax();
+
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                     method.invoke(logger,
-                                  "- initial/min/max pool size: {}/{}/{}" +
-                                  "; active/idle/total connections: {}/{}/{}",
-                                  (Object) new Object[]{ getInitialPoolSize(),
-                                                         getMinimumPoolSize(),
-                                                         getMaximumPoolSize(),
-                                                         getActiveConnections(),
-                                                         getIdleConnections(),
-                                                         getTotalConnections() });
-                } else {
+                                  "{}min/avg/max proxy connection time (ms): {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+
+                val1 = myDataSourceStatistics.getOpenProxySessionCount();
+                val2 = myDataSourceStatistics.getCloseProxySessionCount();
+                val3 = myDataSourceStatistics.getLogicalConnectionCountProxy();
+                
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                     method.invoke(logger,
-                                  "- initial/min/max pool size: {}/{}/{}",
-                                  (Object) new Object[]{ getInitialPoolSize(),
-                                                         getMinimumPoolSize(),
-                                                         getMaximumPoolSize() });
+                                  "{}proxy sessions opened/closed: {}/{}; logical connections skipped while searching for proxy session: {}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+            }
+            
+            if (showPoolSizes) {
+                method.invoke(logger,
+                              "{}initial/min/max pool size: {}/{}/{}",
+                              (Object) new Object[]{ prefix,
+                                                     getInitialPoolSize(),
+                                                     getMinimumPoolSize(),
+                                                     getMaximumPoolSize() });
+            }
+
+            if (!finalCall) {
+                // current values
+                val1 = getActiveConnections();
+                val2 = getIdleConnections();
+                val3 = getTotalConnections();
+                    
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                     method.invoke(logger,
-                                  "- min/avg/max active connections: {}/{}/{}" +
-                                  "; min/avg/max idle connections: {}/{}/{}" +
-                                  "; min/avg/max total connections: {}/{}/{}",
-                                  (Object) new Object[]{ myDataSourceStatistics.getActiveConnectionsMin(),
-                                                         myDataSourceStatistics.getActiveConnectionsAvg(),
-                                                         myDataSourceStatistics.getActiveConnectionsMax(),
-                                                         myDataSourceStatistics.getIdleConnectionsMin(),
-                                                         myDataSourceStatistics.getIdleConnectionsAvg(),
-                                                         myDataSourceStatistics.getIdleConnectionsMax(),
-                                                         myDataSourceStatistics.getTotalConnectionsMin(),
-                                                         myDataSourceStatistics.getTotalConnectionsAvg(),
-                                                         myDataSourceStatistics.getTotalConnectionsMax() });
+                                  "{}current active/idle/total connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+            } else {
+                val1 = myDataSourceStatistics.getActiveConnectionsMin();
+                val2 = myDataSourceStatistics.getActiveConnectionsAvg();
+                val3 = myDataSourceStatistics.getActiveConnectionsMax();
+
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                    method.invoke(logger,
+                                  "{}min/avg/max active connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+                    
+                val1 = myDataSourceStatistics.getIdleConnectionsMin();
+                val2 = myDataSourceStatistics.getIdleConnectionsAvg();
+                val3 = myDataSourceStatistics.getIdleConnectionsMax();
+
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                    method.invoke(logger,
+                                  "{}min/avg/max idle connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+
+                val1 = myDataSourceStatistics.getTotalConnectionsMin();
+                val2 = myDataSourceStatistics.getTotalConnectionsAvg();
+                val3 = myDataSourceStatistics.getTotalConnectionsMax();
+
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                    method.invoke(logger,
+                                  "{}min/avg/max total connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             }
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -760,21 +805,21 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     
         private AtomicBigDecimal timeElapsedProxyAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-        private AtomicInteger activeConnectionsMin = new AtomicInteger(Integer.MAX_VALUE);
+        private AtomicLong activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
         
-        private AtomicInteger activeConnectionsMax = new AtomicInteger(Integer.MIN_VALUE);
+        private AtomicLong activeConnectionsMax = new AtomicLong(Long.MIN_VALUE);
 
         private AtomicBigDecimal activeConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
             
-        private AtomicInteger idleConnectionsMin = new AtomicInteger(Integer.MAX_VALUE);
+        private AtomicLong idleConnectionsMin = new AtomicLong(Long.MAX_VALUE);
         
-        private AtomicInteger idleConnectionsMax = new AtomicInteger(Integer.MIN_VALUE);
+        private AtomicLong idleConnectionsMax = new AtomicLong(Long.MIN_VALUE);
 
         private AtomicBigDecimal idleConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
             
-        private AtomicInteger totalConnectionsMin = new AtomicInteger(Integer.MAX_VALUE);
+        private AtomicLong totalConnectionsMin = new AtomicLong(Long.MAX_VALUE);
         
-        private AtomicInteger totalConnectionsMax = new AtomicInteger(Integer.MIN_VALUE);
+        private AtomicLong totalConnectionsMax = new AtomicLong(Long.MIN_VALUE);
 
         private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
@@ -810,7 +855,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 updateIterativeMean(count, totalConnections, totalConnectionsAvg);
             }
 
-            // The rest is using AtomicInteger/AtomicLong, hence concurrent.
+            // The rest is using AtomicLong, hence concurrent.
             updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
             updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
             updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
@@ -834,7 +879,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 updateIterativeMean(count, timeElapsedProxy, timeElapsedProxyAvg);
             }
 
-            // The rest is using AtomicInteger/AtomicLong, hence concurrent.
+            // The rest is using AtomicLong, hence concurrent.
             updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
             updateMinMax(timeElapsedProxy, timeElapsedProxyMin, timeElapsedProxyMax);
             
@@ -848,14 +893,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         // See https://stackoverflow.com/questions/4591206/
         //   arithmeticexception-non-terminating-decimal-expansion-no-exact-representable
         // to prevent this error: Non-terminating decimal expansion; no exact representable decimal result.
-        private void updateIterativeMean(final BigDecimal count, final int value, final AtomicBigDecimal avg) {
-            if (value >= 0) {
-                avg.addAndGet(new BigDecimal(value).subtract(avg.get()).divide(count,
-                                                                               ROUND_SCALE,
-                                                                               RoundingMode.HALF_UP));
-            }
-        }
-
         private void updateIterativeMean(final BigDecimal count, final long value, final AtomicBigDecimal avg) {
             if (value >= 0L) {
                 avg.addAndGet(new BigDecimal(value).subtract(avg.get()).divide(count,
@@ -864,17 +901,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             }
         }
 
-        private void updateMinMax(final int value, final AtomicInteger min, final AtomicInteger max) {
-            if (value >= 0) {
-                if (value < min.get()) {
-                    min.set(value);
-                }
-                if (value > max.get()) {
-                    max.set(value);
-                }
-            }
-        }
-        
         private void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
             if (value >= 0) {
                 if (value < min.get()) {
@@ -897,7 +923,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         
         // getter(s)
 
-        protected int getPhysicalConnectionCount() {
+        protected long getPhysicalConnectionCount() {
             return physicalConnections.size();
         }
             
@@ -925,8 +951,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             return timeElapsedMax.get();
         }
 
-        protected BigDecimal getTimeElapsedAvg() {
-            return timeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP);
+        protected long getTimeElapsedAvg() {
+            return timeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
         }
 
         protected long getTimeElapsedProxyMin() {
@@ -937,44 +963,44 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             return timeElapsedProxyMax.get();
         }
 
-        protected BigDecimal getTimeElapsedProxyAvg() {
-            return timeElapsedProxyAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP);
+        protected long getTimeElapsedProxyAvg() {
+            return timeElapsedProxyAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
         }
 
-        protected int getActiveConnectionsMin() {
+        protected long getActiveConnectionsMin() {
             return activeConnectionsMin.get();
         }
 
-        protected int getActiveConnectionsMax() {
+        protected long getActiveConnectionsMax() {
             return activeConnectionsMax.get();
         }
 
-        protected BigDecimal getActiveConnectionsAvg() {
-            return activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP);
+        protected long getActiveConnectionsAvg() {
+            return activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
         }
 
-        protected int getIdleConnectionsMin() {
+        protected long getIdleConnectionsMin() {
             return idleConnectionsMin.get();
         }
 
-        protected int getIdleConnectionsMax() {
+        protected long getIdleConnectionsMax() {
             return idleConnectionsMax.get();
         }
         
-        protected BigDecimal getIdleConnectionsAvg() {
-            return idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP);
+        protected long getIdleConnectionsAvg() {
+            return idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
         }
         
-        protected int getTotalConnectionsMin() {
+        protected long getTotalConnectionsMin() {
             return totalConnectionsMin.get();
         }
 
-        protected int getTotalConnectionsMax() {
+        protected long getTotalConnectionsMax() {
             return totalConnectionsMax.get();
         }
 
-        protected BigDecimal getTotalConnectionsAvg() {
-            return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP);
+        protected long getTotalConnectionsAvg() {
+            return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
         }
 
         /**

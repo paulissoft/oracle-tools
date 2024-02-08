@@ -134,42 +134,43 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         }
         
         final HikariDataSource poolDataSourceHikari = ((HikariDataSource)poolDataSource);
+        final String prefix = INDENT_PREFIX;
         
         logger.debug("configuration pool data source {}:", poolDataSourceHikari.getPoolName());
-        logger.debug("- driverClassName: {}", poolDataSourceHikari.getDriverClassName());
-        logger.debug("- dataSourceClassName: {}", poolDataSourceHikari.getDataSourceClassName());
-        logger.debug("- jdbcUrl: {}", poolDataSourceHikari.getJdbcUrl());
-        logger.debug("- username: {}", poolDataSourceHikari.getUsername());
-        logger.debug("- autoCommit: {}", poolDataSourceHikari.isAutoCommit());
-        logger.debug("- connectionTimeout: {}", poolDataSourceHikari.getConnectionTimeout());
-        logger.debug("- idleTimeout: {}", poolDataSourceHikari.getIdleTimeout());
-        logger.debug("- maxLifetime: {}", poolDataSourceHikari.getMaxLifetime());
-        logger.debug("- connectionTestQuery: {}", poolDataSourceHikari.getConnectionTestQuery());
-        logger.debug("- minimumIdle: {}", poolDataSourceHikari.getMinimumIdle());
-        logger.debug("- maximumPoolSize: {}", poolDataSourceHikari.getMaximumPoolSize());
-        logger.debug("- metricRegistry: {}", poolDataSourceHikari.getMetricRegistry());
-        logger.debug("- healthCheckRegistry: {}", poolDataSourceHikari.getHealthCheckRegistry());
-        logger.debug("- initializationFailTimeout: {}", poolDataSourceHikari.getInitializationFailTimeout());
-        logger.debug("- isolateInternalQueries: {}", poolDataSourceHikari.isIsolateInternalQueries());
-        logger.debug("- allowPoolSuspension: {}", poolDataSourceHikari.isAllowPoolSuspension());
-        logger.debug("- readOnly: {}", poolDataSourceHikari.isReadOnly());
-        logger.debug("- registerMbeans: {}", poolDataSourceHikari.isRegisterMbeans());
-        logger.debug("- catalog: {}", poolDataSourceHikari.getCatalog());
-        logger.debug("- connectionInitSql: {}", poolDataSourceHikari.getConnectionInitSql());
-        logger.debug("- driverClassName: {}", poolDataSourceHikari.getDriverClassName());
-        logger.debug("- dataSourceClassName: {}", poolDataSourceHikari.getDataSourceClassName());
-        logger.debug("- transactionIsolation: {}", poolDataSourceHikari.getTransactionIsolation());
-        logger.debug("- validationTimeout: {}", poolDataSourceHikari.getValidationTimeout());
-        logger.debug("- leakDetectionThreshold: {}", poolDataSourceHikari.getLeakDetectionThreshold());
-        logger.debug("- dataSource: {}", poolDataSourceHikari.getDataSource());
-        logger.debug("- schema: {}", poolDataSourceHikari.getSchema());
-        logger.debug("- threadFactory: {}", poolDataSourceHikari.getThreadFactory());
-        logger.debug("- scheduledExecutor: {}", poolDataSourceHikari.getScheduledExecutor());
+        logger.debug("{}driverClassName: {}", prefix, poolDataSourceHikari.getDriverClassName());
+        logger.debug("{}dataSourceClassName: {}", prefix, poolDataSourceHikari.getDataSourceClassName());
+        logger.debug("{}jdbcUrl: {}", prefix, poolDataSourceHikari.getJdbcUrl());
+        logger.debug("{}username: {}", prefix, poolDataSourceHikari.getUsername());
+        logger.debug("{}autoCommit: {}", prefix, poolDataSourceHikari.isAutoCommit());
+        logger.debug("{}connectionTimeout: {}", prefix, poolDataSourceHikari.getConnectionTimeout());
+        logger.debug("{}idleTimeout: {}", prefix, poolDataSourceHikari.getIdleTimeout());
+        logger.debug("{}maxLifetime: {}", prefix, poolDataSourceHikari.getMaxLifetime());
+        logger.debug("{}connectionTestQuery: {}", prefix, poolDataSourceHikari.getConnectionTestQuery());
+        logger.debug("{}minimumIdle: {}", prefix, poolDataSourceHikari.getMinimumIdle());
+        logger.debug("{}maximumPoolSize: {}", prefix, poolDataSourceHikari.getMaximumPoolSize());
+        logger.debug("{}metricRegistry: {}", prefix, poolDataSourceHikari.getMetricRegistry());
+        logger.debug("{}healthCheckRegistry: {}", prefix, poolDataSourceHikari.getHealthCheckRegistry());
+        logger.debug("{}initializationFailTimeout: {}", prefix, poolDataSourceHikari.getInitializationFailTimeout());
+        logger.debug("{}isolateInternalQueries: {}", prefix, poolDataSourceHikari.isIsolateInternalQueries());
+        logger.debug("{}allowPoolSuspension: {}", prefix, poolDataSourceHikari.isAllowPoolSuspension());
+        logger.debug("{}readOnly: {}", prefix, poolDataSourceHikari.isReadOnly());
+        logger.debug("{}registerMbeans: {}", prefix, poolDataSourceHikari.isRegisterMbeans());
+        logger.debug("{}catalog: {}", prefix, poolDataSourceHikari.getCatalog());
+        logger.debug("{}connectionInitSql: {}", prefix, poolDataSourceHikari.getConnectionInitSql());
+        logger.debug("{}driverClassName: {}", prefix, poolDataSourceHikari.getDriverClassName());
+        logger.debug("{}dataSourceClassName: {}", prefix, poolDataSourceHikari.getDataSourceClassName());
+        logger.debug("{}transactionIsolation: {}", prefix, poolDataSourceHikari.getTransactionIsolation());
+        logger.debug("{}validationTimeout: {}", prefix, poolDataSourceHikari.getValidationTimeout());
+        logger.debug("{}leakDetectionThreshold: {}", prefix, poolDataSourceHikari.getLeakDetectionThreshold());
+        logger.debug("{}dataSource: {}", prefix, poolDataSourceHikari.getDataSource());
+        logger.debug("{}schema: {}", prefix, poolDataSourceHikari.getSchema());
+        logger.debug("{}threadFactory: {}", prefix, poolDataSourceHikari.getThreadFactory());
+        logger.debug("{}scheduledExecutor: {}", prefix, poolDataSourceHikari.getScheduledExecutor());
 
         logger.debug("connections pool data source {}:", poolDataSourceHikari.getPoolName());
-        logger.debug("- total={}", getTotalConnections(poolDataSourceHikari));
-        logger.debug("- active={}", getActiveConnections(poolDataSourceHikari));
-        logger.debug("- idle={}", getIdleConnections(poolDataSourceHikari));
+        logger.debug("{}total={}", prefix, getTotalConnections(poolDataSourceHikari));
+        logger.debug("{}active={}", prefix, getActiveConnections(poolDataSourceHikari));
+        logger.debug("{}idle={}", prefix, getIdleConnections(poolDataSourceHikari));
     }
 
     @SuppressWarnings("deprecation")
@@ -215,59 +216,60 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         final Instant t1 = Instant.now();
         final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
         // ProxyConnection is essential because closing a java.sql.Connection seems to close the physical connection
-        ProxyConnection conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
+        ProxyConnection connOK = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
         final Instant t2 = Instant.now();
-        OracleConnection oraConn = conn.unwrap(OracleConnection.class);
-        ProxyConnection found = null;
+        OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
         int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
-        int cost = determineCost(conn, oraConn, schema);
+        int costOK = determineCost(connOK, oraConnOK, schema);
 
-        if (cost == 0) {
-            // we are done
-            found = conn;
-        } else {
+        if (costOK != 0) {
+            // =============================================================================================
+            // The first connection above is there because then:
+            // - we can measure the time elapsed for the first part of the proxy connection.
+            // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
+            // =============================================================================================
+            ProxyConnection conn = connOK;
+            OracleConnection oraConn = oraConnOK;
+            int cost = costOK;
             int nrGetConnectionsLeft = getCurrentPoolCount();
             
-            assert(nrGetConnectionsLeft > 0); // at least this instance
+            assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
             
-            final ArrayList<ProxyConnection> nonMatchingConnections = new ArrayList<>(nrGetConnectionsLeft);
+            final ArrayList<ProxyConnection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
 
             try {
-                while (true) {
-                    assert(cost != 0);
-
-                    nonMatchingConnections.add(conn);
-                
-                    if (cost == 1 || found == null) {
-                        found = conn;
-                    }
-
-                    if (!(nrGetConnectionsLeft-- > 0 && getIdleConnections() > 0 && Instant.now().isBefore(doNotConnectAfter))) {
-                        break;
-                    }
-
+                /**/                                                 // reasons to stop searching:
+                while (costOK != 0 &&                                // 1 - cost 0 is optimal
+                       nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
+                       getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well, otherwise it may take too much time
+                       Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more than we agreed upon for 1 logical connection
                     conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
                     oraConn = conn.unwrap(OracleConnection.class);
                     cost = determineCost(conn, oraConn, schema);
 
-                    if (cost == 0) {
-                        found = conn;
-                        break;
+                    if (cost < costOK) {
+                        // fount a lower cost: switch places
+                        connectionsNotOK.add(connOK);
+                        connOK = conn;
+                        oraConnOK = oraConn;
+                        costOK = cost;
+                    } else {
+                        connectionsNotOK.add(conn);
                     }
                 }
 
-                assert(found != null);                
+                assert(connOK != null);
 
-                if (cost != 0) {
-                    assert(nonMatchingConnections.remove(found));
-                }
+                // connOK should not be in the list
+                assert(!connectionsNotOK.remove(connOK));
 
-                logicalConnectionCountProxy = nonMatchingConnections.size();
+                logicalConnectionCountProxy = connectionsNotOK.size();
 
-                logger.debug("tried {} connections before finding one that meets the criteria", logicalConnectionCountProxy);
+                logger.debug("tried {} connections before finding one that meets the criteria",
+                             logicalConnectionCountProxy);
             } finally {
-                // (soft) close all connections that do not meet the criteria
-                nonMatchingConnections.stream().forEach(c -> {
+                // (soft) close all connections that are not optimal
+                connectionsNotOK.stream().forEach(c -> {
                         try {
                             c.close();
                         } catch (SQLException ex) {
@@ -277,19 +279,15 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
             }
         }
 
-        if (cost == 0) {
+        if (costOK == 0) {
             logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
-            assert(conn == found);
         } else {
-            conn = found;            
-            oraConn = conn.unwrap(OracleConnection.class);
-            
-            if (cost == 2) {
+            if (costOK == 2) {
                 logger.debug("closing proxy session since the current schema is not the requested schema");
                 
-                logger.debug("current schema before = {}", oraConn.getCurrentSchema());
+                logger.debug("current schema before = {}", oraConnOK.getCurrentSchema());
 
-                oraConn.close(OracleConnection.PROXY_SESSION);
+                oraConnOK.close(OracleConnection.PROXY_SESSION);
                 closeProxySessionCount++;
             }        
 
@@ -300,15 +298,15 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
             logger.debug("opening proxy session");
 
-            oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
-            conn.setSchema(schema);
+            oraConnOK.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+            connOK.setSchema(schema);
             openProxySessionCount++;
 
-            logger.debug("current schema after = {}", oraConn.getCurrentSchema());
+            logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
         }
 
         if (updateStatistics) {
-            updateStatistics(conn,
+            updateStatistics(connOK,
                              Duration.between(t1, t2).toMillis(),
                              Duration.between(t2, Instant.now()).toMillis(),
                              showStatistics,
@@ -317,9 +315,9 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                              closeProxySessionCount);
         }
 
-        logger.debug("<getConnectionSmart() = {}", conn);
+        logger.debug("<getConnectionSmart() = {}", connOK);
 
-        return conn;
+        return connOK;
     }
 
     private int determineCost(final Connection conn, final OracleConnection oraConn, final String schema) throws SQLException {
