@@ -231,6 +231,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             if (this.commonPoolDataSource == pds) {
                 setPoolName(getPoolNamePrefix()); // set the prefix the first time
             } else {
+                // for debugging purposes
+                if (getPoolName(pds) == null) {
+                    setPoolName(pds, String.valueOf(pds.hashCode()));
+                }
+                
                 logger.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
                              getInitialPoolSize(),
                              getMinimumPoolSize(),
@@ -241,6 +246,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 newSize = getInitialPoolSize(pds);
                 oldSize = getInitialPoolSize();
 
+                logger.debug("initial pool sizes before setting it: old/new: {}/{}",
+                             oldSize,
+                             newSize);
+
                 if (newSize >= 0) {
                     setInitialPoolSize(newSize + Integer.max(oldSize, 0));
                 }
@@ -248,12 +257,20 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 newSize = getMinimumPoolSize(pds);
                 oldSize = getMinimumPoolSize();
 
+                logger.debug("minimum pool sizes before setting it: old/new: {}/{}",
+                             oldSize,
+                             newSize);
+
                 if (newSize >= 0) {                
                     setMinimumPoolSize(newSize + Integer.max(oldSize, 0));
                 }
                 
                 newSize = getMaximumPoolSize(pds);
                 oldSize = getMaximumPoolSize();
+
+                logger.debug("maximum pool sizes before setting it: old/new: {}/{}",
+                             oldSize,
+                             newSize);
 
                 if (newSize >= 0) {
                     setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
@@ -749,7 +766,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
     protected abstract String getPoolName();
 
+    protected abstract String getPoolName(DataSource pds);
+
     protected abstract void setPoolName(String poolName) throws SQLException;
+
+    protected abstract void setPoolName(DataSource pds, String poolName) throws SQLException;
 
     protected abstract void setUsername(String username) throws SQLException;
 

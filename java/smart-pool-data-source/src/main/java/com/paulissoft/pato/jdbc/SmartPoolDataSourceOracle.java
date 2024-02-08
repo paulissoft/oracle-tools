@@ -130,9 +130,17 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
     protected String getPoolName() {
         return getConnectionPoolName();
     }
+
+    protected String getPoolName(DataSource pds) {
+        return ((PoolDataSource)pds).getConnectionPoolName();
+    }
     
     protected void setPoolName(String poolName) throws SQLException {
         setConnectionPoolName(poolName);
+    }
+    
+    protected void setPoolName(DataSource pds, String poolName) throws SQLException {
+        ((PoolDataSource)pds).setConnectionPoolName(poolName);
     }
 
     protected void setUsername(String username) throws SQLException {

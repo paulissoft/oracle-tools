@@ -5,8 +5,8 @@ import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 // GJP 2024-02-08
-// ProxyConnection does not seem to be essential to close pool proxy connections
-//import com.zaxxer.hikari.pool.ProxyConnection;
+// ProxyConnection does seem to be essential to close pool proxy connections
+import com.zaxxer.hikari.pool.ProxyConnection;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -60,6 +60,10 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
         public Connection getConnection(String username, String password) throws SQLException;
 
+        public int getMaximumPoolSize();
+        
+        public void setMaximumPoolSize(int maxPoolSize);
+        
         /*
         // To solve this error:
         //
@@ -218,7 +222,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
             final Instant t1 = Instant.now();
             final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-            /*Proxy*/Connection connOK = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
+            ProxyConnection connOK = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
             OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
             int costOK = determineCost(connOK, oraConnOK, schema);
             int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
@@ -230,14 +234,14 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                 // - we can measure the time elapsed for the first part of the proxy connection.
                 // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
                 // =============================================================================================
-                /*Proxy*/Connection conn = connOK;
+                ProxyConnection conn = connOK;
                 OracleConnection oraConn = oraConnOK;
                 int cost = costOK;
                 int nrGetConnectionsLeft = getCurrentPoolCount();
             
                 assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
             
-                final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
+                final ArrayList<ProxyConnection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
 
                 try {
                     /**/                                                 // reasons to stop searching:
@@ -245,7 +249,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                            nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
                            getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well, otherwise it may take too much time
                            Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more than we agreed upon for 1 logical connection
-                        conn = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
+                        conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
                         oraConn = conn.unwrap(OracleConnection.class);
                         cost = determineCost(conn, oraConn, schema);
 
@@ -347,7 +351,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         
         return cost;
     }    
-    
+
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
         commonPoolDataSourceHikari = (HikariDataSource) commonPoolDataSource;
     }
@@ -356,36 +360,76 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return "HikariPool";
     }
 
+    protected String getPoolName(DataSource pds) {
+        return ((HikariDataSource)pds).getPoolName();
+    }
+
+    protected void setPoolName(DataSource pds, String poolName) throws SQLException {
+        ((HikariDataSource)pds).setPoolName(poolName);
+    }
+
     // HikariCP does NOT know of an initial pool size
     protected int getInitialPoolSize() {
-        return -1;
+        final int result = getInitialPoolSize(commonPoolDataSourceHikari);
+        
+        logger.trace("getInitialPoolSize1({}) = {}", commonPoolDataSourceHikari, result);
+
+        return result;
     }
 
     protected int getInitialPoolSize(DataSource pds) {
-        return -1;
+        final int result = -1;
+        
+        logger.trace("getInitialPoolSize2({}) = {}", pds, result);
+        
+        return result;
     }
 
     protected void setInitialPoolSize(int initialPoolSize) {
-        ;
+        logger.trace("{}.setInitialPoolSize({})", commonPoolDataSourceHikari, initialPoolSize);
     }        
 
     // HikariCP does NOT know of a minimum pool size
     protected int getMinimumPoolSize() {
-        return -1;
+        final int result = getMinimumPoolSize(commonPoolDataSourceHikari);
+        
+        logger.trace("getMinimumPoolSize1({}) = {}", commonPoolDataSourceHikari, result);
+
+        return result;
     }
 
     protected int getMinimumPoolSize(DataSource pds) {
-        return -1;
+        final int result = -1;
+        
+        logger.trace("getMinimumPoolSize2({}) = {}", pds, result);
+        
+        return result;
     }
 
     protected void setMinimumPoolSize(int minimumPoolSize) {
-        ;
+        logger.trace("{}.setMinimumPoolSize({})", commonPoolDataSourceHikari, minimumPoolSize);
     }
 
-    // HikariCP does know of a maximum pool size
+    // HikariCP does know of a minimum pool size but it is overriden anyway
+    public int getMaximumPoolSize() {
+        final int result = getMaximumPoolSize(commonPoolDataSourceHikari);
+        
+        logger.trace("getMaximumPoolSize1({}) = {}", commonPoolDataSourceHikari, result);
+
+        return result;
+    }
 
     protected int getMaximumPoolSize(DataSource pds) {
-        return ((HikariDataSource)pds).getMaximumPoolSize();
+        final int result = ((HikariDataSource)pds).getMaximumPoolSize();
+        
+        logger.trace("getMaximumPoolSize2({}) = {}", pds, result);
+        
+        return result;
+    }
+
+    public void setMaximumPoolSize(int maximumPoolSize) {
+        logger.trace("{}.setMaximumPoolSize({})", commonPoolDataSourceHikari, maximumPoolSize);
+        commonPoolDataSourceHikari.setMaximumPoolSize(maximumPoolSize);
     }
 
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
