@@ -11,6 +11,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -407,15 +410,21 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         final Instant t1 = Instant.now();
         Connection conn;
 
-        if (useFixedUsernamePassword) {
-            conn = commonPoolDataSource.getConnection();
-        } else {
-            // see observations in constructor
-            conn = commonPoolDataSource.getConnection(( !singleSessionProxyModel && proxyUsername != null ?
-                                                        proxyUsername /* case 3 */ :
-                                                        username /* case 1 & 2 */ ),
-                                                      password);
+        try {    
+            if (useFixedUsernamePassword) {
+                conn = commonPoolDataSource.getConnection();
+            } else {
+                // see observations in constructor
+                conn = commonPoolDataSource.getConnection(( !singleSessionProxyModel && proxyUsername != null ?
+                                                            proxyUsername /* case 3 */ :
+                                                            username /* case 1 & 2 */ ),
+                                                          password);
+            }
+        } catch (Exception ex) {
+            signalConnectionError(ex);
+            throw ex;
         }
+        
         if (updateStatistics) {
             updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
         }
@@ -436,14 +445,12 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,
                                     final boolean showStatistics) {
-        assert(statisticsEnabled);
-        
-        final int activeConnections = getActiveConnections();
-        final int idleConnections = getIdleConnections();
-        final int totalConnections = getTotalConnections();
         final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
         final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
         final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+        final int activeConnections = getActiveConnections();
+        final int idleConnections = getIdleConnections();
+        final int totalConnections = getTotalConnections();
 
         try {
             myDataSourceStatisticsGrandTotal.update(conn,
@@ -479,8 +486,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                     final int logicalConnectionCountProxy,
                                     final int openProxySessionCount,
                                     final int closeProxySessionCount) {
-        assert(statisticsEnabled);
-        
         final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
         final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
         final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
@@ -516,7 +521,28 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL, timeElapsed, timeElapsedProxy, false);
         }
     }
-    
+
+    protected void signalConnectionError(final Exception ex) {        
+        final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+
+        try {
+            final long nrOccurrences = myDataSourceStatisticsGrandTotal.signalError(ex);
+            
+            myDataSourceStatisticsTotal.signalError(ex);
+            myDataSourceStatistics.signalError(ex);
+            // show the message
+            logger.error("While connecting to {}{} this was occurrence # {} for this error: {}",
+                         connectInfo.getSchema(),
+                         ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
+                         nrOccurrences,
+                         ex.getMessage());
+        } catch (Exception e) {
+            logger.error("signalConnectionError() exception: {}", e.getMessage());
+        }
+    }
+
     /**
      * Show data source statistics for a schema (or TOTAL/GRAND_TOTAL).
      *
@@ -561,120 +587,138 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         
         final Method method = (finalCall ? loggerInfo : loggerDebug);
 
-        if (method == null) {
-            return;
-        }
-
-        final String poolName = getPoolName() + " (" + schema + ")";
-        final boolean showPoolSizes = schema.equals(TOTAL);
+        final boolean isTotal = schema.equals(TOTAL);
+        final boolean isGrandTotal = schema.equals(GRAND_TOTAL);
+        final boolean showPoolSizes = isTotal;
+        final boolean showErrors = finalCall && (isTotal || isGrandTotal);
         final String prefix = INDENT_PREFIX;
+        final String poolName = ( !isGrandTotal ? getPoolName()  + " (" + schema + ")" : schema );
 
         try {
-            method.invoke(logger, "pool: {}", (Object) new Object[]{ poolName });
+            if (method != null) {
+                method.invoke(logger, "pool: {}", (Object) new Object[]{ poolName });
             
-            if (!finalCall) {
-                if (timeElapsed >= 0L) {
-                    method.invoke(logger,
-                                  "{}time needed to open last connection (ms): {}",
-                                  (Object) new Object[]{ prefix, timeElapsed });
+                if (!finalCall) {
+                    if (timeElapsed >= 0L) {
+                        method.invoke(logger,
+                                      "{}time needed to open last connection (ms): {}",
+                                      (Object) new Object[]{ prefix, timeElapsed });
+                    }
+                    if (timeElapsedProxy >= 0L) {
+                        method.invoke(logger,
+                                      "{}time needed to open last proxy connection (ms): {}",
+                                      (Object) new Object[]{ prefix, timeElapsedProxy });
+                    }
                 }
-                if (timeElapsedProxy >= 0L) {
+            
+                long val1, val2, val3;
+
+                val1 = myDataSourceStatistics.getPhysicalConnectionCount();
+                val2 = myDataSourceStatistics.getLogicalConnectionCount();
+            
+                if (val1 >= 0L && val2 >= 0L) {
                     method.invoke(logger,
-                                  "{}time needed to open last proxy connection (ms): {}",
-                                  (Object) new Object[]{ prefix, timeElapsedProxy });
+                                  "{}physical/logical connections opened: {}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2 });
                 }
-            }
-            
-            long val1 = myDataSourceStatistics.getTimeElapsedMin();
-            long val2 = myDataSourceStatistics.getTimeElapsedAvg();
-            long val3 = myDataSourceStatistics.getTimeElapsedMax();
 
-            if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                method.invoke(logger,
-                              "{}min/avg/max connection time (ms): {}/{}/{}",
-                              (Object) new Object[]{ prefix, val1, val2, val3 });
-            }
-            
-            val1 = myDataSourceStatistics.getPhysicalConnectionCount();
-            val2 = myDataSourceStatistics.getLogicalConnectionCount();
-            
-            if (val1 >= 0L && val2 >= 0L) {
-                method.invoke(logger,
-                              "{}physical/logical connections opened: {}/{}",
-                              (Object) new Object[]{ prefix, val1, val2 });
-            }
-
-            if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
-                val1 = myDataSourceStatistics.getTimeElapsedProxyMin();
-                val2 = myDataSourceStatistics.getTimeElapsedProxyAvg();
-                val3 = myDataSourceStatistics.getTimeElapsedProxyMax();
+                val1 = myDataSourceStatistics.getTimeElapsedMin();
+                val2 = myDataSourceStatistics.getTimeElapsedAvg();
+                val3 = myDataSourceStatistics.getTimeElapsedMax();
 
                 if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                     method.invoke(logger,
-                                  "{}min/avg/max proxy connection time (ms): {}/{}/{}",
+                                  "{}min/avg/max connection time (ms): {}/{}/{}",
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
+            
+                if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
+                    val1 = myDataSourceStatistics.getTimeElapsedProxyMin();
+                    val2 = myDataSourceStatistics.getTimeElapsedProxyAvg();
+                    val3 = myDataSourceStatistics.getTimeElapsedProxyMax();
 
-                val1 = myDataSourceStatistics.getOpenProxySessionCount();
-                val2 = myDataSourceStatistics.getCloseProxySessionCount();
-                val3 = myDataSourceStatistics.getLogicalConnectionCountProxy();
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max proxy connection time (ms): {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+
+                    val1 = myDataSourceStatistics.getOpenProxySessionCount();
+                    val2 = myDataSourceStatistics.getCloseProxySessionCount();
+                    val3 = myDataSourceStatistics.getLogicalConnectionCountProxy();
                 
-                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                    method.invoke(logger,
-                                  "{}proxy sessions opened/closed: {}/{}; logical connections skipped while searching for proxy session: {}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
                 }
-            }
             
-            if (showPoolSizes) {
-                method.invoke(logger,
-                              "{}initial/min/max pool size: {}/{}/{}",
-                              (Object) new Object[]{ prefix,
-                                                     getInitialPoolSize(),
-                                                     getMinimumPoolSize(),
-                                                     getMaximumPoolSize() });
+                if (showPoolSizes) {
+                    method.invoke(logger,
+                                  "{}initial/min/max pool size: {}/{}/{}",
+                                  (Object) new Object[]{ prefix,
+                                                         getInitialPoolSize(),
+                                                         getMinimumPoolSize(),
+                                                         getMaximumPoolSize() });
+                }
+
+                if (!finalCall) {
+                    // current values
+                    val1 = getActiveConnections();
+                    val2 = getIdleConnections();
+                    val3 = getTotalConnections();
+                    
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}current active/idle/total connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                } else {
+                    val1 = myDataSourceStatistics.getActiveConnectionsMin();
+                    val2 = myDataSourceStatistics.getActiveConnectionsAvg();
+                    val3 = myDataSourceStatistics.getActiveConnectionsMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max active connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                    
+                    val1 = myDataSourceStatistics.getIdleConnectionsMin();
+                    val2 = myDataSourceStatistics.getIdleConnectionsAvg();
+                    val3 = myDataSourceStatistics.getIdleConnectionsMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max idle connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+
+                    val1 = myDataSourceStatistics.getTotalConnectionsMin();
+                    val2 = myDataSourceStatistics.getTotalConnectionsAvg();
+                    val3 = myDataSourceStatistics.getTotalConnectionsMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max total connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                }
             }
 
-            if (!finalCall) {
-                // current values
-                val1 = getActiveConnections();
-                val2 = getIdleConnections();
-                val3 = getTotalConnections();
-                    
-                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                    method.invoke(logger,
-                                  "{}current active/idle/total connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
-                }
-            } else {
-                val1 = myDataSourceStatistics.getActiveConnectionsMin();
-                val2 = myDataSourceStatistics.getActiveConnectionsAvg();
-                val3 = myDataSourceStatistics.getActiveConnectionsMax();
+            // show errors
+            if (showErrors) {
+                final Map<String, Long> errors = myDataSourceStatistics.getErrors();
 
-                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                    method.invoke(logger,
-                                  "{}min/avg/max active connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
-                }
-                    
-                val1 = myDataSourceStatistics.getIdleConnectionsMin();
-                val2 = myDataSourceStatistics.getIdleConnectionsAvg();
-                val3 = myDataSourceStatistics.getIdleConnectionsMax();
-
-                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                    method.invoke(logger,
-                                  "{}min/avg/max idle connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
-                }
-
-                val1 = myDataSourceStatistics.getTotalConnectionsMin();
-                val2 = myDataSourceStatistics.getTotalConnectionsAvg();
-                val3 = myDataSourceStatistics.getTotalConnectionsMax();
-
-                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                    method.invoke(logger,
-                                  "{}min/avg/max total connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                if (errors.isEmpty()) {
+                    logger.error("{} - no errors signalled", poolName);
+                } else {
+                    logger.error("{} - errors signalled in decreasing number of occurrences:", poolName);
+                
+                    errors.entrySet().stream()
+                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
+                        .forEach(e -> logger.error("{}{} occurrences for error {}", prefix, e.getValue(), e.getKey()));
                 }
             }
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -825,6 +869,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         private Set<OracleConnection> physicalConnections;
 
+        // the error message and its count
+        private ConcurrentHashMap<String, AtomicLong> errors = new ConcurrentHashMap<>();
+
         public MyDataSourceStatistics() {
             // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
             final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
@@ -886,6 +933,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             this.logicalConnectionCountProxy.addAndGet(logicalConnectionCountProxy);
             this.openProxySessionCount.addAndGet(openProxySessionCount);
             this.closeProxySessionCount.addAndGet(closeProxySessionCount);
+        }
+
+        protected long signalError(final Exception ex) {
+            return this.errors.computeIfAbsent(ex.getMessage(), msg -> new AtomicLong(0)).incrementAndGet();
         }
         
         // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
@@ -1001,6 +1052,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         protected long getTotalConnectionsAvg() {
             return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+        }
+
+        protected Map<String, Long> getErrors() {
+            final Map<String, Long> result = new HashMap();
+            
+            errors.forEach((k, v) -> result.put(k, Long.valueOf(v.get())));
+            
+            return result;
         }
 
         /**

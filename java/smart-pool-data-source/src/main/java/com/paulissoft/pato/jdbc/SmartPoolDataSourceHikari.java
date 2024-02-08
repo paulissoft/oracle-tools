@@ -217,10 +217,10 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
         // ProxyConnection is essential because closing a java.sql.Connection seems to close the physical connection
         ProxyConnection connOK = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
-        final Instant t2 = Instant.now();
         OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
-        int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
         int costOK = determineCost(connOK, oraConnOK, schema);
+        int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
+        final Instant t2 = Instant.now();
 
         if (costOK != 0) {
             // =============================================================================================
