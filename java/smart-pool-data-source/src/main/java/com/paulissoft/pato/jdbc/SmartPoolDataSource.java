@@ -407,10 +407,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                      updateStatistics,
                      showStatistics);
 
-        final Instant t1 = Instant.now();
-        Connection conn;
-
         try {    
+            final Instant t1 = Instant.now();
+            Connection conn;
+            
             if (useFixedUsernamePassword) {
                 conn = commonPoolDataSource.getConnection();
             } else {
@@ -420,18 +420,17 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                             username /* case 1 & 2 */ ),
                                                           password);
             }
-        } catch (Exception ex) {
-            signalConnectionError(ex);
-            throw ex;
-        }
-        
-        if (updateStatistics) {
-            updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
-        }
+            if (updateStatistics) {
+                updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
+            }
 
-        logger.debug("<getConnectionSimple() = {}", conn);
+            logger.debug("<getConnectionSimple() = {}", conn);
         
-        return conn;
+            return conn;
+        } catch (SQLException ex) {
+            signalSQLException(ex);
+            throw ex;
+        }        
     }    
 
     // you need to implement this one
@@ -522,24 +521,26 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         }
     }
 
-    protected void signalConnectionError(final Exception ex) {        
+    protected void signalSQLException(final SQLException ex) {        
         final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
         final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
         final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
 
         try {
-            final long nrOccurrences = myDataSourceStatisticsGrandTotal.signalError(ex);
+            final long nrOccurrences = myDataSourceStatisticsGrandTotal.signalSQLException(ex);
             
-            myDataSourceStatisticsTotal.signalError(ex);
-            myDataSourceStatistics.signalError(ex);
+            myDataSourceStatisticsTotal.signalSQLException(ex);
+            myDataSourceStatistics.signalSQLException(ex);
             // show the message
-            logger.error("While connecting to {}{} this was occurrence # {} for this error: {}",
+            logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, message={})",
                          connectInfo.getSchema(),
                          ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
                          nrOccurrences,
+                         ex.getErrorCode(),
+                         ex.getSQLState(),
                          ex.getMessage());
         } catch (Exception e) {
-            logger.error("signalConnectionError() exception: {}", e.getMessage());
+            logger.error("signalSQLException() exception: {}", e.getMessage());
         }
     }
 
@@ -709,16 +710,26 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
             // show errors
             if (showErrors) {
-                final Map<String, Long> errors = myDataSourceStatistics.getErrors();
+                final Map<Properties, Long> errors = myDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.error("no errors signalled for {}", poolDescription);
+                    logger.error("no SQL exceptions signalled for {}", poolDescription);
                 } else {
-                    logger.error("errors signalled in decreasing number of occurrences for {}:", poolDescription);
+                    logger.error("SQL exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
-                        .forEach(e -> logger.error("{}{} occurrences for error {}", prefix, e.getValue(), e.getKey()));
+                        .forEach(e -> {
+                                final Properties key = (Properties) e.getKey();
+                                final String errorCode = key.getProperty("error code");
+                                final String SQLState = key.getProperty("SQL state");
+                                
+                                logger.error("{}{} occurrences for (error code={}, SQL state={})",
+                                             prefix,
+                                             e.getValue(),
+                                             errorCode,
+                                             SQLState);
+                            });
                 }
             }
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -869,8 +880,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         private Set<OracleConnection> physicalConnections;
 
-        // the error message and its count
-        private ConcurrentHashMap<String, AtomicLong> errors = new ConcurrentHashMap<>();
+        // the error attributes (error code and SQL state) and its count
+        private ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
 
         public MyDataSourceStatistics() {
             // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
@@ -935,8 +946,13 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             this.closeProxySessionCount.addAndGet(closeProxySessionCount);
         }
 
-        protected long signalError(final Exception ex) {
-            return this.errors.computeIfAbsent(ex.getMessage(), msg -> new AtomicLong(0)).incrementAndGet();
+        protected long signalSQLException(final SQLException ex) {
+            final Properties attrs = new Properties();
+
+            attrs.setProperty("error code", String.valueOf(ex.getErrorCode()));
+            attrs.setProperty("SQL state", ex.getSQLState());
+            
+            return this.errors.computeIfAbsent(attrs, msg -> new AtomicLong(0)).incrementAndGet();
         }
         
         // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
@@ -1054,8 +1070,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
         }
 
-        protected Map<String, Long> getErrors() {
-            final Map<String, Long> result = new HashMap();
+        protected Map<Properties, Long> getErrors() {
+            final Map<Properties, Long> result = new HashMap();
             
             errors.forEach((k, v) -> result.put(k, Long.valueOf(v.get())));
             
