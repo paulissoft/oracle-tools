@@ -206,119 +206,124 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                                             final String proxyUsername,
                                             final boolean updateStatistics,
                                             final boolean showStatistics) throws SQLException {
-        logger.debug(">getConnectionSmart(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
-                     username,
-                     schema,
-                     proxyUsername,
-                     updateStatistics,
-                     showStatistics);
+        try {
+            logger.debug(">getConnectionSmart(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+                         username,
+                         schema,
+                         proxyUsername,
+                         updateStatistics,
+                         showStatistics);
         
-        assert(schema != null);
+            assert(schema != null);
 
-        final Instant t1 = Instant.now();
-        final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-        /*Proxy*/Connection connOK = /*(ProxyConnection)*/ getConnectionSimple(username, password, schema, proxyUsername, false, false);
-        OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
-        int costOK = determineCost(connOK, oraConnOK, schema);
-        int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
-        final Instant t2 = Instant.now();
+            final Instant t1 = Instant.now();
+            final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
+            /*Proxy*/Connection connOK = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
+            OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
+            int costOK = determineCost(connOK, oraConnOK, schema);
+            int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
+            final Instant t2 = Instant.now();
 
-        if (costOK != 0) {
-            // =============================================================================================
-            // The first connection above is there because then:
-            // - we can measure the time elapsed for the first part of the proxy connection.
-            // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
-            // =============================================================================================
-            /*Proxy*/Connection conn = connOK;
-            OracleConnection oraConn = oraConnOK;
-            int cost = costOK;
-            int nrGetConnectionsLeft = getCurrentPoolCount();
+            if (costOK != 0) {
+                // =============================================================================================
+                // The first connection above is there because then:
+                // - we can measure the time elapsed for the first part of the proxy connection.
+                // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
+                // =============================================================================================
+                /*Proxy*/Connection conn = connOK;
+                OracleConnection oraConn = oraConnOK;
+                int cost = costOK;
+                int nrGetConnectionsLeft = getCurrentPoolCount();
             
-            assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
+                assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
             
-            final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
+                final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
 
-            try {
-                /**/                                                 // reasons to stop searching:
-                while (costOK != 0 &&                                // 1 - cost 0 is optimal
-                       nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
-                       getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well, otherwise it may take too much time
-                       Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more than we agreed upon for 1 logical connection
-                    conn = /*(ProxyConnection)*/ getConnectionSimple(username, password, schema, proxyUsername, false, false);
-                    oraConn = conn.unwrap(OracleConnection.class);
-                    cost = determineCost(conn, oraConn, schema);
+                try {
+                    /**/                                                 // reasons to stop searching:
+                    while (costOK != 0 &&                                // 1 - cost 0 is optimal
+                           nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
+                           getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well, otherwise it may take too much time
+                           Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more than we agreed upon for 1 logical connection
+                        conn = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
+                        oraConn = conn.unwrap(OracleConnection.class);
+                        cost = determineCost(conn, oraConn, schema);
 
-                    if (cost < costOK) {
-                        // fount a lower cost: switch places
-                        connectionsNotOK.add(connOK);
-                        connOK = conn;
-                        oraConnOK = oraConn;
-                        costOK = cost;
-                    } else {
-                        connectionsNotOK.add(conn);
-                    }
-                }
-
-                assert(connOK != null);
-
-                // connOK should not be in the list
-                assert(!connectionsNotOK.remove(connOK));
-
-                logicalConnectionCountProxy = connectionsNotOK.size();
-
-                logger.debug("tried {} connections before finding one that meets the criteria",
-                             logicalConnectionCountProxy);
-            } finally {
-                // (soft) close all connections that are not optimal
-                connectionsNotOK.stream().forEach(c -> {
-                        try {
-                            c.close();
-                        } catch (SQLException ex) {
-                            ; // ignore
+                        if (cost < costOK) {
+                            // fount a lower cost: switch places
+                            connectionsNotOK.add(connOK);
+                            connOK = conn;
+                            oraConnOK = oraConn;
+                            costOK = cost;
+                        } else {
+                            connectionsNotOK.add(conn);
                         }
-                    });
+                    }
+
+                    assert(connOK != null);
+
+                    // connOK should not be in the list
+                    assert(!connectionsNotOK.remove(connOK));
+
+                    logicalConnectionCountProxy = connectionsNotOK.size();
+
+                    logger.debug("tried {} connections before finding one that meets the criteria",
+                                 logicalConnectionCountProxy);
+                } finally {
+                    // (soft) close all connections that are not optimal
+                    connectionsNotOK.stream().forEach(c -> {
+                            try {
+                                c.close();
+                            } catch (SQLException ex) {
+                                ; // ignore
+                            }
+                        });
+                }
             }
-        }
 
-        if (costOK == 0) {
-            logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
-        } else {
-            if (costOK == 2) {
-                logger.debug("closing proxy session since the current schema is not the requested schema");
+            if (costOK == 0) {
+                logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
+            } else {
+                if (costOK == 2) {
+                    logger.debug("closing proxy session since the current schema is not the requested schema");
                 
-                logger.debug("current schema before = {}", oraConnOK.getCurrentSchema());
+                    logger.debug("current schema before = {}", oraConnOK.getCurrentSchema());
 
-                oraConnOK.close(OracleConnection.PROXY_SESSION);
-                closeProxySessionCount++;
-            }        
+                    oraConnOK.close(OracleConnection.PROXY_SESSION);
+                    closeProxySessionCount++;
+                }        
 
-            // set up proxy session
-            Properties proxyProperties = new Properties();
+                // set up proxy session
+                Properties proxyProperties = new Properties();
             
-            proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
+                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
 
-            logger.debug("opening proxy session");
+                logger.debug("opening proxy session");
 
-            oraConnOK.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
-            connOK.setSchema(schema);
-            openProxySessionCount++;
+                oraConnOK.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+                connOK.setSchema(schema);
+                openProxySessionCount++;
 
-            logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
+                logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
+            }
+
+            if (updateStatistics) {
+                updateStatistics(connOK,
+                                 Duration.between(t1, t2).toMillis(),
+                                 Duration.between(t2, Instant.now()).toMillis(),
+                                 showStatistics,
+                                 logicalConnectionCountProxy,
+                                 openProxySessionCount,
+                                 closeProxySessionCount);
+            }
+
+            logger.debug("<getConnectionSmart() = {}", connOK);
+
+            return connOK;
+        } catch (SQLException ex) {
+            signalSQLException(ex);
+            throw ex;
         }
-
-        if (updateStatistics) {
-            updateStatistics(connOK,
-                             Duration.between(t1, t2).toMillis(),
-                             Duration.between(t2, Instant.now()).toMillis(),
-                             showStatistics,
-                             logicalConnectionCountProxy,
-                             openProxySessionCount,
-                             closeProxySessionCount);
-        }
-
-        logger.debug("<getConnectionSmart() = {}", connOK);
-
-        return connOK;
     }
 
     private int determineCost(final Connection conn, final OracleConnection oraConn, final String schema) throws SQLException {
