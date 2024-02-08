@@ -596,7 +596,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         try {
             if (method != null) {
-                method.invoke(logger, "pool: {}", (Object) new Object[]{ poolName });
+                method.invoke(logger, "statistics for pool {}:", (Object) new Object[]{ poolName });
             
                 if (!finalCall) {
                     if (timeElapsed >= 0L) {
@@ -712,9 +712,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 final Map<String, Long> errors = myDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.error("{} - no errors signalled", poolName);
+                    logger.error("no errors signalled for pool {}", poolName);
                 } else {
-                    logger.error("{} - errors signalled in decreasing number of occurrences:", poolName);
+                    logger.error("errors signalled in decreasing number of occurrences for pool {}:", poolName);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
