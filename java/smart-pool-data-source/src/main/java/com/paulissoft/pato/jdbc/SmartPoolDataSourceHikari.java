@@ -370,67 +370,67 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
     // HikariCP does NOT know of an initial pool size
     protected int getInitialPoolSize() {
-        final int result = getInitialPoolSize(commonPoolDataSourceHikari);
-        
-        logger.trace("getInitialPoolSize1({}) = {}", commonPoolDataSourceHikari, result);
-
-        return result;
+        return getInitialPoolSize(commonPoolDataSourceHikari);
     }
 
     protected int getInitialPoolSize(DataSource pds) {
         final int result = -1;
         
-        logger.trace("getInitialPoolSize2({}) = {}", pds, result);
+        logger.trace("getInitialPoolSize({}) = {}", getPoolName(pds), result);
         
         return result;
     }
 
     protected void setInitialPoolSize(int initialPoolSize) {
-        logger.trace("{}.setInitialPoolSize({})", commonPoolDataSourceHikari, initialPoolSize);
+        setInitialPoolSize(commonPoolDataSourceHikari, initialPoolSize);
+    }        
+
+    private void setInitialPoolSize(DataSource pds, int initialPoolSize) {
+        logger.trace("setInitialPoolSize({}, {})", getPoolName(pds), initialPoolSize);
     }        
 
     // HikariCP does NOT know of a minimum pool size
     protected int getMinimumPoolSize() {
-        final int result = getMinimumPoolSize(commonPoolDataSourceHikari);
-        
-        logger.trace("getMinimumPoolSize1({}) = {}", commonPoolDataSourceHikari, result);
-
-        return result;
+        return getMinimumPoolSize(commonPoolDataSourceHikari);
     }
 
     protected int getMinimumPoolSize(DataSource pds) {
         final int result = -1;
         
-        logger.trace("getMinimumPoolSize2({}) = {}", pds, result);
+        logger.trace("getMinimumPoolSize({}) = {}", getPoolName(pds), result);
         
         return result;
     }
 
     protected void setMinimumPoolSize(int minimumPoolSize) {
-        logger.trace("{}.setMinimumPoolSize({})", commonPoolDataSourceHikari, minimumPoolSize);
-    }
+        setMinimumPoolSize(commonPoolDataSourceHikari, minimumPoolSize);
+    }        
 
-    // HikariCP does know of a minimum pool size but it is overriden anyway
+    private void setMinimumPoolSize(DataSource pds, int minimumPoolSize) {
+        logger.trace("setMinimumPoolSize({}, {})", getPoolName(pds), minimumPoolSize);
+    }        
+
+    // HikariCP does know of a maximum pool size but it is overriden anyway
     public int getMaximumPoolSize() {
-        final int result = getMaximumPoolSize(commonPoolDataSourceHikari);
-        
-        logger.trace("getMaximumPoolSize1({}) = {}", commonPoolDataSourceHikari, result);
-
-        return result;
+        return getMaximumPoolSize(commonPoolDataSourceHikari);
     }
 
     protected int getMaximumPoolSize(DataSource pds) {
         final int result = ((HikariDataSource)pds).getMaximumPoolSize();
         
-        logger.trace("getMaximumPoolSize2({}) = {}", pds, result);
+        logger.trace("getMaximumPoolSize({}) = {}", getPoolName(pds), result);
         
         return result;
     }
 
     public void setMaximumPoolSize(int maximumPoolSize) {
-        logger.trace("{}.setMaximumPoolSize({})", commonPoolDataSourceHikari, maximumPoolSize);
-        commonPoolDataSourceHikari.setMaximumPoolSize(maximumPoolSize);
-    }
+        setMaximumPoolSize(commonPoolDataSourceHikari, maximumPoolSize);
+    }        
+
+    private void setMaximumPoolSize(DataSource pds, int maximumPoolSize) {
+        logger.trace("setMaximumPoolSize({}, {})", getPoolName(pds), maximumPoolSize);
+        (HikariDataSource)pds).setMaximumPoolSize(maximumPoolSize);
+    }        
 
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
     private static HikariPool getHikariPool(final HikariDataSource poolDataSource) {
