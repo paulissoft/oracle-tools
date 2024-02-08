@@ -5,8 +5,8 @@ import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 // GJP 2024-02-08
-// ProxyConnection does seem to be essential to close pool proxy connections
-import com.zaxxer.hikari.pool.ProxyConnection;
+// ProxyConnection does NOT seem to be essential to close pool proxy connections.
+//import com.zaxxer.hikari.pool.ProxyConnection;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -222,7 +222,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
             final Instant t1 = Instant.now();
             final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-            ProxyConnection connOK = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
+            /*Proxy*/Connection connOK = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
             OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
             int costOK = determineCost(connOK, oraConnOK, schema);
             int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
@@ -234,14 +234,14 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                 // - we can measure the time elapsed for the first part of the proxy connection.
                 // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
                 // =============================================================================================
-                ProxyConnection conn = connOK;
+                /*Proxy*/Connection conn = connOK;
                 OracleConnection oraConn = oraConnOK;
                 int cost = costOK;
                 int nrGetConnectionsLeft = getCurrentPoolCount();
             
                 assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
             
-                final ArrayList<ProxyConnection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
+                final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
 
                 try {
                     /**/                                                 // reasons to stop searching:
@@ -249,7 +249,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                            nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
                            getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well, otherwise it may take too much time
                            Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more than we agreed upon for 1 logical connection
-                        conn = (ProxyConnection) commonPoolDataSourceHikari.getConnection();
+                        conn = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
                         oraConn = conn.unwrap(OracleConnection.class);
                         cost = determineCost(conn, oraConn, schema);
 
