@@ -91,7 +91,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          */
         super(pds, determineCommonDataSourceProperties(pds), username, password, false, true);
 
-        logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari);
+        logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari.getPoolName());
 
         // pool name, sizes and username / password already done in super constructor
         synchronized (commonPoolDataSourceHikari) {
@@ -174,9 +174,9 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         logger.debug("{}scheduledExecutor: {}", prefix, poolDataSourceHikari.getScheduledExecutor());
 
         logger.debug("connections pool data source {}:", poolDataSourceHikari.getPoolName());
-        logger.debug("{}total={}", prefix, getTotalConnections(poolDataSourceHikari));
-        logger.debug("{}active={}", prefix, getActiveConnections(poolDataSourceHikari));
-        logger.debug("{}idle={}", prefix, getIdleConnections(poolDataSourceHikari));
+        logger.debug("{}total: {}", prefix, getTotalConnections(poolDataSourceHikari));
+        logger.debug("{}active: {}", prefix, getActiveConnections(poolDataSourceHikari));
+        logger.debug("{}idle: {}", prefix, getIdleConnections(poolDataSourceHikari));
     }
 
     @SuppressWarnings("deprecation")
@@ -429,7 +429,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
     private void setMaximumPoolSize(DataSource pds, int maximumPoolSize) {
         logger.trace("setMaximumPoolSize({}, {})", getPoolName(pds), maximumPoolSize);
-        (HikariDataSource)pds).setMaximumPoolSize(maximumPoolSize);
+        ((HikariDataSource)pds).setMaximumPoolSize(maximumPoolSize);
     }        
 
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp

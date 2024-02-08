@@ -105,9 +105,9 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         logger.debug("{}connectionValidationTimeout={}", prefix, poolDataSourceOracle.getConnectionValidationTimeout());
 
         logger.debug("connections pool data source {}:", poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("{}total={}", prefix, getTotalConnections(poolDataSourceOracle));
-        logger.debug("{}active={}", prefix, getActiveConnections(poolDataSourceOracle));
-        logger.debug("{}idle={}", prefix, getIdleConnections(poolDataSourceOracle));
+        logger.debug("{}total: {}", prefix, getTotalConnections(poolDataSourceOracle));
+        logger.debug("{}active: {}", prefix, getActiveConnections(poolDataSourceOracle));
+        logger.debug("{}idle: {}", prefix, getIdleConnections(poolDataSourceOracle));
     }
 
     protected Connection getConnectionSmart(final String username,

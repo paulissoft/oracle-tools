@@ -230,7 +230,20 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
             if (this.commonPoolDataSource == pds) {
                 setPoolName(getPoolNamePrefix()); // set the prefix the first time
+                logger.debug("common pool sizes: initial/minimum/maximum: {}/{}/{}",
+                             getInitialPoolSize(),
+                             getMinimumPoolSize(),
+                             getMaximumPoolSize());
             } else {
+                // create a connection in order to set all properties (Spring Boot for instance)
+                /*
+                try (final Connection conn = pds.getConnection()) {
+                    ;
+                } catch (SQLException ex) {
+                    logger.warn("SQL exception while starting one of the pools: {}", ex.getMessage());
+                } 
+                */
+                
                 // for debugging purposes
                 if (getPoolName(pds) == null) {
                     setPoolName(pds, String.valueOf(pds.hashCode()));
@@ -730,9 +743,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 final Map<Properties, Long> errors = myDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.error("no SQL exceptions signalled for {}", poolDescription);
+                    logger.warn("no SQL exceptions signalled for {}", poolDescription);
                 } else {
-                    logger.error("SQL exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
+                    logger.warn("SQL exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
@@ -741,11 +754,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                 final String errorCode = key.getProperty("error code");
                                 final String SQLState = key.getProperty("SQL state");
                                 
-                                logger.error("{}{} occurrences for (error code={}, SQL state={})",
-                                             prefix,
-                                             e.getValue(),
-                                             errorCode,
-                                             SQLState);
+                                logger.warn("{}{} occurrences for (error code={}, SQL state={})",
+                                               prefix,
+                                               e.getValue(),
+                                               errorCode,
+                                               SQLState);
                             });
                 }
             }
