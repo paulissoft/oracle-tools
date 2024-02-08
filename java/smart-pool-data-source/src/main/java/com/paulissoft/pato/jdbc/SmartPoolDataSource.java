@@ -592,11 +592,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         final boolean showPoolSizes = isTotal;
         final boolean showErrors = finalCall && (isTotal || isGrandTotal);
         final String prefix = INDENT_PREFIX;
-        final String poolName = ( !isGrandTotal ? getPoolName()  + " (" + schema + ")" : schema );
+        final String poolDescription = ( isGrandTotal ? "all pools" : "pool " + getPoolName()  + " (" + schema + ")" );
 
         try {
             if (method != null) {
-                method.invoke(logger, "statistics for pool {}:", (Object) new Object[]{ poolName });
+                method.invoke(logger, "statistics for {}:", (Object) new Object[]{ poolDescription });
             
                 if (!finalCall) {
                     if (timeElapsed >= 0L) {
@@ -712,9 +712,9 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 final Map<String, Long> errors = myDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.error("no errors signalled for pool {}", poolName);
+                    logger.error("no errors signalled for {}", poolDescription);
                 } else {
-                    logger.error("errors signalled in decreasing number of occurrences for pool {}:", poolName);
+                    logger.error("errors signalled in decreasing number of occurrences for {}:", poolDescription);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
