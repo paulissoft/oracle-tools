@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -108,13 +109,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         }
         return commonPoolDataSource;
     }
+
+    private static CopyOnWriteArrayList<DataSource> poolDataSources = new CopyOnWriteArrayList<>();
     
-    private DataSource pds = null;
-
-    protected DataSource getPoolDataSource() {
-        return pds;
-    }
-
     private DataSource commonPoolDataSource = null;
 
     @Getter
@@ -162,19 +159,32 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                   final boolean useFixedUsernamePassword) throws SQLException {
         assert(pds != null);
         
-        this.pds = pds;
+        poolDataSources.add(pds);
         this.connectInfo = new ConnectInfo(username, password);
         this.singleSessionProxyModel = singleSessionProxyModel;
         this.useFixedUsernamePassword = useFixedUsernamePassword;
     }
     
     private boolean init() throws SQLException {
-        return init(pds);
+        assert(this.commonPoolDataSource == null);
+
+        boolean result = init(poolDataSources.remove(0));
+
+        assert(this.commonPoolDataSource != null);
+
+        poolDataSources.forEach(pds -> {
+                try {
+                    if (commonPoolDataSource.getClass().getName().equals(pds.getClass().getName())) {
+                        init(pds);
+                    }
+                } catch (SQLException ex) {
+                    ; // ignore
+                }});
+
+        return result;
     }
     
     protected boolean init(final DataSource pds) throws SQLException {
-        assert(this.commonPoolDataSource == null);
-
         if (this.commonPoolDataSource != null) {
             return false;
         }
