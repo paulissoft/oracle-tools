@@ -649,7 +649,15 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         try {
             conn.setAutoCommit(false);
-        
+
+            final OracleConnection oraConn = conn.unwrap(OracleConnection.class);
+
+            logger.trace("current schema = {}; proxy session?: {}",
+                         oraConn.getCurrentSchema(),
+                         oraConn.isProxySession());
+            
+            oraConn.getProperties().list(System.out);
+
             // Prepare a statement to execute the SQL Queries.
             try (final Statement statement = conn.createStatement()) {
                 final String newLine = System.getProperty("line.separator");
