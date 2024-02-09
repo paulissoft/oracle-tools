@@ -227,7 +227,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         try {    
             final Instant t1 = Instant.now();
             Connection conn;
-            
+
+            // HikariCP does not support getConnection(username, password)
             conn = commonPoolDataSourceHikari.getConnection();
 
             showConnection(conn);

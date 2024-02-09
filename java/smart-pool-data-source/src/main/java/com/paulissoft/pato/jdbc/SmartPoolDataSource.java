@@ -494,10 +494,12 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                          showStatistics);
         
             assert(schema != null);
+            assert(!singleSessionProxyModel);
+            assert(proxyUsername != null);
 
             final Instant t1 = Instant.now();
             final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-            Connection connOK = getConnectionSimple(username, password, schema, proxyUsername, false, false);
+            Connection connOK = commonPoolDataSource.getConnection();
             OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
             int costOK = determineCost(connOK, oraConnOK, schema);
             int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
@@ -526,7 +528,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                                          //     otherwise it may take too much time
                            Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more
                                                                          //     than we agreed upon for 1 logical connection
-                        conn = getConnectionSimple(username, password, schema, proxyUsername, false, false);
+                        conn = commonPoolDataSource.getConnection();
                         oraConn = conn.unwrap(OracleConnection.class);
                         cost = determineCost(conn, oraConn, schema);
 
