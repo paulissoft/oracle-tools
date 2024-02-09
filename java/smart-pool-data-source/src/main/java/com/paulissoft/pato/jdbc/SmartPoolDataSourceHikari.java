@@ -112,14 +112,14 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     @Override
-    protected boolean init() throws SQLException {
-        final boolean result = super.init();
-        final HikariDataSource pds = (HikariDataSource)getPoolDataSource();
+    protected boolean init(final DataSource pds) throws SQLException {
+        final boolean result = super.init(pds);
+        final HikariDataSource poolDataSourceHikari = (HikariDataSource)pds;
         
         // pool name, sizes and username / password already done in super constructor
         synchronized (getCommonPoolDataSourceHikari()) {
-            if (getCommonPoolDataSourceHikari() != pds) {
-                final int newValue = pds.getMinimumIdle();
+            if (getCommonPoolDataSourceHikari() != poolDataSourceHikari) {
+                final int newValue = poolDataSourceHikari.getMinimumIdle();
                 final int oldValue = getMinimumIdle();
 
                 logger.debug("minimum idle before: {}", oldValue);
