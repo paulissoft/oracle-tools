@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import javax.sql.DataSource;
 import java.util.Properties;
 import lombok.experimental.Delegate;
@@ -53,9 +52,18 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
     public SmartPoolDataSourceOracle(final PoolDataSource pds,
                                      final String username,
                                      final String password) throws SQLException {
-        super(pds, determineCommonDataSourceProperties(pds), username, password, true, false);        
+        // this(pds, username, password, true, false);        
+        this(pds, username, password, false, true);        
     }
 
+    public SmartPoolDataSourceOracle(final PoolDataSource pds,
+                                     final String username,
+                                     final String password,
+                                     final boolean singleSessionProxyModel,
+                                     final boolean useFixedUsernamePassword) throws SQLException {
+        super(pds, determineCommonDataSourceProperties(pds), username, password, singleSessionProxyModel, useFixedUsernamePassword);
+    }
+    
     private static Properties determineCommonDataSourceProperties(final PoolDataSource pds) {
         final Properties commonDataSourceProperties = new Properties();
         
@@ -110,15 +118,6 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         logger.debug("{}idle: {}", prefix, getIdleConnections(poolDataSourceOracle));
     }
 
-    protected Connection getConnectionSmart(final String username,
-                                            final String password,
-                                            final String schema,
-                                            final String proxyUsername,
-                                            final boolean updateStatistics,
-                                            final boolean showStatistics) throws SQLException {
-        throw new SQLFeatureNotSupportedException("getConnectionSmart()");
-    }
-    
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
         commonPoolDataSourceOracle = (PoolDataSource) commonPoolDataSource;
     }

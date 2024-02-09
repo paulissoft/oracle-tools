@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -104,8 +105,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
     // true - do not use openProxySession() but use proxyUsername[schema]
     // false - use openProxySession() (two sessions will appear in v$session)
+    @Getter
     private boolean singleSessionProxyModel;
 
+    @Getter
     private boolean useFixedUsernamePassword;
 
     private ConnectInfo connectInfo;
@@ -463,13 +466,167 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         }        
     }    
 
-    // you need to implement this one
-    protected abstract Connection getConnectionSmart(final String username,
-                                                     final String password,
-                                                     final String schema,
-                                                     final String proxyUsername,
-                                                     final boolean updateStatistics,
-                                                     final boolean showStatistics) throws SQLException;    
+    /**
+     * Get a connection in a smart way for proxy sessions.
+     *
+     * Retrieve a connection from the pool until one of the following conditions occurs:
+     * 1. there is a last connection and the operation timed out (not(now &lt; doNotConnectAfter))
+     * 2. there is a last connection and there are no more idle connections
+     * 3. the last connection retrieved has the same current schema as the requested schema
+     *
+     * In situation 1 or 2 the best other candidate is chosen. Best in terms of current schema equal
+     * to the username and not another proxy schema.
+     *
+     */
+    protected Connection getConnectionSmart(final String username,
+                                            final String password,
+                                            final String schema,
+                                            final String proxyUsername,
+                                            final boolean updateStatistics,
+                                            final boolean showStatistics) throws SQLException {
+        try {
+            logger.debug(">getConnectionSmart(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+                         username,
+                         schema,
+                         proxyUsername,
+                         updateStatistics,
+                         showStatistics);
+        
+            assert(schema != null);
+
+            final Instant t1 = Instant.now();
+            final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
+            /*Proxy*/Connection connOK = /*(ProxyConnection)*/ commonPoolDataSource.getConnection();
+            OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
+            int costOK = determineCost(connOK, oraConnOK, schema);
+            int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
+            final Instant t2 = Instant.now();
+
+            if (costOK != 0) {
+                // =============================================================================================
+                // The first connection above is there because then:
+                // - we can measure the time elapsed for the first part of the proxy connection.
+                // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
+                // =============================================================================================
+                /*Proxy*/Connection conn = connOK;
+                OracleConnection oraConn = oraConnOK;
+                int cost = costOK;
+                int nrGetConnectionsLeft = getCurrentPoolCount();
+            
+                assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
+            
+                final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
+
+                try {
+                    /**/                                                 // reasons to stop searching:
+                    while (costOK != 0 &&                                // 1 - cost 0 is optimal
+                           nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
+                           getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well,
+                                                                         //     otherwise it may take too much time
+                           Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more
+                                                                         //     than we agreed upon for 1 logical connection
+                        conn = /*(ProxyConnection)*/ commonPoolDataSource.getConnection();
+                        oraConn = conn.unwrap(OracleConnection.class);
+                        cost = determineCost(conn, oraConn, schema);
+
+                        if (cost < costOK) {
+                            // fount a lower cost: switch places
+                            connectionsNotOK.add(connOK);
+                            connOK = conn;
+                            oraConnOK = oraConn;
+                            costOK = cost;
+                        } else {
+                            connectionsNotOK.add(conn);
+                        }
+                    }
+
+                    assert(connOK != null);
+
+                    // connOK should not be in the list
+                    assert(!connectionsNotOK.remove(connOK));
+
+                    logicalConnectionCountProxy = connectionsNotOK.size();
+
+                    logger.debug("tried {} connections before finding one that meets the criteria",
+                                 logicalConnectionCountProxy);
+                } finally {
+                    // (soft) close all connections that are not optimal
+                    connectionsNotOK.stream().forEach(c -> {
+                            try {
+                                c.close();
+                            } catch (SQLException ex) {
+                                ; // ignore
+                            }
+                        });
+                }
+            }
+
+            if (costOK == 0) {
+                logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
+            } else {
+                if (costOK == 2) {
+                    logger.debug("closing proxy session since the current schema is not the requested schema");
+                
+                    logger.debug("current schema before = {}", oraConnOK.getCurrentSchema());
+
+                    oraConnOK.close(OracleConnection.PROXY_SESSION);
+                    closeProxySessionCount++;
+                }        
+
+                // set up proxy session
+                Properties proxyProperties = new Properties();
+            
+                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
+
+                logger.debug("opening proxy session");
+
+                oraConnOK.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+                connOK.setSchema(schema);
+                openProxySessionCount++;
+
+                logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
+            }
+
+            if (updateStatistics) {
+                updateStatistics(connOK,
+                                 Duration.between(t1, t2).toMillis(),
+                                 Duration.between(t2, Instant.now()).toMillis(),
+                                 showStatistics,
+                                 logicalConnectionCountProxy,
+                                 openProxySessionCount,
+                                 closeProxySessionCount);
+            }
+
+            logger.debug("<getConnectionSmart() = {}", connOK);
+
+            return connOK;
+        } catch (SQLException ex) {
+            signalSQLException(ex);
+            throw ex;
+        }
+    }
+
+    private int determineCost(final Connection conn, final OracleConnection oraConn, final String schema) throws SQLException {
+        final String currentSchema = conn.getSchema();        
+        int cost;
+            
+        if (schema != null && currentSchema != null && schema.equalsIgnoreCase(currentSchema)) {
+            cost = 0;
+        } else {
+            // if not a proxy session only oraConn.openProxySession() must be invoked
+            // otherwise oraConn.close(OracleConnection.PROXY_SESSION) must be invoked as well
+            // hence more expensive.
+            cost = (!oraConn.isProxySession() ? 1 : 2);
+        }
+
+        logger.debug("determineCost(currentSchema={}, isProxySession={}, schema={}) = {}",
+                     currentSchema,
+                     oraConn.isProxySession(),
+                     schema,
+                     cost);
+        
+        return cost;
+    }    
 
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,

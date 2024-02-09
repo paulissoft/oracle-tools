@@ -4,13 +4,8 @@ import org.springframework.beans.DirectFieldAccessor;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
-// GJP 2024-02-08
-// ProxyConnection does NOT seem to be essential to close pool proxy connections.
-//import com.zaxxer.hikari.pool.ProxyConnection;
 import java.io.Closeable;
 import java.sql.Connection;
-import java.util.ArrayList;
-import oracle.jdbc.OracleConnection;
 import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Properties;
@@ -89,7 +84,25 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * if any else just the username. Meaning "bc_proxy[bodomain]", "bc_proxy[boauth]" and so one
          * will have ONE common pool data source.
          */
-        super(pds, determineCommonDataSourceProperties(pds), username, password, false, true);
+
+        // this(pds, username, password, false, true);
+        
+        /*
+         * NOTE 2.
+         *
+         * We will try the other way around (singleSessionProxyModel true and useFixedUsernamePassword false)
+         * since getConnectionSimple has been overridden.
+         */
+
+        this(pds, username, password, true, false);
+    }
+    
+    public SmartPoolDataSourceHikari(final HikariDataSource pds,
+                                     final String username,
+                                     final String password,
+                                     final boolean singleSessionProxyModel,
+                                     final boolean useFixedUsernamePassword) throws SQLException {
+        super(pds, determineCommonDataSourceProperties(pds), username, password, singleSessionProxyModel, useFixedUsernamePassword);
 
         logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari.getPoolName());
 
@@ -192,165 +205,47 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         }
     }
 
-    /**
-     * Get a connection in a smart way for proxy sessions.
-     *
-     * Retrieve a connection from the pool until one of the following conditions occurs:
-     * 1. there is a last connection and the operation timed out (not(now &lt; doNotConnectAfter))
-     * 2. there is a last connection and there are no more idle connections
-     * 3. the last connection retrieved has the same current schema as the requested schema
-     *
-     * In situation 1 or 2 the best other candidate is chosen. Best in terms of current schema equal
-     * to the username and not another proxy schema.
-     *
-     */
-    protected Connection getConnectionSmart(final String username,
-                                            final String password,
-                                            final String schema,
-                                            final String proxyUsername,
-                                            final boolean updateStatistics,
-                                            final boolean showStatistics) throws SQLException {
-        try {
-            logger.debug(">getConnectionSmart(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
-                         username,
-                         schema,
-                         proxyUsername,
-                         updateStatistics,
-                         showStatistics);
-        
-            assert(schema != null);
+    @Override
+    protected Connection getConnectionSimple(final String username,
+                                             final String password,
+                                             final String schema,
+                                             final String proxyUsername,
+                                             final boolean updateStatistics,
+                                             final boolean showStatistics) throws SQLException {
+        logger.debug(">getConnectionSimple(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+                     username,
+                     schema,
+                     proxyUsername,
+                     updateStatistics,
+                     showStatistics);
 
+        try {    
             final Instant t1 = Instant.now();
-            final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-            /*Proxy*/Connection connOK = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
-            OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
-            int costOK = determineCost(connOK, oraConnOK, schema);
-            int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
-            final Instant t2 = Instant.now();
-
-            if (costOK != 0) {
-                // =============================================================================================
-                // The first connection above is there because then:
-                // - we can measure the time elapsed for the first part of the proxy connection.
-                // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
-                // =============================================================================================
-                /*Proxy*/Connection conn = connOK;
-                OracleConnection oraConn = oraConnOK;
-                int cost = costOK;
-                int nrGetConnectionsLeft = getCurrentPoolCount();
+            Connection conn;
             
-                assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
-            
-                final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
-
-                try {
-                    /**/                                                 // reasons to stop searching:
-                    while (costOK != 0 &&                                // 1 - cost 0 is optimal
-                           nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
-                           getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well, otherwise it may take too much time
-                           Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more than we agreed upon for 1 logical connection
-                        conn = /*(ProxyConnection)*/ commonPoolDataSourceHikari.getConnection();
-                        oraConn = conn.unwrap(OracleConnection.class);
-                        cost = determineCost(conn, oraConn, schema);
-
-                        if (cost < costOK) {
-                            // fount a lower cost: switch places
-                            connectionsNotOK.add(connOK);
-                            connOK = conn;
-                            oraConnOK = oraConn;
-                            costOK = cost;
-                        } else {
-                            connectionsNotOK.add(conn);
-                        }
-                    }
-
-                    assert(connOK != null);
-
-                    // connOK should not be in the list
-                    assert(!connectionsNotOK.remove(connOK));
-
-                    logicalConnectionCountProxy = connectionsNotOK.size();
-
-                    logger.debug("tried {} connections before finding one that meets the criteria",
-                                 logicalConnectionCountProxy);
-                } finally {
-                    // (soft) close all connections that are not optimal
-                    connectionsNotOK.stream().forEach(c -> {
-                            try {
-                                c.close();
-                            } catch (SQLException ex) {
-                                ; // ignore
-                            }
-                        });
-                }
-            }
-
-            if (costOK == 0) {
-                logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
+            if (isUseFixedUsernamePassword()) {
+                conn = commonPoolDataSourceHikari.getConnection();
             } else {
-                if (costOK == 2) {
-                    logger.debug("closing proxy session since the current schema is not the requested schema");
-                
-                    logger.debug("current schema before = {}", oraConnOK.getCurrentSchema());
-
-                    oraConnOK.close(OracleConnection.PROXY_SESSION);
-                    closeProxySessionCount++;
-                }        
-
-                // set up proxy session
-                Properties proxyProperties = new Properties();
-            
-                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
-
-                logger.debug("opening proxy session");
-
-                oraConnOK.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
-                connOK.setSchema(schema);
-                openProxySessionCount++;
-
-                logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
+                // see observations in constructor of SmartPoolDataSource
+                commonPoolDataSourceHikari.setUsername(( !isSingleSessionProxyModel() && proxyUsername != null ?
+                                                         proxyUsername /* case 3 */ :
+                                                         username /* case 1 & 2 */ ));
+                commonPoolDataSourceHikari.setPassword(password);
+                // HikariCP does not support commonPoolDataSource.getConnection(username, password);
+                conn = commonPoolDataSourceHikari.getConnection();
             }
-
             if (updateStatistics) {
-                updateStatistics(connOK,
-                                 Duration.between(t1, t2).toMillis(),
-                                 Duration.between(t2, Instant.now()).toMillis(),
-                                 showStatistics,
-                                 logicalConnectionCountProxy,
-                                 openProxySessionCount,
-                                 closeProxySessionCount);
+                updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
             }
 
-            logger.debug("<getConnectionSmart() = {}", connOK);
-
-            return connOK;
+            logger.debug("<getConnectionSimple() = {}", conn);
+        
+            return conn;
         } catch (SQLException ex) {
             signalSQLException(ex);
             throw ex;
-        }
+        }        
     }
-
-    private int determineCost(final Connection conn, final OracleConnection oraConn, final String schema) throws SQLException {
-        final String currentSchema = conn.getSchema();        
-        int cost;
-            
-        if (schema != null && currentSchema != null && schema.equalsIgnoreCase(currentSchema)) {
-            cost = 0;
-        } else {
-            // if not a proxy session only oraConn.openProxySession() must be invoked
-            // otherwise oraConn.close(OracleConnection.PROXY_SESSION) must be invoked as well
-            // hence more expensive.
-            cost = (!oraConn.isProxySession() ? 1 : 2);
-        }
-
-        logger.debug("determineCost(currentSchema={}, isProxySession={}, schema={}) = {}",
-                     currentSchema,
-                     oraConn.isProxySession(),
-                     schema,
-                     cost);
-        
-        return cost;
-    }    
 
     protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
         commonPoolDataSourceHikari = (HikariDataSource) commonPoolDataSource;
