@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.Properties;
 import javax.sql.DataSource;
 import lombok.experimental.Delegate;
-import oracle.jdbc.OracleConnection;
 import org.springframework.beans.DirectFieldAccessor;    
 
 import org.slf4j.Logger;
@@ -84,16 +83,18 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * common properties will include the proxy user name ("bc_proxy" from "bc_proxy[bodomain]")
          * if any else just the username. Meaning "bc_proxy[bodomain]", "bc_proxy[boauth]" and so one
          * will have ONE common pool data source.
+         *
+         * See also https://github.com/brettwooldridge/HikariCP/issues/231
          */
 
-        this(pds, username, password, true, false);
+        this(pds, username, password, false, true);
     }
     
-    public SmartPoolDataSourceHikari(final HikariDataSource pds,
-                                     final String username,
-                                     final String password,
-                                     final boolean singleSessionProxyModel,
-                                     final boolean useFixedUsernamePassword) throws SQLException {
+    private SmartPoolDataSourceHikari(final HikariDataSource pds,
+                                      final String username,
+                                      final String password,
+                                      final boolean singleSessionProxyModel,
+                                      final boolean useFixedUsernamePassword) throws SQLException {
         
         /*
          * NOTE 2.
@@ -106,7 +107,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
               username,
               password,
               singleSessionProxyModel,
-              /*singleSessionProxyModel ||*/ useFixedUsernamePassword);
+              singleSessionProxyModel || useFixedUsernamePassword);
 
         logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari.getPoolName());
 
@@ -227,35 +228,12 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
             final Instant t1 = Instant.now();
             Connection conn;
             
-            if (isUseFixedUsernamePassword()) {
-                conn = commonPoolDataSourceHikari.getConnection();
-            } else {
-                // HikariCP does not support commonPoolDataSource.getConnection(username, password);
-                // See observations in constructor of SmartPoolDataSource.
-                commonPoolDataSourceHikari.setUsername(( !isSingleSessionProxyModel() && proxyUsername != null ?
-                                                         proxyUsername /* case 3 */ :
-                                                         username /* case 1 & 2 */ ));
-                commonPoolDataSourceHikari.setPassword(password);
+            conn = commonPoolDataSourceHikari.getConnection();
 
-                while (true) {
-                    conn = commonPoolDataSourceHikari.getConnection();
+            showConnection(conn);
 
-                    logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
-
-                    showConnection(conn);
-
-                    if (conn.getSchema().equalsIgnoreCase(schema)) {
-                        break;
-                    }
-
-                    final OracleConnection oraConn = conn.unwrap(OracleConnection.class);
-                    
-                    logger.warn("closing Oracle connection since the schema does not match");
-
-                    oraConn.close();
-                }
-            }
-
+            logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
+            
             assert(conn.getSchema().equalsIgnoreCase(schema));
 
             if (updateStatistics) {

@@ -52,15 +52,14 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
     public SmartPoolDataSourceOracle(final PoolDataSource pds,
                                      final String username,
                                      final String password) throws SQLException {
-        // this(pds, username, password, true, false);        
-        this(pds, username, password, false, true);        
+        this(pds, username, password, true, false);        
     }
 
-    public SmartPoolDataSourceOracle(final PoolDataSource pds,
-                                     final String username,
-                                     final String password,
-                                     final boolean singleSessionProxyModel,
-                                     final boolean useFixedUsernamePassword) throws SQLException {
+    private SmartPoolDataSourceOracle(final PoolDataSource pds,
+                                      final String username,
+                                      final String password,
+                                      final boolean singleSessionProxyModel,
+                                      final boolean useFixedUsernamePassword) throws SQLException {
         super(pds, determineCommonDataSourceProperties(pds), username, password, singleSessionProxyModel, useFixedUsernamePassword);
     }
     
