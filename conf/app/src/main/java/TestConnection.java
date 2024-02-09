@@ -44,9 +44,13 @@ public class TestConnection {
         return input.nextLine();
     }
 
-    private static void showConnectionInfo() throws SQLException {
+    private static void showConnectionProperties() throws SQLException {
         info("");
         connection.getProperties().list(System.out);
+    }
+
+    private static void showConnectionInfo() throws SQLException {
+        info("");
 
         // Get the JDBC driver name and version 
         final DatabaseMetaData dbmd = connection.getMetaData();
@@ -58,6 +62,40 @@ public class TestConnection {
         info("Default Row Prefetch Value is: " + connection.getDefaultRowPrefetch());
         info("Database Username is: " + connection.getUserName());
         info("");
+
+        // Prepare a statement to execute the SQL Queries.
+        try (final Statement statement = connection.createStatement()) {
+            final String newLine = System.getProperty("line.separator");
+            final String[] parameters = {
+                null,
+                "AUTHENTICATED_IDENTITY", // 1
+                "AUTHENTICATION_METHOD", // 2
+                "CURRENT_SCHEMA", // 3
+                "CURRENT_USER", // 4
+                "PROXY_USER", // 5
+                "SESSION_USER", // 6
+                "SESSIONID", // 7
+                "SID"  // 8
+            };
+            final String sessionParametersQuery = String.join(newLine,
+                                                              "select  sys_context('USERENV', '" + parameters[1] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[2] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[3] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[4] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[5] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[6] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[7] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[8] + "')",
+                                                              "from    dual");
+            
+            try (final ResultSet resultSet = statement.executeQuery(sessionParametersQuery)) {
+                while (resultSet.next()) {
+                    for (int i = 1; i < parameters.length; i++) {
+                        info(parameters[i] + ": " + resultSet.getString(i));
+                    }
+                }
+            }
+        }
     }
 
     private static void connect() throws SQLException {
@@ -109,17 +147,21 @@ public class TestConnection {
                 showMenuOption(0, "Quit");
                 showMenuOption(1, "Connect");
                 showMenuOption(2, "Show connection info");
-                showMenuOption(3, "Show user objects");
-                showMenuOption(4, "Open proxy session");
-                showMenuOption(5, "Close proxy session");
-                showMenuOption(6, "Disconnect");
+                showMenuOption(3, "Show connection properties");
+                showMenuOption(4, "Show user objects");
+                showMenuOption(5, "Open proxy session");
+                showMenuOption(6, "Close proxy session");
+                showMenuOption(7, "Disconnect");
 
                 switch (Integer.parseInt(question("your choice"))) {
                 case 0:
                     return;
                 
                 case 1:
-                    dbUrl = question("database url (jdbc:oracle:thin:@...)");
+                    dbUrl = question("database DSN (after the @ in jdbc:oracle:thin:@...)");
+                    if (!dbUrl.startsWith("jdbc:oracle:thin:@")) {
+                        dbUrl = "jdbc:oracle:thin:@" + dbUrl;
+                    }
                     dbUsername = question("username");
                     dbPassword = question("password");
                     dbProxyClientName = question("proxy client name");
@@ -131,18 +173,22 @@ public class TestConnection {
                     break;
                     
                 case 3:
-                    printUserObjects(connection);
+                    showConnectionProperties();
                     break;
                     
                 case 4:
+                    printUserObjects(connection);
+                    break;
+                    
+                case 5:
                     openProxySession();
                     break;
 
-                case 5:
+                case 6:
                     closeProxySession();
                     break;
                 
-                case 6:
+                case 7:
                     disconnect();
                     break; 
                 }
@@ -206,4 +252,5 @@ public class TestConnection {
             }
         }   
     } 
+
 }
