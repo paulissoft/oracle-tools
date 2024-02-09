@@ -2,7 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicReference;
-import java.io.Closeable;
+//import java.io.Closeable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public abstract class SmartPoolDataSource implements DataSource, Closeable {
+public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     public static final String CLASS = "class";
 
@@ -98,7 +98,24 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     }
     
     @Delegate(excludes=Overrides.class)
-    private DataSource commonPoolDataSource;
+    protected DataSource getCommonPoolDataSource() {
+        if (commonPoolDataSource == null) {
+            try {
+                init();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex.getMessage());
+            }
+        }
+        return commonPoolDataSource;
+    }
+    
+    private DataSource pds = null;
+
+    protected DataSource getPoolDataSource() {
+        return pds;
+    }
+
+    private DataSource commonPoolDataSource = null;
 
     @Getter
     @Setter
@@ -139,12 +156,29 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
      * @param useFixedUsernamePassword    Only use commonPoolDataSource.getConnection(), never commonPoolDataSource.getConnection(username, password)
      */
     protected SmartPoolDataSource(final DataSource pds,
-                                  final Properties commonDataSourceProperties,
                                   final String username,
                                   final String password,
                                   final boolean singleSessionProxyModel,
                                   final boolean useFixedUsernamePassword) throws SQLException {
-        logger.debug(">SmartPoolDataSource(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
+        assert(pds != null);
+        
+        this.pds = pds;
+        this.connectInfo = new ConnectInfo(username, password);
+        this.singleSessionProxyModel = singleSessionProxyModel;
+        this.useFixedUsernamePassword = useFixedUsernamePassword;
+    }
+    
+    protected boolean init() throws SQLException {
+        assert(this.commonPoolDataSource == null);
+
+        if (this.commonPoolDataSource != null) {
+            return false;
+        }
+
+        final String username = connectInfo.getUsername();
+        final String password = connectInfo.getPassword();
+        
+        logger.debug(">init(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
                      pds,
                      username,
                      singleSessionProxyModel,
@@ -154,9 +188,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         
         printDataSourceStatistics(pds, logger);
 
-        this.commonDataSourceProperties.putAll(commonDataSourceProperties);
-        this.singleSessionProxyModel = singleSessionProxyModel;
-        this.useFixedUsernamePassword = useFixedUsernamePassword;
+        this.commonDataSourceProperties.putAll(determineCommonDataSourceProperties(pds));
 
         checkPropertyNotNull(CLASS);
         checkPropertyNotNull(URL);
@@ -167,8 +199,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         checkPropertyNull(INITIAL_POOL_SIZE);
         checkPropertyNull(MINIMUM_POOL_SIZE);
         checkPropertyNull(MAXIMUM_POOL_SIZE);
-    
-        connectInfo = new ConnectInfo(username, password);
 
         // Now we have to adjust this.commonDataSourceProperties and this.username
         // given username/singleSessionProxyModel/useFixedUsernamePassword.
@@ -218,9 +248,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsGrandTotal, s -> new MyDataSourceStatistics());
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsTotal, s -> new MyDataSourceStatistics());
         this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new MyDataSourceStatistics());
-
-        // generic part
-        setCommonPoolDataSource(this.commonPoolDataSource);
 
         // update pool sizes and default username / password when the pool data source is added to an existing
         synchronized (this.commonPoolDataSource) {
@@ -296,7 +323,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
         printDataSourceStatistics(this.commonPoolDataSource, logger);
 
-        logger.debug("<SmartPoolDataSource()");
+        final boolean result = (this.commonPoolDataSource == pds);
+            
+        logger.debug("<init() = {}", result);
+
+        return result;
     }
 
     private void checkPropertyNull(final String name) {
@@ -996,43 +1027,43 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
         return currentPoolCount.get(commonDataSourceProperties).get();
     }
 
+    protected abstract Properties determineCommonDataSourceProperties(final DataSource pds);
+        
     protected abstract void printDataSourceStatistics(final DataSource poolDataSource, final Logger logger);
     
-    protected abstract void setCommonPoolDataSource(final DataSource commonPoolDataSource);
-
     protected abstract String getPoolNamePrefix();
 
-    protected abstract String getPoolName();
+    //protected abstract String getPoolName();
 
     protected abstract String getPoolName(DataSource pds);
 
-    protected abstract void setPoolName(String poolName) throws SQLException;
+    //protected abstract void setPoolName(String poolName) throws SQLException;
 
     protected abstract void setPoolName(DataSource pds, String poolName) throws SQLException;
 
-    protected abstract void setUsername(String username) throws SQLException;
+    //protected abstract void setUsername(String username) throws SQLException;
 
-    protected abstract void setPassword(String password) throws SQLException;
+    //protected abstract void setPassword(String password) throws SQLException;
         
-    protected abstract int getInitialPoolSize();
+    //protected abstract int getInitialPoolSize();
 
     protected abstract int getInitialPoolSize(DataSource pds);
 
-    protected abstract void setInitialPoolSize(int initialPoolSize) throws SQLException;
+    //protected abstract void setInitialPoolSize(int initialPoolSize) throws SQLException;
 
-    protected abstract int getMinimumPoolSize();
+    //protected abstract int getMinimumPoolSize();
 
     protected abstract int getMinimumPoolSize(DataSource pds);
 
-    protected abstract void setMinimumPoolSize(int minimumPoolSize) throws SQLException;
+    //protected abstract void setMinimumPoolSize(int minimumPoolSize) throws SQLException;
 
-    protected abstract int getMaximumPoolSize();
+    //protected abstract int getMaximumPoolSize();
 
     protected abstract int getMaximumPoolSize(DataSource pds);
 
-    protected abstract void setMaximumPoolSize(int maximumPoolSize) throws SQLException;
+    //protected abstract void setMaximumPoolSize(int maximumPoolSize) throws SQLException;
 
-    protected abstract long getConnectionTimeout(); // milliseconds
+    //protected abstract long getConnectionTimeout(); // milliseconds
 
     protected final String getUrl() {
         return (String) commonDataSourceProperties.get(URL);
@@ -1040,11 +1071,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
     // statistics
     
-    protected abstract int getActiveConnections();
+    //protected abstract int getActiveConnections();
 
-    protected abstract int getIdleConnections();
+    //protected abstract int getIdleConnections();
 
-    protected abstract int getTotalConnections();
+    //protected abstract int getTotalConnections();
         
     @Getter
     private class ConnectInfo {

@@ -47,7 +47,9 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
     }
 
     @Delegate(excludes=Overrides.class)
-    private PoolDataSource commonPoolDataSourceOracle;
+    protected PoolDataSource getCommonPoolDataSourceOracle() {
+        return ((PoolDataSource)getCommonPoolDataSource());
+    }
     
     public SmartPoolDataSourceOracle(final PoolDataSource pds,
                                      final String username,
@@ -60,26 +62,29 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
                                       final String password,
                                       final boolean singleSessionProxyModel,
                                       final boolean useFixedUsernamePassword) throws SQLException {
-        super(pds, determineCommonDataSourceProperties(pds), username, password, singleSessionProxyModel, useFixedUsernamePassword);
+        super(pds, username, password, singleSessionProxyModel, useFixedUsernamePassword);
     }
     
-    private static Properties determineCommonDataSourceProperties(final PoolDataSource pds) {
+    protected Properties determineCommonDataSourceProperties(final DataSource pds) {
         final Properties commonDataSourceProperties = new Properties();
+        final PoolDataSource poolDataSourceOracle = (PoolDataSource)pds;    
         
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, pds.getClass().getName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, pds.getURL());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getConnectionFactoryClassName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATE_CONNECTION_ON_BORROW, pds.getValidateConnectionOnBorrow());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, ABANDONED_CONNECTION_TIMEOUT, pds.getAbandonedConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIME_TO_LIVE_CONNECTION_TIMEOUT, pds.getTimeToLiveConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, INACTIVE_CONNECTION_TIMEOUT, pds.getInactiveConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIMEOUT_CHECK_INTERVAL, pds.getTimeoutCheckInterval());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_STATEMENTS, pds.getMaxStatements());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, poolDataSourceOracle.getClass().getName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, poolDataSourceOracle.getURL());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties,
+                                        SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME,
+                                        poolDataSourceOracle.getConnectionFactoryClassName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATE_CONNECTION_ON_BORROW, poolDataSourceOracle.getValidateConnectionOnBorrow());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, ABANDONED_CONNECTION_TIMEOUT, poolDataSourceOracle.getAbandonedConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIME_TO_LIVE_CONNECTION_TIMEOUT, poolDataSourceOracle.getTimeToLiveConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, INACTIVE_CONNECTION_TIMEOUT, poolDataSourceOracle.getInactiveConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIMEOUT_CHECK_INTERVAL, poolDataSourceOracle.getTimeoutCheckInterval());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_STATEMENTS, poolDataSourceOracle.getMaxStatements());
         // getConnectionWaitTimeout() in oracle.ucp.jdbc.PoolDataSource has been deprecated
-        // SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_WAIT_TIMEOUT, pds.getConnectionWaitTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_CONNECTION_REUSE_TIME, pds.getMaxConnectionReuseTime());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SECONDS_TO_TRUST_IDLE_CONNECTION, pds.getSecondsToTrustIdleConnection());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_VALIDATION_TIMEOUT, pds.getConnectionValidationTimeout());
+        // SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_WAIT_TIMEOUT, poolDataSourceOracle.getConnectionWaitTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_CONNECTION_REUSE_TIME, poolDataSourceOracle.getMaxConnectionReuseTime());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SECONDS_TO_TRUST_IDLE_CONNECTION, poolDataSourceOracle.getSecondsToTrustIdleConnection());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_VALIDATION_TIMEOUT, poolDataSourceOracle.getConnectionValidationTimeout());
 
         return commonDataSourceProperties;
     }
@@ -117,15 +122,11 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         logger.debug("{}idle: {}", prefix, getIdleConnections(poolDataSourceOracle));
     }
 
-    protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
-        commonPoolDataSourceOracle = (PoolDataSource) commonPoolDataSource;
-    }
-
     protected String getPoolNamePrefix() {
         return "OraclePool";
     }
     
-    protected String getPoolName() {
+    public String getPoolName() {
         return getConnectionPoolName();
     }
 
@@ -133,7 +134,7 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         return ((PoolDataSource)pds).getConnectionPoolName();
     }
     
-    protected void setPoolName(String poolName) throws SQLException {
+    public void setPoolName(String poolName) throws SQLException {
         setConnectionPoolName(poolName);
     }
     
@@ -141,7 +142,7 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         ((PoolDataSource)pds).setConnectionPoolName(poolName);
     }
 
-    protected void setUsername(String username) throws SQLException {
+    public void setUsername(String username) throws SQLException {
         setUser(username);
     }
 
@@ -149,7 +150,7 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         return ((PoolDataSource)pds).getInitialPoolSize();
     }
 
-    protected int getMinimumPoolSize() {
+    public int getMinimumPoolSize() {
         return getMinPoolSize();
     }
 
@@ -157,11 +158,11 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         return ((PoolDataSource)pds).getMinPoolSize();
     }
 
-    protected void setMinimumPoolSize(int minimumPoolSize) throws SQLException {
+    public void setMinimumPoolSize(int minimumPoolSize) throws SQLException {
         setMinPoolSize(minimumPoolSize);
     }
 
-    protected int getMaximumPoolSize() {
+    public int getMaximumPoolSize() {
         return getMaxPoolSize();
     }
 
@@ -169,16 +170,16 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         return ((PoolDataSource)pds).getMaxPoolSize();
     }
 
-    protected void setMaximumPoolSize(int maximumPoolSize) throws SQLException {
+    public void setMaximumPoolSize(int maximumPoolSize) throws SQLException {
         setMaxPoolSize(maximumPoolSize);
     }
 
-    protected long getConnectionTimeout() {
+    public long getConnectionTimeout() {
         return 1000 * getConnectionWaitTimeout();
     }
 
-    protected int getActiveConnections() {
-        return getActiveConnections(commonPoolDataSourceOracle);
+    public int getActiveConnections() {
+        return getActiveConnections(getCommonPoolDataSourceOracle());
     }
 
     private static int getActiveConnections(final PoolDataSource poolDataSource) {
@@ -189,8 +190,8 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         }
     }
 
-    protected int getIdleConnections() {
-        return getIdleConnections(commonPoolDataSourceOracle);
+    public int getIdleConnections() {
+        return getIdleConnections(getCommonPoolDataSourceOracle());
     }
 
     private static int getIdleConnections(final PoolDataSource poolDataSource) {
@@ -201,8 +202,8 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         }
     }
 
-    protected int getTotalConnections() {
-        return getTotalConnections(commonPoolDataSourceOracle);
+    public int getTotalConnections() {
+        return getTotalConnections(getCommonPoolDataSourceOracle());
     }
 
     private static int getTotalConnections(final PoolDataSource poolDataSource) {

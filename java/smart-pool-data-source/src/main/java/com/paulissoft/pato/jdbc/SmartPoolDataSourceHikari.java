@@ -70,7 +70,9 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
     
     @Delegate(excludes=Overrides.class)
-    private HikariDataSource commonPoolDataSourceHikari;
+    protected HikariDataSource getCommonPoolDataSourceHikari() {
+        return ((HikariDataSource)getCommonPoolDataSource());
+    }
 
     public SmartPoolDataSourceHikari(final HikariDataSource pds,
                                      final String username,
@@ -103,17 +105,20 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * So when singleSessionProxyModel is true, useFixedUsernamePassword must be true as well.
          */
         super(pds,
-              determineCommonDataSourceProperties(pds),
               username,
               password,
               singleSessionProxyModel,
               singleSessionProxyModel || useFixedUsernamePassword);
+    }
 
-        logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari.getPoolName());
-
+    @Override
+    protected boolean init() throws SQLException {
+        final boolean result = super.init();
+        final HikariDataSource pds = (HikariDataSource)getPoolDataSource();
+        
         // pool name, sizes and username / password already done in super constructor
-        synchronized (commonPoolDataSourceHikari) {
-            if (commonPoolDataSourceHikari != pds) {
+        synchronized (getCommonPoolDataSourceHikari()) {
+            if (getCommonPoolDataSourceHikari() != pds) {
                 final int newValue = pds.getMinimumIdle();
                 final int oldValue = getMinimumIdle();
 
@@ -126,28 +131,36 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                 logger.debug("minimum idle after: {}", getMinimumIdle());
             }
         }
+
+        return result;
     }
 
-    private static Properties determineCommonDataSourceProperties(final HikariDataSource pds) {
+    protected Properties determineCommonDataSourceProperties(final DataSource pds) {
         final Properties commonDataSourceProperties = new Properties();
 
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, pds.getClass().getName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, pds.getJdbcUrl());
+        final HikariDataSource poolDataSourceHikari = (HikariDataSource) pds;
+
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, poolDataSourceHikari.getClass().getName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, poolDataSourceHikari.getJdbcUrl());
         // by first setting getDriverClassName(), getDataSourceClassName() will overwrite that one
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getDriverClassName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME, pds.getDataSourceClassName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, AUTO_COMMIT, pds.isAutoCommit());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TIMEOUT, pds.getConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, IDLE_TIMEOUT, pds.getIdleTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_LIFETIME, pds.getMaxLifetime());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TEST_QUERY, pds.getConnectionTestQuery());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, INITIALIZATION_FAIL_TIMEOUT, pds.getInitializationFailTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, ISOLATE_INTERNAL_QUERIES, pds.isIsolateInternalQueries());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, ALLOW_POOL_SUSPENSION, pds.isAllowPoolSuspension());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, READ_ONLY, pds.isReadOnly());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, REGISTER_MBEANS, pds.isRegisterMbeans());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATION_TIMEOUT, pds.getValidationTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, LEAK_DETECTION_THRESHOLD, pds.getLeakDetectionThreshold());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties,
+                                        SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME,
+                                        poolDataSourceHikari.getDriverClassName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties,
+                                        SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME,
+                                        poolDataSourceHikari.getDataSourceClassName());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, AUTO_COMMIT, poolDataSourceHikari.isAutoCommit());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TIMEOUT, poolDataSourceHikari.getConnectionTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, IDLE_TIMEOUT, poolDataSourceHikari.getIdleTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_LIFETIME, poolDataSourceHikari.getMaxLifetime());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_TEST_QUERY, poolDataSourceHikari.getConnectionTestQuery());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, INITIALIZATION_FAIL_TIMEOUT, poolDataSourceHikari.getInitializationFailTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, ISOLATE_INTERNAL_QUERIES, poolDataSourceHikari.isIsolateInternalQueries());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, ALLOW_POOL_SUSPENSION, poolDataSourceHikari.isAllowPoolSuspension());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, READ_ONLY, poolDataSourceHikari.isReadOnly());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, REGISTER_MBEANS, poolDataSourceHikari.isRegisterMbeans());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATION_TIMEOUT, poolDataSourceHikari.getValidationTimeout());
+        SmartPoolDataSource.setProperty(commonDataSourceProperties, LEAK_DETECTION_THRESHOLD, poolDataSourceHikari.getLeakDetectionThreshold());
 
         return commonDataSourceProperties;
     }
@@ -205,8 +218,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
     public void close() {
         if (done()) {
-            commonPoolDataSourceHikari.close();
-            commonPoolDataSourceHikari = null;
+            getCommonPoolDataSourceHikari().close();
         }
     }
 
@@ -229,7 +241,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
             Connection conn;
 
             // HikariCP does not support getConnection(username, password)
-            conn = commonPoolDataSourceHikari.getConnection();
+            conn = getCommonPoolDataSourceHikari().getConnection();
 
             showConnection(conn);
 
@@ -251,10 +263,6 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         }        
     }
 
-    protected void setCommonPoolDataSource(final DataSource commonPoolDataSource) {
-        commonPoolDataSourceHikari = (HikariDataSource) commonPoolDataSource;
-    }
-
     protected String getPoolNamePrefix() {
         return "HikariPool";
     }
@@ -268,8 +276,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     // HikariCP does NOT know of an initial pool size
-    protected int getInitialPoolSize() {
-        return getInitialPoolSize(commonPoolDataSourceHikari);
+    public int getInitialPoolSize() {
+        return getInitialPoolSize(getCommonPoolDataSourceHikari());
     }
 
     protected int getInitialPoolSize(DataSource pds) {
@@ -280,8 +288,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return result;
     }
 
-    protected void setInitialPoolSize(int initialPoolSize) {
-        setInitialPoolSize(commonPoolDataSourceHikari, initialPoolSize);
+    public void setInitialPoolSize(int initialPoolSize) {
+        setInitialPoolSize(getCommonPoolDataSourceHikari(), initialPoolSize);
     }        
 
     private void setInitialPoolSize(DataSource pds, int initialPoolSize) {
@@ -289,8 +297,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }        
 
     // HikariCP does NOT know of a minimum pool size
-    protected int getMinimumPoolSize() {
-        return getMinimumPoolSize(commonPoolDataSourceHikari);
+    public int getMinimumPoolSize() {
+        return getMinimumPoolSize(getCommonPoolDataSourceHikari());
     }
 
     protected int getMinimumPoolSize(DataSource pds) {
@@ -301,8 +309,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return result;
     }
 
-    protected void setMinimumPoolSize(int minimumPoolSize) {
-        setMinimumPoolSize(commonPoolDataSourceHikari, minimumPoolSize);
+    public void setMinimumPoolSize(int minimumPoolSize) {
+        setMinimumPoolSize(getCommonPoolDataSourceHikari(), minimumPoolSize);
     }        
 
     private void setMinimumPoolSize(DataSource pds, int minimumPoolSize) {
@@ -311,7 +319,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
 
     // HikariCP does know of a maximum pool size but it is overriden anyway
     public int getMaximumPoolSize() {
-        return getMaximumPoolSize(commonPoolDataSourceHikari);
+        return getMaximumPoolSize(getCommonPoolDataSourceHikari());
     }
 
     protected int getMaximumPoolSize(DataSource pds) {
@@ -323,7 +331,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     public void setMaximumPoolSize(int maximumPoolSize) {
-        setMaximumPoolSize(commonPoolDataSourceHikari, maximumPoolSize);
+        setMaximumPoolSize(getCommonPoolDataSourceHikari(), maximumPoolSize);
     }        
 
     private void setMaximumPoolSize(DataSource pds, int maximumPoolSize) {
@@ -336,8 +344,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return (HikariPool) new DirectFieldAccessor(poolDataSource).getPropertyValue("pool");
     }
 
-    protected int getActiveConnections() {
-        return getActiveConnections(commonPoolDataSourceHikari);
+    public int getActiveConnections() {
+        return getActiveConnections(getCommonPoolDataSourceHikari());
     }
 
     private static int getActiveConnections(final HikariDataSource poolDataSource) {
@@ -346,8 +354,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return hikariPool != null ? hikariPool.getActiveConnections() : -1;
     }
 
-    protected int getIdleConnections() {
-        return getIdleConnections(commonPoolDataSourceHikari);
+    public int getIdleConnections() {
+        return getIdleConnections(getCommonPoolDataSourceHikari());
     }
 
     private static int getIdleConnections(final HikariDataSource poolDataSource) {
@@ -356,8 +364,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return hikariPool != null ? hikariPool.getIdleConnections() : -1;
     }
 
-    protected int getTotalConnections() {
-        return getTotalConnections(commonPoolDataSourceHikari);
+    public int getTotalConnections() {
+        return getTotalConnections(getCommonPoolDataSourceHikari());
     }
 
     private static int getTotalConnections(final HikariDataSource poolDataSource) {
