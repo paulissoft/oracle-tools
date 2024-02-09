@@ -449,6 +449,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
             showConnection(conn);
 
+            logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
+            
+            assert(conn.getSchema().equalsIgnoreCase(schema));            
+
             if (updateStatistics) {
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
             }
@@ -587,6 +591,10 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
             }
 
             showConnection(connOK);
+
+            logger.debug("current schema: {}; schema: {}", connOK.getSchema(), schema);
+
+            assert(connOK.getSchema().equalsIgnoreCase(schema));
 
             if (updateStatistics) {
                 updateStatistics(connOK,

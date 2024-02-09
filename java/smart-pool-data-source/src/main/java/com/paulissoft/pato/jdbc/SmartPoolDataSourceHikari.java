@@ -1,17 +1,18 @@
 package com.paulissoft.pato.jdbc;
 
-import org.springframework.beans.DirectFieldAccessor;    
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import java.io.Closeable;
 import java.sql.Connection;
-import javax.sql.DataSource;
 import java.sql.SQLException;
-import java.util.Properties;
-import lombok.experimental.Delegate;
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Properties;
+import javax.sql.DataSource;
+import lombok.experimental.Delegate;
+import oracle.jdbc.OracleConnection;
+import org.springframework.beans.DirectFieldAccessor;    
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,16 +230,33 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
             if (isUseFixedUsernamePassword()) {
                 conn = commonPoolDataSourceHikari.getConnection();
             } else {
-                // see observations in constructor of SmartPoolDataSource
+                // HikariCP does not support commonPoolDataSource.getConnection(username, password);
+                // See observations in constructor of SmartPoolDataSource.
                 commonPoolDataSourceHikari.setUsername(( !isSingleSessionProxyModel() && proxyUsername != null ?
                                                          proxyUsername /* case 3 */ :
                                                          username /* case 1 & 2 */ ));
                 commonPoolDataSourceHikari.setPassword(password);
-                // HikariCP does not support commonPoolDataSource.getConnection(username, password);
-                conn = commonPoolDataSourceHikari.getConnection();
+
+                while (true) {
+                    conn = commonPoolDataSourceHikari.getConnection();
+
+                    logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
+
+                    showConnection(conn);
+
+                    if (conn.getSchema().equalsIgnoreCase(schema)) {
+                        break;
+                    }
+
+                    final OracleConnection oraConn = conn.unwrap(OracleConnection.class);
+                    
+                    logger.warn("closing Oracle connection since the schema does not match");
+
+                    oraConn.close();
+                }
             }
 
-            showConnection(conn);
+            assert(conn.getSchema().equalsIgnoreCase(schema));
 
             if (updateStatistics) {
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
