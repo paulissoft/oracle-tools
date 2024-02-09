@@ -8,7 +8,9 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -238,15 +240,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                              getMinimumPoolSize(),
                              getMaximumPoolSize());
             } else {
-                // create a connection in order to set all properties (Spring Boot for instance)
-                /*
-                try (final Connection conn = pds.getConnection()) {
-                    ;
-                } catch (SQLException ex) {
-                    logger.warn("SQL exception while starting one of the pools: {}", ex.getMessage());
-                } 
-                */
-                
                 // for debugging purposes
                 if (getPoolName(pds) == null) {
                     setPoolName(pds, String.valueOf(pds.hashCode()));
@@ -420,7 +413,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                       statisticsEnabled,
                                       true);
         }
-        
+
         logger.debug("getConnection(username={}) = {}", username, conn);
 
         return conn;
@@ -457,11 +450,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
             }
 
+            showConnection(conn);
+
             logger.debug("<getConnectionSimple() = {}", conn);
         
             return conn;
         } catch (SQLException ex) {
             signalSQLException(ex);
+            logger.debug("<getConnectionSimple()");
             throw ex;
         }        
     }    
@@ -496,7 +492,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
 
             final Instant t1 = Instant.now();
             final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-            /*Proxy*/Connection connOK = /*(ProxyConnection)*/ commonPoolDataSource.getConnection();
+            Connection connOK = getConnectionSimple(username, password, schema, proxyUsername, false, false);
             OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
             int costOK = determineCost(connOK, oraConnOK, schema);
             int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
@@ -508,14 +504,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 // - we can measure the time elapsed for the first part of the proxy connection.
                 // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
                 // =============================================================================================
-                /*Proxy*/Connection conn = connOK;
+                Connection conn = connOK;
                 OracleConnection oraConn = oraConnOK;
                 int cost = costOK;
                 int nrGetConnectionsLeft = getCurrentPoolCount();
             
                 assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
             
-                final ArrayList</*Proxy*/Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
+                final ArrayList<Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
 
                 try {
                     /**/                                                 // reasons to stop searching:
@@ -525,7 +521,7 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                                          //     otherwise it may take too much time
                            Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more
                                                                          //     than we agreed upon for 1 logical connection
-                        conn = /*(ProxyConnection)*/ commonPoolDataSource.getConnection();
+                        conn = getConnectionSimple(username, password, schema, proxyUsername, false, false);
                         oraConn = conn.unwrap(OracleConnection.class);
                         cost = determineCost(conn, oraConn, schema);
 
@@ -597,11 +593,14 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                  closeProxySessionCount);
             }
 
+            showConnection(connOK);
+
             logger.debug("<getConnectionSmart() = {}", connOK);
 
             return connOK;
         } catch (SQLException ex) {
             signalSQLException(ex);
+            logger.debug("<getConnectionSmart()");
             throw ex;
         }
     }
@@ -626,7 +625,55 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                      cost);
         
         return cost;
-    }    
+    }
+
+    protected void showConnection(final Connection conn) throws SQLException {
+        if (!logger.isDebugEnabled()) {
+            return;
+        }
+
+        logger.debug(">showConnection({})", conn);
+
+        try {
+            conn.setAutoCommit(false);
+        
+            // Prepare a statement to execute the SQL Queries.
+            try (final Statement statement = conn.createStatement()) {
+                final String newLine = System.getProperty("line.separator");
+                final String[] parameters = {
+                    null,
+                    "AUTHENTICATED_IDENTITY", // 1
+                    "AUTHENTICATION_METHOD", // 2
+                    "CURRENT_SCHEMA", // 3
+                    "CURRENT_USER", // 4
+                    "PROXY_USER", // 5
+                    "SESSION_USER", // 6
+                    "SESSIONID", // 7
+                    "SID"  // 8
+                };
+                final String sessionParametersQuery = String.join(newLine,
+                                                                  "select  sys_context('USERENV', '" + parameters[1] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[2] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[3] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[4] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[5] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[6] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[7] + "')",
+                                                                  ",       sys_context('USERENV', '" + parameters[8] + "')",
+                                                                  "from    dual");
+            
+                try (final ResultSet resultSet = statement.executeQuery(sessionParametersQuery)) {
+                    while (resultSet.next()) {
+                        for (int i = 1; i < parameters.length; i++) {
+                            logger.debug(parameters[i] + ": " + resultSet.getString(i));
+                        }
+                    }
+                }
+            }
+        } finally {
+            logger.debug("<showConnection()");
+        }
+    }
 
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,

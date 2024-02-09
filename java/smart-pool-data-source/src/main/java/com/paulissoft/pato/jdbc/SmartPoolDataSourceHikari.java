@@ -85,15 +85,6 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * will have ONE common pool data source.
          */
 
-        // this(pds, username, password, false, true);
-        
-        /*
-         * NOTE 2.
-         *
-         * We will try the other way around (singleSessionProxyModel true and useFixedUsernamePassword false)
-         * since getConnectionSimple has been overridden.
-         */
-
         this(pds, username, password, true, false);
     }
     
@@ -102,7 +93,19 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                                      final String password,
                                      final boolean singleSessionProxyModel,
                                      final boolean useFixedUsernamePassword) throws SQLException {
-        super(pds, determineCommonDataSourceProperties(pds), username, password, singleSessionProxyModel, useFixedUsernamePassword);
+        
+        /*
+         * NOTE 2.
+         *
+         * The combination of singleSessionProxyModel true and useFixedUsernamePassword false does not work.
+         * So when singleSessionProxyModel is true, useFixedUsernamePassword must be true as well.
+         */
+        super(pds,
+              determineCommonDataSourceProperties(pds),
+              username,
+              password,
+              singleSessionProxyModel,
+              /*singleSessionProxyModel ||*/ useFixedUsernamePassword);
 
         logger.debug("commonPoolDataSourceHikari: {}", commonPoolDataSourceHikari.getPoolName());
 
@@ -238,11 +241,14 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
             }
 
+            showConnection(conn);
+
             logger.debug("<getConnectionSimple() = {}", conn);
         
             return conn;
         } catch (SQLException ex) {
             signalSQLException(ex);
+            logger.debug("<getConnectionSimple()");
             throw ex;
         }        
     }
