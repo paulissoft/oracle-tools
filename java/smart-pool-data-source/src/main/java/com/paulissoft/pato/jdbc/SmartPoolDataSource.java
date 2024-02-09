@@ -446,11 +446,12 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                                             username /* case 1 & 2 */ ),
                                                           password);
             }
+
+            showConnection(conn);
+
             if (updateStatistics) {
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
             }
-
-            showConnection(conn);
 
             logger.debug("<getConnectionSimple() = {}", conn);
         
@@ -557,6 +558,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 }
             }
 
+            showConnection(connOK);
+
             if (costOK == 0) {
                 logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
             } else {
@@ -583,6 +586,8 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
             }
 
+            showConnection(connOK);
+
             if (updateStatistics) {
                 updateStatistics(connOK,
                                  Duration.between(t1, t2).toMillis(),
@@ -592,8 +597,6 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                                  openProxySessionCount,
                                  closeProxySessionCount);
             }
-
-            showConnection(connOK);
 
             logger.debug("<getConnectionSmart() = {}", connOK);
 
@@ -628,11 +631,11 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
     }
 
     protected void showConnection(final Connection conn) throws SQLException {
-        if (!logger.isDebugEnabled()) {
+        if (!logger.isTraceEnabled()) {
             return;
         }
 
-        logger.debug(">showConnection({})", conn);
+        logger.trace(">showConnection({})", conn);
 
         try {
             conn.setAutoCommit(false);
@@ -665,13 +668,13 @@ public abstract class SmartPoolDataSource implements DataSource, Closeable {
                 try (final ResultSet resultSet = statement.executeQuery(sessionParametersQuery)) {
                     while (resultSet.next()) {
                         for (int i = 1; i < parameters.length; i++) {
-                            logger.debug(parameters[i] + ": " + resultSet.getString(i));
+                            logger.trace(parameters[i] + ": " + resultSet.getString(i));
                         }
                     }
                 }
             }
         } finally {
-            logger.debug("<showConnection()");
+            logger.trace("<showConnection()");
         }
     }
 
