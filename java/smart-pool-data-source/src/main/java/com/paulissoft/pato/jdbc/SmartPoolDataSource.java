@@ -168,7 +168,11 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         this.useFixedUsernamePassword = useFixedUsernamePassword;
     }
     
-    protected boolean init() throws SQLException {
+    private boolean init() throws SQLException {
+        return init(pds);
+    }
+    
+    protected boolean init(final DataSource pds) throws SQLException {
         assert(this.commonPoolDataSource == null);
 
         if (this.commonPoolDataSource != null) {
