@@ -59,7 +59,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             VALIDATION_TIMEOUT,
             LEAK_DETECTION_THRESHOLD };
 
-    // get common pool data source proerties like the ones define above
+    // get common pool data source properties like the ones define above
     public Hashtable<String, Object> getProperties() {
         final Hashtable<String, Object> properties = new Hashtable<>(propertyNames.length);
         
@@ -158,10 +158,14 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         return properties;
     }
 
-    // set common pool data source proerties like the ones define above
+    // set common pool data source properties like the ones define above
     public void setProperties(final Hashtable<String, Object> properties) throws SQLException {
         for (String propertyName: propertyNames) {
             final Object value = properties.get(propertyName);
+
+            if (value == null) {
+                continue;
+            }
             
             switch(propertyName) {
             case CLASS:
@@ -272,7 +276,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }        
 
     public int getMaxPoolSize() {
-        return getMaxPoolSize();
+        return getMaximumPoolSize();
     }
 
     public void setMaxPoolSize(int maxPoolSize) {

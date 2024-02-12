@@ -50,7 +50,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             CONNECTION_VALIDATION_TIMEOUT
     };
 
-    // get common pool data source proerties like the ones define above
+    // get common pool data source properties like the ones define above
     public Hashtable<String, Object> getProperties() {
         final Hashtable<String, Object> properties = new Hashtable<>(propertyNames.length);
         
@@ -138,11 +138,15 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return properties;
     }
 
-    // set common pool data source proerties like the ones define above
+    // set common pool data source properties like the ones define above
     public void setProperties(final Hashtable<String, Object> properties) throws SQLException {
         for (String propertyName: propertyNames) {
             final Object value = properties.get(propertyName);
 
+            if (value == null) {
+                continue;
+            }
+            
             switch(propertyName) {
             case CLASS:
                 break;
