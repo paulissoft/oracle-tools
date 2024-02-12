@@ -1,7 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.io.Closeable;
-import javax.sql.DataSource;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import java.util.Hashtable;
@@ -229,7 +227,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     public void setUsername(String username) throws SQLException {
         setUser(username);
-    };
+    }
 
     public long getConnectionTimeout() { // milliseconds
         return 1000 * getConnectionWaitTimeout();

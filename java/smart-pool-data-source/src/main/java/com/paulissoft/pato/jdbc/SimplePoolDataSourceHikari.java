@@ -4,7 +4,6 @@ import java.sql.Driver;
 import javax.sql.DataSource;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
-import java.io.Closeable;
 import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.springframework.beans.DirectFieldAccessor;    

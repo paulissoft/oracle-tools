@@ -2,8 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import javax.sql.DataSource;
-import java.util.Properties;
 import lombok.experimental.Delegate;
 import oracle.ucp.jdbc.PoolDataSource;
 

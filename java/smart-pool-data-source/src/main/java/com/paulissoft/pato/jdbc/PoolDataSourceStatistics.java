@@ -2,32 +2,17 @@ package com.paulissoft.pato.jdbc;
 
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicReference;
-//import java.io.Closeable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import lombok.experimental.Delegate;
-import lombok.Getter;
-import lombok.Setter;
 import oracle.jdbc.OracleConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class PoolDataSourceStatistics {
 

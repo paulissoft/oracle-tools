@@ -2,16 +2,13 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.pool.HikariPool;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
-import javax.sql.DataSource;
 import lombok.experimental.Delegate;
-import org.springframework.beans.DirectFieldAccessor;    
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
