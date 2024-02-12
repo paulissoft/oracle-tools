@@ -229,6 +229,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         setConnectionPoolName(poolName);
     }
 
+    public String getUsername() {
+        return getUser();
+    }
+
     public void setUsername(String username) throws SQLException {
         setUser(username);
     }

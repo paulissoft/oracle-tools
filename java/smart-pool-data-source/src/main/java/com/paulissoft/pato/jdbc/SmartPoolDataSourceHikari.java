@@ -5,8 +5,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Properties;
 import lombok.experimental.Delegate;
 
@@ -90,47 +88,6 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         if (done()) {
             getCommonPoolDataSourceHikari().close();
         }
-    }
-
-    @Override
-    protected Connection getConnectionSimple(final String username,
-                                             final String password,
-                                             final String schema,
-                                             final String proxyUsername,
-                                             final boolean updateStatistics,
-                                             final boolean showStatistics) throws SQLException {
-        logger.debug(">getConnectionSimple(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
-                     username,
-                     schema,
-                     proxyUsername,
-                     updateStatistics,
-                     showStatistics);
-
-        try {    
-            final Instant t1 = Instant.now();
-            Connection conn;
-
-            // HikariCP does not support getConnection(username, password)
-            conn = getCommonPoolDataSourceHikari().getConnection();
-
-            showConnection(conn);
-
-            logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
-            
-            assert(conn.getSchema().equalsIgnoreCase(schema));
-
-            if (updateStatistics) {
-                updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
-            }
-
-            logger.debug("<getConnectionSimple() = {}", conn);
-        
-            return conn;
-        } catch (SQLException ex) {
-            signalSQLException(ex);
-            logger.debug("<getConnectionSimple()");
-            throw ex;
-        }        
     }
 
     protected String getPoolNamePrefix() {

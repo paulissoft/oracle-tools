@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -407,6 +406,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             Connection conn;
             
             if (useFixedUsernamePassword) {
+                if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
+                    commonPoolDataSource.setUsername(usernameToConnectTo);
+                }
                 conn = commonPoolDataSource.getConnection();
             } else {
                 // see observations in constructor
