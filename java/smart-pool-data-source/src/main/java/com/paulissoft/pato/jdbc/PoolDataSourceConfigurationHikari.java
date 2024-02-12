@@ -16,19 +16,6 @@ import lombok.ToString;
 @Component
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
 
-    // Spring properties
-    @Value("${spring.datasource.hikari.initial-pool-size}")
-    private int initialPoolSize;
-
-    @Value("${spring.datasource.hikari.min-pool-size}")
-    private int minPoolSize;
-
-    @Value("${spring.datasource.hikari.max-pool-size}")
-    private int maxPoolSize;
-    
-    @Value("${spring.datasource.hikari.connection-factory-class-name}")
-    private String connectionFactoryClassName;
-
     @Value("spring.datasource.hikari.auto-commit")
     private boolean autoCommit;
     
@@ -46,7 +33,10 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     
     @Value("spring.datasource.hikari.maximum-pool-size")
     private int maximumPoolSize;
-    
+
+    @Value("spring.datasource.hikari.pool-name")
+    private String poolName;
+        
     @Value("spring.datasource.hikari.minimum-idle")
     private int minimumIdle;
     
