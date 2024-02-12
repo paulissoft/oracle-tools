@@ -16,9 +16,15 @@ import oracle.jdbc.OracleConnection;
 
 public class PoolDataSourceStatistics {
 
-    private final int ROUND_SCALE = 32;
+    public static final String EXCEPTION_CLASS_NAME = "class";
 
-    private final int DISPLAY_SCALE = 0;
+    public static final String EXCEPTION_SQL_ERROR_CODE = "SQL error code";
+
+    public static final String EXCEPTION_SQL_STATE = "SQL state";
+
+    private static final int ROUND_SCALE = 32;
+
+    private static final int DISPLAY_SCALE = 0;
 
     private AtomicLong logicalConnectionCount = new AtomicLong();
 
@@ -71,7 +77,7 @@ public class PoolDataSourceStatistics {
     }
         
     void update(final Connection conn,
-                          final long timeElapsed) throws SQLException {
+                final long timeElapsed) throws SQLException {
         update(conn, timeElapsed, -1, -1, -1);
     }
 
@@ -129,8 +135,17 @@ public class PoolDataSourceStatistics {
     long signalSQLException(final SQLException ex) {
         final Properties attrs = new Properties();
 
-        attrs.setProperty("error code", String.valueOf(ex.getErrorCode()));
-        attrs.setProperty("SQL state", ex.getSQLState());
+        attrs.setProperty(EXCEPTION_CLASS_NAME, ex.getClass().getName());
+        attrs.setProperty(EXCEPTION_SQL_ERROR_CODE, String.valueOf(ex.getErrorCode()));
+        attrs.setProperty(EXCEPTION_SQL_STATE, ex.getSQLState());
+            
+        return this.errors.computeIfAbsent(attrs, msg -> new AtomicLong(0)).incrementAndGet();
+    }
+        
+    long signalException(final Exception ex) {
+        final Properties attrs = new Properties();
+
+        attrs.setProperty(EXCEPTION_CLASS_NAME, ex.getClass().getName());
             
         return this.errors.computeIfAbsent(attrs, msg -> new AtomicLong(0)).incrementAndGet();
     }
@@ -279,6 +294,7 @@ public class PoolDataSourceStatistics {
             while (true) {
                 BigDecimal current = valueHolder.get();
                 BigDecimal next = current.add(value);
+                
                 if (valueHolder.compareAndSet(current, next)) {
                     return next;
                 }

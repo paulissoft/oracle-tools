@@ -31,8 +31,6 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     // set common pool data source proerties like the ones define above
     public void setProperties(final Hashtable<String, Object> properties) throws SQLException;
 
-    // public void printDataSourceStatistics();
-        
     public String getPoolName();
 
     public void setPoolName(String poolName) throws SQLException;

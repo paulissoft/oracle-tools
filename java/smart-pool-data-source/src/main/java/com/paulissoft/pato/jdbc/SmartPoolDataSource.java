@@ -454,6 +454,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             signalSQLException(ex);
             logger.debug("<getConnectionSimple()");
             throw ex;
+        } catch (Exception ex) {
+            signalException(ex);
+            logger.debug("<getConnectionSimple()");
+            throw ex;
         }        
     }    
 
@@ -603,6 +607,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             return connOK;
         } catch (SQLException ex) {
             signalSQLException(ex);
+            logger.debug("<getConnectionSmart()");
+            throw ex;
+        } catch (Exception ex) {
+            signalException(ex);
             logger.debug("<getConnectionSmart()");
             throw ex;
         }
@@ -766,6 +774,28 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         }
     }
 
+    protected void signalException(final Exception ex) {        
+        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+
+        try {
+            final long nrOccurrences = poolDataSourceStatisticsGrandTotal.signalException(ex);
+            
+            poolDataSourceStatisticsTotal.signalException(ex);
+            poolDataSourceStatistics.signalException(ex);
+            // show the message
+            logger.error("While connecting to {}{} this was occurrence # {} for this exception: (class={}, message={})",
+                         connectInfo.getSchema(),
+                         ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
+                         nrOccurrences,
+                         ex.getClass().getName(),
+                         ex.getMessage());
+        } catch (Exception e) {
+            logger.error("signalException() exception: {}", e.getMessage());
+        }
+    }
+
     protected void signalSQLException(final SQLException ex) {        
         final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
         final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
@@ -777,10 +807,11 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             poolDataSourceStatisticsTotal.signalSQLException(ex);
             poolDataSourceStatistics.signalSQLException(ex);
             // show the message
-            logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, message={})",
+            logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (class={}, error code={}, SQL state={}, message={})",
                          connectInfo.getSchema(),
                          ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
                          nrOccurrences,
+                         ex.getClass().getName(),
                          ex.getErrorCode(),
                          ex.getSQLState(),
                          ex.getMessage());
@@ -966,14 +997,23 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
                         .forEach(e -> {
                                 final Properties key = (Properties) e.getKey();
-                                final String errorCode = key.getProperty("error code");
-                                final String SQLState = key.getProperty("SQL state");
-                                
-                                logger.warn("{}{} occurrences for (error code={}, SQL state={})",
-                                               prefix,
-                                               e.getValue(),
-                                               errorCode,
-                                               SQLState);
+                                final String className = key.getProperty(PoolDataSourceStatistics.EXCEPTION_CLASS_NAME);
+                                final String SQLErrorCode = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_ERROR_CODE);
+                                final String SQLState = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_STATE);
+
+                                if (SQLErrorCode == null || SQLState == null) {
+                                    logger.warn("{}{} occurrences for (class={})",
+                                                prefix,
+                                                e.getValue(),
+                                                className);
+                                } else {
+                                    logger.warn("{}{} occurrences for (class={}, error code={}, SQL state={})",
+                                                prefix,
+                                                e.getValue(),
+                                                className,
+                                                SQLErrorCode,
+                                                SQLState);
+                                }
                             });
                 }
             }
