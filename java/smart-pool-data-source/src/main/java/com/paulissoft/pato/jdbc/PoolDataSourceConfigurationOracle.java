@@ -16,36 +16,49 @@ import lombok.ToString;
 @Component
 public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfiguration {
 
+    // Spring properties
+    @Value("${spring.datasource.ucp.initial-pool-size}")
+    private int initialPoolSize;
+
+    @Value("${spring.datasource.ucp.min-pool-size}")
+    private int minPoolSize;
+
+    @Value("${spring.datasource.ucp.max-pool-size}")
+    private int maxPoolSize;
+    
+    @Value("${spring.datasource.ucp.connection-factory-class-name}")
+    private String connectionFactoryClassName;
+
     @Value("${spring.datasource.ucp.validate-connection-on-borrow}")
-    private String validateConnectionOnBorrow;
+    private boolean validateConnectionOnBorrow;
 
     @Value("${spring.datasource.ucp.connection-pool-name}")
     private String connectionPoolName;
 
     @Value("${spring.datasource.ucp.abandoned-connection-timeout}")
-    private String abandonedConnectionTimeout;
+    private int abandonedConnectionTimeout;
 
     @Value("${spring.datasource.ucp.time-to-live-connection-timeout}")
-    private String timeToLiveConnectionTimeout;
+    private int timeToLiveConnectionTimeout;
 
     @Value("${spring.datasource.ucp.inactive-connection-timeout}")
-    private String inactiveConnectionTimeout;
+    private int inactiveConnectionTimeout;
 
     @Value("${spring.datasource.ucp.timeout-check-interval}")
-    private String timeoutCheckInterval;
+    private int timeoutCheckInterval;
 
     @Value("${spring.datasource.ucp.max-statements}")
-    private String maxStatements;
+    private int maxStatements;
 
     @Value("${spring.datasource.ucp.connection-wait-timeout}")
-    private String connectionWaitTimeout;
+    private int connectionWaitTimeout;
 
     @Value("${spring.datasource.ucp.maxconnection-reuse-time}")
-    private String maxConnectionReuseTime;
+    private int maxConnectionReuseTime;
 
     @Value("${spring.datasource.ucp.seconds-to-trust-idle-connection}")
-    private String secondsToTrustIdleConnection;
+    private int secondsToTrustIdleConnection;
 
     @Value("${spring.datasource.ucp.connection-validation-timeout}")
-    private String connectionValidationTimeout;
+    private int connectionValidationTimeout;
 }

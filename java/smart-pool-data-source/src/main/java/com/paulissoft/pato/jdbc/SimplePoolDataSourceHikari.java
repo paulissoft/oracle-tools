@@ -172,15 +172,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                 break;
                 
             case CONNECTION_FACTORY_CLASS_NAME:
-                try {
-                    if (DataSource.class.isAssignableFrom(Class.forName((String)value))) {
-                        setDataSourceClassName((String)value);
-                    } else if (Driver.class.isAssignableFrom(Class.forName((String)value))) {
-                        setDriverClassName((String)value);
-                    }
-                } catch(ClassNotFoundException ex) {
-                    ; // ignore
-                }
+                setConnectionFactoryClassName((String)value);
                 break;
                 
             case URL:
@@ -257,6 +249,22 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         }
     }
         
+    public void setUrl(String url) {
+        setJdbcUrl(url);
+    }
+
+    public void setConnectionFactoryClassName(String value) {
+        try {
+            if (DataSource.class.isAssignableFrom(Class.forName(value))) {
+                setDataSourceClassName(value);
+            } else if (Driver.class.isAssignableFrom(Class.forName(value))) {
+                setDriverClassName(value);
+            }
+        } catch(ClassNotFoundException ex) {
+            ; // ignore
+        }
+    }
+
     // HikariCP does NOT know of an initial pool size
     public int getInitialPoolSize() {
         return -1;
