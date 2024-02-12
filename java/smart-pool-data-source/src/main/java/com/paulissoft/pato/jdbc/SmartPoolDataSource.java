@@ -38,13 +38,13 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private static Method loggerDebug;
 
-    private static Hashtable<String, Object> commonDataSourceStatisticsGrandTotal = new Hashtable<>();
+    private static final Hashtable<String, Object> commonDataSourceStatisticsGrandTotal = new Hashtable<>();
 
-    private static ConcurrentHashMap<Hashtable<String, Object>, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Hashtable<String, Object>, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<Hashtable<String, Object>, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Hashtable<String, Object>, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<Hashtable<String, Object>, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+    private static final ConcurrentHashMap<Hashtable<String, Object>, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
@@ -76,7 +76,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     @Getter(AccessLevel.PACKAGE)
     private SimplePoolDataSource commonPoolDataSource = null;
 
-    private SimplePoolDataSource pds = null;
+    private SimplePoolDataSource pds = null; // may be equal to commonPoolDataSource
 
     @Getter
     @Setter
@@ -94,14 +94,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private ConnectInfo connectInfo;
 
     // Same common properties for a pool data source in constructor: same commonPoolDataSource
-    private Hashtable<String, Object> commonDataSourceProperties = new Hashtable<String, Object>();
+    private final Hashtable<String, Object> commonDataSourceProperties = new Hashtable<String, Object>();
 
     // Same as commonDataSourceProperties, i.e. total per common pool data source.
-    private Hashtable<String, Object> commonDataSourceStatisticsTotal = new Hashtable<String, Object>();
+    private final Hashtable<String, Object> commonDataSourceStatisticsTotal = new Hashtable<String, Object>();
 
     // Same as commonDataSourceProperties including current schema and password,
     // only for connection info like elapsed time, open/close sessions.
-    private Hashtable<String, Object> commonDataSourceStatistics = new Hashtable<String, Object>();
+    private final Hashtable<String, Object> commonDataSourceStatistics = new Hashtable<String, Object>();
 
     /**
      * Initialize a pool data source.
@@ -149,7 +149,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         
         printDataSourceStatistics(pds, logger);
 
-        this.commonDataSourceProperties.putAll(pds.getProperties());
+        commonDataSourceProperties.clear();
+        commonDataSourceProperties.putAll(pds.getProperties());
 
         checkPropertyNotNull(CLASS);
         checkPropertyNotNull(URL);
@@ -161,7 +162,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         checkPropertyNull(MIN_POOL_SIZE);
         checkPropertyNull(MAX_POOL_SIZE);
 
-        // Now we have to adjust this.commonDataSourceProperties and this.username
+        // Now we have to adjust commonDataSourceProperties and username
         // given username/singleSessionProxyModel/useFixedUsernamePassword.
         //
         // Some observations:
@@ -182,46 +183,42 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         if (useFixedUsernamePassword) {
             // case A
-            setProperty(this.commonDataSourceProperties,
-                        USERNAME,
-                        ( !singleSessionProxyModel && connectInfo.getProxyUsername() != null ?
-                          connectInfo.getProxyUsername() /* case 3 */ :
-                          connectInfo.getUsername() /* case 1 & 2 */ ));
-            setProperty(this.commonDataSourceProperties, PASSWORD, connectInfo.getPassword());
+            setProperty(commonDataSourceProperties, USERNAME, connectInfo.getUsernameToConnectTo());
+            setProperty(commonDataSourceProperties, PASSWORD, connectInfo.getPassword());
         }
 
-        this.commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
+        commonPoolDataSource = poolDataSources.computeIfAbsent(commonDataSourceProperties, s -> pds);
 
-        assert(this.commonPoolDataSource != null);
+        assert(commonPoolDataSource != null);
         
-        this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
+        currentPoolCount.computeIfAbsent(commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
 
         // The statistics are measured per original data source and per total.
         // Total is just a copy.
-        this.commonDataSourceStatisticsTotal = this.commonDataSourceProperties;
+        commonDataSourceStatisticsTotal.clear();
+        commonDataSourceStatisticsTotal.putAll(commonDataSourceProperties);
 
         // Per original data source, hence we include the username / password.
-        this.commonDataSourceStatistics.putAll(commonDataSourceProperties);
-        setProperty(this.commonDataSourceStatistics, USERNAME, username);
-        setProperty(this.commonDataSourceStatistics, PASSWORD, password);        
+        commonDataSourceStatistics.clear();
+        commonDataSourceStatistics.putAll(commonDataSourceProperties);
+        setProperty(commonDataSourceStatistics, USERNAME, username);
+        setProperty(commonDataSourceStatistics, PASSWORD, password);        
 
         // add totals if not already existent
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsGrandTotal, s -> new PoolDataSourceStatistics());
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsTotal, s -> new PoolDataSourceStatistics());
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new PoolDataSourceStatistics());
+        allDataSourceStatistics.computeIfAbsent(commonDataSourceStatisticsGrandTotal, s -> new PoolDataSourceStatistics());
+        allDataSourceStatistics.computeIfAbsent(commonDataSourceStatisticsTotal, s -> new PoolDataSourceStatistics());
+        allDataSourceStatistics.computeIfAbsent(commonDataSourceStatistics, s -> new PoolDataSourceStatistics());
 
         // update pool sizes and default username / password when the pool data source is added to an existing
-        synchronized (this.commonPoolDataSource) {
+        synchronized (commonPoolDataSource) {
             // Set new username/password combination of common data source before
             // you augment pool size(s) since that may trigger getConnection() calls.
 
             // See observations above.
-            commonPoolDataSource.setUsername(( !singleSessionProxyModel && connectInfo.getProxyUsername() != null ?
-                                               connectInfo.getProxyUsername() /* case 3 */ :
-                                               connectInfo.getUsername() /* case 1 & 2 */ ));
+            commonPoolDataSource.setUsername(connectInfo.getUsernameToConnectTo());
             commonPoolDataSource.setPassword(connectInfo.getPassword());
 
-            if (this.commonPoolDataSource == pds) {
+            if (commonPoolDataSource == pds) {
                 commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
                 logger.debug("common pool sizes: initial/minimum/maximum: {}/{}/{}",
                              commonPoolDataSource.getInitialPoolSize(),
@@ -282,9 +279,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             logger.debug("Common pool name: {}", commonPoolDataSource.getPoolName());
         }
 
-        printDataSourceStatistics(this.commonPoolDataSource, logger);
+        printDataSourceStatistics(commonPoolDataSource, logger);
 
-        final boolean result = (this.commonPoolDataSource == pds);
+        final boolean result = (commonPoolDataSource == pds);
             
         logger.debug("<join()");
     }
@@ -362,21 +359,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     public Connection getConnection() throws SQLException {
         Connection conn;
         
-        if (singleSessionProxyModel || connectInfo.getProxyUsername() == null) {
-            conn = getConnectionSimple(this.connectInfo.getUsername(),
-                                       this.connectInfo.getPassword(),
-                                       this.connectInfo.getSchema(),
-                                       this.connectInfo.getProxyUsername(),
-                                       statisticsEnabled,
-                                       true);
-        } else {
-            conn = getConnectionSmart(this.connectInfo.getUsername(),
-                                      this.connectInfo.getPassword(),
-                                      this.connectInfo.getSchema(),
-                                      this.connectInfo.getProxyUsername(),
-                                      statisticsEnabled,
-                                      true);
-        }
+        conn = getConnection(this.connectInfo.getUsernameToConnectTo(),
+                             this.connectInfo.getPassword(),
+                             this.connectInfo.getSchema(),
+                             this.connectInfo.getProxyUsername(),
+                             statisticsEnabled,
+                             true);
 
         logger.debug("getConnection() = {}", conn);
 
@@ -388,21 +376,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         final ConnectInfo connectInfo = new ConnectInfo(username, password);
         Connection conn;
 
-        if (singleSessionProxyModel || connectInfo.getProxyUsername() == null) {
-            conn = getConnectionSimple(connectInfo.getUsername(),
-                                       connectInfo.getPassword(),
-                                       connectInfo.getSchema(),
-                                       connectInfo.getProxyUsername(),
-                                       statisticsEnabled,
-                                       true);
-        } else {
-            conn = getConnectionSmart(connectInfo.getUsername(),
-                                      connectInfo.getPassword(),
-                                      connectInfo.getSchema(),
-                                      connectInfo.getProxyUsername(),
-                                      statisticsEnabled,
-                                      true);
-        }
+        conn = getConnection(connectInfo.getUsernameToConnectTo(),
+                             connectInfo.getPassword(),
+                             connectInfo.getSchema(),
+                             connectInfo.getProxyUsername(),
+                             statisticsEnabled,
+                             true);
 
         logger.debug("getConnection(username={}) = {}", username, conn);
 
@@ -410,14 +389,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     }
 
     // one may override this one
-    protected Connection getConnectionSimple(final String username,
-                                             final String password,
-                                             final String schema,
-                                             final String proxyUsername,
-                                             final boolean updateStatistics,
-                                             final boolean showStatistics) throws SQLException {
-        logger.debug(">getConnectionSimple(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
-                     username,
+    protected Connection getConnection(final String usernameToConnectTo,
+                                       final String password,
+                                       final String schema,
+                                       final String proxyUsername,
+                                       final boolean updateStatistics,
+                                       final boolean showStatistics) throws SQLException {
+        logger.debug(">getConnection(usernameToConnectTo={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+                     usernameToConnectTo,
                      schema,
                      proxyUsername,
                      updateStatistics,
@@ -431,10 +410,29 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 conn = commonPoolDataSource.getConnection();
             } else {
                 // see observations in constructor
-                conn = commonPoolDataSource.getConnection(( !singleSessionProxyModel && proxyUsername != null ?
-                                                            proxyUsername /* case 3 */ :
-                                                            username /* case 1 & 2 */ ),
-                                                          password);
+                conn = commonPoolDataSource.getConnection(usernameToConnectTo, password);
+            }
+
+            // if the current schema is not the requested schema try to open/close the proxy session
+            if (!conn.getSchema().equalsIgnoreCase(schema)) {
+                OracleConnection oraConn = null;
+            
+                try {
+                    if (conn.isWrapperFor(OracleConnection.class)) {
+                        oraConn = conn.unwrap(OracleConnection.class);
+                    }
+                } catch (SQLException ex) {
+                    oraConn = null;
+                }
+
+                if (oraConn != null) {
+                    if (oraConn.isProxySession()) {
+                        closeProxySession(oraConn);
+                    }
+                    if (proxyUsername != null) {
+                        openProxySession(oraConn, proxyUsername);
+                    }
+                }
             }
 
             showConnection(conn);
@@ -447,195 +445,31 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
             }
 
-            logger.debug("<getConnectionSimple() = {}", conn);
+            logger.debug("<getConnection() = {}", conn);
         
             return conn;
         } catch (SQLException ex) {
             signalSQLException(ex);
-            logger.debug("<getConnectionSimple()");
+            logger.debug("<getConnection()");
             throw ex;
         } catch (Exception ex) {
             signalException(ex);
-            logger.debug("<getConnectionSimple()");
+            logger.debug("<getConnection()");
             throw ex;
         }        
     }    
 
-    /**
-     * Get a connection in a smart way for proxy sessions.
-     *
-     * Retrieve a connection from the pool until one of the following conditions occurs:
-     * 1. there is a last connection and the operation timed out (not(now &lt; doNotConnectAfter))
-     * 2. there is a last connection and there are no more idle connections
-     * 3. the last connection retrieved has the same current schema as the requested schema
-     *
-     * In situation 1 or 2 the best other candidate is chosen. Best in terms of current schema equal
-     * to the username and not another proxy schema.
-     *
-     */
-    protected Connection getConnectionSmart(final String username,
-                                            final String password,
-                                            final String schema,
-                                            final String proxyUsername,
-                                            final boolean updateStatistics,
-                                            final boolean showStatistics) throws SQLException {
-        try {
-            logger.debug(">getConnectionSmart(username={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
-                         username,
-                         schema,
-                         proxyUsername,
-                         updateStatistics,
-                         showStatistics);
-        
-            assert(schema != null);
-            assert(!singleSessionProxyModel);
-            assert(proxyUsername != null);
+    private static void openProxySession(final OracleConnection oraConn, final String schema) throws SQLException {
+        final Properties proxyProperties = new Properties();
 
-            final Instant t1 = Instant.now();
-            final Instant doNotConnectAfter = t1.plusMillis(getConnectionTimeout());
-            Connection connOK = commonPoolDataSource.getConnection();
-            OracleConnection oraConnOK = connOK.unwrap(OracleConnection.class);
-            int costOK = determineCost(connOK, oraConnOK, schema);
-            int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
-            final Instant t2 = Instant.now();
+        proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
+        proxyProperties.setProperty(OracleConnection.CONNECTION_PROPERTY_PROXY_CLIENT_NAME, schema);
 
-            if (costOK != 0) {
-                // =============================================================================================
-                // The first connection above is there because then:
-                // - we can measure the time elapsed for the first part of the proxy connection.
-                // - we need not define the variables (especiall ArrayList) below and thus save some CPU cycles.
-                // =============================================================================================
-                Connection conn = connOK;
-                OracleConnection oraConn = oraConnOK;
-                int cost = costOK;
-                int nrGetConnectionsLeft = getCurrentPoolCount();
-            
-                assert(nrGetConnectionsLeft > 0); // at least this instance needs to be part of it
-            
-                final ArrayList<Connection> connectionsNotOK = new ArrayList<>(nrGetConnectionsLeft);
-
-                try {
-                    /**/                                                 // reasons to stop searching:
-                    while (costOK != 0 &&                                // 1 - cost 0 is optimal
-                           nrGetConnectionsLeft-- > 0 &&                 // 2 - we try just a few times
-                           getIdleConnections() > 0 &&                   // 3 - when there no idle connections we stop as well,
-                                                                         //     otherwise it may take too much time
-                           Instant.now().isBefore(doNotConnectAfter)) {  // 4 - the accumulated elapsed time is more
-                                                                         //     than we agreed upon for 1 logical connection
-                        conn = commonPoolDataSource.getConnection();
-                        oraConn = conn.unwrap(OracleConnection.class);
-                        cost = determineCost(conn, oraConn, schema);
-
-                        if (cost < costOK) {
-                            // fount a lower cost: switch places
-                            connectionsNotOK.add(connOK);
-                            connOK = conn;
-                            oraConnOK = oraConn;
-                            costOK = cost;
-                        } else {
-                            connectionsNotOK.add(conn);
-                        }
-                    }
-
-                    assert(connOK != null);
-
-                    // connOK should not be in the list
-                    assert(!connectionsNotOK.remove(connOK));
-
-                    logicalConnectionCountProxy = connectionsNotOK.size();
-
-                    logger.debug("tried {} connections before finding one that meets the criteria",
-                                 logicalConnectionCountProxy);
-                } finally {
-                    // (soft) close all connections that are not optimal
-                    connectionsNotOK.stream().forEach(c -> {
-                            try {
-                                c.close();
-                            } catch (SQLException ex) {
-                                ; // ignore
-                            }
-                        });
-                }
-            }
-
-            showConnection(connOK);
-
-            if (costOK == 0) {
-                logger.debug("no need to close/open a proxy session since the current schema is the requested schema");
-            } else {
-                if (costOK == 2) {
-                    logger.debug("closing proxy session since the current schema is not the requested schema");
-                
-                    logger.debug("current schema before = {}", oraConnOK.getCurrentSchema());
-
-                    oraConnOK.close(OracleConnection.PROXY_SESSION);
-                    closeProxySessionCount++;
-                }        
-
-                // set up proxy session
-                Properties proxyProperties = new Properties();
-            
-                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
-
-                logger.debug("opening proxy session");
-
-                oraConnOK.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
-                connOK.setSchema(schema);
-                openProxySessionCount++;
-
-                logger.debug("current schema after = {}", oraConnOK.getCurrentSchema());
-            }
-
-            showConnection(connOK);
-
-            logger.debug("current schema: {}; schema: {}", connOK.getSchema(), schema);
-
-            assert(connOK.getSchema().equalsIgnoreCase(schema));
-
-            if (updateStatistics) {
-                updateStatistics(connOK,
-                                 Duration.between(t1, t2).toMillis(),
-                                 Duration.between(t2, Instant.now()).toMillis(),
-                                 showStatistics,
-                                 logicalConnectionCountProxy,
-                                 openProxySessionCount,
-                                 closeProxySessionCount);
-            }
-
-            logger.debug("<getConnectionSmart() = {}", connOK);
-
-            return connOK;
-        } catch (SQLException ex) {
-            signalSQLException(ex);
-            logger.debug("<getConnectionSmart()");
-            throw ex;
-        } catch (Exception ex) {
-            signalException(ex);
-            logger.debug("<getConnectionSmart()");
-            throw ex;
-        }
+        oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
     }
 
-    private int determineCost(final Connection conn, final OracleConnection oraConn, final String schema) throws SQLException {
-        final String currentSchema = conn.getSchema();        
-        int cost;
-            
-        if (schema != null && currentSchema != null && schema.equalsIgnoreCase(currentSchema)) {
-            cost = 0;
-        } else {
-            // if not a proxy session only oraConn.openProxySession() must be invoked
-            // otherwise oraConn.close(OracleConnection.PROXY_SESSION) must be invoked as well
-            // hence more expensive.
-            cost = (!oraConn.isProxySession() ? 1 : 2);
-        }
-
-        logger.debug("determineCost(currentSchema={}, isProxySession={}, schema={}) = {}",
-                     currentSchema,
-                     oraConn.isProxySession(),
-                     schema,
-                     cost);
-        
-        return cost;
+    private static void closeProxySession(final OracleConnection oraConn) throws SQLException {
+        oraConn.close(OracleConnection.PROXY_SESSION);
     }
 
     protected void showConnection(final Connection conn) throws SQLException {
@@ -1094,6 +928,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                          this.username,
                          this.proxyUsername,
                          this.schema);
+        }
+
+        public String getUsernameToConnectTo() {
+            return !singleSessionProxyModel && connectInfo.getProxyUsername() != null ?
+                connectInfo.getProxyUsername() /* case 3 */ :
+                connectInfo.getUsername() /* case 1 & 2 */;
         }
     }    
 }
