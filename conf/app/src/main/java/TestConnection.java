@@ -102,7 +102,7 @@ public class TestConnection {
         }
     }
 
-    private static void connect() throws SQLException {
+    private static void connect(final Boolean openProxySessionIfApplicable) throws SQLException {
         final Properties properties = new Properties();
         
         properties.put(OracleConnection.CONNECTION_PROPERTY_USER_NAME, dbUsername);
@@ -123,10 +123,10 @@ public class TestConnection {
 
         connection = (OracleConnection) ods.getConnection();
 
-        if (!(dbProxyClientName == null || dbProxyClientName.equals(""))) {
-            if (!isDbSingleSessionProxyModel()) {
-                openProxySession(dbProxyClientName);
-            }
+        if (openProxySessionIfApplicable &&
+            !(dbProxyClientName == null || dbProxyClientName.equals("")) &&
+            !isDbSingleSessionProxyModel()) {
+            openProxySession(dbProxyClientName);
         }
     }
 
@@ -160,7 +160,7 @@ public class TestConnection {
                 
                 switch (method) {
                 case 0:
-                    connect();
+                    connect(false);
                     break;
                     
                 case 1:
@@ -233,7 +233,7 @@ public class TestConnection {
                         dbProxyClientName = question("proxy client name");
                     }
                     if (choice == 1) {
-                        connect();
+                        connect(true);
                     } else {
                         benchmark();
                     }
@@ -298,7 +298,7 @@ public class TestConnection {
         dbUsername = args[1];
         dbPassword = args[2];
 
-        connect();
+        connect(true);
 
         showConnectionInfo();
         
