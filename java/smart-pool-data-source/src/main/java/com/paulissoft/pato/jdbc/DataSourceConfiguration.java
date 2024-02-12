@@ -25,8 +25,12 @@ public class DataSourceConfiguration {
 
     @Value("${spring.datasource.username}")
     private String username;
-
+    
     @ToString.Exclude
     @Value("${spring.datasource.password}")
     private String password;
+
+    @Value("${spring.datasource.type}")
+    private String type;
+
 }
