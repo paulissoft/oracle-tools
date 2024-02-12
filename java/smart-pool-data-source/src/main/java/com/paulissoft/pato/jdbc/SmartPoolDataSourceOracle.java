@@ -14,26 +14,6 @@ import org.slf4j.LoggerFactory;
 public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements PoolDataSource {
     // static stuff
 
-    public static final String VALIDATE_CONNECTION_ON_BORROW = "validateConnectionOnBorrow";
-    
-    public static final String ABANDONED_CONNECTION_TIMEOUT = "abandonedConnectionTimeout";
-    
-    public static final String TIME_TO_LIVE_CONNECTION_TIMEOUT = "timeToLiveConnectionTimeout";
-    
-    public static final String INACTIVE_CONNECTION_TIMEOUT = "inactiveConnectionTimeout";
-    
-    public static final String TIMEOUT_CHECK_INTERVAL = "timeoutCheckInterval";
-    
-    public static final String MAX_STATEMENTS = "maxStatements";
-    
-    public static final String CONNECTION_WAIT_TIMEOUT = "connectionWaitTimeout";
-    
-    public static final String MAX_CONNECTION_REUSE_TIME = "maxConnectionReuseTime";
-    
-    public static final String SECONDS_TO_TRUST_IDLE_CONNECTION = "secondsToTrustIdleConnection";
-    
-    public static final String CONNECTION_VALIDATION_TIMEOUT = "connectionValidationTimeout";
-
     private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSourceOracle.class);
 
     static {
@@ -51,13 +31,13 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         return ((PoolDataSource)getCommonPoolDataSource());
     }
     
-    public SmartPoolDataSourceOracle(final PoolDataSource pds,
+    public SmartPoolDataSourceOracle(final SimplePoolDataSourceOracle pds,
                                      final String username,
                                      final String password) throws SQLException {
         this(pds, username, password, true, false);        
     }
 
-    private SmartPoolDataSourceOracle(final PoolDataSource pds,
+    private SmartPoolDataSourceOracle(final SimplePoolDataSourceOracle pds,
                                       final String username,
                                       final String password,
                                       final boolean singleSessionProxyModel,
@@ -65,148 +45,7 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         super(pds, username, password, singleSessionProxyModel, useFixedUsernamePassword);
     }
     
-    protected Properties determineCommonDataSourceProperties(final DataSource pds) {
-        final Properties commonDataSourceProperties = new Properties();
-        final PoolDataSource poolDataSourceOracle = (PoolDataSource)pds;    
-        
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.CLASS, poolDataSourceOracle.getClass().getName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SmartPoolDataSource.URL, poolDataSourceOracle.getURL());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties,
-                                        SmartPoolDataSource.CONNECTION_FACTORY_CLASS_NAME,
-                                        poolDataSourceOracle.getConnectionFactoryClassName());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, VALIDATE_CONNECTION_ON_BORROW, poolDataSourceOracle.getValidateConnectionOnBorrow());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, ABANDONED_CONNECTION_TIMEOUT, poolDataSourceOracle.getAbandonedConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIME_TO_LIVE_CONNECTION_TIMEOUT, poolDataSourceOracle.getTimeToLiveConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, INACTIVE_CONNECTION_TIMEOUT, poolDataSourceOracle.getInactiveConnectionTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, TIMEOUT_CHECK_INTERVAL, poolDataSourceOracle.getTimeoutCheckInterval());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_STATEMENTS, poolDataSourceOracle.getMaxStatements());
-        // getConnectionWaitTimeout() in oracle.ucp.jdbc.PoolDataSource has been deprecated
-        // SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_WAIT_TIMEOUT, poolDataSourceOracle.getConnectionWaitTimeout());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, MAX_CONNECTION_REUSE_TIME, poolDataSourceOracle.getMaxConnectionReuseTime());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, SECONDS_TO_TRUST_IDLE_CONNECTION, poolDataSourceOracle.getSecondsToTrustIdleConnection());
-        SmartPoolDataSource.setProperty(commonDataSourceProperties, CONNECTION_VALIDATION_TIMEOUT, poolDataSourceOracle.getConnectionValidationTimeout());
-
-        return commonDataSourceProperties;
-    }
-
-    protected void printDataSourceStatistics(final DataSource poolDataSource, final Logger logger) {
-        if (!logger.isDebugEnabled()) {
-            return;
-        }
-        
-        final PoolDataSource poolDataSourceOracle = ((PoolDataSource)poolDataSource);
-        final String prefix = INDENT_PREFIX;
-        
-        logger.debug("configuration pool data source {}:", poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("{}connectionFactoryClassName: {}", prefix, poolDataSourceOracle.getConnectionFactoryClassName());
-        logger.debug("{}URL: {}", prefix, poolDataSourceOracle.getURL());
-        logger.debug("{}user: {}", prefix, poolDataSourceOracle.getUser());
-        logger.debug("{}initialPoolSize={}", prefix, poolDataSourceOracle.getInitialPoolSize());
-        logger.debug("{}minPoolSize={}", prefix, poolDataSourceOracle.getMinPoolSize());
-        logger.debug("{}maxPoolSize={}", prefix, poolDataSourceOracle.getMaxPoolSize());        
-        logger.debug("{}validateConnectionOnBorrow={}", prefix, poolDataSourceOracle.getValidateConnectionOnBorrow());
-        logger.debug("{}connectionPoolName={}", prefix, poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("{}abandonedConnectionTimeout={}", prefix, poolDataSourceOracle.getAbandonedConnectionTimeout());
-        logger.debug("{}timeToLiveConnectionTimeout={}", prefix, poolDataSourceOracle.getTimeToLiveConnectionTimeout());
-        logger.debug("{}inactiveConnectionTimeout={}", prefix, poolDataSourceOracle.getInactiveConnectionTimeout());
-        logger.debug("{}timeoutCheckInterval={}", prefix, poolDataSourceOracle.getTimeoutCheckInterval());
-        logger.debug("{}maxStatements={}", prefix, poolDataSourceOracle.getMaxStatements());
-        logger.debug("{}connectionWaitTimeout={}", prefix, poolDataSourceOracle.getConnectionWaitTimeout());
-        logger.debug("{}maxConnectionReuseTime={}", prefix, poolDataSourceOracle.getMaxConnectionReuseTime());
-        logger.debug("{}secondsToTrustIdleConnection={}", prefix, poolDataSourceOracle.getSecondsToTrustIdleConnection());
-        logger.debug("{}connectionValidationTimeout={}", prefix, poolDataSourceOracle.getConnectionValidationTimeout());
-
-        logger.debug("connections pool data source {}:", poolDataSourceOracle.getConnectionPoolName());
-        logger.debug("{}total: {}", prefix, getTotalConnections(poolDataSourceOracle));
-        logger.debug("{}active: {}", prefix, getActiveConnections(poolDataSourceOracle));
-        logger.debug("{}idle: {}", prefix, getIdleConnections(poolDataSourceOracle));
-    }
-
     protected String getPoolNamePrefix() {
         return "OraclePool";
-    }
-    
-    public String getPoolName() {
-        return getConnectionPoolName();
-    }
-
-    protected String getPoolName(DataSource pds) {
-        return ((PoolDataSource)pds).getConnectionPoolName();
-    }
-    
-    public void setPoolName(String poolName) throws SQLException {
-        setConnectionPoolName(poolName);
-    }
-    
-    protected void setPoolName(DataSource pds, String poolName) throws SQLException {
-        ((PoolDataSource)pds).setConnectionPoolName(poolName);
-    }
-
-    public void setUsername(String username) throws SQLException {
-        setUser(username);
-    }
-
-    protected int getInitialPoolSize(DataSource pds) {
-        return ((PoolDataSource)pds).getInitialPoolSize();
-    }
-
-    public int getMinimumPoolSize() {
-        return getMinPoolSize();
-    }
-
-    protected int getMinimumPoolSize(DataSource pds) {
-        return ((PoolDataSource)pds).getMinPoolSize();
-    }
-
-    public void setMinimumPoolSize(int minimumPoolSize) throws SQLException {
-        setMinPoolSize(minimumPoolSize);
-    }
-
-    public int getMaximumPoolSize() {
-        return getMaxPoolSize();
-    }
-
-    protected int getMaximumPoolSize(DataSource pds) {
-        return ((PoolDataSource)pds).getMaxPoolSize();
-    }
-
-    public void setMaximumPoolSize(int maximumPoolSize) throws SQLException {
-        setMaxPoolSize(maximumPoolSize);
-    }
-
-    public long getConnectionTimeout() {
-        return 1000 * getConnectionWaitTimeout();
-    }
-
-    public int getActiveConnections() {
-        return getActiveConnections(getCommonPoolDataSourceOracle());
-    }
-
-    private static int getActiveConnections(final PoolDataSource poolDataSource) {
-        try {
-            return poolDataSource.getBorrowedConnectionsCount();
-        } catch (SQLException ex) {
-            throw new RuntimeException(ex.getMessage());
-        }
-    }
-
-    public int getIdleConnections() {
-        return getIdleConnections(getCommonPoolDataSourceOracle());
-    }
-
-    private static int getIdleConnections(final PoolDataSource poolDataSource) {
-        try {
-            return poolDataSource.getAvailableConnectionsCount();
-        } catch (SQLException ex) {
-            throw new RuntimeException(ex.getMessage());
-        }
-    }
-
-    public int getTotalConnections() {
-        return getTotalConnections(getCommonPoolDataSourceOracle());
-    }
-
-    private static int getTotalConnections(final PoolDataSource poolDataSource) {
-        return getActiveConnections(poolDataSource) + getIdleConnections(poolDataSource);
-    }
+    }    
 }

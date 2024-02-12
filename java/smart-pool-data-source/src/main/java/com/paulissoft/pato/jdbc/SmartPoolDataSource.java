@@ -18,39 +18,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Hashtable;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.sql.DataSource;
 import lombok.experimental.Delegate;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.AccessLevel;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 public abstract class SmartPoolDataSource implements SimplePoolDataSource {
-
-    public static final String CLASS = "class";
-
-    public static final String CONNECTION_FACTORY_CLASS_NAME = "connectionFactoryClassName";
-        
-    public static final String URL = "url";
-
-    public static final String USERNAME = "username";
-    
-    public static final String PASSWORD = "password";
-    
-    public static final String POOL_NAME = "poolName";
-
-    public static final String INITIAL_POOL_SIZE = "initialPoolSize";
-
-    public static final String MINIMUM_POOL_SIZE = "minimumPoolSize";
-
-    public static final String MAXIMUM_POOL_SIZE = "maximumPoolSize";
 
     public static final String INDENT_PREFIX = "* ";
 
@@ -64,13 +46,13 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private static Method loggerDebug;
 
-    private static Properties commonDataSourceStatisticsGrandTotal = new Properties();
+    private static Hashtable<String, Object> commonDataSourceStatisticsGrandTotal = new Hashtable<>();
 
-    private static ConcurrentHashMap<Properties, MyDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Hashtable<String, Object>, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<Properties, DataSource> dataSources = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Hashtable<String, Object>, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<Properties, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+    private static ConcurrentHashMap<Hashtable<String, Object>, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
@@ -99,20 +81,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     }
     
     @Delegate(excludes=Overrides.class)
-    protected DataSource getCommonPoolDataSource() {
-        if (commonPoolDataSource == null) {
-            try {
-                init();
-            } catch (SQLException ex) {
-                throw new RuntimeException(ex.getMessage());
-            }
-        }
-        return commonPoolDataSource;
-    }
+    @Getter(AccessLevel.PACKAGE)
+    private SimplePoolDataSource commonPoolDataSource = null;
 
-    private static CopyOnWriteArrayList<DataSource> poolDataSources = new CopyOnWriteArrayList<>();
-    
-    private DataSource commonPoolDataSource = null;
+    private SimplePoolDataSource pds = null;
 
     @Getter
     @Setter
@@ -130,14 +102,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private ConnectInfo connectInfo;
 
     // Same common properties for a pool data source in constructor: same commonPoolDataSource
-    private Properties commonDataSourceProperties = new Properties();
+    private Hashtable<String, Object> commonDataSourceProperties = new Hashtable<String, Object>();
 
     // Same as commonDataSourceProperties, i.e. total per common pool data source.
-    private Properties commonDataSourceStatisticsTotal = new Properties();
+    private Hashtable<String, Object> commonDataSourceStatisticsTotal = new Hashtable<String, Object>();
 
     // Same as commonDataSourceProperties including current schema and password,
     // only for connection info like elapsed time, open/close sessions.
-    private Properties commonDataSourceStatistics = new Properties();
+    private Hashtable<String, Object> commonDataSourceStatistics = new Hashtable<String, Object>();
 
     /**
      * Initialize a pool data source.
@@ -152,47 +124,30 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      * @param singleSessionProxyModel
      * @param useFixedUsernamePassword    Only use commonPoolDataSource.getConnection(), never commonPoolDataSource.getConnection(username, password)
      */
-    protected SmartPoolDataSource(final DataSource pds,
+    protected SmartPoolDataSource(final SimplePoolDataSource pds,
                                   final String username,
                                   final String password,
                                   final boolean singleSessionProxyModel,
                                   final boolean useFixedUsernamePassword) throws SQLException {
         assert(pds != null);
-        
-        poolDataSources.add(pds);
+
+        this.pds = pds;
         this.connectInfo = new ConnectInfo(username, password);
         this.singleSessionProxyModel = singleSessionProxyModel;
         this.useFixedUsernamePassword = useFixedUsernamePassword;
+
+        join();
     }
     
-    private boolean init() throws SQLException {
-        assert(this.commonPoolDataSource == null);
-
-        boolean result = init(poolDataSources.remove(0));
-
-        assert(this.commonPoolDataSource != null);
-
-        poolDataSources.forEach(pds -> {
-                try {
-                    if (commonPoolDataSource.getClass().getName().equals(pds.getClass().getName())) {
-                        init(pds);
-                    }
-                } catch (SQLException ex) {
-                    ; // ignore
-                }});
-
-        return result;
-    }
-    
-    protected boolean init(final DataSource pds) throws SQLException {
+    protected void join() throws SQLException {
         if (this.commonPoolDataSource != null) {
-            return false;
+            return;
         }
 
         final String username = connectInfo.getUsername();
         final String password = connectInfo.getPassword();
         
-        logger.debug(">init(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
+        logger.debug(">join(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
                      pds,
                      username,
                      singleSessionProxyModel,
@@ -202,7 +157,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         
         printDataSourceStatistics(pds, logger);
 
-        this.commonDataSourceProperties.putAll(determineCommonDataSourceProperties(pds));
+        this.commonDataSourceProperties.putAll(pds.getProperties());
 
         checkPropertyNotNull(CLASS);
         checkPropertyNotNull(URL);
@@ -211,8 +166,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         checkPropertyNull(PASSWORD);
         checkPropertyNull(POOL_NAME);
         checkPropertyNull(INITIAL_POOL_SIZE);
-        checkPropertyNull(MINIMUM_POOL_SIZE);
-        checkPropertyNull(MAXIMUM_POOL_SIZE);
+        checkPropertyNull(MIN_POOL_SIZE);
+        checkPropertyNull(MAX_POOL_SIZE);
 
         // Now we have to adjust this.commonDataSourceProperties and this.username
         // given username/singleSessionProxyModel/useFixedUsernamePassword.
@@ -243,7 +198,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             setProperty(this.commonDataSourceProperties, PASSWORD, connectInfo.getPassword());
         }
 
-        this.commonPoolDataSource = dataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
+        this.commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
 
         assert(this.commonPoolDataSource != null);
         
@@ -259,9 +214,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         setProperty(this.commonDataSourceStatistics, PASSWORD, password);        
 
         // add totals if not already existent
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsGrandTotal, s -> new MyDataSourceStatistics());
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsTotal, s -> new MyDataSourceStatistics());
-        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new MyDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsGrandTotal, s -> new PoolDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatisticsTotal, s -> new PoolDataSourceStatistics());
+        this.allDataSourceStatistics.computeIfAbsent(this.commonDataSourceStatistics, s -> new PoolDataSourceStatistics());
 
         // update pool sizes and default username / password when the pool data source is added to an existing
         synchronized (this.commonPoolDataSource) {
@@ -269,79 +224,77 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             // you augment pool size(s) since that may trigger getConnection() calls.
 
             // See observations above.
-            setUsername(( !singleSessionProxyModel && connectInfo.getProxyUsername() != null ?
-                          connectInfo.getProxyUsername() /* case 3 */ :
-                          connectInfo.getUsername() /* case 1 & 2 */ ));
-            setPassword(connectInfo.getPassword());
+            commonPoolDataSource.setUsername(( !singleSessionProxyModel && connectInfo.getProxyUsername() != null ?
+                                               connectInfo.getProxyUsername() /* case 3 */ :
+                                               connectInfo.getUsername() /* case 1 & 2 */ ));
+            commonPoolDataSource.setPassword(connectInfo.getPassword());
 
             if (this.commonPoolDataSource == pds) {
-                setPoolName(getPoolNamePrefix()); // set the prefix the first time
+                commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
                 logger.debug("common pool sizes: initial/minimum/maximum: {}/{}/{}",
-                             getInitialPoolSize(),
-                             getMinimumPoolSize(),
-                             getMaximumPoolSize());
+                             commonPoolDataSource.getInitialPoolSize(),
+                             commonPoolDataSource.getMinPoolSize(),
+                             commonPoolDataSource.getMaxPoolSize());
             } else {
                 // for debugging purposes
-                if (getPoolName(pds) == null) {
-                    setPoolName(pds, String.valueOf(pds.hashCode()));
+                if (pds.getPoolName() == null) {
+                    pds.setPoolName(String.valueOf(pds.hashCode()));
                 }
                 
                 logger.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                             getInitialPoolSize(),
-                             getMinimumPoolSize(),
-                             getMaximumPoolSize());
+                             commonPoolDataSource.getInitialPoolSize(),
+                             commonPoolDataSource.getMinPoolSize(),
+                             commonPoolDataSource.getMaxPoolSize());
 
                 int oldSize, newSize;
 
-                newSize = getInitialPoolSize(pds);
-                oldSize = getInitialPoolSize();
+                newSize = pds.getInitialPoolSize();
+                oldSize = commonPoolDataSource.getInitialPoolSize();
 
                 logger.debug("initial pool sizes before setting it: old/new: {}/{}",
                              oldSize,
                              newSize);
 
                 if (newSize >= 0) {
-                    setInitialPoolSize(newSize + Integer.max(oldSize, 0));
+                    commonPoolDataSource.setInitialPoolSize(newSize + Integer.max(oldSize, 0));
                 }
 
-                newSize = getMinimumPoolSize(pds);
-                oldSize = getMinimumPoolSize();
+                newSize = pds.getMinPoolSize();
+                oldSize = commonPoolDataSource.getMinPoolSize();
 
                 logger.debug("minimum pool sizes before setting it: old/new: {}/{}",
                              oldSize,
                              newSize);
 
                 if (newSize >= 0) {                
-                    setMinimumPoolSize(newSize + Integer.max(oldSize, 0));
+                    commonPoolDataSource.setMinPoolSize(newSize + Integer.max(oldSize, 0));
                 }
                 
-                newSize = getMaximumPoolSize(pds);
-                oldSize = getMaximumPoolSize();
+                newSize = pds.getMaxPoolSize();
+                oldSize = commonPoolDataSource.getMaxPoolSize();
 
                 logger.debug("maximum pool sizes before setting it: old/new: {}/{}",
                              oldSize,
                              newSize);
 
                 if (newSize >= 0) {
-                    setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
+                    commonPoolDataSource.setMaxPoolSize(newSize + Integer.max(oldSize, 0));
                 }
                 
                 logger.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                            getInitialPoolSize(),
-                            getMinimumPoolSize(),
-                            getMaximumPoolSize());
+                             commonPoolDataSource.getInitialPoolSize(),
+                             commonPoolDataSource.getMinPoolSize(),
+                             commonPoolDataSource.getMaxPoolSize());
             }
-            setPoolName(getPoolName() + "-" + connectInfo.getSchema());
-            logger.debug("Common pool name: {}", getPoolName());
+            commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + "-" + connectInfo.getSchema());
+            logger.debug("Common pool name: {}", commonPoolDataSource.getPoolName());
         }
 
         printDataSourceStatistics(this.commonPoolDataSource, logger);
 
         final boolean result = (this.commonPoolDataSource == pds);
             
-        logger.debug("<init() = {}", result);
-
-        return result;
+        logger.debug("<join()");
     }
 
     private void checkPropertyNull(final String name) {
@@ -362,14 +315,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         }
     }
 
-    protected static void setProperty(final Properties properties,
+    protected static void setProperty(final Hashtable<String, Object> properties,
                                       final String name,
                                       final Object value) {
         if (name != null && value != null) {
             properties.put(name, value);
         }
     }    
-
+    
     public void close() {
         if (done()) {
             commonPoolDataSource = null;
@@ -381,24 +334,24 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         final boolean lastPoolDataSource = currentPoolCount.get(commonDataSourceProperties).decrementAndGet() == 0;
 
         if (statisticsEnabled) {
-            final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-            final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
-            final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+            final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+            final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+            final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
 
-            if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema());
+            if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
+                showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema());
             }
             allDataSourceStatistics.remove(commonDataSourceStatistics);
 
             if (lastPoolDataSource) {
                 // show (grand) totals only when it is the last pool data source
-                showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL);
+                showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL);
                 allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
 
                 // only GrandTotal left?
                 if (allDataSourceStatistics.size() == 1) {                
-                    if (!myDataSourceStatisticsGrandTotal.countersEqual(myDataSourceStatisticsTotal)) {
-                        showDataSourceStatistics(myDataSourceStatisticsGrandTotal, GRAND_TOTAL);
+                    if (!poolDataSourceStatisticsGrandTotal.countersEqual(poolDataSourceStatisticsTotal)) {
+                        showDataSourceStatistics(poolDataSourceStatisticsGrandTotal, GRAND_TOTAL);
                     }
                     allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
                 }
@@ -407,7 +360,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             
         if (lastPoolDataSource) {
             logger.info("Closing pool {}", getPoolName());
-            dataSources.remove(commonDataSourceProperties);
+            poolDataSources.remove(commonDataSourceProperties);
             commonPoolDataSource = null;
         }
 
@@ -744,26 +697,26 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,
                                     final boolean showStatistics) {
-        final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
-        final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
-        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
         final int activeConnections = getActiveConnections();
         final int idleConnections = getIdleConnections();
         final int totalConnections = getTotalConnections();
 
         try {
-            myDataSourceStatisticsGrandTotal.update(conn,
+            poolDataSourceStatisticsGrandTotal.update(conn,
                                                     timeElapsed,
                                                     activeConnections,
                                                     idleConnections,
                                                     totalConnections);
-            myDataSourceStatisticsTotal.update(conn,
+            poolDataSourceStatisticsTotal.update(conn,
                                                timeElapsed,
                                                activeConnections,
                                                idleConnections,
                                                totalConnections);
             // no need for active/idle and total connections because that is counted on common data source level
-            myDataSourceStatistics.update(conn,
+            poolDataSourceStatistics.update(conn,
                                           timeElapsed);
         } catch (Exception e) {
             logger.error("updateStatistics() exception: {}", e.getMessage());
@@ -771,10 +724,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         if (showStatistics) {
             // no need to display same statistics twice (see below for totals)
-            if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema(), timeElapsed, false);
+            if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
+                showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema(), timeElapsed, false);
             }
-            showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL, timeElapsed, false);
+            showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL, timeElapsed, false);
         }
     }
 
@@ -785,24 +738,24 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                     final int logicalConnectionCountProxy,
                                     final int openProxySessionCount,
                                     final int closeProxySessionCount) {
-        final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
-        final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
-        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
 
         try {
-            myDataSourceStatisticsGrandTotal.update(conn,
+            poolDataSourceStatisticsGrandTotal.update(conn,
                                                     timeElapsed,
                                                     timeElapsedProxy,
                                                     logicalConnectionCountProxy,
                                                     openProxySessionCount,
                                                     closeProxySessionCount);
-            myDataSourceStatisticsTotal.update(conn,
+            poolDataSourceStatisticsTotal.update(conn,
                                                timeElapsed,
                                                timeElapsedProxy,
                                                logicalConnectionCountProxy,
                                                openProxySessionCount,
                                                closeProxySessionCount);
-            myDataSourceStatistics.update(conn,
+            poolDataSourceStatistics.update(conn,
                                           timeElapsed,
                                           timeElapsedProxy,
                                           logicalConnectionCountProxy,
@@ -814,23 +767,23 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         if (showStatistics) {
             // no need to display same statistics twice (see below for totals)
-            if (!myDataSourceStatistics.countersEqual(myDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(myDataSourceStatistics, connectInfo.getSchema(), timeElapsed, timeElapsedProxy, false);
+            if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
+                showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema(), timeElapsed, timeElapsedProxy, false);
             }
-            showDataSourceStatistics(myDataSourceStatisticsTotal, TOTAL, timeElapsed, timeElapsedProxy, false);
+            showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL, timeElapsed, timeElapsedProxy, false);
         }
     }
 
     protected void signalSQLException(final SQLException ex) {        
-        final MyDataSourceStatistics myDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
-        final MyDataSourceStatistics myDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
-        final MyDataSourceStatistics myDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
 
         try {
-            final long nrOccurrences = myDataSourceStatisticsGrandTotal.signalSQLException(ex);
+            final long nrOccurrences = poolDataSourceStatisticsGrandTotal.signalSQLException(ex);
             
-            myDataSourceStatisticsTotal.signalSQLException(ex);
-            myDataSourceStatistics.signalSQLException(ex);
+            poolDataSourceStatisticsTotal.signalSQLException(ex);
+            poolDataSourceStatistics.signalSQLException(ex);
             // show the message
             logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, message={})",
                          connectInfo.getSchema(),
@@ -853,32 +806,32 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      * From this it follows that first the connectin is displayed (schema and then TOTAL/GRAND_TOTAL) and
      * next the pool size information (TOTAL only).
      *
-     * @param myDataSourceStatistics  The statistics for a schema (or totals)
+     * @param poolDataSourceStatistics  The statistics for a schema (or totals)
      * @param timeElapsed             The elapsed time
      * @param timeElapsedProxy        The elapsed time for proxy connection (after the connection)
      * @param finalCall               Is this the final call?
      * @param schema                  The schema to display after the pool name
      */
-    private void showDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics,
+    private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
                                           final String schema) {
-        showDataSourceStatistics(myDataSourceStatistics, schema, -1L, -1L, true);
+        showDataSourceStatistics(poolDataSourceStatistics, schema, -1L, -1L, true);
     }
     
-    private void showDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics,
+    private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
                                           final String schema,
                                           final long timeElapsed,
                                           final boolean finalCall) {
-        showDataSourceStatistics(myDataSourceStatistics, schema, timeElapsed, -1L, true);
+        showDataSourceStatistics(poolDataSourceStatistics, schema, timeElapsed, -1L, true);
     }
     
-    private void showDataSourceStatistics(final MyDataSourceStatistics myDataSourceStatistics,
+    private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
                                           final String schema,
                                           final long timeElapsed,
                                           final long timeElapsedProxy,
                                           final boolean finalCall) {
         // Only show the first time a pool has gotten a connection.
         // Not earlier because these (fixed) values may change before and after the first connection.
-        if (myDataSourceStatistics.getLogicalConnectionCount() == 1) {
+        if (poolDataSourceStatistics.getLogicalConnectionCount() == 1) {
             printDataSourceStatistics(commonPoolDataSource, logger);
         }
 
@@ -914,8 +867,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             
                 long val1, val2, val3;
 
-                val1 = myDataSourceStatistics.getPhysicalConnectionCount();
-                val2 = myDataSourceStatistics.getLogicalConnectionCount();
+                val1 = poolDataSourceStatistics.getPhysicalConnectionCount();
+                val2 = poolDataSourceStatistics.getLogicalConnectionCount();
             
                 if (val1 >= 0L && val2 >= 0L) {
                     method.invoke(logger,
@@ -923,9 +876,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                   (Object) new Object[]{ prefix, val1, val2 });
                 }
 
-                val1 = myDataSourceStatistics.getTimeElapsedMin();
-                val2 = myDataSourceStatistics.getTimeElapsedAvg();
-                val3 = myDataSourceStatistics.getTimeElapsedMax();
+                val1 = poolDataSourceStatistics.getTimeElapsedMin();
+                val2 = poolDataSourceStatistics.getTimeElapsedAvg();
+                val3 = poolDataSourceStatistics.getTimeElapsedMax();
 
                 if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                     method.invoke(logger,
@@ -934,9 +887,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 }
             
                 if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
-                    val1 = myDataSourceStatistics.getTimeElapsedProxyMin();
-                    val2 = myDataSourceStatistics.getTimeElapsedProxyAvg();
-                    val3 = myDataSourceStatistics.getTimeElapsedProxyMax();
+                    val1 = poolDataSourceStatistics.getTimeElapsedProxyMin();
+                    val2 = poolDataSourceStatistics.getTimeElapsedProxyAvg();
+                    val3 = poolDataSourceStatistics.getTimeElapsedProxyMax();
 
                     if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                         method.invoke(logger,
@@ -944,9 +897,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
 
-                    val1 = myDataSourceStatistics.getOpenProxySessionCount();
-                    val2 = myDataSourceStatistics.getCloseProxySessionCount();
-                    val3 = myDataSourceStatistics.getLogicalConnectionCountProxy();
+                    val1 = poolDataSourceStatistics.getOpenProxySessionCount();
+                    val2 = poolDataSourceStatistics.getCloseProxySessionCount();
+                    val3 = poolDataSourceStatistics.getLogicalConnectionCountProxy();
                 
                     if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                         method.invoke(logger,
@@ -960,8 +913,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                   "{}initial/min/max pool size: {}/{}/{}",
                                   (Object) new Object[]{ prefix,
                                                          getInitialPoolSize(),
-                                                         getMinimumPoolSize(),
-                                                         getMaximumPoolSize() });
+                                                         getMinPoolSize(),
+                                                         getMaxPoolSize() });
                 }
 
                 if (!finalCall) {
@@ -976,9 +929,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
                 } else {
-                    val1 = myDataSourceStatistics.getActiveConnectionsMin();
-                    val2 = myDataSourceStatistics.getActiveConnectionsAvg();
-                    val3 = myDataSourceStatistics.getActiveConnectionsMax();
+                    val1 = poolDataSourceStatistics.getActiveConnectionsMin();
+                    val2 = poolDataSourceStatistics.getActiveConnectionsAvg();
+                    val3 = poolDataSourceStatistics.getActiveConnectionsMax();
 
                     if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                         method.invoke(logger,
@@ -986,9 +939,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
                     
-                    val1 = myDataSourceStatistics.getIdleConnectionsMin();
-                    val2 = myDataSourceStatistics.getIdleConnectionsAvg();
-                    val3 = myDataSourceStatistics.getIdleConnectionsMax();
+                    val1 = poolDataSourceStatistics.getIdleConnectionsMin();
+                    val2 = poolDataSourceStatistics.getIdleConnectionsAvg();
+                    val3 = poolDataSourceStatistics.getIdleConnectionsMax();
 
                     if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                         method.invoke(logger,
@@ -996,9 +949,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
 
-                    val1 = myDataSourceStatistics.getTotalConnectionsMin();
-                    val2 = myDataSourceStatistics.getTotalConnectionsAvg();
-                    val3 = myDataSourceStatistics.getTotalConnectionsMax();
+                    val1 = poolDataSourceStatistics.getTotalConnectionsMin();
+                    val2 = poolDataSourceStatistics.getTotalConnectionsAvg();
+                    val3 = poolDataSourceStatistics.getTotalConnectionsMax();
 
                     if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
                         method.invoke(logger,
@@ -1010,7 +963,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             // show errors
             if (showErrors) {
-                final Map<Properties, Long> errors = myDataSourceStatistics.getErrors();
+                final Map<Properties, Long> errors = poolDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
                     logger.warn("no SQL exceptions signalled for {}", poolDescription);
@@ -1041,56 +994,30 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         return currentPoolCount.get(commonDataSourceProperties).get();
     }
 
-    protected abstract Properties determineCommonDataSourceProperties(final DataSource pds);
+    private static void printDataSourceStatistics(final SimplePoolDataSource poolDataSource, final Logger logger) {
+        if (!logger.isDebugEnabled()) {
+            return;
+        }
+
+        final String prefix = INDENT_PREFIX;
         
-    protected abstract void printDataSourceStatistics(final DataSource poolDataSource, final Logger logger);
+        logger.debug("configuration pool data source {}:", poolDataSource.getPoolName());
+
+        poolDataSource
+            .getProperties()
+            .entrySet()
+            .stream()
+            .sorted()
+            .forEach(e -> logger.debug("{}{}={}", prefix, e.getKey(), e.getValue()));
+
+        logger.debug("connections pool data source {}:", poolDataSource.getPoolName());
+        logger.debug("{}total: {}", prefix, poolDataSource.getTotalConnections());
+        logger.debug("{}active: {}", prefix, poolDataSource.getActiveConnections());
+        logger.debug("{}idle: {}", prefix, poolDataSource.getIdleConnections());
+    }
     
     protected abstract String getPoolNamePrefix();
 
-    //protected abstract String getPoolName();
-
-    protected abstract String getPoolName(DataSource pds);
-
-    //protected abstract void setPoolName(String poolName) throws SQLException;
-
-    protected abstract void setPoolName(DataSource pds, String poolName) throws SQLException;
-
-    //protected abstract void setUsername(String username) throws SQLException;
-
-    //protected abstract void setPassword(String password) throws SQLException;
-        
-    //protected abstract int getInitialPoolSize();
-
-    protected abstract int getInitialPoolSize(DataSource pds);
-
-    //protected abstract void setInitialPoolSize(int initialPoolSize) throws SQLException;
-
-    //protected abstract int getMinimumPoolSize();
-
-    protected abstract int getMinimumPoolSize(DataSource pds);
-
-    //protected abstract void setMinimumPoolSize(int minimumPoolSize) throws SQLException;
-
-    //protected abstract int getMaximumPoolSize();
-
-    protected abstract int getMaximumPoolSize(DataSource pds);
-
-    //protected abstract void setMaximumPoolSize(int maximumPoolSize) throws SQLException;
-
-    //protected abstract long getConnectionTimeout(); // milliseconds
-
-    protected final String getUrl() {
-        return (String) commonDataSourceProperties.get(URL);
-    }
-
-    // statistics
-    
-    //protected abstract int getActiveConnections();
-
-    //protected abstract int getIdleConnections();
-
-    //protected abstract int getTotalConnections();
-        
     @Getter
     private class ConnectInfo {
 
@@ -1136,288 +1063,5 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                          this.proxyUsername,
                          this.schema);
         }
-    }
-    
-    protected class MyDataSourceStatistics {
-
-        private final int ROUND_SCALE = 32;
-
-        private final int DISPLAY_SCALE = 0;
-
-        private AtomicLong logicalConnectionCount = new AtomicLong();
-
-        private AtomicLong logicalConnectionCountProxy = new AtomicLong();
-        
-        private AtomicLong openProxySessionCount = new AtomicLong();
-        
-        private AtomicLong closeProxySessionCount = new AtomicLong();
-
-        private AtomicLong timeElapsedMin = new AtomicLong(Long.MAX_VALUE);
-    
-        private AtomicLong timeElapsedMax = new AtomicLong(Long.MIN_VALUE);
-    
-        private AtomicBigDecimal timeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
-
-        private AtomicLong timeElapsedProxyMin = new AtomicLong(Long.MAX_VALUE);
-    
-        private AtomicLong timeElapsedProxyMax = new AtomicLong(Long.MIN_VALUE);
-    
-        private AtomicBigDecimal timeElapsedProxyAvg = new AtomicBigDecimal(BigDecimal.ZERO);
-
-        private AtomicLong activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
-        
-        private AtomicLong activeConnectionsMax = new AtomicLong(Long.MIN_VALUE);
-
-        private AtomicBigDecimal activeConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
-            
-        private AtomicLong idleConnectionsMin = new AtomicLong(Long.MAX_VALUE);
-        
-        private AtomicLong idleConnectionsMax = new AtomicLong(Long.MIN_VALUE);
-
-        private AtomicBigDecimal idleConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
-            
-        private AtomicLong totalConnectionsMin = new AtomicLong(Long.MAX_VALUE);
-        
-        private AtomicLong totalConnectionsMax = new AtomicLong(Long.MIN_VALUE);
-
-        private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
-
-        private Set<OracleConnection> physicalConnections;
-
-        // the error attributes (error code and SQL state) and its count
-        private ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
-
-        public MyDataSourceStatistics() {
-            // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
-            final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
- 
-            physicalConnections = dummy.newKeySet();
-        }
-        
-        protected void update(final Connection conn,
-                              final long timeElapsed) throws SQLException {
-            update(conn, timeElapsed, -1, -1, -1);
-        }
-
-        protected void update(final Connection conn,
-                              final long timeElapsed,
-                              final int activeConnections,
-                              final int idleConnections,
-                              final int totalConnections) throws SQLException {
-            physicalConnections.add(conn.unwrap(OracleConnection.class));
-            
-            // We must use count and avg from the same connection so just synchronize.
-            // If we don't synchronize we risk to get the average and count from different connections.
-            synchronized (this) {                
-                final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
-
-                updateIterativeMean(count, timeElapsed, timeElapsedAvg);
-                updateIterativeMean(count, activeConnections, activeConnectionsAvg);
-                updateIterativeMean(count, idleConnections, idleConnectionsAvg);
-                updateIterativeMean(count, totalConnections, totalConnectionsAvg);
-            }
-
-            // The rest is using AtomicLong, hence concurrent.
-            updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
-            updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
-            updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
-            updateMinMax(totalConnections, totalConnectionsMin, totalConnectionsMax);
-        }
-
-        protected void update(final Connection conn,
-                              final long timeElapsed,
-                              final long timeElapsedProxy,
-                              final int logicalConnectionCountProxy,
-                              final int openProxySessionCount,
-                              final int closeProxySessionCount) throws SQLException {
-            physicalConnections.add(conn.unwrap(OracleConnection.class));
-            
-            // We must use count and avg from the same connection so just synchronize.
-            // If we don't synchronize we risk to get the average and count from different connections.
-            synchronized (this) {                
-                final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
-
-                updateIterativeMean(count, timeElapsed, timeElapsedAvg);
-                updateIterativeMean(count, timeElapsedProxy, timeElapsedProxyAvg);
-            }
-
-            // The rest is using AtomicLong, hence concurrent.
-            updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
-            updateMinMax(timeElapsedProxy, timeElapsedProxyMin, timeElapsedProxyMax);
-            
-            this.logicalConnectionCountProxy.addAndGet(logicalConnectionCountProxy);
-            this.openProxySessionCount.addAndGet(openProxySessionCount);
-            this.closeProxySessionCount.addAndGet(closeProxySessionCount);
-        }
-
-        protected long signalSQLException(final SQLException ex) {
-            final Properties attrs = new Properties();
-
-            attrs.setProperty("error code", String.valueOf(ex.getErrorCode()));
-            attrs.setProperty("SQL state", ex.getSQLState());
-            
-            return this.errors.computeIfAbsent(attrs, msg -> new AtomicLong(0)).incrementAndGet();
-        }
-        
-        // Iterative Mean, see https://www.heikohoffmann.de/htmlthesis/node134.html
-                
-        // See https://stackoverflow.com/questions/4591206/
-        //   arithmeticexception-non-terminating-decimal-expansion-no-exact-representable
-        // to prevent this error: Non-terminating decimal expansion; no exact representable decimal result.
-        private void updateIterativeMean(final BigDecimal count, final long value, final AtomicBigDecimal avg) {
-            if (value >= 0L) {
-                avg.addAndGet(new BigDecimal(value).subtract(avg.get()).divide(count,
-                                                                               ROUND_SCALE,
-                                                                               RoundingMode.HALF_UP));
-            }
-        }
-
-        private void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
-            if (value >= 0) {
-                if (value < min.get()) {
-                    min.set(value);
-                }
-                if (value > max.get()) {
-                    max.set(value);
-                }
-            }
-        }
-
-        protected boolean countersEqual(final MyDataSourceStatistics compareTo) {
-            return
-                this.getPhysicalConnectionCount() == compareTo.getPhysicalConnectionCount() &&
-                this.getLogicalConnectionCount() == compareTo.getLogicalConnectionCount() &&
-                this.getLogicalConnectionCountProxy() == compareTo.getLogicalConnectionCountProxy() &&
-                this.getOpenProxySessionCount() == compareTo.getOpenProxySessionCount() &&
-                this.getCloseProxySessionCount() == compareTo.getCloseProxySessionCount();
-        }
-        
-        // getter(s)
-
-        protected long getPhysicalConnectionCount() {
-            return physicalConnections.size();
-        }
-            
-        protected long getLogicalConnectionCount() {
-            return logicalConnectionCount.get();
-        }
-
-        protected long getLogicalConnectionCountProxy() {
-            return logicalConnectionCountProxy.get();
-        }
-
-        protected long getOpenProxySessionCount() {
-            return openProxySessionCount.get();
-        }
-        
-        protected long getCloseProxySessionCount() {
-            return closeProxySessionCount.get();
-        }
-        
-        protected long getTimeElapsedMin() {
-            return timeElapsedMin.get();
-        }
-
-        protected long getTimeElapsedMax() {
-            return timeElapsedMax.get();
-        }
-
-        protected long getTimeElapsedAvg() {
-            return timeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
-        }
-
-        protected long getTimeElapsedProxyMin() {
-            return timeElapsedProxyMin.get();
-        }
-
-        protected long getTimeElapsedProxyMax() {
-            return timeElapsedProxyMax.get();
-        }
-
-        protected long getTimeElapsedProxyAvg() {
-            return timeElapsedProxyAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
-        }
-
-        protected long getActiveConnectionsMin() {
-            return activeConnectionsMin.get();
-        }
-
-        protected long getActiveConnectionsMax() {
-            return activeConnectionsMax.get();
-        }
-
-        protected long getActiveConnectionsAvg() {
-            return activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
-        }
-
-        protected long getIdleConnectionsMin() {
-            return idleConnectionsMin.get();
-        }
-
-        protected long getIdleConnectionsMax() {
-            return idleConnectionsMax.get();
-        }
-        
-        protected long getIdleConnectionsAvg() {
-            return idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
-        }
-        
-        protected long getTotalConnectionsMin() {
-            return totalConnectionsMin.get();
-        }
-
-        protected long getTotalConnectionsMax() {
-            return totalConnectionsMax.get();
-        }
-
-        protected long getTotalConnectionsAvg() {
-            return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
-        }
-
-        protected Map<Properties, Long> getErrors() {
-            final Map<Properties, Long> result = new HashMap();
-            
-            errors.forEach((k, v) -> result.put(k, Long.valueOf(v.get())));
-            
-            return result;
-        }
-
-        /**
-         * @author Alexander_Sergeev
-         *
-         * See https://github.com/qbit-for-money/commons/blob/master/src/main/java/com/qbit/commons/model/AtomicBigDecimal.java
-         */
-        private final class AtomicBigDecimal {
-
-            private final AtomicReference<BigDecimal> valueHolder = new AtomicReference<>();
-
-            public AtomicBigDecimal(BigDecimal value) {
-                valueHolder.set(value);
-            }
-
-            public BigDecimal get() {
-                return valueHolder.get();
-            }
-
-            public BigDecimal addAndGet(final BigDecimal value) {
-                while (true) {
-                    BigDecimal current = valueHolder.get();
-                    BigDecimal next = current.add(value);
-                    if (valueHolder.compareAndSet(current, next)) {
-                        return next;
-                    }
-                }
-            }
-
-            public BigDecimal setAndGet(final BigDecimal value) {
-                while (true) {
-                    BigDecimal current = valueHolder.get();
-
-                    if (valueHolder.compareAndSet(current, value)) {
-                        return value;
-                    }
-                }
-            }
-        }
-    }
+    }    
 }
