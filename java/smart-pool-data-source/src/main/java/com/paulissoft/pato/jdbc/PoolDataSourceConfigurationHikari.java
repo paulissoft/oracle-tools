@@ -16,48 +16,48 @@ import lombok.ToString;
 @Component
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
 
-    @Value("spring.datasource.hikari.auto-commit")
+    @Value("${spring.datasource.hikari.auto-commit}")
     private boolean autoCommit;
     
-    @Value("spring.datasource.hikari.connection-timeout")
+    @Value("${spring.datasource.hikari.connection-timeout}")
     private long connectionTimeout;
     
-    @Value("spring.datasource.hikari.idle-timeout")
+    @Value("${spring.datasource.hikari.idle-timeout}")
     private long idleTimeout;
     
-    @Value("spring.datasource.hikari.max-lifetime")
+    @Value("${spring.datasource.hikari.max-lifetime}")
     private long maxLifetime;
     
-    @Value("spring.datasource.hikari.connection-test-query")
+    @Value("${spring.datasource.hikari.connection-test-query}")
     private String connectionTestQuery;
     
-    @Value("spring.datasource.hikari.maximum-pool-size")
+    @Value("${spring.datasource.hikari.maximum-pool-size}")
     private int maximumPoolSize;
 
-    @Value("spring.datasource.hikari.pool-name")
+    @Value("${spring.datasource.hikari.pool-name}")
     private String poolName;
         
-    @Value("spring.datasource.hikari.minimum-idle")
+    @Value("${spring.datasource.hikari.minimum-idle}")
     private int minimumIdle;
     
-    @Value("spring.datasource.hikari.initialization-fail-timeout")
+    @Value("${spring.datasource.hikari.initialization-fail-timeout}")
     private long initializationFailTimeout;
     
-    @Value("spring.datasource.hikari.isolate-internal-queries")
+    @Value("${spring.datasource.hikari.isolate-internal-queries}")
     private boolean isolateInternalQueries;
     
-    @Value("spring.datasource.hikari.allow-pool-suspension")
+    @Value("${spring.datasource.hikari.allow-pool-suspension}")
     private boolean allowPoolSuspension;
     
-    @Value("spring.datasource.hikari.read-only")
+    @Value("${spring.datasource.hikari.read-only}")
     private boolean readOnly;
     
-    @Value("spring.datasource.hikari.register-mbeans")
+    @Value("${spring.datasource.hikari.register-mbeans}")
     private boolean registerMbeans;
     
-    @Value("spring.datasource.hikari.validation-timeout")
+    @Value("${spring.datasource.hikari.validation-timeout}")
     private long validationTimeout;
     
-    @Value("spring.datasource.hikari.leak-detection-threshold")
+    @Value("${spring.datasource.hikari.leak-detection-threshold}")
     private long leakDetectionThreshold;
 }
