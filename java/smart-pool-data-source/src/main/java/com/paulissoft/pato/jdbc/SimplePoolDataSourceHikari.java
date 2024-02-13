@@ -9,6 +9,29 @@ import org.springframework.beans.DirectFieldAccessor;
 
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
+    public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
+        super();
+        setDriverClassName(pdsConfigurationHikari.getDriverClassName());
+        setJdbcUrl(pdsConfigurationHikari.getUrl());
+        setUsername(pdsConfigurationHikari.getUsername());
+        setPassword(pdsConfigurationHikari.getPassword());
+        setPoolName(pdsConfigurationHikari.getPoolName());
+        setMaximumPoolSize(pdsConfigurationHikari.getMaximumPoolSize());
+        setMinimumIdle(pdsConfigurationHikari.getMinimumIdle());
+        setAutoCommit(pdsConfigurationHikari.isAutoCommit());
+        setConnectionTimeout(pdsConfigurationHikari.getConnectionTimeout());
+        setIdleTimeout(pdsConfigurationHikari.getIdleTimeout());
+        setMaxLifetime(pdsConfigurationHikari.getMaxLifetime());
+        setConnectionTestQuery(pdsConfigurationHikari.getConnectionTestQuery());
+        setInitializationFailTimeout(pdsConfigurationHikari.getInitializationFailTimeout());
+        setIsolateInternalQueries(pdsConfigurationHikari.isIsolateInternalQueries());
+        setAllowPoolSuspension(pdsConfigurationHikari.isAllowPoolSuspension());
+        setReadOnly(pdsConfigurationHikari.isReadOnly());
+        setRegisterMbeans(pdsConfigurationHikari.isRegisterMbeans());
+        setValidationTimeout(pdsConfigurationHikari.getValidationTimeout());
+        setLeakDetectionThreshold(pdsConfigurationHikari.getLeakDetectionThreshold());
+    }
+
     // get common pool data source properties like the ones define above
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return PoolDataSourceConfigurationHikari
