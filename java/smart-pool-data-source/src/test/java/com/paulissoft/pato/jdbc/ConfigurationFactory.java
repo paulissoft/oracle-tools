@@ -13,4 +13,16 @@ public class ConfigurationFactory {
     public DataSourceConfiguration getDataSourceConfiguration() {
         return new DataSourceConfiguration();
     }
+
+    @Bean(name = "app-auth-datasource-hikari")
+    @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+    public PoolDataSourceConfigurationHikari getPoolDataSourceConfigurationHikari() {
+        return new PoolDataSourceConfigurationHikari();
+    }
+
+    @Bean(name = "app-auth-datasource-oracle")
+    @ConfigurationProperties(prefix = "app.auth.datasource.oracle")
+    public PoolDataSourceConfigurationOracle getPoolDataSourceConfigurationOracle() {
+        return new PoolDataSourceConfigurationOracle();
+    }
 }
