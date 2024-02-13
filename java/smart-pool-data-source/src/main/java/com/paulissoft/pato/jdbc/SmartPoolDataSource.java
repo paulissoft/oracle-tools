@@ -683,7 +683,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                           final String schema,
                                           final long timeElapsed,
                                           final boolean finalCall) {
-        showDataSourceStatistics(poolDataSourceStatistics, schema, timeElapsed, -1L, true);
+        showDataSourceStatistics(poolDataSourceStatistics, schema, timeElapsed, -1L, finalCall);
     }
     
     private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
@@ -828,7 +828,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 final Map<Properties, Long> errors = poolDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.warn("no connection exceptions signalled for {}", poolDescription);
+                    logger.info("no connection exceptions signalled for {}", poolDescription);
                 } else {
                     logger.warn("connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
                 
