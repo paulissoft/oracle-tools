@@ -21,7 +21,7 @@ public class ConfigurationFactory {
     }
 
     @Bean(name = "app-auth-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.auth.datasource.oracle")
+    @ConfigurationProperties(prefix = "app.auth.datasource.ucp")
     public PoolDataSourceConfigurationOracle getPoolDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
