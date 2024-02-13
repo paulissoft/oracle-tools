@@ -1,7 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.Driver;
-import javax.sql.DataSource;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 
