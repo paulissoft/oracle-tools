@@ -1,9 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import javax.sql.DataSource;
 import lombok.Data;
-import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -21,4 +19,24 @@ public class DataSourceConfiguration {
     private String password;
 
     private String type;
+
+    public Class getType() {
+        try {
+            final Class cls = type != null ? Class.forName(type) : null;
+
+            return cls != null && DataSource.class.isAssignableFrom(cls) ? cls : null;
+        } catch (ClassNotFoundException ex) {
+            return null;
+        }
+    }
+
+    public void setType(final String type) {
+        try {
+            if (DataSource.class.isAssignableFrom(Class.forName(type))) {
+                this.type = type;
+            }
+        } catch (ClassNotFoundException ex) {
+            this.type = null;
+        }
+    }
 }

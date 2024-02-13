@@ -2,9 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +27,6 @@ public class BindingPropertiesToBeanMethodsUnitTest {
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", dataSourceConfiguration.getUrl());
         assertEquals("system", dataSourceConfiguration.getUsername());
         assertEquals("change_on_install", dataSourceConfiguration.getPassword());
-        assertEquals("com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari", dataSourceConfiguration.getType());
+        assertEquals(SimplePoolDataSourceHikari.class, dataSourceConfiguration.getType());
     }
 }
