@@ -51,4 +51,11 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     private long validationTimeout;
     
     private long leakDetectionThreshold;
+
+    public void clearCommonDataSourceConfiguration() {
+        super.clearCommonDataSourceConfiguration();
+        this.poolName = null;
+        this.maximumPoolSize = 0;
+        this.minimumIdle = 0;
+    }
 }

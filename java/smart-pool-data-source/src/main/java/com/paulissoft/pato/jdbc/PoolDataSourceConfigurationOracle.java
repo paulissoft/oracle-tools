@@ -44,9 +44,17 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
     private int connectionWaitTimeout;
 
-    private int maxConnectionReuseTime;
+    private long maxConnectionReuseTime;
 
     private int secondsToTrustIdleConnection;
 
     private int connectionValidationTimeout;
+
+    public void clearCommonDataSourceConfiguration() {
+        super.clearCommonDataSourceConfiguration();
+        this.connectionPoolName = null;
+        this.initialPoolSize = 0;
+        this.minPoolSize = 0;
+        this.maxPoolSize = 0;
+    }
 }

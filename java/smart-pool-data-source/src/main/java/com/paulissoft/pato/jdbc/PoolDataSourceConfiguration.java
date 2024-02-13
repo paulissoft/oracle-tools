@@ -51,4 +51,9 @@ public class PoolDataSourceConfiguration {
         this.password = poolDataSourceConfiguration.password;
         this.type = poolDataSourceConfiguration.type;
     }
+
+    public void clearCommonDataSourceConfiguration() {
+        this.username = null;
+        this.password = null;
+    }
 }

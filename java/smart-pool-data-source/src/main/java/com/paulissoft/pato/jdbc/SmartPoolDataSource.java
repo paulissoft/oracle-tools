@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Hashtable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.experimental.Delegate;
@@ -37,13 +36,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private static Method loggerDebug;
 
-    private static final Hashtable<String, Object> commonDataSourceStatisticsGrandTotal = new Hashtable<>();
+    private static final PoolDataSourceConfiguration commonDataSourceStatisticsGrandTotal =
+        PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build();
 
-    private static final ConcurrentHashMap<Hashtable<String, Object>, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PoolDataSourceConfiguration, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
-    private static final ConcurrentHashMap<Hashtable<String, Object>, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PoolDataSourceConfiguration, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
 
-    private static final ConcurrentHashMap<Hashtable<String, Object>, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+    private static final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
@@ -61,8 +61,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             logger.error("static exception: {}", e.getMessage());
             loggerDebug = null;
         }
-
-        setProperty(commonDataSourceStatisticsGrandTotal, USERNAME, GRAND_TOTAL);
     }
 
     private interface Overrides {
@@ -93,14 +91,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private ConnectInfo connectInfo;
 
     // Same common properties for a pool data source in constructor: same commonPoolDataSource
-    private final Hashtable<String, Object> commonDataSourceProperties = new Hashtable<String, Object>();
+    private PoolDataSourceConfiguration commonDataSourceProperties;
 
     // Same as commonDataSourceProperties, i.e. total per common pool data source.
-    private final Hashtable<String, Object> commonDataSourceStatisticsTotal = new Hashtable<String, Object>();
+    private PoolDataSourceConfiguration commonDataSourceStatisticsTotal;
 
     // Same as commonDataSourceProperties including current schema and password,
     // only for connection info like elapsed time, open/close sessions.
-    private final Hashtable<String, Object> commonDataSourceStatistics = new Hashtable<String, Object>();
+    private PoolDataSourceConfiguration commonDataSourceStatistics;
 
     /**
      * Initialize a pool data source.
@@ -116,14 +114,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      * @param useFixedUsernamePassword    Only use commonPoolDataSource.getConnection(), never commonPoolDataSource.getConnection(username, password)
      */
     protected SmartPoolDataSource(final SimplePoolDataSource pds,
-                                  final String username,
-                                  final String password,
                                   final boolean singleSessionProxyModel,
                                   final boolean useFixedUsernamePassword) throws SQLException {
         assert(pds != null);
+        assert(pds.getUsername() != null);
+        assert(pds.getPassword() != null);
 
         this.pds = pds;
-        this.connectInfo = new ConnectInfo(username, password);
+        this.connectInfo = new ConnectInfo(pds.getUsername(), pds.getPassword());
         this.singleSessionProxyModel = singleSessionProxyModel;
         this.useFixedUsernamePassword = useFixedUsernamePassword;
 
@@ -148,18 +146,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         
         printDataSourceStatistics(pds, logger);
 
-        commonDataSourceProperties.clear();
-        commonDataSourceProperties.putAll(pds.getProperties());
+        commonDataSourceProperties = pds.getPoolDataSourceConfiguration();
 
-        checkPropertyNotNull(CLASS);
-        checkPropertyNotNull(URL);
+        assert(commonDataSourceProperties.getType() != null);
+        assert(commonDataSourceProperties.getUrl() != null);
 
-        checkPropertyNull(USERNAME);
-        checkPropertyNull(PASSWORD);
-        checkPropertyNull(POOL_NAME);
-        checkPropertyNull(INITIAL_POOL_SIZE);
-        checkPropertyNull(MIN_POOL_SIZE);
-        checkPropertyNull(MAX_POOL_SIZE);
+        commonDataSourceProperties.clearCommonDataSourceConfiguration();
 
         // Now we have to adjust commonDataSourceProperties and username
         // given username/singleSessionProxyModel/useFixedUsernamePassword.
@@ -182,8 +174,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         if (useFixedUsernamePassword) {
             // case A
-            setProperty(commonDataSourceProperties, USERNAME, connectInfo.getUsernameToConnectTo());
-            setProperty(commonDataSourceProperties, PASSWORD, connectInfo.getPassword());
+            commonDataSourceProperties.setUsername(connectInfo.getUsernameToConnectTo());
+            commonDataSourceProperties.setPassword(connectInfo.getPassword());
         }
 
         commonPoolDataSource = poolDataSources.computeIfAbsent(commonDataSourceProperties, s -> pds);
@@ -194,14 +186,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         // The statistics are measured per original data source and per total.
         // Total is just a copy.
-        commonDataSourceStatisticsTotal.clear();
-        commonDataSourceStatisticsTotal.putAll(commonDataSourceProperties);
+        commonDataSourceStatisticsTotal = commonDataSourceProperties.toBuilder().build();
 
         // Per original data source, hence we include the username / password.
-        commonDataSourceStatistics.clear();
-        commonDataSourceStatistics.putAll(commonDataSourceProperties);
-        setProperty(commonDataSourceStatistics, USERNAME, username);
-        setProperty(commonDataSourceStatistics, PASSWORD, password);        
+        commonDataSourceStatistics = commonDataSourceProperties
+            .toBuilder()
+            .username(username)
+            .password(password)
+            .build();
 
         // add totals if not already existent
         allDataSourceStatistics.computeIfAbsent(commonDataSourceStatisticsGrandTotal, s -> new PoolDataSourceStatistics());
@@ -284,32 +276,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             
         logger.debug("<join()");
     }
-
-    private void checkPropertyNull(final String name) {
-        try {
-            assert(commonDataSourceProperties.get(name) == null);
-        } catch (AssertionError ex) {
-            System.err.println(String.format("Property ({}) must be null", name));
-            throw ex;
-        }
-    }
-    
-    private void checkPropertyNotNull(final String name) {
-        try {
-            assert(commonDataSourceProperties.get(name) != null);
-        } catch (AssertionError ex) {
-            System.err.println(String.format("Property ({}) must NOT be null", name));
-            throw ex;
-        }
-    }
-
-    protected static void setProperty(final Hashtable<String, Object> properties,
-                                      final String name,
-                                      final Object value) {
-        if (name != null && value != null) {
-            properties.put(name, value);
-        }
-    }    
     
     public void close() {
         if (done()) {
@@ -870,14 +836,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         final String prefix = INDENT_PREFIX;
         
         logger.debug("configuration pool data source {}:", poolDataSource.getPoolName());
-
-        poolDataSource
-            .getProperties()
-            .entrySet()
-            .stream()
-            .sorted()
-            .forEach(e -> logger.debug("{}{}={}", prefix, e.getKey(), e.getValue()));
-
+        logger.debug("{}configuration: {}", prefix, poolDataSource.getPoolDataSourceConfiguration().toString());
         logger.debug("connections pool data source {}:", poolDataSource.getPoolName());
         logger.debug("{}total: {}", prefix, poolDataSource.getTotalConnections());
         logger.debug("{}active: {}", prefix, poolDataSource.getActiveConnections());
