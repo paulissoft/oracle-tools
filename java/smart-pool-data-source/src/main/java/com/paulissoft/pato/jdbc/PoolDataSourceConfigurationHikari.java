@@ -16,6 +16,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
 
+    // properties that may differ, i.e. are ignored
+    
+    private String poolName;
+    
+    private int maximumPoolSize;
+        
+    private int minimumIdle;
+
+    // properties that may NOT differ, i.e. must be common
+
+    private String dataSourceClassName;
+
     private boolean autoCommit;
     
     private long connectionTimeout;
@@ -25,12 +37,6 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     private long maxLifetime;
     
     private String connectionTestQuery;
-    
-    private int maximumPoolSize;
-
-    private String poolName;
-        
-    private int minimumIdle;
     
     private long initializationFailTimeout;
     

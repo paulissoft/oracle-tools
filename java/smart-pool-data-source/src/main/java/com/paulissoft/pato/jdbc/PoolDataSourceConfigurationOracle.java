@@ -16,9 +16,21 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties
 public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfiguration {
 
-    private boolean validateConnectionOnBorrow;
-
+    // properties that may differ, i.e. are ignored
+    
     private String connectionPoolName;
+
+    private int initialPoolSize;
+
+    private int minPoolSize;
+
+    private int maxPoolSize;
+
+    // properties that may NOT differ, i.e. must be common
+        
+    private String connectionFactoryClassName;
+
+    private boolean validateConnectionOnBorrow;
 
     private int abandonedConnectionTimeout;
 

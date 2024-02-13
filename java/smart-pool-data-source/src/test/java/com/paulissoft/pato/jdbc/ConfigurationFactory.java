@@ -10,12 +10,6 @@ public class ConfigurationFactory {
 
     @Bean(name = "spring-datasource")
     @ConfigurationProperties(prefix = "spring.datasource")
-    public DataSourceConfiguration getDataSourceConfiguration() {
-        return new DataSourceConfiguration();
-    }
-
-    @Bean(name = "app-auth-datasource-pool")
-    @ConfigurationProperties(prefix = "spring.datasource.pool")
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return new PoolDataSourceConfiguration();
     }
