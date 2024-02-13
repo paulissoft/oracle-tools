@@ -12,7 +12,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @ExtendWith(SpringExtension.class)
-/**/@EnableConfigurationProperties(value = DataSourceConfiguration.class)
+@EnableConfigurationProperties({DataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
 @TestPropertySource("classpath:application-test.properties")
 public class BindingPropertiesToBeanMethodsUnitTest {
@@ -20,6 +20,10 @@ public class BindingPropertiesToBeanMethodsUnitTest {
     @Autowired
     @Qualifier("spring-datasource")
     private DataSourceConfiguration dataSourceConfiguration;
+
+    @Autowired
+    @Qualifier("app-auth-datasource-pool")
+    private PoolDataSourceConfiguration poolDataSourceConfiguration;
 
     @Autowired
     @Qualifier("app-auth-datasource-hikari")
@@ -32,17 +36,22 @@ public class BindingPropertiesToBeanMethodsUnitTest {
         assertEquals("system", dataSourceConfiguration.getUsername());
         assertEquals("change_on_install", dataSourceConfiguration.getPassword());
         assertEquals(SimplePoolDataSourceHikari.class, dataSourceConfiguration.getType());
-        assertEquals("<DataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari)>", dataSourceConfiguration.toString());
+        assertEquals("DataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari)", dataSourceConfiguration.toString());
     }
-
+    
+    @Test
+    void testPoolDataSourceConfiguration() {
+        // generic
+        assertEquals(0, poolDataSourceConfiguration.getInitialPoolSize());
+        assertEquals(10, poolDataSourceConfiguration.getMinPoolSize());
+        assertEquals(20, poolDataSourceConfiguration.getMaxPoolSize());
+        assertEquals("oracle.jdbc.pool.OracleDataSource", poolDataSourceConfiguration.getConnectionFactoryClassName());
+        assertEquals("PoolDataSourceConfiguration(initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource)", poolDataSourceConfiguration.toString());
+    }
+    
     @Test
     void testPoolDataSourceConfigurationHikari() {
-        // generic
-        assertEquals(-1, poolDataSourceConfigurationHikari.getInitialPoolSize());
-        assertEquals(60, poolDataSourceConfigurationHikari.getMinPoolSize());
-        assertEquals(60, poolDataSourceConfigurationHikari.getMaxPoolSize());
-        assertEquals(null, poolDataSourceConfigurationHikari.getConnectionFactoryClassName());
-        // specifice
+        // specific
         assertEquals(true, poolDataSourceConfigurationHikari.isAutoCommit());
         assertEquals(30000, poolDataSourceConfigurationHikari.getConnectionTimeout());
         assertEquals(600000, poolDataSourceConfigurationHikari.getIdleTimeout());
@@ -57,6 +66,6 @@ public class BindingPropertiesToBeanMethodsUnitTest {
         assertEquals(false, poolDataSourceConfigurationHikari.isRegisterMbeans());
         assertEquals(5000, poolDataSourceConfigurationHikari.getValidationTimeout());
         assertEquals(0, poolDataSourceConfigurationHikari.getLeakDetectionThreshold());
-        assertEquals("", poolDataSourceConfigurationHikari.toString());
+        assertEquals("PoolDataSourceConfigurationHikari(autoCommit=true, connectionTimeout=30000, idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, maximumPoolSize=60, poolName=HikariPool-boauth, minimumIdle=60, initializationFailTimeout=1, isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, validationTimeout=5000, leakDetectionThreshold=0)", poolDataSourceConfigurationHikari.toString());
     }
 }

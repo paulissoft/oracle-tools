@@ -14,6 +14,12 @@ public class ConfigurationFactory {
         return new DataSourceConfiguration();
     }
 
+    @Bean(name = "app-auth-datasource-pool")
+    @ConfigurationProperties(prefix = "spring.datasource.pool")
+    public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        return new PoolDataSourceConfiguration();
+    }
+
     @Bean(name = "app-auth-datasource-hikari")
     @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
     public PoolDataSourceConfigurationHikari getPoolDataSourceConfigurationHikari() {
