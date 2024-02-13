@@ -66,6 +66,6 @@ public class BindingPropertiesToBeanMethodsUnitTest {
         assertEquals(false, poolDataSourceConfigurationHikari.isRegisterMbeans());
         assertEquals(5000, poolDataSourceConfigurationHikari.getValidationTimeout());
         assertEquals(0, poolDataSourceConfigurationHikari.getLeakDetectionThreshold());
-        assertEquals("PoolDataSourceConfigurationHikari(autoCommit=true, connectionTimeout=30000, idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, maximumPoolSize=60, poolName=HikariPool-boauth, minimumIdle=60, initializationFailTimeout=1, isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, validationTimeout=5000, leakDetectionThreshold=0)", poolDataSourceConfigurationHikari.toString());
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(initialPoolSize=0, minPoolSize=0, maxPoolSize=0, connectionFactoryClassName=null), autoCommit=true, connectionTimeout=30000, idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, maximumPoolSize=60, poolName=HikariPool-boauth, minimumIdle=60, initializationFailTimeout=1, isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, validationTimeout=5000, leakDetectionThreshold=0)", poolDataSourceConfigurationHikari.toString());
     }
 }
