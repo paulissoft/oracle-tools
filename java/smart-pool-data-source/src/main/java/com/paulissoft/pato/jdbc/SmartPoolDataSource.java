@@ -320,7 +320,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 if (poolDataSourceStatisticsTotal != null && lastPoolDataSource) {
                     // show (grand) totals only when it is the last pool data source
                     showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL);
-                    allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
+                    allDataSourceStatistics.remove(commonDataSourceStatisticsTotal);
 
                     logger.debug("poolDataSourceStatisticsGrandTotal={}; allDataSourceStatistics.size()={}",
                                  poolDataSourceStatisticsGrandTotal,
@@ -828,9 +828,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 final Map<Properties, Long> errors = poolDataSourceStatistics.getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.warn("no SQL exceptions signalled for {}", poolDescription);
+                    logger.warn("no connection exceptions signalled for {}", poolDescription);
                 } else {
-                    logger.warn("SQL exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
+                    logger.warn("connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
