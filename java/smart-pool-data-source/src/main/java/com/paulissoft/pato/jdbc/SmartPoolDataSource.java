@@ -360,8 +360,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                        final String proxyUsername,
                                        final boolean updateStatistics,
                                        final boolean showStatistics) throws SQLException {
-        logger.debug(">getConnection(usernameToConnectTo={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+        logger.debug(">getConnection(usernameToConnectTo={}, password={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
                      usernameToConnectTo,
+                     password,
                      schema,
                      proxyUsername,
                      updateStatistics,
@@ -374,9 +375,16 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             if (useFixedUsernamePassword) {
                 if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
                     commonPoolDataSource.setUsername(usernameToConnectTo);
+                    commonPoolDataSource.setPassword(password);
                 }
+                logger.debug("connecting to username={} and password={}",
+                             commonPoolDataSource.getUsername(),
+                             commonPoolDataSource.getPassword());
                 conn = commonPoolDataSource.getConnection();
             } else {
+                logger.debug("connecting to username={} and password={}",
+                             usernameToConnectTo,
+                             password);
                 // see observations in constructor
                 conn = commonPoolDataSource.getConnection(usernameToConnectTo, password);
             }

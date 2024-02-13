@@ -5,13 +5,19 @@ import javax.sql.DataSource;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import javax.sql.DataSource;
-import org.springframework.beans.DirectFieldAccessor;    
+import org.springframework.beans.DirectFieldAccessor;
+import lombok.extern.slf4j.Slf4j;
 
+
+@Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
         super();
-        setDriverClassName(pdsConfigurationHikari.getDriverClassName());
+        log.info("SimplePoolDataSourceHikari(pdsConfigurationHikari={})", pdsConfigurationHikari);
+        if (pdsConfigurationHikari.getDriverClassName() != null) {
+            setDriverClassName(pdsConfigurationHikari.getDriverClassName());
+        }
         setJdbcUrl(pdsConfigurationHikari.getUrl());
         setUsername(pdsConfigurationHikari.getUsername());
         setPassword(pdsConfigurationHikari.getPassword());
@@ -63,6 +69,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         setJdbcUrl(url);
     }
 
+    /*
     public void setConnectionFactoryClassName(String value) {
         try {
             if (DataSource.class.isAssignableFrom(Class.forName(value))) {
@@ -74,6 +81,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             ; // ignore
         }
     }
+    */
 
     // HikariCP does NOT know of an initial pool size
     public int getInitialPoolSize() {

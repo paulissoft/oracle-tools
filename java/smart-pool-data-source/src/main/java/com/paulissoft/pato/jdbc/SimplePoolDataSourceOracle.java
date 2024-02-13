@@ -2,12 +2,15 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
 
     public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
         super();
+        log.info("SimplePoolDataSourceOracle(pdsConfigurationOracle={})", pdsConfigurationOracle);
         setURL(pdsConfigurationOracle.getUrl());
         setUsername(pdsConfigurationOracle.getUsername());
         setPassword(pdsConfigurationOracle.getPassword());
