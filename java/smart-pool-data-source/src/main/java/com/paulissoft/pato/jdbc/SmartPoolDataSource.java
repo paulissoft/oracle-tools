@@ -545,18 +545,18 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         try {
             poolDataSourceStatisticsGrandTotal.update(conn,
-                                                    timeElapsed,
-                                                    activeConnections,
-                                                    idleConnections,
-                                                    totalConnections);
+                                                      timeElapsed,
+                                                      activeConnections,
+                                                      idleConnections,
+                                                      totalConnections);
             poolDataSourceStatisticsTotal.update(conn,
-                                               timeElapsed,
-                                               activeConnections,
-                                               idleConnections,
-                                               totalConnections);
+                                                 timeElapsed,
+                                                 activeConnections,
+                                                 idleConnections,
+                                                 totalConnections);
             // no need for active/idle and total connections because that is counted on common data source level
             poolDataSourceStatistics.update(conn,
-                                          timeElapsed);
+                                            timeElapsed);
         } catch (Exception e) {
             logger.error("updateStatistics() exception: {}", e.getMessage());
         }
@@ -583,23 +583,23 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         try {
             poolDataSourceStatisticsGrandTotal.update(conn,
-                                                    timeElapsed,
-                                                    timeElapsedProxy,
-                                                    logicalConnectionCountProxy,
-                                                    openProxySessionCount,
-                                                    closeProxySessionCount);
+                                                      timeElapsed,
+                                                      timeElapsedProxy,
+                                                      logicalConnectionCountProxy,
+                                                      openProxySessionCount,
+                                                      closeProxySessionCount);
             poolDataSourceStatisticsTotal.update(conn,
-                                               timeElapsed,
-                                               timeElapsedProxy,
-                                               logicalConnectionCountProxy,
-                                               openProxySessionCount,
-                                               closeProxySessionCount);
+                                                 timeElapsed,
+                                                 timeElapsedProxy,
+                                                 logicalConnectionCountProxy,
+                                                 openProxySessionCount,
+                                                 closeProxySessionCount);
             poolDataSourceStatistics.update(conn,
-                                          timeElapsed,
-                                          timeElapsedProxy,
-                                          logicalConnectionCountProxy,
-                                          openProxySessionCount,
-                                          closeProxySessionCount);
+                                            timeElapsed,
+                                            timeElapsedProxy,
+                                            logicalConnectionCountProxy,
+                                            openProxySessionCount,
+                                            closeProxySessionCount);
         } catch (Exception e) {
             logger.error("updateStatistics() exception: {}", e.getMessage());
         }
