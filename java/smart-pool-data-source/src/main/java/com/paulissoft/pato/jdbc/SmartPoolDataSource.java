@@ -278,45 +278,78 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     }
     
     public void close() {
-        if (done()) {
-            commonPoolDataSource = null;
+        logger.info(">close()");
+
+        try {
+            done();
+        } catch (Exception ex) {
+            logger.error("exception:", ex);
+            ex.printStackTrace(System.err);
+            throw ex;
+        } finally {
+            logger.info("<close()");
         }
     }
 
     // returns true if there are no more pool data sources hereafter
     final protected boolean done() {
+        logger.info(">done()");
+        
         final boolean lastPoolDataSource = currentPoolCount.get(commonDataSourceProperties).decrementAndGet() == 0;
 
-        if (statisticsEnabled) {
-            final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-            final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
-            final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
+        try {
+            if (statisticsEnabled) {
+                final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
+                final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+                final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
 
-            if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema());
-            }
-            allDataSourceStatistics.remove(commonDataSourceStatistics);
-
-            if (lastPoolDataSource) {
-                // show (grand) totals only when it is the last pool data source
-                showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL);
-                allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
-
-                // only GrandTotal left?
-                if (allDataSourceStatistics.size() == 1) {                
-                    if (!poolDataSourceStatisticsGrandTotal.countersEqual(poolDataSourceStatisticsTotal)) {
-                        showDataSourceStatistics(poolDataSourceStatisticsGrandTotal, GRAND_TOTAL);
+                logger.debug("poolDataSourceStatistics={}",
+                             poolDataSourceStatistics);
+                
+                if (poolDataSourceStatistics != null) {
+                    if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
+                        showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema());
                     }
+                    allDataSourceStatistics.remove(commonDataSourceStatistics);
+                }
+
+                logger.debug("poolDataSourceStatisticsTotal={}; lastPoolDataSource={}",
+                             poolDataSourceStatisticsTotal,
+                             lastPoolDataSource);
+
+                if (poolDataSourceStatisticsTotal != null && lastPoolDataSource) {
+                    // show (grand) totals only when it is the last pool data source
+                    showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL);
                     allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
+
+                    logger.debug("poolDataSourceStatisticsGrandTotal={}; allDataSourceStatistics.size()={}",
+                                 poolDataSourceStatisticsGrandTotal,
+                                 allDataSourceStatistics.size());
+
+                    // only GrandTotal left?
+                    if (poolDataSourceStatisticsGrandTotal != null) {
+                        if (allDataSourceStatistics.size() == 1) {                
+                            if (!poolDataSourceStatisticsGrandTotal.countersEqual(poolDataSourceStatisticsTotal)) {
+                                showDataSourceStatistics(poolDataSourceStatisticsGrandTotal, GRAND_TOTAL);
+                            }
+                            allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
+                        }
+                    }
                 }
             }
-        }
             
-        if (lastPoolDataSource) {
-            logger.info("Closing pool {}", getPoolName());
-            poolDataSources.remove(commonDataSourceProperties);
-            commonPoolDataSource = null;
-        }
+            if (lastPoolDataSource) {
+                logger.info("Closing pool {}", getPoolName());
+                poolDataSources.remove(commonDataSourceProperties);
+            }
+        } catch (Exception ex) {
+            logger.error("exception:", ex);
+            ex.printStackTrace(System.err);
+            logger.info("<done()");
+            throw ex;
+        } 
+
+        logger.info("<done() = {}", lastPoolDataSource);
 
         return lastPoolDataSource;
     }
