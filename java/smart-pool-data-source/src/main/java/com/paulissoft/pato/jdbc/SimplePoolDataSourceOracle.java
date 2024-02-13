@@ -6,6 +6,28 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
 
+    public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
+        super();
+        setURL(pdsConfigurationOracle.getUrl());
+        setUsername(pdsConfigurationOracle.getUsername());
+        setPassword(pdsConfigurationOracle.getPassword());
+        setConnectionPoolName(pdsConfigurationOracle.getConnectionPoolName());
+        setInitialPoolSize(pdsConfigurationOracle.getInitialPoolSize());
+        setMinPoolSize(pdsConfigurationOracle.getMinPoolSize());
+        setMaxPoolSize(pdsConfigurationOracle.getMaxPoolSize());
+        setConnectionFactoryClassName(pdsConfigurationOracle.getConnectionFactoryClassName());
+        setValidateConnectionOnBorrow(pdsConfigurationOracle.isValidateConnectionOnBorrow());
+        setAbandonedConnectionTimeout(pdsConfigurationOracle.getAbandonedConnectionTimeout());
+        setTimeToLiveConnectionTimeout(pdsConfigurationOracle.getTimeToLiveConnectionTimeout());
+        setInactiveConnectionTimeout(pdsConfigurationOracle.getInactiveConnectionTimeout());
+        setTimeoutCheckInterval(pdsConfigurationOracle.getTimeoutCheckInterval());
+        setMaxStatements(pdsConfigurationOracle.getMaxStatements());
+        setConnectionWaitTimeout(pdsConfigurationOracle.getConnectionWaitTimeout());
+        setMaxConnectionReuseTime(pdsConfigurationOracle.getMaxConnectionReuseTime());
+        setSecondsToTrustIdleConnection(pdsConfigurationOracle.getSecondsToTrustIdleConnection());
+        setConnectionValidationTimeout(pdsConfigurationOracle.getConnectionValidationTimeout());
+    }
+
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return PoolDataSourceConfigurationOracle
             .builder()
