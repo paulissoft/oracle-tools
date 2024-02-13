@@ -377,14 +377,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                     commonPoolDataSource.setUsername(usernameToConnectTo);
                     commonPoolDataSource.setPassword(password);
                 }
-                logger.debug("connecting to username={} and password={}",
-                             commonPoolDataSource.getUsername(),
-                             commonPoolDataSource.getPassword());
                 conn = commonPoolDataSource.getConnection();
             } else {
-                logger.debug("connecting to username={} and password={}",
-                             usernameToConnectTo,
-                             password);
                 // see observations in constructor
                 conn = commonPoolDataSource.getConnection(usernameToConnectTo, password);
             }
@@ -392,7 +386,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             // if the current schema is not the requested schema try to open/close the proxy session
             if (!conn.getSchema().equalsIgnoreCase(schema)) {
                 OracleConnection oraConn = null;
-            
+
                 try {
                     if (conn.isWrapperFor(OracleConnection.class)) {
                         oraConn = conn.unwrap(OracleConnection.class);
@@ -403,19 +397,21 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
                 if (oraConn != null) {
                     if (oraConn.isProxySession()) {
-                        closeProxySession(oraConn);
+                        closeProxySession(oraConn, proxyUsername);
                     }
-                    if (proxyUsername != null) {
-                        openProxySession(oraConn, proxyUsername);
+                    if (proxyUsername != null) { // proxyUsername is username to connect to
+                        assert(proxyUsername.equalsIgnoreCase(usernameToConnectTo));
+                        
+                        openProxySession(oraConn, schema);
                     }
                 }
+                
+                assert(conn.getSchema().equalsIgnoreCase(schema));            
             }
 
             showConnection(conn);
 
             logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
-            
-            assert(conn.getSchema().equalsIgnoreCase(schema));            
 
             if (updateStatistics) {
                 updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
@@ -439,13 +435,13 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         final Properties proxyProperties = new Properties();
 
         proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
-        proxyProperties.setProperty(OracleConnection.CONNECTION_PROPERTY_PROXY_CLIENT_NAME, schema);
-
         oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
+        oraConn.setSchema(schema);
     }
 
-    private static void closeProxySession(final OracleConnection oraConn) throws SQLException {
+    private static void closeProxySession(final OracleConnection oraConn, final String proxyUsername) throws SQLException {
         oraConn.close(OracleConnection.PROXY_SESSION);
+        oraConn.setSchema(proxyUsername);
     }
 
     protected void showConnection(final Connection conn) throws SQLException {
