@@ -1,11 +1,16 @@
 package com.paulissoft.pato.jdbc;
 
-import org.springframework.stereotype.Component;
-
-import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 
-@ToString
-@Component
+@SuperBuilder(toBuilder = true)
 public class PoolDataSourceConfiguration {
+
+    private int initialPoolSize;
+
+    private int minPoolSize;
+
+    private int maxPoolSize;
+    
+    private String connectionFactoryClassName;
 }
