@@ -12,6 +12,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public void setPoolName(String poolName) throws SQLException;
 
+    public String getUrl();
+
     public void setUrl(String url) throws SQLException;
 
     public String getUsername();

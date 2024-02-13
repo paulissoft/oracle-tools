@@ -65,6 +65,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         setConnectionPoolName(poolName);
     }
 
+    public String getUrl() {
+        return getURL();
+    }
+    
     public void setUrl(String url) throws SQLException {
         setURL(url);
     }

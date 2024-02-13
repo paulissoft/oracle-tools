@@ -64,7 +64,11 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
     }
-        
+
+    public String getUrl() {
+        return getJdbcUrl();
+    }
+    
     public void setUrl(String url) {
         setJdbcUrl(url);
     }
