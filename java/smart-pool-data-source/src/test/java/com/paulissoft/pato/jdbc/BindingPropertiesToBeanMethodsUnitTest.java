@@ -41,6 +41,7 @@ public class BindingPropertiesToBeanMethodsUnitTest {
     
     @Test
     void testPoolDataSourceConfigurationHikari() {
+        poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
         assertEquals("HikariPool-boauth", poolDataSourceConfigurationHikari.getPoolName());
         assertEquals(60, poolDataSourceConfigurationHikari.getMaximumPoolSize());
         assertEquals(60, poolDataSourceConfigurationHikari.getMinimumIdle());
@@ -57,6 +58,6 @@ public class BindingPropertiesToBeanMethodsUnitTest {
         assertEquals(false, poolDataSourceConfigurationHikari.isRegisterMbeans());
         assertEquals(5000, poolDataSourceConfigurationHikari.getValidationTimeout());
         assertEquals(0, poolDataSourceConfigurationHikari.getLeakDetectionThreshold());
-        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, url=null, username=null, password=null, type=null), poolName=HikariPool-boauth, maximumPoolSize=60, minimumIdle=60, dataSourceClassName=null, autoCommit=true, connectionTimeout=30000, idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, validationTimeout=5000, leakDetectionThreshold=0)", poolDataSourceConfigurationHikari.toString());
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=HikariPool-boauth, maximumPoolSize=60, minimumIdle=60, dataSourceClassName=null, autoCommit=true, connectionTimeout=30000, idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, validationTimeout=5000, leakDetectionThreshold=0)", poolDataSourceConfigurationHikari.toString());
     }
 }

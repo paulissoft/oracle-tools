@@ -42,4 +42,13 @@ public class PoolDataSourceConfiguration {
             this.type = null;
         }
     }
+
+    // copy parent fields
+    public void copy(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+        this.driverClassName = poolDataSourceConfiguration.driverClassName;
+        this.url = poolDataSourceConfiguration.url;    
+        this.username = poolDataSourceConfiguration.username;
+        this.password = poolDataSourceConfiguration.password;
+        this.type = poolDataSourceConfiguration.type;
+    }
 }
