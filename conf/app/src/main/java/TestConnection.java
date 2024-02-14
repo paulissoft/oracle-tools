@@ -23,6 +23,10 @@ public class TestConnection {
 
     private static String dbProxyClientName = null;
 
+    private static Boolean isDbSingleSessionProxyModel() {
+        return dbUsername.endsWith("]");
+    }
+
     private static OracleConnection connection;
         
     private static void error(final String msg) {
@@ -44,9 +48,13 @@ public class TestConnection {
         return input.nextLine();
     }
 
-    private static void showConnectionInfo() throws SQLException {
+    private static void showConnectionProperties() throws SQLException {
         info("");
         connection.getProperties().list(System.out);
+    }
+
+    private static void showConnectionInfo() throws SQLException {
+        info("");
 
         // Get the JDBC driver name and version 
         final DatabaseMetaData dbmd = connection.getMetaData();
@@ -58,22 +66,55 @@ public class TestConnection {
         info("Default Row Prefetch Value is: " + connection.getDefaultRowPrefetch());
         info("Database Username is: " + connection.getUserName());
         info("");
+
+        // Prepare a statement to execute the SQL Queries.
+        try (final Statement statement = connection.createStatement()) {
+            final String newLine = System.getProperty("line.separator");
+            final String[] parameters = {
+                null,
+                "AUTHENTICATED_IDENTITY", // 1
+                "AUTHENTICATION_METHOD", // 2
+                "CURRENT_SCHEMA", // 3
+                "CURRENT_USER", // 4
+                "PROXY_USER", // 5
+                "SESSION_USER", // 6
+                "SESSIONID", // 7
+                "SID"  // 8
+            };
+            final String sessionParametersQuery = String.join(newLine,
+                                                              "select  sys_context('USERENV', '" + parameters[1] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[2] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[3] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[4] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[5] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[6] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[7] + "')",
+                                                              ",       sys_context('USERENV', '" + parameters[8] + "')",
+                                                              "from    dual");
+            
+            try (final ResultSet resultSet = statement.executeQuery(sessionParametersQuery)) {
+                while (resultSet.next()) {
+                    for (int i = 1; i < parameters.length; i++) {
+                        info(parameters[i] + ": " + resultSet.getString(i));
+                    }
+                }
+            }
+        }
     }
 
-    private static void connect() throws SQLException {
-        info("Db Url: " + dbUrl);
-        info("Db Username: " + dbUsername);
-        info("Db Password: " + (dbPassword != null ? "***" : "null"));
-
+    private static void connect(final Boolean openProxySessionIfApplicable) throws SQLException {
         final Properties properties = new Properties();
         
         properties.put(OracleConnection.CONNECTION_PROPERTY_USER_NAME, dbUsername);
         properties.put(OracleConnection.CONNECTION_PROPERTY_PASSWORD, dbPassword);          
-        properties.put(OracleConnection.CONNECTION_PROPERTY_DEFAULT_ROW_PREFETCH, "20");
+        // properties.put(OracleConnection.CONNECTION_PROPERTY_DEFAULT_ROW_PREFETCH, "20");
+        /*
         if (!(dbProxyClientName == null || dbProxyClientName.equals(""))) {
-            info("Db Proxy Client Name: " + dbProxyClientName);
-            properties.put(OracleConnection.CONNECTION_PROPERTY_PROXY_CLIENT_NAME, dbProxyClientName);
+            if (isDbSingleSessionProxyModel()) {
+                properties.put(OracleConnection.CONNECTION_PROPERTY_PROXY_CLIENT_NAME, dbProxyClientName);
+            }
         }
+        */
 
         final OracleDataSource ods = new OracleDataSource();
         
@@ -81,17 +122,21 @@ public class TestConnection {
         ods.setConnectionProperties(properties);
 
         connection = (OracleConnection) ods.getConnection();
+
+        if (openProxySessionIfApplicable &&
+            !(dbProxyClientName == null || dbProxyClientName.equals("")) &&
+            !isDbSingleSessionProxyModel()) {
+            openProxySession(dbProxyClientName);
+        }
     }
 
-    private static void openProxySession() throws SQLException {
+    private static void openProxySession(final String schema) throws SQLException {
         final Properties proxyProperties = new Properties();
 
-        final String schema = question("schema to proxy to");
-            
         proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
         proxyProperties.setProperty(OracleConnection.CONNECTION_PROPERTY_PROXY_CLIENT_NAME, schema);
 
-        connection.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+        connection.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
     }
 
     private static void closeProxySession() throws SQLException {
@@ -102,6 +147,58 @@ public class TestConnection {
         connection.close();
     }
     
+    private static void benchmark() throws SQLException {
+        final long[] elapsedTimes = new long[] { 0L, 0L, 0L, 0L };
+        final String[] methodNames = new String[] { "connect()", "openProxySession()", "closeProxySession()", "disconnect()" };
+        int method;
+
+        final int MAX_COUNTER = Integer.parseInt(question("how many times to benchmark connect/openProxySession/closeProxySession/disconnect"));
+        
+        for (int counter = 1; counter <= MAX_COUNTER; counter++) {
+            for (method = 0; method < elapsedTimes.length; method++) {
+                final long startTime = System.currentTimeMillis();
+                
+                switch (method) {
+                case 0:
+                    connect(false);
+                    break;
+                    
+                case 1:
+                    if (dbProxyClientName == null || dbProxyClientName.equals("")) {
+                        continue;
+                    }
+                    openProxySession(dbProxyClientName);
+                    break;
+
+                case 2:
+                    if (dbProxyClientName == null || dbProxyClientName.equals("")) {
+                        continue;
+                    }
+                    closeProxySession();
+                    break;
+                    
+                case 3:
+                    disconnect();
+                    break;
+                }
+
+                final long endTime = System.currentTimeMillis();
+
+                info(methodNames[method] + " (#" + counter + ")" + " elapsed time (ms) = " + (endTime - startTime));
+
+                elapsedTimes[method] += endTime - startTime;
+            }
+        }
+
+        info("");
+        
+        for (method = 0; method < elapsedTimes.length; method++) {
+            if (elapsedTimes[method] > 0L) {
+                info(methodNames[method] + " avg elapsed time (ms) = " + (long) (elapsedTimes[method] / MAX_COUNTER));
+            }
+        }
+    }
+
     private static void menu() {
         while (true) {
             try {
@@ -109,21 +206,37 @@ public class TestConnection {
                 showMenuOption(0, "Quit");
                 showMenuOption(1, "Connect");
                 showMenuOption(2, "Show connection info");
-                showMenuOption(3, "Show user objects");
-                showMenuOption(4, "Open proxy session");
-                showMenuOption(5, "Close proxy session");
-                showMenuOption(6, "Disconnect");
+                showMenuOption(3, "Show connection properties");
+                showMenuOption(4, "Show user objects");
+                showMenuOption(5, "Open proxy session");
+                showMenuOption(6, "Close proxy session");
+                showMenuOption(7, "Benchmark");                
+                showMenuOption(8, "Disconnect");
 
-                switch (Integer.parseInt(question("your choice"))) {
+                int choice;
+                    
+                switch (choice = Integer.parseInt(question("your choice"))) {
                 case 0:
                     return;
                 
                 case 1:
-                    dbUrl = question("database url (jdbc:oracle:thin:@...)");
+                case 7:
+                    dbUrl = question("database DSN (after the @ in jdbc:oracle:thin:@...)");
+                    if (!dbUrl.startsWith("jdbc:oracle:thin:@")) {
+                        dbUrl = "jdbc:oracle:thin:@" + dbUrl;
+                    }
                     dbUsername = question("username");
                     dbPassword = question("password");
-                    dbProxyClientName = question("proxy client name");
-                    connect();
+                    if (isDbSingleSessionProxyModel()) {
+                        dbProxyClientName = null;
+                    } else {
+                        dbProxyClientName = question("proxy client name");
+                    }
+                    if (choice == 1) {
+                        connect(true);
+                    } else {
+                        benchmark();
+                    }
                     break;
 
                 case 2:
@@ -131,18 +244,22 @@ public class TestConnection {
                     break;
                     
                 case 3:
-                    printUserObjects(connection);
+                    showConnectionProperties();
                     break;
                     
                 case 4:
-                    openProxySession();
+                    printUserObjects(connection);
+                    break;
+                    
+                case 5:
+                    openProxySession(dbProxyClientName = question("schema to proxy to"));
                     break;
 
-                case 5:
+                case 6:
                     closeProxySession();
                     break;
                 
-                case 6:
+                case 8:
                     disconnect();
                     break; 
                 }
@@ -181,7 +298,7 @@ public class TestConnection {
         dbUsername = args[1];
         dbPassword = args[2];
 
-        connect();
+        connect(true);
 
         showConnectionInfo();
         
@@ -206,4 +323,5 @@ public class TestConnection {
             }
         }   
     } 
+
 }
