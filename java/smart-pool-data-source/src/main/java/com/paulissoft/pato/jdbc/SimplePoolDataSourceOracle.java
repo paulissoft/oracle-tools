@@ -10,25 +10,42 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
         super();
+
         log.info("SimplePoolDataSourceOracle(pdsConfigurationOracle={})", pdsConfigurationOracle);
-        setURL(pdsConfigurationOracle.getUrl());
-        setUsername(pdsConfigurationOracle.getUsername());
-        setPassword(pdsConfigurationOracle.getPassword());
-        setConnectionPoolName(pdsConfigurationOracle.getConnectionPoolName());
-        setInitialPoolSize(pdsConfigurationOracle.getInitialPoolSize());
-        setMinPoolSize(pdsConfigurationOracle.getMinPoolSize());
-        setMaxPoolSize(pdsConfigurationOracle.getMaxPoolSize());
-        setConnectionFactoryClassName(pdsConfigurationOracle.getConnectionFactoryClassName());
-        setValidateConnectionOnBorrow(pdsConfigurationOracle.isValidateConnectionOnBorrow());
-        setAbandonedConnectionTimeout(pdsConfigurationOracle.getAbandonedConnectionTimeout());
-        setTimeToLiveConnectionTimeout(pdsConfigurationOracle.getTimeToLiveConnectionTimeout());
-        setInactiveConnectionTimeout(pdsConfigurationOracle.getInactiveConnectionTimeout());
-        setTimeoutCheckInterval(pdsConfigurationOracle.getTimeoutCheckInterval());
-        setMaxStatements(pdsConfigurationOracle.getMaxStatements());
-        setConnectionWaitTimeout(pdsConfigurationOracle.getConnectionWaitTimeout());
-        setMaxConnectionReuseTime(pdsConfigurationOracle.getMaxConnectionReuseTime());
-        setSecondsToTrustIdleConnection(pdsConfigurationOracle.getSecondsToTrustIdleConnection());
-        setConnectionValidationTimeout(pdsConfigurationOracle.getConnectionValidationTimeout());
+        
+        int nr = 0;
+        final int maxNr = 17;
+        
+        do {
+            try {
+                switch(nr) {
+                case 0: setURL(pdsConfigurationOracle.getUrl()); break;
+                case 1: setUsername(pdsConfigurationOracle.getUsername()); break;
+                case 2: setPassword(pdsConfigurationOracle.getPassword()); break;
+                case 3: setConnectionPoolName(pdsConfigurationOracle.getConnectionPoolName()); break;
+                case 4: setInitialPoolSize(pdsConfigurationOracle.getInitialPoolSize()); break;
+                case 5: setMinPoolSize(pdsConfigurationOracle.getMinPoolSize()); break;
+                case 6: setMaxPoolSize(pdsConfigurationOracle.getMaxPoolSize()); break;
+                case 7: setConnectionFactoryClassName(pdsConfigurationOracle.getConnectionFactoryClassName()); break;
+                case 8: setValidateConnectionOnBorrow(pdsConfigurationOracle.isValidateConnectionOnBorrow()); break;
+                case 9: setAbandonedConnectionTimeout(pdsConfigurationOracle.getAbandonedConnectionTimeout()); break;
+                case 10: setTimeToLiveConnectionTimeout(pdsConfigurationOracle.getTimeToLiveConnectionTimeout()); break;
+                case 11: setInactiveConnectionTimeout(pdsConfigurationOracle.getInactiveConnectionTimeout()); break;
+                case 12: setTimeoutCheckInterval(pdsConfigurationOracle.getTimeoutCheckInterval()); break;
+                case 13: setMaxStatements(pdsConfigurationOracle.getMaxStatements()); break;
+                case 14: setConnectionWaitTimeout(pdsConfigurationOracle.getConnectionWaitTimeout()); break;
+                case 15: setMaxConnectionReuseTime(pdsConfigurationOracle.getMaxConnectionReuseTime()); break;
+                case 16: setSecondsToTrustIdleConnection(pdsConfigurationOracle.getSecondsToTrustIdleConnection()); break;
+                case 17: setConnectionValidationTimeout(pdsConfigurationOracle.getConnectionValidationTimeout()); break;
+                default:
+                    throw new RuntimeException(String.format("Wrong value for nr ({nr}): must be between 0 and {}", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("exception at nr {}: {}", nr, ex.getMessage());
+            }
+        } while (++nr <= maxNr);
+
+        log.info("getPoolDataSourceConfiguration()={}", getPoolDataSourceConfiguration().toString());
     }
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
@@ -58,24 +75,24 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
-        log.debug(">updatePoolSizes()");
+        log.info(">updatePoolSizes()");
 
         final SimplePoolDataSourceOracle pdsOracle = (SimplePoolDataSourceOracle) pds;
         
         assert(this != pdsOracle);
-        log.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                     getInitialPoolSize(),
-                     getMinPoolSize(),
-                     getMaxPoolSize());
+        log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                 getInitialPoolSize(),
+                 getMinPoolSize(),
+                 getMaxPoolSize());
 
         int oldSize, newSize;
 
         newSize = pdsOracle.getInitialPoolSize();
         oldSize = getInitialPoolSize();
 
-        log.debug("initial pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+        log.info("initial pool sizes before setting it: old/new: {}/{}",
+                 oldSize,
+                 newSize);
 
         if (newSize >= 0) {
             setInitialPoolSize(newSize + Integer.max(oldSize, 0));
@@ -84,9 +101,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         newSize = pdsOracle.getMinPoolSize();
         oldSize = getMinPoolSize();
 
-        log.debug("minimum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+        log.info("minimum pool sizes before setting it: old/new: {}/{}",
+                 oldSize,
+                 newSize);
 
         if (newSize >= 0) {                
             setMinPoolSize(newSize + Integer.max(oldSize, 0));
@@ -95,20 +112,20 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         newSize = pdsOracle.getMaxPoolSize();
         oldSize = getMaxPoolSize();
 
-        log.debug("maximum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+        log.info("maximum pool sizes before setting it: old/new: {}/{}",
+                 oldSize,
+                 newSize);
 
         if (newSize >= 0) {
             setMaxPoolSize(newSize + Integer.max(oldSize, 0));
         }
                 
-        log.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                     getInitialPoolSize(),
-                     getMinPoolSize(),
-                     getMaxPoolSize());
+        log.info("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                 getInitialPoolSize(),
+                 getMinPoolSize(),
+                 getMaxPoolSize());
 
-        log.debug("<updatePoolSizes()");
+        log.info("<updatePoolSizes()");
     }
     
     public String getPoolName() {

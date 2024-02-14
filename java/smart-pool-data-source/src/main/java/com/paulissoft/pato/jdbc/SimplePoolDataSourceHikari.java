@@ -12,28 +12,43 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
         super();
+        
         log.info("SimplePoolDataSourceHikari(pdsConfigurationHikari={})", pdsConfigurationHikari);
-        if (pdsConfigurationHikari.getDriverClassName() != null) {
-            setDriverClassName(pdsConfigurationHikari.getDriverClassName());
-        }
-        setJdbcUrl(pdsConfigurationHikari.getUrl());
-        setUsername(pdsConfigurationHikari.getUsername());
-        setPassword(pdsConfigurationHikari.getPassword());
-        setPoolName(pdsConfigurationHikari.getPoolName());
-        setMaximumPoolSize(pdsConfigurationHikari.getMaximumPoolSize());
-        setMinimumIdle(pdsConfigurationHikari.getMinimumIdle());
-        setAutoCommit(pdsConfigurationHikari.isAutoCommit());
-        setConnectionTimeout(pdsConfigurationHikari.getConnectionTimeout());
-        setIdleTimeout(pdsConfigurationHikari.getIdleTimeout());
-        setMaxLifetime(pdsConfigurationHikari.getMaxLifetime());
-        setConnectionTestQuery(pdsConfigurationHikari.getConnectionTestQuery());
-        setInitializationFailTimeout(pdsConfigurationHikari.getInitializationFailTimeout());
-        setIsolateInternalQueries(pdsConfigurationHikari.isIsolateInternalQueries());
-        setAllowPoolSuspension(pdsConfigurationHikari.isAllowPoolSuspension());
-        setReadOnly(pdsConfigurationHikari.isReadOnly());
-        setRegisterMbeans(pdsConfigurationHikari.isRegisterMbeans());
-        setValidationTimeout(pdsConfigurationHikari.getValidationTimeout());
-        setLeakDetectionThreshold(pdsConfigurationHikari.getLeakDetectionThreshold());
+
+        int nr = 0;
+        final int maxNr = 18;
+        
+        do {
+            try {
+                switch(nr) {
+                case 0: setDriverClassName(pdsConfigurationHikari.getDriverClassName()); break;
+                case 1: setJdbcUrl(pdsConfigurationHikari.getUrl()); break;
+                case 2: setUsername(pdsConfigurationHikari.getUsername()); break;
+                case 3: setPassword(pdsConfigurationHikari.getPassword()); break;
+                case 4: setPoolName(pdsConfigurationHikari.getPoolName()); break;
+                case 5: setMaximumPoolSize(pdsConfigurationHikari.getMaximumPoolSize()); break;
+                case 6: setMinimumIdle(pdsConfigurationHikari.getMinimumIdle()); break;
+                case 7: setAutoCommit(pdsConfigurationHikari.isAutoCommit()); break;
+                case 8: setConnectionTimeout(pdsConfigurationHikari.getConnectionTimeout()); break;
+                case 9: setIdleTimeout(pdsConfigurationHikari.getIdleTimeout()); break;
+                case 10: setMaxLifetime(pdsConfigurationHikari.getMaxLifetime()); break;
+                case 11: setConnectionTestQuery(pdsConfigurationHikari.getConnectionTestQuery()); break;
+                case 12: setInitializationFailTimeout(pdsConfigurationHikari.getInitializationFailTimeout()); break;
+                case 13: setIsolateInternalQueries(pdsConfigurationHikari.isIsolateInternalQueries()); break;
+                case 14: setAllowPoolSuspension(pdsConfigurationHikari.isAllowPoolSuspension()); break;
+                case 15: setReadOnly(pdsConfigurationHikari.isReadOnly()); break;
+                case 16: setRegisterMbeans(pdsConfigurationHikari.isRegisterMbeans()); break;
+                case 17: setValidationTimeout(pdsConfigurationHikari.getValidationTimeout()); break;
+                case 18: setLeakDetectionThreshold(pdsConfigurationHikari.getLeakDetectionThreshold()); break;
+                default:
+                    throw new RuntimeException(String.format("Wrong value for nr ({nr}): must be between 0 and {}", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("exception at nr {}: {}", nr, ex.getMessage());
+            }
+        } while (++nr <= maxNr);
+
+        log.info("getPoolDataSourceConfiguration()={}", getPoolDataSourceConfiguration().toString());
     }
 
     // get common pool data source properties like the ones define above
@@ -64,24 +79,24 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
-        log.debug(">updatePoolSizes()");
+        log.info(">updatePoolSizes()");
 
         final SimplePoolDataSourceHikari pdsHikari = (SimplePoolDataSourceHikari) pds;
 
         assert(this != pdsHikari);
         
-        log.debug("pool sizes before: minimum/maximum: {}/{}/{}",
-                     getMinimumIdle(),
-                     getMaximumPoolSize());
+        log.info("pool sizes before: minimum/maximum: {}/{}/{}",
+                 getMinimumIdle(),
+                 getMaximumPoolSize());
 
         int oldSize, newSize;
 
         newSize = pdsHikari.getMinimumIdle();
         oldSize = getMinimumIdle();
 
-        log.debug("minimum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+        log.info("minimum pool sizes before setting it: old/new: {}/{}",
+                 oldSize,
+                 newSize);
 
         if (newSize >= 0) {                
             setMinimumIdle(newSize + Integer.max(oldSize, 0));
@@ -90,19 +105,19 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         newSize = pdsHikari.getMaximumPoolSize();
         oldSize = getMaximumPoolSize();
 
-        log.debug("maximum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+        log.info("maximum pool sizes before setting it: old/new: {}/{}",
+                 oldSize,
+                 newSize);
 
         if (newSize >= 0) {
             setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
         }
                 
-        log.debug("pool sizes after: minimum/maximum: {}/{}/{}",
-                     getMinimumIdle(),
-                     getMaximumPoolSize());
+        log.info("pool sizes after: minimum/maximum: {}/{}/{}",
+                 getMinimumIdle(),
+                 getMaximumPoolSize());
             
-        log.debug("<updatePoolSizes()");
+        log.info("<updatePoolSizes()");
     }
 
     public String getUrl() {

@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.sql.SQLException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
 @TestPropertySource("classpath:application-test.properties")
-public class BindingPropertiesToBeanMethodsUnitTest {
+public class CheckConfigurationUnitTest {
 
     @Autowired
     @Qualifier("spring-datasource")
@@ -83,6 +84,20 @@ public class BindingPropertiesToBeanMethodsUnitTest {
     }
 
     @Test
+    void testDefaultSimplePoolDataSourceHikari() {
+        final SimplePoolDataSourceHikari pds = new SimplePoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
+
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=null, username=null, password=null, " +
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
+                     "maximumPoolSize=-1, minimumIdle=0, dataSourceClassName=null, autoCommit=false, connectionTimeout=2147483647, " +
+                     "idleTimeout=0, maxLifetime=0, connectionTestQuery=null, initializationFailTimeout=0, " +
+                     "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
+                     "validationTimeout=5000, leakDetectionThreshold=0)",
+                     pds.getPoolDataSourceConfiguration().toString());
+    }
+
+    @Test
     void testPoolDataSourceConfigurationOracle() {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
@@ -117,5 +132,13 @@ public class BindingPropertiesToBeanMethodsUnitTest {
                      "abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=100, inactiveConnectionTimeout=0, timeoutCheckInterval=30, " +
                      "maxStatements=10, connectionWaitTimeout=3, maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfigurationOracle.toString());
+    }
+
+    @Test
+    void testDefaultSimplePoolDataSourceOracle() throws SQLException {
+        final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
+            
+        assertEquals("",
+                     pds.getPoolDataSourceConfiguration().toString());
     }
 }

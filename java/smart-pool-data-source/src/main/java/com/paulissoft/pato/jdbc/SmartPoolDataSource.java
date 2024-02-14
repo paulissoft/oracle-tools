@@ -132,7 +132,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         final String username = connectInfo.getUsername();
         final String password = connectInfo.getPassword();
         
-        logger.debug(">join(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
+        logger.info(">join(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
                      pds,
                      username,
                      singleSessionProxyModel,
@@ -143,6 +143,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         printDataSourceStatistics(pds, logger);
 
         final PoolDataSourceConfiguration commonDataSourceProperties = pds.getPoolDataSourceConfiguration();
+
+        logger.info("commonDataSourceProperties before: {}", commonDataSourceProperties.toString());
 
         assert(commonDataSourceProperties.getType() != null);
         assert(commonDataSourceProperties.getUrl() != null);
@@ -175,6 +177,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         }
 
         this.commonDataSourceProperties = commonDataSourceProperties.toString();
+
+        logger.info("commonDataSourceProperties after: {}", this.commonDataSourceProperties);
         
         commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
 
@@ -222,12 +226,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 commonPoolDataSource.updatePoolSizes(pds);
             }
             commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + "-" + connectInfo.getSchema());
-            logger.debug("Common pool name: {}", commonPoolDataSource.getPoolName());
+            logger.info("Common pool name: {}", commonPoolDataSource.getPoolName());
         }
 
         printDataSourceStatistics(commonPoolDataSource, logger);
             
-        logger.debug("<join()");
+        logger.info("<join()");
     }
     
     public void close() {
@@ -341,9 +345,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                        final String proxyUsername,
                                        final boolean updateStatistics,
                                        final boolean showStatistics) throws SQLException {
-        logger.debug(">getConnection(usernameToConnectTo={}, password={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+        logger.debug(">getConnection(usernameToConnectTo={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
                      usernameToConnectTo,
-                     password,
                      schema,
                      proxyUsername,
                      updateStatistics,
@@ -352,6 +355,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         try {    
             final Instant t1 = Instant.now();
             Connection conn;
+            int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
+            Instant t2 = null;
             
             if (useFixedUsernamePassword) {
                 if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
@@ -367,7 +372,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             // if the current schema is not the requested schema try to open/close the proxy session
             if (!conn.getSchema().equalsIgnoreCase(schema)) {
                 assert(!singleSessionProxyModel);
-                
+
+                t2 = Instant.now();
+
                 OracleConnection oraConn = null;
 
                 try {
@@ -382,10 +389,13 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                     int nr = 0;
                     
                     do {
+                        logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
+
                         switch(nr) {
                         case 0:
                             if (oraConn.isProxySession()) {
                                 closeProxySession(oraConn, proxyUsername != null ? proxyUsername : schema);
+                                closeProxySessionCount++;
                             }
                             break;
                             
@@ -394,6 +404,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                 assert(proxyUsername.equalsIgnoreCase(usernameToConnectTo));
                         
                                 openProxySession(oraConn, schema);
+                                openProxySessionCount++;
                             }
                             break;
                             
@@ -409,12 +420,23 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             }
 
             assert(conn.getSchema().equalsIgnoreCase(schema));
+            
             showConnection(conn);
 
-            logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
-
             if (updateStatistics) {
-                updateStatistics(conn, Duration.between(t1, Instant.now()).toMillis(), showStatistics);
+                if (t2 == null) {
+                    updateStatistics(conn,
+                                     Duration.between(t1, Instant.now()).toMillis(),
+                                     showStatistics);
+                } else {
+                    updateStatistics(conn,
+                                     Duration.between(t1, t2).toMillis(),
+                                     Duration.between(t2, Instant.now()).toMillis(),
+                                     showStatistics,
+                                     logicalConnectionCountProxy,
+                                     openProxySessionCount,
+                                     closeProxySessionCount);
+                }
             }
 
             logger.debug("<getConnection() = {}", conn);
