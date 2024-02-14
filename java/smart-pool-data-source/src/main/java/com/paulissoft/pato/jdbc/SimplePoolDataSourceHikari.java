@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import java.sql.SQLException;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import org.springframework.beans.DirectFieldAccessor;
@@ -60,6 +61,48 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .validationTimeout(getValidationTimeout())
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
+    }
+
+    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
+        log.debug(">updatePoolSizes()");
+
+        final SimplePoolDataSourceHikari pdsHikari = (SimplePoolDataSourceHikari) pds;
+
+        assert(this != pdsHikari);
+        
+        log.debug("pool sizes before: minimum/maximum: {}/{}/{}",
+                     getMinimumIdle(),
+                     getMaximumPoolSize());
+
+        int oldSize, newSize;
+
+        newSize = pdsHikari.getMinimumIdle();
+        oldSize = getMinimumIdle();
+
+        log.debug("minimum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+        if (newSize >= 0) {                
+            setMinimumIdle(newSize + Integer.max(oldSize, 0));
+        }
+                
+        newSize = pdsHikari.getMaximumPoolSize();
+        oldSize = getMaximumPoolSize();
+
+        log.debug("maximum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+        if (newSize >= 0) {
+            setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
+        }
+                
+        log.debug("pool sizes after: minimum/maximum: {}/{}/{}",
+                     getMinimumIdle(),
+                     getMaximumPoolSize());
+            
+        log.debug("<updatePoolSizes()");
     }
 
     public String getUrl() {

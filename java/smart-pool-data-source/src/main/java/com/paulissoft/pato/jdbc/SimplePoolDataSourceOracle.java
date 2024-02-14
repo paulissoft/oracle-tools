@@ -56,7 +56,61 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
     }
+
+    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
+        log.debug(">updatePoolSizes()");
+
+        final SimplePoolDataSourceOracle pdsOracle = (SimplePoolDataSourceOracle) pds;
         
+        assert(this != pdsOracle);
+        log.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                     getInitialPoolSize(),
+                     getMinPoolSize(),
+                     getMaxPoolSize());
+
+        int oldSize, newSize;
+
+        newSize = pdsOracle.getInitialPoolSize();
+        oldSize = getInitialPoolSize();
+
+        log.debug("initial pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+        if (newSize >= 0) {
+            setInitialPoolSize(newSize + Integer.max(oldSize, 0));
+        }
+
+        newSize = pdsOracle.getMinPoolSize();
+        oldSize = getMinPoolSize();
+
+        log.debug("minimum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+        if (newSize >= 0) {                
+            setMinPoolSize(newSize + Integer.max(oldSize, 0));
+        }
+                
+        newSize = pdsOracle.getMaxPoolSize();
+        oldSize = getMaxPoolSize();
+
+        log.debug("maximum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+        if (newSize >= 0) {
+            setMaxPoolSize(newSize + Integer.max(oldSize, 0));
+        }
+                
+        log.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                     getInitialPoolSize(),
+                     getMinPoolSize(),
+                     getMaxPoolSize());
+
+        log.debug("<updatePoolSizes()");
+    }
+    
     public String getPoolName() {
         return getConnectionPoolName();
     }

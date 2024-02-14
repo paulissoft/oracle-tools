@@ -36,14 +36,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private static Method loggerDebug;
 
-    private static final PoolDataSourceConfiguration commonDataSourceStatisticsGrandTotal = null;
-    // PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build();
+    private static final String commonDataSourceStatisticsGrandTotal = null;
+    // PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build().toString();
 
-    private static final ConcurrentHashMap<PoolDataSourceConfiguration, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
-    private static final ConcurrentHashMap<PoolDataSourceConfiguration, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
 
-    private static final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+    private static final ConcurrentHashMap<String, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
@@ -91,14 +91,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private ConnectInfo connectInfo;
 
     // Same common properties for a pool data source in constructor: same commonPoolDataSource
-    private PoolDataSourceConfiguration commonDataSourceProperties;
+    private String commonDataSourceProperties;
 
     // Same as commonDataSourceProperties, i.e. total per common pool data source.
-    private final PoolDataSourceConfiguration commonDataSourceStatisticsTotal = null;
+    private final String commonDataSourceStatisticsTotal = null;
 
     // Same as commonDataSourceProperties including current schema and password,
     // only for connection info like elapsed time, open/close sessions.
-    private PoolDataSourceConfiguration commonDataSourceStatistics;
+    private String commonDataSourceStatistics;
 
     /**
      * Initialize a pool data source.
@@ -106,10 +106,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      * The one and only constructor.
      *
      * @param pds                         A pool data source (HikariCP or UCP).
-     * @param commonDataSourceProperties  The properties of the pool data source that have to be equal to create a common pool data source.
-     *                                    Mandatory properties: CLASS and URL.
-     * @param username                    The username to connect to for this pool data source, may be a proxy username like BC_PROXY[BDOMAIN].
-     * @param password                    The password.
      * @param singleSessionProxyModel
      * @param useFixedUsernamePassword    Only use commonPoolDataSource.getConnection(), never commonPoolDataSource.getConnection(username, password)
      */
@@ -146,7 +142,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         
         printDataSourceStatistics(pds, logger);
 
-        commonDataSourceProperties = pds.getPoolDataSourceConfiguration();
+        final PoolDataSourceConfiguration commonDataSourceProperties = pds.getPoolDataSourceConfiguration();
 
         assert(commonDataSourceProperties.getType() != null);
         assert(commonDataSourceProperties.getUrl() != null);
@@ -178,22 +174,25 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             commonDataSourceProperties.setPassword(connectInfo.getPassword());
         }
 
-        commonPoolDataSource = poolDataSources.computeIfAbsent(commonDataSourceProperties, s -> pds);
+        this.commonDataSourceProperties = commonDataSourceProperties.toString();
+        
+        commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
 
         assert(commonPoolDataSource != null);
         
-        currentPoolCount.computeIfAbsent(commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
+        currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
 
         // The statistics are measured per original data source and per total.
         // Total is just a copy.
-        // commonDataSourceStatisticsTotal = commonDataSourceProperties.toBuilder().build();
+        // commonDataSourceStatisticsTotal = commonDataSourceProperties.toBuilder().build().toString();
 
         // Per original data source, hence we include the username / password.
         commonDataSourceStatistics = commonDataSourceProperties
             .toBuilder()
             .username(username)
             .password(password)
-            .build();
+            .build()
+            .toString();
 
         // add totals if not already existent
         if (commonDataSourceStatisticsGrandTotal != null) {
@@ -204,7 +203,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         }
         allDataSourceStatistics.computeIfAbsent(commonDataSourceStatistics, s -> new PoolDataSourceStatistics());
 
-        // update pool sizes and default username / password when the pool data source is added to an existing
+        // update default username / password when the pool data source is added to an existing
         synchronized (commonPoolDataSource) {
             // Set new username/password combination of common data source before
             // you augment pool size(s) since that may trigger getConnection() calls.
@@ -215,68 +214,18 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             if (commonPoolDataSource == pds) {
                 commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
-                logger.debug("common pool sizes: initial/minimum/maximum: {}/{}/{}",
-                             commonPoolDataSource.getInitialPoolSize(),
-                             commonPoolDataSource.getMinPoolSize(),
-                             commonPoolDataSource.getMaxPoolSize());
             } else {
                 // for debugging purposes
                 if (pds.getPoolName() == null) {
                     pds.setPoolName(String.valueOf(pds.hashCode()));
                 }
-                
-                logger.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                             commonPoolDataSource.getInitialPoolSize(),
-                             commonPoolDataSource.getMinPoolSize(),
-                             commonPoolDataSource.getMaxPoolSize());
-
-                int oldSize, newSize;
-
-                newSize = pds.getInitialPoolSize();
-                oldSize = commonPoolDataSource.getInitialPoolSize();
-
-                logger.debug("initial pool sizes before setting it: old/new: {}/{}",
-                             oldSize,
-                             newSize);
-
-                if (newSize >= 0) {
-                    commonPoolDataSource.setInitialPoolSize(newSize + Integer.max(oldSize, 0));
-                }
-
-                newSize = pds.getMinPoolSize();
-                oldSize = commonPoolDataSource.getMinPoolSize();
-
-                logger.debug("minimum pool sizes before setting it: old/new: {}/{}",
-                             oldSize,
-                             newSize);
-
-                if (newSize >= 0) {                
-                    commonPoolDataSource.setMinPoolSize(newSize + Integer.max(oldSize, 0));
-                }
-                
-                newSize = pds.getMaxPoolSize();
-                oldSize = commonPoolDataSource.getMaxPoolSize();
-
-                logger.debug("maximum pool sizes before setting it: old/new: {}/{}",
-                             oldSize,
-                             newSize);
-
-                if (newSize >= 0) {
-                    commonPoolDataSource.setMaxPoolSize(newSize + Integer.max(oldSize, 0));
-                }
-                
-                logger.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                             commonPoolDataSource.getInitialPoolSize(),
-                             commonPoolDataSource.getMinPoolSize(),
-                             commonPoolDataSource.getMaxPoolSize());
+                commonPoolDataSource.updatePoolSizes(pds);
             }
             commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + "-" + connectInfo.getSchema());
             logger.debug("Common pool name: {}", commonPoolDataSource.getPoolName());
         }
 
         printDataSourceStatistics(commonPoolDataSource, logger);
-
-        final boolean result = (commonPoolDataSource == pds);
             
         logger.debug("<join()");
     }
@@ -430,6 +379,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             // if the current schema is not the requested schema try to open/close the proxy session
             if (!conn.getSchema().equalsIgnoreCase(schema)) {
+                assert(!singleSessionProxyModel);
+                
                 OracleConnection oraConn = null;
 
                 try {
@@ -441,19 +392,36 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 }
 
                 if (oraConn != null) {
-                    if (oraConn.isProxySession()) {
-                        closeProxySession(oraConn, proxyUsername);
-                    }
-                    if (proxyUsername != null) { // proxyUsername is username to connect to
-                        assert(proxyUsername.equalsIgnoreCase(usernameToConnectTo));
+                    int nr = 0;
+                    
+                    do {
+                        switch(nr) {
+                        case 0:
+                            if (oraConn.isProxySession()) {
+                                closeProxySession(oraConn, proxyUsername != null ? proxyUsername : schema);
+                            }
+                            break;
+                            
+                        case 1:
+                            if (proxyUsername != null) { // proxyUsername is username to connect to
+                                assert(proxyUsername.equalsIgnoreCase(usernameToConnectTo));
                         
-                        openProxySession(oraConn, schema);
-                    }
-                }
-                
-                assert(conn.getSchema().equalsIgnoreCase(schema));            
+                                openProxySession(oraConn, schema);
+                            }
+                            break;
+                            
+                        case 2:
+                            oraConn.setSchema(schema);
+                            break;
+                            
+                        default:
+                            throw new RuntimeException(String.format("Wrong value for nr ({}): must be between 0 and 2", nr));
+                        }
+                    } while (!conn.getSchema().equalsIgnoreCase(schema) && nr++ < 3);
+                }                
             }
 
+            assert(conn.getSchema().equalsIgnoreCase(schema));
             showConnection(conn);
 
             logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);

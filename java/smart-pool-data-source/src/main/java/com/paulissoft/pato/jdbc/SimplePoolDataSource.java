@@ -8,6 +8,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
+    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
+
     public String getPoolName();
 
     public void setPoolName(String poolName) throws SQLException;
