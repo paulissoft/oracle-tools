@@ -1,10 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.Driver;
-import javax.sql.DataSource;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
-import javax.sql.DataSource;
 import org.springframework.beans.DirectFieldAccessor;
 import lombok.extern.slf4j.Slf4j;
 
