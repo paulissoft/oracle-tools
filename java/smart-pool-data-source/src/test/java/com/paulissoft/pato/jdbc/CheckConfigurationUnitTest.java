@@ -138,7 +138,12 @@ public class CheckConfigurationUnitTest {
     void testDefaultSimplePoolDataSourceOracle() throws SQLException {
         final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
             
-        assertEquals("",
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=null, username=null, password=null, " +
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, initialPoolSize=0, " +
+                     "minPoolSize=0, maxPoolSize=0, connectionFactoryClassName=, validateConnectionOnBorrow=false, " +
+                     "abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, inactiveConnectionTimeout=0, timeoutCheckInterval=0, " +
+                     "maxStatements=0, connectionWaitTimeout=0, maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=0)",
                      pds.getPoolDataSourceConfiguration().toString());
     }
 }
