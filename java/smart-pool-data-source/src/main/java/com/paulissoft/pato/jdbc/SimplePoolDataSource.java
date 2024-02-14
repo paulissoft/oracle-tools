@@ -28,15 +28,9 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
         
     public int getInitialPoolSize();
 
-    public void setInitialPoolSize(int initialPoolSize) throws SQLException;
-
     public int getMinPoolSize();
 
-    public void setMinPoolSize(int minPoolSize) throws SQLException;
-
     public int getMaxPoolSize();
-
-    public void setMaxPoolSize(int maxPoolSize) throws SQLException;
 
     public long getConnectionTimeout(); // milliseconds
 

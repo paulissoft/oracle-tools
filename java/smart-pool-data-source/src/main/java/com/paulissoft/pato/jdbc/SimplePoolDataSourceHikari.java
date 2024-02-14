@@ -128,27 +128,9 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         setJdbcUrl(url);
     }
 
-    /*
-    public void setConnectionFactoryClassName(String value) {
-        try {
-            if (DataSource.class.isAssignableFrom(Class.forName(value))) {
-                setDataSourceClassName(value);
-            } else if (Driver.class.isAssignableFrom(Class.forName(value))) {
-                setDriverClassName(value);
-            }
-        } catch(ClassNotFoundException ex) {
-            ; // ignore
-        }
-    }
-    */
-
     // HikariCP does NOT know of an initial pool size
     public int getInitialPoolSize() {
         return -1;
-    }
-
-    public void setInitialPoolSize(int initialPoolSize) {
-        ;
     }
 
     // HikariCP does NOT know of a minimum pool size but minimumIdle seems to be the equivalent
@@ -156,18 +138,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         return getMinimumIdle();
     }
 
-    public void setMinPoolSize(int minPoolSize) {
-        setMinimumIdle(minPoolSize);
-    }        
-
     public int getMaxPoolSize() {
         return getMaximumPoolSize();
     }
 
-    public void setMaxPoolSize(int maxPoolSize) {
-        setMaximumPoolSize(maxPoolSize);
-    }
-    
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
     private HikariPool getHikariPool() {
         return (HikariPool) new DirectFieldAccessor(this).getPropertyValue("pool");
