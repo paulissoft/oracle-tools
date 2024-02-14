@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.6.1] - 2024-02-14
+
+### Fixed
+
+- [The common pool data source is updated when a second pool with the same properties joins.](https://github.com/paulissoft/oracle-tools/issues/151)
+
 ## [2.6.0] - 2024-02-14
 
 ### Added
