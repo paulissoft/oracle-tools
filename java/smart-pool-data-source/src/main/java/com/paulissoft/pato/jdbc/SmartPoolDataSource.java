@@ -304,14 +304,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         try {
             if (statisticsEnabled) {
                 final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-                final PoolDataSourceStatistics poolDataSourceStatisticsTotal = allDataSourceStatistics.get(commonDataSourceStatisticsTotal);
+                final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+                    commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
 
                 logger.debug("poolDataSourceStatistics={}",
                              poolDataSourceStatistics);
                 
                 if (poolDataSourceStatistics != null) {
-                    if (poolDataSourceStatisticsTotal != null &&
-                        !poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
+                    if (poolDataSourceStatisticsTotal != null && !poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
                         showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema());
                     }
                     allDataSourceStatistics.remove(commonDataSourceStatistics);
