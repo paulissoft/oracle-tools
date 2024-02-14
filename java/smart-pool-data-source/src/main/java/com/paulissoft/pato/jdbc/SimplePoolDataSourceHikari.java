@@ -85,7 +85,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
         assert(this != pdsHikari);
         
-        log.info("pool sizes before: minimum/maximum: {}/{}/{}",
+        log.info("pool sizes before: minimum/maximum: {}/{}",
                  getMinimumIdle(),
                  getMaximumPoolSize());
 
@@ -113,7 +113,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
         }
                 
-        log.info("pool sizes after: minimum/maximum: {}/{}/{}",
+        log.info("pool sizes after: minimum/maximum: {}/{}",
                  getMinimumIdle(),
                  getMaximumPoolSize());
             
