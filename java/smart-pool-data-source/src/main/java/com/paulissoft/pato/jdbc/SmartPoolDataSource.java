@@ -155,18 +155,19 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             /*
             || There are three relevant join situations:
-            || I   - This pool (or a similar one with the same configuration) has already joined before.
+            || I   - This pool has not joined before.
+            ||       Next, determine the commonPoolDataSource (clearing common properties like pool name and pool sizes).
+            ||       Now, if the commonPoolDataSource has NOT already started (i.e. NOT total transactions > 0), we can adjust
+            ||       the common properties of commonPoolDataSource and initialize all other data structures.
+            || II  - This pool has not joined before but the commonPoolDataSource has already started.
+            ||       Now we can (or may) NOT adjust its properties, so just use this pool as the commonPoolDataSource and repeat step I.
+            || III - This pool (or a similar one with the same configuration) has already joined before.
             ||       Now we have the commonPoolDataSource and we are done
             ||       since all has already been initialized before (especially the static fields).
             ||       However we must set these member fields as well:
             ||       - commonDataSourceProperties
             ||       - commonDataSourceStatisticsTotal / commonDataSourceStatistics
-            ||       And pool name.
-            || II  - Else, determine the commonPoolDataSource (clearing common properties like pool name and pool sizes).
-            ||       Now, if the commonPoolDataSource has NOT already started (i.e. NOT total transactions > 0), we can adjust
-            ||       the common properties of commonPoolDataSource and initialize all other data structures.
-            || III - Else (the commonPoolDataSource has already started), we can not adjust its properties, so
-            |        just use this pool as the commonPoolDataSource and repeat step II.
+            ||       And the pool name as well.
             */
 
             logger.info("(similar) pool data source already joined: {}",
@@ -174,7 +175,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             logger.debug("dataSourceProperties: {}", dataSourceProperties.toString());
 
             if (this.commonPoolDataSource != null) {
-                logger.info("join situation I");
+                logger.info("join situation III");
                 commonDataSourceProperties = determineCommonDataSourceProperties(this.commonPoolDataSource.getPoolDataSourceConfiguration(),
                                                                                  this.connectInfo,
                                                                                  this.useFixedUsernamePassword);
@@ -194,25 +195,26 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                                                              this.connectInfo,
                                                                              this.useFixedUsernamePassword);
 
-            int nr = 2;
+            int nr = 1;
+            int maxNr = 2;
 
             // see II and III above
             do {
-                logger.info("checking situation {} for calculation of commonPoolDataSource", (nr == 2 ? "II" : "III"));
+                logger.info("checking join situation {} for calculation of commonPoolDataSource", (nr == 1 ? "I" : "II"));
                 switch (nr) {
-                case 2:
+                case 1:
                     break;
                     
-                case 3:
+                case 2:
                     commonDataSourceProperties = dataSourceProperties;
                     break;
                 }
                 this.commonDataSourceProperties = commonDataSourceProperties.toString();
                 this.commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
                 assert(this.commonPoolDataSource != null);
-            } while (this.commonPoolDataSource.getTotalConnections() > 0 && ++nr <= 3);
+            } while (this.commonPoolDataSource.getTotalConnections() > 0 && ++nr <= maxNr);
 
-            logger.info("join situation {}", (nr == 2 ? "II" : "III"));
+            logger.info("join situation {}", (nr == 1 ? "I" : "II"));
 
             // also register the commonPoolDataSource for any pds because we need it above (I, II and III)
             poolDataSources.computeIfAbsent(dataSourceProperties.toString(), s -> this.commonPoolDataSource);
