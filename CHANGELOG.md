@@ -15,13 +15,20 @@ Types of changes:
 
 ## [Unreleased]
 
-## [2.6.0] - 2024-02-07
+## [2.6.0] - 2024-02-14
+
+### Added
 
 - [Combine multiple Java pool data sources into one in order to reduce resources needed.](https://github.com/paulissoft/oracle-tools/issues/150)
 
 ## [2.5.0] - 2024-01-25
 
+### Added
+
 - [Enhance test connection Java program.](https://github.com/paulissoft/oracle-tools/issues/149)
+
+### Fixed
+
 - [Generation of BC_PORTAL scripts does no longer work.](https://github.com/paulissoft/oracle-tools/issues/146)
 
 ## [2.4.0] - 2023-11-20
