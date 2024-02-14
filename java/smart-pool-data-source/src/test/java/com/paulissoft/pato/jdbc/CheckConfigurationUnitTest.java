@@ -42,6 +42,8 @@ public class CheckConfigurationUnitTest {
                      poolDataSourceConfiguration.toString());
     }
     
+    //=== Hikari ===
+
     @Test
     void testPoolDataSourceConfigurationHikari() {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
@@ -98,6 +100,29 @@ public class CheckConfigurationUnitTest {
     }
 
     @Test
+    void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
+        poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
+
+        final SimplePoolDataSourceHikari pds1 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
+        final SimplePoolDataSourceHikari pds2 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
+        final SmartPoolDataSource pds3 = new SmartPoolDataSourceHikari(pds1);
+        final SmartPoolDataSource pds4 = new SmartPoolDataSourceHikari(pds2);
+
+        assertEquals(pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString(),
+                     pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString());
+        assertEquals(pds3.getPds().getPoolDataSourceConfiguration().toString(),
+                     pds4.getPds().getPoolDataSourceConfiguration().toString());
+        assertEquals(pds3.isStatisticsEnabled(), pds4.isStatisticsEnabled());
+        assertEquals(pds3.isSingleSessionProxyModel(), pds4.isSingleSessionProxyModel());
+        assertEquals(pds3.isUseFixedUsernamePassword(), pds4.isUseFixedUsernamePassword());
+        assertEquals(pds3.getCommonDataSourceProperties(), pds4.getCommonDataSourceProperties());
+        assertEquals(pds3.getCommonDataSourceStatisticsTotal(), pds4.getCommonDataSourceStatisticsTotal());
+        assertEquals(pds3.getCommonDataSourceStatistics(), pds4.getCommonDataSourceStatistics());
+    }
+
+    //=== Oracle ===
+
+    @Test
     void testPoolDataSourceConfigurationOracle() {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
@@ -145,5 +170,27 @@ public class CheckConfigurationUnitTest {
                      "abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, inactiveConnectionTimeout=0, timeoutCheckInterval=0, " +
                      "maxStatements=0, connectionWaitTimeout=0, maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=0)",
                      pds.getPoolDataSourceConfiguration().toString());
+    }
+
+    @Test
+    void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
+        poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
+
+        final SimplePoolDataSourceOracle pds1 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
+        final SimplePoolDataSourceOracle pds2 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
+        final SmartPoolDataSource pds3 = new SmartPoolDataSourceOracle(pds1);
+        final SmartPoolDataSource pds4 = new SmartPoolDataSourceOracle(pds2);
+
+        // check all fields
+        assertEquals(pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString(),
+                     pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString());
+        assertEquals(pds3.getPds().getPoolDataSourceConfiguration().toString(),
+                     pds4.getPds().getPoolDataSourceConfiguration().toString());
+        assertEquals(pds3.isStatisticsEnabled(), pds4.isStatisticsEnabled());
+        assertEquals(pds3.isSingleSessionProxyModel(), pds4.isSingleSessionProxyModel());
+        assertEquals(pds3.isUseFixedUsernamePassword(), pds4.isUseFixedUsernamePassword());
+        assertEquals(pds3.getCommonDataSourceProperties(), pds4.getCommonDataSourceProperties());
+        assertEquals(pds3.getCommonDataSourceStatisticsTotal(), pds4.getCommonDataSourceStatisticsTotal());
+        assertEquals(pds3.getCommonDataSourceStatistics(), pds4.getCommonDataSourceStatistics());
     }
 }
