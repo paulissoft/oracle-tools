@@ -36,10 +36,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private static Method loggerDebug;
 
-    private static final PoolDataSourceConfiguration commonDataSourceStatisticsGrandTotal = null;
-    // PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build();
+    private static final String commonDataSourceStatisticsGrandTotal = null;
+    // PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build().toString();
 
-    private static final ConcurrentHashMap<PoolDataSourceConfiguration, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
     private static final ConcurrentHashMap<PoolDataSourceConfiguration, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
 
@@ -97,12 +97,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     // Same as commonDataSourceProperties, i.e. total per common pool data source.
     @Getter(AccessLevel.PACKAGE)
-    private PoolDataSourceConfiguration commonDataSourceStatisticsTotal = null;
+    private String commonDataSourceStatisticsTotal = null;
 
     // Same as commonDataSourceProperties including current schema and password,
     // only for connection info like elapsed time, open/close sessions.
     @Getter(AccessLevel.PACKAGE)
-    private PoolDataSourceConfiguration commonDataSourceStatistics;
+    private String commonDataSourceStatistics;
 
     /**
      * Initialize a pool data source.
@@ -168,18 +168,11 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             logger.debug("dataSourceProperties:\n{}", dataSourceProperties.toString());
 
-            boolean pdsIsCommonPoolDataSource = poolDataSources.containsValue(this.pds);
-            boolean pdsExists = poolDataSources.containsKey(dataSourceProperties);
-
-            logger.debug("pdsIsCommonPoolDataSource: {}; pdsExists: {}",
-                         pdsIsCommonPoolDataSource,
-                         pdsExists);
-
             // same data source can be asked another time (in another thread)
             this.commonPoolDataSource =
-                pdsIsCommonPoolDataSource ?
+                poolDataSources.containsValue(this.pds) ?
                 this.pds :
-                ( pdsExists ? poolDataSources.get(dataSourceProperties) : null ); // see I below
+                poolDataSources.get(dataSourceProperties); // see I below
 
             logger.info("(similar) pool data source already joined: {}",
                         this.commonPoolDataSource != null);
@@ -274,16 +267,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 poolDataSources.computeIfAbsent(dataSourceProperties, s -> this.commonPoolDataSource);
             }        
 
-            pdsIsCommonPoolDataSource = poolDataSources.containsValue(this.pds);
-            pdsExists = poolDataSources.containsKey(dataSourceProperties.toString());
-
-            logger.debug("pdsIsCommonPoolDataSource: {}; pdsExists: {}",
-                         pdsIsCommonPoolDataSource,
-                         pdsExists);
-
-            assert(pdsIsCommonPoolDataSource || pdsExists);
-            assert(!(pdsIsCommonPoolDataSource && pdsExists));
-
             printDataSourceStatistics(this.commonPoolDataSource, logger);
         } finally {
             logger.info("<join()");
@@ -332,15 +315,16 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         return commonDataSourceProperties;
     }
 
-    private static PoolDataSourceConfiguration determineCommonDataSourceStatistics(final PoolDataSourceConfiguration commonDataSourceProperties,
-                                                                                   final String username,
-                                                                                   final String password) {
+    private static String determineCommonDataSourceStatistics(final PoolDataSourceConfiguration commonDataSourceProperties,
+                                                              final String username,
+                                                              final String password) {
         // Per original data source, hence we include the username / password.
         return commonDataSourceProperties
             .toBuilder()
             .username(username)
             .password(password)
-            .build();
+            .build()
+            .toString();
     }
 
     public void close() {
