@@ -41,4 +41,25 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public int getIdleConnections();
 
     public int getTotalConnections();        
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SimplePoolDataSource)) {
+            return false;
+        }
+
+        SimplePoolDataSource other = (SimplePoolDataSource) obj;
+        
+        return other.toString().equals(this.toString());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.toString().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return getPoolDataSourceConfiguration().toString();
+    }
 }
