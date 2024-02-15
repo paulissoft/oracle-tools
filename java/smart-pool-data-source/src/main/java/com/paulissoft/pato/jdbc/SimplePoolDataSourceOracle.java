@@ -27,7 +27,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                 case 5: setMinPoolSize(pdsConfigurationOracle.getMinPoolSize()); break;
                 case 6: setMaxPoolSize(pdsConfigurationOracle.getMaxPoolSize()); break;
                 case 7: setConnectionFactoryClassName(pdsConfigurationOracle.getConnectionFactoryClassName()); break;
-                case 8: setValidateConnectionOnBorrow(pdsConfigurationOracle.isValidateConnectionOnBorrow()); break;
+                case 8: setValidateConnectionOnBorrow(pdsConfigurationOracle.getValidateConnectionOnBorrow()); break;
                 case 9: setAbandonedConnectionTimeout(pdsConfigurationOracle.getAbandonedConnectionTimeout()); break;
                 case 10: setTimeToLiveConnectionTimeout(pdsConfigurationOracle.getTimeToLiveConnectionTimeout()); break;
                 case 11: setInactiveConnectionTimeout(pdsConfigurationOracle.getInactiveConnectionTimeout()); break;
