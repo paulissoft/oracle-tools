@@ -36,14 +36,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private static Method loggerDebug;
 
-    private static final String commonDataSourceStatisticsGrandTotal = null;
+    private static final String/*PoolDataSourceConfiguration*/ commonDataSourceStatisticsGrandTotal = null;
     // PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build().toString();
 
-    private static final ConcurrentHashMap<String, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String/*PoolDataSourceConfiguration*/, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
 
-    private static final ConcurrentHashMap<PoolDataSourceConfiguration, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap</*String*/PoolDataSourceConfiguration, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
 
-    private static final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+    private static final ConcurrentHashMap</*String*/PoolDataSourceConfiguration, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
@@ -93,16 +93,16 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     // Same common properties for a pool data source in constructor: same commonPoolDataSource
     @Getter(AccessLevel.PACKAGE)
-    private PoolDataSourceConfiguration commonDataSourceProperties;
+    private /*String*/PoolDataSourceConfiguration commonDataSourceProperties;
 
     // Same as commonDataSourceProperties, i.e. total per common pool data source.
     @Getter(AccessLevel.PACKAGE)
-    private String commonDataSourceStatisticsTotal = null;
+    private String/*PoolDataSourceConfiguration*/ commonDataSourceStatisticsTotal = null;
 
     // Same as commonDataSourceProperties including current schema and password,
     // only for connection info like elapsed time, open/close sessions.
     @Getter(AccessLevel.PACKAGE)
-    private String commonDataSourceStatistics;
+    private String/*PoolDataSourceConfiguration*/ commonDataSourceStatistics;
 
     /**
      * Initialize a pool data source.
@@ -219,7 +219,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             // The statistics are measured per original data source and per total.
             // Total is just a copy.
-            // commonDataSourceStatisticsTotal = commonDataSourceProperties.toBuilder().build().toString();
+            // commonDataSourceStatisticsTotal = this.commonDataSourceProperties.toBuilder().build().toString();
 
             this.commonDataSourceStatistics = determineCommonDataSourceStatistics(this.commonDataSourceProperties,
                                                                                   username,
@@ -315,9 +315,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         return commonDataSourceProperties;
     }
 
-    private static String determineCommonDataSourceStatistics(final PoolDataSourceConfiguration commonDataSourceProperties,
-                                                              final String username,
-                                                              final String password) {
+    private static String/*PoolDataSourceConfiguration*/ determineCommonDataSourceStatistics(final PoolDataSourceConfiguration commonDataSourceProperties,
+                                                                                             final String username,
+                                                                                             final String password) {
         // Per original data source, hence we include the username / password.
         return commonDataSourceProperties
             .toBuilder()
