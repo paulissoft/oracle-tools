@@ -172,7 +172,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     @Override
-    default public boolean equals(Object obj) {
+    public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof SimplePoolDataSourceHikari)) {
             return false;
         }
@@ -183,12 +183,12 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     @Override
-    default public int hashCode() {
+    public int hashCode() {
         return this.toString().hashCode();
     }
 
     @Override
-    default public String toString() {
+    public String toString() {
         return getPoolDataSourceConfiguration().toString();
     }
 }
