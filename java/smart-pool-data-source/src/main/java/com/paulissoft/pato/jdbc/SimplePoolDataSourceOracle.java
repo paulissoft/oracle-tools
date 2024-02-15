@@ -175,7 +175,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     @Override
-    default public boolean equals(Object obj) {
+    public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof SimplePoolDataSourceOracle)) {
             return false;
         }
@@ -186,12 +186,12 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     @Override
-    default public int hashCode() {
+    public int hashCode() {
         return this.toString().hashCode();
     }
 
     @Override
-    default public String toString() {
+    public String toString() {
         return getPoolDataSourceConfiguration().toString();
     }
 }
