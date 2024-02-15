@@ -106,9 +106,12 @@ public class CheckConfigurationUnitTest {
         final SimplePoolDataSourceHikari pds1 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
         final SimplePoolDataSourceHikari pds2 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
         final SmartPoolDataSource pds3 = new SmartPoolDataSourceHikari(pds1);
-        final SmartPoolDataSource pds4 = new SmartPoolDataSourceHikari(pds2);
+        final SmartPoolDataSource pds4 = new SmartPoolDataSourceHikari(pds1); // same pds
+        final SmartPoolDataSource pds5 = new SmartPoolDataSourceHikari(pds2); // similar pds
 
         checkSimplePoolDataSourceOracleJoinTwice(pds3, pds4);
+        checkSimplePoolDataSourceOracleJoinTwice(pds4, pds5);
+        checkSimplePoolDataSourceOracleJoinTwice(pds3, pds5);
     }
 
     //=== Oracle ===
@@ -170,36 +173,39 @@ public class CheckConfigurationUnitTest {
         final SimplePoolDataSourceOracle pds1 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
         final SimplePoolDataSourceOracle pds2 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
         final SmartPoolDataSource pds3 = new SmartPoolDataSourceOracle(pds1);
-        final SmartPoolDataSource pds4 = new SmartPoolDataSourceOracle(pds2);
+        final SmartPoolDataSource pds4 = new SmartPoolDataSourceOracle(pds1); // same pds
+        final SmartPoolDataSource pds5 = new SmartPoolDataSourceOracle(pds2); // similar pds
 
         checkSimplePoolDataSourceOracleJoinTwice(pds3, pds4);
+        checkSimplePoolDataSourceOracleJoinTwice(pds4, pds5);
+        checkSimplePoolDataSourceOracleJoinTwice(pds3, pds5);
     }
 
-    private void checkSimplePoolDataSourceOracleJoinTwice(final SmartPoolDataSource pds3, final SmartPoolDataSource pds4) {
-        PoolDataSourceConfiguration poolDataSourceConfiguration3 = null;
-        PoolDataSourceConfiguration poolDataSourceConfiguration4 = null;
+    private void checkSimplePoolDataSourceOracleJoinTwice(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2) {
+        PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
+        PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
             
         // check all fields
         for (int i = 0; i < 2; i++) {
             switch(i) {
             case 0:
-                poolDataSourceConfiguration3 = pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration();
-                poolDataSourceConfiguration4 = pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+                poolDataSourceConfiguration1 = pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+                poolDataSourceConfiguration2 = pds2.getCommonPoolDataSource().getPoolDataSourceConfiguration();
                 break;
             case 1:
-                poolDataSourceConfiguration3 = pds3.getPds().getPoolDataSourceConfiguration();
-                poolDataSourceConfiguration4 = pds4.getPds().getPoolDataSourceConfiguration();
+                poolDataSourceConfiguration1 = pds1.getPds().getPoolDataSourceConfiguration();
+                poolDataSourceConfiguration2 = pds2.getPds().getPoolDataSourceConfiguration();
                 break;
             }
-            assertEquals(poolDataSourceConfiguration3.toString(),
-                         poolDataSourceConfiguration4.toString());
+            assertEquals(poolDataSourceConfiguration1.toString(),
+                         poolDataSourceConfiguration2.toString());
         }
         
-        assertEquals(pds3.isStatisticsEnabled(), pds4.isStatisticsEnabled());
-        assertEquals(pds3.isSingleSessionProxyModel(), pds4.isSingleSessionProxyModel());
-        assertEquals(pds3.isUseFixedUsernamePassword(), pds4.isUseFixedUsernamePassword());
-        assertEquals(pds3.getCommonDataSourceProperties(), pds4.getCommonDataSourceProperties());
-        assertEquals(pds3.getCommonDataSourceStatisticsTotal(), pds4.getCommonDataSourceStatisticsTotal());
-        assertEquals(pds3.getCommonDataSourceStatistics(), pds4.getCommonDataSourceStatistics());
+        assertEquals(pds1.isStatisticsEnabled(), pds2.isStatisticsEnabled());
+        assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
+        assertEquals(pds1.isUseFixedUsernamePassword(), pds2.isUseFixedUsernamePassword());
+        assertEquals(pds1.getCommonDataSourceProperties(), pds2.getCommonDataSourceProperties());
+        assertEquals(pds1.getCommonDataSourceStatisticsTotal(), pds2.getCommonDataSourceStatisticsTotal());
+        assertEquals(pds1.getCommonDataSourceStatistics(), pds2.getCommonDataSourceStatistics());
     }
 }
