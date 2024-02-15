@@ -166,20 +166,33 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             final PoolDataSourceConfiguration dataSourceProperties = this.pds.getPoolDataSourceConfiguration();
 
-            // ignore pool name
+            // ignore pool name for dataSourceProperties lookup
             dataSourceProperties.clearPoolName();
-            
+
+            logger.debug("dataSourceProperties:\n{}", dataSourceProperties.toString());
+
             PoolDataSourceConfiguration commonDataSourceProperties; // there is also a this.commonDataSourceProperties
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("poolDataSources before:");
+                poolDataSources.forEach((k, v) -> logger.debug("\n{}\nvalue (hash code)={}; value (string)=\n{}", k, v.hashCode(), v.toString()));
+            }
+            
+            boolean pdsIsCommonPoolDataSource = poolDataSources.containsValue(this.pds);
+            boolean pdsExists = poolDataSources.containsKey(dataSourceProperties.toString());
+
+            logger.debug("pdsIsCommonPoolDataSource: {}; pdsExists: {}",
+                         pdsIsCommonPoolDataSource,
+                         pdsExists);
 
             // same data source can be asked another time (in another thread)
             this.commonPoolDataSource =
-                poolDataSources.containsValue(this.pds) ?
+                pdsIsCommonPoolDataSource ?
                 this.pds :
-                poolDataSources.get(dataSourceProperties.toString()); // see I below
+                ( pdsExists ? poolDataSources.get(dataSourceProperties.toString()) : null ); // see I below
 
             logger.info("(similar) pool data source already joined: {}",
                         this.commonPoolDataSource != null);
-            logger.debug("dataSourceProperties: {}", dataSourceProperties.toString());
 
             if (this.commonPoolDataSource != null) {
                 logger.info("join situation III");
@@ -269,8 +282,24 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 if (this.pds.getPoolName() == null) {
                     this.pds.setPoolName(String.valueOf(this.pds.hashCode()));
                 }
+                logger.debug("adding pds\n{}", dataSourceProperties.toString());
                 poolDataSources.computeIfAbsent(dataSourceProperties.toString(), s -> this.commonPoolDataSource);
             }        
+
+            pdsIsCommonPoolDataSource = poolDataSources.containsValue(this.pds);
+            pdsExists = poolDataSources.containsKey(dataSourceProperties.toString());
+
+            logger.debug("pdsIsCommonPoolDataSource: {}; pdsExists: {}",
+                         pdsIsCommonPoolDataSource,
+                         pdsExists);
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("poolDataSources after:");
+                poolDataSources.forEach((k, v) -> logger.debug("\n{}\nvalue (hash code)={}; value (string)={}", k, v.hashCode(), v.toString()));
+            }
+            
+            assert(pdsIsCommonPoolDataSource || pdsExists);
+            assert(!(pdsIsCommonPoolDataSource && pdsExists));
 
             printDataSourceStatistics(this.commonPoolDataSource, logger);
         } finally {
@@ -283,7 +312,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                                                                    final boolean useFixedUsernamePassword) {
         final PoolDataSourceConfiguration commonDataSourceProperties = dataSourceProperties.toBuilder().build(); // a copy
 
-        logger.info("commonDataSourceProperties before: {}", commonDataSourceProperties.toString());
+        logger.debug("commonDataSourceProperties before:\n{}", commonDataSourceProperties.toString());
 
         assert(commonDataSourceProperties.getType() != null);
         assert(commonDataSourceProperties.getUrl() != null);
@@ -315,7 +344,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             commonDataSourceProperties.setPassword(connectInfo.getPassword());
         }
 
-        logger.info("commonDataSourceProperties after: {}", commonDataSourceProperties.toString());
+        logger.debug("commonDataSourceProperties after:\n{}", commonDataSourceProperties.toString());
 
         return commonDataSourceProperties;
     }
