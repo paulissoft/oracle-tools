@@ -173,4 +173,25 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     public void close() {
         ; // nothing
     }
+
+    @Override
+    default public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SimplePoolDataSourceOracle)) {
+            return false;
+        }
+
+        SimplePoolDataSourceOracle other = (SimplePoolDataSourceOracle) obj;
+        
+        return other.toString().equals(this.toString());
+    }
+
+    @Override
+    default public int hashCode() {
+        return this.toString().hashCode();
+    }
+
+    @Override
+    default public String toString() {
+        return getPoolDataSourceConfiguration().toString();
+    }
 }
