@@ -128,47 +128,54 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         join();
     }
     
-    protected void join() throws SQLException {
+    /**
+     * Join the common pool of pool data sources.
+     *
+     * There are three relevant join situations:
+     * I   - This pool has not joined before (ignoring pool name).
+     *       Next, determine the commonPoolDataSource (clearing common properties like pool name and pool sizes).
+     *       Now, if the commonPoolDataSource has NOT already started (i.e. NOT total transactions > 0), we can adjust
+     *       the common properties of commonPoolDataSource and initialize all other data structures.
+     * II  - This pool has not joined before (ignoring pool name) but the commonPoolDataSource has already started.
+     *       Now we can (or may) NOT adjust its properties, so just use this pool as the commonPoolDataSource and repeat step I.
+     * III - This pool (or a similar one with the same configuration) has already joined before (ignoring pool name).
+     *       Now we have the commonPoolDataSource and we are done
+     *       since all has already been initialized before (especially the static fields).
+     *       However we must set these member fields as well:
+     *       - commonDataSourceProperties
+     *       - commonDataSourceStatisticsTotal / commonDataSourceStatistics
+    */
+    final private void join() throws SQLException {
         if (this.commonPoolDataSource != null) {
             return;
         }
 
-        final String username = connectInfo.getUsername();
-        final String password = connectInfo.getPassword();
+        final String username = this.connectInfo.getUsername();
+        final String password = this.connectInfo.getPassword();
         
         logger.info(">join(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
-                     pds,
+                     this.pds,
                      username,
-                     singleSessionProxyModel,
-                     useFixedUsernamePassword);
+                     this.singleSessionProxyModel,
+                     this.useFixedUsernamePassword);
 
         try {
-            assert(pds != null);
+            assert(this.pds != null);
         
-            printDataSourceStatistics(pds, logger);
+            printDataSourceStatistics(this.pds, logger);
 
-            final PoolDataSourceConfiguration dataSourceProperties = pds.getPoolDataSourceConfiguration();
-            PoolDataSourceConfiguration commonDataSourceProperties;
+            final PoolDataSourceConfiguration dataSourceProperties = this.pds.getPoolDataSourceConfiguration();
+
+            // ignore pool name
+            dataSourceProperties.clearPoolName();
+            
+            PoolDataSourceConfiguration commonDataSourceProperties; // there is also a this.commonDataSourceProperties
 
             // same data source can be asked another time (in another thread)
-            this.commonPoolDataSource = poolDataSources.get(dataSourceProperties.toString()); // see I below
-
-            /*
-            || There are three relevant join situations:
-            || I   - This pool has not joined before.
-            ||       Next, determine the commonPoolDataSource (clearing common properties like pool name and pool sizes).
-            ||       Now, if the commonPoolDataSource has NOT already started (i.e. NOT total transactions > 0), we can adjust
-            ||       the common properties of commonPoolDataSource and initialize all other data structures.
-            || II  - This pool has not joined before but the commonPoolDataSource has already started.
-            ||       Now we can (or may) NOT adjust its properties, so just use this pool as the commonPoolDataSource and repeat step I.
-            || III - This pool (or a similar one with the same configuration) has already joined before.
-            ||       Now we have the commonPoolDataSource and we are done
-            ||       since all has already been initialized before (especially the static fields).
-            ||       However we must set these member fields as well:
-            ||       - commonDataSourceProperties
-            ||       - commonDataSourceStatisticsTotal / commonDataSourceStatistics
-            ||       And the pool name as well.
-            */
+            this.commonPoolDataSource =
+                poolDataSources.containsValue(this.pds) ?
+                this.pds :
+                poolDataSources.get(dataSourceProperties.toString()); // see I below
 
             logger.info("(similar) pool data source already joined: {}",
                         this.commonPoolDataSource != null);
@@ -186,8 +193,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                                                                       password);                    
                 this.commonDataSourceStatisticsTotal = null;
 
-                pds.setPoolName(commonPoolDataSource.getPoolName());
-                    
                 return; // see I
             }
             
@@ -210,15 +215,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                     break;
                 }
                 this.commonDataSourceProperties = commonDataSourceProperties.toString();
-                this.commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
+                this.commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> this.pds);
                 assert(this.commonPoolDataSource != null);
             } while (this.commonPoolDataSource.getTotalConnections() > 0 && ++nr <= maxNr);
 
             logger.info("join situation {}", (nr == 1 ? "I" : "II"));
 
-            // also register the commonPoolDataSource for any pds because we need it above (I, II and III)
-            poolDataSources.computeIfAbsent(dataSourceProperties.toString(), s -> this.commonPoolDataSource);
-        
             this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
 
             // The statistics are measured per original data source and per total.
@@ -242,29 +244,35 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             // only modify commonPoolDataSource when there are no connections i.e. not started yet
             if (this.commonPoolDataSource.getTotalConnections() <= 0) {
                 // update default username / password when the pool data source is added to an existing
-                synchronized (commonPoolDataSource) {
+                synchronized (this.commonPoolDataSource) {
                     // Set new username/password combination of common data source before
                     // you augment pool size(s) since that may trigger getConnection() calls.
 
                     // See observations above.
-                    commonPoolDataSource.setUsername(connectInfo.getUsernameToConnectTo());
-                    commonPoolDataSource.setPassword(connectInfo.getPassword());
+                    this.commonPoolDataSource.setUsername(this.connectInfo.getUsernameToConnectTo());
+                    this.commonPoolDataSource.setPassword(this.connectInfo.getPassword());
 
-                    if (commonPoolDataSource == pds) {
-                        commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
+                    if (this.commonPoolDataSource == this.pds) {
+                        this.commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
                     } else {
-                        // for debugging purposes
-                        if (pds.getPoolName() == null) {
-                            pds.setPoolName(String.valueOf(pds.hashCode()));
-                        }
-                        commonPoolDataSource.updatePoolSizes(pds);
+                        this.commonPoolDataSource.updatePoolSizes(this.pds);
                     }
-                    commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + "-" + connectInfo.getSchema());
-                    logger.info("Common pool name: {}", commonPoolDataSource.getPoolName());
+                    this.commonPoolDataSource.setPoolName(this.commonPoolDataSource.getPoolName() + "-" + this.connectInfo.getSchema());
+                    logger.info("Common pool name: {}", this.commonPoolDataSource.getPoolName());
                 }
             }
 
-            printDataSourceStatistics(commonPoolDataSource, logger);
+            // also register the commonPoolDataSource for any pds (not being a commonPoolDataSource)
+            // because we need it above (I, II and III) in the first lookup
+            if (this.commonPoolDataSource != this.pds) {
+                // for debugging purposes
+                if (this.pds.getPoolName() == null) {
+                    this.pds.setPoolName(String.valueOf(this.pds.hashCode()));
+                }
+                poolDataSources.computeIfAbsent(dataSourceProperties.toString(), s -> this.commonPoolDataSource);
+            }        
+
+            printDataSourceStatistics(this.commonPoolDataSource, logger);
         } finally {
             logger.info("<join()");
         }

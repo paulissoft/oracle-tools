@@ -30,6 +30,7 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
         
     private String connectionFactoryClassName;
 
+    // Must use lombok.getter.noIsPrefix = true in a lombok.config file
     private boolean validateConnectionOnBorrow;
 
     private int abandonedConnectionTimeout;
@@ -50,11 +51,16 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
     private int connectionValidationTimeout;
 
-    public void clearCommonDataSourceConfiguration() {
+    void clearCommonDataSourceConfiguration() {
         super.clearCommonDataSourceConfiguration();
         this.connectionPoolName = null;
         this.initialPoolSize = 0;
         this.minPoolSize = 0;
         this.maxPoolSize = 0;
+    }
+
+    @Override
+    void clearPoolName() {
+        this.connectionPoolName = null;
     }
 }

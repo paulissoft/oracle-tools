@@ -52,8 +52,12 @@ public class PoolDataSourceConfiguration {
         this.type = poolDataSourceConfiguration.type;
     }
 
-    public void clearCommonDataSourceConfiguration() {
+    void clearCommonDataSourceConfiguration() {
         this.username = null;
         this.password = null;
+    }
+
+    void clearPoolName() {
+        throw new RuntimeException("not implemented");
     }
 }
