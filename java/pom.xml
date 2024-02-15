@@ -43,6 +43,7 @@
     <oracle.jdbc.version>23.3.0.23.09</oracle.jdbc.version>
     <spring.version>5.2.3.RELEASE</spring.version>
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
+    <commons-lang3.version>3.9</commons-lang3.version>
   </properties>
 
   <dependencies>
@@ -100,6 +101,13 @@
       <artifactId>spring-boot-starter-validation</artifactId>
       <version>${spring.boot.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+    </dependency>
+    <!-- Thanks for using https://jar-download.com -->
+
   </dependencies>
   
   <build>
