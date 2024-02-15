@@ -51,8 +51,11 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         log.info("getPoolDataSourceConfiguration()={}", getPoolDataSourceConfiguration().toString());
     }
 
-    // get common pool data source properties like the ones define above
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        return getPoolDataSourceConfiguration(true);
+    }
+    
+    public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludePoolName) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
@@ -60,7 +63,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .username(getUsername())
             .password(getPassword())
             .type(SimplePoolDataSourceHikari.class.getName())
-            .poolName(getPoolName())
+            .poolName(excludePoolName ? null : getPoolName())
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())
             .autoCommit(isAutoCommit())

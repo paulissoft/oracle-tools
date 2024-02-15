@@ -49,6 +49,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        return getPoolDataSourceConfiguration(true);
+    }
+    
+    public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludePoolName) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
@@ -56,7 +60,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .username(getUsername())
             .password(getPassword())
             .type(SimplePoolDataSourceOracle.class.getName())
-            .connectionPoolName(getConnectionPoolName())
+            .connectionPoolName(excludePoolName ? null : getConnectionPoolName())
             .initialPoolSize(getInitialPoolSize())
             .minPoolSize(getMinPoolSize())
             .maxPoolSize(getMaxPoolSize())

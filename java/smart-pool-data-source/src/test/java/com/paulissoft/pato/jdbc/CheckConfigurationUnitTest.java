@@ -30,7 +30,7 @@ public class CheckConfigurationUnitTest {
     @Qualifier("app-auth-datasource-oracle")
     private PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle;
 
-    //@Test
+    @Test
     void testPoolDataSourceConfiguration() {
         assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
@@ -44,7 +44,7 @@ public class CheckConfigurationUnitTest {
     
     //=== Hikari ===
 
-    //@Test
+    @Test
     void testPoolDataSourceConfigurationHikari() {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
         assertEquals("HikariPool-boauth", poolDataSourceConfigurationHikari.getPoolName());
@@ -85,7 +85,7 @@ public class CheckConfigurationUnitTest {
                      poolDataSourceConfigurationHikariCopy.toString());
     }
 
-    //@Test
+    @Test
     void testDefaultSimplePoolDataSourceHikari() {
         final SimplePoolDataSourceHikari pds = new SimplePoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
 
@@ -99,7 +99,7 @@ public class CheckConfigurationUnitTest {
                      pds.getPoolDataSourceConfiguration().toString());
     }
 
-    //@Test
+    @Test
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
 
@@ -113,7 +113,7 @@ public class CheckConfigurationUnitTest {
 
     //=== Oracle ===
 
-    //@Test
+    @Test
     void testPoolDataSourceConfigurationOracle() {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
@@ -150,7 +150,7 @@ public class CheckConfigurationUnitTest {
                      poolDataSourceConfigurationOracle.toString());
     }
 
-    //@Test
+    @Test
     void testDefaultSimplePoolDataSourceOracle() throws SQLException {
         final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
             
@@ -191,8 +191,6 @@ public class CheckConfigurationUnitTest {
                 poolDataSourceConfiguration4 = pds4.getPds().getPoolDataSourceConfiguration();
                 break;
             }
-            poolDataSourceConfiguration3.clearPoolName();
-            poolDataSourceConfiguration4.clearPoolName();
             assertEquals(poolDataSourceConfiguration3.toString(),
                          poolDataSourceConfiguration4.toString());
         }

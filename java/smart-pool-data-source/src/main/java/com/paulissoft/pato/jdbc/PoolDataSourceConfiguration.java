@@ -56,8 +56,4 @@ public class PoolDataSourceConfiguration {
         this.username = null;
         this.password = null;
     }
-
-    void clearPoolName() {
-        throw new RuntimeException("not implemented");
-    }
 }
