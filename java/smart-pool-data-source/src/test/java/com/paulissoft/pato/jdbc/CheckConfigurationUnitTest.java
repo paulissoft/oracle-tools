@@ -105,13 +105,22 @@ public class CheckConfigurationUnitTest {
 
         final SimplePoolDataSourceHikari pds1 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
         final SimplePoolDataSourceHikari pds2 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
+        final int startTotalPoolCount = SmartPoolDataSource.getTotalPoolCount();
         final SmartPoolDataSource pds3 = new SmartPoolDataSourceHikari(pds1);
+
+        assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
+
         final SmartPoolDataSource pds4 = new SmartPoolDataSourceHikari(pds1); // same pds
+
+        assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
+
         final SmartPoolDataSource pds5 = new SmartPoolDataSourceHikari(pds2); // similar pds
 
-        checkSimplePoolDataSourceOracleJoinTwice(pds3, pds4);
-        checkSimplePoolDataSourceOracleJoinTwice(pds4, pds5);
-        checkSimplePoolDataSourceOracleJoinTwice(pds3, pds5);
+        assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
+
+        checkSimplePoolDataSourceJoinTwice(pds3, pds4);
+        checkSimplePoolDataSourceJoinTwice(pds4, pds5);
+        checkSimplePoolDataSourceJoinTwice(pds3, pds5);
     }
 
     //=== Oracle ===
@@ -172,16 +181,25 @@ public class CheckConfigurationUnitTest {
 
         final SimplePoolDataSourceOracle pds1 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
         final SimplePoolDataSourceOracle pds2 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
+        final int startTotalPoolCount = SmartPoolDataSource.getTotalPoolCount();
         final SmartPoolDataSource pds3 = new SmartPoolDataSourceOracle(pds1);
+
+        assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
+
         final SmartPoolDataSource pds4 = new SmartPoolDataSourceOracle(pds1); // same pds
+
+        assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
+
         final SmartPoolDataSource pds5 = new SmartPoolDataSourceOracle(pds2); // similar pds
 
-        checkSimplePoolDataSourceOracleJoinTwice(pds3, pds4);
-        checkSimplePoolDataSourceOracleJoinTwice(pds4, pds5);
-        checkSimplePoolDataSourceOracleJoinTwice(pds3, pds5);
+        assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
+            
+        checkSimplePoolDataSourceJoinTwice(pds3, pds4);
+        checkSimplePoolDataSourceJoinTwice(pds4, pds5);
+        checkSimplePoolDataSourceJoinTwice(pds3, pds5);
     }
 
-    private void checkSimplePoolDataSourceOracleJoinTwice(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2) {
+    private void checkSimplePoolDataSourceJoinTwice(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2) {
         PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
         PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
             
