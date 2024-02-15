@@ -333,7 +333,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         try {
             done();
         } catch (Exception ex) {
-            logger.error("exception:", ex);
+            logger.error(String.format("{}:", ex.getClass().getSimpleName()), ex);
             ex.printStackTrace(System.err);
             throw ex;
         } finally {
@@ -388,8 +388,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 poolDataSources.remove(commonDataSourceProperties);
             }
         } catch (Exception ex) {
-            logger.error("exception:", ex);
-            ex.printStackTrace(System.err);
+            logger.error(String.format("{}:", ex.getClass().getSimpleName()), ex);
             logger.debug("<done()");
             throw ex;
         } 
@@ -971,6 +970,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     protected int getCurrentPoolCount() {
         return currentPoolCount.get(commonDataSourceProperties).get();
+    }
+
+    protected static int getTotalPoolCount() {
+        final AtomicInteger total = new AtomicInteger(0);
+
+        currentPoolCount.forEach((k, v) -> total.addAndGet(v.get()));
+
+        return total.get();
     }
 
     private static void printDataSourceStatistics(final SimplePoolDataSource poolDataSource, final Logger logger) {
