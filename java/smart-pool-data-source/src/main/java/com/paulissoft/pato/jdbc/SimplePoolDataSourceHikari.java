@@ -170,4 +170,25 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             return -1;
         }
     }
+
+    @Override
+    default public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SimplePoolDataSourceHikari)) {
+            return false;
+        }
+
+        SimplePoolDataSourceHikari other = (SimplePoolDataSourceHikari) obj;
+        
+        return other.toString().equals(this.toString());
+    }
+
+    @Override
+    default public int hashCode() {
+        return this.toString().hashCode();
+    }
+
+    @Override
+    default public String toString() {
+        return getPoolDataSourceConfiguration().toString();
+    }
 }
