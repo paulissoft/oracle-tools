@@ -1,20 +1,36 @@
 package com.paulissoft.pato.jdbc;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicReference;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import oracle.jdbc.OracleConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PoolDataSourceStatistics {
+
+    // all static stuff
+    
+    private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
+
+    static final String INDENT_PREFIX = "* ";
+
+    static final String GRAND_TOTAL = "grand total";
+
+    static final String TOTAL = "total";
 
     public static final String EXCEPTION_CLASS_NAME = "class";
 
@@ -26,25 +42,69 @@ public class PoolDataSourceStatistics {
 
     private static final int DISPLAY_SCALE = 0;
 
+    private static Method loggerInfo;
+
+    private static Method loggerDebug;
+
+    static {
+        logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
+        
+        try {
+            loggerInfo = logger.getClass().getMethod("info", String.class, Object[].class);
+        } catch (Exception e) {
+            logger.error("static exception: {}", e.getMessage());
+            loggerInfo = null;
+        }
+
+        try {
+            loggerDebug = logger.getClass().getMethod("debug", String.class, Object[].class);
+        } catch (Exception e) {
+            logger.error("static exception: {}", e.getMessage());
+            loggerDebug = null;
+        }
+    }
+
+    // all instance stuff
+    
+    private String name = null;
+
+    // all physical time elapsed stuff
+    
+    private Set<OracleConnection> physicalConnections = null;
+
+    private AtomicLong physicalConnectionCount = new AtomicLong();
+
+    private AtomicLong physicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
+    
+    private AtomicLong physicalTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
+    
+    private AtomicBigDecimal physicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+
+    // all logical time elapsed stuff
+    
     private AtomicLong logicalConnectionCount = new AtomicLong();
 
-    private AtomicLong logicalConnectionCountProxy = new AtomicLong();
-        
-    private AtomicLong openProxySessionCount = new AtomicLong();
-        
-    private AtomicLong closeProxySessionCount = new AtomicLong();
+    private AtomicLong logicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
+    
+    private AtomicLong logicalTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
+    
+    private AtomicBigDecimal logicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-    private AtomicLong timeElapsedMin = new AtomicLong(Long.MAX_VALUE);
-    
-    private AtomicLong timeElapsedMax = new AtomicLong(Long.MIN_VALUE);
-    
-    private AtomicBigDecimal timeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    // all proxy time elapsed stuff
 
-    private AtomicLong timeElapsedProxyMin = new AtomicLong(Long.MAX_VALUE);
+    private AtomicLong proxyLogicalConnectionCount = new AtomicLong();
+        
+    private AtomicLong proxyOpenSessionCount = new AtomicLong();
+        
+    private AtomicLong proxyCloseSessionCount = new AtomicLong();
+
+    private AtomicLong proxyTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
-    private AtomicLong timeElapsedProxyMax = new AtomicLong(Long.MIN_VALUE);
+    private AtomicLong proxyTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
     
-    private AtomicBigDecimal timeElapsedProxyAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private AtomicBigDecimal proxyTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+
+    // all connection related stuff
 
     private AtomicLong activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
         
@@ -64,16 +124,30 @@ public class PoolDataSourceStatistics {
 
     private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-    private Set<OracleConnection> physicalConnections;
-
     // the error attributes (error code and SQL state) and its count
     private ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
 
+    private PoolDataSourceStatistics parent = null;
+
     public PoolDataSourceStatistics() {
-        // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
-        final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
+        this(null);
+    }
+        
+    public PoolDataSourceStatistics(final String name) {
+        this(name, null);
+    }
+        
+    public PoolDataSourceStatistics(final String name, final PoolDataSourceStatistics parent) {
+        this.name = name;
+        this.parent = parent;
+
+        // only the overall instance tracks note of physical connections
+        if (parent == null) {
+            // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
+            final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
  
-        physicalConnections = dummy.newKeySet();
+            this.physicalConnections = dummy.newKeySet();
+        }
     }
         
     void update(final Connection conn,
@@ -86,21 +160,37 @@ public class PoolDataSourceStatistics {
                 final int activeConnections,
                 final int idleConnections,
                 final int totalConnections) throws SQLException {
-        physicalConnections.add(conn.unwrap(OracleConnection.class));
+        final boolean isPhysicalConnection = add(conn);
             
         // We must use count and avg from the same connection so just synchronize.
         // If we don't synchronize we risk to get the average and count from different connections.
         synchronized (this) {                
-            final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
+            BigDecimal count = new BigDecimal(isPhysicalConnection ?
+                                              this.physicalConnectionCount.incrementAndGet() :
+                                              this.logicalConnectionCount.incrementAndGet());
 
-            updateIterativeMean(count, timeElapsed, timeElapsedAvg);
+            if (isPhysicalConnection) {
+                updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
+            } else {
+                updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
+            }
+
+            // add the other part as well
+            count = count.add(new BigDecimal(!isPhysicalConnection ?
+                                             this.physicalConnectionCount.get() :
+                                             this.logicalConnectionCount.get()));
+            
             updateIterativeMean(count, activeConnections, activeConnectionsAvg);
             updateIterativeMean(count, idleConnections, idleConnectionsAvg);
             updateIterativeMean(count, totalConnections, totalConnectionsAvg);
         }
 
         // The rest is using AtomicLong, hence concurrent.
-        updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
+        if (isPhysicalConnection) {
+            updateMinMax(timeElapsed, physicalTimeElapsedMin, physicalTimeElapsedMax);
+        } else {
+            updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
+        }
         updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
         updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
         updateMinMax(totalConnections, totalConnectionsMin, totalConnectionsMax);
@@ -108,30 +198,50 @@ public class PoolDataSourceStatistics {
 
     void update(final Connection conn,
                 final long timeElapsed,
-                final long timeElapsedProxy,
-                final int logicalConnectionCountProxy,
-                final int openProxySessionCount,
-                final int closeProxySessionCount) throws SQLException {
-        physicalConnections.add(conn.unwrap(OracleConnection.class));
+                final long proxyTimeElapsed,
+                final int proxyLogicalConnectionCount,
+                final int proxyOpenSessionCount,
+                final int proxyCloseSessionCount) throws SQLException {
+        final boolean isPhysicalConnection = add(conn);
             
         // We must use count and avg from the same connection so just synchronize.
         // If we don't synchronize we risk to get the average and count from different connections.
         synchronized (this) {                
-            final BigDecimal count = new BigDecimal(this.logicalConnectionCount.incrementAndGet());
+            BigDecimal count = new BigDecimal(isPhysicalConnection ?
+                                              this.physicalConnectionCount.incrementAndGet() :
+                                              this.logicalConnectionCount.incrementAndGet());
 
-            updateIterativeMean(count, timeElapsed, timeElapsedAvg);
-            updateIterativeMean(count, timeElapsedProxy, timeElapsedProxyAvg);
+            if (isPhysicalConnection) {
+                updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
+            } else {
+                updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
+            }
+
+            // add the other part as well
+            count = count.add(new BigDecimal(!isPhysicalConnection ?
+                                             this.physicalConnectionCount.get() :
+                                             this.logicalConnectionCount.get()));
+
+            updateIterativeMean(count, proxyTimeElapsed, proxyTimeElapsedAvg);
         }
 
         // The rest is using AtomicLong, hence concurrent.
-        updateMinMax(timeElapsed, timeElapsedMin, timeElapsedMax);
-        updateMinMax(timeElapsedProxy, timeElapsedProxyMin, timeElapsedProxyMax);
+        if (isPhysicalConnection) {
+            updateMinMax(timeElapsed, physicalTimeElapsedMin, physicalTimeElapsedMax);
+        } else {
+            updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
+        }        
+        updateMinMax(proxyTimeElapsed, proxyTimeElapsedMin, proxyTimeElapsedMax);
             
-        this.logicalConnectionCountProxy.addAndGet(logicalConnectionCountProxy);
-        this.openProxySessionCount.addAndGet(openProxySessionCount);
-        this.closeProxySessionCount.addAndGet(closeProxySessionCount);
+        this.proxyLogicalConnectionCount.addAndGet(proxyLogicalConnectionCount);
+        this.proxyOpenSessionCount.addAndGet(proxyOpenSessionCount);
+        this.proxyCloseSessionCount.addAndGet(proxyCloseSessionCount);
     }
 
+    private boolean add(final Connection conn) throws SQLException {
+        return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(OracleConnection.class)) );
+    }
+    
     long signalSQLException(final SQLException ex) {
         final Properties attrs = new Properties();
 
@@ -178,56 +288,255 @@ public class PoolDataSourceStatistics {
         return
             this.getPhysicalConnectionCount() == compareTo.getPhysicalConnectionCount() &&
             this.getLogicalConnectionCount() == compareTo.getLogicalConnectionCount() &&
-            this.getLogicalConnectionCountProxy() == compareTo.getLogicalConnectionCountProxy() &&
-            this.getOpenProxySessionCount() == compareTo.getOpenProxySessionCount() &&
-            this.getCloseProxySessionCount() == compareTo.getCloseProxySessionCount();
+            this.getProxyLogicalConnectionCount() == compareTo.getProxyLogicalConnectionCount() &&
+            this.getProxyOpenSessionCount() == compareTo.getProxyOpenSessionCount() &&
+            this.getProxyCloseSessionCount() == compareTo.getProxyCloseSessionCount();
     }
+
+    public void showStatistics(final SmartPoolDataSource pds,
+                               final String schema,
+                               final long timeElapsed,
+                               final long proxyTimeElapsed,
+                               final boolean finalCall) {
+        if (!finalCall && !logger.isDebugEnabled()) {
+            return;
+        }
         
+        final Method method = (finalCall ? loggerInfo : loggerDebug);
+
+        final boolean isTotal = schema.equals(TOTAL);
+        final boolean isGrandTotal = schema.equals(GRAND_TOTAL);
+        final boolean showPoolSizes = isTotal;
+        final boolean showErrors = finalCall && (isTotal || isGrandTotal);
+        final String prefix = INDENT_PREFIX;
+        final String poolDescription = ( isGrandTotal ? "all pools" : "pool " + pds.getPoolName()  + " (" + schema + ")" );
+
+        try {
+            if (method != null) {
+                method.invoke(logger, "statistics for {}:", (Object) new Object[]{ poolDescription });
+            
+                if (!finalCall) {
+                    if (timeElapsed >= 0L) {
+                        method.invoke(logger,
+                                      "{}time needed to open last connection (ms): {}",
+                                      (Object) new Object[]{ prefix, timeElapsed });
+                    }
+                    if (proxyTimeElapsed >= 0L) {
+                        method.invoke(logger,
+                                      "{}time needed to open last proxy connection (ms): {}",
+                                      (Object) new Object[]{ prefix, proxyTimeElapsed });
+                    }
+                }
+            
+                long val1, val2, val3;
+
+                val1 = getPhysicalConnectionCount();
+                val2 = getLogicalConnectionCount();
+            
+                if (val1 >= 0L && val2 >= 0L) {
+                    method.invoke(logger,
+                                  "{}physical/logical connections opened: {}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2 });
+                }
+
+                val1 = getPhysicalTimeElapsedMin();
+                val2 = getPhysicalTimeElapsedAvg();
+                val3 = getPhysicalTimeElapsedMax();
+
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                    method.invoke(logger,
+                                  "{}min/avg/max physical connection time (ms): {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+            
+                val1 = getLogicalTimeElapsedMin();
+                val2 = getLogicalTimeElapsedAvg();
+                val3 = getLogicalTimeElapsedMax();
+
+                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                    method.invoke(logger,
+                                  "{}min/avg/max logical connection time (ms): {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
+            
+                if (!pds.isSingleSessionProxyModel() && pds.getConnectInfo().getProxyUsername() != null) {
+                    val1 = getProxyTimeElapsedMin();
+                    val2 = getProxyTimeElapsedAvg();
+                    val3 = getProxyTimeElapsedMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max proxy connection time (ms): {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+
+                    val1 = getProxyOpenSessionCount();
+                    val2 = getProxyCloseSessionCount();
+                    val3 = getProxyLogicalConnectionCount();
+                
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                }
+            
+                if (showPoolSizes) {
+                    method.invoke(logger,
+                                  "{}initial/min/max pool size: {}/{}/{}",
+                                  (Object) new Object[]{ prefix,
+                                                         pds.getInitialPoolSize(),
+                                                         pds.getMinPoolSize(),
+                                                         pds.getMaxPoolSize() });
+                }
+
+                if (!finalCall) {
+                    // current values
+                    val1 = pds.getActiveConnections();
+                    val2 = pds.getIdleConnections();
+                    val3 = pds.getTotalConnections();
+                    
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}current active/idle/total connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                } else {
+                    val1 = getActiveConnectionsMin();
+                    val2 = getActiveConnectionsAvg();
+                    val3 = getActiveConnectionsMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max active connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                    
+                    val1 = getIdleConnectionsMin();
+                    val2 = getIdleConnectionsAvg();
+                    val3 = getIdleConnectionsMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max idle connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+
+                    val1 = getTotalConnectionsMin();
+                    val2 = getTotalConnectionsAvg();
+                    val3 = getTotalConnectionsMax();
+
+                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
+                        method.invoke(logger,
+                                      "{}min/avg/max total connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
+                }
+            }
+
+            // show errors
+            if (showErrors) {
+                final Map<Properties, Long> errors = getErrors();
+
+                if (errors.isEmpty()) {
+                    logger.info("no connection exceptions signalled for {}", poolDescription);
+                } else {
+                    logger.warn("connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
+                
+                    errors.entrySet().stream()
+                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
+                        .forEach(e -> {
+                                final Properties key = (Properties) e.getKey();
+                                final String className = key.getProperty(PoolDataSourceStatistics.EXCEPTION_CLASS_NAME);
+                                final String SQLErrorCode = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_ERROR_CODE);
+                                final String SQLState = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_STATE);
+
+                                if (SQLErrorCode == null || SQLState == null) {
+                                    logger.warn("{}{} occurrences for (class={})",
+                                                prefix,
+                                                e.getValue(),
+                                                className);
+                                } else {
+                                    logger.warn("{}{} occurrences for (class={}, error code={}, SQL state={})",
+                                                prefix,
+                                                e.getValue(),
+                                                className,
+                                                SQLErrorCode,
+                                                SQLState);
+                                }
+                            });
+                }
+            }
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            logger.error("showDataSourceStatistics exception: {}", e.getMessage());
+        }
+    }
+
     // getter(s)
 
+    // all physical time elapsed stuff
+
     public long getPhysicalConnectionCount() {
-        return physicalConnections.size();
+        return physicalConnectionCount.get();
     }
             
+    public long getPhysicalTimeElapsedMin() {
+        return physicalTimeElapsedMin.get();
+    }
+
+    public long getPhysicalTimeElapsedMax() {
+        return physicalTimeElapsedMax.get();
+    }
+
+    public long getPhysicalTimeElapsedAvg() {
+        return physicalTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+    }
+
+    // all logical time elapsed stuff
+    
     public long getLogicalConnectionCount() {
         return logicalConnectionCount.get();
     }
 
-    public long getLogicalConnectionCountProxy() {
-        return logicalConnectionCountProxy.get();
+    public long getLogicalTimeElapsedMin() {
+        return logicalTimeElapsedMin.get();
     }
 
-    public long getOpenProxySessionCount() {
-        return openProxySessionCount.get();
+    public long getLogicalTimeElapsedMax() {
+        return logicalTimeElapsedMax.get();
+    }
+
+    public long getLogicalTimeElapsedAvg() {
+        return logicalTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+    }
+
+    // all proxy time elapsed stuff
+
+    public long getProxyLogicalConnectionCount() {
+        return proxyLogicalConnectionCount.get();
+    }
+
+    public long getProxyOpenSessionCount() {
+        return proxyOpenSessionCount.get();
     }
         
-    public long getCloseProxySessionCount() {
-        return closeProxySessionCount.get();
+    public long getProxyCloseSessionCount() {
+        return proxyCloseSessionCount.get();
     }
         
-    public long getTimeElapsedMin() {
-        return timeElapsedMin.get();
+    public long getProxyTimeElapsedMin() {
+        return proxyTimeElapsedMin.get();
     }
 
-    public long getTimeElapsedMax() {
-        return timeElapsedMax.get();
+    public long getProxyTimeElapsedMax() {
+        return proxyTimeElapsedMax.get();
     }
 
-    public long getTimeElapsedAvg() {
-        return timeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+    public long getProxyTimeElapsedAvg() {
+        return proxyTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
-
-    public long getTimeElapsedProxyMin() {
-        return timeElapsedProxyMin.get();
-    }
-
-    public long getTimeElapsedProxyMax() {
-        return timeElapsedProxyMax.get();
-    }
-
-    public long getTimeElapsedProxyAvg() {
-        return timeElapsedProxyAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
-    }
+    
+    // all connection related stuff
 
     public long getActiveConnectionsMin() {
         return activeConnectionsMin.get();
