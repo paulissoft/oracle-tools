@@ -71,6 +71,11 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
         this.maxPoolSize = 0;
     }
 
+    void clearNonIdConfiguration() {
+        super.clearNonIdConfiguration();
+        this.connectionPoolName = null;
+    }
+
 //**/    @Override
 //**/    public String toString() {
 //**/        ReflectionToStringBuilder rtsb = new ReflectionToStringBuilder(this, ToStringStyle.JSON_STYLE);

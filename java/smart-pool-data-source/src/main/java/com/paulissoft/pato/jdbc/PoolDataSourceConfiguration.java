@@ -56,4 +56,8 @@ public class PoolDataSourceConfiguration {
         this.username = null;
         this.password = null;
     }
+
+    void clearNonIdConfiguration() {
+        this.password = null;
+    }
 }

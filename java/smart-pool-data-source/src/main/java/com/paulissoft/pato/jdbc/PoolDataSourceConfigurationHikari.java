@@ -53,11 +53,18 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     
     private long leakDetectionThreshold;
 
+    @Override
     void clearCommonDataSourceConfiguration() {
         super.clearCommonDataSourceConfiguration();
         this.poolName = null;
         this.maximumPoolSize = 0;
         this.minimumIdle = 0;
+    }
+
+    @Override
+    void clearNonIdConfiguration() {
+        super.clearNonIdConfiguration();
+        this.poolName = null;
     }
 
 //**/    @Override
