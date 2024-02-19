@@ -22,8 +22,6 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
         super();
 
-        cachePoolDataSourceConfigurations.put(new PoolDataSourceConfigurationId(pdsConfigurationOracle), true);
-        
         int nr = 0;
         final int maxNr = 17;
         
@@ -55,6 +53,8 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                 log.warn("exception at nr {}: {}", nr, ex.getMessage());
             }
         } while (++nr <= maxNr);
+
+        join(pdsConfigurationOracle, true);
     }
 
     /*TBD*/
@@ -91,19 +91,27 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     */
     
     public void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
+        join(pdsConfigurationOracle, false);        
+    }
+    
+    private void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle, final boolean first) {
         final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfigurationOracle);
         
         cachePoolDataSourceConfigurations.computeIfAbsent(id, k -> {
                 final ConnectInfo connectInfo = new ConnectInfo(pdsConfigurationOracle.getUsername());
 
                 try {
-                    updatePoolSizes(pdsConfigurationOracle);
+                    if (first) {
+                        setPoolName("OraclePool");
+                    } else {
+                        updatePoolSizes(pdsConfigurationOracle);
+                    }
                     setPoolName(getPoolName() + "-" + connectInfo.getSchema());
                 } catch (SQLException ex) {
                     throw new RuntimeException(ex.getMessage());
                 }
                 
-                return false;
+                return first;
             });
     }
 
