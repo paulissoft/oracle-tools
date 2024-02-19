@@ -8,6 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
 
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+        new PoolDataSourceStatistics(SimplePoolDataSourceOracle.class::getSimpleName,
+                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+
+    private final PoolDataSourceStatistics poolDataSourceStatistics = new PoolDataSourceStatistics(this::getConnectionPoolName, poolDataSourceStatisticsTotal);
+
     public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
         super();
 
@@ -178,6 +184,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return getActiveConnections() + getIdleConnections();
     }
 
+    public PoolDataSourceStatistics getPoolDataSourceStatistics() {
+        return poolDataSourceStatistics;
+    }
+    
     public void close() {
         ; // nothing
     }

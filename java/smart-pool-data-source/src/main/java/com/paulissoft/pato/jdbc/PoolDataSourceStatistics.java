@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.function.Supplier;
 
 public class PoolDataSourceStatistics {
 
@@ -46,6 +47,8 @@ public class PoolDataSourceStatistics {
 
     private static Method loggerDebug;
 
+    static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> GRAND_TOTAL);
+
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
         
@@ -66,7 +69,7 @@ public class PoolDataSourceStatistics {
 
     // all instance stuff
     
-    private String name = null;
+    private Supplier<String> nameSupplier = null;
 
     // all physical time elapsed stuff
     
@@ -133,12 +136,12 @@ public class PoolDataSourceStatistics {
         this(null);
     }
         
-    public PoolDataSourceStatistics(final String name) {
-        this(name, null);
+    public PoolDataSourceStatistics(final Supplier<String> nameSupplier) {
+        this(nameSupplier, null);
     }
         
-    public PoolDataSourceStatistics(final String name, final PoolDataSourceStatistics parent) {
-        this.name = name;
+    public PoolDataSourceStatistics(final Supplier<String> nameSupplier, final PoolDataSourceStatistics parent) {
+        this.nameSupplier = nameSupplier;
         this.parent = parent;
 
         // only the overall instance tracks note of physical connections
@@ -148,6 +151,10 @@ public class PoolDataSourceStatistics {
  
             this.physicalConnections = dummy.newKeySet();
         }
+    }
+
+    private String getName() {
+        return nameSupplier != null ? nameSupplier.get() : null;
     }
         
     void update(final Connection conn,

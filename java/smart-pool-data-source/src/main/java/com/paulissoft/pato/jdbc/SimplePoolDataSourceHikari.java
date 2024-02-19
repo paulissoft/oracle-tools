@@ -10,6 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+        new PoolDataSourceStatistics(SimplePoolDataSourceHikari.class::getSimpleName,
+                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+
+    private final PoolDataSourceStatistics poolDataSourceStatistics = new PoolDataSourceStatistics(this::getPoolName, poolDataSourceStatisticsTotal);
+
+    // constructor
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
         super();
         
@@ -25,7 +32,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                 case 1: setJdbcUrl(pdsConfigurationHikari.getUrl()); break;
                 case 2: setUsername(pdsConfigurationHikari.getUsername()); break;
                 case 3: setPassword(pdsConfigurationHikari.getPassword()); break;
-                case 4: setPoolName(pdsConfigurationHikari.getPoolName()); break;
+                case 4: setPoolName("HikariPool"); break;
                 case 5: setMaximumPoolSize(pdsConfigurationHikari.getMaximumPoolSize()); break;
                 case 6: setMinimumIdle(pdsConfigurationHikari.getMinimumIdle()); break;
                 case 7: setAutoCommit(pdsConfigurationHikari.isAutoCommit()); break;
@@ -82,7 +89,17 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public void join(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
-
+        /*
+                    if (this.commonPoolDataSource == this.pds) {
+                        this.commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
+                    } else {
+                        this.commonPoolDataSource.updatePoolSizes(this.pds);
+                    }
+                    this.commonPoolDataSource.setPoolName(this.commonPoolDataSource.getPoolName() + "-" + this.connectInfo.getSchema());
+                    logger.info("Common pool name: {}", this.commonPoolDataSource.getPoolName());
+                }
+            }
+        */
     }
 
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
@@ -178,6 +195,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         }
     }
 
+    public PoolDataSourceStatistics getPoolDataSourceStatistics() {
+        return poolDataSourceStatistics;
+    }
+    
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof SimplePoolDataSourceHikari)) {

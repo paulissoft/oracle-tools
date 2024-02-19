@@ -41,4 +41,6 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public int getIdleConnections();
 
     public int getTotalConnections();        
+
+    public PoolDataSourceStatistics getPoolDataSourceStatistics();
 }

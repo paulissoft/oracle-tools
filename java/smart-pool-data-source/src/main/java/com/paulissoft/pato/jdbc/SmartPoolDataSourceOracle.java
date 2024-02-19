@@ -29,14 +29,16 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
         return ((PoolDataSource)getCommonPoolDataSource());
     }
     
-    public SmartPoolDataSourceOracle(final SimplePoolDataSourceOracle pds) throws SQLException {
-        this(pds, true, false);        
+    public SmartPoolDataSourceOracle(final PoolDataSourceConfiguration pds,
+                                     final SimplePoolDataSourceOracle commonPoolDataSource) throws SQLException {
+        this(pds, commonPoolDataSource, true, false);        
     }
 
-    private SmartPoolDataSourceOracle(final SimplePoolDataSourceOracle pds,
+    private SmartPoolDataSourceOracle(final PoolDataSourceConfiguration pds,
+                                      final SimplePoolDataSourceOracle commonPoolDataSource,
                                       final boolean singleSessionProxyModel,
                                       final boolean useFixedUsernamePassword) throws SQLException {
-        super(pds, singleSessionProxyModel, useFixedUsernamePassword);
+        super(pds, commonPoolDataSource, singleSessionProxyModel, useFixedUsernamePassword);
     }
     
     protected String getPoolNamePrefix() {

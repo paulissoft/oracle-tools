@@ -41,7 +41,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         return ((HikariDataSource)getCommonPoolDataSource());
     }
 
-    public SmartPoolDataSourceHikari(final SimplePoolDataSourceHikari pds) throws SQLException {
+    public SmartPoolDataSourceHikari(final PoolDataSourceConfiguration pds,
+                                     final SimplePoolDataSourceHikari commonPoolDataSource) throws SQLException {
         /*
          * NOTE 1.
          *
@@ -54,10 +55,11 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * See also https://github.com/brettwooldridge/HikariCP/issues/231
          */
 
-        this(pds, false, true);
+        this(pds, commonPoolDataSource, false, true);
     }
     
-    private SmartPoolDataSourceHikari(final SimplePoolDataSourceHikari pds,
+    private SmartPoolDataSourceHikari(final PoolDataSourceConfiguration pds,
+                                      final SimplePoolDataSourceHikari commonPoolDataSource,
                                       final boolean singleSessionProxyModel,
                                       final boolean useFixedUsernamePassword) throws SQLException {
         
@@ -68,6 +70,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
          * So when singleSessionProxyModel is true, useFixedUsernamePassword must be true as well.
          */
         super(pds,
+              commonPoolDataSource,
               singleSessionProxyModel,
               singleSessionProxyModel || useFixedUsernamePassword);
     }
@@ -79,9 +82,8 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     public void close() {
-        if (done()) {
-            getCommonPoolDataSourceHikari().close();
-        }
+        done();
+        // getCommonPoolDataSourceHikari().close();
     }
 
     protected String getPoolNamePrefix() {
