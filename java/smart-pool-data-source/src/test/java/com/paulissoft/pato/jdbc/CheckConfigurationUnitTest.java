@@ -104,24 +104,22 @@ public class CheckConfigurationUnitTest {
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
 
-        final SimplePoolDataSourceHikari pds1 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
-        final SimplePoolDataSourceHikari pds2 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
         final int startTotalPoolCount = SmartPoolDataSource.getTotalPoolCount();
-        final SmartPoolDataSource pds3 = new SmartPoolDataSourceHikari(pds1);
+        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari);
 
         assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
 
-        final SmartPoolDataSource pds4 = new SmartPoolDataSourceHikari(pds1); // same pds
+        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari); // same config
 
         assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
 
-        final SmartPoolDataSource pds5 = new SmartPoolDataSourceHikari(pds2); // similar pds
+        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari); // same config
 
         assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
 
-        checkSimplePoolDataSourceJoinTwice(pds3, pds4);
-        checkSimplePoolDataSourceJoinTwice(pds4, pds5);
-        checkSimplePoolDataSourceJoinTwice(pds3, pds5);
+        checkSimplePoolDataSourceJoinTwice(pds1, pds2);
+        checkSimplePoolDataSourceJoinTwice(pds2, pds3);
+        checkSimplePoolDataSourceJoinTwice(pds3, pds1);
 
         // change one property and create a smart pool data source: total pool count should increase
         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari1 =
@@ -129,15 +127,12 @@ public class CheckConfigurationUnitTest {
             .toBuilder()
             .autoCommit(!poolDataSourceConfigurationHikari.isAutoCommit())
             .build();
-        final SimplePoolDataSourceHikari pds6 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari1);
-        final SmartPoolDataSource pds7 = new SmartPoolDataSourceHikari(pds6);
+        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1);
 
         assertEquals(startTotalPoolCount + 2, SmartPoolDataSource.getTotalPoolCount());
 
-        assertNotEquals(pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
-                        pds7.getCommonPoolDataSource().getPoolDataSourceConfiguration());
-        assertNotEquals(pds3.getPds().getPoolDataSourceConfiguration(),
-                        pds7.getPds().getPoolDataSourceConfiguration());
+        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
     }
 
     //=== Oracle ===
@@ -196,24 +191,22 @@ public class CheckConfigurationUnitTest {
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
-        final SimplePoolDataSourceOracle pds1 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
-        final SimplePoolDataSourceOracle pds2 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
         final int startTotalPoolCount = SmartPoolDataSource.getTotalPoolCount();
-        final SmartPoolDataSource pds3 = new SmartPoolDataSourceOracle(pds1);
+        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle);
 
         assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
 
-        final SmartPoolDataSource pds4 = new SmartPoolDataSourceOracle(pds1); // same pds
+        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle); // same config
 
         assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
 
-        final SmartPoolDataSource pds5 = new SmartPoolDataSourceOracle(pds2); // similar pds
+        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle); // same config
 
         assertEquals(startTotalPoolCount + 1, SmartPoolDataSource.getTotalPoolCount());
             
-        checkSimplePoolDataSourceJoinTwice(pds3, pds4);
-        checkSimplePoolDataSourceJoinTwice(pds4, pds5);
-        checkSimplePoolDataSourceJoinTwice(pds3, pds5);
+        checkSimplePoolDataSourceJoinTwice(pds1, pds2);
+        checkSimplePoolDataSourceJoinTwice(pds2, pds3);
+        checkSimplePoolDataSourceJoinTwice(pds3, pds1);
 
         // change one property and create a smart pool data source: total pool count should increase
         final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
@@ -221,15 +214,12 @@ public class CheckConfigurationUnitTest {
             .toBuilder()
             .validateConnectionOnBorrow(!poolDataSourceConfigurationOracle.getValidateConnectionOnBorrow())
             .build();
-        final SimplePoolDataSourceOracle pds6 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle1);
-        final SmartPoolDataSource pds7 = new SmartPoolDataSourceOracle(pds6);
+        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle1);
 
         assertEquals(startTotalPoolCount + 2, SmartPoolDataSource.getTotalPoolCount());
         
-        assertNotEquals(pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
-                        pds7.getCommonPoolDataSource().getPoolDataSourceConfiguration());
-        assertNotEquals(pds3.getPds().getPoolDataSourceConfiguration(),
-                        pds7.getPds().getPoolDataSourceConfiguration());
+        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
     }
 
     private void checkSimplePoolDataSourceJoinTwice(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2) {
@@ -237,26 +227,14 @@ public class CheckConfigurationUnitTest {
         PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
             
         // check all fields
-        for (int i = 0; i < 2; i++) {
-            switch(i) {
-            case 0:
-                poolDataSourceConfiguration1 = pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration();
-                poolDataSourceConfiguration2 = pds2.getCommonPoolDataSource().getPoolDataSourceConfiguration();
-                break;
-            case 1:
-                poolDataSourceConfiguration1 = pds1.getPds().getPoolDataSourceConfiguration();
-                poolDataSourceConfiguration2 = pds2.getPds().getPoolDataSourceConfiguration();
-                break;
-            }
-            assertEquals(poolDataSourceConfiguration1.toString(),
-                         poolDataSourceConfiguration2.toString());
-        }
+        poolDataSourceConfiguration1 = pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+        poolDataSourceConfiguration2 = pds2.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+
+        assertEquals(poolDataSourceConfiguration1.toString(),
+                     poolDataSourceConfiguration2.toString());
         
         assertEquals(pds1.isStatisticsEnabled(), pds2.isStatisticsEnabled());
         assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
         assertEquals(pds1.isUseFixedUsernamePassword(), pds2.isUseFixedUsernamePassword());
-        assertEquals(pds1.getCommonDataSourceProperties(), pds2.getCommonDataSourceProperties());
-        assertEquals(pds1.getCommonDataSourceStatisticsTotal(), pds2.getCommonDataSourceStatisticsTotal());
-        assertEquals(pds1.getCommonDataSourceStatistics(), pds2.getCommonDataSourceStatistics());
     }
 }
