@@ -106,7 +106,56 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         join();
     }
-    
+
+    public static SmartPoolDataSource build(final PoolDataSourceConfiguration dataSourceConfiguration,
+                                            final PoolDataSourceConfiguration... pdsConfigurations) {
+        SmartPoolDataSource pds = null;
+
+        try {
+            final Class cls = dataSourceConfiguration.getType();
+
+            if (cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls)) {
+                SimplePoolDataSourceOracle pdsOracle = null;
+
+                for (PoolDataSourceConfiguration pdsConfiguration: pdsConfigurations) {
+                    if (pdsConfiguration instanceof PoolDataSourceConfigurationOracle) {
+                        final PoolDataSourceConfigurationOracle pdsConfigurationOracle =
+                            (PoolDataSourceConfigurationOracle) pdsConfiguration;
+
+                        pdsConfigurationOracle.copy(dataSourceConfiguration);
+                        pdsOracle = new SimplePoolDataSourceOracle(pdsConfigurationOracle);
+
+                        break;
+                    }
+                }
+
+                pds = new SmartPoolDataSourceOracle(pdsOracle);
+            } else {
+                SimplePoolDataSourceHikari pdsHikari = null;
+
+                for (PoolDataSourceConfiguration pdsConfiguration: pdsConfigurations) {
+                    if (pdsConfiguration instanceof PoolDataSourceConfigurationHikari) {
+                        final PoolDataSourceConfigurationHikari pdsConfigurationHikari =
+                            (PoolDataSourceConfigurationHikari) pdsConfiguration;
+
+                        pdsConfigurationHikari.copy(dataSourceConfiguration);
+                        pdsHikari = new SimplePoolDataSourceHikari(pdsConfigurationHikari);
+
+                        break;
+                    }
+                }
+
+                pds = new SmartPoolDataSourceHikari(pdsHikari);
+            }
+
+            pds.setStatisticsEnabled(true);
+        } catch (SQLException ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+        
+        return pds;
+    }
+
     /**
      * Join the common pool of pool data sources.
      *
