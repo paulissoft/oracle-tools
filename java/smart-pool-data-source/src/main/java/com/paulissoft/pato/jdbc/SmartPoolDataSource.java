@@ -15,7 +15,8 @@ import lombok.AccessLevel;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import java.util.function.Supplier;
+import java.util.function.Function;
 
 public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
@@ -80,7 +81,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     SmartPoolDataSource(final PoolDataSourceConfiguration pdsConfiguration,
                         final SimplePoolDataSource commonPoolDataSource,
                         final boolean singleSessionProxyModel,
-                        final boolean useFixedUsernamePassword) throws SQLException {
+                        final boolean useFixedUsernamePassword) {
         logger.info(">SmartPoolDataSource()");
 
         try {
@@ -117,6 +118,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             this.commonPoolDataSource.setUsername(this.connectInfo.getUsernameToConnectTo(singleSessionProxyModel));
             this.commonPoolDataSource.setPassword(this.connectInfo.getPassword());
+        } catch (SQLException ex) {
+            throw new RuntimeException(ex.getMessage());
         } finally {
             logger.info("<SmartPoolDataSource()");
         }
@@ -208,37 +211,44 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         // case 1: if not absent
         return cacheSmartPoolDataSources.computeIfAbsent(thisId, key -> {
-                PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
-                SimplePoolDataSourceHikari simplePoolDataSource = null;
-                
-                // cases 2, 3 and 4
-                try {                    
-                    if ((simplePoolDataSource = ((SimplePoolDataSourceHikari) cacheSimplePoolDataSources.get(thisId))) == null) {
-                        // there is no specific one so try the common one and join() it
-                        simplePoolDataSource = ((SimplePoolDataSourceHikari) cacheSimplePoolDataSources.get(commonId));
-
-                        if (simplePoolDataSource != null) {
-                            try {
-                                // case 2 or 3
-                                simplePoolDataSource.join(pdsConfiguration); // must amend pool sizes
-                                // case 2
-                            } catch (Exception ex) {
-                                // case 3
-                                simplePoolDataSource = null;
-                                commonId = thisId; // join() failed so we must be very specific when we put it into the cache
-                            }
-                        }
-                        if (simplePoolDataSource == null) {
-                            simplePoolDataSource = new SimplePoolDataSourceHikari(pdsConfiguration);
-                            cacheSimplePoolDataSources.put(commonId, simplePoolDataSource);
-                        }
-                    }
-                    return new SmartPoolDataSourceHikari(pdsConfiguration, simplePoolDataSource);
-                } catch (SQLException ex) {
-                    throw new RuntimeException(ex.getMessage());
-                }
+                return build(pdsConfiguration,
+                             thisId,
+                             () -> (SimplePoolDataSource)(new SimplePoolDataSourceHikari(pdsConfiguration)),
+                             p -> (SmartPoolDataSource)(new SmartPoolDataSourceHikari(pdsConfiguration, (SimplePoolDataSourceHikari) p)));
             });
     }        
+
+    private static SmartPoolDataSource build(final PoolDataSourceConfiguration pdsConfiguration,
+                                             final PoolDataSourceConfigurationId thisId,
+                                             final Supplier<SimplePoolDataSource> newSimplePoolDataSource,
+                                             final Function<SimplePoolDataSource, SmartPoolDataSource> newSmartPoolDataSource) {
+        PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
+        SimplePoolDataSource simplePoolDataSource = null;
+                
+        // cases 2, 3 and 4
+        if ((simplePoolDataSource = cacheSimplePoolDataSources.get(thisId)) == null) {
+            // there is no specific one so try the common one and join() it
+            simplePoolDataSource = cacheSimplePoolDataSources.get(commonId);
+
+            if (simplePoolDataSource != null) {
+                try {
+                    // case 2 or 3
+                    simplePoolDataSource.join(pdsConfiguration); // must amend pool sizes
+                    // case 2
+                } catch (Exception ex) {
+                    // case 3
+                    simplePoolDataSource = null;
+                    commonId = thisId; // join() failed so we must be very specific when we put it into the cache
+                }
+            }
+            if (simplePoolDataSource == null) {
+                simplePoolDataSource = newSimplePoolDataSource.get();
+                cacheSimplePoolDataSources.put(commonId, simplePoolDataSource);
+            }
+        }
+
+        return newSmartPoolDataSource.apply(simplePoolDataSource);
+    }
 
     public void close() {
         logger.debug(">close()");

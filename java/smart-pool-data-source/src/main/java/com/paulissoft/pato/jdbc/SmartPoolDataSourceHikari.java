@@ -34,7 +34,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     public SmartPoolDataSourceHikari(final PoolDataSourceConfiguration pds,
-                                     final SimplePoolDataSourceHikari commonPoolDataSource) throws SQLException {
+                                     final SimplePoolDataSourceHikari commonPoolDataSource) {
         /*
          * NOTE 1.
          *
@@ -53,7 +53,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     private SmartPoolDataSourceHikari(final PoolDataSourceConfiguration pds,
                                       final SimplePoolDataSourceHikari commonPoolDataSource,
                                       final boolean singleSessionProxyModel,
-                                      final boolean useFixedUsernamePassword) throws SQLException {
+                                      final boolean useFixedUsernamePassword) {
         
         /*
          * NOTE 2.

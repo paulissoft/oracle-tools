@@ -10,7 +10,7 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
 
     // for join()
-    // value True means it is the initialization entry (in constructor)
+    // value true means it is the initialization entry (in constructor)
     private static final ConcurrentHashMap<PoolDataSourceConfigurationId, Boolean> cachePoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
@@ -90,8 +90,8 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
     */
     
-    public void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
-        join(pdsConfigurationOracle, false);        
+    public void join(final PoolDataSourceConfiguration pdsConfiguration) {
+        join((PoolDataSourceConfigurationOracle)pdsConfiguration, false);        
     }
     
     private void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle, final boolean first) {

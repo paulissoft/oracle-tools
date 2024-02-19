@@ -12,6 +12,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public String getPoolName();
 
+    public void join(final PoolDataSourceConfiguration pdsConfiguration);
+    
     //*TBD*/public void setPoolName(String poolName) throws SQLException;
 
     //*TBD*/public String getUrl();

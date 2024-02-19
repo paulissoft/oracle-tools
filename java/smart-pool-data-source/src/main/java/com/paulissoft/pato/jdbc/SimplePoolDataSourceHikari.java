@@ -95,8 +95,8 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
     */
         
-    public void join(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
-        join(pdsConfigurationHikari, false);        
+    public void join(final PoolDataSourceConfiguration pdsConfiguration) {
+        join((PoolDataSourceConfigurationHikari)pdsConfiguration, false);        
     }
     
     private void join(final PoolDataSourceConfigurationHikari pdsConfigurationHikari, final boolean first) {
