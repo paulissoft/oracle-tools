@@ -78,6 +78,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .build();
     }
 
+    public void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
+
+    }
+    
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
         log.info(">updatePoolSizes()");
 

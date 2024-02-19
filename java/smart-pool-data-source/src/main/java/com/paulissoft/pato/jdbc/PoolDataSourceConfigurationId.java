@@ -6,13 +6,22 @@ class PoolDataSourceConfigurationId {
     private String id;
 
     PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+        this(poolDataSourceConfiguration, false);
+    }
+
+    PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+                                  final boolean onlyCommonDataSourceConfiguration) {
         final PoolDataSourceConfiguration copy = poolDataSourceConfiguration.toBuilder().build(); // a copy
 
-        copy.clearNonIdConfiguration();
+        if (onlyCommonDataSourceConfiguration) {
+            copy.clearCommonDataSourceConfiguration();
+        } else {
+            copy.clearNonIdConfiguration();
+        }
         
         this.id = copy.toString();
     }
-    
+
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof PoolDataSourceConfigurationId)) {

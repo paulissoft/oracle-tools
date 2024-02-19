@@ -81,6 +81,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .build();
     }
 
+    public void join(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
+
+    }
+
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
         log.info(">updatePoolSizes()");
 

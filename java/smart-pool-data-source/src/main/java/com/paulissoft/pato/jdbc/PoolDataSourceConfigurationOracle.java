@@ -63,6 +63,7 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
     private int connectionValidationTimeout;
 
+    @Override
     void clearCommonDataSourceConfiguration() {
         super.clearCommonDataSourceConfiguration();
         this.connectionPoolName = null;
@@ -71,6 +72,7 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
         this.maxPoolSize = 0;
     }
 
+    @Override
     void clearNonIdConfiguration() {
         super.clearNonIdConfiguration();
         this.connectionPoolName = null;
