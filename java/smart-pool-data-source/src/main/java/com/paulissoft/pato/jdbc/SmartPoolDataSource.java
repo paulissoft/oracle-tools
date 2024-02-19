@@ -611,6 +611,11 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         pdsStatistics.showStatistics(this, schema, timeElapsed, proxyTimeElapsed, finalCall);
     }
-    
-    //protected abstract String getPoolNamePrefix();
+
+    protected static int getTotalPoolCount() {
+        return cacheSmartPoolDataSources.size();
+    }
+
+
+    //*TBD*/protected abstract String getPoolNamePrefix();
 }
