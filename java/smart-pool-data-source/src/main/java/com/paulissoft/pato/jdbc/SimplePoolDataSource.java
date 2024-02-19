@@ -6,7 +6,7 @@ import java.sql.SQLException;
 
 public interface SimplePoolDataSource extends DataSource, Closeable {
 
-    //*TBD*/public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
+    public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
     //*TBD*/public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
 

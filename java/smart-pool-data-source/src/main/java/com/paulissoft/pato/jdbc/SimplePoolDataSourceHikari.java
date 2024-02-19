@@ -62,8 +62,6 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         join(pdsConfigurationHikari, true);
     }
 
-    /*TBD*/
-    /*
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }
@@ -93,7 +91,6 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
     }
-    */
         
     public void join(final PoolDataSourceConfiguration pdsConfiguration) {
         join((PoolDataSourceConfigurationHikari)pdsConfiguration, false);        

@@ -19,7 +19,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     private final PoolDataSourceStatistics poolDataSourceStatistics = new PoolDataSourceStatistics(this::getConnectionPoolName, poolDataSourceStatisticsTotal);
 
-    public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
+    public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
         super();
 
         int nr = 0;
@@ -57,8 +57,6 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         join(pdsConfigurationOracle, true);
     }
 
-    /*TBD*/
-    /*
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }
@@ -88,7 +86,6 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
     }
-    */
     
     public void join(final PoolDataSourceConfiguration pdsConfiguration) {
         join((PoolDataSourceConfigurationOracle)pdsConfiguration, false);        
