@@ -28,7 +28,7 @@ class PoolDataSourceConfigurationId {
             return false;
         }
 
-        PoolDataSourceConfigurationId other = (PoolDataSourceConfigurationId) obj;
+        final PoolDataSourceConfigurationId other = (PoolDataSourceConfigurationId) obj;
         
         return other.id.equals(this.id);
     }

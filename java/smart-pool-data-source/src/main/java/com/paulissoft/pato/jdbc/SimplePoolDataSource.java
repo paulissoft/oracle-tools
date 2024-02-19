@@ -6,17 +6,17 @@ import java.sql.SQLException;
 
 public interface SimplePoolDataSource extends DataSource, Closeable {
 
-    public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
+    //*TBD*/public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
-    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
+    //*TBD*/public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
 
     public String getPoolName();
 
-    public void setPoolName(String poolName) throws SQLException;
+    //*TBD*/public void setPoolName(String poolName) throws SQLException;
 
-    public String getUrl();
+    //*TBD*/public String getUrl();
 
-    public void setUrl(String url) throws SQLException;
+    //*TBD*/public void setUrl(String url) throws SQLException;
 
     public String getUsername();
 

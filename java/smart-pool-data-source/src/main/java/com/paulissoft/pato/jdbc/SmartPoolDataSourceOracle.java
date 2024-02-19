@@ -5,18 +5,8 @@ import java.sql.SQLException;
 import lombok.experimental.Delegate;
 import oracle.ucp.jdbc.PoolDataSource;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements PoolDataSource {
-    // static stuff
-
-    private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSourceOracle.class);
-
-    static {
-        logger.info("Initializing {}", SmartPoolDataSourceOracle.class.toString());
-    }
 
     private interface Overrides {
         public Connection getConnection() throws SQLException;
@@ -40,8 +30,11 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
                                       final boolean useFixedUsernamePassword) throws SQLException {
         super(pds, commonPoolDataSource, singleSessionProxyModel, useFixedUsernamePassword);
     }
-    
+
+    /*TBD*/
+    /*
     protected String getPoolNamePrefix() {
         return "OraclePool";
-    }    
+    }
+    */
 }

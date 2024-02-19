@@ -8,16 +8,8 @@ import java.sql.SQLException;
 import java.util.Properties;
 import lombok.experimental.Delegate;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements HikariConfigMXBean, Closeable {
-
-    private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSourceHikari.class);
-
-    static {
-        logger.info("Initializing {}", SmartPoolDataSourceHikari.class.toString());
-    }
 
     private interface Overrides {
         public void close();
@@ -82,11 +74,13 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     }
 
     public void close() {
-        done();
         // getCommonPoolDataSourceHikari().close();
     }
 
+    /*TBD*/
+    /*
     protected String getPoolNamePrefix() {
         return "HikariPool";
     }
+    */
 }

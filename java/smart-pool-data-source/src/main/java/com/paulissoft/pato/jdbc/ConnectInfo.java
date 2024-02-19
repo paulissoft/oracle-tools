@@ -1,11 +1,12 @@
 package com.paulissoft.pato.jdbc;
 
 import lombok.Getter;
+import lombok.AccessLevel;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@Getter
+@Getter(AccessLevel.PACKAGE)
 class ConnectInfo {
 
     private String username;
@@ -27,7 +28,11 @@ class ConnectInfo {
      * @param password  The pasword.
      *
      */    
-    public ConnectInfo(final String username, final String password) {
+    ConnectInfo(final String username) {
+        this(username, null);
+    }
+    
+    ConnectInfo(final String username, final String password) {
         this.username = username;
         this.password = password;
         
@@ -51,7 +56,7 @@ class ConnectInfo {
                   this.schema);
     }
 
-    public String getUsernameToConnectTo(final boolean singleSessionProxyModel) {
+    String getUsernameToConnectTo(final boolean singleSessionProxyModel) {
         return !singleSessionProxyModel && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */
             proxyUsername /* case 3 */ :

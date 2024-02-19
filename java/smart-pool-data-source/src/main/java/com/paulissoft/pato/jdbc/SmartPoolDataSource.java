@@ -256,7 +256,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     }
 
     // returns true if there are no more pool data sources hereafter
-    final protected void done() {
+    final private void done() {
         logger.debug(">done()");
 
         /*
@@ -627,21 +627,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         pdsStatistics.showStatistics(this, schema, timeElapsed, proxyTimeElapsed, finalCall);
     }
-
-    private static void printDataSourceStatistics(final SimplePoolDataSource poolDataSource, final Logger logger) {
-        if (!logger.isDebugEnabled()) {
-            return;
-        }
-
-        final String prefix = INDENT_PREFIX;
-        
-        logger.debug("configuration pool data source {}:", poolDataSource.getPoolName());
-        logger.debug("{}configuration: {}", prefix, poolDataSource.getPoolDataSourceConfiguration().toString());
-        logger.debug("connections pool data source {}:", poolDataSource.getPoolName());
-        logger.debug("{}total: {}", prefix, poolDataSource.getTotalConnections());
-        logger.debug("{}active: {}", prefix, poolDataSource.getActiveConnections());
-        logger.debug("{}idle: {}", prefix, poolDataSource.getIdleConnections());
-    }
     
-    protected abstract String getPoolNamePrefix();
+    //protected abstract String getPoolNamePrefix();
 }

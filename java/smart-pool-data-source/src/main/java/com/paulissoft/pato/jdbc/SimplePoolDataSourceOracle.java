@@ -1,12 +1,17 @@
 package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
+
+    // for join()
+    // value True means it is the initialization entry (in constructor)
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationId, Boolean> cachePoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
         new PoolDataSourceStatistics(SimplePoolDataSourceOracle.class::getSimpleName,
@@ -17,7 +22,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) throws SQLException {
         super();
 
-        log.info("SimplePoolDataSourceOracle(pdsConfigurationOracle={})", pdsConfigurationOracle);
+        cachePoolDataSourceConfigurations.put(new PoolDataSourceConfigurationId(pdsConfigurationOracle), true);
         
         int nr = 0;
         final int maxNr = 17;
@@ -50,10 +55,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                 log.warn("exception at nr {}: {}", nr, ex.getMessage());
             }
         } while (++nr <= maxNr);
-
-        log.info("getPoolDataSourceConfiguration()={}", getPoolDataSourceConfiguration().toString());
     }
 
+    /*TBD*/
+    /*
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }
@@ -83,17 +88,28 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
     }
-
-    public void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
-
-    }
+    */
     
-    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
+    public void join(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
+        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfigurationOracle);
+        
+        cachePoolDataSourceConfigurations.computeIfAbsent(id, k -> {
+                final ConnectInfo connectInfo = new ConnectInfo(pdsConfigurationOracle.getUsername());
+
+                try {
+                    updatePoolSizes(pdsConfigurationOracle);
+                    setPoolName(getPoolName() + "-" + connectInfo.getSchema());
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex.getMessage());
+                }
+                
+                return false;
+            });
+    }
+
+    private void updatePoolSizes(final PoolDataSourceConfigurationOracle pdsOracle) throws SQLException {
         log.info(">updatePoolSizes()");
 
-        final SimplePoolDataSourceOracle pdsOracle = (SimplePoolDataSourceOracle) pds;
-        
-        assert(this != pdsOracle);
         log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
                  getInitialPoolSize(),
                  getMinPoolSize(),
@@ -192,6 +208,8 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         ; // nothing
     }
 
+    /*TBD*/
+    /*
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof SimplePoolDataSourceOracle)) {
@@ -212,4 +230,5 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     public String toString() {
         return getPoolDataSourceConfiguration().toString();
     }
+    */
 }
