@@ -90,14 +90,26 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
     
     public void join(final PoolDataSourceConfiguration pdsConfiguration, final String schema) {
+        final PoolDataSourceConfigurationOracle pdsConfigurationOracle = (PoolDataSourceConfigurationOracle) pdsConfiguration;
         final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
-        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfiguration, false);
-        final PoolDataSourceConfigurationId otherCommonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
+        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfigurationOracle, false);
+        final PoolDataSourceConfigurationId otherCommonId = new PoolDataSourceConfigurationId(pdsConfigurationOracle, true);
         final PoolDataSourceConfigurationId thisCommonId = new PoolDataSourceConfigurationId(getPoolDataSourceConfiguration(), true);
 
-        assert(otherCommonId.equals(thisCommonId));
+        log.debug(">join(id={}, firstPds={})", id, firstPds);
+
+        try {
+            if (!otherCommonId.equals(thisCommonId)) {
+                log.error("otherCommonId: {}", otherCommonId);
+                log.error("thisCommonId: {}", thisCommonId);
         
-        cachedPoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfiguration, schema, firstPds); return false; });
+                assert(false);
+            }
+        
+            cachedPoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfigurationOracle, schema, firstPds); return false; });
+        } finally {
+            log.debug("<join()");
+        }
     }
     
     public String getPoolNamePrefix() {
@@ -212,11 +224,15 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     @Override
     public void open(final PoolDataSourceConfiguration pds) {
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pds), (id, opened) -> true);
+        final PoolDataSourceConfigurationOracle pdsOracle = (PoolDataSourceConfigurationOracle) pds;
+
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsOracle), (id, opened) -> true);
     }
 
     @Override
     public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
+        final PoolDataSourceConfigurationOracle pdsOracle = (PoolDataSourceConfigurationOracle) pds;
+
         BiFunction<PoolDataSourceConfigurationId, Boolean, Boolean> f = 
             (id, opened) -> {
             if (opened && statisticsEnabled) {
@@ -225,7 +241,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             return false;
         };
 
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pds), f);
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsOracle), f);
     }
 
     // to implement interface Closeable

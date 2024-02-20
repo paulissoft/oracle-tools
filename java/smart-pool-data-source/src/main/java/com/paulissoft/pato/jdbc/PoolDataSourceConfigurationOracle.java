@@ -2,18 +2,20 @@ package com.paulissoft.pato.jdbc;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+//**/import lombok.NoArgsConstructor;
 /**/import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 
+@Slf4j
 @Data
 @EqualsAndHashCode(callSuper = true)
 /**/@ToString(callSuper = true)
-@NoArgsConstructor
+//**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
 @ConfigurationProperties
 public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfiguration {
@@ -63,6 +65,16 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
     private int connectionValidationTimeout;
 
+    public PoolDataSourceConfigurationOracle() {
+        super();
+        
+        final Class cls = getType();
+
+        log.debug("PoolDataSourceConfigurationOracle type: {}", cls.getName());
+
+        assert(cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls));
+    }
+    
     @Override
     void clearCommonDataSourceConfiguration() {
         super.clearCommonDataSourceConfiguration();

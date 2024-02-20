@@ -8,6 +8,7 @@ import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.DirectFieldAccessor;
 
+
 @Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
@@ -93,14 +94,27 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
         
     public void join(final PoolDataSourceConfiguration pdsConfiguration, final String schema) {
+        final PoolDataSourceConfiguration pdsConfigurationHikari = (PoolDataSourceConfigurationHikari) pdsConfiguration;
         final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
-        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfiguration, false);
-        final PoolDataSourceConfigurationId otherCommonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
+        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfigurationHikari, false);
+        final PoolDataSourceConfigurationId otherCommonId = new PoolDataSourceConfigurationId(pdsConfigurationHikari, true);
         final PoolDataSourceConfigurationId thisCommonId = new PoolDataSourceConfigurationId(getPoolDataSourceConfiguration(), true);
 
-        assert(otherCommonId.equals(thisCommonId));
+        log.debug(">join(id={}, firstPds={})", id, firstPds);
+
+        try {
+            
+            if (!otherCommonId.equals(thisCommonId)) {
+                log.error("otherCommonId: {}", otherCommonId);
+                log.error("thisCommonId: {}", thisCommonId);
         
-        cachedPoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfiguration, schema, firstPds); return false; });
+                assert(false);
+            }
+        
+            cachedPoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfigurationHikari, schema, firstPds); return false; });
+        } finally {
+            log.debug("<join()");
+        }
     }
 
     public String getPoolNamePrefix() {
@@ -211,11 +225,15 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
     @Override
     public void open(final PoolDataSourceConfiguration pds) {
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pds), (id, opened) -> true);
+        final PoolDataSourceConfigurationHikari pdsHikari = (PoolDataSourceConfigurationHikari) pds;
+        
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsHikari), (id, opened) -> true);
     }
 
     @Override
     public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
+        final PoolDataSourceConfigurationHikari pdsHikari = (PoolDataSourceConfigurationHikari) pds;
+
         BiFunction<PoolDataSourceConfigurationId, Boolean, Boolean> f = 
             (id, opened) -> {
             if (opened && statisticsEnabled) {
@@ -224,6 +242,6 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             return false;
         };
 
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pds), f);
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsHikari), f);
     }
 }

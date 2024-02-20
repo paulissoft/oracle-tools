@@ -13,7 +13,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.experimental.Delegate;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
@@ -176,8 +175,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     public static SmartPoolDataSource build(final PoolDataSourceConfigurationOracle pdsConfiguration) {
         final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
-                                                              () -> (SimplePoolDataSource)(new SimplePoolDataSourceOracle(pdsConfiguration)),
-                                                              p -> (SmartPoolDataSource)(new SmartPoolDataSourceOracle(pdsConfiguration, (SimplePoolDataSourceOracle) p)));
+                                                              () -> new SimplePoolDataSourceOracle(pdsConfiguration),
+                                                              p -> new SmartPoolDataSourceOracle(pdsConfiguration, (SimplePoolDataSourceOracle) p));
 
         smartPoolDataSource.open();
 
@@ -186,8 +185,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     public static SmartPoolDataSource build(final PoolDataSourceConfigurationHikari pdsConfiguration) {
         final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
-                                                              () -> (SimplePoolDataSource)(new SimplePoolDataSourceHikari(pdsConfiguration)),
-                                                              p -> (SmartPoolDataSource)(new SmartPoolDataSourceHikari(pdsConfiguration, (SimplePoolDataSourceHikari) p)));
+                                                              () -> new SimplePoolDataSourceHikari(pdsConfiguration),
+                                                              p -> new SmartPoolDataSourceHikari(pdsConfiguration, (SimplePoolDataSourceHikari) p));
 
         smartPoolDataSource.open();
 
@@ -234,7 +233,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             });
     }
 
-    public static boolean getStatisticsEnabled() {
+    public static boolean isStatisticsEnabled() {
         return statisticsEnabled.get();
     }
 
@@ -267,7 +266,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         try {
             if (opened.getAndSet(false)) {
                 // old value was true: give the parent a sign that this one has just closed
-                final boolean statisticsEnabled = getStatisticsEnabled();
+                final boolean statisticsEnabled = isStatisticsEnabled();
                 
                 if (statisticsEnabled) {
                     showDataSourceStatistics();
