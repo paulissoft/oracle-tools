@@ -59,6 +59,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         } while (++nr <= maxNr);
     }
 
+    public static SimplePoolDataSourceOracle build(final PoolDataSourceConfiguration pdsConfiguration) {
+        return new SimplePoolDataSourceOracle((PoolDataSourceConfigurationOracle)pdsConfiguration);
+    }
+
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }

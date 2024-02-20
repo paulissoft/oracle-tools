@@ -63,6 +63,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         } while (++nr <= maxNr);
     }
 
+    public static SimplePoolDataSourceHikari build(final PoolDataSourceConfiguration pdsConfiguration) {
+        return new SimplePoolDataSourceHikari((PoolDataSourceConfigurationHikari)pdsConfiguration);
+    }
+
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }

@@ -67,6 +67,11 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
               singleSessionProxyModel || useFixedUsernamePassword);
     }
 
+    public static SmartPoolDataSourceHikari build(final PoolDataSourceConfiguration pds,
+                                                  final SimplePoolDataSourceHikari commonPoolDataSource) {
+        return new SmartPoolDataSourceHikari(pds, commonPoolDataSource);
+    }
+        
     @SuppressWarnings("deprecation")
     @Override
     public Connection getConnection(String username, String password) throws SQLException {

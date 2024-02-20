@@ -133,30 +133,36 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                             final PoolDataSourceConfiguration... pdsConfigurations) throws SQLException {
         final Class cls = dataSourceConfiguration.getType();
 
-        if (cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls)) {
-            for (PoolDataSourceConfiguration pdsConfiguration: pdsConfigurations) {
-                if (pdsConfiguration instanceof PoolDataSourceConfigurationOracle) {
-                    final PoolDataSourceConfigurationOracle pdsConfigurationOracle =
-                        (PoolDataSourceConfigurationOracle) pdsConfiguration;
-                    pdsConfigurationOracle.copy(dataSourceConfiguration);
+        logger.info(">build(type={}) (1)", cls);
+
+        try {
+            if (cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls)) {
+                for (PoolDataSourceConfiguration pdsConfiguration: pdsConfigurations) {
+                    if (pdsConfiguration instanceof PoolDataSourceConfigurationOracle) {
+                        final PoolDataSourceConfigurationOracle pdsConfigurationOracle =
+                            (PoolDataSourceConfigurationOracle) pdsConfiguration;
+                        pdsConfigurationOracle.copy(dataSourceConfiguration);
                         
-                    return build(pdsConfigurationOracle);
+                        return build(pdsConfigurationOracle);
+                    }
                 }
-            }
-        } else if (cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls)) {
-            for (PoolDataSourceConfiguration pdsConfiguration: pdsConfigurations) {
-                if (pdsConfiguration instanceof PoolDataSourceConfigurationHikari) {
-                    final PoolDataSourceConfigurationHikari pdsConfigurationHikari =
-                        (PoolDataSourceConfigurationHikari) pdsConfiguration;
-                    pdsConfigurationHikari.copy(dataSourceConfiguration);
+            } else if (cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls)) {
+                for (PoolDataSourceConfiguration pdsConfiguration: pdsConfigurations) {
+                    if (pdsConfiguration instanceof PoolDataSourceConfigurationHikari) {
+                        final PoolDataSourceConfigurationHikari pdsConfigurationHikari =
+                            (PoolDataSourceConfigurationHikari) pdsConfiguration;
+                        pdsConfigurationHikari.copy(dataSourceConfiguration);
                         
-                    return build(pdsConfigurationHikari);
+                        return build(pdsConfigurationHikari);
+                    }
                 }
+            } else {
+                throw new IllegalArgumentException("Unknown type: " + cls);
             }
-        } else {
-            throw new IllegalArgumentException("Unknown type: " + cls);
+        } finally {
+            logger.info("<build() (1)");
         }
-        
+
         return null;
     }
     
@@ -167,43 +173,64 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      *
      * Is this id already cached (as SmartPoolDataSource)?
      * 1. yes: return that one
-     * 2. no, but there is a SimplePoolDataSource for its commonId does and join() works (in constructor): return that one
+     * 2. no, but there is a SimplePoolDataSource for its Id (or commonId and join() works (in constructor)): return that one
      * 3. no, but there is a SimplePoolDataSource for its commonId does and join() does NOT work:
      *    create a SimplePoolDataSource and store it as the most specific, i.e. thisId
      * 4. else, create a SimplePoolDataSource and store it as the commonId
      */
 
     public static SmartPoolDataSource build(final PoolDataSourceConfigurationOracle pdsConfiguration) {
-        final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
-                                                              () -> new SimplePoolDataSourceOracle(pdsConfiguration),
-                                                              p -> new SmartPoolDataSourceOracle(pdsConfiguration, (SimplePoolDataSourceOracle) p));
+        logger.info(">build(type={}) (2)", pdsConfiguration.getType());
 
-        smartPoolDataSource.open();
+        try {
+            final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
+                                                                  () -> SimplePoolDataSourceOracle.build(pdsConfiguration),
+                                                                  p -> SmartPoolDataSourceOracle.build(pdsConfiguration, (SimplePoolDataSourceOracle) p));
 
-        return smartPoolDataSource;
+            smartPoolDataSource.open();
+
+            return smartPoolDataSource;
+        } finally {
+            logger.info("<build() (2)");
+        }
     }
 
     public static SmartPoolDataSource build(final PoolDataSourceConfigurationHikari pdsConfiguration) {
-        final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
-                                                              () -> new SimplePoolDataSourceHikari(pdsConfiguration),
-                                                              p -> new SmartPoolDataSourceHikari(pdsConfiguration, (SimplePoolDataSourceHikari) p));
+        logger.info(">build(type={}) (3)", pdsConfiguration.getType());
 
-        smartPoolDataSource.open();
+        try {
+            final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
+                                                                  () -> SimplePoolDataSourceHikari.build(pdsConfiguration),
+                                                                  p -> SmartPoolDataSourceHikari.build(pdsConfiguration, (SimplePoolDataSourceHikari) p));
 
-        return smartPoolDataSource;
+            smartPoolDataSource.open();
+
+            return smartPoolDataSource;
+        } finally {
+            logger.info("<build() (3)");
+        }
     }        
 
     private static SmartPoolDataSource build(final PoolDataSourceConfiguration pdsConfiguration,
                                              final Supplier<SimplePoolDataSource> newSimplePoolDataSource,
                                              final Function<SimplePoolDataSource, SmartPoolDataSource> newSmartPoolDataSource) {
-        final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(pdsConfiguration, false);
-        
-        // case 1: if not absent
-        return cachedSmartPoolDataSources.computeIfAbsent(thisId, key -> {
+        logger.info(">build(type={}) (4)", pdsConfiguration.getType());
+
+        try {
+            final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(pdsConfiguration, false);
+
+            logger.debug("thisId: {}", thisId);
+
+            // case 1: if not absent
+            return cachedSmartPoolDataSources.computeIfAbsent(thisId, key -> {
                 PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
                 SimplePoolDataSource simplePoolDataSource = null;
                 SmartPoolDataSource smartPoolDataSource = null;
-                
+
+                logger.debug("commonId: {}", commonId);
+
+                logger.debug("cases 2, 3 or 4");
+
                 // cases 2, 3 and 4
                 if ((simplePoolDataSource = cachedSimplePoolDataSources.get(thisId)) == null) {
                     // there is no specific one so try the common one and join() it
@@ -211,19 +238,26 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
                     if (simplePoolDataSource != null) {
                         try {
+                            logger.debug("cases 2 or 3");
                             // case 2 or 3
                             smartPoolDataSource = newSmartPoolDataSource.apply(simplePoolDataSource);
+                            logger.debug("case 2");
                             // case 2
                         } catch (Exception ex) {
+                            logger.debug("case 3");
                             // case 3
                             simplePoolDataSource = null;
                             commonId = thisId; // join() failed so we must be very specific when we put it into the cache
                         }
+                    } else {
+                        logger.debug("case 4");
                     }
                     if (simplePoolDataSource == null) {
                         simplePoolDataSource = newSimplePoolDataSource.get();
                         cachedSimplePoolDataSources.put(commonId, simplePoolDataSource);
                     }
+                } else {
+                    logger.debug("case 2"); // since the simplePoolDataSource is stored for just this Id, join() must have been called before
                 }
                 assert(simplePoolDataSource != null);
                 if (smartPoolDataSource == null) {
@@ -231,6 +265,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 }
                 return smartPoolDataSource;
             });
+        } finally {
+            logger.info("<build() (4)");
+        }            
     }
 
     public static boolean isStatisticsEnabled() {

@@ -30,4 +30,9 @@ public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements Po
                                       final boolean useFixedUsernamePassword) {
         super(pds, commonPoolDataSource, singleSessionProxyModel, useFixedUsernamePassword);
     }
+
+    public static SmartPoolDataSourceOracle build(final PoolDataSourceConfiguration pds,
+                                                  final SimplePoolDataSourceOracle commonPoolDataSource) {
+        return new SmartPoolDataSourceOracle(pds, commonPoolDataSource);
+    }
 }

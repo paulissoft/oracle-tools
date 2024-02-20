@@ -59,9 +59,13 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     public PoolDataSourceConfigurationHikari() {
         super();
 
+        if (getType() == null) {
+            setType(SimplePoolDataSourceHikari.class.getName());
+        }
+        
         final Class cls = getType();
 
-        log.debug("PoolDataSourceConfigurationHikari type: {}", cls.getName());
+        log.debug("PoolDataSourceConfigurationHikari type: {}", cls);
 
         assert(cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls));
     }

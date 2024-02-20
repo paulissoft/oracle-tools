@@ -68,13 +68,26 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
     public PoolDataSourceConfigurationOracle() {
         super();
         
+        if (getType() == null) {
+            setType(SimplePoolDataSourceOracle.class.getName());
+        }
+        
         final Class cls = getType();
 
-        log.debug("PoolDataSourceConfigurationOracle type: {}", cls.getName());
+        log.debug("PoolDataSourceConfigurationOracle type: {}", cls);
 
         assert(cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls));
     }
     
+    // copy parent fields
+    @Override
+    public void copy(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+        super.copy(poolDataSourceConfiguration);
+
+        // not used for Oracle
+        setDriverClassName(null);
+    }
+
     @Override
     void clearCommonDataSourceConfiguration() {
         super.clearCommonDataSourceConfiguration();

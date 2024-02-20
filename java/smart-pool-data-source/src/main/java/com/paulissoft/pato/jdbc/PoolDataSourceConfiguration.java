@@ -49,7 +49,9 @@ public class PoolDataSourceConfiguration {
         this.url = poolDataSourceConfiguration.url;    
         this.username = poolDataSourceConfiguration.username;
         this.password = poolDataSourceConfiguration.password;
-        this.type = poolDataSourceConfiguration.type;
+
+        // GJP 2024-02-20 Type can not change
+        // this.type = poolDataSourceConfiguration.type;
     }
 
     void clearCommonDataSourceConfiguration() {

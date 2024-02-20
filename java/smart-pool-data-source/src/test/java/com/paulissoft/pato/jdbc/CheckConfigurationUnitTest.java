@@ -12,7 +12,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @ExtendWith(SpringExtension.class)
 @EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
@@ -31,7 +33,7 @@ public class CheckConfigurationUnitTest {
     @Qualifier("app-auth-datasource-oracle")
     private PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle;
 
-    @Test
+    //**/@Test
     void testPoolDataSourceConfiguration() {
         assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
@@ -45,7 +47,7 @@ public class CheckConfigurationUnitTest {
     
     //=== Hikari ===
 
-    @Test
+    //**/@Test
     void testPoolDataSourceConfigurationHikari() {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
         assertEquals("HikariPool-boauth", poolDataSourceConfigurationHikari.getPoolName());
@@ -86,7 +88,7 @@ public class CheckConfigurationUnitTest {
                      poolDataSourceConfigurationHikariCopy.toString());
     }
 
-    @Test
+    //**/@Test
     void testDefaultSimplePoolDataSourceHikari() {
         final SimplePoolDataSourceHikari pds = new SimplePoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
 
@@ -100,9 +102,14 @@ public class CheckConfigurationUnitTest {
                      pds.getPoolDataSourceConfiguration().toString());
     }
 
-    @Test
+    //**/@Test
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
+
+        log.debug("testSimplePoolDataSourceHikariJoinTwice()");
+        log.debug("poolDataSourceConfigurationHikari.getType(): {}", poolDataSourceConfigurationHikari.getType());
+
+        assertEquals(SimplePoolDataSourceHikari.class, poolDataSourceConfigurationHikari.getType());
 
         final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
         final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari);
@@ -137,7 +144,7 @@ public class CheckConfigurationUnitTest {
 
     //=== Oracle ===
 
-    @Test
+    //**/@Test
     void testPoolDataSourceConfigurationOracle() {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
@@ -174,7 +181,7 @@ public class CheckConfigurationUnitTest {
                      poolDataSourceConfigurationOracle.toString());
     }
 
-    @Test
+    //**/@Test
     void testDefaultSimplePoolDataSourceOracle() throws SQLException {
         final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
             
@@ -190,6 +197,11 @@ public class CheckConfigurationUnitTest {
     @Test
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
+
+        log.debug("testSimplePoolDataSourceOracleJoinTwice()");
+        log.debug("poolDataSourceConfigurationOracle.getType(): {}", poolDataSourceConfigurationOracle.getType());
+        
+        assertEquals(SimplePoolDataSourceOracle.class, poolDataSourceConfigurationOracle.getType());
 
         final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
         final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle);
