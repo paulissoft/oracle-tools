@@ -26,6 +26,12 @@ public class ConfigurationFactory {
         return new PoolDataSourceConfigurationHikari();
     }
 
+    @Bean(name = "app-auth-datasource-oracle")
+    @ConfigurationProperties(prefix = "app.auth.datasource.ucp")
+    public PoolDataSourceConfigurationOracle getAppAuthDataSourceConfigurationOracle() {
+        return new PoolDataSourceConfigurationOracle();
+    }
+
     @Bean(name = "app-ocpp-datasource")
     @ConfigurationProperties(prefix = "app.ocpp.datasource")
     public PoolDataSourceConfiguration getAppOcppDataSourceConfiguration() {
@@ -38,9 +44,9 @@ public class ConfigurationFactory {
         return new PoolDataSourceConfigurationHikari();
     }
 
-    @Bean(name = "app-auth-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.auth.datasource.ucp")
-    public PoolDataSourceConfigurationOracle getAppAuthDataSourceConfigurationOracle() {
+    @Bean(name = "app-ocpp-datasource-oracle")
+    @ConfigurationProperties(prefix = "app.ocpp.datasource.ucp")
+    public PoolDataSourceConfigurationOracle getAppOcppDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
 }

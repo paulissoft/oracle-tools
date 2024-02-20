@@ -26,16 +26,24 @@ public class CheckLifeCycleUnitTest {
     private PoolDataSourceConfiguration poolAppAuthDataSourceConfiguration;
 
     @Autowired
-    @Qualifier("app-auth-datasource-hikari")
-    private PoolDataSourceConfigurationHikari poolAppAuthDataSourceConfigurationHikari;
-
-    @Autowired
     @Qualifier("app-ocpp-datasource")
     private PoolDataSourceConfiguration poolAppOcppDataSourceConfiguration;
 
     @Autowired
+    @Qualifier("app-auth-datasource-hikari")
+    private PoolDataSourceConfigurationHikari poolAppAuthDataSourceConfigurationHikari;
+
+    @Autowired
     @Qualifier("app-ocpp-datasource-hikari")
     private PoolDataSourceConfigurationHikari poolAppOcppDataSourceConfigurationHikari;
+
+    @Autowired
+    @Qualifier("app-auth-datasource-oracle")
+    private PoolDataSourceConfigurationOracle poolAppAuthDataSourceConfigurationOracle;
+
+    @Autowired
+    @Qualifier("app-ocpp-datasource-oracle")
+    private PoolDataSourceConfigurationOracle poolAppOcppDataSourceConfigurationOracle;
 
     //=== Hikari ===
 
@@ -74,6 +82,51 @@ public class CheckLifeCycleUnitTest {
             .autoCommit(!poolAppAuthDataSourceConfigurationHikari.isAutoCommit())
             .build();
         final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1);
+
+        assertEquals(startTotalSmartPoolCount + 3, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+    }
+
+    //=== Oracle ===
+
+    @Test
+    void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
+        poolAppAuthDataSourceConfigurationOracle.copy(poolAppAuthDataSourceConfiguration);
+        poolAppOcppDataSourceConfigurationOracle.copy(poolAppOcppDataSourceConfiguration);
+
+        log.debug("testSimplePoolDataSourceOracleJoinTwice()");
+
+        final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
+        final int startTotalSimplePoolCount = SmartPoolDataSource.getTotalSimplePoolCount();
+        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationOracle);
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle); // not the same config as pds1
+
+        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle); // same config as pds1
+
+        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        checkSimplePoolDataSourceJoin(pds1, pds2, false);
+        checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
+        checkSimplePoolDataSourceJoin(pds3, pds1, false);
+
+        // change one property and create a smart pool data source: total pool count should increase
+        final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
+            poolAppAuthDataSourceConfigurationOracle
+            .toBuilder()
+            .validateConnectionOnBorrow(!poolAppAuthDataSourceConfigurationOracle.getValidateConnectionOnBorrow())
+            .build();
+        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle1);
 
         assertEquals(startTotalSmartPoolCount + 3, SmartPoolDataSource.getTotalSmartPoolCount());
         assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
