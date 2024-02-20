@@ -11,7 +11,7 @@ import lombok.experimental.Delegate;
 
 public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements HikariConfigMXBean, Closeable {
 
-    private interface Overrides {
+    private interface Excludes {
         public void close();
 
         public Connection getConnection() throws SQLException;
@@ -28,7 +28,7 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
         public Properties getDataSourceProperties();
     }
     
-    @Delegate(excludes=Overrides.class)
+    @Delegate(excludes=Excludes.class)
     protected HikariDataSource getCommonPoolDataSourceHikari() {
         return ((HikariDataSource)getCommonPoolDataSource());
     }
