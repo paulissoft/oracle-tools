@@ -62,38 +62,72 @@ public class CheckLifeCycleUnitTest {
 
         final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
         final int startTotalSimplePoolCount = SmartPoolDataSource.getTotalSimplePoolCount();
-        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationHikari);
 
-        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+        int startTotalSmartPoolCountAfter1 = 0,
+            startTotalSimplePoolCountAfter1 = 0,
+            startTotalSmartPoolCountAfter2 = 0,
+            startTotalSimplePoolCountAfter2 = 0,
+            startTotalSmartPoolCountAfter3 = 0,
+            startTotalSimplePoolCountAfter3 = 0,
+            startTotalSmartPoolCountAfter4 = 0,
+            startTotalSimplePoolCountAfter4 = 0;
+        
+        for (int i = 0; i < 2; i++) {
+            switch (i) {
+            case 0:
+                startTotalSmartPoolCountAfter1 = startTotalSmartPoolCount + 1;
+                startTotalSimplePoolCountAfter1 = startTotalSimplePoolCount + 1;
+                startTotalSmartPoolCountAfter2 = startTotalSmartPoolCount + 2;
+                startTotalSimplePoolCountAfter2 = startTotalSimplePoolCount + 1;
+                startTotalSmartPoolCountAfter3 = startTotalSmartPoolCount + 2;
+                startTotalSimplePoolCountAfter3 = startTotalSimplePoolCount + 1;
+                startTotalSmartPoolCountAfter4 = startTotalSmartPoolCount + 3;
+                startTotalSimplePoolCountAfter4 = startTotalSimplePoolCount + 2;
+                break;
+                
+            default:
+                startTotalSmartPoolCountAfter1 = startTotalSmartPoolCountAfter2 = startTotalSmartPoolCountAfter3 = startTotalSmartPoolCountAfter4;
+                startTotalSimplePoolCountAfter1 = startTotalSimplePoolCountAfter2 = startTotalSimplePoolCountAfter3 = startTotalSimplePoolCountAfter4;
+                break;
+            }
 
-        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari); // not the same config as pds1
+            try (final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationHikari)) {
+                assertEquals(startTotalSmartPoolCountAfter1, SmartPoolDataSource.getTotalSmartPoolCount());
+                assertEquals(startTotalSimplePoolCountAfter1, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+                try (final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari)) { // not the same config as pds1
+                    assertEquals(startTotalSmartPoolCountAfter2, SmartPoolDataSource.getTotalSmartPoolCount());
+                    assertEquals(startTotalSimplePoolCountAfter2, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari); // same config as pds1
+                    try (final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari)) { // same config as pds1
+                        assertEquals(startTotalSmartPoolCountAfter3, SmartPoolDataSource.getTotalSmartPoolCount());
+                        assertEquals(startTotalSimplePoolCountAfter3, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+                        checkSimplePoolDataSourceJoin(pds1, pds2, false);
+                        checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
+                        checkSimplePoolDataSourceJoin(pds3, pds1, false);
 
-        checkSimplePoolDataSourceJoin(pds1, pds2, false);
-        checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
-        checkSimplePoolDataSourceJoin(pds3, pds1, false);
+                        // change one property and create a smart pool data source: total pool count should increase
+                        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari1 =
+                            poolAppAuthDataSourceConfigurationHikari
+                            .toBuilder()
+                            .autoCommit(!poolAppAuthDataSourceConfigurationHikari.isAutoCommit())
+                            .build();
+                        
+                        try (final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1)) {
+                            assertEquals(startTotalSmartPoolCountAfter4, SmartPoolDataSource.getTotalSmartPoolCount());
+                            assertEquals(startTotalSimplePoolCountAfter4, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        // change one property and create a smart pool data source: total pool count should increase
-        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari1 =
-            poolAppAuthDataSourceConfigurationHikari
-            .toBuilder()
-            .autoCommit(!poolAppAuthDataSourceConfigurationHikari.isAutoCommit())
-            .build();
-        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1);
+                            assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                                            pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+                        }
+                    }
+                }
+            }
+        }
 
-        assertEquals(startTotalSmartPoolCount + 3, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
-
-        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
-                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+        assertEquals(startTotalSmartPoolCountAfter4, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCountAfter4, SmartPoolDataSource.getTotalSimplePoolCount());
     }
 
     //=== Oracle ===
@@ -107,38 +141,79 @@ public class CheckLifeCycleUnitTest {
 
         final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
         final int startTotalSimplePoolCount = SmartPoolDataSource.getTotalSimplePoolCount();
-        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationOracle);
 
-        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+        int startTotalSmartPoolCountAfter1 = 0,
+            startTotalSimplePoolCountAfter1 = 0,
+            startTotalSmartPoolCountAfter2 = 0,
+            startTotalSimplePoolCountAfter2 = 0,
+            startTotalSmartPoolCountAfter3 = 0,
+            startTotalSimplePoolCountAfter3 = 0,
+            startTotalSmartPoolCountAfter4 = 0,
+            startTotalSimplePoolCountAfter4 = 0;
 
-        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle); // not the same config as pds1
+        SmartPoolDataSource pds1, pds2, pds3, pds4;
+        
+        for (int i = 0; i < 2; i++) {
+            switch (i) {
+            case 0:
+                startTotalSmartPoolCountAfter1 = startTotalSmartPoolCount + 1;
+                startTotalSimplePoolCountAfter1 = startTotalSimplePoolCount + 1;
+                startTotalSmartPoolCountAfter2 = startTotalSmartPoolCount + 2;
+                startTotalSimplePoolCountAfter2 = startTotalSimplePoolCount + 1;
+                startTotalSmartPoolCountAfter3 = startTotalSmartPoolCount + 2;
+                startTotalSimplePoolCountAfter3 = startTotalSimplePoolCount + 1;
+                startTotalSmartPoolCountAfter4 = startTotalSmartPoolCount + 3;
+                startTotalSimplePoolCountAfter4 = startTotalSimplePoolCount + 2;
+                break;
+                
+            default:
+                startTotalSmartPoolCountAfter1 = startTotalSmartPoolCountAfter2 = startTotalSmartPoolCountAfter3 = startTotalSmartPoolCountAfter4;
+                startTotalSimplePoolCountAfter1 = startTotalSimplePoolCountAfter2 = startTotalSimplePoolCountAfter3 = startTotalSimplePoolCountAfter4;
+                break;
+            }
 
-        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+            pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationOracle);
 
-        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle); // same config as pds1
+            assertEquals(startTotalSmartPoolCountAfter1, SmartPoolDataSource.getTotalSmartPoolCount());
+            assertEquals(startTotalSimplePoolCountAfter1, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+            pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle); // not the same config as pds1
+            assertEquals(startTotalSmartPoolCountAfter2, SmartPoolDataSource.getTotalSmartPoolCount());
+            assertEquals(startTotalSimplePoolCountAfter2, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        checkSimplePoolDataSourceJoin(pds1, pds2, false);
-        checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
-        checkSimplePoolDataSourceJoin(pds3, pds1, false);
+            pds3 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle); // same config as pds1
+            assertEquals(startTotalSmartPoolCountAfter3, SmartPoolDataSource.getTotalSmartPoolCount());
+            assertEquals(startTotalSimplePoolCountAfter3, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        // change one property and create a smart pool data source: total pool count should increase
-        final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
-            poolAppAuthDataSourceConfigurationOracle
-            .toBuilder()
-            .validateConnectionOnBorrow(!poolAppAuthDataSourceConfigurationOracle.getValidateConnectionOnBorrow())
-            .build();
-        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle1);
+            checkSimplePoolDataSourceJoin(pds1, pds2, false);
+            checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
+            checkSimplePoolDataSourceJoin(pds3, pds1, false);
 
-        assertEquals(startTotalSmartPoolCount + 3, SmartPoolDataSource.getTotalSmartPoolCount());
-        assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
+            // change one property and create a smart pool data source: total pool count should increase
+            final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
+                poolAppAuthDataSourceConfigurationOracle
+                .toBuilder()
+                .validateConnectionOnBorrow(!poolAppAuthDataSourceConfigurationOracle.getValidateConnectionOnBorrow())
+                .build();
 
-        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
-                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+            pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle1);
+            assertEquals(startTotalSmartPoolCountAfter4, SmartPoolDataSource.getTotalSmartPoolCount());
+            assertEquals(startTotalSimplePoolCountAfter4, SmartPoolDataSource.getTotalSimplePoolCount());
+
+            assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                            pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+
+            pds4.close();
+
+            pds3.close();
+            
+            pds2.close();
+            
+            pds1.close();
+        }
+
+        assertEquals(startTotalSmartPoolCountAfter4, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCountAfter4, SmartPoolDataSource.getTotalSimplePoolCount());
     }
 
     private void checkSimplePoolDataSourceJoin(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2, final boolean equal) {

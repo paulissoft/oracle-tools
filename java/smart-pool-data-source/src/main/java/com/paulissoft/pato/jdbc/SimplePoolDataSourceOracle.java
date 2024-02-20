@@ -204,6 +204,24 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         setUser(username);
     }
 
+    @SuppressWarnings("deprecation")
+    @Override
+    public String getPassword() {
+        return super.getPassword();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public int getConnectionWaitTimeout() {
+        return super.getConnectionWaitTimeout();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void setConnectionWaitTimeout(int waitTimeout) throws java.sql.SQLException {
+        super.setConnectionWaitTimeout(waitTimeout);
+    }
+
     public long getConnectionTimeout() { // milliseconds
         return 1000 * getConnectionWaitTimeout();
     }
