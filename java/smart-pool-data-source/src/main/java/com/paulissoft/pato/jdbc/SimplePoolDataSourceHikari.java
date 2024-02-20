@@ -24,6 +24,11 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
     private final PoolDataSourceStatistics poolDataSourceStatistics =
         new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)", poolDataSourceStatisticsTotal);
+
+    // for test purposes
+    static void clear() {
+        cachedPoolDataSourceConfigurations.clear();
+    }
     
     // constructor
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {

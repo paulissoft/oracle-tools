@@ -72,6 +72,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     @Getter(AccessLevel.PACKAGE)
     private ConnectInfo connectInfo;
 
+    // for test purposes
+    static void clear() {
+        cachedSmartPoolDataSources.clear();
+        cachedSimplePoolDataSources.clear();
+        SimplePoolDataSourceHikari.clear();
+        SimplePoolDataSourceOracle.clear();
+    }
+
     /**
      * Initialize a smart pool data source.
      *

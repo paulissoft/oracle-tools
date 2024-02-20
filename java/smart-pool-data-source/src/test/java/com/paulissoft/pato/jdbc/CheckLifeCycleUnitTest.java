@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.sql.SQLException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,11 @@ public class CheckLifeCycleUnitTest {
     @Autowired
     @Qualifier("app-ocpp-datasource-oracle")
     private PoolDataSourceConfigurationOracle poolAppOcppDataSourceConfigurationOracle;
+
+    @BeforeAll
+    static void clear() {
+        SmartPoolDataSource.clear();
+    }
 
     //=== Hikari ===
 
