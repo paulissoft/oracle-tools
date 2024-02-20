@@ -29,8 +29,6 @@ public class PoolDataSourceStatistics {
 
     static final String INDENT_PREFIX = "* ";
 
-    static final String GRAND_TOTAL = "grand total";
-
     static final String TOTAL = "total";
 
     public static final String EXCEPTION_CLASS_NAME = "class";
@@ -47,7 +45,7 @@ public class PoolDataSourceStatistics {
 
     private static Method loggerDebug;
 
-    static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> GRAND_TOTAL);
+    static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
@@ -304,29 +302,28 @@ public class PoolDataSourceStatistics {
             this.getProxyCloseSessionCount() == compareTo.getProxyCloseSessionCount();
     }
 
-    public void showStatistics(final SmartPoolDataSource pds,
-                               final String schema,
+    public void showStatistics(final SimplePoolDataSource pds,
                                final long timeElapsed,
                                final long proxyTimeElapsed,
-                               final boolean finalCall) {
-        if (!finalCall && !logger.isDebugEnabled()) {
+                               final boolean showTotals) {
+        if (!showTotals && !logger.isDebugEnabled()) {
             return;
         }
         
-        final Method method = (finalCall ? loggerInfo : loggerDebug);
+        final Method method = (showTotals ? loggerInfo : loggerDebug);
 
-        final boolean isTotal = schema.equals(TOTAL);
-        final boolean isGrandTotal = schema.equals(GRAND_TOTAL);
+        final boolean isTotal = level == 2;
+        final boolean isGrandTotal = level == 1;
         final boolean showPoolSizes = isTotal;
-        final boolean showErrors = finalCall && (isTotal || isGrandTotal);
+        final boolean showErrors = showTotals && (isTotal || isGrandTotal);
         final String prefix = INDENT_PREFIX;
-        final String poolDescription = ( isGrandTotal ? "all pools" : "pool " + pds.getPoolName()  + " (" + schema + ")" );
+        final String poolDescription = getName();
 
         try {
             if (method != null) {
                 method.invoke(logger, "statistics for {}:", (Object) new Object[]{ poolDescription });
             
-                if (!finalCall) {
+                if (!showTotals) {
                     if (timeElapsed >= 0L) {
                         method.invoke(logger,
                                       "{}time needed to open last connection (ms): {}",
@@ -370,26 +367,26 @@ public class PoolDataSourceStatistics {
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             
-                if (!pds.isSingleSessionProxyModel() && pds.getConnectInfo().getProxyUsername() != null) {
-                    val1 = getProxyTimeElapsedMin();
-                    val2 = getProxyTimeElapsedAvg();
-                    val3 = getProxyTimeElapsedMax();
+                val1 = getProxyTimeElapsedMin();
+                val2 = getProxyTimeElapsedAvg();
+                val3 = getProxyTimeElapsedMax();
 
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}min/avg/max proxy connection time (ms): {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
+                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                    method.invoke(logger,
+                                  "{}min/avg/max proxy connection time (ms): {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
 
-                    val1 = getProxyOpenSessionCount();
-                    val2 = getProxyCloseSessionCount();
-                    val3 = getProxyLogicalConnectionCount();
+                val1 = getProxyOpenSessionCount();
+                val2 = getProxyCloseSessionCount();
+                val3 = getProxyLogicalConnectionCount();
                 
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
+                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                    method.invoke(logger,
+                                  "{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             
                 if (showPoolSizes) {
@@ -401,7 +398,7 @@ public class PoolDataSourceStatistics {
                                                          pds.getMaxPoolSize() });
                 }
 
-                if (!finalCall) {
+                if (!showTotals) {
                     // current values
                     val1 = pds.getActiveConnections();
                     val2 = pds.getIdleConnections();

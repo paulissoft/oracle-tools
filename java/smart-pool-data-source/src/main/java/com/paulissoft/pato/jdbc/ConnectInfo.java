@@ -35,21 +35,26 @@ class ConnectInfo {
     ConnectInfo(final String username, final String password) {
         this.username = username;
         this.password = password;
-        
-        final int pos1 = username.indexOf("[");
-        final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
-      
-        if (pos1 >= 0 && pos2 >= pos1) {
-            // a username like bc_proxy[bodomain]
-            this.proxyUsername = username.substring(0, pos1);
-            this.schema = username.substring(pos1+1, pos2);
-        } else {
-            // a username like bodomain
-            this.proxyUsername = null;
-            this.schema = username;
-        }
 
-        log.debug("ConnectInfo(username={}) = (username={}, proxyUsername={}, schema={})",
+        if (username == null) {
+            this.proxyUsername = null;
+            this.schema = null;
+        } else {
+            final int pos1 = username.indexOf("[");
+            final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
+      
+            if (pos1 >= 0 && pos2 >= pos1) {
+                // a username like bc_proxy[bodomain]
+                this.proxyUsername = username.substring(0, pos1);
+                this.schema = username.substring(pos1+1, pos2);
+            } else {
+                // a username like bodomain
+                this.proxyUsername = null;
+                this.schema = username;
+            }
+        }
+        
+        log.debug("ConnectInfo(username={}) = (this.username={}, this.proxyUsername={}, this.schema={})",
                   username,
                   this.username,
                   this.proxyUsername,

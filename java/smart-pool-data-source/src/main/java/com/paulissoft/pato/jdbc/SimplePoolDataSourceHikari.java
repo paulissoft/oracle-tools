@@ -4,23 +4,25 @@ import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.DirectFieldAccessor;
-
 
 @Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
+    private static final String POOL_NAME_PREFIX = "HikariPool";
+         
     // for join()
     // value indicates whether smart pool data source (indicated by id) is open
-    private static final ConcurrentHashMap<PoolDataSourceConfigurationId, Boolean> cachePoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationId, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-        new PoolDataSourceStatistics(SimplePoolDataSourceHikari.class::getSimpleName,
+        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     private final PoolDataSourceStatistics poolDataSourceStatistics =
-        new PoolDataSourceStatistics(() -> this.getPoolName() + " (all)", poolDataSourceStatisticsTotal);
+        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)", poolDataSourceStatisticsTotal);
     
     // constructor
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
@@ -91,14 +93,18 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
         
     public void join(final PoolDataSourceConfiguration pdsConfiguration, final String schema) {
-        final boolean firstPds = cachePoolDataSourceConfigurations.isEmpty();
-        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfiguration);
+        final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
+        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfiguration, false);
+        final PoolDataSourceConfigurationId otherCommonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
+        final PoolDataSourceConfigurationId thisCommonId = new PoolDataSourceConfigurationId(getPoolDataSourceConfiguration(), true);
+
+        assert(otherCommonId.equals(thisCommonId));
         
-        cachePoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfiguration, schema, firstPds); return false; });
+        cachedPoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfiguration, schema, firstPds); return false; });
     }
 
     public String getPoolNamePrefix() {
-        return "HikariPool";
+        return POOL_NAME_PREFIX;
     }
 
     public void updatePoolSizes(final PoolDataSourceConfiguration pds) throws SQLException {
@@ -203,7 +209,21 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         poolDataSourceStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
     }
 
-    public void close(final PoolDataSourceConfiguration pds) {
+    @Override
+    public void open(final PoolDataSourceConfiguration pds) {
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pds), (id, opened) -> true);
+    }
 
+    @Override
+    public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
+        BiFunction<PoolDataSourceConfigurationId, Boolean, Boolean> f = 
+            (id, opened) -> {
+            if (opened && statisticsEnabled) {
+                poolDataSourceStatistics.showStatistics(this, -1L, -1L, true);
+            };
+            return false;
+        };
+
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pds), f);
     }
 }

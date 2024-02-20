@@ -68,5 +68,9 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public void updateStatistics();
 
-    public void close(final PoolDataSourceConfiguration pds);    
+    default public void open(final PoolDataSourceConfiguration pds) {
+    }
+    
+    default public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
+    }
 }
