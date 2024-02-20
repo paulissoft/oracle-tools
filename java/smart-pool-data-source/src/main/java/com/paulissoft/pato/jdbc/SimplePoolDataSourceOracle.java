@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 
@@ -241,16 +240,16 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     @Override
     public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
         final PoolDataSourceConfigurationOracle pdsOracle = (PoolDataSourceConfigurationOracle) pds;
+        final boolean isOpenBefore = statisticsEnabled && cachedPoolDataSourceConfigurations.containsValue(true);
 
-        BiFunction<PoolDataSourceConfigurationId, Boolean, Boolean> f = 
-            (id, opened) -> {
-            if (opened && statisticsEnabled) {
-                poolDataSourceStatistics.showStatistics(this, -1L, -1L, true);
-            };
-            return false;
-        };
+        // this will set opened to false for the key
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsOracle), (id, opened) -> false);
 
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsOracle), f);
+        final boolean isOpenAfter = statisticsEnabled && cachedPoolDataSourceConfigurations.containsValue(true);
+
+        if (isOpenBefore && !isOpenAfter) { // implies statisticsEnabled
+            poolDataSourceStatistics.showStatistics(this, -1L, -1L, true);
+        }
     }
 
     // to implement interface Closeable

@@ -4,10 +4,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.DirectFieldAccessor;
-
 
 @Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
@@ -242,15 +240,15 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     @Override
     public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
         final PoolDataSourceConfigurationHikari pdsHikari = (PoolDataSourceConfigurationHikari) pds;
+        final boolean isOpenBefore = statisticsEnabled && cachedPoolDataSourceConfigurations.containsValue(true);
 
-        BiFunction<PoolDataSourceConfigurationId, Boolean, Boolean> f = 
-            (id, opened) -> {
-            if (opened && statisticsEnabled) {
-                poolDataSourceStatistics.showStatistics(this, -1L, -1L, true);
-            };
-            return false;
-        };
+        // this will set opened to false for the key
+        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsHikari), (id, opened) -> false);
 
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsHikari), f);
+        final boolean isOpenAfter = statisticsEnabled && cachedPoolDataSourceConfigurations.containsValue(true);
+
+        if (isOpenBefore && !isOpenAfter) { // implies statisticsEnabled
+            poolDataSourceStatistics.showStatistics(this, -1L, -1L, true);
+        }
     }
 }
