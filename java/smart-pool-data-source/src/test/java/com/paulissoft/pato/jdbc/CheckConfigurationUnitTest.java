@@ -33,7 +33,7 @@ public class CheckConfigurationUnitTest {
     @Qualifier("app-auth-datasource-oracle")
     private PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle;
 
-    //**/@Test
+    @Test
     void testPoolDataSourceConfiguration() {
         assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
@@ -47,7 +47,7 @@ public class CheckConfigurationUnitTest {
     
     //=== Hikari ===
 
-    //**/@Test
+    @Test
     void testPoolDataSourceConfigurationHikari() {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
         assertEquals("HikariPool-boauth", poolDataSourceConfigurationHikari.getPoolName());
@@ -88,7 +88,7 @@ public class CheckConfigurationUnitTest {
                      poolDataSourceConfigurationHikariCopy.toString());
     }
 
-    //**/@Test
+    @Test
     void testDefaultSimplePoolDataSourceHikari() {
         final SimplePoolDataSourceHikari pds = new SimplePoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
 
@@ -102,7 +102,7 @@ public class CheckConfigurationUnitTest {
                      pds.getPoolDataSourceConfiguration().toString());
     }
 
-    //**/@Test
+    @Test
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
 
@@ -144,7 +144,7 @@ public class CheckConfigurationUnitTest {
 
     //=== Oracle ===
 
-    //**/@Test
+    @Test
     void testPoolDataSourceConfigurationOracle() {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
@@ -163,25 +163,25 @@ public class CheckConfigurationUnitTest {
         assertEquals(0, poolDataSourceConfigurationOracle.getMaxConnectionReuseTime());
         assertEquals(120, poolDataSourceConfigurationOracle.getSecondsToTrustIdleConnection());
         assertEquals(15, poolDataSourceConfigurationOracle.getConnectionValidationTimeout());
-        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=change_on_install, " +
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), connectionPoolName=common-pool, initialPoolSize=0, " +
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=common-pool, initialPoolSize=0, " +
                      "minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, validateConnectionOnBorrow=true, " +
                      "abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, inactiveConnectionTimeout=0, timeoutCheckInterval=30, " +
                      "maxStatements=10, connectionWaitTimeout=3, maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfigurationOracle.toString());
 
         poolDataSourceConfigurationOracle = poolDataSourceConfigurationOracle.toBuilder().password("null").timeToLiveConnectionTimeout(100).build();
-        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=null, " +
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), connectionPoolName=common-pool, initialPoolSize=0, " +
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=common-pool, initialPoolSize=0, " +
                      "minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, validateConnectionOnBorrow=true, " +
                      "abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=100, inactiveConnectionTimeout=0, timeoutCheckInterval=30, " +
                      "maxStatements=10, connectionWaitTimeout=3, maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfigurationOracle.toString());
     }
 
-    //**/@Test
+    @Test
     void testDefaultSimplePoolDataSourceOracle() throws SQLException {
         final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
             
