@@ -8,23 +8,19 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-import lombok.experimental.Delegate;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.AccessLevel;
+import lombok.experimental.Delegate;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.function.Supplier;
-import java.util.function.Function;
+
 
 public abstract class SmartPoolDataSource implements SimplePoolDataSource {
-
-    private static final String INDENT_PREFIX = PoolDataSourceStatistics.INDENT_PREFIX;
-
-    private static final String GRAND_TOTAL = PoolDataSourceStatistics.GRAND_TOTAL;
-
-    private static final String TOTAL = PoolDataSourceStatistics.TOTAL;
 
     private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSource.class);
 
@@ -32,6 +28,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private static final ConcurrentHashMap<PoolDataSourceConfigurationId, SmartPoolDataSource> cacheSmartPoolDataSources = new ConcurrentHashMap<>();
 
     private static final ConcurrentHashMap<PoolDataSourceConfigurationId, SimplePoolDataSource> cacheSimplePoolDataSources = new ConcurrentHashMap<>();
+
+    // for all smart pool data sources the same
+    private static AtomicBoolean statisticsEnabled = new AtomicBoolean(false);
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
@@ -46,9 +45,18 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     // member fields
     private PoolDataSourceConfiguration pdsConfiguration = null;
         
-    @Delegate(excludes=Overrides.class)
-    @Getter(AccessLevel.PACKAGE)
     private SimplePoolDataSource commonPoolDataSource = null;
+
+    private AtomicBoolean opened = new AtomicBoolean(false);
+    
+    @Delegate(excludes=Overrides.class)
+    SimplePoolDataSource getCommonPoolDataSource() {
+        if (!opened.get()) {
+            throw new IllegalStateException(String.format("Smart pool data source ({}) must be open.",
+                                                          pdsConfiguration != null ? pdsConfiguration.toString() : "UNKNOWN"));
+        }
+        return commonPoolDataSource;
+    }   
 
     private PoolDataSourceStatistics pdsStatistics = null;
 
@@ -63,10 +71,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     @Getter(AccessLevel.PACKAGE)
     private ConnectInfo connectInfo;
-
-    @Getter
-    @Setter
-    private boolean statisticsEnabled = false;
 
     /**
      * Initialize a smart pool data source.
@@ -118,8 +122,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             this.commonPoolDataSource.setUsername(this.connectInfo.getUsernameToConnectTo(singleSessionProxyModel));
             this.commonPoolDataSource.setPassword(this.connectInfo.getPassword());
+
+            this.commonPoolDataSource.join(pdsConfiguration, this.connectInfo.getSchema()); // must amend pool sizes
         } catch (SQLException ex) {
-            throw new RuntimeException(ex.getMessage());
+            throw new RuntimeException(String.format("{}: {}", ex.getClass().getName(), ex.getMessage()));
         } finally {
             logger.info("<SmartPoolDataSource()");
         }
@@ -163,122 +169,103 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      *
      * Is this id already cached (as SmartPoolDataSource)?
      * 1. yes: return that one
-     * 2. no, but there is a SimplePoolDataSource for its commonId does and join() works: return that one
+     * 2. no, but there is a SimplePoolDataSource for its commonId does and join() works (in constructor): return that one
      * 3. no, but there is a SimplePoolDataSource for its commonId does and join() does NOT work:
      *    create a SimplePoolDataSource and store it as the most specific, i.e. thisId
      * 4. else, create a SimplePoolDataSource and store it as the commonId
      */
 
     public static SmartPoolDataSource build(final PoolDataSourceConfigurationOracle pdsConfiguration) {
+        final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
+                                                              () -> (SimplePoolDataSource)(new SimplePoolDataSourceOracle(pdsConfiguration)),
+                                                              p -> (SmartPoolDataSource)(new SmartPoolDataSourceOracle(pdsConfiguration, (SimplePoolDataSourceOracle) p)));
+
+        smartPoolDataSource.open();
+
+        return smartPoolDataSource;
+    }
+
+    public static SmartPoolDataSource build(final PoolDataSourceConfigurationHikari pdsConfiguration) {
+        final SmartPoolDataSource smartPoolDataSource = build(pdsConfiguration,
+                                                              () -> (SimplePoolDataSource)(new SimplePoolDataSourceHikari(pdsConfiguration)),
+                                                              p -> (SmartPoolDataSource)(new SmartPoolDataSourceHikari(pdsConfiguration, (SimplePoolDataSourceHikari) p)));
+
+        smartPoolDataSource.open();
+
+        return smartPoolDataSource;
+    }        
+
+    private static SmartPoolDataSource build(final PoolDataSourceConfiguration pdsConfiguration,
+                                             final Supplier<SimplePoolDataSource> newSimplePoolDataSource,
+                                             final Function<SimplePoolDataSource, SmartPoolDataSource> newSmartPoolDataSource) {
         final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(pdsConfiguration, false);
         
         // case 1: if not absent
         return cacheSmartPoolDataSources.computeIfAbsent(thisId, key -> {
-                return build(pdsConfiguration,
-                             thisId,
-                             () -> (SimplePoolDataSource)(new SimplePoolDataSourceOracle(pdsConfiguration)),
-                             p -> (SmartPoolDataSource)(new SmartPoolDataSourceOracle(pdsConfiguration, (SimplePoolDataSourceOracle) p)));
-            });
-    }
-
-    public static SmartPoolDataSource build(final PoolDataSourceConfigurationHikari pdsConfiguration) {
-        final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(pdsConfiguration, false);
-
-        // case 1: if not absent
-        return cacheSmartPoolDataSources.computeIfAbsent(thisId, key -> {
-                return build(pdsConfiguration,
-                             thisId,
-                             () -> (SimplePoolDataSource)(new SimplePoolDataSourceHikari(pdsConfiguration)),
-                             p -> (SmartPoolDataSource)(new SmartPoolDataSourceHikari(pdsConfiguration, (SimplePoolDataSourceHikari) p)));
-            });
-    }        
-
-    private static SmartPoolDataSource build(final PoolDataSourceConfiguration pdsConfiguration,
-                                             final PoolDataSourceConfigurationId thisId,
-                                             final Supplier<SimplePoolDataSource> newSimplePoolDataSource,
-                                             final Function<SimplePoolDataSource, SmartPoolDataSource> newSmartPoolDataSource) {
-        PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
-        SimplePoolDataSource simplePoolDataSource = null;
+                PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(pdsConfiguration, true);
+                SimplePoolDataSource simplePoolDataSource = null;
+                SmartPoolDataSource smartPoolDataSource = null;
                 
-        // cases 2, 3 and 4
-        if ((simplePoolDataSource = cacheSimplePoolDataSources.get(thisId)) == null) {
-            // there is no specific one so try the common one and join() it
-            simplePoolDataSource = cacheSimplePoolDataSources.get(commonId);
+                // cases 2, 3 and 4
+                if ((simplePoolDataSource = cacheSimplePoolDataSources.get(thisId)) == null) {
+                    // there is no specific one so try the common one and join() it
+                    simplePoolDataSource = cacheSimplePoolDataSources.get(commonId);
 
-            if (simplePoolDataSource != null) {
-                try {
-                    // case 2 or 3
-                    simplePoolDataSource.join(pdsConfiguration); // must amend pool sizes
-                    // case 2
-                } catch (Exception ex) {
-                    // case 3
-                    simplePoolDataSource = null;
-                    commonId = thisId; // join() failed so we must be very specific when we put it into the cache
+                    if (simplePoolDataSource != null) {
+                        try {
+                            // case 2 or 3
+                            smartPoolDataSource = newSmartPoolDataSource.apply(simplePoolDataSource);
+                            // case 2
+                        } catch (Exception ex) {
+                            // case 3
+                            simplePoolDataSource = null;
+                            commonId = thisId; // join() failed so we must be very specific when we put it into the cache
+                        }
+                    }
+                    if (simplePoolDataSource == null) {
+                        simplePoolDataSource = newSimplePoolDataSource.get();
+                        cacheSimplePoolDataSources.put(commonId, simplePoolDataSource);
+                    }
                 }
-            }
-            if (simplePoolDataSource == null) {
-                simplePoolDataSource = newSimplePoolDataSource.get();
-                cacheSimplePoolDataSources.put(commonId, simplePoolDataSource);
-            }
-        }
-
-        return newSmartPoolDataSource.apply(simplePoolDataSource);
+                assert(simplePoolDataSource != null);
+                if (smartPoolDataSource == null) {
+                    smartPoolDataSource = newSmartPoolDataSource.apply(simplePoolDataSource);
+                }
+                return smartPoolDataSource;
+            });
     }
 
-    public void close() {
+    public static boolean getStatisticsEnabled() {
+        return statisticsEnabled.get();
+    }
+
+    public static void setStatisticsEnabled(final boolean statisticsEnabled) {
+        SmartPoolDataSource.statisticsEnabled.set(statisticsEnabled);
+    }
+    
+    private void open() {
+        logger.debug(">open()");
+
+        opened.set(true);
+        
+        logger.debug("<open()");
+    }
+
+    final public void close() {
         logger.debug(">close()");
 
         try {
-            done();
+            if (opened.getAndSet(false)) {
+                // old value was true: give the parent a sign that this one has just closed
+                commonPoolDataSource.close(pdsConfiguration);
+            }
         } catch (Exception ex) {
-            logger.error(String.format("{}:", ex.getClass().getSimpleName()), ex);
+            logger.error(String.format("{}:", ex.getClass().getName()), ex);
             ex.printStackTrace(System.err);
             throw ex;
         } finally {
             logger.debug("<close()");
         }
-    }
-
-    // returns true if there are no more pool data sources hereafter
-    final private void done() {
-        logger.debug(">done()");
-
-        /*
-        final boolean lastPoolDataSource = currentPoolCount.get(commonDataSourceProperties).decrementAndGet() == 0;
-
-        try {
-            if (statisticsEnabled) {
-                final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-                final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-                    commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
-
-                if (poolDataSourceStatistics != null) {
-                    if (poolDataSourceStatisticsTotal == null ||
-                        !poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
-                        showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema());
-                    }
-                    allDataSourceStatistics.remove(commonDataSourceStatistics);
-                }
-
-                // show (grand) totals only when it is the last pool data source
-                if (poolDataSourceStatisticsTotal != null && lastPoolDataSource) {
-                    showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL);
-                    allDataSourceStatistics.remove(commonDataSourceStatisticsTotal);
-                }
-            }
-            
-            if (lastPoolDataSource) {
-                logger.info("Closing pool {}", getPoolName());
-                poolDataSources.remove(commonDataSourceProperties);
-            }
-        } catch (Exception ex) {
-            logger.error(String.format("{}:", ex.getClass().getSimpleName()), ex);
-            logger.debug("<done()");
-            throw ex;
-        }
-        */
-
-        logger.debug("<done()");
     }
 
     public Connection getConnection() throws SQLException {
@@ -288,7 +275,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                              this.connectInfo.getPassword(),
                              this.connectInfo.getSchema(),
                              this.connectInfo.getProxyUsername(),
-                             statisticsEnabled,
+                             statisticsEnabled.get(),
                              true);
 
         logger.debug("getConnection() = {}", conn);
@@ -305,7 +292,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                              connectInfo.getPassword(),
                              connectInfo.getSchema(),
                              connectInfo.getProxyUsername(),
-                             statisticsEnabled,
+                             statisticsEnabled.get(),
                              true);
 
         logger.debug("getConnection(username={}) = {}", username, conn);
@@ -388,7 +375,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                             break;
                             
                         default:
-                            throw new RuntimeException(String.format("Wrong value for nr ({}): must be between 0 and 2", nr));
+                            throw new IllegalArgumentException(String.format("Wrong value for nr ({}): must be between 0 and 2", nr));
                         }
                     } while (!conn.getSchema().equalsIgnoreCase(schema) && nr++ < 3);
                 }                
@@ -500,12 +487,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,
                                     final boolean showStatistics) {
-        final int activeConnections = getActiveConnections();
-        final int idleConnections = getIdleConnections();
-        final int totalConnections = getTotalConnections();
-
         try {
-            pdsStatistics.update(conn, timeElapsed, activeConnections, idleConnections, totalConnections);
+            pdsStatistics.update(conn, timeElapsed);
+            commonPoolDataSource.updateStatistics();
         } catch (Exception e) {
             logger.error("updateStatistics() exception: {}", e.getMessage());
         }
@@ -529,6 +513,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                  proxyLogicalConnectionCount,
                                  proxyOpenSessionCount,
                                  proxyCloseSessionCount);
+            commonPoolDataSource.updateStatistics();
         } catch (Exception e) {
             logger.error("updateStatistics() exception: {}", e.getMessage());
         }
@@ -579,15 +564,13 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     }
 
     /**
-     * Show data source statistics for a schema (or TOTAL/GRAND_TOTAL).
+     * Show data source statistics.
      *
      * Normally first the statistics of a schema are displayed and then the statistics
      * for all schemas in a pool (unless there is just one).
      *
-     * From this it follows that first the connectin is displayed (schema and then TOTAL/GRAND_TOTAL) and
-     * next the pool size information (TOTAL only).
+     * From this it follows that first the connection is displayed.
      *
-     * @param poolDataSourceStatistics  The statistics for a schema (or totals)
      * @param timeElapsed             The elapsed time
      * @param proxyTimeElapsed        The elapsed time for proxy connection (after the connection)
      * @param finalCall               Is this the final call?
@@ -615,7 +598,4 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     protected static int getTotalPoolCount() {
         return cacheSmartPoolDataSources.size();
     }
-
-
-    //*TBD*/protected abstract String getPoolNamePrefix();
 }

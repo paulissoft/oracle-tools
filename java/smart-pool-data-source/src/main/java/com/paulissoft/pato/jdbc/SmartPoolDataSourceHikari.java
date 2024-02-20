@@ -72,15 +72,4 @@ public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements Hi
     public Connection getConnection(String username, String password) throws SQLException {
         return super.getConnection(username, password);
     }
-
-    public void close() {
-        // getCommonPoolDataSourceHikari().close();
-    }
-
-    /*TBD*/
-    /*
-    protected String getPoolNamePrefix() {
-        return "HikariPool";
-    }
-    */
 }

@@ -71,6 +71,8 @@ public class PoolDataSourceStatistics {
     
     private Supplier<String> nameSupplier = null;
 
+    private int level;
+
     // all physical time elapsed stuff
     
     private Set<OracleConnection> physicalConnections = null;
@@ -150,6 +152,10 @@ public class PoolDataSourceStatistics {
             final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
  
             this.physicalConnections = dummy.newKeySet();
+
+            level = 1;
+        } else {
+            level = 1 + parent.level;
         }
     }
 
@@ -159,14 +165,6 @@ public class PoolDataSourceStatistics {
         
     void update(final Connection conn,
                 final long timeElapsed) throws SQLException {
-        update(conn, timeElapsed, -1, -1, -1);
-    }
-
-    void update(final Connection conn,
-                final long timeElapsed,
-                final int activeConnections,
-                final int idleConnections,
-                final int totalConnections) throws SQLException {
         final boolean isPhysicalConnection = add(conn);
             
         // We must use count and avg from the same connection so just synchronize.
@@ -181,15 +179,6 @@ public class PoolDataSourceStatistics {
             } else {
                 updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
             }
-
-            // add the other part as well
-            count = count.add(new BigDecimal(!isPhysicalConnection ?
-                                             this.physicalConnectionCount.get() :
-                                             this.logicalConnectionCount.get()));
-            
-            updateIterativeMean(count, activeConnections, activeConnectionsAvg);
-            updateIterativeMean(count, idleConnections, idleConnectionsAvg);
-            updateIterativeMean(count, totalConnections, totalConnectionsAvg);
         }
 
         // The rest is using AtomicLong, hence concurrent.
@@ -198,9 +187,6 @@ public class PoolDataSourceStatistics {
         } else {
             updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
         }
-        updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
-        updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
-        updateMinMax(totalConnections, totalConnectionsMin, totalConnectionsMax);
     }
 
     void update(final Connection conn,
@@ -243,6 +229,24 @@ public class PoolDataSourceStatistics {
         this.proxyLogicalConnectionCount.addAndGet(proxyLogicalConnectionCount);
         this.proxyOpenSessionCount.addAndGet(proxyOpenSessionCount);
         this.proxyCloseSessionCount.addAndGet(proxyCloseSessionCount);
+    }
+
+    void update(final int activeConnections,
+                final int idleConnections,
+                final int totalConnections) /*throws SQLException*/ {
+        // We must use count and avg from the same connection so just synchronize.
+        // If we don't synchronize we risk to get the average and count from different connections.
+        synchronized (this) {                
+            BigDecimal count = new BigDecimal(getConnectionCount());
+            
+            updateIterativeMean(count, activeConnections, activeConnectionsAvg);
+            updateIterativeMean(count, idleConnections, idleConnectionsAvg);
+            updateIterativeMean(count, totalConnections, totalConnectionsAvg);
+        }
+
+        updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
+        updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
+        updateMinMax(totalConnections, totalConnectionsMin, totalConnectionsMax);
     }
 
     private boolean add(final Connection conn) throws SQLException {
@@ -481,6 +485,10 @@ public class PoolDataSourceStatistics {
 
     // getter(s)
 
+    public long getConnectionCount() {
+        return getPhysicalConnectionCount() + getLogicalConnectionCount();
+    }
+            
     // all physical time elapsed stuff
 
     public long getPhysicalConnectionCount() {
