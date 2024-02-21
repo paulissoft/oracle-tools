@@ -48,17 +48,11 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private PoolDataSourceConfiguration poolDataSourceConfiguration = null;
         
     @Getter(AccessLevel.PACKAGE)
+    @Delegate(excludes=ToOverride.class)
     private SimplePoolDataSource commonPoolDataSource = null;
 
     private AtomicBoolean opened = new AtomicBoolean(false);
     
-    @Delegate(excludes=ToOverride.class)
-    SimplePoolDataSource getOpenCommonPoolDataSource() {
-        checkIsOpen();
-        
-        return commonPoolDataSource;
-    }   
-
     private PoolDataSourceStatistics pdsStatistics = null;
 
     // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
@@ -297,14 +291,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         return !opened.get();
     }
 
-    private void checkIsOpen() {
-        if (!opened.get()) {
-            throw new IllegalStateException("Smart pool data source (" +
-                                            (poolDataSourceConfiguration != null ? poolDataSourceConfiguration.toString() : "UNKNOWN") +
-                                            ") must be open.");
-        }
-    }
-
     private void open() {
         logger.debug(">open()");
 
@@ -478,6 +464,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             throw ex;
         }        
     }    
+
+    private void checkIsOpen() {
+        if (!opened.get()) {
+            throw new IllegalStateException("Smart pool data source (" +
+                                            (poolDataSourceConfiguration != null ? poolDataSourceConfiguration.toString() : "UNKNOWN") +
+                                            ") must be open.");
+        }
+    }
 
     private static void openProxySession(final OracleConnection oraConn, final String schema) throws SQLException {
         final Properties proxyProperties = new Properties();

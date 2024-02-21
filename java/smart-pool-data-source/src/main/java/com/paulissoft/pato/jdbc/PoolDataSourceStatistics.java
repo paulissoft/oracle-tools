@@ -492,7 +492,7 @@ public class PoolDataSourceStatistics {
         final boolean showErrors = showTotals && level <= 3;
         final String prefix = INDENT_PREFIX;
         final String poolDescription = String.format("{} (level {}, accumulated since {})",
-                                                     getDescription()
+                                                     getDescription(),
                                                      level,
                                                      accumulatedSince);
 
