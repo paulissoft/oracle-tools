@@ -117,7 +117,7 @@ public class CheckConnectionUnitTest {
             assertEquals(pds3.getPoolName(), "OraclePool-boauth-boocpp15j");
             assertEquals(pds3.getPoolName(), pds4.getPoolName());
             
-            // get come connections
+            // get some connections
             for (int j = 0; j < 2; j++) {
                 assertNotNull(conn1 = pds1.getConnection());
                 assertNotNull(conn2 = pds2.getConnection());
