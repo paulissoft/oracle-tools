@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-//import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 //import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.SQLException;
+import java.sql.Connection;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,6 +60,10 @@ public class CheckConnectionUnitTest {
 
     @Test
     void testConnection() throws SQLException {
+        final String rex = "^Smart pool data source \\(.+\\) must be open.$";
+        IllegalStateException thrown;
+        Connection conn1, conn2, conn3, conn4;
+        
         log.debug("testConnection()");
 
         // auth
@@ -69,50 +74,105 @@ public class CheckConnectionUnitTest {
         poolAppOcppDataSourceConfigurationHikari.copy(poolAppOcppDataSourceConfiguration);
         poolAppOcppDataSourceConfigurationOracle.copy(poolAppOcppDataSourceConfiguration);
 
-        SmartPoolDataSource pds1, pds2, pds3, pds4;
+        for (int i = 0; i < 2; i++) {
+            // these two will be combined
+            final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationHikari);
+            final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari);
 
-        // these two will be combined
-        pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationHikari);
-        pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari);
+            // do not use assertEquals(pds1.getCommonPoolDataSource(), pds2.getCommonPoolDataSource()) since equals() is overridden
+            assertTrue(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
 
-        assertTrue(pds1 == pds2); // do not use assertEquals(pds1, pds2) since equals() is overridden
+            assertEquals(pds1.getMinPoolSize(),
+                         poolAppAuthDataSourceConfigurationHikari.getMinimumIdle() +
+                         poolAppOcppDataSourceConfigurationHikari.getMinimumIdle());
 
-        // these two will be combined
-        pds3 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationOracle);
-        pds4 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle);
+            assertEquals(pds1.getMaxPoolSize(),
+                         poolAppAuthDataSourceConfigurationHikari.getMaximumPoolSize() +
+                         poolAppOcppDataSourceConfigurationHikari.getMaximumPoolSize());
 
-        assertTrue(pds3 == pds4);
+            assertEquals(pds1.getPoolName(), "HikariPool-boauth-boocpp15j");
+            assertEquals(pds1.getPoolName(), pds2.getPoolName());
 
-        assertFalse(pds1 == pds3);
+            // these two will be combined too
+            final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationOracle);
+            final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle);
 
-        // issue come connections
-        assertNotNull(pds1.getConnection());
-        assertNotNull(pds3.getConnection());
+            assertTrue(pds3.getCommonPoolDataSource() == pds4.getCommonPoolDataSource());
 
-        // close pds4 (and thus indirectly pds3)
-        assertFalse(pds4.isClosed());
-        pds4.close();
-        assertTrue(pds4.isClosed());
+            // Hikari != Oracle
+            assertFalse(pds1.getCommonPoolDataSource() == pds3.getCommonPoolDataSource());
 
-        final String rex = "^Smart pool data source \(.+\) must be open.$";
-        IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+            assertEquals(pds3.getInitialPoolSize(),
+                         poolAppAuthDataSourceConfigurationOracle.getInitialPoolSize() +
+                         poolAppOcppDataSourceConfigurationOracle.getInitialPoolSize());
 
-        assertTrue(thrown.getMessage().matches(rex));
+            assertEquals(pds3.getMinPoolSize(),
+                         poolAppAuthDataSourceConfigurationOracle.getMinPoolSize() +
+                         poolAppOcppDataSourceConfigurationOracle.getMinPoolSize());
 
-        assertTrue(pds3.isClosed()); // since pds3 == pds4, closing pds3 will also close pds2
-        pds3.close();
-        assertTrue(pds3.isClosed());
+            assertEquals(pds3.getMaxPoolSize(),
+                         poolAppAuthDataSourceConfigurationOracle.getMaxPoolSize() +
+                         poolAppOcppDataSourceConfigurationOracle.getMaxPoolSize());
 
-        // close pds2 (and thus indirectly pds1)
-        assertFalse(pds2.isClosed());
-        pds2.close();
-        assertTrue(pds2.isClosed());
-
-        thrown = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
-        assertTrue(thrown.getMessage().matches(rex));
+            assertEquals(pds3.getPoolName(), "OraclePool-boauth-boocpp15j");
+            assertEquals(pds3.getPoolName(), pds4.getPoolName());
             
-        assertTrue(pds1.isClosed()); // since pds1 == pds2, closing pds3 will also close pds2
-        pds1.close();
-        assertTrue(pds1.isClosed());
+            // get come connections
+            for (int j = 0; j < 2; j++) {
+                assertNotNull(conn1 = pds1.getConnection());
+                assertNotNull(conn2 = pds2.getConnection());
+                assertNotNull(conn3 = pds3.getConnection());
+                assertNotNull(conn4 = pds4.getConnection());
+
+                assertEquals(pds1.getMaxPoolSize(), pds1.getTotalConnections());
+                assertEquals(2, pds1.getActiveConnections());
+                assertEquals(pds1.getTotalConnections(), pds1.getActiveConnections() + pds1.getIdleConnections());
+
+                assertEquals(pds4.getMaxPoolSize(), pds4.getTotalConnections());
+                assertEquals(2, pds4.getActiveConnections());
+                assertEquals(pds4.getTotalConnections(), pds4.getActiveConnections() + pds4.getIdleConnections());
+                
+                conn1.close();
+                conn2.close();
+                conn3.close();
+                conn4.close();
+            }
+
+            // close pds4
+            assertFalse(pds4.isClosed());
+            pds4.close();
+            assertTrue(pds4.isClosed());
+            assertFalse(pds4.getCommonPoolDataSource().isClosed()); // must close pds3 too
+
+            thrown = assertThrows(IllegalStateException.class, () -> pds4.getConnection());
+            assertTrue(thrown.getMessage().matches(rex));
+
+            // close pds3
+            assertFalse(pds3.isClosed());
+            pds3.close();
+            assertTrue(pds3.isClosed());
+            assertTrue(pds4.getCommonPoolDataSource().isClosed()); // done
+
+            thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+            assertTrue(thrown.getMessage().matches(rex));
+
+            // close pds2
+            assertFalse(pds2.isClosed());
+            pds2.close();
+            assertTrue(pds2.isClosed());
+            assertFalse(pds2.getCommonPoolDataSource().isClosed()); // must close pds1 too
+
+            thrown = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
+            assertTrue(thrown.getMessage().matches(rex));
+
+            // close pds1
+            assertFalse(pds1.isClosed());
+            pds1.close();
+            assertTrue(pds1.isClosed());
+            assertTrue(pds2.getCommonPoolDataSource().isClosed()); // done
+
+            thrown = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
+            assertTrue(thrown.getMessage().matches(rex));
+        }
     }
 }
