@@ -15,7 +15,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     private static final String POOL_NAME_PREFIX = "HikariPool";
          
     // for join(), valus is irrelevant
-    private static final ConcurrentHashMap<SimplePoolDataSourceHikari, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<SimplePoolDataSource, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
         new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
@@ -102,11 +102,6 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
         
     public void join(final SimplePoolDataSource pds, final String schema) {
-        // just issue a cast to be sure
-        join((SimplePoolDataSourceHikari)pds, schema);
-    }
-    
-    private void join(final SimplePoolDataSourceHikari pds, final String schema) {
         final PoolDataSourceConfigurationId otherCommonId =
             new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
         final PoolDataSourceConfigurationId thisCommonId =
@@ -135,10 +130,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
-        updatePoolSizes((SimplePoolDataSourceHikari) pds);
+        updatePoolSizes((PoolDataSourceConfigurationHikari) pds.getPoolDataSourceConfiguration());
     }
     
-    private void updatePoolSizes(final SimplePoolDataSourceHikari pds) throws SQLException {
+    private void updatePoolSizes(final PoolDataSourceConfigurationHikari pds) throws SQLException {
         log.info(">updatePoolSizes()");
         log.info("pool sizes before: minimum/maximum: {}/{}",
                  getMinimumIdle(),
@@ -240,7 +235,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
     public boolean isClosed() {
         // when there is at least one attached pool not closed: return false
-        for (final Enumeration<SimplePoolDataSourceHikari> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
+        for (final Enumeration<SimplePoolDataSource> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
             if (!e.nextElement().isClosed()) {
                 return false;
             }

@@ -47,12 +47,13 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     @Getter
     private PoolDataSourceConfiguration poolDataSourceConfiguration = null;
         
+    @Getter(AccessLevel.PACKAGE)
     private SimplePoolDataSource commonPoolDataSource = null;
 
     private AtomicBoolean opened = new AtomicBoolean(false);
     
     @Delegate(excludes=ToOverride.class)
-    SimplePoolDataSource getCommonPoolDataSource() {
+    SimplePoolDataSource getOpenCommonPoolDataSource() {
         checkIsOpen();
         
         return commonPoolDataSource;

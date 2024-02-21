@@ -13,7 +13,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
     // for join(), valus is irrelevant
-    private static final ConcurrentHashMap<SimplePoolDataSourceOracle, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<SimplePoolDataSource, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
         new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
@@ -98,11 +98,6 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
     
     public void join(final SimplePoolDataSource pds, final String schema) {
-        // just issue a cast to be sure
-        join((SimplePoolDataSourceOracle)pds, schema);
-    }
-    
-    private void join(final SimplePoolDataSourceOracle pds, final String schema) {
         final PoolDataSourceConfigurationId otherCommonId =
             new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
         final PoolDataSourceConfigurationId thisCommonId =
@@ -131,10 +126,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
-        updatePoolSizes((SimplePoolDataSourceOracle) pds);
+        updatePoolSizes((PoolDataSourceConfigurationOracle) pds.getPoolDataSourceConfiguration());
     }
     
-    private void updatePoolSizes(final SimplePoolDataSourceOracle pds) throws SQLException {
+    private void updatePoolSizes(final PoolDataSourceConfigurationOracle pds) throws SQLException {
         log.info(">updatePoolSizes()");
 
         log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
@@ -259,7 +254,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     public boolean isClosed() {
         // when there is at least one attached pool not closed: return false
-        for (final Enumeration<SimplePoolDataSourceOracle> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
+        for (final Enumeration<SimplePoolDataSource> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
             if (!e.nextElement().isClosed()) {
                 return false;
             }
