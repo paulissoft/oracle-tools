@@ -29,8 +29,6 @@ public class PoolDataSourceStatistics {
 
     // all static stuff
     
-    private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
-
     static final String INDENT_PREFIX = "* ";
 
     public static final String EXCEPTION_CLASS_NAME = "class";
@@ -48,6 +46,8 @@ public class PoolDataSourceStatistics {
     private static Method loggerDebug;
 
     static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
+
+    private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
@@ -209,7 +209,7 @@ public class PoolDataSourceStatistics {
                 if (!i.next().isClosed()) {
                     return false;
                 }
-            };
+            }
         }
         return true;
     }

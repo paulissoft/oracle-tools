@@ -66,7 +66,7 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
     private int connectionValidationTimeout;
 
     public PoolDataSourceConfigurationOracle() {
-        super();
+        // super();
         
         if (getType() == null) {
             setType(SimplePoolDataSourceOracle.class.getName());

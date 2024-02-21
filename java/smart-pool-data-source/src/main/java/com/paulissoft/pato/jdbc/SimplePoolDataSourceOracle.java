@@ -30,7 +30,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
-        super();
+        // super();
 
         int nr = 0;
         final int maxNr = 17;
@@ -251,7 +251,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     // to implement interface Closeable
     public void close() {
-        ; // nothing
+        // nothing
     }
 
     public boolean isClosed() {

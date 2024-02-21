@@ -1,6 +1,7 @@
 <!DOCTYPE module PUBLIC
   "-//Puppy Crawl//DTD Check Configuration 1.3//EN"
-  "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+"http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+<!-- see https://checkstyle.org/checks.html -->
 <module name="Checker">
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>
@@ -22,5 +23,10 @@
     <module name="OneTopLevelClass"/>
     <module name="OverloadMethodsDeclarationOrder"/>
     <module name="NeedBraces"/>
+    <module name="UnusedLocalVariable"/>
+    <module name="AvoidNoArgumentSuperConstructorCall"/>
+    <!--module name="DeclarationOrder"/-->
+    <module name="DefaultComesLast"/>
+    <module name="EmptyStatement"/>
   </module>
 </module>

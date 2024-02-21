@@ -57,7 +57,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     private long leakDetectionThreshold;
 
     public PoolDataSourceConfigurationHikari() {
-        super();
+        // super();
 
         if (getType() == null) {
             setType(SimplePoolDataSourceHikari.class.getName());

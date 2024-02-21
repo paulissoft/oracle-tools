@@ -33,7 +33,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     
     // constructor
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
-        super();
+        // super();
         
         int nr = 0;
         final int maxNr = 18;
@@ -232,7 +232,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
     @Override
     public void close() {
-        ; // this pool data source should never close
+        // this pool data source should never close
     }
 
     public boolean isClosed() {
