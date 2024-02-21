@@ -9,20 +9,24 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
     // to be invoked in SmartPoolDateSource constructor    
-    public void join(final PoolDataSourceConfiguration pdsConfiguration, final String schema);
+    public void join(final SimplePoolDataSource pds, final String schema);
 
     // to be invoked by previous join()
-    default public void join(final PoolDataSourceConfiguration pdsConfiguration, final String schema, final boolean firstPds) {
+    default public void join(final SimplePoolDataSource pds, final String schema, final boolean firstPds) {
         try {
             if (firstPds) {
                 setPoolName(getPoolNamePrefix());
             } else {
-                updatePoolSizes(pdsConfiguration);
+                updatePoolSizes(pds);
             }
             setPoolName(getPoolName() + "-" + schema);
         } catch (SQLException ex) {
-            throw new RuntimeException(String.format("{}: {}", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(exceptionToString(ex));
         }
+    }
+
+    default public String exceptionToString(final Exception ex) {
+        return String.format("{}: {}", ex.getClass().getName(), ex.getMessage());
     }
 
     // signature used by HikariDataSource
@@ -30,7 +34,7 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public String getPoolNamePrefix();
     
-    public void updatePoolSizes(final PoolDataSourceConfiguration pds) throws SQLException;
+    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
 
     public String getPoolName();
 
@@ -66,11 +70,5 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public PoolDataSourceStatistics getPoolDataSourceStatistics();
 
-    public void updateStatistics();
-
-    default public void open(final PoolDataSourceConfiguration pds) {
-    }
-    
-    default public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
-    }
+    public boolean isClosed();
 }

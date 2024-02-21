@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Enumeration;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 
@@ -11,9 +12,8 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    // for join()
-    // value true means it is the initialization entry (in constructor)
-    private static final ConcurrentHashMap<PoolDataSourceConfigurationId, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    // for join(), valus is irrelevant
+    private static final ConcurrentHashMap<SimplePoolDataSourceOracle, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
         new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
@@ -58,7 +58,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                     throw new IllegalArgumentException(String.format("Wrong value for nr ({nr}): must be between 0 and {}", nr, maxNr));
                 }
             } catch (Exception ex) {
-                log.warn("exception at nr {}: {}", nr, ex.getMessage());
+                log.warn("nr: {}; exception: {}", nr, exceptionToString(ex));
             }
         } while (++nr <= maxNr);
     }
@@ -97,24 +97,30 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .build();
     }
     
-    public void join(final PoolDataSourceConfiguration pdsConfiguration, final String schema) {
-        final PoolDataSourceConfigurationOracle pdsConfigurationOracle = (PoolDataSourceConfigurationOracle) pdsConfiguration;
+    public void join(final SimplePoolDataSource pds, final String schema) {
+        // just issue a cast to be sure
+        join((SimplePoolDataSourceOracle)pds, schema);
+    }
+    
+    private void join(final SimplePoolDataSourceOracle pds, final String schema) {
+        final PoolDataSourceConfigurationId otherCommonId =
+            new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
+        final PoolDataSourceConfigurationId thisCommonId =
+            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
         final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
-        final PoolDataSourceConfigurationId id = new PoolDataSourceConfigurationId(pdsConfigurationOracle, false);
-        final PoolDataSourceConfigurationId otherCommonId = new PoolDataSourceConfigurationId(pdsConfigurationOracle, true);
-        final PoolDataSourceConfigurationId thisCommonId = new PoolDataSourceConfigurationId(getPoolDataSourceConfiguration(), true);
 
-        log.debug(">join(id={}, firstPds={})", id, firstPds);
+        log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);
 
         try {
-            if (!otherCommonId.equals(thisCommonId)) {
+            try {
+                assert(otherCommonId.equals(thisCommonId));
+            } catch (Exception ex) {
                 log.error("otherCommonId: {}", otherCommonId);
                 log.error("thisCommonId: {}", thisCommonId);
-        
-                assert(false);
+                throw ex;
             }
         
-            cachedPoolDataSourceConfigurations.computeIfAbsent(id, k -> { join(pdsConfigurationOracle, schema, firstPds); return false; });
+            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, schema, firstPds); return false; });
         } finally {
             log.debug("<join()");
         }
@@ -124,11 +130,13 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return POOL_NAME_PREFIX;
     }
 
-    public void updatePoolSizes(final PoolDataSourceConfiguration pds) throws SQLException {
+    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
+        updatePoolSizes((SimplePoolDataSourceOracle) pds);
+    }
+    
+    private void updatePoolSizes(final SimplePoolDataSourceOracle pds) throws SQLException {
         log.info(">updatePoolSizes()");
 
-        final PoolDataSourceConfigurationOracle pdsOracle = (PoolDataSourceConfigurationOracle) pds;
-            
         log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
                  getInitialPoolSize(),
                  getMinPoolSize(),
@@ -136,7 +144,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
         int oldSize, newSize;
 
-        newSize = pdsOracle.getInitialPoolSize();
+        newSize = pds.getInitialPoolSize();
         oldSize = getInitialPoolSize();
 
         log.info("initial pool sizes before setting it: old/new: {}/{}",
@@ -147,7 +155,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             setInitialPoolSize(newSize + Integer.max(oldSize, 0));
         }
 
-        newSize = pdsOracle.getMinPoolSize();
+        newSize = pds.getMinPoolSize();
         oldSize = getMinPoolSize();
 
         log.info("minimum pool sizes before setting it: old/new: {}/{}",
@@ -158,7 +166,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             setMinPoolSize(newSize + Integer.max(oldSize, 0));
         }
                 
-        newSize = pdsOracle.getMaxPoolSize();
+        newSize = pds.getMaxPoolSize();
         oldSize = getMaxPoolSize();
 
         log.info("maximum pool sizes before setting it: old/new: {}/{}",
@@ -243,35 +251,40 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     public PoolDataSourceStatistics getPoolDataSourceStatistics() {
         return poolDataSourceStatistics;
     }
-    
-    public void updateStatistics() {
-        poolDataSourceStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
-    }
-
-    @Override
-    public void open(final PoolDataSourceConfiguration pds) {
-        final PoolDataSourceConfigurationOracle pdsOracle = (PoolDataSourceConfigurationOracle) pds;
-
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsOracle), (id, opened) -> true);
-    }
-
-    @Override
-    public void close(final PoolDataSourceConfiguration pds, final boolean statisticsEnabled) {
-        final PoolDataSourceConfigurationOracle pdsOracle = (PoolDataSourceConfigurationOracle) pds;
-        final boolean isOpenBefore = statisticsEnabled && cachedPoolDataSourceConfigurations.containsValue(true);
-
-        // this will set opened to false for the key
-        cachedPoolDataSourceConfigurations.computeIfPresent(new PoolDataSourceConfigurationId(pdsOracle), (id, opened) -> false);
-
-        final boolean isOpenAfter = statisticsEnabled && cachedPoolDataSourceConfigurations.containsValue(true);
-
-        if (isOpenBefore && !isOpenAfter) { // implies statisticsEnabled
-            poolDataSourceStatistics.showStatistics(this, -1L, -1L, true);
-        }
-    }
 
     // to implement interface Closeable
     public void close() {
         ; // nothing
+    }
+
+    public boolean isClosed() {
+        // when there is at least one attached pool not closed: return false
+        for (final Enumeration<SimplePoolDataSourceOracle> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
+            if (!e.nextElement().isClosed()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SimplePoolDataSourceOracle)) {
+            return false;
+        }
+
+        final SimplePoolDataSourceOracle other = (SimplePoolDataSourceOracle) obj;
+        
+        return other.getPoolDataSourceConfiguration().equals(this.getPoolDataSourceConfiguration());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.getPoolDataSourceConfiguration().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return this.getPoolDataSourceConfiguration().toString();
     }
 }

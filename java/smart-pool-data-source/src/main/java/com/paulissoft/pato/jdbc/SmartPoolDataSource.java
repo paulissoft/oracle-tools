@@ -35,7 +35,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
     }
 
-    private interface Excludes {
+    private interface ToOverride {
         public Connection getConnection() throws SQLException;
 
         public Connection getConnection(String username, String password) throws SQLException;
@@ -51,7 +51,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private AtomicBoolean opened = new AtomicBoolean(false);
     
-    @Delegate(excludes=Excludes.class)
+    @Delegate(excludes=ToOverride.class)
     SimplePoolDataSource getCommonPoolDataSource() {
         checkIsOpen();
         
@@ -103,7 +103,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             assert(commonPoolDataSource != null);
 
             this.poolDataSourceConfiguration = poolDataSourceConfiguration;
-            this.connectInfo = new ConnectInfo(poolDataSourceConfiguration.getUsername(), poolDataSourceConfiguration.getPassword());
+            this.connectInfo = new ConnectInfo(this.poolDataSourceConfiguration.getUsername(), this.poolDataSourceConfiguration.getPassword());
             this.commonPoolDataSource = commonPoolDataSource;
             this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +  this.connectInfo.getSchema() + ")",
                                                               commonPoolDataSource.getPoolDataSourceStatistics());
@@ -132,9 +132,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             this.commonPoolDataSource.setUsername(this.connectInfo.getUsernameToConnectTo(singleSessionProxyModel));
             this.commonPoolDataSource.setPassword(this.connectInfo.getPassword());
 
-            this.commonPoolDataSource.join(poolDataSourceConfiguration, this.connectInfo.getSchema()); // must amend pool sizes
+            this.commonPoolDataSource.join(this, this.connectInfo.getSchema()); // must amend pool sizes
         } catch (SQLException ex) {
-            throw new RuntimeException(String.format("{}: {}", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(exceptionToString(ex));
         } finally {
             logger.debug("<SmartPoolDataSource()");
         }
@@ -291,6 +291,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         SmartPoolDataSource.statisticsEnabled.set(statisticsEnabled);
     }
 
+    public boolean isClosed() {
+        return !opened.get();
+    }
+
     private void checkIsOpen() {
         if (!opened.get()) {
             throw new IllegalStateException(String.format("Smart pool data source ({}) must be open.",
@@ -301,10 +305,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private void open() {
         logger.debug(">open()");
 
-        if (!opened.getAndSet(true)) {
-            // old value was false: give the parent a sign that this one has just opened
-            commonPoolDataSource.open(poolDataSourceConfiguration);
-        }
+        opened.set(true);
         
         logger.debug("<open()");
     }
@@ -314,19 +315,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         logger.debug(">close()");
 
         try {
-            if (opened.getAndSet(false)) {
-                // old value was true: give the parent a sign that this one has just closed
-                final boolean statisticsEnabled = isStatisticsEnabled();
-                
-                if (statisticsEnabled) {
-                    showDataSourceStatistics();
-                }
-                commonPoolDataSource.close(poolDataSourceConfiguration, statisticsEnabled);
+            if (opened.getAndSet(false) && isStatisticsEnabled()) {
+                // switched from open to closed: show statistics
+                showDataSourceStatistics();
             }
-        } catch (Exception ex) {
-            logger.error(String.format("{}:", ex.getClass().getName()), ex);
-            ex.printStackTrace(System.err);
-            throw ex;
         } finally {
             logger.debug("<close()");
         }
@@ -557,9 +549,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                     final boolean showStatistics) {
         try {
             pdsStatistics.update(conn, timeElapsed);
-            commonPoolDataSource.updateStatistics();
+            pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
         } catch (Exception e) {
-            logger.error("updateStatistics() exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
         }
 
         if (showStatistics) {
@@ -581,9 +573,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                  proxyLogicalConnectionCount,
                                  proxyOpenSessionCount,
                                  proxyCloseSessionCount);
-            commonPoolDataSource.updateStatistics();
+            pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
         } catch (Exception e) {
-            logger.error("updateStatistics() exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
         }
 
         if (showStatistics) {
@@ -598,15 +590,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             if (nrOccurrences > 0) {
                 pdsStatistics.signalException(ex);
                 // show the message
-                logger.error("While connecting to {}{} this was occurrence # {} for this exception: (class={}, message={})",
+                logger.error("While connecting to {}{} this was occurrence # {} for this exception: ({})",
                              connectInfo.getSchema(),
                              ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
-                             ex.getClass().getName(),
-                             ex.getMessage());
+                             exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error("signalException() exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
         }
     }
 
@@ -617,17 +608,16 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             if (nrOccurrences > 0) {
                 pdsStatistics.signalSQLException(ex);
                 // show the message
-                logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (class={}, error code={}, SQL state={}, message={})",
+                logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
                              connectInfo.getSchema(),
                              ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
-                             ex.getClass().getName(),
                              ex.getErrorCode(),
                              ex.getSQLState(),
-                             ex.getMessage());
+                             exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error("signalSQLException() exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
         }
     }
 
@@ -666,5 +656,26 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     protected static int getTotalSimplePoolCount() {
         return cachedSimplePoolDataSources.size();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SmartPoolDataSource)) {
+            return false;
+        }
+
+        final SmartPoolDataSource other = (SmartPoolDataSource) obj;
+        
+        return other.getPoolDataSourceConfiguration().equals(this.getPoolDataSourceConfiguration());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.getPoolDataSourceConfiguration().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return this.getPoolDataSourceConfiguration().toString();
     }
 }

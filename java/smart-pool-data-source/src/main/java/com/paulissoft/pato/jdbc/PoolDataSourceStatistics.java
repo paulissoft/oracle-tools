@@ -53,14 +53,14 @@ public class PoolDataSourceStatistics {
         try {
             loggerInfo = logger.getClass().getMethod("info", String.class, Object[].class);
         } catch (Exception e) {
-            logger.error("static exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
             loggerInfo = null;
         }
 
         try {
             loggerDebug = logger.getClass().getMethod("debug", String.class, Object[].class);
         } catch (Exception e) {
-            logger.error("static exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
             loggerDebug = null;
         }
     }
@@ -476,10 +476,14 @@ public class PoolDataSourceStatistics {
                 }
             }
         } catch (IllegalAccessException | InvocationTargetException e) {
-            logger.error("showDataSourceStatistics exception: {}", e.getMessage());
+            logger.error(exceptionToString(e));
         }
     }
 
+    private static String exceptionToString(final Exception ex) {
+        return String.format("{}: {}", ex.getClass().getName(), ex.getMessage());
+    }
+    
     // getter(s)
 
     public long getConnectionCount() {
