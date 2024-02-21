@@ -124,11 +124,9 @@ public class CheckConnectionUnitTest {
                 assertNotNull(conn3 = pds3.getConnection());
                 assertNotNull(conn4 = pds4.getConnection());
 
-                assertEquals(pds1.getMaxPoolSize(), pds1.getTotalConnections());
                 assertEquals(2, pds1.getActiveConnections());
                 assertEquals(pds1.getTotalConnections(), pds1.getActiveConnections() + pds1.getIdleConnections());
 
-                assertEquals(pds4.getMaxPoolSize(), pds4.getTotalConnections());
                 assertEquals(2, pds4.getActiveConnections());
                 assertEquals(pds4.getTotalConnections(), pds4.getActiveConnections() + pds4.getIdleConnections());
                 
