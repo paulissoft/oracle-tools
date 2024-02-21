@@ -28,28 +28,28 @@ import lombok.extern.slf4j.Slf4j;
 public class CheckConnectionUnitTest {
 
     @Autowired
-    @Qualifier("app-auth-datasource")
-    private PoolDataSourceConfiguration poolAppAuthDataSourceConfiguration;
+    @Qualifier("app-config-datasource")
+    private PoolDataSourceConfiguration poolAppConfigDataSourceConfiguration;
 
     @Autowired
-    @Qualifier("app-ocpp-datasource")
-    private PoolDataSourceConfiguration poolAppOcppDataSourceConfiguration;
+    @Qualifier("app-ocpi-datasource")
+    private PoolDataSourceConfiguration poolAppOcpiDataSourceConfiguration;
 
     @Autowired
-    @Qualifier("app-auth-datasource-hikari")
-    private PoolDataSourceConfigurationHikari poolAppAuthDataSourceConfigurationHikari;
+    @Qualifier("app-config-datasource-hikari")
+    private PoolDataSourceConfigurationHikari poolAppConfigDataSourceConfigurationHikari;
 
     @Autowired
-    @Qualifier("app-ocpp-datasource-hikari")
-    private PoolDataSourceConfigurationHikari poolAppOcppDataSourceConfigurationHikari;
+    @Qualifier("app-ocpi-datasource-hikari")
+    private PoolDataSourceConfigurationHikari poolAppOcpiDataSourceConfigurationHikari;
 
     @Autowired
-    @Qualifier("app-auth-datasource-oracle")
-    private PoolDataSourceConfigurationOracle poolAppAuthDataSourceConfigurationOracle;
+    @Qualifier("app-config-datasource-oracle")
+    private PoolDataSourceConfigurationOracle poolAppConfigDataSourceConfigurationOracle;
 
     @Autowired
-    @Qualifier("app-ocpp-datasource-oracle")
-    private PoolDataSourceConfigurationOracle poolAppOcppDataSourceConfigurationOracle;
+    @Qualifier("app-ocpi-datasource-oracle")
+    private PoolDataSourceConfigurationOracle poolAppOcpiDataSourceConfigurationOracle;
 
     @BeforeAll
     static void clear() {
@@ -66,36 +66,36 @@ public class CheckConnectionUnitTest {
         
         log.debug("testConnection()");
 
-        // auth
-        poolAppAuthDataSourceConfigurationHikari.copy(poolAppAuthDataSourceConfiguration);
-        poolAppAuthDataSourceConfigurationOracle.copy(poolAppAuthDataSourceConfiguration);
+        // config
+        poolAppConfigDataSourceConfigurationHikari.copy(poolAppConfigDataSourceConfiguration);
+        poolAppConfigDataSourceConfigurationOracle.copy(poolAppConfigDataSourceConfiguration);
 
-        // ocpp
-        poolAppOcppDataSourceConfigurationHikari.copy(poolAppOcppDataSourceConfiguration);
-        poolAppOcppDataSourceConfigurationOracle.copy(poolAppOcppDataSourceConfiguration);
+        // ocpi
+        poolAppOcpiDataSourceConfigurationHikari.copy(poolAppOcpiDataSourceConfiguration);
+        poolAppOcpiDataSourceConfigurationOracle.copy(poolAppOcpiDataSourceConfiguration);
 
         for (int i = 0; i < 2; i++) {
             // these two will be combined
-            final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationHikari);
-            final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari);
+            final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppConfigDataSourceConfigurationHikari);
+            final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcpiDataSourceConfigurationHikari);
 
             // do not use assertEquals(pds1.getCommonPoolDataSource(), pds2.getCommonPoolDataSource()) since equals() is overridden
             assertTrue(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
 
             assertEquals(pds1.getMinPoolSize(),
-                         poolAppAuthDataSourceConfigurationHikari.getMinimumIdle() +
-                         poolAppOcppDataSourceConfigurationHikari.getMinimumIdle());
+                         poolAppConfigDataSourceConfigurationHikari.getMinimumIdle() +
+                         poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle());
 
             assertEquals(pds1.getMaxPoolSize(),
-                         poolAppAuthDataSourceConfigurationHikari.getMaximumPoolSize() +
-                         poolAppOcppDataSourceConfigurationHikari.getMaximumPoolSize());
+                         poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize() +
+                         poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize());
 
-            assertEquals(pds1.getPoolName(), "HikariPool-boauth-boocpp15j");
+            assertEquals(pds1.getPoolName(), "HikariPool-bocsconf-boocpi");
             assertEquals(pds1.getPoolName(), pds2.getPoolName());
 
             // these two will be combined too
-            final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationOracle);
-            final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationOracle);
+            final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppConfigDataSourceConfigurationOracle);
+            final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolAppOcpiDataSourceConfigurationOracle);
 
             assertTrue(pds3.getCommonPoolDataSource() == pds4.getCommonPoolDataSource());
 
@@ -103,18 +103,18 @@ public class CheckConnectionUnitTest {
             assertFalse(pds1.getCommonPoolDataSource() == pds3.getCommonPoolDataSource());
 
             assertEquals(pds3.getInitialPoolSize(),
-                         poolAppAuthDataSourceConfigurationOracle.getInitialPoolSize() +
-                         poolAppOcppDataSourceConfigurationOracle.getInitialPoolSize());
+                         poolAppConfigDataSourceConfigurationOracle.getInitialPoolSize() +
+                         poolAppOcpiDataSourceConfigurationOracle.getInitialPoolSize());
 
             assertEquals(pds3.getMinPoolSize(),
-                         poolAppAuthDataSourceConfigurationOracle.getMinPoolSize() +
-                         poolAppOcppDataSourceConfigurationOracle.getMinPoolSize());
+                         poolAppConfigDataSourceConfigurationOracle.getMinPoolSize() +
+                         poolAppOcpiDataSourceConfigurationOracle.getMinPoolSize());
 
             assertEquals(pds3.getMaxPoolSize(),
-                         poolAppAuthDataSourceConfigurationOracle.getMaxPoolSize() +
-                         poolAppOcppDataSourceConfigurationOracle.getMaxPoolSize());
+                         poolAppConfigDataSourceConfigurationOracle.getMaxPoolSize() +
+                         poolAppOcpiDataSourceConfigurationOracle.getMaxPoolSize());
 
-            assertEquals(pds3.getPoolName(), "OraclePool-boauth-boocpp15j");
+            assertEquals(pds3.getPoolName(), "OraclePool-bocsconf-boocpi");
             assertEquals(pds3.getPoolName(), pds4.getPoolName());
             
             // get some connections

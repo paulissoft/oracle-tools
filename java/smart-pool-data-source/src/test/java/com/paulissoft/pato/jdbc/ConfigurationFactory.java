@@ -49,4 +49,40 @@ public class ConfigurationFactory {
     public PoolDataSourceConfigurationOracle getAppOcppDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
+
+    @Bean(name = "app-config-datasource")
+    @ConfigurationProperties(prefix = "app.config.datasource")
+    public PoolDataSourceConfiguration getAppConfigDataSourceConfiguration() {
+        return new PoolDataSourceConfiguration();
+    }
+
+    @Bean(name = "app-config-datasource-hikari")
+    @ConfigurationProperties(prefix = "app.config.datasource.hikari")
+    public PoolDataSourceConfigurationHikari getAppConfigDataSourceConfigurationHikari() {
+        return new PoolDataSourceConfigurationHikari();
+    }
+
+    @Bean(name = "app-config-datasource-oracle")
+    @ConfigurationProperties(prefix = "app.config.datasource.ucp")
+    public PoolDataSourceConfigurationOracle getAppConfigDataSourceConfigurationOracle() {
+        return new PoolDataSourceConfigurationOracle();
+    }
+
+    @Bean(name = "app-ocpi-datasource")
+    @ConfigurationProperties(prefix = "app.ocpi.datasource")
+    public PoolDataSourceConfiguration getAppOcpiDataSourceConfiguration() {
+        return new PoolDataSourceConfiguration();
+    }
+
+    @Bean(name = "app-ocpi-datasource-hikari")
+    @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
+    public PoolDataSourceConfigurationHikari getAppOcpiDataSourceConfigurationHikari() {
+        return new PoolDataSourceConfigurationHikari();
+    }
+
+    @Bean(name = "app-ocpi-datasource-oracle")
+    @ConfigurationProperties(prefix = "app.ocpi.datasource.ucp")
+    public PoolDataSourceConfigurationOracle getAppOcpiDataSourceConfigurationOracle() {
+        return new PoolDataSourceConfigurationOracle();
+    }
 }
