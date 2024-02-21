@@ -22,7 +22,9 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     private final PoolDataSourceStatistics poolDataSourceStatistics =
-        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)", poolDataSourceStatisticsTotal);
+        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
+                                     poolDataSourceStatisticsTotal,
+                                     this::isClosed);
 
     // for test purposes
     static void clear() {

@@ -20,7 +20,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     private final PoolDataSourceStatistics poolDataSourceStatistics =
-        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)", poolDataSourceStatisticsTotal);
+        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
+                                     poolDataSourceStatisticsTotal,
+                                     this::isClosed);
     
     // for test purposes
     static void clear() {

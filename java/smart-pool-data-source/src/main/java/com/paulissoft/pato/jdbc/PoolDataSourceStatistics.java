@@ -9,17 +9,21 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.function.Supplier;
+import java.time.LocalDateTime;
+
 
 public class PoolDataSourceStatistics {
 
@@ -28,8 +32,6 @@ public class PoolDataSourceStatistics {
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
     static final String INDENT_PREFIX = "* ";
-
-    static final String TOTAL = "total";
 
     public static final String EXCEPTION_CLASS_NAME = "class";
 
@@ -67,10 +69,14 @@ public class PoolDataSourceStatistics {
 
     // all instance stuff
     
-    private Supplier<String> nameSupplier = null;
+    private Supplier<String> descriptionSupplier = null;
+
+    private Supplier<Boolean> isClosedSupplier = null;
 
     private int level;
 
+    private LocalDateTime accumulatedSince = LocalDateTime.now();
+    
     // all physical time elapsed stuff
     
     private Set<OracleConnection> physicalConnections = null;
@@ -107,42 +113,48 @@ public class PoolDataSourceStatistics {
     
     private AtomicBigDecimal proxyTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-    // all connection related stuff
+    // all connection related stuff (level 3 and less)
 
-    private AtomicLong activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
+    private AtomicLong activeConnectionsMin = null;
         
-    private AtomicLong activeConnectionsMax = new AtomicLong(Long.MIN_VALUE);
+    private AtomicLong activeConnectionsMax = null;
 
-    private AtomicBigDecimal activeConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private AtomicBigDecimal activeConnectionsAvg = null;
             
-    private AtomicLong idleConnectionsMin = new AtomicLong(Long.MAX_VALUE);
+    private AtomicLong idleConnectionsMin = null;
         
-    private AtomicLong idleConnectionsMax = new AtomicLong(Long.MIN_VALUE);
+    private AtomicLong idleConnectionsMax = null;
 
-    private AtomicBigDecimal idleConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private AtomicBigDecimal idleConnectionsAvg = null;
             
-    private AtomicLong totalConnectionsMin = new AtomicLong(Long.MAX_VALUE);
+    private AtomicLong totalConnectionsMin = null;
         
-    private AtomicLong totalConnectionsMax = new AtomicLong(Long.MIN_VALUE);
+    private AtomicLong totalConnectionsMax = null;
 
-    private AtomicBigDecimal totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private AtomicBigDecimal totalConnectionsAvg = null;
 
     // the error attributes (error code and SQL state) and its count
     private ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
 
     private PoolDataSourceStatistics parent = null;
 
-    public PoolDataSourceStatistics() {
-        this(null);
+    private CopyOnWriteArraySet<PoolDataSourceStatistics> children = null;
+
+    public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier) {
+        this(descriptionSupplier, null);
     }
         
-    public PoolDataSourceStatistics(final Supplier<String> nameSupplier) {
-        this(nameSupplier, null);
+    public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier,
+                                    final PoolDataSourceStatistics parent) {
+        this(descriptionSupplier, parent, null);
     }
         
-    public PoolDataSourceStatistics(final Supplier<String> nameSupplier, final PoolDataSourceStatistics parent) {
-        this.nameSupplier = nameSupplier;
+    public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier,
+                                    final PoolDataSourceStatistics parent,
+                                    final Supplier<Boolean> isClosedSupplier) {
+        this.descriptionSupplier = descriptionSupplier;
         this.parent = parent;
+        this.isClosedSupplier = isClosedSupplier;
 
         // only the overall instance tracks note of physical connections
         if (parent == null) {
@@ -151,32 +163,72 @@ public class PoolDataSourceStatistics {
  
             this.physicalConnections = dummy.newKeySet();
 
-            level = 1;
+            this.level = 1;
         } else {
-            level = 1 + parent.level;
+            this.level = 1 + this.parent.level;
+        }
+
+        assert(this.level >= 1 && this.level <= 4);
+        assert((this.level == 1) == (this.parent == null));
+
+        switch(this.level) {
+        case 4:
+            break;
+            
+        default:
+            this.children = new CopyOnWriteArraySet();
+            this.activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
+            this.activeConnectionsMax = new AtomicLong(Long.MIN_VALUE);
+            this.activeConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+            this.idleConnectionsMin = new AtomicLong(Long.MAX_VALUE);
+            this.idleConnectionsMax = new AtomicLong(Long.MIN_VALUE);
+            this.idleConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+            this.totalConnectionsMin = new AtomicLong(Long.MAX_VALUE);
+            this.totalConnectionsMax = new AtomicLong(Long.MIN_VALUE);
+            this.totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+            break;
+        }
+
+        assert((this.level == 4) == (this.children == null));
+
+        if (this.parent != null) {
+            this.parent.children.add(this);
         }
     }
 
-    private String getName() {
-        return nameSupplier != null ? nameSupplier.get() : null;
+    private String getDescription() {
+        return descriptionSupplier != null ? descriptionSupplier.get() : null;
+    }
+        
+    boolean isClosed() {
+        if (isClosedSupplier != null) {
+            return isClosedSupplier.get();
+        } else if (children != null) {
+            // traverse the children: if one is not closed return false
+            for (final Iterator<PoolDataSourceStatistics> i = children.iterator(); i.hasNext(); ) {
+                if (!i.next().isClosed()) {
+                    return false;
+                }
+            };
+        }
+        return true;
     }
         
     void update(final Connection conn,
                 final long timeElapsed) throws SQLException {
+        if (level != 4 || isClosed()) {
+            return;
+        }
+        
         final boolean isPhysicalConnection = add(conn);
-            
-        // We must use count and avg from the same connection so just synchronize.
-        // If we don't synchronize we risk to get the average and count from different connections.
-        synchronized (this) {                
-            BigDecimal count = new BigDecimal(isPhysicalConnection ?
-                                              this.physicalConnectionCount.incrementAndGet() :
-                                              this.logicalConnectionCount.incrementAndGet());
+        final BigDecimal count = new BigDecimal(isPhysicalConnection ?
+                                                this.physicalConnectionCount.incrementAndGet() :
+                                                this.logicalConnectionCount.incrementAndGet());
 
-            if (isPhysicalConnection) {
-                updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
-            } else {
-                updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
-            }
+        if (isPhysicalConnection) {
+            updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
+        } else {
+            updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
         }
 
         // The rest is using AtomicLong, hence concurrent.
@@ -193,28 +245,27 @@ public class PoolDataSourceStatistics {
                 final int proxyLogicalConnectionCount,
                 final int proxyOpenSessionCount,
                 final int proxyCloseSessionCount) throws SQLException {
-        final boolean isPhysicalConnection = add(conn);
-            
-        // We must use count and avg from the same connection so just synchronize.
-        // If we don't synchronize we risk to get the average and count from different connections.
-        synchronized (this) {                
-            BigDecimal count = new BigDecimal(isPhysicalConnection ?
-                                              this.physicalConnectionCount.incrementAndGet() :
-                                              this.logicalConnectionCount.incrementAndGet());
-
-            if (isPhysicalConnection) {
-                updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
-            } else {
-                updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
-            }
-
-            // add the other part as well
-            count = count.add(new BigDecimal(!isPhysicalConnection ?
-                                             this.physicalConnectionCount.get() :
-                                             this.logicalConnectionCount.get()));
-
-            updateIterativeMean(count, proxyTimeElapsed, proxyTimeElapsedAvg);
+        if (level != 4 || isClosed()) {
+            return;
         }
+
+        final boolean isPhysicalConnection = add(conn);
+        BigDecimal count = new BigDecimal(isPhysicalConnection ?
+                                          this.physicalConnectionCount.incrementAndGet() :
+                                          this.logicalConnectionCount.incrementAndGet());
+        
+        if (isPhysicalConnection) {
+            updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
+        } else {
+            updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
+        }
+
+        // add the other part as well
+        count = count.add(new BigDecimal(!isPhysicalConnection ?
+                                         this.physicalConnectionCount.get() :
+                                         this.logicalConnectionCount.get()));
+
+        updateIterativeMean(count, proxyTimeElapsed, proxyTimeElapsedAvg);
 
         // The rest is using AtomicLong, hence concurrent.
         if (isPhysicalConnection) {
@@ -232,19 +283,103 @@ public class PoolDataSourceStatistics {
     void update(final int activeConnections,
                 final int idleConnections,
                 final int totalConnections) /*throws SQLException*/ {
-        // We must use count and avg from the same connection so just synchronize.
-        // If we don't synchronize we risk to get the average and count from different connections.
-        synchronized (this) {                
-            BigDecimal count = new BigDecimal(getConnectionCount());
-            
-            updateIterativeMean(count, activeConnections, activeConnectionsAvg);
-            updateIterativeMean(count, idleConnections, idleConnectionsAvg);
-            updateIterativeMean(count, totalConnections, totalConnectionsAvg);
+        if (level != 4 || isClosed()) {
+            return;
         }
 
-        updateMinMax(activeConnections, activeConnectionsMin, activeConnectionsMax);
-        updateMinMax(idleConnections, idleConnectionsMin, idleConnectionsMax);
-        updateMinMax(totalConnections, totalConnectionsMin, totalConnectionsMax);
+        final BigDecimal count = new BigDecimal(getConnectionCount());
+
+        // update parent
+        updateIterativeMean(count, activeConnections, parent.activeConnectionsAvg);
+        updateIterativeMean(count, idleConnections, parent.idleConnectionsAvg);
+        updateIterativeMean(count, totalConnections, parent.totalConnectionsAvg);
+
+        updateMinMax(activeConnections, parent.activeConnectionsMin, parent.activeConnectionsMax);
+        updateMinMax(idleConnections, parent.idleConnectionsMin, parent.idleConnectionsMax);
+        updateMinMax(totalConnections, parent.totalConnectionsMin, parent.totalConnectionsMax);
+    }
+
+    void close() {
+        if (level != 4) {
+            return;
+        }
+    
+        copyToParents(this, this.parent, false);
+        copyToParents(this.parent, this.parent.parent, true);
+
+        this.reset();
+    }
+    
+    private static void copyToParents(final PoolDataSourceStatistics childLevelX,
+                                      final PoolDataSourceStatistics parentLevelY,
+                                      final boolean connectionStatistics) {
+        if (parentLevelY == null) {
+            return;
+        }
+
+        if (!connectionStatistics && childLevelX.level == 4) {
+            updateMean(childLevelX.getPhysicalConnectionCount(), childLevelX.physicalTimeElapsedAvg.get(),
+                       parentLevelY.physicalConnectionCount, parentLevelY.physicalTimeElapsedAvg);
+            updateMean(childLevelX.getLogicalConnectionCount(), childLevelX.logicalTimeElapsedAvg.get(),
+                       parentLevelY.logicalConnectionCount, parentLevelY.logicalTimeElapsedAvg);
+            // connection count is the combination of physical and logical count, not a counter
+            updateMean(childLevelX.getConnectionCount(), childLevelX.proxyTimeElapsedAvg.get(),
+                       parentLevelY.getConnectionCount(), parentLevelY.proxyTimeElapsedAvg);
+
+            // supplying this min and max will update parent min and max
+            updateMinMax(childLevelX.physicalTimeElapsedMin.get(), parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
+            updateMinMax(childLevelX.physicalTimeElapsedMax.get(), parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
+        
+            updateMinMax(childLevelX.logicalTimeElapsedMin.get(), parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
+            updateMinMax(childLevelX.logicalTimeElapsedMax.get(), parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
+
+            updateMinMax(childLevelX.proxyTimeElapsedMin.get(), parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
+            updateMinMax(childLevelX.proxyTimeElapsedMax.get(), parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
+            
+            parentLevelY.proxyLogicalConnectionCount.addAndGet(childLevelX.proxyLogicalConnectionCount.get());
+            parentLevelY.proxyOpenSessionCount.addAndGet(childLevelX.proxyOpenSessionCount.get());
+            parentLevelY.proxyCloseSessionCount.addAndGet(childLevelX.proxyCloseSessionCount.get());
+        } else if (connectionStatistics && childLevelX.level == 3) {
+            updateMean(childLevelX.getConnectionCount(), childLevelX.activeConnectionsAvg.get(),
+                       parentLevelY.getConnectionCount(), parentLevelY.activeConnectionsAvg);
+            updateMean(childLevelX.getConnectionCount(), childLevelX.idleConnectionsAvg.get(),
+                       parentLevelY.getConnectionCount(), parentLevelY.idleConnectionsAvg);
+            updateMean(childLevelX.getConnectionCount(), childLevelX.totalConnectionsAvg.get(),
+                       parentLevelY.getConnectionCount(), parentLevelY.totalConnectionsAvg);
+
+            updateMinMax(childLevelX.activeConnectionsMin.get(), parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
+            updateMinMax(childLevelX.activeConnectionsMax.get(), parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
+            updateMinMax(childLevelX.idleConnectionsMin.get(), parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
+            updateMinMax(childLevelX.idleConnectionsMax.get(), parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
+            updateMinMax(childLevelX.totalConnectionsMin.get(), parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
+            updateMinMax(childLevelX.totalConnectionsMax.get(), parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
+        }
+
+        // recursively
+        copyToParents(childLevelX, parentLevelY.parent, connectionStatistics);
+    }
+
+    private void reset() {
+        if (level != 4) {
+            return;
+        }
+
+        accumulatedSince = LocalDateTime.now();
+        physicalConnectionCount.set(0L);
+        physicalTimeElapsedMin.set(Long.MAX_VALUE);    
+        physicalTimeElapsedMax.set(Long.MIN_VALUE);    
+        physicalTimeElapsedAvg.set(BigDecimal.ZERO);
+        logicalConnectionCount.set(0L);
+        logicalTimeElapsedMin.set(Long.MAX_VALUE);   
+        logicalTimeElapsedMax.set(Long.MIN_VALUE);
+        logicalTimeElapsedAvg.set(BigDecimal.ZERO);
+        proxyLogicalConnectionCount.set(0L);        
+        proxyOpenSessionCount.set(0L);        
+        proxyCloseSessionCount.set(0L);
+        proxyTimeElapsedMin.set(Long.MAX_VALUE);    
+        proxyTimeElapsedMax.set(Long.MIN_VALUE);    
+        proxyTimeElapsedAvg.set(BigDecimal.ZERO);
+        errors.clear();
     }
 
     private boolean add(final Connection conn) throws SQLException {
@@ -252,6 +387,10 @@ public class PoolDataSourceStatistics {
     }
     
     long signalSQLException(final SQLException ex) {
+        if (isClosed()) {
+            return -1L;
+        }
+        
         final Properties attrs = new Properties();
 
         attrs.setProperty(EXCEPTION_CLASS_NAME, ex.getClass().getName());
@@ -262,6 +401,10 @@ public class PoolDataSourceStatistics {
     }
         
     long signalException(final Exception ex) {
+        if (isClosed()) {
+            return -1L;
+        }
+        
         final Properties attrs = new Properties();
 
         attrs.setProperty(EXCEPTION_CLASS_NAME, ex.getClass().getName());
@@ -274,7 +417,9 @@ public class PoolDataSourceStatistics {
     // See https://stackoverflow.com/questions/4591206/
     //   arithmeticexception-non-terminating-decimal-expansion-no-exact-representable
     // to prevent this error: Non-terminating decimal expansion; no exact representable decimal result.
-    private void updateIterativeMean(final BigDecimal count, final long value, final AtomicBigDecimal avg) {
+    private static void updateIterativeMean(final BigDecimal count,
+                                            final long value,
+                                            final AtomicBigDecimal avg) {
         if (value >= 0L) {
             avg.addAndGet(new BigDecimal(value).subtract(avg.get()).divide(count,
                                                                            ROUND_SCALE,
@@ -282,7 +427,34 @@ public class PoolDataSourceStatistics {
         }
     }
 
-    private void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
+    private static void updateMean(final long count1,
+                                   final BigDecimal avg1,
+                                   final AtomicLong count2,
+                                   final AtomicBigDecimal avg2) {
+        updateMean(count1, avg1, count2.get(), avg2);
+        if (count2.get() > 0L) {
+            count2.addAndGet(count1);
+        }
+    }
+
+    private static void updateMean(final long count1,
+                                   final BigDecimal avg1,
+                                   final long count2,
+                                   final AtomicBigDecimal avg2) {
+        if (count1 < 0L || count2 < 0L || count1 + count2 <= 0L) {
+            return;
+        }
+        
+        final BigDecimal value1 = (new BigDecimal(count1)).multiply(avg1);
+        final BigDecimal value2 = (new BigDecimal(count2)).multiply(avg2.get());
+        final BigDecimal count = new BigDecimal(count1 + count2);
+        
+        avg2.setAndGet(value1.add(value2).divide(count,
+                                                 ROUND_SCALE,
+                                                 RoundingMode.HALF_UP));
+    }
+
+    private static void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
         if (value >= 0) {
             if (value < min.get()) {
                 min.set(value);
@@ -303,6 +475,11 @@ public class PoolDataSourceStatistics {
     }
 
     public void showStatistics(final SimplePoolDataSource pds,
+                               final boolean showTotals) {
+        showStatistics(pds, -1L, -1L, showTotals);
+    }
+    
+    public void showStatistics(final SimplePoolDataSource pds,
                                final long timeElapsed,
                                final long proxyTimeElapsed,
                                final boolean showTotals) {
@@ -311,13 +488,13 @@ public class PoolDataSourceStatistics {
         }
         
         final Method method = (showTotals ? loggerInfo : loggerDebug);
-
-        final boolean isTotal = level == 2;
-        final boolean isGrandTotal = level == 1;
-        final boolean showPoolSizes = isTotal;
-        final boolean showErrors = showTotals && (isTotal || isGrandTotal);
+        final boolean showPoolSizes = level <= 3;
+        final boolean showErrors = showTotals && level <= 3;
         final String prefix = INDENT_PREFIX;
-        final String poolDescription = getName();
+        final String poolDescription = String.format("{} (level {}, accumulated since {})",
+                                                     getDescription()
+                                                     level,
+                                                     accumulatedSince);
 
         try {
             if (method != null) {
@@ -389,7 +566,7 @@ public class PoolDataSourceStatistics {
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             
-                if (showPoolSizes) {
+                if (showPoolSizes && pds != null) {
                     method.invoke(logger,
                                   "{}initial/min/max pool size: {}/{}/{}",
                                   (Object) new Object[]{ prefix,
@@ -398,7 +575,7 @@ public class PoolDataSourceStatistics {
                                                          pds.getMaxPoolSize() });
                 }
 
-                if (!showTotals) {
+                if (!showTotals && pds != null) {
                     // current values
                     val1 = pds.getActiveConnections();
                     val2 = pds.getIdleConnections();
@@ -478,8 +655,12 @@ public class PoolDataSourceStatistics {
         } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error(exceptionToString(e));
         }
-    }
 
+        if (showTotals && parent != null) { // recursively
+            parent.showStatistics(null, -1L, -1L, showTotals);
+        }
+    }
+    
     private static String exceptionToString(final Exception ex) {
         return String.format("{}: {}", ex.getClass().getName(), ex.getMessage());
     }
@@ -555,39 +736,39 @@ public class PoolDataSourceStatistics {
     // all connection related stuff
 
     public long getActiveConnectionsMin() {
-        return activeConnectionsMin.get();
+        return activeConnectionsMin != null ? activeConnectionsMin.get() : -1L;
     }
 
     public long getActiveConnectionsMax() {
-        return activeConnectionsMax.get();
+        return activeConnectionsMax != null ? activeConnectionsMax.get() : -1L;
     }
 
     public long getActiveConnectionsAvg() {
-        return activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+        return activeConnectionsAvg != null ? activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : -1L;
     }
 
     public long getIdleConnectionsMin() {
-        return idleConnectionsMin.get();
+        return idleConnectionsMin != null ? idleConnectionsMin.get() : -1L;
     }
 
     public long getIdleConnectionsMax() {
-        return idleConnectionsMax.get();
+        return idleConnectionsMax != null ? idleConnectionsMax.get() : -1L;
     }
         
     public long getIdleConnectionsAvg() {
-        return idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+        return idleConnectionsAvg != null ? idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : -1L;
     }
         
     public long getTotalConnectionsMin() {
-        return totalConnectionsMin.get();
+        return totalConnectionsMin != null ? totalConnectionsMin.get() : -1L;
     }
 
     public long getTotalConnectionsMax() {
-        return totalConnectionsMax.get();
+        return totalConnectionsMax != null ? totalConnectionsMax.get() : -1L;
     }
 
     public long getTotalConnectionsAvg() {
-        return totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+        return totalConnectionsAvg != null ? totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : -1L;
     }
 
     public Map<Properties, Long> getErrors() {
@@ -613,6 +794,10 @@ public class PoolDataSourceStatistics {
 
         public BigDecimal get() {
             return valueHolder.get();
+        }
+
+        public void set(final BigDecimal value) {
+            setAndGet(value);
         }
 
         public BigDecimal addAndGet(final BigDecimal value) {

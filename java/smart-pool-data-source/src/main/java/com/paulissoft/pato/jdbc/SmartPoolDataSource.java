@@ -107,7 +107,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             this.connectInfo = new ConnectInfo(this.poolDataSourceConfiguration.getUsername(), this.poolDataSourceConfiguration.getPassword());
             this.commonPoolDataSource = commonPoolDataSource;
             this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +  this.connectInfo.getSchema() + ")",
-                                                              commonPoolDataSource.getPoolDataSourceStatistics());
+                                                              commonPoolDataSource.getPoolDataSourceStatistics(),
+                                                              this::isClosed);
             this.singleSessionProxyModel = singleSessionProxyModel;
             this.useFixedUsernamePassword = useFixedUsernamePassword;
 
@@ -298,8 +299,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     private void checkIsOpen() {
         if (!opened.get()) {
-            throw new IllegalStateException(String.format("Smart pool data source ({}) must be open.",
-                                                          poolDataSourceConfiguration != null ? poolDataSourceConfiguration.toString() : "UNKNOWN"));
+            throw new IllegalStateException("Smart pool data source (" +
+                                            (poolDataSourceConfiguration != null ? poolDataSourceConfiguration.toString() : "UNKNOWN") +
+                                            ") must be open.");
         }
     }
 
@@ -316,9 +318,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         logger.debug(">close()");
 
         try {
-            if (opened.getAndSet(false) && isStatisticsEnabled()) {
-                // switched from open to closed: show statistics
-                showDataSourceStatistics();
+            if (opened.getAndSet(false)) {
+                // switched from open to closed: show statistics and close (which will update and show the parent statistics too)
+                pdsStatistics.showStatistics(this, isStatisticsEnabled());
+                pdsStatistics.close();
             }
         } finally {
             logger.debug("<close()");
@@ -634,10 +637,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      * @param proxyTimeElapsed        The elapsed time for proxy connection (after the connection)
      * @param showTotals               Is this the final call?
      */
-    private void showDataSourceStatistics() {
-        showDataSourceStatistics(-1L, -1L, true);
-    }
-    
     private void showDataSourceStatistics(final long timeElapsed,
                                           final boolean showTotals) {
         showDataSourceStatistics(timeElapsed, -1L, showTotals);
