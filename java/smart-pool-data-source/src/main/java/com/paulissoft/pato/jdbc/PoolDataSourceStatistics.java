@@ -49,6 +49,8 @@ public class PoolDataSourceStatistics {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
+    private static volatile boolean debug = false;
+
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
         
@@ -201,17 +203,25 @@ public class PoolDataSourceStatistics {
     }
         
     boolean isClosed() {
+        boolean result = true;
+                     
         if (isClosedSupplier != null) {
-            return isClosedSupplier.get();
+            result = isClosedSupplier.get();
         } else if (children != null) {
             // traverse the children: if one is not closed return false
             for (final Iterator<PoolDataSourceStatistics> i = children.iterator(); i.hasNext(); ) {
                 if (!i.next().isClosed()) {
-                    return false;
+                    result = false;
+                    break;
                 }
             }
         }
-        return true;
+
+        if (debug) {
+            logger.info("isClosed({}): {}", getDescription(), result);
+        }
+        
+        return result;
     }
         
     void update(final Connection conn,
@@ -303,11 +313,19 @@ public class PoolDataSourceStatistics {
         if (level != 4) {
             return;
         }
+
+        logger.info(">close({})", getDescription());
+
+        debug = true;
     
         copyToParents(this, this.parent, false);
         copyToParents(this.parent, this.parent.parent, true);
 
         this.reset();
+
+        debug = false;
+
+        logger.info("<close()");
     }
     
     private static void copyToParents(final PoolDataSourceStatistics childLevelX,
@@ -327,14 +345,20 @@ public class PoolDataSourceStatistics {
                        parentLevelY.getConnectionCount(), parentLevelY.proxyTimeElapsedAvg);
 
             // supplying this min and max will update parent min and max
-            updateMinMax(childLevelX.physicalTimeElapsedMin.get(), parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
-            updateMinMax(childLevelX.physicalTimeElapsedMax.get(), parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
+            updateMinMax(childLevelX.physicalTimeElapsedMin.get(),
+                         parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
+            updateMinMax(childLevelX.physicalTimeElapsedMax.get(),
+                         parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
         
-            updateMinMax(childLevelX.logicalTimeElapsedMin.get(), parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
-            updateMinMax(childLevelX.logicalTimeElapsedMax.get(), parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
+            updateMinMax(childLevelX.logicalTimeElapsedMin.get(),
+                         parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
+            updateMinMax(childLevelX.logicalTimeElapsedMax.get(),
+                         parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
 
-            updateMinMax(childLevelX.proxyTimeElapsedMin.get(), parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
-            updateMinMax(childLevelX.proxyTimeElapsedMax.get(), parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
+            updateMinMax(childLevelX.proxyTimeElapsedMin.get(),
+                         parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
+            updateMinMax(childLevelX.proxyTimeElapsedMax.get(),
+                         parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
             
             parentLevelY.proxyLogicalConnectionCount.addAndGet(childLevelX.proxyLogicalConnectionCount.get());
             parentLevelY.proxyOpenSessionCount.addAndGet(childLevelX.proxyOpenSessionCount.get());
@@ -347,12 +371,18 @@ public class PoolDataSourceStatistics {
             updateMean(childLevelX.getConnectionCount(), childLevelX.totalConnectionsAvg.get(),
                        parentLevelY.getConnectionCount(), parentLevelY.totalConnectionsAvg);
 
-            updateMinMax(childLevelX.activeConnectionsMin.get(), parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
-            updateMinMax(childLevelX.activeConnectionsMax.get(), parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
-            updateMinMax(childLevelX.idleConnectionsMin.get(), parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
-            updateMinMax(childLevelX.idleConnectionsMax.get(), parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
-            updateMinMax(childLevelX.totalConnectionsMin.get(), parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
-            updateMinMax(childLevelX.totalConnectionsMax.get(), parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
+            updateMinMax(childLevelX.activeConnectionsMin.get(),
+                         parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
+            updateMinMax(childLevelX.activeConnectionsMax.get(),
+                         parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
+            updateMinMax(childLevelX.idleConnectionsMin.get(),
+                         parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
+            updateMinMax(childLevelX.idleConnectionsMax.get(),
+                         parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
+            updateMinMax(childLevelX.totalConnectionsMin.get(),
+                         parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
+            updateMinMax(childLevelX.totalConnectionsMax.get(),
+                         parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
         }
 
         // recursively
@@ -432,7 +462,7 @@ public class PoolDataSourceStatistics {
                                    final AtomicLong count2,
                                    final AtomicBigDecimal avg2) {
         updateMean(count1, avg1, count2.get(), avg2);
-        if (count2.get() > 0L) {
+        if (count1 > 0L) {
             count2.addAndGet(count1);
         }
     }
@@ -444,18 +474,38 @@ public class PoolDataSourceStatistics {
         if (count1 < 0L || count2 < 0L || count1 + count2 <= 0L) {
             return;
         }
-        
+
         final BigDecimal value1 = (new BigDecimal(count1)).multiply(avg1);
         final BigDecimal value2 = (new BigDecimal(count2)).multiply(avg2.get());
         final BigDecimal count = new BigDecimal(count1 + count2);
-        
+
+        if (debug) {
+            logger.info(">updateMean(count1={}, avg1={}, level={}, count2={}, avg2={})",
+                        count1,
+                        avg1,
+                        count2,
+                        avg2.get());
+        }        
+
         avg2.setAndGet(value1.add(value2).divide(count,
                                                  ROUND_SCALE,
                                                  RoundingMode.HALF_UP));
+
+        if (debug) {
+            logger.info("<updateMean(avg2={})",
+                        avg2.get());
+        }        
     }
 
     private static void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
-        if (value >= 0) {
+        if (debug) {
+            logger.info(">updateMinMax(value={}, min={}, max={})",
+                        value,
+                        min.get(),
+                        max.get());
+        }
+
+        if (value >= 0 && value < Long.MAX_VALUE) {
             if (value < min.get()) {
                 min.set(value);
             }
@@ -463,6 +513,13 @@ public class PoolDataSourceStatistics {
                 max.set(value);
             }
         }
+
+        if (debug) {
+            logger.info(">updateMinMax(min={}, max={})",
+                        min.get(),
+                        max.get());
+        }        
+
     }
 
     private boolean countersEqual(final PoolDataSourceStatistics compareTo) {
@@ -491,14 +548,12 @@ public class PoolDataSourceStatistics {
         final boolean showPoolSizes = level <= 3;
         final boolean showErrors = showTotals && level <= 3;
         final String prefix = INDENT_PREFIX;
-        final String poolDescription = String.format("{} (level {}, accumulated since {})",
-                                                     getDescription(),
-                                                     level,
-                                                     accumulatedSince);
+        final String poolDescription = getDescription();
 
         try {
             if (method != null) {
-                method.invoke(logger, "statistics for {}:", (Object) new Object[]{ poolDescription });
+                method.invoke(logger, "statistics for {} (level {}, accumulated since {}):",
+                              (Object) new Object[]{ poolDescription, level, accumulatedSince });
             
                 if (!showTotals) {
                     if (timeElapsed >= 0L) {
@@ -656,13 +711,16 @@ public class PoolDataSourceStatistics {
             logger.error(exceptionToString(e));
         }
 
-        if (showTotals && parent != null && !countersEqual(parent)) { // recursively but only if there are different statistics
+        if (showTotals &&
+            parent != null &&
+            parent.isClosed() &&
+            !countersEqual(parent)) { // recursively but only if the parent is closed and there are different statistics and 
             parent.showStatistics(null, -1L, -1L, showTotals);
         }
     }
     
     private static String exceptionToString(final Exception ex) {
-        return String.format("{}: {}", ex.getClass().getName(), ex.getMessage());
+        return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
     }
     
     // getter(s)

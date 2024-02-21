@@ -26,7 +26,7 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     }
 
     default public String exceptionToString(final Exception ex) {
-        return String.format("{}: {}", ex.getClass().getName(), ex.getMessage());
+        return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
     }
 
     // signature used by HikariDataSource

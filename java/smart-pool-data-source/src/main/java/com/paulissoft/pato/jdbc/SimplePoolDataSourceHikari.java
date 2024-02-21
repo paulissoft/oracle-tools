@@ -61,7 +61,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                 case 17: setValidationTimeout(pdsConfigurationHikari.getValidationTimeout()); break;
                 case 18: setLeakDetectionThreshold(pdsConfigurationHikari.getLeakDetectionThreshold()); break;
                 default:
-                    throw new IllegalArgumentException(String.format("Wrong value for nr ({nr}): must be between 0 and {}", nr, maxNr));
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
                 log.warn("nr: {}; exception: {}", nr, exceptionToString(ex));

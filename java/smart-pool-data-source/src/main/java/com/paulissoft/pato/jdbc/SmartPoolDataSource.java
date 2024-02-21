@@ -425,7 +425,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                             break;
                             
                         default:
-                            throw new IllegalArgumentException(String.format("Wrong value for nr ({}): must be between 0 and 2", nr));
+                            throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
                         }
                     } while (!conn.getSchema().equalsIgnoreCase(schema) && nr++ < 3);
                 }                
