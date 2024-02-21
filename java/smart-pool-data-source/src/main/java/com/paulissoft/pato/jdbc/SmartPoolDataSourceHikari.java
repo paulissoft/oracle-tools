@@ -12,7 +12,9 @@ import lombok.experimental.Delegate;
 public class SmartPoolDataSourceHikari extends SmartPoolDataSource implements HikariConfigMXBean, Closeable {
 
     private interface ToOverride {
-        public void close();
+        public void close(); // must be SmartPoolDataSource.close()
+                
+        public boolean isClosed(); // must be SmartPoolDataSource.isClosed()
 
         public Connection getConnection() throws SQLException;
 

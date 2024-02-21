@@ -287,7 +287,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         SmartPoolDataSource.statisticsEnabled.set(statisticsEnabled);
     }
 
-    public boolean isClosed() {
+    final public boolean isClosed() {
         return !opened.get();
     }
 

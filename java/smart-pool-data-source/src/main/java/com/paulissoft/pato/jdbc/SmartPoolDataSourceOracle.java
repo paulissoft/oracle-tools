@@ -9,6 +9,10 @@ import oracle.ucp.jdbc.PoolDataSource;
 public class SmartPoolDataSourceOracle extends SmartPoolDataSource implements PoolDataSource {
 
     private interface ToOverride {
+        public void close(); // must be SmartPoolDataSource.close()
+
+        public boolean isClosed(); // must be SmartPoolDataSource.isClosed()
+
         public Connection getConnection() throws SQLException;
 
         public Connection getConnection(String username, String password) throws SQLException;

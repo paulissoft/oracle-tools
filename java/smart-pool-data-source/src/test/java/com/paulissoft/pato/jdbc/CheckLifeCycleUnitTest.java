@@ -92,14 +92,20 @@ public class CheckLifeCycleUnitTest {
             }
 
             try (final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppAuthDataSourceConfigurationHikari)) {
+                assertEquals(false, pds1.isClosed());
+
                 assertEquals(startTotalSmartPoolCountAfter1, SmartPoolDataSource.getTotalSmartPoolCount());
                 assertEquals(startTotalSimplePoolCountAfter1, SmartPoolDataSource.getTotalSimplePoolCount());
 
                 try (final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari)) { // not the same config as pds1
+                    assertEquals(false, pds2.isClosed());
+
                     assertEquals(startTotalSmartPoolCountAfter2, SmartPoolDataSource.getTotalSmartPoolCount());
                     assertEquals(startTotalSimplePoolCountAfter2, SmartPoolDataSource.getTotalSimplePoolCount());
 
                     try (final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppOcppDataSourceConfigurationHikari)) { // same config as pds1
+                        assertEquals(false, pds3.isClosed());
+
                         assertEquals(startTotalSmartPoolCountAfter3, SmartPoolDataSource.getTotalSmartPoolCount());
                         assertEquals(startTotalSimplePoolCountAfter3, SmartPoolDataSource.getTotalSimplePoolCount());
 
@@ -115,6 +121,8 @@ public class CheckLifeCycleUnitTest {
                             .build();
                         
                         try (final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1)) {
+                            assertEquals(false, pds4.isClosed());
+                            
                             assertEquals(startTotalSmartPoolCountAfter4, SmartPoolDataSource.getTotalSmartPoolCount());
                             assertEquals(startTotalSimplePoolCountAfter4, SmartPoolDataSource.getTotalSimplePoolCount());
 
@@ -187,6 +195,7 @@ public class CheckLifeCycleUnitTest {
 
             checkSimplePoolDataSourceJoin(pds1, pds2, false);
             checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
+            assertEquals(true, pds2 == pds3);
             checkSimplePoolDataSourceJoin(pds3, pds1, false);
 
             // change one property and create a smart pool data source: total pool count should increase
@@ -203,13 +212,21 @@ public class CheckLifeCycleUnitTest {
             assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
                             pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
 
+            assertEquals(false, pds4.isClosed());
             pds4.close();
+            assertEquals(true, pds4.isClosed());
 
+            assertEquals(false, pds3.isClosed());
             pds3.close();
+            assertEquals(true, pds3.isClosed());
             
+            assertEquals(true, pds2.isClosed()); // since pds2 == pds3, closing pds3 will also close pds2
             pds2.close();
+            assertEquals(true, pds2.isClosed());
             
+            assertEquals(false, pds1.isClosed());
             pds1.close();
+            assertEquals(true, pds1.isClosed());
         }
 
         assertEquals(startTotalSmartPoolCountAfter4, SmartPoolDataSource.getTotalSmartPoolCount());
