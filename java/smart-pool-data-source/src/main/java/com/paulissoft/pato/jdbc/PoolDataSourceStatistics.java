@@ -465,7 +465,7 @@ public class PoolDataSourceStatistics {
         }
     }
 
-    boolean countersEqual(final PoolDataSourceStatistics compareTo) {
+    private boolean countersEqual(final PoolDataSourceStatistics compareTo) {
         return
             this.getPhysicalConnectionCount() == compareTo.getPhysicalConnectionCount() &&
             this.getLogicalConnectionCount() == compareTo.getLogicalConnectionCount() &&
@@ -656,7 +656,7 @@ public class PoolDataSourceStatistics {
             logger.error(exceptionToString(e));
         }
 
-        if (showTotals && parent != null) { // recursively
+        if (showTotals && parent != null && !countersEqual(parent)) { // recursively but only if there are different statistics
             parent.showStatistics(null, -1L, -1L, showTotals);
         }
     }
