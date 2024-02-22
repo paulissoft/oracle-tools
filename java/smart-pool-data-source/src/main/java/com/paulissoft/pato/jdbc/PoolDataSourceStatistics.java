@@ -49,8 +49,6 @@ public class PoolDataSourceStatistics {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
-    private static volatile boolean debug = false;
-
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
         
@@ -217,10 +215,6 @@ public class PoolDataSourceStatistics {
             }
         }
 
-        if (debug) {
-            logger.info("isClosed({}): {}", getDescription(), result);
-        }
-        
         return result;
     }
         
@@ -352,14 +346,10 @@ public class PoolDataSourceStatistics {
             childProxyCloseSessionCountBefore = this.getProxyCloseSessionCount(),
             parentProxyCloseSessionCountBefore = this.parent.getProxyCloseSessionCount();
             
-        debug = true;
-    
         consolidate(this, this.parent, false);
         consolidate(this.parent, this.parent.parent, true);
 
         this.reset();
-
-        debug = false;
 
         final long
             childPhysicalConnectionCountAfter = this.getPhysicalConnectionCount(),
@@ -733,32 +723,12 @@ public class PoolDataSourceStatistics {
         final BigDecimal value2 = (new BigDecimal(count2)).multiply(avg2.get());
         final BigDecimal count = new BigDecimal(count1 + count2);
 
-        if (debug) {
-            logger.info(">updateMean(count1={}, avg1={}, count2={}, avg2={})",
-                        count1,
-                        avg1,
-                        count2,
-                        avg2.get());
-        }        
-
         avg2.setAndGet(value1.add(value2).divide(count,
                                                  ROUND_SCALE,
                                                  RoundingMode.HALF_UP));
-
-        if (debug) {
-            logger.info("<updateMean(avg2={})",
-                        avg2.get());
-        }        
     }
 
     private static void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {
-        if (debug) {
-            logger.info(">updateMinMax(value={}, min={}, max={})",
-                        value,
-                        min.get(),
-                        max.get());
-        }
-
         if (value >= 0 && value < Long.MAX_VALUE) {
             if (value < min.get()) {
                 min.set(value);
@@ -767,13 +737,6 @@ public class PoolDataSourceStatistics {
                 max.set(value);
             }
         }
-
-        if (debug) {
-            logger.info(">updateMinMax(min={}, max={})",
-                        min.get(),
-                        max.get());
-        }        
-
     }
 
     private boolean countersEqual(final PoolDataSourceStatistics compareTo) {
