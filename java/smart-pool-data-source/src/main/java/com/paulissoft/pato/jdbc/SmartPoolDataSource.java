@@ -29,7 +29,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private static final ConcurrentHashMap<PoolDataSourceConfigurationId, SimplePoolDataSource> cachedSimplePoolDataSources = new ConcurrentHashMap<>();
 
     // for all smart pool data sources the same
-    private static AtomicBoolean statisticsEnabled = new AtomicBoolean(false);
+    private static AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
