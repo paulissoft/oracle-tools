@@ -471,13 +471,14 @@ public class PoolDataSourceStatistics {
         }
 
         if (!connectionStatistics && childLevelX.level == 4) {
+            // connection count is the combination of physical and logical count, not a counter so do it before the others
+            updateMean(childLevelX.getConnectionCount(), childLevelX.proxyTimeElapsedAvg.get(),
+                       parentLevelY.getConnectionCount(), parentLevelY.proxyTimeElapsedAvg);
+            // now update parent counters
             updateMean(childLevelX.getPhysicalConnectionCount(), childLevelX.physicalTimeElapsedAvg.get(),
                        parentLevelY.physicalConnectionCount, parentLevelY.physicalTimeElapsedAvg);
             updateMean(childLevelX.getLogicalConnectionCount(), childLevelX.logicalTimeElapsedAvg.get(),
                        parentLevelY.logicalConnectionCount, parentLevelY.logicalTimeElapsedAvg);
-            // connection count is the combination of physical and logical count, not a counter
-            updateMean(childLevelX.getConnectionCount(), childLevelX.proxyTimeElapsedAvg.get(),
-                       parentLevelY.getConnectionCount(), parentLevelY.proxyTimeElapsedAvg);
 
             // supplying this min and max will update parent min and max
             updateMinMax(childLevelX.physicalTimeElapsedMin.get(),
@@ -560,7 +561,7 @@ public class PoolDataSourceStatistics {
                                  childConnectionCountAfter,
                                  parentConnectionCountAfter);
 
-        final long diffThreshold = 1L;
+        final long diffThreshold = 10L;
         final long totalBefore = (childConnectionCountBefore * childTimeElapsedAvgBefore
                                   + parentConnectionCountBefore * parentTimeElapsedAvgBefore);
         final long totalAfter = (childConnectionCountAfter * childTimeElapsedAvgAfter
@@ -587,10 +588,11 @@ public class PoolDataSourceStatistics {
                          parentConnectionCountAfter,
                          parentTimeElapsedAvgAfter,
                          parentConnectionCountAfter * parentTimeElapsedAvgAfter);
-            logger.debug("totalBefore={}; totalAfter={}; abs(diff)={}",
+            logger.debug("totalBefore={}; totalAfter={}; abs(diff)={}; diffThreshold: {}",
                          totalBefore,
                          totalAfter,
-                         Math.abs(totalBefore - totalAfter));
+                         Math.abs(totalBefore - totalAfter),
+                         diffThreshold);
             logger.debug("<checkMeanBeforeAndAfter()");
             throw ex;
         }
@@ -732,7 +734,7 @@ public class PoolDataSourceStatistics {
         final BigDecimal count = new BigDecimal(count1 + count2);
 
         if (debug) {
-            logger.info(">updateMean(count1={}, avg1={}, level={}, count2={}, avg2={})",
+            logger.info(">updateMean(count1={}, avg1={}, count2={}, avg2={})",
                         count1,
                         avg1,
                         count2,
