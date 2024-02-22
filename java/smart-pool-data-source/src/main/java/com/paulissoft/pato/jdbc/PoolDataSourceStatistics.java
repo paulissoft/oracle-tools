@@ -316,21 +316,156 @@ public class PoolDataSourceStatistics {
 
         logger.info(">close({})", getDescription());
 
+        final long
+            childPhysicalConnectionCountBefore = this.getPhysicalConnectionCount(),
+            childPhysicalTimeElapsedAvgBefore = this.getPhysicalTimeElapsedAvg(),
+            parentPhysicalConnectionCountBefore = this.parent.getPhysicalConnectionCount(),
+            parentPhysicalTimeElapsedAvgBefore = this.parent.getPhysicalTimeElapsedAvg(),            
+            childLogicalConnectionCountBefore = this.getLogicalConnectionCount(),
+            childLogicalTimeElapsedAvgBefore = this.getLogicalTimeElapsedAvg(),
+            parentLogicalConnectionCountBefore = this.parent.getLogicalConnectionCount(),
+            parentLogicalTimeElapsedAvgBefore = this.parent.getLogicalTimeElapsedAvg(),            
+            childConnectionCountBefore = this.getConnectionCount(),
+            childProxyTimeElapsedAvgBefore = this.getProxyTimeElapsedAvg(),
+            parentConnectionCountBefore = this.parent.getConnectionCount(),
+            parentProxyTimeElapsedAvgBefore = this.parent.getProxyTimeElapsedAvg();
+
+        final long
+            childPhysicalTimeElapsedMinBefore = this.getPhysicalTimeElapsedMin(),
+            childPhysicalTimeElapsedMaxBefore = this.getPhysicalTimeElapsedMax(),
+            parentPhysicalTimeElapsedMinBefore = this.parent.getPhysicalTimeElapsedMin(),
+            parentPhysicalTimeElapsedMaxBefore = this.parent.getPhysicalTimeElapsedMax(),
+            childLogicalTimeElapsedMinBefore = this.getLogicalTimeElapsedMin(),
+            childLogicalTimeElapsedMaxBefore = this.getLogicalTimeElapsedMax(),
+            parentLogicalTimeElapsedMinBefore = this.parent.getLogicalTimeElapsedMin(),
+            parentLogicalTimeElapsedMaxBefore = this.parent.getLogicalTimeElapsedMax(),
+            childProxyTimeElapsedMinBefore = this.getProxyTimeElapsedMin(),
+            childProxyTimeElapsedMaxBefore = this.getProxyTimeElapsedMax(),
+            parentProxyTimeElapsedMinBefore = this.parent.getProxyTimeElapsedMin(),
+            parentProxyTimeElapsedMaxBefore = this.parent.getProxyTimeElapsedMax();
+
+        final long
+            childProxyLogicalConnectionCountBefore = this.getProxyLogicalConnectionCount(),
+            parentProxyLogicalConnectionCountBefore = this.parent.getProxyLogicalConnectionCount(),
+            childProxyOpenSessionCountBefore = this.getProxyOpenSessionCount(),
+            parentProxyOpenSessionCountBefore = this.parent.getProxyOpenSessionCount(),
+            childProxyCloseSessionCountBefore = this.getProxyCloseSessionCount(),
+            parentProxyCloseSessionCountBefore = this.parent.getProxyCloseSessionCount();
+            
         debug = true;
     
-        copyToParents(this, this.parent, false);
-        copyToParents(this.parent, this.parent.parent, true);
+        consolidate(this, this.parent, false);
+        consolidate(this.parent, this.parent.parent, true);
 
         this.reset();
 
         debug = false;
 
+        final long
+            childPhysicalConnectionCountAfter = this.getPhysicalConnectionCount(),
+            childPhysicalTimeElapsedAvgAfter = this.getPhysicalTimeElapsedAvg(),
+            parentPhysicalConnectionCountAfter = this.parent.getPhysicalConnectionCount(),
+            parentPhysicalTimeElapsedAvgAfter = this.parent.getPhysicalTimeElapsedAvg(),            
+            childLogicalConnectionCountAfter = this.getLogicalConnectionCount(),
+            childLogicalTimeElapsedAvgAfter = this.getLogicalTimeElapsedAvg(),
+            parentLogicalConnectionCountAfter = this.parent.getLogicalConnectionCount(),
+            parentLogicalTimeElapsedAvgAfter = this.parent.getLogicalTimeElapsedAvg(),            
+            childConnectionCountAfter = this.getConnectionCount(),
+            childProxyTimeElapsedAvgAfter = this.getProxyTimeElapsedAvg(),
+            parentConnectionCountAfter = this.parent.getConnectionCount(),
+            parentProxyTimeElapsedAvgAfter = this.parent.getProxyTimeElapsedAvg();
+
+        checkMeanBeforeAndAfter(childPhysicalConnectionCountBefore,
+                                childPhysicalTimeElapsedAvgBefore,
+                                parentPhysicalConnectionCountBefore,
+                                parentPhysicalTimeElapsedAvgBefore,
+                                childPhysicalConnectionCountAfter,
+                                childPhysicalTimeElapsedAvgAfter,
+                                parentPhysicalConnectionCountAfter,
+                                parentPhysicalTimeElapsedAvgAfter);
+        checkMeanBeforeAndAfter(childLogicalConnectionCountBefore,
+                                childLogicalTimeElapsedAvgBefore,
+                                parentLogicalConnectionCountBefore,
+                                parentLogicalTimeElapsedAvgBefore,
+                                childLogicalConnectionCountAfter,
+                                childLogicalTimeElapsedAvgAfter,
+                                parentLogicalConnectionCountAfter,
+                                parentLogicalTimeElapsedAvgAfter);
+        checkMeanBeforeAndAfter(childConnectionCountBefore,
+                                childProxyTimeElapsedAvgBefore,
+                                parentConnectionCountBefore,
+                                parentProxyTimeElapsedAvgBefore,
+                                childConnectionCountAfter,
+                                childProxyTimeElapsedAvgAfter,
+                                parentConnectionCountAfter,
+                                parentProxyTimeElapsedAvgAfter);
+
+        final long
+            childPhysicalTimeElapsedMinAfter = this.getPhysicalTimeElapsedMin(),
+            childPhysicalTimeElapsedMaxAfter = this.getPhysicalTimeElapsedMax(),
+            parentPhysicalTimeElapsedMinAfter = this.parent.getPhysicalTimeElapsedMin(),
+            parentPhysicalTimeElapsedMaxAfter = this.parent.getPhysicalTimeElapsedMax(),
+            childLogicalTimeElapsedMinAfter = this.getLogicalTimeElapsedMin(),
+            childLogicalTimeElapsedMaxAfter = this.getLogicalTimeElapsedMax(),
+            parentLogicalTimeElapsedMinAfter = this.parent.getLogicalTimeElapsedMin(),
+            parentLogicalTimeElapsedMaxAfter = this.parent.getLogicalTimeElapsedMax(),
+            childProxyTimeElapsedMinAfter = this.getProxyTimeElapsedMin(),
+            childProxyTimeElapsedMaxAfter = this.getProxyTimeElapsedMax(),
+            parentProxyTimeElapsedMinAfter = this.parent.getProxyTimeElapsedMin(),
+            parentProxyTimeElapsedMaxAfter = this.parent.getProxyTimeElapsedMax();
+
+        checkMinMaxBeforeAndAfter(childPhysicalTimeElapsedMinBefore,
+                                  childPhysicalTimeElapsedMaxBefore,
+                                  parentPhysicalTimeElapsedMinBefore,
+                                  parentPhysicalTimeElapsedMaxBefore,
+                                  childPhysicalTimeElapsedMinAfter,
+                                  childPhysicalTimeElapsedMaxAfter,
+                                  parentPhysicalTimeElapsedMinAfter,
+                                  parentPhysicalTimeElapsedMaxAfter);
+        checkMinMaxBeforeAndAfter(childLogicalTimeElapsedMinBefore,
+                                  childLogicalTimeElapsedMaxBefore,
+                                  parentLogicalTimeElapsedMinBefore,
+                                  parentLogicalTimeElapsedMaxBefore,
+                                  childLogicalTimeElapsedMinAfter,
+                                  childLogicalTimeElapsedMaxAfter,
+                                  parentLogicalTimeElapsedMinAfter,
+                                  parentLogicalTimeElapsedMaxAfter);
+        checkMinMaxBeforeAndAfter(childProxyTimeElapsedMinBefore,
+                                  childProxyTimeElapsedMaxBefore,
+                                  parentProxyTimeElapsedMinBefore,
+                                  parentProxyTimeElapsedMaxBefore,
+                                  childProxyTimeElapsedMinAfter,
+                                  childProxyTimeElapsedMaxAfter,
+                                  parentProxyTimeElapsedMinAfter,
+                                  parentProxyTimeElapsedMaxAfter);
+
+        final long
+            childProxyLogicalConnectionCountAfter = this.getProxyLogicalConnectionCount(),
+            parentProxyLogicalConnectionCountAfter = this.parent.getProxyLogicalConnectionCount(),
+            childProxyOpenSessionCountAfter = this.getProxyOpenSessionCount(),
+            parentProxyOpenSessionCountAfter = this.parent.getProxyOpenSessionCount(),
+            childProxyCloseSessionCountAfter = this.getProxyCloseSessionCount(),
+            parentProxyCloseSessionCountAfter = this.parent.getProxyCloseSessionCount();
+
+        checkCountBeforeAndAfter(childProxyLogicalConnectionCountBefore,
+                                 parentProxyLogicalConnectionCountBefore,
+                                 childProxyLogicalConnectionCountAfter,
+                                 parentProxyLogicalConnectionCountAfter);
+        checkCountBeforeAndAfter(childProxyOpenSessionCountBefore,
+                                 parentProxyOpenSessionCountBefore,
+                                 childProxyOpenSessionCountAfter,
+                                 parentProxyOpenSessionCountAfter);
+        checkCountBeforeAndAfter(childProxyCloseSessionCountBefore,
+                                 parentProxyCloseSessionCountBefore,
+                                 childProxyCloseSessionCountAfter,
+                                 parentProxyCloseSessionCountAfter);
+
         logger.info("<close()");
-    }
+    }    
     
-    private static void copyToParents(final PoolDataSourceStatistics childLevelX,
-                                      final PoolDataSourceStatistics parentLevelY,
-                                      final boolean connectionStatistics) {
+    private static void consolidate(final PoolDataSourceStatistics childLevelX,
+                                    final PoolDataSourceStatistics parentLevelY,
+                                    final boolean connectionStatistics) {
         if (parentLevelY == null) {
             return;
         }
@@ -386,7 +521,7 @@ public class PoolDataSourceStatistics {
         }
 
         // recursively
-        copyToParents(childLevelX, parentLevelY.parent, connectionStatistics);
+        consolidate(childLevelX, parentLevelY.parent, connectionStatistics);
     }
 
     private void reset() {
@@ -412,6 +547,123 @@ public class PoolDataSourceStatistics {
         errors.clear();
     }
 
+    private static void checkMeanBeforeAndAfter(final long childConnectionCountBefore,
+                                                final long childTimeElapsedAvgBefore,
+                                                final long parentConnectionCountBefore,
+                                                final long parentTimeElapsedAvgBefore,
+                                                final long childConnectionCountAfter,
+                                                final long childTimeElapsedAvgAfter,
+                                                final long parentConnectionCountAfter,
+                                                final long parentTimeElapsedAvgAfter) {
+        checkCountBeforeAndAfter(childConnectionCountBefore,
+                                 parentConnectionCountBefore,
+                                 childConnectionCountAfter,
+                                 parentConnectionCountAfter);
+
+        final long diffThreshold = 1L;
+        final long totalBefore = (childConnectionCountBefore * childTimeElapsedAvgBefore
+                                  + parentConnectionCountBefore * parentTimeElapsedAvgBefore);
+        final long totalAfter = (childConnectionCountAfter * childTimeElapsedAvgAfter
+                                 + parentConnectionCountAfter * parentTimeElapsedAvgAfter);
+
+        try {            
+            assert(Math.abs(totalBefore - totalAfter) <= diffThreshold);
+            assert(childTimeElapsedAvgAfter == 0L);
+        } catch (AssertionError ex) {
+            logger.debug(">checkMeanBeforeAndAfter()");
+            logger.debug("childConnectionCountBefore={}; childTimeElapsedAvgBefore={}; multiplied={}",
+                         childConnectionCountBefore,
+                         childTimeElapsedAvgBefore,
+                         childConnectionCountBefore * childTimeElapsedAvgBefore);
+            logger.debug("parentConnectionCountBefore={}; parentTimeElapsedAvgBefore={}; multiplied={}",
+                         parentConnectionCountBefore,
+                         parentTimeElapsedAvgBefore,
+                         parentConnectionCountBefore * parentTimeElapsedAvgBefore);
+            logger.debug("childConnectionCountAfter={}; childTimeElapsedAvgAfter={}; multiplied={}",
+                         childConnectionCountAfter,
+                         childTimeElapsedAvgAfter,
+                         childConnectionCountAfter * childTimeElapsedAvgAfter);
+            logger.debug("parentConnectionCountAfter={}; parentTimeElapsedAvgAfter={}; multiplied={}",
+                         parentConnectionCountAfter,
+                         parentTimeElapsedAvgAfter,
+                         parentConnectionCountAfter * parentTimeElapsedAvgAfter);
+            logger.debug("totalBefore={}; totalAfter={}; abs(diff)={}",
+                         totalBefore,
+                         totalAfter,
+                         Math.abs(totalBefore - totalAfter));
+            logger.debug("<checkMeanBeforeAndAfter()");
+            throw ex;
+        }
+    }
+
+    private static void checkMinMaxBeforeAndAfter(final long childTimeElapsedMinBefore,
+                                                  final long childTimeElapsedMaxBefore,
+                                                  final long parentTimeElapsedMinBefore,
+                                                  final long parentTimeElapsedMaxBefore,
+                                                  final long childTimeElapsedMinAfter,
+                                                  final long childTimeElapsedMaxAfter,
+                                                  final long parentTimeElapsedMinAfter,
+                                                  final long parentTimeElapsedMaxAfter) {
+        try {
+            assert(childTimeElapsedMinBefore == Long.MAX_VALUE ||
+                   childTimeElapsedMaxBefore == Long.MIN_VALUE ||
+                   childTimeElapsedMinBefore <= childTimeElapsedMaxBefore);
+            // child values are reste after
+            assert(childTimeElapsedMinAfter == Long.MAX_VALUE);
+            assert(childTimeElapsedMaxAfter == Long.MIN_VALUE);
+        
+            assert(parentTimeElapsedMinBefore == Long.MAX_VALUE ||
+                   parentTimeElapsedMaxBefore == Long.MIN_VALUE ||
+                   parentTimeElapsedMinBefore <= parentTimeElapsedMaxBefore);
+            // parent min after must be at most parent min before (when that was set)
+            assert(parentTimeElapsedMinBefore == Long.MAX_VALUE ||
+                   parentTimeElapsedMinAfter <= parentTimeElapsedMinBefore);
+            assert(parentTimeElapsedMinAfter == Long.MAX_VALUE ||
+                   parentTimeElapsedMaxAfter == Long.MIN_VALUE ||
+                   parentTimeElapsedMinAfter <= parentTimeElapsedMaxAfter);
+            // parent max after must be at least parent max before (when that was set)
+            assert(parentTimeElapsedMaxBefore == Long.MIN_VALUE ||
+                   parentTimeElapsedMaxAfter >= parentTimeElapsedMaxBefore);
+        } catch (AssertionError ex) {
+            logger.debug(">checkMinMaxBeforeAndAfter()");
+            logger.debug("childTimeElapsedMinBefore={}; childTimeElapsedMaxBefore={}; parentTimeElapsedMinBefore={}; parentTimeElapsedMaxBefore={}",
+                         childTimeElapsedMinBefore,
+                         childTimeElapsedMaxBefore,
+                         parentTimeElapsedMinBefore,
+                         parentTimeElapsedMaxBefore);
+            logger.debug("childTimeElapsedMinAfter={}; childTimeElapsedMaxAfter={}; parentTimeElapsedMinAfter={}; parentTimeElapsedMaxAfter={}",
+                         childTimeElapsedMinAfter,
+                         childTimeElapsedMaxAfter,
+                         parentTimeElapsedMinAfter,
+                         parentTimeElapsedMaxAfter);
+            logger.debug("<checkMinMaxBeforeAndAfter()");
+            throw ex;
+        }
+    }
+    
+    private static void checkCountBeforeAndAfter(final long childCountBefore,
+                                                 final long parentCountBefore,
+                                                 final long childCountAfter,
+                                                 final long parentCountAfter) {
+        try {        
+            assert(childCountBefore + parentCountBefore ==
+                   childCountAfter + parentCountAfter);
+            assert(childCountBefore + parentCountBefore ==
+                   childCountAfter + parentCountAfter);
+            assert(childCountAfter == 0L);
+        } catch (AssertionError ex) {
+            logger.debug(">checkCountBeforeAndAfter()");
+            logger.debug("childCountBefore={}; parentCountBefore={}",
+                         childCountBefore,
+                         parentCountBefore);
+            logger.debug("childCountAfter={}; parentCountAfter={}",
+                         childCountAfter,
+                         parentCountAfter);
+            logger.debug("<checkCountBeforeAndAfter()");
+            throw ex;
+        }
+    }
+    
     private boolean add(final Connection conn) throws SQLException {
         return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(OracleConnection.class)) );
     }
