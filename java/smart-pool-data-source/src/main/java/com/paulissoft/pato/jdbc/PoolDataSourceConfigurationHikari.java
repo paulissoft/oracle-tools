@@ -72,7 +72,8 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
 
     @Override
     void clearCommonDataSourceConfiguration() {
-        super.clearCommonDataSourceConfiguration();
+        // do not invoke the super since it clears username and it should not
+        setPassword(null);
         this.poolName = null;
         this.maximumPoolSize = 0;
         this.minimumIdle = 0;
