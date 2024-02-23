@@ -35,12 +35,12 @@ public class PoolDataSourceConfiguration {
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
-    private String proxyUsername;
+    private String proxyUsername = null;
 
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
-    private String schema; // needed to build the PoolName
+    private String schema = null; // needed to build the PoolName
 
     public Class getType() {
         try {
@@ -89,7 +89,9 @@ public class PoolDataSourceConfiguration {
     void determineConnectInfo() {
         if (username == null) {
             proxyUsername = schema = null;
-        } else {
+        } else if (schema == null) {
+            log.debug(">determineConnectInfo(username={})", username);
+            
             final int pos1 = username.indexOf("[");
             final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
       
@@ -102,16 +104,17 @@ public class PoolDataSourceConfiguration {
                 proxyUsername = null;
                 schema = username;
             }
+
+            log.debug("<determineConnectInfo(username={}, proxyUsername={}, schema={})",
+                      username,
+                      proxyUsername,
+                      schema);
         }
-        
-        log.debug("determineConnectInfo(username={}) = (username={}, proxyUsername={}, schema={})",
-                  username,
-                  username,
-                  proxyUsername,
-                  schema);
     }
 
     String getUsernameToConnectTo(final boolean singleSessionProxyModel) {
+        assert(username != null);
+        
         return !singleSessionProxyModel && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */
             proxyUsername /* case 3 */ :
