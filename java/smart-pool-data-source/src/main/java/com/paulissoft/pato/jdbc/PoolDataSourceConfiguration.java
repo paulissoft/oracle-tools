@@ -32,15 +32,15 @@ public class PoolDataSourceConfiguration {
     // username like:
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
-    @Getter(AccessLevel.NONE)
+    @Getter(AccessLevel.PACKAGE)
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
-    private String proxyUsername = null;
+    private String proxyUsername;
 
-    @Getter(AccessLevel.NONE)
+    @Getter(AccessLevel.PACKAGE)
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
-    private String schema = null; // needed to build the PoolName
+    private String schema; // needed to build the PoolName
 
     public Class getType() {
         try {
@@ -89,7 +89,7 @@ public class PoolDataSourceConfiguration {
     void determineConnectInfo() {
         if (username == null) {
             proxyUsername = schema = null;
-        } else if (schema == null) {
+        } else if (schema == null) { /* determine only when necessary */
             log.debug(">determineConnectInfo(username={})", username);
             
             final int pos1 = username.indexOf("[");
@@ -112,6 +112,28 @@ public class PoolDataSourceConfiguration {
         }
     }
 
+    /**
+     *
+     * Get the username to connect to.
+     *
+     * Some observations:
+     * 1 - when username does NOT contain proxy info (like "bodomain", not "bc_proxy[bodomain]")
+     *     the username to connect must be username (e.g. "bodomain", proxyUsername is null)
+     * 2 - else, when singleSessionProxyModel is true,
+     *     the username to connect to MUST be username (e.g. "bc_proxy[bodomain]") and
+     *     never proxyUsername ("bc_proxy")
+     * 3 - else, when singleSessionProxyModel is false,
+     *     the username to connect to must be proxyUsername ("bc_proxy") and
+     *     then later on OracleConnection.openProxySession() will be invoked to connect to schema.
+     *
+     * So you use proxyUsername only if not null and when singleSessionProxyModel is false (case 3).
+     *
+     * A - when useFixedUsernamePassword is true,
+     *     every data source having the same common data source MUST use the same username/password to connect to.
+     *     Meaning that these properties MUST be part of the commonDataSourceProperties!
+     *
+     * @param singleSessionProxyModel  Do we use a single session proxy model?
+     */
     String getUsernameToConnectTo(final boolean singleSessionProxyModel) {
         assert(username != null);
         
