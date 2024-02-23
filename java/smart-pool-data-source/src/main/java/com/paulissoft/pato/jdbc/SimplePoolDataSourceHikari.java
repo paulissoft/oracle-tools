@@ -12,6 +12,10 @@ import org.springframework.beans.DirectFieldAccessor;
 @Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
+    private final static boolean singleSessionProxyModel = false;
+    
+    private final static boolean useFixedUsernamePassword = true;
+
     private static final String POOL_NAME_PREFIX = "HikariPool";
          
     // for join(), valus is irrelevant
@@ -78,7 +82,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
     
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
-        return PoolDataSourceConfigurationHikari
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
             .url(getJdbcUrl())
@@ -101,6 +105,9 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .validationTimeout(getValidationTimeout())
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
+        poolDataSourceConfiguration.determineConnectInfo(singleSessionProxyModel, useFixedUsernamePassword);
+        
+        return poolDataSourceConfiguration;
     }
         
     public void join(final SimplePoolDataSource pds, final String schema) {
@@ -115,7 +122,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         try {
             try {
                 assert(otherCommonId.equals(thisCommonId));
-            } catch (Exception ex) {
+            } catch (AssertionError ex) {
                 log.error("otherCommonId: {}", otherCommonId);
                 log.error("thisCommonId: {}", thisCommonId);
                 throw ex;

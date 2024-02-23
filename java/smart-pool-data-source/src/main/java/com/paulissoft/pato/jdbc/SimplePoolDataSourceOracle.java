@@ -10,6 +10,10 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 @Slf4j
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
 
+    private final static boolean singleSessionProxyModel = true;
+    
+    private final static boolean useFixedUsernamePassword = false;
+
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
     // for join(), valus is irrelevant
@@ -74,7 +78,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
     
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
-        return PoolDataSourceConfigurationOracle
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
             .url(getURL())
@@ -97,6 +101,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
+        poolDataSourceConfiguration.determineConnectInfo(true, false);
+        
+        return poolDataSourceConfiguration;
     }
     
     public void join(final SimplePoolDataSource pds, final String schema) {
@@ -111,7 +118,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         try {
             try {
                 assert(otherCommonId.equals(thisCommonId));
-            } catch (Exception ex) {
+            } catch (AssertionError ex) {
                 log.error("otherCommonId: {}", otherCommonId);
                 log.error("thisCommonId: {}", thisCommonId);
                 throw ex;

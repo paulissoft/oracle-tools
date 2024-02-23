@@ -3,7 +3,7 @@ package com.paulissoft.pato.jdbc;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
-/**/import lombok.ToString;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Slf4j
 @Data
 @EqualsAndHashCode(callSuper = true)
-/**/@ToString(callSuper = true)
+@ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
 @ConfigurationProperties

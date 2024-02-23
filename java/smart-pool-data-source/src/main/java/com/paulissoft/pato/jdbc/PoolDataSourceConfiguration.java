@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -29,19 +30,27 @@ public class PoolDataSourceConfiguration {
     private String type;
 
     // the rest of the fields will not be set by Spring Boot properties
+    @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @ToString.Exclude
     private boolean singleSessionProxyModel;
 
+    @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @ToString.Exclude
     private boolean useFixedUsernamePassword;
 
     // username like:
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
+    @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @ToString.Exclude
     private String proxyUsername;
 
+    @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @ToString.Exclude
     private String schema; // needed to build the PoolName
 
     public Class getType() {
@@ -92,10 +101,25 @@ public class PoolDataSourceConfiguration {
      * @param password  The pasword.
      *
      */    
+    void determineConnectInfo(final String username,
+                              final String password,
+                              final boolean singleSessionProxyModel,
+                              final boolean useFixedUsernamePassword) {
+        this.username = username;
+        this.password = password;
+        determineConnectInfo(singleSessionProxyModel, useFixedUsernamePassword);
+    }
+    
+    void determineConnectInfo(final boolean singleSessionProxyModel,
+                              final boolean useFixedUsernamePassword) {
+        this.singleSessionProxyModel = singleSessionProxyModel;
+        this.useFixedUsernamePassword = useFixedUsernamePassword;
+        determineConnectInfo();
+    }
+    
     void determineConnectInfo() {
         if (username == null) {
-            proxyUsername = null;
-            schema = null;
+            proxyUsername = schema = null;
         } else {
             final int pos1 = username.indexOf("[");
             final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
