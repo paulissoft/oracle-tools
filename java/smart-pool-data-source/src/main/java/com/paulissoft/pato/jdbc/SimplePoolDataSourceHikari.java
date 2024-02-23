@@ -82,7 +82,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
     
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
-        return PoolDataSourceConfigurationHikari
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
             .url(getJdbcUrl())
@@ -105,6 +105,9 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .validationTimeout(getValidationTimeout())
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
+        poolDataSourceConfiguration.determineConnectInfo();
+        
+        return poolDataSourceConfiguration;
     }
         
     public void join(final SimplePoolDataSource pds, final String schema) {

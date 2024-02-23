@@ -97,7 +97,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             assert(poolDataSourceConfiguration.getPassword() != null);
             assert(commonPoolDataSource != null);
 
-            this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+            // make a copy
+            this.poolDataSourceConfiguration = poolDataSourceConfiguration.toBuilder().build();
+
+            this.poolDataSourceConfiguration.determineConnectInfo();
+
+            assert(this.poolDataSourceConfiguration.getSchema() != null);
+            assert(singleSessionProxyModel || !this.poolDataSourceConfiguration.getUsername().endsWith("]"));
+                        
             this.connectInfo = new ConnectInfo(this.poolDataSourceConfiguration.getUsername(), this.poolDataSourceConfiguration.getPassword());
             this.commonPoolDataSource = commonPoolDataSource;
             this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +  this.connectInfo.getSchema() + ")",
@@ -146,20 +153,22 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             if (cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls)) {
                 for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
                     if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationOracle) {
+                        // make a copy
                         final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle =
-                            (PoolDataSourceConfigurationOracle) poolDataSourceConfiguration;
+                            (PoolDataSourceConfigurationOracle) poolDataSourceConfiguration.toBuilder().build();
                         poolDataSourceConfigurationOracle.copy(dataSourceConfiguration);
-                        
+
                         return build(poolDataSourceConfigurationOracle);
                     }
                 }
             } else if (cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls)) {
                 for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
                     if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationHikari) {
+                        // make a copy
                         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
-                            (PoolDataSourceConfigurationHikari) poolDataSourceConfiguration;
+                            (PoolDataSourceConfigurationHikari) poolDataSourceConfiguration.toBuilder().build();
                         poolDataSourceConfigurationHikari.copy(dataSourceConfiguration);
-                        
+
                         return build(poolDataSourceConfigurationHikari);
                     }
                 }

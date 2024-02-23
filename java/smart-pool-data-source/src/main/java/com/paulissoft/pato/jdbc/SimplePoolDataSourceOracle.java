@@ -78,7 +78,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
     
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
-        return PoolDataSourceConfigurationOracle
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
             .url(getURL())
@@ -101,6 +101,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
+        poolDataSourceConfiguration.determineConnectInfo();
+        
+        return poolDataSourceConfiguration;
     }
     
     public void join(final SimplePoolDataSource pds, final String schema) {

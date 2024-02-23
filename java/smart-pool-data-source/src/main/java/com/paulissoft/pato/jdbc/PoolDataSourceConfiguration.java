@@ -99,6 +99,7 @@ public class PoolDataSourceConfiguration {
                 // a username like bc_proxy[bodomain]
                 proxyUsername = username.substring(0, pos1);
                 schema = username.substring(pos1+1, pos2);
+                username = proxyUsername;
             } else {
                 // a username like bodomain
                 proxyUsername = null;

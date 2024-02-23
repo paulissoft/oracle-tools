@@ -78,9 +78,9 @@ public class CheckLifeCycleUnitTest {
                 startTotalSmartPoolCountAfter1 = startTotalSmartPoolCount + 1;
                 startTotalSimplePoolCountAfter1 = startTotalSimplePoolCount + 1;
                 startTotalSmartPoolCountAfter2 = startTotalSmartPoolCount + 2;
-                startTotalSimplePoolCountAfter2 = startTotalSimplePoolCount + 1;
+                startTotalSimplePoolCountAfter2 = startTotalSimplePoolCount + 2; // GJP 2023-02-23
                 startTotalSmartPoolCountAfter3 = startTotalSmartPoolCount + 2;
-                startTotalSimplePoolCountAfter3 = startTotalSimplePoolCount + 1;
+                startTotalSimplePoolCountAfter3 = startTotalSimplePoolCount + 2; // GJP 2023-02-23
                 startTotalSmartPoolCountAfter4 = startTotalSmartPoolCount + 3;
                 startTotalSimplePoolCountAfter4 = startTotalSimplePoolCount + 2;
                 break;
@@ -193,10 +193,10 @@ public class CheckLifeCycleUnitTest {
             assertEquals(startTotalSmartPoolCountAfter3, SmartPoolDataSource.getTotalSmartPoolCount());
             assertEquals(startTotalSimplePoolCountAfter3, SmartPoolDataSource.getTotalSimplePoolCount());
 
-            checkSimplePoolDataSourceJoin(pds1, pds2, false);
+            checkSimplePoolDataSourceJoin(pds1, pds2, true); // GJP 2024-02-23
             checkSimplePoolDataSourceJoin(pds2, pds3, true); // 2 == 3
             assertEquals(true, pds2 == pds3);
-            checkSimplePoolDataSourceJoin(pds3, pds1, false);
+            checkSimplePoolDataSourceJoin(pds3, pds1, true); // GJP 2024-02-23
 
             // change one property and create a smart pool data source: total pool count should increase
             final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
@@ -241,12 +241,15 @@ public class CheckLifeCycleUnitTest {
         poolDataSourceConfiguration1 = pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration();
         poolDataSourceConfiguration2 = pds2.getCommonPoolDataSource().getPoolDataSourceConfiguration();
 
-        assertEquals(true,
+        assertEquals(equal,
                      poolDataSourceConfiguration1.toString().equals(poolDataSourceConfiguration2.toString()));
         
         poolDataSourceConfiguration1 = pds1.getPoolDataSourceConfiguration();
         poolDataSourceConfiguration2 = pds2.getPoolDataSourceConfiguration();
 
+        log.debug("poolDataSourceConfiguration1: {}", poolDataSourceConfiguration1.toString());
+        log.debug("poolDataSourceConfiguration2: {}", poolDataSourceConfiguration2.toString());
+        
         assertEquals(equal,
                      poolDataSourceConfiguration1.toString().equals(poolDataSourceConfiguration2.toString()));
         

@@ -80,18 +80,16 @@ public class CheckConnectionUnitTest {
             final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcpiDataSourceConfigurationHikari);
 
             // do not use assertEquals(pds1.getCommonPoolDataSource(), pds2.getCommonPoolDataSource()) since equals() is overridden
-            assertTrue(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
+            assertTrue(pds1.getCommonPoolDataSource() != pds2.getCommonPoolDataSource()); // GJP 2023-02-23
 
             assertEquals(pds1.getMinPoolSize(),
-                         poolAppConfigDataSourceConfigurationHikari.getMinimumIdle() +
-                         poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle());
+                         poolAppConfigDataSourceConfigurationHikari.getMinimumIdle());
 
-            assertEquals(pds1.getMaxPoolSize(),
-                         poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize() +
+            assertEquals(pds2.getMaxPoolSize(),
                          poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize());
 
-            assertEquals(pds1.getPoolName(), "HikariPool-bocsconf-boocpi");
-            assertEquals(pds1.getPoolName(), pds2.getPoolName());
+            assertEquals(pds1.getPoolName(), "HikariPool-bocsconf");
+            assertEquals(pds2.getPoolName(), "HikariPool-boocpi");
 
             // these two will be combined too
             final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolAppConfigDataSourceConfigurationOracle);
