@@ -101,7 +101,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
-        poolDataSourceConfiguration.determineConnectInfo(true, false);
+        poolDataSourceConfiguration.determineConnectInfo();
         
         return poolDataSourceConfiguration;
     }

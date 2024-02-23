@@ -105,7 +105,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .validationTimeout(getValidationTimeout())
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
-        poolDataSourceConfiguration.determineConnectInfo(singleSessionProxyModel, useFixedUsernamePassword);
+        poolDataSourceConfiguration.determineConnectInfo();
         
         return poolDataSourceConfiguration;
     }

@@ -29,17 +29,6 @@ public class PoolDataSourceConfiguration {
 
     private String type;
 
-    // the rest of the fields will not be set by Spring Boot properties
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    @ToString.Exclude
-    private boolean singleSessionProxyModel;
-
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    @ToString.Exclude
-    private boolean useFixedUsernamePassword;
-
     // username like:
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
@@ -96,27 +85,7 @@ public class PoolDataSourceConfiguration {
     /**
      * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
      * schema (bodomain) and proxy username (bc_proxy respectively empty).
-     *
-     * @param username  The username to connect to.
-     * @param password  The pasword.
-     *
      */    
-    void determineConnectInfo(final String username,
-                              final String password,
-                              final boolean singleSessionProxyModel,
-                              final boolean useFixedUsernamePassword) {
-        this.username = username;
-        this.password = password;
-        determineConnectInfo(singleSessionProxyModel, useFixedUsernamePassword);
-    }
-    
-    void determineConnectInfo(final boolean singleSessionProxyModel,
-                              final boolean useFixedUsernamePassword) {
-        this.singleSessionProxyModel = singleSessionProxyModel;
-        this.useFixedUsernamePassword = useFixedUsernamePassword;
-        determineConnectInfo();
-    }
-    
     void determineConnectInfo() {
         if (username == null) {
             proxyUsername = schema = null;
@@ -142,7 +111,7 @@ public class PoolDataSourceConfiguration {
                   schema);
     }
 
-    String getUsernameToConnectTo() {
+    String getUsernameToConnectTo(final boolean singleSessionProxyModel) {
         return !singleSessionProxyModel && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */
             proxyUsername /* case 3 */ :
