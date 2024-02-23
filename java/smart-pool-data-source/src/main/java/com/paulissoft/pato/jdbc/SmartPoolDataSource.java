@@ -146,20 +146,22 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             if (cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls)) {
                 for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
                     if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationOracle) {
+                        // make a copy
                         final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle =
-                            (PoolDataSourceConfigurationOracle) poolDataSourceConfiguration;
+                            (PoolDataSourceConfigurationOracle) poolDataSourceConfiguration.toBuilder().build();
                         poolDataSourceConfigurationOracle.copy(dataSourceConfiguration);
-                        
+
                         return build(poolDataSourceConfigurationOracle);
                     }
                 }
             } else if (cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls)) {
                 for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
                     if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationHikari) {
+                        // make a copy
                         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
-                            (PoolDataSourceConfigurationHikari) poolDataSourceConfiguration;
+                            (PoolDataSourceConfigurationHikari) poolDataSourceConfiguration.toBuilder().build();
                         poolDataSourceConfigurationHikari.copy(dataSourceConfiguration);
-                        
+
                         return build(poolDataSourceConfigurationHikari);
                     }
                 }
@@ -306,7 +308,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         try {
             if (opened.getAndSet(false)) {
                 // switched from open to closed: show statistics and close (which will update and show the parent statistics too)
-                pdsStatistics.showStatistics(this, isStatisticsEnabled());
                 pdsStatistics.close();
             }
         } finally {
