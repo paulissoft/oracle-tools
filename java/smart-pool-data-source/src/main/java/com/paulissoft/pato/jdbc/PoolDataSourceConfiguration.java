@@ -42,6 +42,14 @@ public class PoolDataSourceConfiguration {
     @ToString.Exclude
     private String schema; // needed to build the PoolName
 
+    protected boolean getSingleSessionProxyModel() {
+        return true;
+    }
+
+    protected boolean getUseFixedUsernamePassword() {
+        return false;
+    }
+        
     public Class getType() {
         try {
             final Class cls = type != null ? Class.forName(type) : null;
@@ -74,7 +82,9 @@ public class PoolDataSourceConfiguration {
     }
 
     void clearCommonDataSourceConfiguration() {
-        this.username = null;
+        if (!getUseFixedUsernamePassword()) {
+            this.username = null;
+        }
         this.password = null;
     }
 
@@ -99,7 +109,6 @@ public class PoolDataSourceConfiguration {
                 // a username like bc_proxy[bodomain]
                 proxyUsername = username.substring(0, pos1);
                 schema = username.substring(pos1+1, pos2);
-                username = proxyUsername;
             } else {
                 // a username like bodomain
                 proxyUsername = null;
@@ -135,10 +144,10 @@ public class PoolDataSourceConfiguration {
      *
      * @param singleSessionProxyModel  Do we use a single session proxy model?
      */
-    String getUsernameToConnectTo(final boolean singleSessionProxyModel) {
+    String getUsernameToConnectTo() {
         assert(username != null);
         
-        return !singleSessionProxyModel && proxyUsername != null ?
+        return !getSingleSessionProxyModel() && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */
             proxyUsername /* case 3 */ :
             username /* case 1 & 2 */;

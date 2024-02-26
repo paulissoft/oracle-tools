@@ -46,7 +46,7 @@
     <commons-lang3.version>3.9</commons-lang3.version>
 
     <maven.test.skip>true</maven.test.skip>
-    <!--test>CheckConfigurationUnitTest</test-->
+    <!--test>CheckConfigurationUnitTest,CheckLifeCycleUnitTest</test-->
   </properties>
 
   <dependencies>

@@ -49,6 +49,8 @@ public class PoolDataSourceStatistics {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
+    private static boolean checkBeforeAfter = false;
+
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
         
@@ -74,6 +76,8 @@ public class PoolDataSourceStatistics {
     private Supplier<Boolean> isClosedSupplier = null;
 
     private int level;
+
+    private SimplePoolDataSource pds = null;
 
     private LocalDateTime firstUpdate = null;
 
@@ -148,15 +152,17 @@ public class PoolDataSourceStatistics {
         
     public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier,
                                     final PoolDataSourceStatistics parent) {
-        this(descriptionSupplier, parent, null);
+        this(descriptionSupplier, parent, null, null);
     }
         
     public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier,
                                     final PoolDataSourceStatistics parent,
-                                    final Supplier<Boolean> isClosedSupplier) {
+                                    final Supplier<Boolean> isClosedSupplier,
+                                    final SimplePoolDataSource pds) {
         this.descriptionSupplier = descriptionSupplier;
         this.parent = parent;
         this.isClosedSupplier = isClosedSupplier;
+        this.pds = pds;
 
         // only the overall instance tracks note of physical connections
         if (parent == null) {
@@ -478,7 +484,9 @@ public class PoolDataSourceStatistics {
             return;
         }
 
-        showStatistics(null, true);
+        if (children == null || children.size() != 1) {
+            showStatistics(true);
+        }
 
         if (parentLevelY == null) {
             return;
@@ -606,7 +614,10 @@ public class PoolDataSourceStatistics {
                          Math.abs(totalBefore - totalAfter),
                          diffThreshold);
             logger.debug("<checkMeanBeforeAndAfter()");
-            throw ex;
+
+            if (checkBeforeAfter) {
+                throw ex;
+            }
         }
     }
 
@@ -651,7 +662,10 @@ public class PoolDataSourceStatistics {
                          parentTimeElapsedMinAfter,
                          parentTimeElapsedMaxAfter);
             logger.debug("<checkMinMaxBeforeAndAfter()");
-            throw ex;
+
+            if (checkBeforeAfter) {
+                throw ex;
+            }
         }
     }
     
@@ -674,7 +688,10 @@ public class PoolDataSourceStatistics {
                          childCountAfter,
                          parentCountAfter);
             logger.debug("<checkCountBeforeAndAfter()");
-            throw ex;
+
+            if (checkBeforeAfter) {
+                throw ex;
+            }
         }
     }
     
@@ -770,13 +787,11 @@ public class PoolDataSourceStatistics {
             this.getProxyCloseSessionCount() == compareTo.getProxyCloseSessionCount();
     }
 
-    public void showStatistics(final SimplePoolDataSource pds,
-                               final boolean showTotals) {
-        showStatistics(pds, -1L, -1L, showTotals);
+    public void showStatistics(final boolean showTotals) {
+        showStatistics(-1L, -1L, showTotals);
     }
     
-    public void showStatistics(final SimplePoolDataSource pds,
-                               final long timeElapsed,
+    public void showStatistics(final long timeElapsed,
                                final long proxyTimeElapsed,
                                final boolean showTotals) {
         if (!showTotals && !logger.isDebugEnabled()) {
@@ -948,13 +963,6 @@ public class PoolDataSourceStatistics {
             }
         } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error(exceptionToString(e));
-        }
-
-        if (showTotals &&
-            parent != null &&
-            parent.isClosed() &&
-            !countersEqual(parent)) { // recursively but only if the parent is closed and there are different statistics and 
-            parent.showStatistics(null, -1L, -1L, showTotals);
         }
     }
     

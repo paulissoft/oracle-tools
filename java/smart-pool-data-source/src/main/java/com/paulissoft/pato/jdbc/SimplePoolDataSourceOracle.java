@@ -26,7 +26,8 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     private final PoolDataSourceStatistics poolDataSourceStatistics =
         new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
                                      poolDataSourceStatisticsTotal,
-                                     this::isClosed);
+                                     this::isClosed,
+                                     this);
     
     // for test purposes
     static void clear() {

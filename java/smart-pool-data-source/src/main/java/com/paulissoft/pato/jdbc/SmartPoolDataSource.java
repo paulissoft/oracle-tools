@@ -102,7 +102,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             this.commonPoolDataSource = commonPoolDataSource;
             this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +  this.connectInfo.getSchema() + ")",
                                                               commonPoolDataSource.getPoolDataSourceStatistics(),
-                                                              this::isClosed);
+                                                              this::isClosed,
+                                                              this);
             this.singleSessionProxyModel = singleSessionProxyModel;
             this.useFixedUsernamePassword = useFixedUsernamePassword;
 
@@ -642,7 +643,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                           final boolean showTotals) {
         assert(pdsStatistics != null);
 
-        pdsStatistics.showStatistics(this, timeElapsed, proxyTimeElapsed, showTotals);
+        pdsStatistics.showStatistics(timeElapsed, proxyTimeElapsed, showTotals);
     }
 
     protected static int getTotalSmartPoolCount() {

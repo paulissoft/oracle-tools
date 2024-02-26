@@ -56,6 +56,16 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     
     private long leakDetectionThreshold;
 
+    @Override
+    protected boolean getSingleSessionProxyModel() {
+        return false;
+    }
+
+    @Override
+    protected boolean getUseFixedUsernamePassword() {
+        return true;
+    }
+    
     public PoolDataSourceConfigurationHikari() {
         // super();
 
@@ -72,8 +82,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
 
     @Override
     void clearCommonDataSourceConfiguration() {
-        // do not invoke the super since it clears username and it should not
-        setPassword(null);
+        super.clearCommonDataSourceConfiguration();
         this.poolName = null;
         this.maximumPoolSize = 0;
         this.minimumIdle = 0;
