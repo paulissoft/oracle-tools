@@ -343,11 +343,10 @@ public class PoolDataSourceStatistics {
     
     private void consolidate() {
         /*
-         * Show the statistics when
-         * 1) this item is closed AND
-         *    a) there are no children (level 4) OR
-         *    b) there is more than 1 child OR
-         *    c) the child has different statistics (i.e. snapshots different)
+         * Show the statistics when this item is closed AND
+         * a) there are no children (level 4) OR
+         * b) there is more than 1 child OR
+         * c) the only child has different statistics than its parent (i.e. snapshots different)
          */
         if (!this.isClosed()) {
             return;
@@ -355,7 +354,7 @@ public class PoolDataSourceStatistics {
 
         if (children == null ||
             children.size() != 1 ||
-            !(new Snapshot(this)).equals(new Snapshot(children.get(0)))) {
+            !(new Snapshot(this)).equals(new Snapshot(children.iterator().next()))) {
             showStatistics(true);
         }
 
