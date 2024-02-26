@@ -85,4 +85,22 @@ public class ConfigurationFactory {
     public PoolDataSourceConfigurationOracle getAppOcpiDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
+
+    @Bean(name = "app-domain-datasource")
+    @ConfigurationProperties(prefix = "app.domain.datasource")
+    public PoolDataSourceConfiguration getAppDomainDataSourceConfiguration() {
+        return new PoolDataSourceConfiguration();
+    }
+
+    @Bean(name = "app-domain-datasource-hikari")
+    @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
+    public PoolDataSourceConfigurationHikari getAppDomainDataSourceConfigurationHikari() {
+        return new PoolDataSourceConfigurationHikari();
+    }
+
+    @Bean(name = "app-domain-datasource-oracle")
+    @ConfigurationProperties(prefix = "app.domain.datasource.ucp")
+    public PoolDataSourceConfigurationOracle getAppDomainDataSourceConfigurationOracle() {
+        return new PoolDataSourceConfigurationOracle();
+    }
 }
