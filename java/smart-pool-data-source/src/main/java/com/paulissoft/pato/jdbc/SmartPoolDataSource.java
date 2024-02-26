@@ -64,9 +64,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     @Getter
     private boolean useFixedUsernamePassword;
 
-    @Getter(AccessLevel.PACKAGE)
-    private ConnectInfo connectInfo;
-
     // for test purposes
     static void clear() {
         cachedSmartPoolDataSources.clear();
@@ -97,39 +94,20 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             assert(poolDataSourceConfiguration.getPassword() != null);
             assert(commonPoolDataSource != null);
 
-            this.poolDataSourceConfiguration = poolDataSourceConfiguration;
-            this.connectInfo = new ConnectInfo(this.poolDataSourceConfiguration.getUsername(), this.poolDataSourceConfiguration.getPassword());
+            this.poolDataSourceConfiguration = poolDataSourceConfiguration.toBuilder().build(); // make a copy
+            this.poolDataSourceConfiguration.determineConnectInfo();
+            
             this.commonPoolDataSource = commonPoolDataSource;
-            this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +  this.connectInfo.getSchema() + ")",
+            this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +
+                                                              this.poolDataSourceConfiguration.getSchema() + ")",
                                                               commonPoolDataSource.getPoolDataSourceStatistics(),
                                                               this::isClosed,
                                                               this);
             this.singleSessionProxyModel = singleSessionProxyModel;
             this.useFixedUsernamePassword = useFixedUsernamePassword;
-
-            // Now we have to adjust the username/password of commonPoolDataSource
-            // given pool data source username/singleSessionProxyModel/useFixedUsernamePassword.
-            //
-            // Some observations:
-            // 1 - when username does NOT contain proxy info (like "bodomain", not "bc_proxy[bodomain]")
-            //     the username to connect must be connectInfo.username (e.g. "bodomain", connectInfo.proxyUsername is null)
-            // 2 - else, when singleSessionProxyModel is true,
-            //     the username to connect to MUST be connectInfo.username (e.g. "bc_proxy[bodomain]") and
-            //     never connectInfo.proxyUsername ("bc_proxy")
-            // 3 - else, when singleSessionProxyModel is false,
-            //     the username to connect to must be connectInfo.proxyUsername ("bc_proxy") and
-            //     then later on OracleConnection.openProxySession() will be invoked to connect to connectInfo.schema.
-            //
-            // So you use connectInfo.proxyUsername only if not null and when singleSessionProxyModel is false (case 3).
-            //
-            // A - when useFixedUsernamePassword is true,
-            //     every data source having the same common data source MUST use the same username/password to connect to.
-            //     Meaning that these properties MUST be part of the commonDataSourceProperties!
-
-            this.commonPoolDataSource.setUsername(this.connectInfo.getUsernameToConnectTo(singleSessionProxyModel));
-            this.commonPoolDataSource.setPassword(this.connectInfo.getPassword());
-
-            this.commonPoolDataSource.join(this, this.connectInfo.getSchema()); // must amend pool sizes
+            this.commonPoolDataSource.setUsername(this.poolDataSourceConfiguration.getUsernameToConnectTo());
+            this.commonPoolDataSource.setPassword(this.poolDataSourceConfiguration.getPassword());
+            this.commonPoolDataSource.join(this, this.poolDataSourceConfiguration.getSchema()); // must amend pool sizes
         } catch (SQLException ex) {
             throw new RuntimeException(exceptionToString(ex));
         } finally {
@@ -319,14 +297,12 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     public Connection getConnection() throws SQLException {
         checkIsOpen();
 
-        Connection conn;
-        
-        conn = getConnection(this.connectInfo.getUsernameToConnectTo(singleSessionProxyModel),
-                             this.connectInfo.getPassword(),
-                             this.connectInfo.getSchema(),
-                             this.connectInfo.getProxyUsername(),
-                             statisticsEnabled.get(),
-                             true);
+        final Connection conn = getConnection(this.poolDataSourceConfiguration.getUsernameToConnectTo(),
+                                              this.poolDataSourceConfiguration.getPassword(),
+                                              this.poolDataSourceConfiguration.getSchema(),
+                                              this.poolDataSourceConfiguration.getProxyUsername(),
+                                              statisticsEnabled.get(),
+                                              true);
 
         logger.debug("getConnection() = {}", conn);
 
@@ -336,16 +312,18 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     @Deprecated
     public Connection getConnection(String username, String password) throws SQLException {
         checkIsOpen();
-        
-        final ConnectInfo connectInfo = new ConnectInfo(username, password);
-        Connection conn;
 
-        conn = getConnection(connectInfo.getUsernameToConnectTo(singleSessionProxyModel),
-                             connectInfo.getPassword(),
-                             connectInfo.getSchema(),
-                             connectInfo.getProxyUsername(),
-                             statisticsEnabled.get(),
-                             true);
+        // make a copy
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = this.poolDataSourceConfiguration.toBuilder().build();
+
+        poolDataSourceConfiguration.determineConnectInfo(username, password);
+
+        final Connection conn = getConnection(poolDataSourceConfiguration.getUsernameToConnectTo(),
+                                              poolDataSourceConfiguration.getPassword(),
+                                              poolDataSourceConfiguration.getSchema(),
+                                              poolDataSourceConfiguration.getProxyUsername(),
+                                              statisticsEnabled.get(),
+                                              true);
 
         logger.debug("getConnection(username={}) = {}", username, conn);
 
@@ -591,8 +569,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 pdsStatistics.signalException(ex);
                 // show the message
                 logger.error("While connecting to {}{} this was occurrence # {} for this exception: ({})",
-                             connectInfo.getSchema(),
-                             ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
+                             poolDataSourceConfiguration.getSchema(),
+                             ( poolDataSourceConfiguration.getProxyUsername() != null ? " (via " + poolDataSourceConfiguration.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
                              exceptionToString(ex));
             }
@@ -609,8 +587,8 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 pdsStatistics.signalSQLException(ex);
                 // show the message
                 logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
-                             connectInfo.getSchema(),
-                             ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
+                             poolDataSourceConfiguration.getSchema(),
+                             ( poolDataSourceConfiguration.getProxyUsername() != null ? " (via " + poolDataSourceConfiguration.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
                              ex.getErrorCode(),
                              ex.getSQLState(),

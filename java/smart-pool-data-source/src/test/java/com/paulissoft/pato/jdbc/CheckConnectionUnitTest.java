@@ -115,9 +115,9 @@ public class CheckConnectionUnitTest {
             assertEquals(poolAppDomainDataSourceConfigurationHikari.getMaximumPoolSize(),
                          pds3.getMaxPoolSize());
 
-            assertEquals(pds1.getPoolName(), "HikariPool-bocsconf-boocpi");
+            assertEquals("HikariPool-bocsconf-boocpi", pds1.getPoolName());
             assertEquals(pds1.getPoolName(), pds2.getPoolName());
-            assertEquals(pds3.getPoolName(), "HikariPool-bodomain");
+            assertEquals("HikariPool-bodomain", pds3.getPoolName());
 
             // these two will be combined too
             final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolAppConfigDataSourceConfigurationOracle);
@@ -146,7 +146,7 @@ public class CheckConnectionUnitTest {
                          poolAppOcpiDataSourceConfigurationOracle.getMaxPoolSize() +
                          poolAppDomainDataSourceConfigurationOracle.getMaxPoolSize());
 
-            assertEquals(pds4.getPoolName(), "OraclePool-bocsconf-boocpi-bodomain");
+            assertEquals("OraclePool-bocsconf-boocpi-bodomain", pds4.getPoolName());
             assertEquals(pds4.getPoolName(), pds5.getPoolName());
             assertEquals(pds4.getPoolName(), pds6.getPoolName());
             

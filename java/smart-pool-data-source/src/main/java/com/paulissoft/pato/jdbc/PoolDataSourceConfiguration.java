@@ -96,6 +96,12 @@ public class PoolDataSourceConfiguration {
      * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
      * schema (bodomain) and proxy username (bc_proxy respectively empty).
      */    
+    void determineConnectInfo(final String username, final String password) {
+        this.username = username;
+        this.password = password;
+        determineConnectInfo();
+    }
+    
     void determineConnectInfo() {
         if (username == null) {
             proxyUsername = schema = null;
