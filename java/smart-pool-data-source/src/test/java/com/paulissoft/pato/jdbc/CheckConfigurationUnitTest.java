@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,6 +37,10 @@ public class CheckConfigurationUnitTest {
     private PoolDataSourceConfiguration poolDataSourceConfigurationOcpp;
 
     @Autowired
+    @Qualifier("app-domain-datasource")
+    private PoolDataSourceConfiguration poolDataSourceConfigurationDomain;
+
+    @Autowired
     @Qualifier("app-auth-datasource-hikari")
     private PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari;
 
@@ -62,7 +67,7 @@ public class CheckConfigurationUnitTest {
     
     @Test
     void testPoolDataSourceConfigurationCommonId() {
-        PoolDataSourceConfigurationId idAuth, idOcpp;
+        PoolDataSourceConfigurationId idAuth, idOcpp, idDomain;
         
         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikariCopy =
             poolDataSourceConfigurationHikari.toBuilder().build();
@@ -75,10 +80,15 @@ public class CheckConfigurationUnitTest {
         poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationOcpp);
         idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
 
+        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationDomain);
+        idDomain = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+
         log.debug("idAuth: {}", idAuth);
         log.debug("idOcpp: {}", idOcpp);
+        log.debug("idDomain: {}", idDomain);
         
         assertTrue(idAuth.equals(idOcpp));
+        assertFalse(idAuth.equals(idDomain)); // different user to logon to
 
         poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationAuth);
         idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
@@ -86,10 +96,15 @@ public class CheckConfigurationUnitTest {
         poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationOcpp);
         idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
 
+        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationDomain);
+        idDomain = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+
         log.debug("idAuth: {}", idAuth);
         log.debug("idOcpp: {}", idOcpp);
+        log.debug("idDomain: {}", idDomain);
         
         assertTrue(idAuth.equals(idOcpp));
+        assertTrue(idAuth.equals(idDomain)); // for UCP a different user to logon to is ignored
     }
     
     //=== Hikari ===

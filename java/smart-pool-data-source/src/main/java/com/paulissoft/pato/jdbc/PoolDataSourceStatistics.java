@@ -49,7 +49,7 @@ public class PoolDataSourceStatistics {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
-    private static boolean ignoreAssertionError = false;
+    private static boolean ignoreAssertionError = !logger.isDebugEnabled();
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
