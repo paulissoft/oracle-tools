@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -19,7 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public abstract class SmartPoolDataSource implements SimplePoolDataSource {
+public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSource.class);
 
@@ -45,6 +44,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     // member fields
     @Getter
+    @Delegate(types=ConnectInfo.class)
     private PoolDataSourceConfiguration poolDataSourceConfiguration = null;
         
     @Getter(AccessLevel.PACKAGE)
@@ -54,15 +54,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     private AtomicBoolean opened = new AtomicBoolean(false);
     
     private PoolDataSourceStatistics pdsStatistics = null;
-
-    // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
-    // true - do not use openProxySession() but use proxyUsername[schema]
-    // false - use openProxySession() (two sessions will appear in v$session)
-    @Getter
-    private boolean singleSessionProxyModel;
-
-    @Getter
-    private boolean useFixedUsernamePassword;
 
     // for test purposes
     static void clear() {
@@ -79,13 +70,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
      *
      * @param poolDataSourceConfiguration            The pool data source configuraion
      * @param commonPoolDataSource        The common pool data source (HikariCP or UCP).
-     * @param singleSessionProxyModel
-     * @param useFixedUsernamePassword    Only use commonPoolDataSource.getConnection(), never commonPoolDataSource.getConnection(username, password)
      */
     SmartPoolDataSource(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                        final SimplePoolDataSource commonPoolDataSource,
-                        final boolean singleSessionProxyModel,
-                        final boolean useFixedUsernamePassword) {
+                        final SimplePoolDataSource commonPoolDataSource) {
         logger.debug(">SmartPoolDataSource()");
 
         try {
@@ -103,8 +90,6 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                                               commonPoolDataSource.getPoolDataSourceStatistics(),
                                                               this::isClosed,
                                                               this);
-            this.singleSessionProxyModel = singleSessionProxyModel;
-            this.useFixedUsernamePassword = useFixedUsernamePassword;
             this.commonPoolDataSource.setUsername(this.poolDataSourceConfiguration.getUsernameToConnectTo());
             this.commonPoolDataSource.setPassword(this.poolDataSourceConfiguration.getPassword());
             this.commonPoolDataSource.join(this, this.poolDataSourceConfiguration.getSchema()); // must amend pool sizes
@@ -172,9 +157,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         try {
             final SmartPoolDataSource smartPoolDataSource = build(poolDataSourceConfiguration,
-                                                                  () -> SimplePoolDataSourceOracle.build(poolDataSourceConfiguration),
-                                                                  p -> SmartPoolDataSourceOracle.build(poolDataSourceConfiguration,
-                                                                                                       (SimplePoolDataSourceOracle) p));
+                                                                  () -> SimplePoolDataSourceOracle.build(poolDataSourceConfiguration));
 
             smartPoolDataSource.open();
 
@@ -189,9 +172,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
         try {
             final SmartPoolDataSource smartPoolDataSource = build(poolDataSourceConfiguration,
-                                                                  () -> SimplePoolDataSourceHikari.build(poolDataSourceConfiguration),
-                                                                  p -> SmartPoolDataSourceHikari.build(poolDataSourceConfiguration,
-                                                                                                       (SimplePoolDataSourceHikari) p));
+                                                                  () -> SimplePoolDataSourceHikari.build(poolDataSourceConfiguration));
 
             smartPoolDataSource.open();
 
@@ -202,8 +183,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     }        
 
     private static SmartPoolDataSource build(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                                             final Supplier<SimplePoolDataSource> newSimplePoolDataSource,
-                                             final Function<SimplePoolDataSource, SmartPoolDataSource> newSmartPoolDataSource) {
+                                             final Supplier<SimplePoolDataSource> newSimplePoolDataSource) {
         logger.debug(">build(type={}) (4)", poolDataSourceConfiguration.getType());
 
         try {
@@ -230,7 +210,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                         try {
                             logger.debug("cases 2 or 3");
                             // case 2 or 3
-                            smartPoolDataSource = newSmartPoolDataSource.apply(simplePoolDataSource);
+                            smartPoolDataSource = new SmartPoolDataSource(poolDataSourceConfiguration, simplePoolDataSource);
                             logger.debug("case 2");
                             // case 2
                         } catch (Exception ex) {
@@ -251,7 +231,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                 }
                 assert(simplePoolDataSource != null);
                 if (smartPoolDataSource == null) {
-                    smartPoolDataSource = newSmartPoolDataSource.apply(simplePoolDataSource);
+                    smartPoolDataSource = new SmartPoolDataSource(poolDataSourceConfiguration, simplePoolDataSource);
                 }
                 return smartPoolDataSource;
             });
@@ -350,7 +330,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
             Instant t2 = null;
             
-            if (useFixedUsernamePassword) {
+            if (isUseFixedUsernamePassword()) {
                 if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
                     commonPoolDataSource.setUsername(usernameToConnectTo);
                     commonPoolDataSource.setPassword(password);
@@ -363,7 +343,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             // if the current schema is not the requested schema try to open/close the proxy session
             if (!conn.getSchema().equalsIgnoreCase(schema)) {
-                assert(!singleSessionProxyModel);
+                assert(!isSingleSessionProxyModel());
 
                 t2 = Instant.now();
 

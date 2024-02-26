@@ -17,7 +17,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @SuperBuilder(toBuilder = true)
 @ConfigurationProperties
 @Slf4j
-public class PoolDataSourceConfiguration {
+public class PoolDataSourceConfiguration implements ConnectInfo {
 
     private String driverClassName;
 
@@ -42,11 +42,14 @@ public class PoolDataSourceConfiguration {
     @ToString.Exclude
     private String schema; // needed to build the PoolName
 
-    protected boolean getSingleSessionProxyModel() {
+    // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
+    // true - do not use openProxySession() but use proxyUsername[schema]
+    // false - use openProxySession() (two sessions will appear in v$session)
+    public boolean isSingleSessionProxyModel() {
         return true;
     }
 
-    protected boolean getUseFixedUsernamePassword() {
+    public boolean isUseFixedUsernamePassword() {
         return false;
     }
         
@@ -82,7 +85,7 @@ public class PoolDataSourceConfiguration {
     }
 
     void clearCommonDataSourceConfiguration() {
-        if (!getUseFixedUsernamePassword()) {
+        if (!isUseFixedUsernamePassword()) {
             this.username = null;
         }
         this.password = null;
@@ -153,7 +156,7 @@ public class PoolDataSourceConfiguration {
     String getUsernameToConnectTo() {
         assert(username != null);
         
-        return !getSingleSessionProxyModel() && proxyUsername != null ?
+        return !isSingleSessionProxyModel() && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */
             proxyUsername /* case 3 */ :
             username /* case 1 & 2 */;

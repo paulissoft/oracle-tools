@@ -15,7 +15,7 @@ class PoolDataSourceConfigurationId {
 
         if (onlyCommonDataSourceConfiguration) {
             copy.clearCommonDataSourceConfiguration();
-            if (copy.getUseFixedUsernamePassword()) {
+            if (copy.isUseFixedUsernamePassword()) {
                 // username like bc_proxy[bodomain] to bc_proxy
                 copy.determineConnectInfo();
                 if (copy.getProxyUsername() != null) {
