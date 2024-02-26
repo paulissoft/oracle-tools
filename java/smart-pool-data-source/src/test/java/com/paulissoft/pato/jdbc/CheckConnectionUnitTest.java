@@ -7,8 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.sql.SQLException;
 import java.sql.Connection;
+import java.sql.SQLException;
+import lombok.extern.slf4j.Slf4j;
+import oracle.jdbc.OracleConnection;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +20,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -127,9 +128,13 @@ public class CheckConnectionUnitTest {
                 assertEquals(2, pds1.getActiveConnections());
                 assertEquals(pds1.getTotalConnections(), pds1.getActiveConnections() + pds1.getIdleConnections());
 
+                assertEquals(conn1.unwrap(OracleConnection.class).getClass(), conn2.unwrap(Connection.class).getClass());
+
                 assertEquals(2, pds4.getActiveConnections());
                 assertEquals(pds4.getTotalConnections(), pds4.getActiveConnections() + pds4.getIdleConnections());
-                
+
+                assertEquals(conn3.unwrap(OracleConnection.class).getClass(), conn4.unwrap(Connection.class).getClass());
+
                 conn1.close();
                 conn2.close();
                 conn3.close();
