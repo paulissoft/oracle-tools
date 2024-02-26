@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import oracle.jdbc.OracleConnection;
+//import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.function.Supplier;
@@ -85,7 +85,7 @@ public class PoolDataSourceStatistics {
     
     // all physical time elapsed stuff
     
-    private Set<OracleConnection> physicalConnections = null;
+    private Set</*Oracle*/Connection> physicalConnections = null;
 
     private AtomicLong physicalConnectionCount = new AtomicLong();
 
@@ -342,10 +342,7 @@ public class PoolDataSourceStatistics {
     }    
     
     private void consolidate() {
-        final PoolDataSourceStatistics childLevelX = this;
-        final PoolDataSourceStatistics parentLevelY = this.parent;
-        
-        if (!childLevelX.isClosed()) {
+        if (!this.isClosed()) {
             return;
         }
 
@@ -353,70 +350,70 @@ public class PoolDataSourceStatistics {
             showStatistics(true);
         }
 
-        if (parentLevelY == null) {
+        if (this.parent == null) {
             return;
         }
 
         final Snapshot
-            childSnapshotBefore = new Snapshot(childLevelX),
-            parentSnapshotBefore = new Snapshot(parentLevelY);            
+            childSnapshotBefore = new Snapshot(this),
+            parentSnapshotBefore = new Snapshot(this.parent);            
 
         // connection count is the combination of physical and logical count, not a counter so do it before the others
-        updateMean(childLevelX.getConnectionCount(), childLevelX.proxyTimeElapsedAvg.get(),
-                   parentLevelY.getConnectionCount(), parentLevelY.proxyTimeElapsedAvg);
+        updateMean(this.getConnectionCount(), this.proxyTimeElapsedAvg.get(),
+                   this.parent.getConnectionCount(), this.parent.proxyTimeElapsedAvg);
         // now update parent counters
-        updateMean(childLevelX.getPhysicalConnectionCount(), childLevelX.physicalTimeElapsedAvg.get(),
-                   parentLevelY.physicalConnectionCount, parentLevelY.physicalTimeElapsedAvg);
-        updateMean(childLevelX.getLogicalConnectionCount(), childLevelX.logicalTimeElapsedAvg.get(),
-                   parentLevelY.logicalConnectionCount, parentLevelY.logicalTimeElapsedAvg);
+        updateMean(this.getPhysicalConnectionCount(), this.physicalTimeElapsedAvg.get(),
+                   this.parent.physicalConnectionCount, this.parent.physicalTimeElapsedAvg);
+        updateMean(this.getLogicalConnectionCount(), this.logicalTimeElapsedAvg.get(),
+                   this.parent.logicalConnectionCount, this.parent.logicalTimeElapsedAvg);
 
         // supplying this min and max will update parent min and max
-        updateMinMax(childLevelX.physicalTimeElapsedMin.get(),
-                     parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
-        updateMinMax(childLevelX.physicalTimeElapsedMax.get(),
-                     parentLevelY.physicalTimeElapsedMin, parentLevelY.physicalTimeElapsedMax);
+        updateMinMax(this.physicalTimeElapsedMin.get(),
+                     this.parent.physicalTimeElapsedMin, this.parent.physicalTimeElapsedMax);
+        updateMinMax(this.physicalTimeElapsedMax.get(),
+                     this.parent.physicalTimeElapsedMin, this.parent.physicalTimeElapsedMax);
         
-        updateMinMax(childLevelX.logicalTimeElapsedMin.get(),
-                     parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
-        updateMinMax(childLevelX.logicalTimeElapsedMax.get(),
-                     parentLevelY.logicalTimeElapsedMin, parentLevelY.logicalTimeElapsedMax);
+        updateMinMax(this.logicalTimeElapsedMin.get(),
+                     this.parent.logicalTimeElapsedMin, this.parent.logicalTimeElapsedMax);
+        updateMinMax(this.logicalTimeElapsedMax.get(),
+                     this.parent.logicalTimeElapsedMin, this.parent.logicalTimeElapsedMax);
 
-        updateMinMax(childLevelX.proxyTimeElapsedMin.get(),
-                     parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
-        updateMinMax(childLevelX.proxyTimeElapsedMax.get(),
-                     parentLevelY.proxyTimeElapsedMin, parentLevelY.proxyTimeElapsedMax);
+        updateMinMax(this.proxyTimeElapsedMin.get(),
+                     this.parent.proxyTimeElapsedMin, this.parent.proxyTimeElapsedMax);
+        updateMinMax(this.proxyTimeElapsedMax.get(),
+                     this.parent.proxyTimeElapsedMin, this.parent.proxyTimeElapsedMax);
             
-        parentLevelY.proxyLogicalConnectionCount.addAndGet(childLevelX.proxyLogicalConnectionCount.get());
-        parentLevelY.proxyOpenSessionCount.addAndGet(childLevelX.proxyOpenSessionCount.get());
-        parentLevelY.proxyCloseSessionCount.addAndGet(childLevelX.proxyCloseSessionCount.get());
+        this.parent.proxyLogicalConnectionCount.addAndGet(this.proxyLogicalConnectionCount.get());
+        this.parent.proxyOpenSessionCount.addAndGet(this.proxyOpenSessionCount.get());
+        this.parent.proxyCloseSessionCount.addAndGet(this.proxyCloseSessionCount.get());
 
-        if (childLevelX.level <= 3) {
-            updateMean(childLevelX.getConnectionCount(), childLevelX.activeConnectionsAvg.get(),
-                       parentLevelY.getConnectionCount(), parentLevelY.activeConnectionsAvg);
-            updateMean(childLevelX.getConnectionCount(), childLevelX.idleConnectionsAvg.get(),
-                       parentLevelY.getConnectionCount(), parentLevelY.idleConnectionsAvg);
-            updateMean(childLevelX.getConnectionCount(), childLevelX.totalConnectionsAvg.get(),
-                       parentLevelY.getConnectionCount(), parentLevelY.totalConnectionsAvg);
+        if (this.level <= 3) {
+            updateMean(this.getConnectionCount(), this.activeConnectionsAvg.get(),
+                       this.parent.getConnectionCount(), this.parent.activeConnectionsAvg);
+            updateMean(this.getConnectionCount(), this.idleConnectionsAvg.get(),
+                       this.parent.getConnectionCount(), this.parent.idleConnectionsAvg);
+            updateMean(this.getConnectionCount(), this.totalConnectionsAvg.get(),
+                       this.parent.getConnectionCount(), this.parent.totalConnectionsAvg);
 
-            updateMinMax(childLevelX.activeConnectionsMin.get(),
-                         parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
-            updateMinMax(childLevelX.activeConnectionsMax.get(),
-                         parentLevelY.activeConnectionsMin, parentLevelY.activeConnectionsMax);
-            updateMinMax(childLevelX.idleConnectionsMin.get(),
-                         parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
-            updateMinMax(childLevelX.idleConnectionsMax.get(),
-                         parentLevelY.idleConnectionsMin, parentLevelY.idleConnectionsMax);
-            updateMinMax(childLevelX.totalConnectionsMin.get(),
-                         parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
-            updateMinMax(childLevelX.totalConnectionsMax.get(),
-                         parentLevelY.totalConnectionsMin, parentLevelY.totalConnectionsMax);
+            updateMinMax(this.activeConnectionsMin.get(),
+                         this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
+            updateMinMax(this.activeConnectionsMax.get(),
+                         this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
+            updateMinMax(this.idleConnectionsMin.get(),
+                         this.parent.idleConnectionsMin, this.parent.idleConnectionsMax);
+            updateMinMax(this.idleConnectionsMax.get(),
+                         this.parent.idleConnectionsMin, this.parent.idleConnectionsMax);
+            updateMinMax(this.totalConnectionsMin.get(),
+                         this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
+            updateMinMax(this.totalConnectionsMax.get(),
+                         this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
         }
 
-        childLevelX.reset();
+        this.reset();
 
         final Snapshot
-            childSnapshotAfter = new Snapshot(childLevelX),
-            parentSnapshotAfter = new Snapshot(parentLevelY);
+            childSnapshotAfter = new Snapshot(this),
+            parentSnapshotAfter = new Snapshot(this.parent);
 
         checkBeforeAndAfter(childSnapshotBefore,
                             parentSnapshotBefore,
@@ -424,7 +421,7 @@ public class PoolDataSourceStatistics {
                             parentSnapshotAfter);
 
         // recursively
-        parentLevelY.consolidate();
+        this.parent.consolidate();
     }
 
     private void reset() {
@@ -447,7 +444,7 @@ public class PoolDataSourceStatistics {
     }
 
     private boolean add(final Connection conn) throws SQLException {
-        return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(OracleConnection.class)) );
+        return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(/*Oracle*/Connection.class)) );
     }
     
     long signalSQLException(final SQLException ex) {
