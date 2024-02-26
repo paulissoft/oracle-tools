@@ -397,11 +397,11 @@ public class PoolDataSourceStatistics {
 
         if (this.level <= 3) {
             updateMean(this.getConnectionCount(), this.activeConnectionsAvg.get(),
-                       this.parent.getConnectionCount(), this.parent.activeConnectionsAvg);
+                       0, this.parent.activeConnectionsAvg);
             updateMean(this.getConnectionCount(), this.idleConnectionsAvg.get(),
-                       this.parent.getConnectionCount(), this.parent.idleConnectionsAvg);
+                       0, this.parent.idleConnectionsAvg);
             updateMean(this.getConnectionCount(), this.totalConnectionsAvg.get(),
-                       this.parent.getConnectionCount(), this.parent.totalConnectionsAvg);
+                       0, this.parent.totalConnectionsAvg);
 
             updateMinMax(this.activeConnectionsMin.get(),
                          this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
