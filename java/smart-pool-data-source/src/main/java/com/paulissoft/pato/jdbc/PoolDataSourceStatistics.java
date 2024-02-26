@@ -49,7 +49,7 @@ public class PoolDataSourceStatistics {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
-    private static boolean checkBeforeAfter = false;
+    private static boolean checkBeforeAfter = true;
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
@@ -336,20 +336,7 @@ public class PoolDataSourceStatistics {
 
         logger.info(">close({})", getDescription());
 
-        final Snapshot
-            childSnapshotBefore = new Snapshot(this),
-            parentSnapshotBefore = new Snapshot(this.parent);
-            
         consolidate();
-
-        final Snapshot
-            childSnapshotAfter = new Snapshot(this),
-            parentSnapshotAfter = new Snapshot(this.parent);
-
-        checkBeforeAndAfter(childSnapshotBefore,
-                            parentSnapshotBefore,
-                            childSnapshotAfter,
-                            parentSnapshotAfter);
 
         logger.info("<close()");
     }    
@@ -369,6 +356,10 @@ public class PoolDataSourceStatistics {
         if (parentLevelY == null) {
             return;
         }
+
+        final Snapshot
+            childSnapshotBefore = new Snapshot(childLevelX),
+            parentSnapshotBefore = new Snapshot(parentLevelY);            
 
         // connection count is the combination of physical and logical count, not a counter so do it before the others
         updateMean(childLevelX.getConnectionCount(), childLevelX.proxyTimeElapsedAvg.get(),
@@ -422,6 +413,15 @@ public class PoolDataSourceStatistics {
         }
 
         childLevelX.reset();
+
+        final Snapshot
+            childSnapshotAfter = new Snapshot(childLevelX),
+            parentSnapshotAfter = new Snapshot(parentLevelY);
+
+        checkBeforeAndAfter(childSnapshotBefore,
+                            parentSnapshotBefore,
+                            childSnapshotAfter,
+                            parentSnapshotAfter);
 
         // recursively
         parentLevelY.consolidate();
@@ -527,15 +527,6 @@ public class PoolDataSourceStatistics {
                 max.set(value);
             }
         }
-    }
-
-    private boolean countersEqual(final PoolDataSourceStatistics compareTo) {
-        return
-            this.getPhysicalConnectionCount() == compareTo.getPhysicalConnectionCount() &&
-            this.getLogicalConnectionCount() == compareTo.getLogicalConnectionCount() &&
-            this.getProxyLogicalConnectionCount() == compareTo.getProxyLogicalConnectionCount() &&
-            this.getProxyOpenSessionCount() == compareTo.getProxyOpenSessionCount() &&
-            this.getProxyCloseSessionCount() == compareTo.getProxyCloseSessionCount();
     }
 
     public void showStatistics(final boolean showTotals) {
