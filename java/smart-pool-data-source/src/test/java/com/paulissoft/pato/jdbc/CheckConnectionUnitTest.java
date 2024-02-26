@@ -101,19 +101,19 @@ public class CheckConnectionUnitTest {
             assertTrue(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
             assertFalse(pds1.getCommonPoolDataSource() == pds3.getCommonPoolDataSource());
 
-            assertEquals(pds1.getMinPoolSize(),
-                         poolAppConfigDataSourceConfigurationHikari.getMinimumIdle() +
-                         poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle());
+            assertEquals(poolAppConfigDataSourceConfigurationHikari.getMinimumIdle() +
+                         poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle(),
+                         pds1.getMinPoolSize());
 
-            assertEquals(pds1.getMaxPoolSize(),
-                         poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize() +
-                         poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize());
+            assertEquals(poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize() +
+                         poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize(),
+                         pds1.getMaxPoolSize());
 
-            assertEquals(pds3.getMinPoolSize(),
-                         poolAppDomainDataSourceConfigurationHikari.getMinimumIdle());
+            assertEquals(poolAppDomainDataSourceConfigurationHikari.getMinimumIdle(),
+                         pds3.getMinPoolSize());
 
-            assertEquals(pds3.getMaxPoolSize(),
-                         poolAppDomainDataSourceConfigurationHikari.getMaximumPoolSize());
+            assertEquals(poolAppDomainDataSourceConfigurationHikari.getMaximumPoolSize(),
+                         pds3.getMaxPoolSize());
 
             assertEquals(pds1.getPoolName(), "HikariPool-bocsconf-boocpi");
             assertEquals(pds1.getPoolName(), pds2.getPoolName());
@@ -211,7 +211,7 @@ public class CheckConnectionUnitTest {
 
             // close pds3
             assertFalse(pds3.isClosed());
-            pds2.close();
+            pds3.close();
             assertTrue(pds3.isClosed());
             assertTrue(pds3.getCommonPoolDataSource().isClosed()); // one user: bodomain
 

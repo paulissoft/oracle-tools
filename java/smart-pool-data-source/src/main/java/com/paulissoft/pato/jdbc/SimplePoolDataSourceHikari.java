@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Enumeration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.DirectFieldAccessor;
 
@@ -113,8 +112,17 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
         final PoolDataSourceConfigurationId thisCommonId =
             new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
-        final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
-
+        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
+                final PoolDataSourceConfigurationId cachedCommonId =
+                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
+            
+                if (cachedCommonId.equals(thisCommonId)) {
+                    return true;
+                }
+                return null;
+            });
+        final boolean firstPds = found == null;
+        
         log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);
 
         try {
@@ -241,13 +249,20 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public boolean isClosed() {
-        // when there is at least one attached pool not closed: return false
-        for (final Enumeration<SimplePoolDataSource> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
-            if (!e.nextElement().isClosed()) {
-                return false;
-            }
-        }
-        return true;
+        // when there is at least one attached pool (samen commonId) not closed: return false
+        final PoolDataSourceConfigurationId thisCommonId =
+            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
+        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
+                final PoolDataSourceConfigurationId cachedCommonId =
+                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
+            
+                if (cachedCommonId.equals(thisCommonId) && !k.isClosed()) {
+                    return true;
+                }
+                return null;
+            });
+
+        return found == null; // all closed
     }
 
     @Override

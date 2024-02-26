@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Enumeration;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 
@@ -109,7 +108,16 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
         final PoolDataSourceConfigurationId thisCommonId =
             new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
-        final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
+        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
+                final PoolDataSourceConfigurationId cachedCommonId =
+                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
+            
+                if (cachedCommonId.equals(thisCommonId)) {
+                    return true;
+                }
+                return null;
+            });
+        final boolean firstPds = found == null;
 
         log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);
 
@@ -260,13 +268,20 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public boolean isClosed() {
-        // when there is at least one attached pool not closed: return false
-        for (final Enumeration<SimplePoolDataSource> e = cachedPoolDataSourceConfigurations.keys(); e.hasMoreElements();) {
-            if (!e.nextElement().isClosed()) {
-                return false;
-            }
-        }
-        return true;
+        // when there is at least one attached pool (samen commonId) not closed: return false
+        final PoolDataSourceConfigurationId thisCommonId =
+            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
+        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
+                final PoolDataSourceConfigurationId cachedCommonId =
+                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
+            
+                if (cachedCommonId.equals(thisCommonId) && !k.isClosed()) {
+                    return true;
+                }
+                return null;
+            });
+
+        return found == null; // all closed
     }
 
     @Override
