@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,6 +28,14 @@ public class CheckConfigurationUnitTest {
     private PoolDataSourceConfiguration poolDataSourceConfiguration;
 
     @Autowired
+    @Qualifier("app-auth-datasource")
+    private PoolDataSourceConfiguration poolDataSourceConfigurationAuth;
+
+    @Autowired
+    @Qualifier("app-ocpp-datasource")
+    private PoolDataSourceConfiguration poolDataSourceConfigurationOcpp;
+
+    @Autowired
     @Qualifier("app-auth-datasource-hikari")
     private PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari;
 
@@ -49,6 +58,38 @@ public class CheckConfigurationUnitTest {
         assertEquals("PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, " +
                      "username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari)",
                      poolDataSourceConfiguration.toString());
+    }
+    
+    @Test
+    void testPoolDataSourceConfigurationCommonId() {
+        PoolDataSourceConfigurationId idAuth, idOcpp;
+        
+        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikariCopy =
+            poolDataSourceConfigurationHikari.toBuilder().build();
+        final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracleCopy =
+            poolDataSourceConfigurationOracle.toBuilder().build();
+
+        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationAuth);
+        idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+
+        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationOcpp);
+        idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+
+        log.debug("idAuth: {}", idAuth);
+        log.debug("idOcpp: {}", idOcpp);
+        
+        assertTrue(idAuth.equals(idOcpp));
+
+        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationAuth);
+        idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+        
+        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationOcpp);
+        idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+
+        log.debug("idAuth: {}", idAuth);
+        log.debug("idOcpp: {}", idOcpp);
+        
+        assertTrue(idAuth.equals(idOcpp));
     }
     
     //=== Hikari ===
