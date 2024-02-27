@@ -21,11 +21,11 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
             }
             setPoolName(getPoolName() + "-" + schema);
         } catch (SQLException ex) {
-            throw new RuntimeException(exceptionToString(ex));
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
 
-    default public String exceptionToString(final Exception ex) {
+    public static String exceptionToString(final Exception ex) {
         return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
     }
 

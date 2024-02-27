@@ -33,7 +33,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         cachedPoolDataSourceConfigurations.clear();
     }
 
-    public SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
+    private SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
         // super();
 
         int nr = 0;
@@ -64,7 +64,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                     throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
-                log.warn("nr: {}; exception: {}", nr, exceptionToString(ex));
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
             }
         } while (++nr <= maxNr);
     }
@@ -147,52 +147,54 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     private void updatePoolSizes(final PoolDataSourceConfigurationOracle pds) throws SQLException {
         log.info(">updatePoolSizes()");
 
-        log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                 getInitialPoolSize(),
-                 getMinPoolSize(),
-                 getMaxPoolSize());
+        try {
+            log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                     getInitialPoolSize(),
+                     getMinPoolSize(),
+                     getMaxPoolSize());
 
-        int oldSize, newSize;
+            int oldSize, newSize;
 
-        newSize = pds.getInitialPoolSize();
-        oldSize = getInitialPoolSize();
+            newSize = pds.getInitialPoolSize();
+            oldSize = getInitialPoolSize();
 
-        log.info("initial pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
+            log.info("initial pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
 
-        if (newSize >= 0) {
-            setInitialPoolSize(newSize + Integer.max(oldSize, 0));
-        }
+            if (newSize >= 0) {
+                setInitialPoolSize(newSize + Integer.max(oldSize, 0));
+            }
 
-        newSize = pds.getMinPoolSize();
-        oldSize = getMinPoolSize();
+            newSize = pds.getMinPoolSize();
+            oldSize = getMinPoolSize();
 
-        log.info("minimum pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
+            log.info("minimum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
 
-        if (newSize >= 0) {                
-            setMinPoolSize(newSize + Integer.max(oldSize, 0));
-        }
+            if (newSize >= 0) {                
+                setMinPoolSize(newSize + Integer.max(oldSize, 0));
+            }
                 
-        newSize = pds.getMaxPoolSize();
-        oldSize = getMaxPoolSize();
+            newSize = pds.getMaxPoolSize();
+            oldSize = getMaxPoolSize();
 
-        log.info("maximum pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
+            log.info("maximum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
 
-        if (newSize >= 0) {
-            setMaxPoolSize(newSize + Integer.max(oldSize, 0));
+            if (newSize >= 0) {
+                setMaxPoolSize(newSize + Integer.max(oldSize, 0));
+            }
+        } finally {
+            log.info("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                     getInitialPoolSize(),
+                     getMinPoolSize(),
+                     getMaxPoolSize());
+
+            log.info("<updatePoolSizes()");
         }
-                
-        log.info("pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                 getInitialPoolSize(),
-                 getMinPoolSize(),
-                 getMaxPoolSize());
-
-        log.info("<updatePoolSizes()");
     }
     
     public String getPoolName() {

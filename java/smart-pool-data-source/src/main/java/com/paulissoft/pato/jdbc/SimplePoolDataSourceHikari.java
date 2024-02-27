@@ -36,7 +36,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
     
     // constructor
-    public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
+    private SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
         // super();
         
         int nr = 0;
@@ -68,7 +68,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                     throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
-                log.warn("nr: {}; exception: {}", nr, exceptionToString(ex));
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
             }
         } while (++nr <= maxNr);
     }
@@ -147,42 +147,45 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
         updatePoolSizes((PoolDataSourceConfigurationHikari) pds.getPoolDataSourceConfiguration());
     }
-    
+
     private void updatePoolSizes(final PoolDataSourceConfigurationHikari pds) throws SQLException {
         log.info(">updatePoolSizes()");
-        log.info("pool sizes before: minimum/maximum: {}/{}",
-                 getMinimumIdle(),
-                 getMaximumPoolSize());
 
-        int oldSize, newSize;
+        try {
+            log.info("pool sizes before: minimum/maximum: {}/{}",
+                     getMinimumIdle(),
+                     getMaximumPoolSize());
 
-        newSize = pds.getMinimumIdle();
-        oldSize = getMinimumIdle();
+            int oldSize, newSize;
 
-        log.info("minimum pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
+            newSize = pds.getMinimumIdle();
+            oldSize = getMinimumIdle();
 
-        if (newSize >= 0) {                
-            setMinimumIdle(newSize + Integer.max(oldSize, 0));
-        }
+            log.info("minimum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+            if (newSize >= 0) {                
+                setMinimumIdle(newSize + Integer.max(oldSize, 0));
+            }
                 
-        newSize = pds.getMaximumPoolSize();
-        oldSize = getMaximumPoolSize();
+            newSize = pds.getMaximumPoolSize();
+            oldSize = getMaximumPoolSize();
 
-        log.info("maximum pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
+            log.info("maximum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
 
-        if (newSize >= 0) {
-            setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
-        }
-                
-        log.info("pool sizes after: minimum/maximum: {}/{}",
-                 getMinimumIdle(),
-                 getMaximumPoolSize());
+            if (newSize >= 0) {
+                setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
+            }
+        } finally {
+            log.info("pool sizes after: minimum/maximum: {}/{}",
+                     getMinimumIdle(),
+                     getMaximumPoolSize());
             
-        log.info("<updatePoolSizes()");
+            log.info("<updatePoolSizes()");
+        }
     }
 
     /*TBD*/

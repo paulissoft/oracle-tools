@@ -16,6 +16,8 @@ import lombok.experimental.Delegate;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.zaxxer.hikari.HikariDataSource;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
@@ -71,8 +73,8 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
      * @param poolDataSourceConfiguration            The pool data source configuraion
      * @param commonPoolDataSource        The common pool data source (HikariCP or UCP).
      */
-    SmartPoolDataSource(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                        final SimplePoolDataSource commonPoolDataSource) {
+    private SmartPoolDataSource(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+                                final SimplePoolDataSource commonPoolDataSource) {
         logger.debug(">SmartPoolDataSource()");
 
         try {
@@ -94,7 +96,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
             this.commonPoolDataSource.setPassword(this.poolDataSourceConfiguration.getPassword());
             this.commonPoolDataSource.join(this, this.poolDataSourceConfiguration.getSchema()); // must amend pool sizes
         } catch (SQLException ex) {
-            throw new RuntimeException(exceptionToString(ex));
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
             logger.debug("<SmartPoolDataSource()");
         }
@@ -107,7 +109,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
         logger.debug(">build(type={}) (1)", cls);
 
         try {
-            if (cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls)) {
+            if (cls != null && PoolDataSourceImpl.class.isAssignableFrom(cls)) {
                 for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
                     if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationOracle) {
                         // make a copy
@@ -118,7 +120,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                         return build(poolDataSourceConfigurationOracle);
                     }
                 }
-            } else if (cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls)) {
+            } else if (cls == null || HikariDataSource.class.isAssignableFrom(cls)) {
                 for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
                     if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationHikari) {
                         // make a copy
@@ -214,6 +216,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                             logger.debug("case 2");
                             // case 2
                         } catch (Exception ex) {
+                            logger.error(SimplePoolDataSource.exceptionToString(ex), ex);
                             logger.debug("case 3");
                             // case 3
                             simplePoolDataSource = null;
@@ -509,7 +512,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
             pdsStatistics.update(conn, timeElapsed);
             pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
         } catch (Exception e) {
-            logger.error(exceptionToString(e));
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
 
         if (showStatistics) {
@@ -533,7 +536,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                                  proxyCloseSessionCount);
             pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
         } catch (Exception e) {
-            logger.error(exceptionToString(e));
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
 
         if (showStatistics) {
@@ -552,10 +555,10 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                              poolDataSourceConfiguration.getSchema(),
                              ( poolDataSourceConfiguration.getProxyUsername() != null ? " (via " + poolDataSourceConfiguration.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
-                             exceptionToString(ex));
+                             SimplePoolDataSource.exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error(exceptionToString(e));
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
     }
 
@@ -572,10 +575,10 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                              nrOccurrences,
                              ex.getErrorCode(),
                              ex.getSQLState(),
-                             exceptionToString(ex));
+                             SimplePoolDataSource.exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error(exceptionToString(e));
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
     }
 

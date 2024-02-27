@@ -1,5 +1,25 @@
 # Smart Pool Data Source library
 
+## Table of contents
+
+1. [Introduction](#introduction)
+   1. [Business case](#business-case)
+   2. [How can we combine pools?](#how-can-we-combine-pools)
+      1. [Get a default connection](#get-a-default-connection)
+      2. [Get a connection with supplied credentials](#get-a-connection-with-supplied-credentials)
+      3. [How can Oracle Universal Connection Pool (UCP) combine pools?](#how-can-oracle-universal-connection-pool-ucp-combine-pools)
+      4. [How can we let Hikari combine pools?](#how-can-we-let-hikari-combine-pools)
+   3. [What pool statistics are needed?](#what-pool-statistics-are-needed)
+   4. [What are the advantages of this library?](#what-are-the-advantages-of-this-library)
+2. [High Level Design](#high-level-design)
+   1. [Data source properties](#data-source-properties)
+   2. [Hikari pool data source properties](#hikari-pool-data-source-properties)
+   3. [Oracle pool data source properties](#oracle-pool-data-source-properties)
+   4. [Join multiple pool data sources](#join-multiple-pool-data-sources)
+      1. [Determination of the data source type](#determination-of-the-data-source-type)
+      2. [Build a smart pool data source](#build-a-smart-pool-data-source)
+3. [Conclusion](#conclusion)
+
 ## Introduction
 
 Here I will describe the JDBC Smart Pool Data Source library, a library designed to reduce the number of pools and thus connections as well as a solution to keep the pool open as long as possible making application recovery faster.
@@ -15,6 +35,7 @@ Blue Current uses a Java Spring Boot application called Motown from [Infuse](htt
 So how can we decrease the number of connections and thus costs?
 1. by reducing the maximum number of physical connections per pool, however that has already been tried and the number of SQL errors increased by doing this. And it is really a trial and error process, something you do not like to do too long with a mission critical application.
 2. by combining pools and thus reduce the number of pools: since pools will usually have idle connections, the combined pool will have more of them so the maximum pool size can be reduced.
+3. by connecting to one schema and give that schema all the rights to query and manipulate objects from the other schemas including DDL: from a security perspective not the best option.
 
 So the second option, combining pools, seems the best option.
 
@@ -24,7 +45,7 @@ But how can we do that and maybe more important, how can we tune the combined po
 
 First from [javax.sql.DataSource](https://docs.oracle.com/javase/8/docs/api/javax/sql/DataSource.html):
 
-#### Get a default connection 
+#### Get a default connection
 
 ```
 Connection getConnection() throws SQLException
@@ -229,3 +250,9 @@ The first question: is this id already cached (as SmartPoolDataSource)?
 4. else, create a SimplePoolDataSource and store it with the common id
 
 After steps 3 and 4 you just need to build a SmartPoolDataSource from the last stored SimplePoolDataSource.
+
+## Conclusion
+
+The Smart Pool Data Source library allows you to combine pool data sources in Java JDBC applications like Spring Boot and thus reduce the number of connections. In an Oracle Cloud environment this may reduce costs also since they are related to the number of CPUs and each CPU has a maximum of connections.
+
+Another advantage of this library is that it does not destroy the physical pool data source when the logical pool data sources are closed: they are just virtual and use the physical to do the actual work.

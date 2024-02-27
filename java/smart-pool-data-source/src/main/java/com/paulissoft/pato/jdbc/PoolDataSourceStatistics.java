@@ -366,14 +366,39 @@ public class PoolDataSourceStatistics {
             childSnapshotBefore = new Snapshot(this),
             parentSnapshotBefore = new Snapshot(this.parent);            
 
+        // update the parent before the child since updateMean1 is used,
+        // i.e. those must be done before updateMean2
+        if (this.level <= 3) {
+            updateMean1(this.getConnectionCount(), this.activeConnectionsAvg.get(),
+                        this.parent.getConnectionCount(), this.parent.activeConnectionsAvg);
+            updateMean1(this.getConnectionCount(), this.idleConnectionsAvg.get(),
+                        this.parent.getConnectionCount(), this.parent.idleConnectionsAvg);
+            updateMean1(this.getConnectionCount(), this.totalConnectionsAvg.get(),
+                        this.parent.getConnectionCount(), this.parent.totalConnectionsAvg);
+
+            updateMinMax(this.activeConnectionsMin.get(),
+                         this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
+            updateMinMax(this.activeConnectionsMax.get(),
+                         this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
+            updateMinMax(this.idleConnectionsMin.get(),
+                         this.parent.idleConnectionsMin, this.parent.idleConnectionsMax);
+            updateMinMax(this.idleConnectionsMax.get(),
+                         this.parent.idleConnectionsMin, this.parent.idleConnectionsMax);
+            updateMinMax(this.totalConnectionsMin.get(),
+                         this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
+            updateMinMax(this.totalConnectionsMax.get(),
+                         this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
+        }
+
         // connection count is the combination of physical and logical count, not a counter so do it before the others
-        updateMean(this.getConnectionCount(), this.proxyTimeElapsedAvg.get(),
-                   this.parent.getConnectionCount(), this.parent.proxyTimeElapsedAvg);
+        updateMean1(this.getConnectionCount(), this.proxyTimeElapsedAvg.get(),
+                    this.parent.getConnectionCount(), this.parent.proxyTimeElapsedAvg);
+
         // now update parent counters
-        updateMean(this.getPhysicalConnectionCount(), this.physicalTimeElapsedAvg.get(),
-                   this.parent.physicalConnectionCount, this.parent.physicalTimeElapsedAvg);
-        updateMean(this.getLogicalConnectionCount(), this.logicalTimeElapsedAvg.get(),
-                   this.parent.logicalConnectionCount, this.parent.logicalTimeElapsedAvg);
+        updateMean2(this.getPhysicalConnectionCount(), this.physicalTimeElapsedAvg.get(),
+                    this.parent.physicalConnectionCount, this.parent.physicalTimeElapsedAvg);
+        updateMean2(this.getLogicalConnectionCount(), this.logicalTimeElapsedAvg.get(),
+                    this.parent.logicalConnectionCount, this.parent.logicalTimeElapsedAvg);
 
         // supplying this min and max will update parent min and max
         updateMinMax(this.physicalTimeElapsedMin.get(),
@@ -394,28 +419,6 @@ public class PoolDataSourceStatistics {
         this.parent.proxyLogicalConnectionCount.addAndGet(this.proxyLogicalConnectionCount.get());
         this.parent.proxyOpenSessionCount.addAndGet(this.proxyOpenSessionCount.get());
         this.parent.proxyCloseSessionCount.addAndGet(this.proxyCloseSessionCount.get());
-
-        if (this.level <= 3) {
-            updateMean(this.getConnectionCount(), this.activeConnectionsAvg.get(),
-                       0, this.parent.activeConnectionsAvg);
-            updateMean(this.getConnectionCount(), this.idleConnectionsAvg.get(),
-                       0, this.parent.idleConnectionsAvg);
-            updateMean(this.getConnectionCount(), this.totalConnectionsAvg.get(),
-                       0, this.parent.totalConnectionsAvg);
-
-            updateMinMax(this.activeConnectionsMin.get(),
-                         this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
-            updateMinMax(this.activeConnectionsMax.get(),
-                         this.parent.activeConnectionsMin, this.parent.activeConnectionsMax);
-            updateMinMax(this.idleConnectionsMin.get(),
-                         this.parent.idleConnectionsMin, this.parent.idleConnectionsMax);
-            updateMinMax(this.idleConnectionsMax.get(),
-                         this.parent.idleConnectionsMin, this.parent.idleConnectionsMax);
-            updateMinMax(this.totalConnectionsMin.get(),
-                         this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
-            updateMinMax(this.totalConnectionsMax.get(),
-                         this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
-        }
 
         this.reset();
 
@@ -509,20 +512,10 @@ public class PoolDataSourceStatistics {
         }
     }
 
-    private static void updateMean(final long count1,
-                                   final BigDecimal avg1,
-                                   final AtomicLong count2,
-                                   final AtomicBigDecimal avg2) {
-        updateMean(count1, avg1, count2.get(), avg2);
-        if (count1 > 0L) {
-            count2.addAndGet(count1);
-        }
-    }
-
-    private static void updateMean(final long count1,
-                                   final BigDecimal avg1,
-                                   final long count2,
-                                   final AtomicBigDecimal avg2) {
+    private static void updateMean1(final long count1,
+                                    final BigDecimal avg1,
+                                    final long count2,
+                                    final AtomicBigDecimal avg2) {
         if (count1 < 0L || count2 < 0L || count1 + count2 <= 0L) {
             return;
         }
@@ -534,6 +527,16 @@ public class PoolDataSourceStatistics {
         avg2.setAndGet(value1.add(value2).divide(count,
                                                  ROUND_SCALE,
                                                  RoundingMode.HALF_UP));
+    }
+
+    private static void updateMean2(final long count1,
+                                    final BigDecimal avg1,
+                                    final AtomicLong count2,
+                                    final AtomicBigDecimal avg2) {
+        updateMean1(count1, avg1, count2.get(), avg2);
+        if (count1 > 0L) {
+            count2.addAndGet(count1);
+        }
     }
 
     private static void updateMinMax(final long value, final AtomicLong min, final AtomicLong max) {

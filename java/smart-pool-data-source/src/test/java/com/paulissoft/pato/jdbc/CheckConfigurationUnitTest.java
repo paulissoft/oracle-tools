@@ -152,7 +152,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testDefaultSimplePoolDataSourceHikari() {
-        final SimplePoolDataSourceHikari pds = new SimplePoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
+        final SimplePoolDataSourceHikari pds = SimplePoolDataSourceHikari.build(new PoolDataSourceConfigurationHikari());
 
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=null, username=null, password=null, " +
@@ -250,7 +250,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testDefaultSimplePoolDataSourceOracle() throws SQLException {
-        final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
+        final SimplePoolDataSourceOracle pds = SimplePoolDataSourceOracle.build(new PoolDataSourceConfigurationOracle());
             
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=null, username=null, password=null, " +
