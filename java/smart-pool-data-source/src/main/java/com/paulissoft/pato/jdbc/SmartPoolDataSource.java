@@ -1,410 +1,291 @@
 package com.paulissoft.pato.jdbc;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import lombok.experimental.Delegate;
-import lombok.Getter;
-import lombok.Setter;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.experimental.Delegate;
 import oracle.jdbc.OracleConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.zaxxer.hikari.HikariDataSource;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
-public abstract class SmartPoolDataSource implements SimplePoolDataSource {
-
-    public static final String INDENT_PREFIX = "* ";
-
-    private static final String GRAND_TOTAL = "grand total";
-
-    private static final String TOTAL = "total";
+public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSource.class);
 
-    private static Method loggerInfo;
+    // every constructed item shows up here
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationId, SmartPoolDataSource> cachedSmartPoolDataSources = new ConcurrentHashMap<>();
 
-    private static Method loggerDebug;
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationId, SimplePoolDataSource> cachedSimplePoolDataSources = new ConcurrentHashMap<>();
 
-    private static final String commonDataSourceStatisticsGrandTotal = null;
-    // PoolDataSourceConfiguration.builder().username(GRAND_TOTAL).build().toString();
-
-    private static final ConcurrentHashMap<String, PoolDataSourceStatistics> allDataSourceStatistics = new ConcurrentHashMap<>();
-
-    private static final ConcurrentHashMap<String, SimplePoolDataSource> poolDataSources = new ConcurrentHashMap<>();
-
-    private static final ConcurrentHashMap<String, AtomicInteger> currentPoolCount = new ConcurrentHashMap<>();    
+    // for all smart pool data sources the same
+    private static AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
 
     static {
         logger.info("Initializing {}", SmartPoolDataSource.class.toString());
-        
-        try {
-            loggerInfo = logger.getClass().getMethod("info", String.class, Object[].class);
-        } catch (Exception e) {
-            logger.error("static exception: {}", e.getMessage());
-            loggerInfo = null;
-        }
-
-        try {
-            loggerDebug = logger.getClass().getMethod("debug", String.class, Object[].class);
-        } catch (Exception e) {
-            logger.error("static exception: {}", e.getMessage());
-            loggerDebug = null;
-        }
     }
 
-    private interface Overrides {
+    private interface ToOverride {
         public Connection getConnection() throws SQLException;
 
         public Connection getConnection(String username, String password) throws SQLException;
+
+        public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
     }
-    
-    @Delegate(excludes=Overrides.class)
+
+    // member fields
+    @Getter
+    @Delegate(types=ConnectInfo.class)
+    private PoolDataSourceConfiguration poolDataSourceConfiguration = null;
+        
     @Getter(AccessLevel.PACKAGE)
+    @Delegate(excludes=ToOverride.class)
     private SimplePoolDataSource commonPoolDataSource = null;
 
-    @Getter(AccessLevel.PACKAGE)
-    private SimplePoolDataSource pds = null; // may be equal to commonPoolDataSource
+    private AtomicBoolean opened = new AtomicBoolean(false);
+    
+    private PoolDataSourceStatistics pdsStatistics = null;
 
-    @Getter
-    @Setter
-    private boolean statisticsEnabled = false;
-
-    // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
-    // true - do not use openProxySession() but use proxyUsername[schema]
-    // false - use openProxySession() (two sessions will appear in v$session)
-    @Getter
-    private boolean singleSessionProxyModel;
-
-    @Getter
-    private boolean useFixedUsernamePassword;
-
-    private ConnectInfo connectInfo;
-
-    // Same common properties for a pool data source in constructor: same commonPoolDataSource
-    @Getter(AccessLevel.PACKAGE)
-    private String commonDataSourceProperties;
-
-    // Same as commonDataSourceProperties, i.e. total per common pool data source.
-    @Getter(AccessLevel.PACKAGE)
-    private String commonDataSourceStatisticsTotal = null;
-
-    // Same as commonDataSourceProperties including current schema and password,
-    // only for connection info like elapsed time, open/close sessions.
-    @Getter(AccessLevel.PACKAGE)
-    private String commonDataSourceStatistics;
+    // for test purposes
+    static void clear() {
+        cachedSmartPoolDataSources.clear();
+        cachedSimplePoolDataSources.clear();
+        SimplePoolDataSourceHikari.clear();
+        SimplePoolDataSourceOracle.clear();
+    }
 
     /**
-     * Initialize a pool data source.
+     * Initialize a smart pool data source.
      *
      * The one and only constructor.
      *
-     * @param pds                         A pool data source (HikariCP or UCP).
-     * @param singleSessionProxyModel
-     * @param useFixedUsernamePassword    Only use commonPoolDataSource.getConnection(), never commonPoolDataSource.getConnection(username, password)
+     * @param poolDataSourceConfiguration            The pool data source configuraion
+     * @param commonPoolDataSource        The common pool data source (HikariCP or UCP).
      */
-    protected SmartPoolDataSource(final SimplePoolDataSource pds,
-                                  final boolean singleSessionProxyModel,
-                                  final boolean useFixedUsernamePassword) throws SQLException {
-        assert(pds != null);
-        assert(pds.getUsername() != null);
-        assert(pds.getPassword() != null);
-
-        this.pds = pds;
-        this.connectInfo = new ConnectInfo(pds.getUsername(), pds.getPassword());
-        this.singleSessionProxyModel = singleSessionProxyModel;
-        this.useFixedUsernamePassword = useFixedUsernamePassword;
-
-        join();
-    }
-    
-    protected void join() throws SQLException {
-        if (this.commonPoolDataSource != null) {
-            return;
-        }
-
-        final String username = connectInfo.getUsername();
-        final String password = connectInfo.getPassword();
-        
-        logger.info(">join(pds={}, username={}, singleSessionProxyModel={}, useFixedUsernamePassword={})",
-                     pds,
-                     username,
-                     singleSessionProxyModel,
-                     useFixedUsernamePassword);
+    private SmartPoolDataSource(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+                                final SimplePoolDataSource commonPoolDataSource) {
+        logger.debug(">SmartPoolDataSource()");
 
         try {
-            assert(pds != null);
-        
-            printDataSourceStatistics(pds, logger);
+            assert(poolDataSourceConfiguration != null);
+            assert(poolDataSourceConfiguration.getUsername() != null);
+            assert(poolDataSourceConfiguration.getPassword() != null);
+            assert(commonPoolDataSource != null);
 
-            final PoolDataSourceConfiguration dataSourceProperties = pds.getPoolDataSourceConfiguration();
-            PoolDataSourceConfiguration commonDataSourceProperties;
-
-            // same data source can be asked another time (in another thread)
-            this.commonPoolDataSource = poolDataSources.get(dataSourceProperties.toString()); // see I below
-
-            /*
-            || There are three relevant join situations:
-            || I   - This pool has not joined before.
-            ||       Next, determine the commonPoolDataSource (clearing common properties like pool name and pool sizes).
-            ||       Now, if the commonPoolDataSource has NOT already started (i.e. NOT total transactions > 0), we can adjust
-            ||       the common properties of commonPoolDataSource and initialize all other data structures.
-            || II  - This pool has not joined before but the commonPoolDataSource has already started.
-            ||       Now we can (or may) NOT adjust its properties, so just use this pool as the commonPoolDataSource and repeat step I.
-            || III - This pool (or a similar one with the same configuration) has already joined before.
-            ||       Now we have the commonPoolDataSource and we are done
-            ||       since all has already been initialized before (especially the static fields).
-            ||       However we must set these member fields as well:
-            ||       - commonDataSourceProperties
-            ||       - commonDataSourceStatisticsTotal / commonDataSourceStatistics
-            ||       And the pool name as well.
-            */
-
-            logger.info("(similar) pool data source already joined: {}",
-                        this.commonPoolDataSource != null);
-            logger.debug("dataSourceProperties: {}", dataSourceProperties.toString());
-
-            if (this.commonPoolDataSource != null) {
-                logger.info("join situation III");
-                commonDataSourceProperties = determineCommonDataSourceProperties(this.commonPoolDataSource.getPoolDataSourceConfiguration(),
-                                                                                 this.connectInfo,
-                                                                                 this.useFixedUsernamePassword);
-
-                this.commonDataSourceProperties = commonDataSourceProperties.toString();
-                this.commonDataSourceStatistics = determineCommonDataSourceStatistics(commonDataSourceProperties,
-                                                                                      username,
-                                                                                      password);                    
-                this.commonDataSourceStatisticsTotal = null;
-
-                pds.setPoolName(commonPoolDataSource.getPoolName());
-                    
-                return; // see I
-            }
+            this.poolDataSourceConfiguration = poolDataSourceConfiguration.toBuilder().build(); // make a copy
+            this.poolDataSourceConfiguration.determineConnectInfo();
             
-            commonDataSourceProperties = determineCommonDataSourceProperties(dataSourceProperties,
-                                                                             this.connectInfo,
-                                                                             this.useFixedUsernamePassword);
-
-            int nr = 1;
-            int maxNr = 2;
-
-            // see II and III above
-            do {
-                logger.info("checking join situation {} for calculation of commonPoolDataSource", (nr == 1 ? "I" : "II"));
-                switch (nr) {
-                case 1:
-                    break;
-                    
-                case 2:
-                    commonDataSourceProperties = dataSourceProperties;
-                    break;
-                }
-                this.commonDataSourceProperties = commonDataSourceProperties.toString();
-                this.commonPoolDataSource = poolDataSources.computeIfAbsent(this.commonDataSourceProperties, s -> pds);
-                assert(this.commonPoolDataSource != null);
-            } while (this.commonPoolDataSource.getTotalConnections() > 0 && ++nr <= maxNr);
-
-            logger.info("join situation {}", (nr == 1 ? "I" : "II"));
-
-            // also register the commonPoolDataSource for any pds because we need it above (I, II and III)
-            poolDataSources.computeIfAbsent(dataSourceProperties.toString(), s -> this.commonPoolDataSource);
-        
-            this.currentPoolCount.computeIfAbsent(this.commonDataSourceProperties, s -> new AtomicInteger()).incrementAndGet();
-
-            // The statistics are measured per original data source and per total.
-            // Total is just a copy.
-            // commonDataSourceStatisticsTotal = commonDataSourceProperties.toBuilder().build().toString();
-
-            this.commonDataSourceStatistics = determineCommonDataSourceStatistics(commonDataSourceProperties,
-                                                                                  username,
-                                                                                  password);
-            this.commonDataSourceStatisticsTotal = null;
-
-            // add totals if not already existent
-            if (commonDataSourceStatisticsGrandTotal != null) {
-                allDataSourceStatistics.computeIfAbsent(commonDataSourceStatisticsGrandTotal, s -> new PoolDataSourceStatistics());
-            }
-            if (commonDataSourceStatisticsTotal != null) {
-                allDataSourceStatistics.computeIfAbsent(commonDataSourceStatisticsTotal, s -> new PoolDataSourceStatistics());
-            }
-            allDataSourceStatistics.computeIfAbsent(commonDataSourceStatistics, s -> new PoolDataSourceStatistics());
-
-            // only modify commonPoolDataSource when there are no connections i.e. not started yet
-            if (this.commonPoolDataSource.getTotalConnections() <= 0) {
-                // update default username / password when the pool data source is added to an existing
-                synchronized (commonPoolDataSource) {
-                    // Set new username/password combination of common data source before
-                    // you augment pool size(s) since that may trigger getConnection() calls.
-
-                    // See observations above.
-                    commonPoolDataSource.setUsername(connectInfo.getUsernameToConnectTo());
-                    commonPoolDataSource.setPassword(connectInfo.getPassword());
-
-                    if (commonPoolDataSource == pds) {
-                        commonPoolDataSource.setPoolName(getPoolNamePrefix()); // set the prefix the first time
-                    } else {
-                        // for debugging purposes
-                        if (pds.getPoolName() == null) {
-                            pds.setPoolName(String.valueOf(pds.hashCode()));
-                        }
-                        commonPoolDataSource.updatePoolSizes(pds);
-                    }
-                    commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + "-" + connectInfo.getSchema());
-                    logger.info("Common pool name: {}", commonPoolDataSource.getPoolName());
-                }
-            }
-
-            printDataSourceStatistics(commonPoolDataSource, logger);
+            this.commonPoolDataSource = commonPoolDataSource;
+            this.pdsStatistics = new PoolDataSourceStatistics(() -> this.commonPoolDataSource.getPoolName() + ": (only " +
+                                                              this.poolDataSourceConfiguration.getSchema() + ")",
+                                                              commonPoolDataSource.getPoolDataSourceStatistics(),
+                                                              this::isClosed,
+                                                              this);
+            this.commonPoolDataSource.setUsername(this.poolDataSourceConfiguration.getUsernameToConnectTo());
+            this.commonPoolDataSource.setPassword(this.poolDataSourceConfiguration.getPassword());
+            this.commonPoolDataSource.join(this, this.poolDataSourceConfiguration.getSchema()); // must amend pool sizes
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
-            logger.info("<join()");
+            logger.debug("<SmartPoolDataSource()");
         }
     }
 
-    private static PoolDataSourceConfiguration determineCommonDataSourceProperties(final PoolDataSourceConfiguration dataSourceProperties,
-                                                                                   final ConnectInfo connectInfo,
-                                                                                   final boolean useFixedUsernamePassword) {
-        final PoolDataSourceConfiguration commonDataSourceProperties = dataSourceProperties.toBuilder().build(); // a copy
+    public static SmartPoolDataSource build(final PoolDataSourceConfiguration dataSourceConfiguration,
+                                            final PoolDataSourceConfiguration... poolDataSourceConfigurations) throws SQLException {
+        final Class cls = dataSourceConfiguration.getType();
 
-        logger.info("commonDataSourceProperties before: {}", commonDataSourceProperties.toString());
+        logger.debug(">build(type={}) (1)", cls);
 
-        assert(commonDataSourceProperties.getType() != null);
-        assert(commonDataSourceProperties.getUrl() != null);
+        try {
+            if (cls != null && PoolDataSourceImpl.class.isAssignableFrom(cls)) {
+                for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
+                    if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationOracle) {
+                        // make a copy
+                        final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle =
+                            (PoolDataSourceConfigurationOracle) poolDataSourceConfiguration.toBuilder().build();
+                        poolDataSourceConfigurationOracle.copy(dataSourceConfiguration);
 
-        commonDataSourceProperties.clearCommonDataSourceConfiguration();
+                        return build(poolDataSourceConfigurationOracle);
+                    }
+                }
+            } else if (cls == null || HikariDataSource.class.isAssignableFrom(cls)) {
+                for (PoolDataSourceConfiguration poolDataSourceConfiguration: poolDataSourceConfigurations) {
+                    if (poolDataSourceConfiguration instanceof PoolDataSourceConfigurationHikari) {
+                        // make a copy
+                        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
+                            (PoolDataSourceConfigurationHikari) poolDataSourceConfiguration.toBuilder().build();
+                        poolDataSourceConfigurationHikari.copy(dataSourceConfiguration);
 
-        // Now we have to adjust commonDataSourceProperties and username
-        // given username/singleSessionProxyModel/useFixedUsernamePassword.
-        //
-        // Some observations:
-        // 1 - when username does NOT contain proxy info (like "bodomain", not "bc_proxy[bodomain]")
-        //     the username to connect must be connectInfo.username (e.g. "bodomain", connectInfo.proxyUsername is null)
-        // 2 - else, when singleSessionProxyModel is true,
-        //     the username to connect to MUST be connectInfo.username (e.g. "bc_proxy[bodomain]") and
-        //     never connectInfo.proxyUsername ("bc_proxy")
-        // 3 - else, when singleSessionProxyModel is false,
-        //     the username to connect to must be connectInfo.proxyUsername ("bc_proxy") and
-        //     then later on OracleConnection.openProxySession() will be invoked to connect to connectInfo.schema.
-        //
-        // So you use connectInfo.proxyUsername only if not null and when singleSessionProxyModel is false (case 3).
-        //
-        // A - when useFixedUsernamePassword is true,
-        //     every data source having the same common data source MUST use the same username/password to connect to.
-        //     Meaning that these properties MUST be part of the commonDataSourceProperties!
-
-        if (useFixedUsernamePassword) {
-            // case A
-            commonDataSourceProperties.setUsername(connectInfo.getUsernameToConnectTo());
-            commonDataSourceProperties.setPassword(connectInfo.getPassword());
+                        return build(poolDataSourceConfigurationHikari);
+                    }
+                }
+            } else {
+                throw new IllegalArgumentException("Unknown type: " + cls);
+            }
+        } finally {
+            logger.debug("<build() (1)");
         }
 
-        logger.info("commonDataSourceProperties after: {}", commonDataSourceProperties.toString());
+        return null;
+    }
+    
+    /*
+     * For both:
+     * - build(final PoolDataSourceConfigurationOracle poolDataSourceConfiguration) and
+     * - build(final PoolDataSourceConfigurationHikari poolDataSourceConfiguration)
+     *
+     * Is this id already cached (as SmartPoolDataSource)?
+     * 1. yes: return that one
+     * 2. no, but there is a SimplePoolDataSource for its Id (or commonId and join() works (in constructor)): return that one
+     * 3. no, but there is a SimplePoolDataSource for its commonId does and join() does NOT work:
+     *    create a SimplePoolDataSource and store it as the most specific, i.e. thisId
+     * 4. else, create a SimplePoolDataSource and store it as the commonId
+     */
 
-        return commonDataSourceProperties;
+    public static SmartPoolDataSource build(final PoolDataSourceConfigurationOracle poolDataSourceConfiguration) {
+        logger.debug(">build(type={}) (2)", poolDataSourceConfiguration.getType());
+
+        try {
+            final SmartPoolDataSource smartPoolDataSource = build(poolDataSourceConfiguration,
+                                                                  () -> SimplePoolDataSourceOracle.build(poolDataSourceConfiguration));
+
+            smartPoolDataSource.open();
+
+            return smartPoolDataSource;
+        } finally {
+            logger.debug("<build() (2)");
+        }
     }
 
-    private static String determineCommonDataSourceStatistics(final PoolDataSourceConfiguration commonDataSourceProperties,
-                                                              final String username,
-                                                              final String password) {
-        // Per original data source, hence we include the username / password.
-        return commonDataSourceProperties
-            .toBuilder()
-            .username(username)
-            .password(password)
-            .build()
-            .toString();
+    public static SmartPoolDataSource build(final PoolDataSourceConfigurationHikari poolDataSourceConfiguration) {
+        logger.debug(">build(type={}) (3)", poolDataSourceConfiguration.getType());
+
+        try {
+            final SmartPoolDataSource smartPoolDataSource = build(poolDataSourceConfiguration,
+                                                                  () -> SimplePoolDataSourceHikari.build(poolDataSourceConfiguration));
+
+            smartPoolDataSource.open();
+
+            return smartPoolDataSource;
+        } finally {
+            logger.debug("<build() (3)");
+        }
+    }        
+
+    private static SmartPoolDataSource build(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+                                             final Supplier<SimplePoolDataSource> newSimplePoolDataSource) {
+        logger.debug(">build(type={}) (4)", poolDataSourceConfiguration.getType());
+
+        try {
+            final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(poolDataSourceConfiguration, false);
+
+            logger.debug("thisId: {}", thisId);
+
+            // case 1: if not absent
+            return cachedSmartPoolDataSources.computeIfAbsent(thisId, key -> {
+                PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(poolDataSourceConfiguration, true);
+                SimplePoolDataSource simplePoolDataSource = null;
+                SmartPoolDataSource smartPoolDataSource = null;
+
+                logger.debug("commonId: {}", commonId);
+
+                logger.debug("cases 2, 3 or 4");
+
+                // cases 2, 3 and 4
+                if ((simplePoolDataSource = cachedSimplePoolDataSources.get(thisId)) == null) {
+                    // there is no specific one so try the common one and join() it
+                    simplePoolDataSource = cachedSimplePoolDataSources.get(commonId);
+
+                    if (simplePoolDataSource != null) {
+                        try {
+                            logger.debug("cases 2 or 3");
+                            // case 2 or 3
+                            smartPoolDataSource = new SmartPoolDataSource(poolDataSourceConfiguration, simplePoolDataSource);
+                            logger.debug("case 2");
+                            // case 2
+                        } catch (Exception ex) {
+                            logger.error(SimplePoolDataSource.exceptionToString(ex), ex);
+                            logger.debug("case 3");
+                            // case 3
+                            simplePoolDataSource = null;
+                            commonId = thisId; // join() failed so we must be very specific when we put it into the cache
+                        }
+                    } else {
+                        logger.debug("case 4");
+                    }
+                    if (simplePoolDataSource == null) {
+                        simplePoolDataSource = newSimplePoolDataSource.get();
+                        cachedSimplePoolDataSources.put(commonId, simplePoolDataSource);
+                    }
+                } else {
+                    logger.debug("case 2"); // since the simplePoolDataSource is stored for just this Id, join() must have been called before
+                }
+                assert(simplePoolDataSource != null);
+                if (smartPoolDataSource == null) {
+                    smartPoolDataSource = new SmartPoolDataSource(poolDataSourceConfiguration, simplePoolDataSource);
+                }
+                return smartPoolDataSource;
+            });
+        } finally {
+            logger.debug("<build() (4)");
+        }            
     }
 
-    public void close() {
+    public static boolean isStatisticsEnabled() {
+        return statisticsEnabled.get();
+    }
+
+    public static void setStatisticsEnabled(final boolean statisticsEnabled) {
+        SmartPoolDataSource.statisticsEnabled.set(statisticsEnabled);
+    }
+
+    final public boolean isClosed() {
+        return !opened.get();
+    }
+
+    private void open() {
+        logger.debug(">open()");
+
+        opened.set(true);
+        
+        logger.debug("<open()");
+    }
+
+    // to implement interface Closeable
+    final public void close() {
         logger.debug(">close()");
 
         try {
-            done();
-        } catch (Exception ex) {
-            logger.error("exception:", ex);
-            ex.printStackTrace(System.err);
-            throw ex;
+            if (opened.getAndSet(false)) {
+                // switched from open to closed: show statistics and close (which will update and show the parent statistics too)
+                pdsStatistics.close();
+            }
         } finally {
             logger.debug("<close()");
         }
     }
 
-    // returns true if there are no more pool data sources hereafter
-    final protected boolean done() {
-        logger.debug(">done()");
-        
-        final boolean lastPoolDataSource = currentPoolCount.get(commonDataSourceProperties).decrementAndGet() == 0;
-
-        try {
-            if (statisticsEnabled) {
-                final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-                final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-                    commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
-
-                if (poolDataSourceStatistics != null) {
-                    if (poolDataSourceStatisticsTotal == null ||
-                        !poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
-                        showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema());
-                    }
-                    allDataSourceStatistics.remove(commonDataSourceStatistics);
-                }
-
-                // show (grand) totals only when it is the last pool data source
-                if (poolDataSourceStatisticsTotal != null && lastPoolDataSource) {
-                    showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL);
-                    allDataSourceStatistics.remove(commonDataSourceStatisticsTotal);
-
-                    if (commonDataSourceStatisticsGrandTotal != null) {
-                        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal =
-                            allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal);
-
-                        // only GrandTotal left?
-                        if (poolDataSourceStatisticsGrandTotal != null) {
-                            if (allDataSourceStatistics.size() == 1) {                
-                                if (!poolDataSourceStatisticsGrandTotal.countersEqual(poolDataSourceStatisticsTotal)) {
-                                    showDataSourceStatistics(poolDataSourceStatisticsGrandTotal, GRAND_TOTAL);
-                                }
-                                allDataSourceStatistics.remove(commonDataSourceStatisticsGrandTotal);
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (lastPoolDataSource) {
-                logger.info("Closing pool {}", getPoolName());
-                poolDataSources.remove(commonDataSourceProperties);
-            }
-        } catch (Exception ex) {
-            logger.error("exception:", ex);
-            ex.printStackTrace(System.err);
-            logger.debug("<done()");
-            throw ex;
-        } 
-
-        logger.debug("<done() = {}", lastPoolDataSource);
-
-        return lastPoolDataSource;
-    }
-
     public Connection getConnection() throws SQLException {
-        Connection conn;
-        
-        conn = getConnection(this.connectInfo.getUsernameToConnectTo(),
-                             this.connectInfo.getPassword(),
-                             this.connectInfo.getSchema(),
-                             this.connectInfo.getProxyUsername(),
-                             statisticsEnabled,
-                             true);
+        checkIsOpen();
+
+        final Connection conn = getConnection(this.poolDataSourceConfiguration.getUsernameToConnectTo(),
+                                              this.poolDataSourceConfiguration.getPassword(),
+                                              this.poolDataSourceConfiguration.getSchema(),
+                                              this.poolDataSourceConfiguration.getProxyUsername(),
+                                              statisticsEnabled.get(),
+                                              true);
 
         logger.debug("getConnection() = {}", conn);
 
@@ -413,15 +294,19 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
     @Deprecated
     public Connection getConnection(String username, String password) throws SQLException {
-        final ConnectInfo connectInfo = new ConnectInfo(username, password);
-        Connection conn;
+        checkIsOpen();
 
-        conn = getConnection(connectInfo.getUsernameToConnectTo(),
-                             connectInfo.getPassword(),
-                             connectInfo.getSchema(),
-                             connectInfo.getProxyUsername(),
-                             statisticsEnabled,
-                             true);
+        // make a copy
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = this.poolDataSourceConfiguration.toBuilder().build();
+
+        poolDataSourceConfiguration.determineConnectInfo(username, password);
+
+        final Connection conn = getConnection(poolDataSourceConfiguration.getUsernameToConnectTo(),
+                                              poolDataSourceConfiguration.getPassword(),
+                                              poolDataSourceConfiguration.getSchema(),
+                                              poolDataSourceConfiguration.getProxyUsername(),
+                                              statisticsEnabled.get(),
+                                              true);
 
         logger.debug("getConnection(username={}) = {}", username, conn);
 
@@ -445,10 +330,10 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
         try {    
             final Instant t1 = Instant.now();
             Connection conn;
-            int logicalConnectionCountProxy = 0, openProxySessionCount = 0, closeProxySessionCount = 0;        
+            int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
             Instant t2 = null;
             
-            if (useFixedUsernamePassword) {
+            if (isUseFixedUsernamePassword()) {
                 if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
                     commonPoolDataSource.setUsername(usernameToConnectTo);
                     commonPoolDataSource.setPassword(password);
@@ -461,7 +346,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
 
             // if the current schema is not the requested schema try to open/close the proxy session
             if (!conn.getSchema().equalsIgnoreCase(schema)) {
-                assert(!singleSessionProxyModel);
+                assert(!isSingleSessionProxyModel());
 
                 t2 = Instant.now();
 
@@ -485,7 +370,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                         case 0:
                             if (oraConn.isProxySession()) {
                                 closeProxySession(oraConn, proxyUsername != null ? proxyUsername : schema);
-                                closeProxySessionCount++;
+                                proxyCloseSessionCount++;
                             }
                             break;
                             
@@ -494,7 +379,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                 assert(proxyUsername.equalsIgnoreCase(usernameToConnectTo));
                         
                                 openProxySession(oraConn, schema);
-                                openProxySessionCount++;
+                                proxyOpenSessionCount++;
                             }
                             break;
                             
@@ -503,7 +388,7 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                             break;
                             
                         default:
-                            throw new RuntimeException(String.format("Wrong value for nr ({}): must be between 0 and 2", nr));
+                            throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
                         }
                     } while (!conn.getSchema().equalsIgnoreCase(schema) && nr++ < 3);
                 }                
@@ -523,9 +408,9 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
                                      Duration.between(t1, t2).toMillis(),
                                      Duration.between(t2, Instant.now()).toMillis(),
                                      showStatistics,
-                                     logicalConnectionCountProxy,
-                                     openProxySessionCount,
-                                     closeProxySessionCount);
+                                     proxyLogicalConnectionCount,
+                                     proxyOpenSessionCount,
+                                     proxyCloseSessionCount);
                 }
             }
 
@@ -542,6 +427,14 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
             throw ex;
         }        
     }    
+
+    private void checkIsOpen() {
+        if (!opened.get()) {
+            throw new IllegalStateException("Smart pool data source (" +
+                                            (poolDataSourceConfiguration != null ? poolDataSourceConfiguration.toString() : "UNKNOWN") +
+                                            ") must be open.");
+        }
+    }
 
     private static void openProxySession(final OracleConnection oraConn, final String schema) throws SQLException {
         final Properties proxyProperties = new Properties();
@@ -615,428 +508,131 @@ public abstract class SmartPoolDataSource implements SimplePoolDataSource {
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,
                                     final boolean showStatistics) {
-        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal =
-            commonDataSourceStatisticsGrandTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-            commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-        final int activeConnections = getActiveConnections();
-        final int idleConnections = getIdleConnections();
-        final int totalConnections = getTotalConnections();
-
         try {
-            if (poolDataSourceStatisticsGrandTotal != null) {
-                poolDataSourceStatisticsGrandTotal.update(conn,
-                                                          timeElapsed,
-                                                          activeConnections,
-                                                          idleConnections,
-                                                          totalConnections);
-            }
-            if (poolDataSourceStatisticsTotal != null) {
-                poolDataSourceStatisticsTotal.update(conn,
-                                                     timeElapsed,
-                                                     activeConnections,
-                                                     idleConnections,
-                                                     totalConnections);
-            }
-            // no need for active/idle and total connections because that is counted on common data source level
-            poolDataSourceStatistics.update(conn,
-                                            timeElapsed);
+            pdsStatistics.update(conn, timeElapsed);
+            pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
         } catch (Exception e) {
-            logger.error("updateStatistics() exception: {}", e.getMessage());
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
 
-        if (showStatistics && poolDataSourceStatisticsTotal != null) {
-            // no need to display same statistics twice (see below for totals)
-            if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema(), timeElapsed, false);
-            }
-            showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL, timeElapsed, false);
+        if (showStatistics) {
+            showDataSourceStatistics(timeElapsed, false);
         }
     }
 
     protected void updateStatistics(final Connection conn,
                                     final long timeElapsed,
-                                    final long timeElapsedProxy,
+                                    final long proxyTimeElapsed,
                                     final boolean showStatistics,
-                                    final int logicalConnectionCountProxy,
-                                    final int openProxySessionCount,
-                                    final int closeProxySessionCount) {
-        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal =
-            commonDataSourceStatisticsGrandTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-            commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-
+                                    final int proxyLogicalConnectionCount,
+                                    final int proxyOpenSessionCount,
+                                    final int proxyCloseSessionCount) {
         try {
-            if (poolDataSourceStatisticsGrandTotal != null) {
-                poolDataSourceStatisticsGrandTotal.update(conn,
-                                                          timeElapsed,
-                                                          timeElapsedProxy,
-                                                          logicalConnectionCountProxy,
-                                                          openProxySessionCount,
-                                                          closeProxySessionCount);
-            }
-            if (poolDataSourceStatisticsTotal != null) {
-                poolDataSourceStatisticsTotal.update(conn,
-                                                     timeElapsed,
-                                                     timeElapsedProxy,
-                                                     logicalConnectionCountProxy,
-                                                     openProxySessionCount,
-                                                     closeProxySessionCount);
-            }
-            poolDataSourceStatistics.update(conn,
-                                            timeElapsed,
-                                            timeElapsedProxy,
-                                            logicalConnectionCountProxy,
-                                            openProxySessionCount,
-                                            closeProxySessionCount);
+            pdsStatistics.update(conn,
+                                 timeElapsed,
+                                 proxyTimeElapsed,
+                                 proxyLogicalConnectionCount,
+                                 proxyOpenSessionCount,
+                                 proxyCloseSessionCount);
+            pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
         } catch (Exception e) {
-            logger.error("updateStatistics() exception: {}", e.getMessage());
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
 
-        if (showStatistics && poolDataSourceStatisticsTotal != null) {
-            // no need to display same statistics twice (see below for totals)
-            if (!poolDataSourceStatistics.countersEqual(poolDataSourceStatisticsTotal)) {
-                showDataSourceStatistics(poolDataSourceStatistics, connectInfo.getSchema(), timeElapsed, timeElapsedProxy, false);
-            }
-            showDataSourceStatistics(poolDataSourceStatisticsTotal, TOTAL, timeElapsed, timeElapsedProxy, false);
+        if (showStatistics) {
+            showDataSourceStatistics(timeElapsed, proxyTimeElapsed, false);
         }
     }
 
     protected void signalException(final Exception ex) {        
-        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal =
-            commonDataSourceStatisticsGrandTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-            commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-
         try {
-            final long nrOccurrences = poolDataSourceStatisticsGrandTotal != null ? poolDataSourceStatisticsGrandTotal.signalException(ex) : 0;
+            final long nrOccurrences = 0;
 
             if (nrOccurrences > 0) {
-                if (poolDataSourceStatisticsTotal != null) {
-                    poolDataSourceStatisticsTotal.signalException(ex);
-                }
-                poolDataSourceStatistics.signalException(ex);
+                pdsStatistics.signalException(ex);
                 // show the message
-                logger.error("While connecting to {}{} this was occurrence # {} for this exception: (class={}, message={})",
-                             connectInfo.getSchema(),
-                             ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
+                logger.error("While connecting to {}{} this was occurrence # {} for this exception: ({})",
+                             poolDataSourceConfiguration.getSchema(),
+                             ( poolDataSourceConfiguration.getProxyUsername() != null ? " (via " + poolDataSourceConfiguration.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
-                             ex.getClass().getName(),
-                             ex.getMessage());
+                             SimplePoolDataSource.exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error("signalException() exception: {}", e.getMessage());
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
     }
 
     protected void signalSQLException(final SQLException ex) {        
-        final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal =
-            commonDataSourceStatisticsGrandTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsGrandTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-            commonDataSourceStatisticsTotal != null ? allDataSourceStatistics.get(commonDataSourceStatisticsTotal) : null;
-        final PoolDataSourceStatistics poolDataSourceStatistics = allDataSourceStatistics.get(commonDataSourceStatistics);
-
         try {
-            final long nrOccurrences = poolDataSourceStatisticsGrandTotal != null ? poolDataSourceStatisticsGrandTotal.signalSQLException(ex) : 0;
+            final long nrOccurrences = 0;
 
             if (nrOccurrences > 0) {
-                if (poolDataSourceStatisticsTotal != null) {
-                    poolDataSourceStatisticsTotal.signalSQLException(ex);
-                }
-                poolDataSourceStatistics.signalSQLException(ex);
+                pdsStatistics.signalSQLException(ex);
                 // show the message
-                logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (class={}, error code={}, SQL state={}, message={})",
-                             connectInfo.getSchema(),
-                             ( connectInfo.getProxyUsername() != null ? " (via " + connectInfo.getProxyUsername() + ")" : "" ),
+                logger.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
+                             poolDataSourceConfiguration.getSchema(),
+                             ( poolDataSourceConfiguration.getProxyUsername() != null ? " (via " + poolDataSourceConfiguration.getProxyUsername() + ")" : "" ),
                              nrOccurrences,
-                             ex.getClass().getName(),
                              ex.getErrorCode(),
                              ex.getSQLState(),
-                             ex.getMessage());
+                             SimplePoolDataSource.exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error("signalSQLException() exception: {}", e.getMessage());
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
     }
 
     /**
-     * Show data source statistics for a schema (or TOTAL/GRAND_TOTAL).
+     * Show data source statistics.
      *
      * Normally first the statistics of a schema are displayed and then the statistics
      * for all schemas in a pool (unless there is just one).
      *
-     * From this it follows that first the connectin is displayed (schema and then TOTAL/GRAND_TOTAL) and
-     * next the pool size information (TOTAL only).
+     * From this it follows that first the connection is displayed.
      *
-     * @param poolDataSourceStatistics  The statistics for a schema (or totals)
      * @param timeElapsed             The elapsed time
-     * @param timeElapsedProxy        The elapsed time for proxy connection (after the connection)
-     * @param finalCall               Is this the final call?
-     * @param schema                  The schema to display after the pool name
+     * @param proxyTimeElapsed        The elapsed time for proxy connection (after the connection)
+     * @param showTotals               Is this the final call?
      */
-    private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
-                                          final String schema) {
-        showDataSourceStatistics(poolDataSourceStatistics, schema, -1L, -1L, true);
+    private void showDataSourceStatistics(final long timeElapsed,
+                                          final boolean showTotals) {
+        showDataSourceStatistics(timeElapsed, -1L, showTotals);
     }
     
-    private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
-                                          final String schema,
-                                          final long timeElapsed,
-                                          final boolean finalCall) {
-        showDataSourceStatistics(poolDataSourceStatistics, schema, timeElapsed, -1L, finalCall);
+    private void showDataSourceStatistics(final long timeElapsed,
+                                          final long proxyTimeElapsed,
+                                          final boolean showTotals) {
+        assert(pdsStatistics != null);
+
+        pdsStatistics.showStatistics(timeElapsed, proxyTimeElapsed, showTotals);
     }
-    
-    private void showDataSourceStatistics(final PoolDataSourceStatistics poolDataSourceStatistics,
-                                          final String schema,
-                                          final long timeElapsed,
-                                          final long timeElapsedProxy,
-                                          final boolean finalCall) {
-        assert(poolDataSourceStatistics != null);
+
+    protected static int getTotalSmartPoolCount() {
+        return cachedSmartPoolDataSources.size();
+    }
+
+    protected static int getTotalSimplePoolCount() {
+        return cachedSimplePoolDataSources.size();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SmartPoolDataSource)) {
+            return false;
+        }
+
+        final SmartPoolDataSource other = (SmartPoolDataSource) obj;
         
-        // Only show the first time a pool has gotten a connection.
-        // Not earlier because these (fixed) values may change before and after the first connection.
-        if (poolDataSourceStatistics.getLogicalConnectionCount() == 1) {
-            printDataSourceStatistics(commonPoolDataSource, logger);
-        }
-
-        if (!finalCall && !logger.isDebugEnabled()) {
-            return;
-        }
-        
-        final Method method = (finalCall ? loggerInfo : loggerDebug);
-
-        final boolean isTotal = schema.equals(TOTAL);
-        final boolean isGrandTotal = schema.equals(GRAND_TOTAL);
-        final boolean showPoolSizes = isTotal;
-        final boolean showErrors = finalCall && (isTotal || isGrandTotal);
-        final String prefix = INDENT_PREFIX;
-        final String poolDescription = ( isGrandTotal ? "all pools" : "pool " + getPoolName()  + " (" + schema + ")" );
-
-        try {
-            if (method != null) {
-                method.invoke(logger, "statistics for {}:", (Object) new Object[]{ poolDescription });
-            
-                if (!finalCall) {
-                    if (timeElapsed >= 0L) {
-                        method.invoke(logger,
-                                      "{}time needed to open last connection (ms): {}",
-                                      (Object) new Object[]{ prefix, timeElapsed });
-                    }
-                    if (timeElapsedProxy >= 0L) {
-                        method.invoke(logger,
-                                      "{}time needed to open last proxy connection (ms): {}",
-                                      (Object) new Object[]{ prefix, timeElapsedProxy });
-                    }
-                }
-            
-                long val1, val2, val3;
-
-                val1 = poolDataSourceStatistics.getPhysicalConnectionCount();
-                val2 = poolDataSourceStatistics.getLogicalConnectionCount();
-            
-                if (val1 >= 0L && val2 >= 0L) {
-                    method.invoke(logger,
-                                  "{}physical/logical connections opened: {}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2 });
-                }
-
-                val1 = poolDataSourceStatistics.getTimeElapsedMin();
-                val2 = poolDataSourceStatistics.getTimeElapsedAvg();
-                val3 = poolDataSourceStatistics.getTimeElapsedMax();
-
-                if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                    method.invoke(logger,
-                                  "{}min/avg/max connection time (ms): {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
-                }
-            
-                if (!singleSessionProxyModel && connectInfo.getProxyUsername() != null) {
-                    val1 = poolDataSourceStatistics.getTimeElapsedProxyMin();
-                    val2 = poolDataSourceStatistics.getTimeElapsedProxyAvg();
-                    val3 = poolDataSourceStatistics.getTimeElapsedProxyMax();
-
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}min/avg/max proxy connection time (ms): {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-
-                    val1 = poolDataSourceStatistics.getOpenProxySessionCount();
-                    val2 = poolDataSourceStatistics.getCloseProxySessionCount();
-                    val3 = poolDataSourceStatistics.getLogicalConnectionCountProxy();
-                
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-                }
-            
-                if (showPoolSizes) {
-                    method.invoke(logger,
-                                  "{}initial/min/max pool size: {}/{}/{}",
-                                  (Object) new Object[]{ prefix,
-                                                         getInitialPoolSize(),
-                                                         getMinPoolSize(),
-                                                         getMaxPoolSize() });
-                }
-
-                if (!finalCall) {
-                    // current values
-                    val1 = getActiveConnections();
-                    val2 = getIdleConnections();
-                    val3 = getTotalConnections();
-                    
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}current active/idle/total connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-                } else {
-                    val1 = poolDataSourceStatistics.getActiveConnectionsMin();
-                    val2 = poolDataSourceStatistics.getActiveConnectionsAvg();
-                    val3 = poolDataSourceStatistics.getActiveConnectionsMax();
-
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}min/avg/max active connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-                    
-                    val1 = poolDataSourceStatistics.getIdleConnectionsMin();
-                    val2 = poolDataSourceStatistics.getIdleConnectionsAvg();
-                    val3 = poolDataSourceStatistics.getIdleConnectionsMax();
-
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}min/avg/max idle connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-
-                    val1 = poolDataSourceStatistics.getTotalConnectionsMin();
-                    val2 = poolDataSourceStatistics.getTotalConnectionsAvg();
-                    val3 = poolDataSourceStatistics.getTotalConnectionsMax();
-
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}min/avg/max total connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-                }
-            }
-
-            // show errors
-            if (showErrors) {
-                final Map<Properties, Long> errors = poolDataSourceStatistics.getErrors();
-
-                if (errors.isEmpty()) {
-                    logger.info("no connection exceptions signalled for {}", poolDescription);
-                } else {
-                    logger.warn("connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
-                
-                    errors.entrySet().stream()
-                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
-                        .forEach(e -> {
-                                final Properties key = (Properties) e.getKey();
-                                final String className = key.getProperty(PoolDataSourceStatistics.EXCEPTION_CLASS_NAME);
-                                final String SQLErrorCode = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_ERROR_CODE);
-                                final String SQLState = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_STATE);
-
-                                if (SQLErrorCode == null || SQLState == null) {
-                                    logger.warn("{}{} occurrences for (class={})",
-                                                prefix,
-                                                e.getValue(),
-                                                className);
-                                } else {
-                                    logger.warn("{}{} occurrences for (class={}, error code={}, SQL state={})",
-                                                prefix,
-                                                e.getValue(),
-                                                className,
-                                                SQLErrorCode,
-                                                SQLState);
-                                }
-                            });
-                }
-            }
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            logger.error("showDataSourceStatistics exception: {}", e.getMessage());
-        }
+        return other.getPoolDataSourceConfiguration().equals(this.getPoolDataSourceConfiguration());
     }
 
-    protected int getCurrentPoolCount() {
-        return currentPoolCount.get(commonDataSourceProperties).get();
+    @Override
+    public int hashCode() {
+        return this.getPoolDataSourceConfiguration().hashCode();
     }
 
-    private static void printDataSourceStatistics(final SimplePoolDataSource poolDataSource, final Logger logger) {
-        if (!logger.isDebugEnabled()) {
-            return;
-        }
-
-        final String prefix = INDENT_PREFIX;
-        
-        logger.debug("configuration pool data source {}:", poolDataSource.getPoolName());
-        logger.debug("{}configuration: {}", prefix, poolDataSource.getPoolDataSourceConfiguration().toString());
-        logger.debug("connections pool data source {}:", poolDataSource.getPoolName());
-        logger.debug("{}total: {}", prefix, poolDataSource.getTotalConnections());
-        logger.debug("{}active: {}", prefix, poolDataSource.getActiveConnections());
-        logger.debug("{}idle: {}", prefix, poolDataSource.getIdleConnections());
+    @Override
+    public String toString() {
+        return this.getPoolDataSourceConfiguration().toString();
     }
-    
-    protected abstract String getPoolNamePrefix();
-
-    @Getter
-    private class ConnectInfo {
-
-        private String username;
-
-        private String password;
-    
-        // username like:
-        // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
-        // * bodomain => proxyUsername = null, schema = bodomain
-        private String proxyUsername;
-    
-        private String schema; // needed to build the PoolName
-
-        /**
-         * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
-         * schema (bodomain) and proxy username (bc_proxy respectively empty).
-         *
-         * @param username  The username to connect to.
-         * @param password  The pasword.
-         *
-         */    
-        public ConnectInfo(final String username, final String password) {
-            this.username = username;
-            this.password = password;
-        
-            final int pos1 = username.indexOf("[");
-            final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
-      
-            if (pos1 >= 0 && pos2 >= pos1) {
-                // a username like bc_proxy[bodomain]
-                this.proxyUsername = username.substring(0, pos1);
-                this.schema = username.substring(pos1+1, pos2);
-            } else {
-                // a username like bodomain
-                this.proxyUsername = null;
-                this.schema = username;
-            }
-
-            logger.debug("ConnectInfo(username={}) = (username={}, proxyUsername={}, schema={})",
-                         username,
-                         this.username,
-                         this.proxyUsername,
-                         this.schema);
-        }
-
-        public String getUsernameToConnectTo() {
-            return !singleSessionProxyModel && connectInfo.getProxyUsername() != null ?
-                connectInfo.getProxyUsername() /* case 3 */ :
-                connectInfo.getUsername() /* case 1 & 2 */;
-        }
-    }    
 }

@@ -2,16 +2,20 @@ package com.paulissoft.pato.jdbc;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+//**/import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
+//**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+//**/import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 
+@Slf4j
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-@NoArgsConstructor
+//**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
 @ConfigurationProperties
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
@@ -52,10 +56,69 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     
     private long leakDetectionThreshold;
 
-    public void clearCommonDataSourceConfiguration() {
+    /*
+     * NOTE 1.
+     *
+     * HikariCP does not support getConnection(String username, String password) so set
+     * singleSessionProxyModel to false and useFixedUsernamePassword to true so the
+     * common properties will include the proxy user name ("bc_proxy" from "bc_proxy[bodomain]")
+     * if any else just the username. Meaning "bc_proxy[bodomain]", "bc_proxy[boauth]" and so one
+     * will have ONE common pool data source.
+     *
+     * See also https://github.com/brettwooldridge/HikariCP/issues/231
+     */
+
+    @Override
+    public boolean isSingleSessionProxyModel() {
+        return false;
+    }
+
+    /*
+     * NOTE 2.
+     *
+     * The combination of singleSessionProxyModel true and useFixedUsernamePassword false does not work.
+     * So when singleSessionProxyModel is true, useFixedUsernamePassword must be true as well.
+     */
+
+    @Override
+    public boolean isUseFixedUsernamePassword() {
+        return true;
+    }
+    
+    public PoolDataSourceConfigurationHikari() {
+        // super();
+
+        if (getType() == null) {
+            setType(SimplePoolDataSourceHikari.class.getName());
+        }
+        
+        final Class cls = getType();
+
+        log.debug("PoolDataSourceConfigurationHikari type: {}", cls);
+
+        assert(cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls));
+    }
+
+    @Override
+    void clearCommonDataSourceConfiguration() {
         super.clearCommonDataSourceConfiguration();
         this.poolName = null;
         this.maximumPoolSize = 0;
         this.minimumIdle = 0;
     }
+
+    @Override
+    void clearNonIdConfiguration() {
+        super.clearNonIdConfiguration();
+        this.poolName = null;
+    }
+
+//**/    @Override
+//**/    public String toString() {
+//**/        ReflectionToStringBuilder rtsb = new ReflectionToStringBuilder(this, ToStringStyle.JSON_STYLE);
+//**/        
+//**/        rtsb.setExcludeNullValues(true);
+//**/        
+//**/        return rtsb.toString();
+//**/    }
 }

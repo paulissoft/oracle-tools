@@ -1,8 +1,12 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +15,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @ExtendWith(SpringExtension.class)
 @EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
@@ -23,12 +29,29 @@ public class CheckConfigurationUnitTest {
     private PoolDataSourceConfiguration poolDataSourceConfiguration;
 
     @Autowired
+    @Qualifier("app-auth-datasource")
+    private PoolDataSourceConfiguration poolDataSourceConfigurationAuth;
+
+    @Autowired
+    @Qualifier("app-ocpp-datasource")
+    private PoolDataSourceConfiguration poolDataSourceConfigurationOcpp;
+
+    @Autowired
+    @Qualifier("app-domain-datasource")
+    private PoolDataSourceConfiguration poolDataSourceConfigurationDomain;
+
+    @Autowired
     @Qualifier("app-auth-datasource-hikari")
     private PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari;
 
     @Autowired
     @Qualifier("app-auth-datasource-oracle")
     private PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle;
+
+    @BeforeAll
+    static void clear() {
+        SmartPoolDataSource.clear();
+    }
 
     @Test
     void testPoolDataSourceConfiguration() {
@@ -40,6 +63,48 @@ public class CheckConfigurationUnitTest {
         assertEquals("PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, " +
                      "username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari)",
                      poolDataSourceConfiguration.toString());
+    }
+    
+    @Test
+    void testPoolDataSourceConfigurationCommonId() {
+        PoolDataSourceConfigurationId idAuth, idOcpp, idDomain;
+        
+        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikariCopy =
+            poolDataSourceConfigurationHikari.toBuilder().build();
+        final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracleCopy =
+            poolDataSourceConfigurationOracle.toBuilder().build();
+
+        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationAuth);
+        idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+
+        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationOcpp);
+        idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+
+        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationDomain);
+        idDomain = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+
+        log.debug("idAuth: {}", idAuth);
+        log.debug("idOcpp: {}", idOcpp);
+        log.debug("idDomain: {}", idDomain);
+        
+        assertTrue(idAuth.equals(idOcpp));
+        assertFalse(idAuth.equals(idDomain)); // different user to logon to
+
+        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationAuth);
+        idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+        
+        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationOcpp);
+        idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+
+        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationDomain);
+        idDomain = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+
+        log.debug("idAuth: {}", idAuth);
+        log.debug("idOcpp: {}", idOcpp);
+        log.debug("idDomain: {}", idDomain);
+        
+        assertTrue(idAuth.equals(idOcpp));
+        assertTrue(idAuth.equals(idDomain)); // for UCP a different user to logon to is ignored
     }
     
     //=== Hikari ===
@@ -87,7 +152,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testDefaultSimplePoolDataSourceHikari() {
-        final SimplePoolDataSourceHikari pds = new SimplePoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
+        final SimplePoolDataSourceHikari pds = SimplePoolDataSourceHikari.build(new PoolDataSourceConfigurationHikari());
 
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=null, username=null, password=null, " +
@@ -103,21 +168,45 @@ public class CheckConfigurationUnitTest {
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
         poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
 
-        final SimplePoolDataSourceHikari pds1 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
-        final SimplePoolDataSourceHikari pds2 = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikari);
-        final SmartPoolDataSource pds3 = new SmartPoolDataSourceHikari(pds1);
-        final SmartPoolDataSource pds4 = new SmartPoolDataSourceHikari(pds2);
+        log.debug("testSimplePoolDataSourceHikariJoinTwice()");
+        log.debug("poolDataSourceConfigurationHikari.getType(): {}", poolDataSourceConfigurationHikari.getType());
 
-        assertEquals(pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString(),
-                     pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString());
-        assertEquals(pds3.getPds().getPoolDataSourceConfiguration().toString(),
-                     pds4.getPds().getPoolDataSourceConfiguration().toString());
-        assertEquals(pds3.isStatisticsEnabled(), pds4.isStatisticsEnabled());
-        assertEquals(pds3.isSingleSessionProxyModel(), pds4.isSingleSessionProxyModel());
-        assertEquals(pds3.isUseFixedUsernamePassword(), pds4.isUseFixedUsernamePassword());
-        assertEquals(pds3.getCommonDataSourceProperties(), pds4.getCommonDataSourceProperties());
-        assertEquals(pds3.getCommonDataSourceStatisticsTotal(), pds4.getCommonDataSourceStatisticsTotal());
-        assertEquals(pds3.getCommonDataSourceStatistics(), pds4.getCommonDataSourceStatistics());
+        assertEquals(SimplePoolDataSourceHikari.class, poolDataSourceConfigurationHikari.getType());
+
+        final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
+        final int startTotalSimplePoolCount = SmartPoolDataSource.getTotalSimplePoolCount();
+        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari);
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari); // same config
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari); // same config
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        checkSimplePoolDataSourceJoinTwice(pds1, pds2);
+        checkSimplePoolDataSourceJoinTwice(pds2, pds3);
+        checkSimplePoolDataSourceJoinTwice(pds3, pds1);
+
+        // change one property and create a smart pool data source: total pool count should increase
+        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari1 =
+            poolDataSourceConfigurationHikari
+            .toBuilder()
+            .autoCommit(!poolDataSourceConfigurationHikari.isAutoCommit())
+            .build();
+        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1);
+
+        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
     }
 
     //=== Oracle ===
@@ -131,7 +220,7 @@ public class CheckConfigurationUnitTest {
         assertEquals(10, poolDataSourceConfigurationOracle.getMinPoolSize());
         assertEquals(20, poolDataSourceConfigurationOracle.getMaxPoolSize());
         assertEquals("oracle.jdbc.pool.OracleDataSource", poolDataSourceConfigurationOracle.getConnectionFactoryClassName());
-        assertEquals(true, poolDataSourceConfigurationOracle.isValidateConnectionOnBorrow());
+        assertEquals(true, poolDataSourceConfigurationOracle.getValidateConnectionOnBorrow());
         assertEquals(120, poolDataSourceConfigurationOracle.getAbandonedConnectionTimeout());
         assertEquals(120, poolDataSourceConfigurationOracle.getTimeToLiveConnectionTimeout());
         assertEquals(0, poolDataSourceConfigurationOracle.getInactiveConnectionTimeout());
@@ -141,18 +230,18 @@ public class CheckConfigurationUnitTest {
         assertEquals(0, poolDataSourceConfigurationOracle.getMaxConnectionReuseTime());
         assertEquals(120, poolDataSourceConfigurationOracle.getSecondsToTrustIdleConnection());
         assertEquals(15, poolDataSourceConfigurationOracle.getConnectionValidationTimeout());
-        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=change_on_install, " +
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), connectionPoolName=common-pool, initialPoolSize=0, " +
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=common-pool, initialPoolSize=0, " +
                      "minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, validateConnectionOnBorrow=true, " +
                      "abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, inactiveConnectionTimeout=0, timeoutCheckInterval=30, " +
                      "maxStatements=10, connectionWaitTimeout=3, maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfigurationOracle.toString());
 
         poolDataSourceConfigurationOracle = poolDataSourceConfigurationOracle.toBuilder().password("null").timeToLiveConnectionTimeout(100).build();
-        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=system, password=null, " +
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), connectionPoolName=common-pool, initialPoolSize=0, " +
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=common-pool, initialPoolSize=0, " +
                      "minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, validateConnectionOnBorrow=true, " +
                      "abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=100, inactiveConnectionTimeout=0, timeoutCheckInterval=30, " +
                      "maxStatements=10, connectionWaitTimeout=3, maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
@@ -161,7 +250,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testDefaultSimplePoolDataSourceOracle() throws SQLException {
-        final SimplePoolDataSourceOracle pds = new SimplePoolDataSourceOracle(new PoolDataSourceConfigurationOracle());
+        final SimplePoolDataSourceOracle pds = SimplePoolDataSourceOracle.build(new PoolDataSourceConfigurationOracle());
             
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=null, username=null, password=null, " +
@@ -176,21 +265,60 @@ public class CheckConfigurationUnitTest {
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
         poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
 
-        final SimplePoolDataSourceOracle pds1 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
-        final SimplePoolDataSourceOracle pds2 = new SimplePoolDataSourceOracle(poolDataSourceConfigurationOracle);
-        final SmartPoolDataSource pds3 = new SmartPoolDataSourceOracle(pds1);
-        final SmartPoolDataSource pds4 = new SmartPoolDataSourceOracle(pds2);
+        log.debug("testSimplePoolDataSourceOracleJoinTwice()");
+        log.debug("poolDataSourceConfigurationOracle.getType(): {}", poolDataSourceConfigurationOracle.getType());
+        
+        assertEquals(SimplePoolDataSourceOracle.class, poolDataSourceConfigurationOracle.getType());
 
+        final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
+        final int startTotalSimplePoolCount = SmartPoolDataSource.getTotalSimplePoolCount();
+        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle);
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle); // same config
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+
+        final SmartPoolDataSource pds3 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle); // same config
+
+        assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
+            
+        checkSimplePoolDataSourceJoinTwice(pds1, pds2);
+        checkSimplePoolDataSourceJoinTwice(pds2, pds3);
+        checkSimplePoolDataSourceJoinTwice(pds3, pds1);
+
+        // change one property and create a smart pool data source: total pool count should increase
+        final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
+            poolDataSourceConfigurationOracle
+            .toBuilder()
+            .validateConnectionOnBorrow(!poolDataSourceConfigurationOracle.getValidateConnectionOnBorrow())
+            .build();
+        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationOracle1);
+
+        assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
+        assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
+        
+        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
+                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+    }
+
+    private void checkSimplePoolDataSourceJoinTwice(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2) {
+        PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
+        PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
+            
         // check all fields
-        assertEquals(pds3.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString(),
-                     pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration().toString());
-        assertEquals(pds3.getPds().getPoolDataSourceConfiguration().toString(),
-                     pds4.getPds().getPoolDataSourceConfiguration().toString());
-        assertEquals(pds3.isStatisticsEnabled(), pds4.isStatisticsEnabled());
-        assertEquals(pds3.isSingleSessionProxyModel(), pds4.isSingleSessionProxyModel());
-        assertEquals(pds3.isUseFixedUsernamePassword(), pds4.isUseFixedUsernamePassword());
-        assertEquals(pds3.getCommonDataSourceProperties(), pds4.getCommonDataSourceProperties());
-        assertEquals(pds3.getCommonDataSourceStatisticsTotal(), pds4.getCommonDataSourceStatisticsTotal());
-        assertEquals(pds3.getCommonDataSourceStatistics(), pds4.getCommonDataSourceStatistics());
+        poolDataSourceConfiguration1 = pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+        poolDataSourceConfiguration2 = pds2.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+
+        assertEquals(poolDataSourceConfiguration1.toString(),
+                     poolDataSourceConfiguration2.toString());
+        
+        assertEquals(pds1.isStatisticsEnabled(), pds2.isStatisticsEnabled());
+        assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
+        assertEquals(pds1.isUseFixedUsernamePassword(), pds2.isUseFixedUsernamePassword());
     }
 }

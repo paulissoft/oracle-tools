@@ -8,22 +8,48 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
+    // to be invoked in SmartPoolDateSource constructor    
+    public void join(final SimplePoolDataSource pds, final String schema);
+
+    // to be invoked by previous join()
+    default public void join(final SimplePoolDataSource pds, final String schema, final boolean firstPds) {
+        try {
+            if (firstPds) {
+                setPoolName(getPoolNamePrefix());
+            } else {
+                updatePoolSizes(pds);
+            }
+            setPoolName(getPoolName() + "-" + schema);
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
+    }
+
+    public static String exceptionToString(final Exception ex) {
+        return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
+    }
+
+    // signature used by HikariDataSource
+    public void setPoolName(String poolName) throws SQLException;
+
+    public String getPoolNamePrefix();
+    
     public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
 
     public String getPoolName();
 
-    public void setPoolName(String poolName) throws SQLException;
+    //*TBD*/public String getUrl();
 
-    public String getUrl();
-
-    public void setUrl(String url) throws SQLException;
+    //*TBD*/public void setUrl(String url) throws SQLException;
 
     public String getUsername();
 
+    // signature used by HikariDataSource
     public void setUsername(String username) throws SQLException;
 
     public String getPassword();
-    
+
+    // signature used by HikariDataSource / PoolDataSource
     public void setPassword(String password) throws SQLException;
         
     public int getInitialPoolSize();
@@ -41,4 +67,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public int getIdleConnections();
 
     public int getTotalConnections();        
+
+    public PoolDataSourceStatistics getPoolDataSourceStatistics();
+
+    public boolean isClosed();
 }

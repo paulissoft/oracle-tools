@@ -1,20 +1,44 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.SQLException;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
-import org.springframework.beans.DirectFieldAccessor;
+import java.sql.SQLException;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.DirectFieldAccessor;
 
 
 @Slf4j
 public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
 
-    public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
-        super();
-        
-        log.info("SimplePoolDataSourceHikari(pdsConfigurationHikari={})", pdsConfigurationHikari);
+    private final static boolean singleSessionProxyModel = false;
+    
+    private final static boolean useFixedUsernamePassword = true;
 
+    private static final String POOL_NAME_PREFIX = "HikariPool";
+         
+    // for join(), valus is irrelevant
+    private static final ConcurrentHashMap<SimplePoolDataSource, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+
+    private final PoolDataSourceStatistics poolDataSourceStatistics =
+        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
+                                     poolDataSourceStatisticsTotal,
+                                     this::isClosed,
+                                     this);
+
+    // for test purposes
+    static void clear() {
+        cachedPoolDataSourceConfigurations.clear();
+    }
+    
+    // constructor
+    private SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
+        // super();
+        
         int nr = 0;
         final int maxNr = 18;
         
@@ -25,7 +49,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                 case 1: setJdbcUrl(pdsConfigurationHikari.getUrl()); break;
                 case 2: setUsername(pdsConfigurationHikari.getUsername()); break;
                 case 3: setPassword(pdsConfigurationHikari.getPassword()); break;
-                case 4: setPoolName(pdsConfigurationHikari.getPoolName()); break;
+                case 4: /* set in super() via join() */ break;
                 case 5: setMaximumPoolSize(pdsConfigurationHikari.getMaximumPoolSize()); break;
                 case 6: setMinimumIdle(pdsConfigurationHikari.getMinimumIdle()); break;
                 case 7: setAutoCommit(pdsConfigurationHikari.isAutoCommit()); break;
@@ -41,26 +65,31 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                 case 17: setValidationTimeout(pdsConfigurationHikari.getValidationTimeout()); break;
                 case 18: setLeakDetectionThreshold(pdsConfigurationHikari.getLeakDetectionThreshold()); break;
                 default:
-                    throw new RuntimeException(String.format("Wrong value for nr ({nr}): must be between 0 and {}", nr, maxNr));
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
-                log.warn("exception at nr {}: {}", nr, ex.getMessage());
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
             }
         } while (++nr <= maxNr);
-
-        log.info("getPoolDataSourceConfiguration()={}", getPoolDataSourceConfiguration().toString());
     }
 
-    // get common pool data source properties like the ones define above
+    public static SimplePoolDataSourceHikari build(final PoolDataSourceConfiguration pdsConfiguration) {
+        return new SimplePoolDataSourceHikari((PoolDataSourceConfigurationHikari)pdsConfiguration);
+    }
+
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        return getPoolDataSourceConfiguration(true);
+    }
+    
+    public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
             .url(getJdbcUrl())
             .username(getUsername())
-            .password(getPassword())
+            .password(excludeNonIdConfiguration ? null : getPassword())
             .type(SimplePoolDataSourceHikari.class.getName())
-            .poolName(getPoolName())
+            .poolName(excludeNonIdConfiguration ? null : getPoolName())
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())
             .autoCommit(isAutoCommit())
@@ -77,49 +106,90 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
     }
-
-    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
-        log.info(">updatePoolSizes()");
-
-        final SimplePoolDataSourceHikari pdsHikari = (SimplePoolDataSourceHikari) pds;
-
-        assert(this != pdsHikari);
         
-        log.info("pool sizes before: minimum/maximum: {}/{}",
-                 getMinimumIdle(),
-                 getMaximumPoolSize());
-
-        int oldSize, newSize;
-
-        newSize = pdsHikari.getMinimumIdle();
-        oldSize = getMinimumIdle();
-
-        log.info("minimum pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
-
-        if (newSize >= 0) {                
-            setMinimumIdle(newSize + Integer.max(oldSize, 0));
-        }
-                
-        newSize = pdsHikari.getMaximumPoolSize();
-        oldSize = getMaximumPoolSize();
-
-        log.info("maximum pool sizes before setting it: old/new: {}/{}",
-                 oldSize,
-                 newSize);
-
-        if (newSize >= 0) {
-            setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
-        }
-                
-        log.info("pool sizes after: minimum/maximum: {}/{}",
-                 getMinimumIdle(),
-                 getMaximumPoolSize());
+    public void join(final SimplePoolDataSource pds, final String schema) {
+        final PoolDataSourceConfigurationId otherCommonId =
+            new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
+        final PoolDataSourceConfigurationId thisCommonId =
+            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
+        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
+                final PoolDataSourceConfigurationId cachedCommonId =
+                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
             
-        log.info("<updatePoolSizes()");
+                if (cachedCommonId.equals(thisCommonId)) {
+                    return true;
+                }
+                return null;
+            });
+        final boolean firstPds = found == null;
+        
+        log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);
+
+        try {
+            try {
+                assert(otherCommonId.equals(thisCommonId));
+            } catch (AssertionError ex) {
+                log.error("otherCommonId: {}", otherCommonId);
+                log.error("thisCommonId: {}", thisCommonId);
+                throw ex;
+            }
+        
+            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, schema, firstPds); return false; });
+        } finally {
+            log.debug("<join()");
+        }
     }
 
+    public String getPoolNamePrefix() {
+        return POOL_NAME_PREFIX;
+    }
+
+    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
+        updatePoolSizes((PoolDataSourceConfigurationHikari) pds.getPoolDataSourceConfiguration());
+    }
+
+    private void updatePoolSizes(final PoolDataSourceConfigurationHikari pds) throws SQLException {
+        log.info(">updatePoolSizes()");
+
+        try {
+            log.info("pool sizes before: minimum/maximum: {}/{}",
+                     getMinimumIdle(),
+                     getMaximumPoolSize());
+
+            int oldSize, newSize;
+
+            newSize = pds.getMinimumIdle();
+            oldSize = getMinimumIdle();
+
+            log.info("minimum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+            if (newSize >= 0) {                
+                setMinimumIdle(newSize + Integer.max(oldSize, 0));
+            }
+                
+            newSize = pds.getMaximumPoolSize();
+            oldSize = getMaximumPoolSize();
+
+            log.info("maximum pool sizes before setting it: old/new: {}/{}",
+                     oldSize,
+                     newSize);
+
+            if (newSize >= 0) {
+                setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
+            }
+        } finally {
+            log.info("pool sizes after: minimum/maximum: {}/{}",
+                     getMinimumIdle(),
+                     getMaximumPoolSize());
+            
+            log.info("<updatePoolSizes()");
+        }
+    }
+
+    /*TBD*/
+    /*
     public String getUrl() {
         return getJdbcUrl();
     }
@@ -127,10 +197,11 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     public void setUrl(String url) {
         setJdbcUrl(url);
     }
+    */
 
-    // HikariCP does NOT know of an initial pool size
+    // HikariCP does NOT know of an initial pool size so just return getMinPoolSize()
     public int getInitialPoolSize() {
-        return -1;
+        return getMinPoolSize();
     }
 
     // HikariCP does NOT know of a minimum pool size but minimumIdle seems to be the equivalent
@@ -169,5 +240,52 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         } catch (NullPointerException ex) {
             return -1;
         }
+    }
+
+    public PoolDataSourceStatistics getPoolDataSourceStatistics() {
+        return poolDataSourceStatistics;
+    }
+
+    @Override
+    public void close() {
+        // this pool data source should never close
+    }
+
+    public boolean isClosed() {
+        // when there is at least one attached pool (samen commonId) not closed: return false
+        final PoolDataSourceConfigurationId thisCommonId =
+            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
+        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
+                final PoolDataSourceConfigurationId cachedCommonId =
+                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
+            
+                if (cachedCommonId.equals(thisCommonId) && !k.isClosed()) {
+                    return true;
+                }
+                return null;
+            });
+
+        return found == null; // all closed
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof SimplePoolDataSourceHikari)) {
+            return false;
+        }
+
+        final SimplePoolDataSourceHikari other = (SimplePoolDataSourceHikari) obj;
+        
+        return other.getPoolDataSourceConfiguration().equals(this.getPoolDataSourceConfiguration());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.getPoolDataSourceConfiguration().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return this.getPoolDataSourceConfiguration().toString();
     }
 }
