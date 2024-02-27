@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
@@ -9,28 +10,31 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 @Slf4j
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
 
-    private final static boolean singleSessionProxyModel = true;
-    
-    private final static boolean useFixedUsernamePassword = false;
-
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    // for join(), valus is irrelevant
-    private static final ConcurrentHashMap<SimplePoolDataSource, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private static PoolDataSourceStatistics poolDataSourceStatisticsTotal;
 
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+    static {
+        init();
+    }
+
+    private static void init() {
+        poolDataSourceStatisticsTotal = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+    }
+
+    // for join(), value: pool data source open (true) or not (false)
+    private final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicBoolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     private final PoolDataSourceStatistics poolDataSourceStatistics =
         new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
                                      poolDataSourceStatisticsTotal,
                                      this::isClosed,
-                                     this);
+                                     this.getPoolDataSourceConfiguration());
     
     // for test purposes
     static void clear() {
-        cachedPoolDataSourceConfigurations.clear();
+        init();
     }
 
     private SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
@@ -103,21 +107,12 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .build();
     }
     
-    public void join(final SimplePoolDataSource pds, final String schema) {
+    public void join(final PoolDataSourceConfiguration pds) {
         final PoolDataSourceConfigurationId otherCommonId =
-            new PoolDataSourceConfigurationId(pds.getPoolDataSourceConfiguration(), true);
+            new PoolDataSourceConfigurationId(pds, true);
         final PoolDataSourceConfigurationId thisCommonId =
             new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
-        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
-                final PoolDataSourceConfigurationId cachedCommonId =
-                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
-            
-                if (cachedCommonId.equals(thisCommonId)) {
-                    return true;
-                }
-                return null;
-            });
-        final boolean firstPds = found == null;
+        final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
 
         log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);
 
@@ -130,7 +125,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
                 throw ex;
             }
         
-            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, schema, firstPds); return false; });
+            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, firstPds); return new AtomicBoolean(false); });
         } finally {
             log.debug("<join()");
         }
@@ -140,8 +135,8 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return POOL_NAME_PREFIX;
     }
 
-    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException {
-        updatePoolSizes((PoolDataSourceConfigurationOracle) pds.getPoolDataSourceConfiguration());
+    public void updatePoolSizes(final PoolDataSourceConfiguration pds) throws SQLException {
+        updatePoolSizes((PoolDataSourceConfigurationOracle)pds);
     }
     
     private void updatePoolSizes(final PoolDataSourceConfigurationOracle pds) throws SQLException {
@@ -264,20 +259,23 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return poolDataSourceStatistics;
     }
 
+    public void open(final PoolDataSourceConfiguration pds) {
+        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(true);
+    }
+
+    public void close(final PoolDataSourceConfiguration pds) {
+        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(false);
+    }
+
     // to implement interface Closeable
     public void close() {
         // nothing
     }
 
     public boolean isClosed() {
-        // when there is at least one attached pool (samen commonId) not closed: return false
-        final PoolDataSourceConfigurationId thisCommonId =
-            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
-        final Boolean found = cachedPoolDataSourceConfigurations.searchKeys(Long.MAX_VALUE, (k) -> {
-                final PoolDataSourceConfigurationId cachedCommonId =
-                    new PoolDataSourceConfigurationId(k.getPoolDataSourceConfiguration(), true);
-            
-                if (cachedCommonId.equals(thisCommonId) && !k.isClosed()) {
+        // when there is at least one attached pool open: return false
+        final Boolean found = cachedPoolDataSourceConfigurations.searchValues(Long.MAX_VALUE, (v) -> {
+                if (v.get()) {
                     return true;
                 }
                 return null;

@@ -9,17 +9,17 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
     // to be invoked in SmartPoolDateSource constructor    
-    public void join(final SimplePoolDataSource pds, final String schema);
+    public void join(final PoolDataSourceConfiguration pds);
 
-    // to be invoked by previous join()
-    default public void join(final SimplePoolDataSource pds, final String schema, final boolean firstPds) {
+    // to be invoked by previous one
+    default public void join(final PoolDataSourceConfiguration pds, final boolean firstPds) {
         try {
             if (firstPds) {
                 setPoolName(getPoolNamePrefix());
             } else {
                 updatePoolSizes(pds);
             }
-            setPoolName(getPoolName() + "-" + schema);
+            setPoolName(getPoolName() + "-" + pds.getSchema());
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
@@ -34,7 +34,7 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public String getPoolNamePrefix();
     
-    public void updatePoolSizes(final SimplePoolDataSource pds) throws SQLException;
+    public void updatePoolSizes(final PoolDataSourceConfiguration pds) throws SQLException;
 
     public String getPoolName();
 
@@ -69,6 +69,10 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public int getTotalConnections();        
 
     public PoolDataSourceStatistics getPoolDataSourceStatistics();
+
+    public void open(final PoolDataSourceConfiguration pds);
+
+    public void close(final PoolDataSourceConfiguration pds);
 
     public boolean isClosed();
 }

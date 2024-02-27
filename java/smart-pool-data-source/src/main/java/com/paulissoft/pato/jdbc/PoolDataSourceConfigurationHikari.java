@@ -56,6 +56,21 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     
     private long leakDetectionThreshold;
 
+    @Override
+    public int getInitialPoolSize() {
+        return minimumIdle;
+    }
+
+    @Override
+    public int getMinPoolSize() {
+        return minimumIdle;
+    }
+
+    @Override
+    public int getMaxPoolSize() {
+        return maximumPoolSize;
+    }
+    
     /*
      * NOTE 1.
      *

@@ -45,7 +45,7 @@ public class PoolDataSourceStatistics {
 
     private static Method loggerDebug;
 
-    static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
+    static PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal;
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
@@ -67,8 +67,18 @@ public class PoolDataSourceStatistics {
             logger.error(exceptionToString(e));
             loggerDebug = null;
         }
+
+        init();
     }
 
+    private static void init() {
+        poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
+    }
+
+    static void clear() {
+        init();
+    }
+    
     // all instance stuff
     
     private Supplier<String> descriptionSupplier = null;
@@ -77,7 +87,7 @@ public class PoolDataSourceStatistics {
 
     private int level;
 
-    private SimplePoolDataSource pds = null;
+    private PoolDataSourceConfiguration pds = null;
 
     private LocalDateTime firstUpdate = null;
 
@@ -158,7 +168,7 @@ public class PoolDataSourceStatistics {
     public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier,
                                     final PoolDataSourceStatistics parent,
                                     final Supplier<Boolean> isClosedSupplier,
-                                    final SimplePoolDataSource pds) {
+                                    final PoolDataSourceConfiguration pds) {
         this.descriptionSupplier = descriptionSupplier;
         this.parent = parent;
         this.isClosedSupplier = isClosedSupplier;
@@ -650,50 +660,37 @@ public class PoolDataSourceStatistics {
                                                          pds.getMaxPoolSize() });
                 }
 
-                if (!showTotals && pds != null) {
-                    // current values
-                    val1 = pds.getActiveConnections();
-                    val2 = pds.getIdleConnections();
-                    val3 = pds.getTotalConnections();
+                val1 = getActiveConnectionsMin();
+                val2 = getActiveConnectionsAvg();
+                val3 = getActiveConnectionsMax();
+
+                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                    method.invoke(logger,
+                                  "{}min/avg/max active connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
                     
-                    if (val1 >= 0L && val2 >= 0L && val3 >= 0L) {
-                        method.invoke(logger,
-                                      "{}current active/idle/total connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-                } else {
-                    val1 = getActiveConnectionsMin();
-                    val2 = getActiveConnectionsAvg();
-                    val3 = getActiveConnectionsMax();
+                val1 = getIdleConnectionsMin();
+                val2 = getIdleConnectionsAvg();
+                val3 = getIdleConnectionsMax();
 
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.invoke(logger,
-                                      "{}min/avg/max active connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
-                    
-                    val1 = getIdleConnectionsMin();
-                    val2 = getIdleConnectionsAvg();
-                    val3 = getIdleConnectionsMax();
+                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                    method.invoke(logger,
+                                  "{}min/avg/max idle connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                }
 
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.invoke(logger,
-                                      "{}min/avg/max idle connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
+                val1 = getTotalConnectionsMin();
+                val2 = getTotalConnectionsAvg();
+                val3 = getTotalConnectionsMax();
 
-                    val1 = getTotalConnectionsMin();
-                    val2 = getTotalConnectionsAvg();
-                    val3 = getTotalConnectionsMax();
-
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.invoke(logger,
-                                      "{}min/avg/max total connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
-                    }
+                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                    method.invoke(logger,
+                                  "{}min/avg/max total connections: {}/{}/{}",
+                                  (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             }
 

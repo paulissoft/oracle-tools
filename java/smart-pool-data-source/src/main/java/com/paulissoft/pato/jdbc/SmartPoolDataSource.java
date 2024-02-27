@@ -1,5 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
+import com.zaxxer.hikari.HikariDataSource;
+import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,17 +12,17 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import javax.sql.DataSource;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.Delegate;
 import oracle.jdbc.OracleConnection;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.zaxxer.hikari.HikariDataSource;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
-public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
+public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolDataSource,*/ ConnectInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(SmartPoolDataSource.class);
 
@@ -50,7 +52,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
     private PoolDataSourceConfiguration poolDataSourceConfiguration = null;
         
     @Getter(AccessLevel.PACKAGE)
-    @Delegate(excludes=ToOverride.class)
+    @Delegate(types=DataSource.class,excludes=ToOverride.class)
     private SimplePoolDataSource commonPoolDataSource = null;
 
     private AtomicBoolean opened = new AtomicBoolean(false);
@@ -61,6 +63,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
     static void clear() {
         cachedSmartPoolDataSources.clear();
         cachedSimplePoolDataSources.clear();
+        PoolDataSourceStatistics.clear();
         SimplePoolDataSourceHikari.clear();
         SimplePoolDataSourceOracle.clear();
     }
@@ -91,10 +94,10 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                                                               this.poolDataSourceConfiguration.getSchema() + ")",
                                                               commonPoolDataSource.getPoolDataSourceStatistics(),
                                                               this::isClosed,
-                                                              this);
+                                                              this.poolDataSourceConfiguration);
             this.commonPoolDataSource.setUsername(this.poolDataSourceConfiguration.getUsernameToConnectTo());
             this.commonPoolDataSource.setPassword(this.poolDataSourceConfiguration.getPassword());
-            this.commonPoolDataSource.join(this, this.poolDataSourceConfiguration.getSchema()); // must amend pool sizes
+            this.commonPoolDataSource.join(this.poolDataSourceConfiguration); // must amend pool sizes
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
@@ -259,6 +262,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
         logger.debug(">open()");
 
         opened.set(true);
+        commonPoolDataSource.open(this.getPoolDataSourceConfiguration());
         
         logger.debug("<open()");
     }
@@ -270,6 +274,7 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
         try {
             if (opened.getAndSet(false)) {
                 // switched from open to closed: show statistics and close (which will update and show the parent statistics too)
+                commonPoolDataSource.open(this.getPoolDataSourceConfiguration());
                 pdsStatistics.close();
             }
         } finally {
@@ -510,7 +515,9 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                                     final boolean showStatistics) {
         try {
             pdsStatistics.update(conn, timeElapsed);
-            pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
+            pdsStatistics.update(commonPoolDataSource.getActiveConnections(),
+                                 commonPoolDataSource.getIdleConnections(),
+                                 commonPoolDataSource.getTotalConnections());
         } catch (Exception e) {
             logger.error(SimplePoolDataSource.exceptionToString(e));
         }
@@ -534,7 +541,9 @@ public class SmartPoolDataSource implements SimplePoolDataSource, ConnectInfo {
                                  proxyLogicalConnectionCount,
                                  proxyOpenSessionCount,
                                  proxyCloseSessionCount);
-            pdsStatistics.update(getActiveConnections(), getIdleConnections(), getTotalConnections());
+            pdsStatistics.update(commonPoolDataSource.getActiveConnections(),
+                                 commonPoolDataSource.getIdleConnections(),
+                                 commonPoolDataSource.getTotalConnections());
         } catch (Exception e) {
             logger.error(SimplePoolDataSource.exceptionToString(e));
         }
