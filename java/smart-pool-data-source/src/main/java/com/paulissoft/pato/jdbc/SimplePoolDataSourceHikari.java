@@ -104,10 +104,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
         
     public void join(final PoolDataSourceConfiguration pds) {
-        final PoolDataSourceConfigurationId otherCommonId =
-            new PoolDataSourceConfigurationId(pds, true);
-        final PoolDataSourceConfigurationId thisCommonId =
-            new PoolDataSourceConfigurationId(this.getPoolDataSourceConfiguration(), true);
+        final PoolDataSourceConfigurationCommonId otherCommonId =
+            new PoolDataSourceConfigurationCommonId(pds);
+        final PoolDataSourceConfigurationCommonId thisCommonId =
+            new PoolDataSourceConfigurationCommonId(this.getPoolDataSourceConfiguration());
         final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
         
         log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);

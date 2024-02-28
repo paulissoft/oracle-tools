@@ -194,13 +194,13 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
         logger.debug(">build(type={}) (4)", poolDataSourceConfiguration.getType());
 
         try {
-            final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(poolDataSourceConfiguration, false);
+            final PoolDataSourceConfigurationId thisId = new PoolDataSourceConfigurationId(poolDataSourceConfiguration);
 
             logger.debug("thisId: {}", thisId);
 
             // case 1: if not absent
             return cachedSmartPoolDataSources.computeIfAbsent(thisId, key -> {
-                PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationId(poolDataSourceConfiguration, true);
+                PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
                 SimplePoolDataSource simplePoolDataSource = null;
                 SmartPoolDataSource smartPoolDataSource = null;
 

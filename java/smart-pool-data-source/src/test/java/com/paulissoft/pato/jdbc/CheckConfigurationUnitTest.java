@@ -67,7 +67,7 @@ public class CheckConfigurationUnitTest {
     
     @Test
     void testPoolDataSourceConfigurationCommonId() {
-        PoolDataSourceConfigurationId idAuth, idOcpp, idDomain;
+        PoolDataSourceConfigurationCommonId idAuth, idOcpp, idDomain;
         
         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikariCopy =
             poolDataSourceConfigurationHikari.toBuilder().build();
@@ -75,13 +75,13 @@ public class CheckConfigurationUnitTest {
             poolDataSourceConfigurationOracle.toBuilder().build();
 
         poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationAuth);
-        idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+        idAuth = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
 
         poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationOcpp);
-        idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+        idOcpp = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
 
         poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationDomain);
-        idDomain = new PoolDataSourceConfigurationId(poolDataSourceConfigurationHikariCopy, true);
+        idDomain = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
 
         log.debug("idAuth: {}", idAuth);
         log.debug("idOcpp: {}", idOcpp);
@@ -91,13 +91,13 @@ public class CheckConfigurationUnitTest {
         assertFalse(idAuth.equals(idDomain)); // different user to logon to
 
         poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationAuth);
-        idAuth = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+        idAuth = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationOracleCopy);
         
         poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationOcpp);
-        idOcpp = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+        idOcpp = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationOracleCopy);
 
         poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationDomain);
-        idDomain = new PoolDataSourceConfigurationId(poolDataSourceConfigurationOracleCopy, true);
+        idDomain = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationOracleCopy);
 
         log.debug("idAuth: {}", idAuth);
         log.debug("idOcpp: {}", idOcpp);

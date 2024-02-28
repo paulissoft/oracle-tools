@@ -3,28 +3,16 @@ package com.paulissoft.pato.jdbc;
 
 class PoolDataSourceConfigurationId {
 
-    private String id;
+    protected String id;
 
-    PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
-        this(poolDataSourceConfiguration, false);
+    // necessary for PoolDataSourceConfigurationCommonId constructor
+    PoolDataSourceConfigurationId() {
     }
-
-    PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                                  final boolean onlyCommonDataSourceConfiguration) {
+    
+    PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         final PoolDataSourceConfiguration copy = poolDataSourceConfiguration.toBuilder().build(); // a copy
 
-        if (onlyCommonDataSourceConfiguration) {
-            copy.keepCommonDataSourceConfiguration();
-            if (copy.isUseFixedUsernamePassword()) {
-                // username like bc_proxy[bodomain] to bc_proxy
-                copy.determineConnectInfo();
-                if (copy.getProxyUsername() != null) {
-                    copy.setUsername(copy.getProxyUsername());
-                }
-            }
-        } else {
-            copy.clearNonIdConfiguration();
-        }
+        copy.clearNonIdConfiguration();
         
         this.id = copy.toString();
     }
