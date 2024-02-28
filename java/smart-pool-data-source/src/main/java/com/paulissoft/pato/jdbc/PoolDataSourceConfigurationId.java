@@ -12,7 +12,7 @@ class PoolDataSourceConfigurationId {
     PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         final PoolDataSourceConfiguration copy = poolDataSourceConfiguration.toBuilder().build(); // a copy
 
-        copy.clearNonIdConfiguration();
+        copy.keepIdConfiguration();
         
         this.id = copy.toString();
     }

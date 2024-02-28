@@ -94,8 +94,8 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
     }
 
     @Override
-    void keepCommonDataSourceConfiguration() {
-        super.keepCommonDataSourceConfiguration();
+    void keepCommonIdConfiguration() {
+        super.keepCommonIdConfiguration();
         this.connectionPoolName = null;
         this.initialPoolSize = 0;
         this.minPoolSize = 0;
@@ -103,8 +103,8 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
     }
 
     @Override
-    void clearNonIdConfiguration() {
-        super.clearNonIdConfiguration();
+    void keepIdConfiguration() {
+        super.keepIdConfiguration();
         this.connectionPoolName = null;
     }
 

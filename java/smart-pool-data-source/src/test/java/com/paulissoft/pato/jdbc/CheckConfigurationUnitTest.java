@@ -319,6 +319,6 @@ public class CheckConfigurationUnitTest {
         
         assertEquals(pds1.isStatisticsEnabled(), pds2.isStatisticsEnabled());
         assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
-        assertEquals(pds1.isUseFixedUsernamePassword(), pds2.isUseFixedUsernamePassword());
+        assertEquals(pds1.isFixedUsernamePassword(), pds2.isFixedUsernamePassword());
     }
 }

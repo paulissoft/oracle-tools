@@ -65,7 +65,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         return true;
     }
 
-    public boolean isUseFixedUsernamePassword() {
+    public boolean isFixedUsernamePassword() {
         return false;
     }
         
@@ -100,14 +100,14 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         // this.type = poolDataSourceConfiguration.type;
     }
 
-    void keepCommonDataSourceConfiguration() {
-        if (!isUseFixedUsernamePassword()) {
+    void keepCommonIdConfiguration() {
+        if (!isFixedUsernamePassword()) {
             this.username = null;
         }
         this.password = null;
     }
 
-    void clearNonIdConfiguration() {
+    void keepIdConfiguration() {
         this.password = null;
     }
 
@@ -163,7 +163,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
      *
      * So you use proxyUsername only if not null and when singleSessionProxyModel is false (case 3).
      *
-     * A - when useFixedUsernamePassword is true,
+     * A - when useUsernamePassword is true,
      *     every data source having the same common data source MUST use the same username/password to connect to.
      *     Meaning that these properties MUST be part of the commonDataSourceProperties!
      *

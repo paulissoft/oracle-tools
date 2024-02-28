@@ -3,7 +3,6 @@ package com.paulissoft.pato.jdbc;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.DirectFieldAccessor;
@@ -24,7 +23,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                                      this::getPoolDataSourceConfiguration);
     
     // for join(), value: pool data source open (true) or not (false)
-    private final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicBoolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<PoolDataSourceConfiguration, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     // for test purposes
     static void clear() {
@@ -121,7 +120,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
                 throw ex;
             }
         
-            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, firstPds); return new AtomicBoolean(false); });
+            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, firstPds); return false; });
         } finally {
             log.debug("<join()");
         }
@@ -225,13 +224,13 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     public void open(final PoolDataSourceConfiguration pds) {
         log.debug("open({})", pds);
         
-        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(true);
+        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> true);
     }
 
     public void close(final PoolDataSourceConfiguration pds) {
         log.debug("close({})", pds);
                 
-        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(false);
+        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> false);
     }
  
     @Override
@@ -243,17 +242,11 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         log.debug(">isClosed()");
         
         // when there is at least one attached pool open: return false
-        final Boolean found = cachedPoolDataSourceConfigurations.searchEntries(Long.MAX_VALUE, (e) -> {
-                log.debug("key: {}; value: {}", e.getKey(), e.getValue().get());
-                if (e.getValue().get()) {                    
-                    return true;
-                }
-                return null;
-            });
+        final Boolean found = cachedPoolDataSourceConfigurations.containsValue(true);
 
-        log.debug("<isClosed() = {}", found == null);
+        log.debug("<isClosed() = {}", !found);
 
-        return found == null; // all closed
+        return !found; // all closed
     }
 
     public void show() {

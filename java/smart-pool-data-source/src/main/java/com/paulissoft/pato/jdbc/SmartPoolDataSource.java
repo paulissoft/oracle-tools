@@ -343,7 +343,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
             int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
             Instant t2 = null;
             
-            if (isUseFixedUsernamePassword()) {
+            if (isFixedUsernamePassword()) {
                 if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
                     commonPoolDataSource.setUsername(usernameToConnectTo);
                     commonPoolDataSource.setPassword(password);

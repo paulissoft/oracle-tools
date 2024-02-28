@@ -80,7 +80,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
      * NOTE 1.
      *
      * HikariCP does not support getConnection(String username, String password) so set
-     * singleSessionProxyModel to false and useFixedUsernamePassword to true so the
+     * singleSessionProxyModel to false and fixedUsernamePassword to true so the
      * common properties will include the proxy user name ("bc_proxy" from "bc_proxy[bodomain]")
      * if any else just the username. Meaning "bc_proxy[bodomain]", "bc_proxy[boauth]" and so one
      * will have ONE common pool data source.
@@ -96,12 +96,12 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     /*
      * NOTE 2.
      *
-     * The combination of singleSessionProxyModel true and useFixedUsernamePassword false does not work.
-     * So when singleSessionProxyModel is true, useFixedUsernamePassword must be true as well.
+     * The combination of singleSessionProxyModel true and fixedUsernamePassword false does not work.
+     * So when singleSessionProxyModel is true, fixedUsernamePassword must be true as well.
      */
 
     @Override
-    public boolean isUseFixedUsernamePassword() {
+    public boolean isFixedUsernamePassword() {
         return true;
     }
     
@@ -120,16 +120,16 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     }
 
     @Override
-    void keepCommonDataSourceConfiguration() {
-        super.keepCommonDataSourceConfiguration();
+    void keepCommonIdConfiguration() {
+        super.keepCommonIdConfiguration();
         this.poolName = null;
         this.maximumPoolSize = 0;
         this.minimumIdle = 0;
     }
 
     @Override
-    void clearNonIdConfiguration() {
-        super.clearNonIdConfiguration();
+    void keepIdConfiguration() {
+        super.keepIdConfiguration();
         this.poolName = null;
     }
 

@@ -8,5 +8,5 @@ public interface ConnectInfo {
     // false - use openProxySession() (two sessions will appear in v$session)
     public boolean isSingleSessionProxyModel();
 
-    public boolean isUseFixedUsernamePassword();
+    public boolean isFixedUsernamePassword();
 }    
