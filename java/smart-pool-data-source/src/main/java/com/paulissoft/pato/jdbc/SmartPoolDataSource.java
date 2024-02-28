@@ -146,19 +146,6 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
         return null;
     }
     
-    /*
-     * For both:
-     * - build(final PoolDataSourceConfigurationOracle poolDataSourceConfiguration) and
-     * - build(final PoolDataSourceConfigurationHikari poolDataSourceConfiguration)
-     *
-     * Is this id already cached (as SmartPoolDataSource)?
-     * 1. yes: return that one
-     * 2. no, but there is a SimplePoolDataSource for its Id (or commonId and join() works (in constructor)): return that one
-     * 3. no, but there is a SimplePoolDataSource for its commonId does and join() does NOT work:
-     *    create a SimplePoolDataSource and store it as the most specific, i.e. thisId
-     * 4. else, create a SimplePoolDataSource and store it as the commonId
-     */
-
     public static SmartPoolDataSource build(final PoolDataSourceConfigurationOracle poolDataSourceConfiguration) {
         logger.debug(">build(type={}) (2)", poolDataSourceConfiguration.getType());
 
@@ -189,6 +176,19 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
         }
     }        
 
+    /*
+     * For both:
+     * - build(final PoolDataSourceConfigurationOracle poolDataSourceConfiguration) and
+     * - build(final PoolDataSourceConfigurationHikari poolDataSourceConfiguration)
+     *
+     * Is thisId already cached (as SmartPoolDataSource)?
+     * 1. yes: return that one
+     * 2. no, but there is a SimplePoolDataSource for thisId (or commonId and join() works (in constructor)): return that one
+     * 3. no, but there is a SimplePoolDataSource for its commonId does and join() does NOT work:
+     *    create a SimplePoolDataSource and store it as the most specific, i.e. thisId
+     * 4. else, create a SimplePoolDataSource and store it as the commonId
+     */
+
     private static SmartPoolDataSource build(final PoolDataSourceConfiguration poolDataSourceConfiguration,
                                              final Supplier<SimplePoolDataSource> newSimplePoolDataSource) {
         logger.debug(">build(type={}) (4)", poolDataSourceConfiguration.getType());
@@ -198,7 +198,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
 
             logger.debug("thisId: {}", thisId);
 
-            // case 1: if not absent
+            // case 1: if not absent, the computeIfAbsent method will return the value belonging to the key, i.e. thisId
             return cachedSmartPoolDataSources.computeIfAbsent(thisId, key -> {
                 PoolDataSourceConfigurationId commonId = new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
                 SimplePoolDataSource simplePoolDataSource = null;
@@ -210,7 +210,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
 
                 // cases 2, 3 and 4
                 if ((simplePoolDataSource = cachedSimplePoolDataSources.get(thisId)) == null) {
-                    // there is no specific one so try the common one and join() it
+                    // there is no specific one so try the common one and join() it by invoking the constructor
                     simplePoolDataSource = cachedSimplePoolDataSources.get(commonId);
 
                     if (simplePoolDataSource != null) {
@@ -221,6 +221,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                             logger.debug("case 2");
                             // case 2
                         } catch (Exception ex) {
+                            // probably join() failed
                             logger.warn(SimplePoolDataSource.exceptionToString(ex), ex);
                             logger.debug("case 3");
                             // case 3
@@ -235,7 +236,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                         cachedSimplePoolDataSources.put(commonId, simplePoolDataSource);
                     }
                 } else {
-                    logger.debug("case 2"); // since the simplePoolDataSource is stored for just this Id, join() must have been called before
+                    logger.debug("case 2"); // since the simplePoolDataSource is stored for just thisId, join() must have been called before
                 }
                 assert(simplePoolDataSource != null);
                 if (smartPoolDataSource == null) {

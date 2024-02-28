@@ -18,7 +18,13 @@
    4. [Join multiple pool data sources](#join-multiple-pool-data-sources)
       1. [Determination of the data source type](#determination-of-the-data-source-type)
       2. [Build a smart pool data source](#build-a-smart-pool-data-source)
-3. [Conclusion](#conclusion)
+3. [Usage](#usage)
+   1. [Spring Boot bean creation](#spring-boot-bean-creation)
+      1. [Old version of class `JpaAuthConfiguration`](#old-version-of-class-jpaauthconfiguration)
+      2. [New version of class `JpaAuthConfiguration`](#new-version-of-class-jpaauthconfiguration)
+      3. [Class `MyPoolDataSourceBuilder`](#class-mypooldatasourcebuilder)
+   2. [Spring boot application properties file](#spring-boot-application-properties-file)
+4. [Conclusion](#conclusion)
 
 ## Introduction
 
@@ -71,6 +77,8 @@ Every pool has some specific properties like username, password, pool name and m
 So we will have a situation where there are several smart pools who are joined together to an actual combined and rather simple pool. The smart pools each contain the credential information needed to create a physical connection (or get a logical connection with the same credentials). They delegate the work of getting a connection to the simple pool.
 
 So the smart pool also gets a (default) connection via `getConnection()` but only after the smart pool data source library first sets the default credentials via `PoolDataSource.setUser()` and `PoolDataSource.setPassword()`. See also [the Oracle PoolDataSource interface](https://javadoc.io/doc/com.oracle.database.jdbc/ucp/21.3.0.0/oracle/ucp/jdbc/PoolDataSource.html).
+
+The only thing you need to change is the initial pool size. Since the common pool data source will have as credentials one of its combined pool data source credentials (for example user X), on start up it will create exactly this initial amount of connections for user X (since it is the default for `getConnection()`). And that is probably not what you want: a pool with only connections for user X. So it is best to set the initial pool size to 0 and let the physical connections be made on demand thereafter.
 
 #### How can we let Hikari combine pools?
 
@@ -192,11 +200,11 @@ These are the properties defined in class `PoolDataSourceConfigurationHikari`:
 - long maxLifetime
 - String connectionTestQuery
 - long initializationFailTimeout
-- boolean isolateInternalQueries    
+- boolean isolateInternalQueries
 - boolean allowPoolSuspension
 - boolean readOnly
 - boolean registerMbeans
-- long validationTimeout  
+- long validationTimeout
 - long leakDetectionThreshold
 
 ### Oracle pool data source properties
@@ -226,30 +234,130 @@ Every time you build a smart pool data source (from data source properties and t
 
 #### Determination of the data source type
 
-It must be either the `SimplePoolDataSourceOracle` or `SimplePoolDataSourceHikari` class.
+It must either be:
+- an Oracle pool data source class (`PoolDataSourceImpl` or `SimplePoolDataSourceOracle`) OR
+- a Hikari pool data source class (`HikariDataSource` or `SimplePoolDataSourceHikari`) OR
+- null which results in a Hikari pool data source class (as is the default fro Spring Boot)
 
-This can be specified in the Spring properties file:
+This can be specified in the Spring properties file by:
 
 ```
-spring.datasource.type=com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari
+spring.datasource.type=com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle
+```
+
+or:
+
+```
+spring.datasource.type=com.zaxxer.hikari.HikariDataSource
 ```
 
 #### Build a smart pool data source
 
 First, determine:
-- the id using all properties except pool name and password;
+- the (unique) id using all properties except pool name and password;
 - the common id using all properties except password, pool name and pool sizes;
-- for Oracle (proxy) username is not part of the common properties but for Hikari it must be included since Hikari smart pools must share the same (proxy) username, see the discussion above.
+- for Oracle, the (proxy) username is not part of the common properties but for Hikari it must be included since Hikari smart pools must share the same (proxy) username, see the discussion above.
 
-The first question: is this id already cached (as SmartPoolDataSource)?
+The first question: is this (unique) id already cached (as SmartPoolDataSource)?
 
 1. yes: return that one
-2. no, but there is a SimplePoolDataSource for its id (or common id and the SmartPoolDataSource could be constructed, i.e. joined): return that one
-3. no, but there is a SimplePoolDataSource for its common id does and and the SmartPoolDataSource could NOT be constructed (join did NOT work):
-   create a SimplePoolDataSource and store it as the most specific, i.e. with the id
+2. no, but there is a SimplePoolDataSource for its (unique) id (or common id and the SmartPoolDataSource could be constructed, i.e. joined): return that one
+3. no, but there is a SimplePoolDataSource for its common id and the SmartPoolDataSource could NOT be constructed (join did NOT work):
+   create a SimplePoolDataSource and store it with the most specific id, i.e. with the unique id
 4. else, create a SimplePoolDataSource and store it with the common id
 
-After steps 3 and 4 you just need to build a SmartPoolDataSource from the last stored SimplePoolDataSource.
+After steps 2, 3 and 4 you just need to build a SmartPoolDataSource from the last stored SimplePoolDataSource.
+
+## Usage
+
+### Spring Boot bean creation
+
+#### Old version of class `JpaAuthConfiguration`
+
+```
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+...
+
+@Configuration
+@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory", transactionManagerRef = "authTransactionManager", basePackages = {"io.motown.domain.commandauthorization.repositories", "io.motown.identificationauthorization"})
+public class JpaAuthConfiguration {
+
+  @Bean(name = {"authDataSourceProperties"})
+  @ConfigurationProperties(prefix = "app.auth.datasource")
+  public DataSourceProperties dataSourceProperties() {
+    return new DataSourceProperties();
+  }
+  
+  @Bean(name = {"authDataSource"})
+  @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+  public DataSource dataSource(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+    return properties
+      .initializeDataSourceBuilder()
+      .type(HikariDataSource.class)
+      .build();
+  }
+...
+```
+
+#### New version of class `JpaAuthConfiguration`
+
+```
+import com.paulissoft.pato.jdbc.PoolDataSourceConfiguration;
+import com.paulissoft.pato.jdbc.PoolDataSourceConfigurationHikari;
+import com.paulissoft.pato.jdbc.PoolDataSourceConfigurationOracle;
+...
+
+@Configuration
+@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory", transactionManagerRef = "authTransactionManager", basePackages = {"io.motown.domain.commandauthorization.repositories", "io.motown.identificationauthorization"})
+public class JpaAuthConfiguration {
+
+  @Bean(name = {"authDataSourceConfiguration"})
+  @ConfigurationProperties(prefix = "app.auth.datasource")
+  public PoolDataSourceConfiguration dataSourceConfiguration() {
+    return new PoolDataSourceConfiguration();
+  }
+  
+  @Bean(name = {"authPoolDataSourceConfigurationHikari"})
+  @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+  public PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari() {
+    return new PoolDataSourceConfigurationHikari();
+  }
+  
+  @Bean(name = {"authPoolDataSourceConfigurationOracle"})
+  @ConfigurationProperties(prefix = "app.auth.datasource.ucp")
+  public PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle() {
+    return new PoolDataSourceConfigurationOracle();
+  }
+  
+  @Bean(name = {"authDataSource"})
+  public DataSource dataSource(@Qualifier("authDataSourceConfiguration") PoolDataSourceConfiguration dataSourceConfiguration,
+                               @Qualifier("authPoolDataSourceConfigurationHikari") PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari,
+                               @Qualifier("authPoolDataSourceConfigurationOracle") PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+    return MyPoolDataSourceBuilder.build(dataSourceConfiguration, 
+                                         poolDataSourceConfigurationHikari, 
+                                         poolDataSourceConfigurationOracle);
+  }
+...
+```
+
+#### Class `MyPoolDataSourceBuilder`
+
+```
+public class MyPoolDataSourceBuilder {
+  protected static SmartPoolDataSource build(PoolDataSourceConfiguration dataSourceConfiguration, PoolDataSourceConfiguration... pdsConfigurations) {
+    try {
+      SmartPoolDataSource pds = SmartPoolDataSource.build(dataSourceConfiguration, pdsConfigurations);
+      SmartPoolDataSource.setStatisticsEnabled(true);
+      return pds;
+    } catch (SQLException ex) {
+      throw new RuntimeException(ex.getMessage());
+    } 
+  }
+}
+```
+
+### Spring boot application properties file
 
 ## Conclusion
 
