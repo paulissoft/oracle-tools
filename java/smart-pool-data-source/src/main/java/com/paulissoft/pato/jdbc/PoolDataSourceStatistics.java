@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -18,11 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-//import oracle.jdbc.OracleConnection;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.function.Supplier;
-import java.time.LocalDateTime;
 
 
 public class PoolDataSourceStatistics {
@@ -93,7 +93,7 @@ public class PoolDataSourceStatistics {
     
     // all physical time elapsed stuff
     
-    private Set</*Oracle*/Connection> physicalConnections = null;
+    private Set<Connection> physicalConnections = null;
 
     private AtomicLong physicalConnectionCount = new AtomicLong();
 
@@ -500,7 +500,7 @@ public class PoolDataSourceStatistics {
     }
 
     private boolean add(final Connection conn) throws SQLException {
-        return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(/*Oracle*/Connection.class)) );
+        return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(Connection.class)) );
     }
     
     long signalSQLException(final SQLException ex) {
@@ -602,8 +602,15 @@ public class PoolDataSourceStatistics {
 
         try {
             if (method != null) {
-                method.invoke(logger, "statistics for {} (level {}):",
+                method.invoke(logger, "Statistics for {} (level {}):",
                               (Object) new Object[]{ poolDescription, level });
+
+                if (firstUpdate != null && lastUpdate != null) {
+                    method.invoke(logger, "{}first updated at: {}",
+                                  (Object) new Object[]{ prefix, firstUpdate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
+                    method.invoke(logger, "{}last  updated at: {}",
+                                  (Object) new Object[]{ prefix, lastUpdate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
+                }
             
                 if (!showTotals) {
                     if (timeElapsed >= 0L) {
@@ -724,9 +731,9 @@ public class PoolDataSourceStatistics {
                 final Map<Properties, Long> errors = getErrors();
 
                 if (errors.isEmpty()) {
-                    logger.info("no connection exceptions signalled for {}", poolDescription);
+                    logger.info("No connection exceptions signalled for {}", poolDescription);
                 } else {
-                    logger.warn("connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
+                    logger.warn("Connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
