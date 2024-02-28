@@ -288,7 +288,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
         /* Smart Pool Data Source */
 
-        log.info("properties for smart pool connecting to schema {} via {}", pds.getSchema(), pds.getUsernameToConnectTo());
+        log.info("Properties for smart pool connecting to schema {} via {}", pds.getSchema(), pds.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
         log.info("{}url: {}", indentPrefix, pds.getUrl());
@@ -313,7 +313,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
         /* Common Simple Pool Data Source */
 
-        log.info("properties for common simple pool: {}", getConnectionPoolName());
+        log.info("Properties for common simple pool: {}", getConnectionPoolName());
 
         /* info from PoolDataSourceConfiguration */
         log.info("{}url: {}", indentPrefix, getURL());

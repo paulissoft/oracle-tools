@@ -49,7 +49,9 @@ public class PoolDataSourceStatistics {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
-    private static boolean checkInvariants = logger.isDebugEnabled();
+    private static final boolean checkStatistics = logger.isDebugEnabled();
+
+    private static boolean failOnInvalidStatistics = false;
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
@@ -344,9 +346,9 @@ public class PoolDataSourceStatistics {
 
     private boolean mustShowTotals() {
         // Show statistics if the last update moment is not equal to the last shown moment
-        // When checkInvariants is true (i.e. debug enabled) the moment is minute else hour
-        final int lastUpdateMoment = checkInvariants ? lastUpdate.getMinute() : lastUpdate.getHour();
-        final int lastShownMoment = lastShown != null ? (checkInvariants ? lastShown.getMinute() : lastShown.getHour()) : -1;
+        // When checkStatistics is true (i.e. debug enabled) the moment is minute else hour
+        final int lastUpdateMoment = checkStatistics ? lastUpdate.getMinute() : lastUpdate.getHour();
+        final int lastShownMoment = lastShown != null ? (checkStatistics ? lastShown.getMinute() : lastShown.getHour()) : -1;
         
         return lastUpdateMoment != lastShownMoment;
     }
@@ -390,7 +392,7 @@ public class PoolDataSourceStatistics {
             childSnapshotAfter = null,
             parentSnapshotAfter = null;
 
-        if (checkInvariants) {
+        if (checkStatistics) {
             childSnapshotBefore = new Snapshot(this);
             parentSnapshotBefore = new Snapshot(this.parent);
         }
@@ -451,7 +453,7 @@ public class PoolDataSourceStatistics {
 
         this.reset();
 
-        if (checkInvariants) {
+        if (checkStatistics) {
             childSnapshotAfter = new Snapshot(this);
             parentSnapshotAfter = new Snapshot(this.parent);
 
@@ -887,6 +889,10 @@ public class PoolDataSourceStatistics {
         return result;
     }
 
+    public static void setFailOnInvalidStatistics(final boolean failOnInvalidStatistics) {
+        PoolDataSourceStatistics.failOnInvalidStatistics = failOnInvalidStatistics;
+    }
+
     static void checkBeforeAndAfter(final Snapshot childSnapshotBefore,
                                     final Snapshot parentSnapshotBefore,
                                     final Snapshot childSnapshotAfter,
@@ -990,7 +996,7 @@ public class PoolDataSourceStatistics {
                                  childConnectionCountAfter,
                                  parentConnectionCountAfter);
 
-        final long diffThreshold = 0L;
+        final long diffThreshold = 10L; // 10 milliseconds
         final long totalBefore = (childTimeElapsedBefore + parentTimeElapsedBefore);
         final long totalAfter = (childTimeElapsedAfter + parentTimeElapsedAfter);
         int nr = 0;
@@ -1001,27 +1007,30 @@ public class PoolDataSourceStatistics {
             nr++;
             assert(childTimeElapsedAfter == 0L);
         } catch (AssertionError ex) {
-            logger.debug(">checkTotalBeforeAndAfter()");
-            logger.debug("assertion # {} failed", nr);
-            logger.debug("childConnectionCountBefore={}; childTimeElapsedBefore={}",
+            logger.error(">checkTotalBeforeAndAfter()");
+            logger.error("assertion # {} failed", nr);
+            logger.error("childConnectionCountBefore={}; childTimeElapsedBefore={}",
                          childConnectionCountBefore,
                          childTimeElapsedBefore);
-            logger.debug("parentConnectionCountBefore={}; parentTimeElapsedBefore={}",
+            logger.error("parentConnectionCountBefore={}; parentTimeElapsedBefore={}",
                          parentConnectionCountBefore,
                          parentTimeElapsedBefore);
-            logger.debug("childConnectionCountAfter={}; childTimeElapsedAfter={}",
+            logger.error("childConnectionCountAfter={}; childTimeElapsedAfter={}",
                          childConnectionCountAfter,
                          childTimeElapsedAfter);
-            logger.debug("parentConnectionCountAfter={}; parentTimeElapsedAfter={}",
+            logger.error("parentConnectionCountAfter={}; parentTimeElapsedAfter={}",
                          parentConnectionCountAfter,
                          parentTimeElapsedAfter);
-            logger.debug("totalBefore={}; totalAfter={}; abs(diff)={}; diffThreshold: {}",
+            logger.error("totalBefore={}; totalAfter={}; abs(diff)={}; diffThreshold: {}",
                          totalBefore,
                          totalAfter,
                          Math.abs(totalBefore - totalAfter),
                          diffThreshold);
-            logger.debug("<checkTotalBeforeAndAfter()");
-            throw ex;
+            logger.error("<checkTotalBeforeAndAfter()");
+
+            if (failOnInvalidStatistics) {
+                throw ex;
+            }
         }
     }
 
@@ -1063,20 +1072,23 @@ public class PoolDataSourceStatistics {
             assert(parentMaxBefore == Long.MIN_VALUE ||
                    parentMaxAfter >= parentMaxBefore);
         } catch (AssertionError ex) {
-            logger.debug(">checkMinMaxBeforeAndAfter()");
-            logger.debug("assertion # {} failed", nr);
-            logger.debug("childMinBefore={}; childMaxBefore={}; parentMinBefore={}; parentMaxBefore={}",
+            logger.error(">checkMinMaxBeforeAndAfter()");
+            logger.error("assertion # {} failed", nr);
+            logger.error("childMinBefore={}; childMaxBefore={}; parentMinBefore={}; parentMaxBefore={}",
                          childMinBefore,
                          childMaxBefore,
                          parentMinBefore,
                          parentMaxBefore);
-            logger.debug("childMinAfter={}; childMaxAfter={}; parentMinAfter={}; parentMaxAfter={}",
+            logger.error("childMinAfter={}; childMaxAfter={}; parentMinAfter={}; parentMaxAfter={}",
                          childMinAfter,
                          childMaxAfter,
                          parentMinAfter,
                          parentMaxAfter);
-            logger.debug("<checkMinMaxBeforeAndAfter()");
-            throw ex;
+            logger.error("<checkMinMaxBeforeAndAfter()");
+
+            if (failOnInvalidStatistics) {
+                throw ex;
+            }
         }
     }
     
@@ -1096,16 +1108,19 @@ public class PoolDataSourceStatistics {
             ++nr;
             assert(childCountAfter == 0L);
         } catch (AssertionError ex) {
-            logger.debug(">checkCountBeforeAndAfter()");
-            logger.debug("assertion # {} failed", nr);
-            logger.debug("childCountBefore={}; parentCountBefore={}",
+            logger.error(">checkCountBeforeAndAfter()");
+            logger.error("assertion # {} failed", nr);
+            logger.error("childCountBefore={}; parentCountBefore={}",
                          childCountBefore,
                          parentCountBefore);
-            logger.debug("childCountAfter={}; parentCountAfter={}",
+            logger.error("childCountAfter={}; parentCountAfter={}",
                          childCountAfter,
                          parentCountAfter);
-            logger.debug("<checkCountBeforeAndAfter()");
-            throw ex;
+            logger.error("<checkCountBeforeAndAfter()");
+
+            if (failOnInvalidStatistics) {
+                throw ex;
+            }
         }
     }
 

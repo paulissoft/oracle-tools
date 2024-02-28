@@ -258,7 +258,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
         /* Smart Pool Data Source */
         
-        log.info("properties for smart pool connecting to schema {} via {}", pds.getSchema(), pds.getUsernameToConnectTo());
+        log.info("Properties for smart pool connecting to schema {} via {}", pds.getSchema(), pds.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
         log.info("{}url: {}", indentPrefix, pds.getUrl());
@@ -285,7 +285,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
         /* Common Simple Pool Data Source */
         
-        log.info("properties for common simple pool: {}", getPoolName());
+        log.info("Properties for common simple pool: {}", getPoolName());
         
         /* info from PoolDataSourceConfiguration */
         log.info("{}driverClassName: {}", indentPrefix, getDriverClassName());
