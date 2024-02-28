@@ -45,11 +45,11 @@ public class PoolDataSourceStatistics {
 
     private static Method loggerDebug;
 
-    static PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal;
+    static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
-    private static boolean ignoreAssertionError = !logger.isDebugEnabled();
+    private static boolean checkInvariants = logger.isDebugEnabled();
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
@@ -67,16 +67,10 @@ public class PoolDataSourceStatistics {
             logger.error(exceptionToString(e));
             loggerDebug = null;
         }
-
-        init();
-    }
-
-    private static void init() {
-        poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
     }
 
     static void clear() {
-        init();
+        poolDataSourceStatisticsGrandTotal.reset();
     }
     
     // all instance stuff
@@ -87,11 +81,13 @@ public class PoolDataSourceStatistics {
 
     private int level;
 
-    private PoolDataSourceConfiguration pds = null;
+    private Supplier<PoolDataSourceConfiguration> pdsSupplier = null;
 
     private LocalDateTime firstUpdate = null;
 
     private LocalDateTime lastUpdate = null;
+
+    private LocalDateTime lastShown = null;
     
     // all physical time elapsed stuff
     
@@ -168,11 +164,11 @@ public class PoolDataSourceStatistics {
     public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier,
                                     final PoolDataSourceStatistics parent,
                                     final Supplier<Boolean> isClosedSupplier,
-                                    final PoolDataSourceConfiguration pds) {
+                                    final Supplier<PoolDataSourceConfiguration> pdsSupplier) {
         this.descriptionSupplier = descriptionSupplier;
         this.parent = parent;
         this.isClosedSupplier = isClosedSupplier;
-        this.pds = pds;
+        this.pdsSupplier = pdsSupplier;
 
         // only the overall instance tracks note of physical connections
         if (parent == null) {
@@ -235,9 +231,16 @@ public class PoolDataSourceStatistics {
 
         return result;
     }
+
+    private PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        return pdsSupplier != null ? pdsSupplier.get() : null;
+    }        
         
     void update(final Connection conn,
-                final long timeElapsed) throws SQLException {
+                final long timeElapsed,
+                final int activeConnections,
+                final int idleConnections,
+                final int totalConnections) throws SQLException {
         if (level != 4 || isClosed()) {
             return;
         }
@@ -264,7 +267,7 @@ public class PoolDataSourceStatistics {
             updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
         }
 
-        lastUpdate = LocalDateTime.now();
+        update(activeConnections, idleConnections, totalConnections);
     }
 
     void update(final Connection conn,
@@ -272,7 +275,10 @@ public class PoolDataSourceStatistics {
                 final long proxyTimeElapsed,
                 final int proxyLogicalConnectionCount,
                 final int proxyOpenSessionCount,
-                final int proxyCloseSessionCount) throws SQLException {
+                final int proxyCloseSessionCount,
+                final int activeConnections,
+                final int idleConnections,
+                final int totalConnections) throws SQLException {
         if (level != 4 || isClosed()) {
             return;
         }
@@ -311,20 +317,12 @@ public class PoolDataSourceStatistics {
         this.proxyOpenSessionCount.addAndGet(proxyOpenSessionCount);
         this.proxyCloseSessionCount.addAndGet(proxyCloseSessionCount);
 
-        lastUpdate = LocalDateTime.now();
+        update(activeConnections, idleConnections, totalConnections);
     }
 
-    void update(final int activeConnections,
-                final int idleConnections,
-                final int totalConnections) /*throws SQLException*/ {
-        if (level != 4 || isClosed()) {
-            return;
-        }
-
-        if (firstUpdate == null) {
-            firstUpdate = LocalDateTime.now();
-        }
-
+    private void update(final int activeConnections,
+                        final int idleConnections,
+                        final int totalConnections) /*throws SQLException*/ {
         final BigDecimal count = new BigDecimal(getConnectionCount());
 
         // update parent
@@ -337,6 +335,20 @@ public class PoolDataSourceStatistics {
         updateMinMax(totalConnections, parent.totalConnectionsMin, parent.totalConnectionsMax);
 
         lastUpdate = LocalDateTime.now();
+
+        // Show statistics if necessary
+        if (mustShowTotals()) {
+            showStatistics(true);
+        }
+    }
+
+    private boolean mustShowTotals() {
+        // Show statistics if the last update hour is not equal to the last shown hour
+        
+        final int lastUpdateHour = lastUpdate.getHour();
+        final int lastShownHour = lastShown != null ? lastShown.getHour() : -1;
+        
+        return lastUpdateHour != lastShownHour;
     }
 
     void close() {
@@ -372,9 +384,16 @@ public class PoolDataSourceStatistics {
             return;
         }
 
-        final Snapshot
-            childSnapshotBefore = new Snapshot(this),
-            parentSnapshotBefore = new Snapshot(this.parent);            
+        Snapshot
+            childSnapshotBefore = null,
+            parentSnapshotBefore = null,
+            childSnapshotAfter = null,
+            parentSnapshotAfter = null;
+
+        if (checkInvariants) {
+            childSnapshotBefore = new Snapshot(this);
+            parentSnapshotBefore = new Snapshot(this.parent);
+        }
 
         // update the parent before the child since updateMean1 is used,
         // i.e. those must be done before updateMean2
@@ -432,21 +451,22 @@ public class PoolDataSourceStatistics {
 
         this.reset();
 
-        final Snapshot
-            childSnapshotAfter = new Snapshot(this),
+        if (checkInvariants) {
+            childSnapshotAfter = new Snapshot(this);
             parentSnapshotAfter = new Snapshot(this.parent);
 
-        checkBeforeAndAfter(childSnapshotBefore,
-                            parentSnapshotBefore,
-                            childSnapshotAfter,
-                            parentSnapshotAfter);
+            checkBeforeAndAfter(childSnapshotBefore,
+                                parentSnapshotBefore,
+                                childSnapshotAfter,
+                                parentSnapshotAfter);
+        }
 
         // recursively
         this.parent.consolidate();
     }
 
-    private void reset() {
-        firstUpdate = lastUpdate = null;
+    void reset() {
+        firstUpdate = lastUpdate = lastShown = null;
         physicalConnectionCount.set(0L);
         physicalTimeElapsedMin.set(Long.MAX_VALUE);    
         physicalTimeElapsedMax.set(Long.MIN_VALUE);    
@@ -576,6 +596,7 @@ public class PoolDataSourceStatistics {
         final boolean showErrors = showTotals && level <= 3;
         final String prefix = INDENT_PREFIX;
         final String poolDescription = getDescription();
+        final PoolDataSourceConfiguration pds = showPoolSizes ? getPoolDataSourceConfiguration() : null;
 
         try {
             if (method != null) {
@@ -660,37 +681,39 @@ public class PoolDataSourceStatistics {
                                                          pds.getMaxPoolSize() });
                 }
 
-                val1 = getActiveConnectionsMin();
-                val2 = getActiveConnectionsAvg();
-                val3 = getActiveConnectionsMax();
+                if (showTotals) {
+                    val1 = getActiveConnectionsMin();
+                    val2 = getActiveConnectionsAvg();
+                    val3 = getActiveConnectionsMax();
 
-                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}min/avg/max active connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
-                }
+                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        method.invoke(logger,
+                                      "{}min/avg/max active connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
                     
-                val1 = getIdleConnectionsMin();
-                val2 = getIdleConnectionsAvg();
-                val3 = getIdleConnectionsMax();
+                    val1 = getIdleConnectionsMin();
+                    val2 = getIdleConnectionsAvg();
+                    val3 = getIdleConnectionsMax();
 
-                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}min/avg/max idle connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
-                }
+                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        method.invoke(logger,
+                                      "{}min/avg/max idle connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
 
-                val1 = getTotalConnectionsMin();
-                val2 = getTotalConnectionsAvg();
-                val3 = getTotalConnectionsMax();
+                    val1 = getTotalConnectionsMin();
+                    val2 = getTotalConnectionsAvg();
+                    val3 = getTotalConnectionsMax();
 
-                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}min/avg/max total connections: {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        method.invoke(logger,
+                                      "{}min/avg/max total connections: {}/{}/{}",
+                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                    }
                 }
             }
 
@@ -729,6 +752,8 @@ public class PoolDataSourceStatistics {
             }
         } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error(exceptionToString(e));
+        } finally {
+            lastShown = LocalDateTime.now();
         }
     }
     
@@ -996,10 +1021,7 @@ public class PoolDataSourceStatistics {
                          Math.abs(totalBefore - totalAfter),
                          diffThreshold);
             logger.debug("<checkTotalBeforeAndAfter()");
-
-            if (!ignoreAssertionError) {
-                throw ex;
-            }
+            throw ex;
         }
     }
 
@@ -1054,10 +1076,7 @@ public class PoolDataSourceStatistics {
                          parentMinAfter,
                          parentMaxAfter);
             logger.debug("<checkMinMaxBeforeAndAfter()");
-
-            if (!ignoreAssertionError) {
-                throw ex;
-            }
+            throw ex;
         }
     }
     
@@ -1086,10 +1105,7 @@ public class PoolDataSourceStatistics {
                          childCountAfter,
                          parentCountAfter);
             logger.debug("<checkCountBeforeAndAfter()");
-
-            if (!ignoreAssertionError) {
-                throw ex;
-            }
+            throw ex;
         }
     }
 

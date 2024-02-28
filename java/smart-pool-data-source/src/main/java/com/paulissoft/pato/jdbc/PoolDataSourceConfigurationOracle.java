@@ -79,6 +79,11 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
         assert(cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls));
     }
     
+    @Override
+    public String getPoolName() {
+        return connectionPoolName;
+    }
+
     // copy parent fields
     @Override
     public void copy(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
@@ -89,8 +94,8 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
     }
 
     @Override
-    void clearCommonDataSourceConfiguration() {
-        super.clearCommonDataSourceConfiguration();
+    void keepCommonDataSourceConfiguration() {
+        super.keepCommonDataSourceConfiguration();
         this.connectionPoolName = null;
         this.initialPoolSize = 0;
         this.minPoolSize = 0;

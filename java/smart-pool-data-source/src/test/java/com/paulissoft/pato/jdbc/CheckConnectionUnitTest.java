@@ -127,12 +127,12 @@ public class CheckConnectionUnitTest {
             assertFalse(pds1.getCommonPoolDataSource() == pds3.getCommonPoolDataSource());
             
             assertEquals(poolAppDomainDataSourceConfigurationHikari.getMinimumIdle(),
-                         pds3.getMinPoolSize());
+                         pds3.getCommonPoolDataSource().getMinPoolSize());
 
             assertEquals(poolAppDomainDataSourceConfigurationHikari.getMaximumPoolSize(),
-                         pds3.getMaxPoolSize());
+                         pds3.getCommonPoolDataSource().getMaxPoolSize());
 
-            assertEquals("HikariPool-bodomain", pds3.getPoolName());
+            assertEquals("HikariPool-bodomain", pds3.getCommonPoolDataSource().getPoolName());
             
             switch(i) {
             case 0:
@@ -141,14 +141,16 @@ public class CheckConnectionUnitTest {
             
                 assertEquals(poolAppConfigDataSourceConfigurationHikari.getMinimumIdle() +
                              poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle(),
-                             pds1.getMinPoolSize());
+                             pds1.getCommonPoolDataSource().getMinPoolSize());
 
                 assertEquals(poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize() +
                              poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize(),
-                             pds2.getMaxPoolSize());
+                             pds2.getCommonPoolDataSource().getMaxPoolSize());
 
-                assertEquals("HikariPool-bocsconf-boocpi", pds1.getPoolName());
-                assertEquals(pds1.getPoolName(), pds2.getPoolName());
+                assertEquals("HikariPool-bocsconf-boocpi",
+                             pds1.getCommonPoolDataSource().getPoolName());
+                assertEquals(pds1.getCommonPoolDataSource().getPoolName(),
+                             pds2.getCommonPoolDataSource().getPoolName());
                 break;
 
             case 2:
@@ -157,17 +159,19 @@ public class CheckConnectionUnitTest {
                 assertFalse(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
 
                 assertEquals(poolAppConfigDataSourceConfigurationHikari.getMinimumIdle(),
-                             pds1.getMinPoolSize());
+                             pds1.getCommonPoolDataSource().getMinPoolSize());
                 assertEquals(poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle(),
-                             pds2.getMinPoolSize());
+                             pds2.getCommonPoolDataSource().getMinPoolSize());
 
                 assertEquals(poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize(),
-                             pds1.getMaxPoolSize());
+                             pds1.getCommonPoolDataSource().getMaxPoolSize());
                 assertEquals(poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize(),
-                             pds2.getMaxPoolSize());
+                             pds2.getCommonPoolDataSource().getMaxPoolSize());
 
-                assertEquals("HikariPool-bocsconf", pds1.getPoolName());
-                assertEquals("HikariPool-boocpi", pds2.getPoolName());
+                assertEquals("HikariPool-bocsconf",
+                             pds1.getCommonPoolDataSource().getPoolName());
+                assertEquals("HikariPool-boocpi",
+                             pds2.getCommonPoolDataSource().getPoolName());
                 break;
             }
 
@@ -198,52 +202,58 @@ public class CheckConnectionUnitTest {
             switch(i) {
             case 0:
             case 1:
-                assertEquals(pds4.getInitialPoolSize(),
-                             poolAppConfigDataSourceConfigurationOracle.getInitialPoolSize() +
+                assertEquals(poolAppConfigDataSourceConfigurationOracle.getInitialPoolSize() +
                              poolAppOcpiDataSourceConfigurationOracle.getInitialPoolSize() +
-                             poolAppDomainDataSourceConfigurationOracle.getInitialPoolSize());
+                             poolAppDomainDataSourceConfigurationOracle.getInitialPoolSize(),
+                             pds4.getCommonPoolDataSource().getInitialPoolSize());
 
-                assertEquals(pds4.getMinPoolSize(),
-                             poolAppConfigDataSourceConfigurationOracle.getMinPoolSize() +
+                assertEquals(poolAppConfigDataSourceConfigurationOracle.getMinPoolSize() +
                              poolAppOcpiDataSourceConfigurationOracle.getMinPoolSize() +
-                             poolAppDomainDataSourceConfigurationOracle.getMinPoolSize());
+                             poolAppDomainDataSourceConfigurationOracle.getMinPoolSize(),
+                             pds4.getCommonPoolDataSource().getMinPoolSize());
 
-                assertEquals(pds4.getMaxPoolSize(),
-                             poolAppConfigDataSourceConfigurationOracle.getMaxPoolSize() +
+                assertEquals(poolAppConfigDataSourceConfigurationOracle.getMaxPoolSize() +
                              poolAppOcpiDataSourceConfigurationOracle.getMaxPoolSize() +
-                             poolAppDomainDataSourceConfigurationOracle.getMaxPoolSize());
+                             poolAppDomainDataSourceConfigurationOracle.getMaxPoolSize(),
+                             pds4.getCommonPoolDataSource().getMaxPoolSize());
 
-                assertEquals("OraclePool-bocsconf-boocpi-bodomain", pds4.getPoolName());
-                assertEquals(pds4.getPoolName(), pds5.getPoolName());
-                assertEquals(pds4.getPoolName(), pds6.getPoolName());
+                assertEquals("OraclePool-bocsconf-boocpi-bodomain",
+                             pds4.getCommonPoolDataSource().getPoolName());
+                assertEquals(pds4.getCommonPoolDataSource().getPoolName(),
+                             pds5.getCommonPoolDataSource().getPoolName());
+                assertEquals(pds4.getCommonPoolDataSource().getPoolName(),
+                             pds6.getCommonPoolDataSource().getPoolName());
                 break;
                 
             case 2:
             case 3:
                 assertEquals(poolAppConfigDataSourceConfigurationOracle.getInitialPoolSize(),
-                             pds4.getInitialPoolSize());
+                             pds4.getCommonPoolDataSource().getInitialPoolSize());
                 assertEquals(poolAppOcpiDataSourceConfigurationOracle.getInitialPoolSize(),
-                             pds5.getInitialPoolSize());
+                             pds5.getCommonPoolDataSource().getInitialPoolSize());
                 assertEquals(poolAppDomainDataSourceConfigurationOracle.getInitialPoolSize(),
-                             pds6.getInitialPoolSize());
+                             pds6.getCommonPoolDataSource().getInitialPoolSize());
 
                 assertEquals(poolAppConfigDataSourceConfigurationOracle.getMinPoolSize(),
-                             pds4.getMinPoolSize());
+                             pds4.getCommonPoolDataSource().getMinPoolSize());
                 assertEquals(poolAppOcpiDataSourceConfigurationOracle.getMinPoolSize(),
-                             pds5.getMinPoolSize());
+                             pds5.getCommonPoolDataSource().getMinPoolSize());
                 assertEquals(poolAppDomainDataSourceConfigurationOracle.getMinPoolSize(),
-                             pds6.getMinPoolSize());
+                             pds6.getCommonPoolDataSource().getMinPoolSize());
 
                 assertEquals(poolAppConfigDataSourceConfigurationOracle.getMaxPoolSize(),
-                             pds4.getMaxPoolSize());
+                             pds4.getCommonPoolDataSource().getMaxPoolSize());
                 assertEquals(poolAppOcpiDataSourceConfigurationOracle.getMaxPoolSize(),
-                             pds5.getMaxPoolSize());
+                             pds5.getCommonPoolDataSource().getMaxPoolSize());
                 assertEquals(poolAppDomainDataSourceConfigurationOracle.getMaxPoolSize(),
-                             pds6.getMaxPoolSize());
+                             pds6.getCommonPoolDataSource().getMaxPoolSize());
 
-                assertEquals("OraclePool-bocsconf", pds4.getPoolName());
-                assertEquals("OraclePool-boocpi", pds5.getPoolName());
-                assertEquals("OraclePool-bodomain", pds6.getPoolName());
+                assertEquals("OraclePool-bocsconf",
+                             pds4.getCommonPoolDataSource().getPoolName());
+                assertEquals("OraclePool-boocpi",
+                             pds5.getCommonPoolDataSource().getPoolName());
+                assertEquals("OraclePool-bodomain",
+                             pds6.getCommonPoolDataSource().getPoolName());
                 break;
             }
             
@@ -256,20 +266,30 @@ public class CheckConnectionUnitTest {
                 assertNotNull(conn5 = pds5.getConnection());
                 assertNotNull(conn6 = pds6.getConnection());
 
-                assertEquals(2, pds1.getActiveConnections());
-                assertEquals(pds1.getTotalConnections(), pds1.getActiveConnections() + pds1.getIdleConnections());
+                assertEquals(2, pds1.getCommonPoolDataSource().getActiveConnections());
+                assertEquals(pds1.getCommonPoolDataSource().getActiveConnections() +
+                             pds1.getCommonPoolDataSource().getIdleConnections(),
+                             pds1.getCommonPoolDataSource().getTotalConnections());
 
-                assertEquals(1, pds3.getActiveConnections());
-                assertEquals(pds3.getTotalConnections(), pds3.getActiveConnections() + pds3.getIdleConnections());
+                assertEquals(1, pds3.getCommonPoolDataSource().getActiveConnections());
+                assertEquals(pds3.getCommonPoolDataSource().getActiveConnections() +
+                             pds3.getCommonPoolDataSource().getIdleConnections(),
+                             pds3.getCommonPoolDataSource().getTotalConnections());                             
 
-                assertEquals(conn1.unwrap(OracleConnection.class).getClass(), conn2.unwrap(Connection.class).getClass());
-                assertEquals(conn1.unwrap(OracleConnection.class).getClass(), conn3.unwrap(Connection.class).getClass());
+                assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
+                             conn2.unwrap(Connection.class).getClass());
+                assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
+                             conn3.unwrap(Connection.class).getClass());
 
-                assertEquals(3, pds4.getActiveConnections());
-                assertEquals(pds4.getTotalConnections(), pds4.getActiveConnections() + pds4.getIdleConnections());
+                assertEquals(3, pds4.getCommonPoolDataSource().getActiveConnections());
+                assertEquals(pds4.getCommonPoolDataSource().getActiveConnections() +
+                             pds4.getCommonPoolDataSource().getIdleConnections(),
+                             pds4.getCommonPoolDataSource().getTotalConnections());                             
 
-                assertEquals(conn4.unwrap(OracleConnection.class).getClass(), conn5.unwrap(Connection.class).getClass());
-                assertEquals(conn4.unwrap(OracleConnection.class).getClass(), conn6.unwrap(Connection.class).getClass());
+                assertEquals(conn4.unwrap(OracleConnection.class).getClass(),
+                             conn5.unwrap(Connection.class).getClass());
+                assertEquals(conn4.unwrap(OracleConnection.class).getClass(),
+                             conn6.unwrap(Connection.class).getClass());
 
                 conn1.close();
                 conn2.close();

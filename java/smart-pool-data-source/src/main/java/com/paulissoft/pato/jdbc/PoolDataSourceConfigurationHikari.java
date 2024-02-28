@@ -57,6 +57,11 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     private long leakDetectionThreshold;
 
     @Override
+    public String getPoolName() {
+        return poolName;
+    }
+
+    @Override
     public int getInitialPoolSize() {
         return minimumIdle;
     }
@@ -115,8 +120,8 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     }
 
     @Override
-    void clearCommonDataSourceConfiguration() {
-        super.clearCommonDataSourceConfiguration();
+    void keepCommonDataSourceConfiguration() {
+        super.keepCommonDataSourceConfiguration();
         this.poolName = null;
         this.maximumPoolSize = 0;
         this.minimumIdle = 0;

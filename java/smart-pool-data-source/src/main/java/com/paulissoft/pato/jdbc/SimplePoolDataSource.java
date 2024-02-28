@@ -75,4 +75,6 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public void close(final PoolDataSourceConfiguration pds);
 
     public boolean isClosed();
+
+    public void show();
 }

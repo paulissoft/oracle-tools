@@ -42,6 +42,10 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     @ToString.Exclude
     private String schema; // needed to build the PoolName
 
+    public String getPoolName() {
+        return null;
+    }
+
     public int getInitialPoolSize() {
         return -1;
     }
@@ -96,7 +100,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         // this.type = poolDataSourceConfiguration.type;
     }
 
-    void clearCommonDataSourceConfiguration() {
+    void keepCommonDataSourceConfiguration() {
         if (!isUseFixedUsernamePassword()) {
             this.username = null;
         }

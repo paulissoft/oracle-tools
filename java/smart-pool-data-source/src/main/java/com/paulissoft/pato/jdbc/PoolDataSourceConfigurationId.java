@@ -14,7 +14,7 @@ class PoolDataSourceConfigurationId {
         final PoolDataSourceConfiguration copy = poolDataSourceConfiguration.toBuilder().build(); // a copy
 
         if (onlyCommonDataSourceConfiguration) {
-            copy.clearCommonDataSourceConfiguration();
+            copy.keepCommonDataSourceConfiguration();
             if (copy.isUseFixedUsernamePassword()) {
                 // username like bc_proxy[bodomain] to bc_proxy
                 copy.determineConnectInfo();

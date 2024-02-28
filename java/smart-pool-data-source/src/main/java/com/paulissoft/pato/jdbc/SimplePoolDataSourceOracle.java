@@ -12,29 +12,22 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    private static PoolDataSourceStatistics poolDataSourceStatisticsTotal;
-
-    static {
-        init();
-    }
-
-    private static void init() {
-        poolDataSourceStatisticsTotal = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-    }
-
-    // for join(), value: pool data source open (true) or not (false)
-    private final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicBoolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
+        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     private final PoolDataSourceStatistics poolDataSourceStatistics =
         new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
                                      poolDataSourceStatisticsTotal,
                                      this::isClosed,
-                                     this.getPoolDataSourceConfiguration());
+                                     this::getPoolDataSourceConfiguration);
+
+    // for join(), value: pool data source open (true) or not (false)
+    private final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicBoolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
     
     // for test purposes
     static void clear() {
-        init();
+        poolDataSourceStatisticsTotal.reset();
     }
 
     private SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
@@ -282,6 +275,31 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             });
 
         return found == null; // all closed
+    }
+
+    public void show() {
+        log.info("pool: {}", getConnectionPoolName());
+
+        /* info from PoolDataSourceConfiguration */
+        log.info("url: {}", getURL());
+        log.info("username: {}", getUser());
+        // log.info("password: {}", getPassword());
+
+        /* info from PoolDataSourceConfigurationOracle */
+        log.info("initialPoolSize: {}", getInitialPoolSize());
+        log.info("minPoolSize: {}", getMinPoolSize());
+        log.info("maxPoolSize: {}", getMaxPoolSize());
+        log.info("connectionFactoryClassName: {}", getConnectionFactoryClassName());
+        log.info("validateConnectionOnBorrow: {}", getValidateConnectionOnBorrow());
+        log.info("abandonedConnectionTimeout: {}", getAbandonedConnectionTimeout());
+        log.info("timeToLiveConnectionTimeout: {}", getTimeToLiveConnectionTimeout()); 
+        log.info("inactiveConnectionTimeout: {}", getInactiveConnectionTimeout());
+        log.info("timeoutCheckInterval: {}", getTimeoutCheckInterval());
+        log.info("maxStatements: {}", getMaxStatements());
+        log.info("connectionWaitTimeout: {}", getConnectionWaitTimeout());
+        log.info("maxConnectionReuseTime: {}", getMaxConnectionReuseTime());
+        log.info("secondsToTrustIdleConnection: {}", getSecondsToTrustIdleConnection());
+        log.info("connectionValidationTimeout: {}", getConnectionValidationTimeout());
     }
 
     @Override

@@ -13,29 +13,22 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
          
-    private static PoolDataSourceStatistics poolDataSourceStatisticsTotal;
-
-    static {
-        init();
-    }
-
-    private static void init() {
-        poolDataSourceStatisticsTotal = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-    }
-    
-    // for join(), value: pool data source open (true) or not (false)
-    private final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicBoolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
-
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
+        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+       
     private final PoolDataSourceStatistics poolDataSourceStatistics =
         new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
                                      poolDataSourceStatisticsTotal,
                                      this::isClosed,
-                                     this.getPoolDataSourceConfiguration());
+                                     this::getPoolDataSourceConfiguration);
+    
+    // for join(), value: pool data source open (true) or not (false)
+    private final ConcurrentHashMap<PoolDataSourceConfiguration, AtomicBoolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
 
     // for test purposes
     static void clear() {
-        init();
+        poolDataSourceStatisticsTotal.reset();
     }
     
     // constructor
@@ -263,6 +256,44 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             });
 
         return found == null; // all closed
+    }
+
+    public void show() {
+        log.info("pool: {}", getPoolName());
+
+        /* info from PoolDataSourceConfiguration */
+        log.info("driverClassName: {}", getDriverClassName());
+        log.info("url: {}", getJdbcUrl());
+        log.info("username: {}", getUsername());
+        // log.info("password: {}", getPassword());
+
+        /* info from PoolDataSourceConfigurationHikari */
+        log.info("maximumPoolSize: {}", getMaximumPoolSize());
+        log.info("minimumIdle: {}", getMinimumIdle());
+        log.info("dataSourceClassName: {}", getDataSourceClassName());
+        log.info("autoCommit: {}", isAutoCommit());
+        log.info("connectionTimeout: {}", getConnectionTimeout());
+        log.info("idleTimeout: {}", getIdleTimeout());
+        log.info("maxLifetime: {}", getMaxLifetime());
+        log.info("connectionTestQuery: {}", getConnectionTestQuery());
+        log.info("initializationFailTimeout: {}", getInitializationFailTimeout());
+        log.info("isolateInternalQueries: {}", isIsolateInternalQueries());
+        log.info("allowPoolSuspension: {}", isAllowPoolSuspension());
+        log.info("readOnly: {}", isReadOnly());
+        log.info("registerMbeans: {}", isRegisterMbeans());
+        log.info("validationTimeout: {}", getValidationTimeout());
+        log.info("leakDetectionThreshold: {}", getLeakDetectionThreshold());
+        /*
+        log.info("metricRegistry: {}", getMetricRegistry());
+        log.info("healthCheckRegistry: {}", getHealthCheckRegistry());
+        log.info("catalog: {}", getCatalog());
+        log.info("connectionInitSql: {}", getConnectionInitSql());
+        log.info("transactionIsolation: {}", getTransactionIsolation());
+        log.info("dataSource: {}", getDataSource());
+        log.info("schema: {}", getSchema());
+        log.info("threadFactory: {}", getThreadFactory());
+        log.info("scheduledExecutor: {}", getScheduledExecutor());
+        */
     }
 
     @Override

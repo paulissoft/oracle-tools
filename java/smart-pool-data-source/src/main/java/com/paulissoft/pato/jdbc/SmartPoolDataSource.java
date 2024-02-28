@@ -56,6 +56,8 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
     private SimplePoolDataSource commonPoolDataSource = null;
 
     private AtomicBoolean opened = new AtomicBoolean(false);
+
+    private AtomicBoolean firstConnection = new AtomicBoolean(false);
     
     private PoolDataSourceStatistics pdsStatistics = null;
 
@@ -94,7 +96,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                                                               this.poolDataSourceConfiguration.getSchema() + ")",
                                                               commonPoolDataSource.getPoolDataSourceStatistics(),
                                                               this::isClosed,
-                                                              this.poolDataSourceConfiguration);
+                                                              this::getPoolDataSourceConfiguration);
             this.commonPoolDataSource.setUsername(this.poolDataSourceConfiguration.getUsernameToConnectTo());
             this.commonPoolDataSource.setPassword(this.poolDataSourceConfiguration.getPassword());
             this.commonPoolDataSource.join(this.poolDataSourceConfiguration); // must amend pool sizes
@@ -219,7 +221,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                             logger.debug("case 2");
                             // case 2
                         } catch (Exception ex) {
-                            logger.error(SimplePoolDataSource.exceptionToString(ex), ex);
+                            logger.warn(SimplePoolDataSource.exceptionToString(ex), ex);
                             logger.debug("case 3");
                             // case 3
                             simplePoolDataSource = null;
@@ -347,6 +349,12 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
             } else {
                 // see observations in constructor
                 conn = commonPoolDataSource.getConnection(usernameToConnectTo, password);
+            }
+
+            if (!firstConnection.getAndSet(true)) {
+                // Only show the first time a pool has gotten a connection.
+                // Not earlier because these (fixed) values may change before and after the first connection.
+                commonPoolDataSource.show();
             }
 
             // if the current schema is not the requested schema try to open/close the proxy session
@@ -514,8 +522,9 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                                     final long timeElapsed,
                                     final boolean showStatistics) {
         try {
-            pdsStatistics.update(conn, timeElapsed);
-            pdsStatistics.update(commonPoolDataSource.getActiveConnections(),
+            pdsStatistics.update(conn,
+                                 timeElapsed,
+                                 commonPoolDataSource.getActiveConnections(),
                                  commonPoolDataSource.getIdleConnections(),
                                  commonPoolDataSource.getTotalConnections());
         } catch (Exception e) {
@@ -540,8 +549,8 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                                  proxyTimeElapsed,
                                  proxyLogicalConnectionCount,
                                  proxyOpenSessionCount,
-                                 proxyCloseSessionCount);
-            pdsStatistics.update(commonPoolDataSource.getActiveConnections(),
+                                 proxyCloseSessionCount,
+                                 commonPoolDataSource.getActiveConnections(),
                                  commonPoolDataSource.getIdleConnections(),
                                  commonPoolDataSource.getTotalConnections());
         } catch (Exception e) {
