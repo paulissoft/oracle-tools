@@ -280,7 +280,10 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 ...
 
 @Configuration
-@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory", transactionManagerRef = "authTransactionManager", basePackages = {"io.motown.domain.commandauthorization.repositories", "io.motown.identificationauthorization"})
+@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory",
+                       transactionManagerRef = "authTransactionManager",
+                       basePackages = {"io.motown.domain.commandauthorization.repositories",
+                                       "io.motown.identificationauthorization"})
 public class JpaAuthConfiguration {
 
   @Bean(name = {"authDataSourceProperties"})
@@ -309,7 +312,10 @@ import com.paulissoft.pato.jdbc.PoolDataSourceConfigurationOracle;
 ...
 
 @Configuration
-@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory", transactionManagerRef = "authTransactionManager", basePackages = {"io.motown.domain.commandauthorization.repositories", "io.motown.identificationauthorization"})
+@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory",
+                       transactionManagerRef = "authTransactionManager",
+                       basePackages = {"io.motown.domain.commandauthorization.repositories",
+                                       "io.motown.identificationauthorization"})
 public class JpaAuthConfiguration {
 
   @Bean(name = {"authDataSourceConfiguration"})
@@ -361,6 +367,8 @@ public class MyPoolDataSourceBuilder {
 
 ## Conclusion
 
-The Smart Pool Data Source library allows you to combine pool data sources in Java JDBC applications like Spring Boot and thus reduce the number of connections. In an Oracle Cloud environment this may reduce costs also since they are related to the number of CPUs and each CPU has a maximum of connections.
+The Smart Pool Data Source library allows you to combine pool data sources in Java JDBC applications like Spring Boot and thus reduce the number of connections. In an Oracle Cloud environment this may reduce costs also since they are related to the number of CPUs where each CPU has a limit to the maximum number of connections.
 
-Another advantage of this library is that it does not destroy the physical pool data source when the logical pool data sources are closed: they are just virtual and use the physical to do the actual work.
+Another advantage is that the library shows pool statistics for up to four levels and they are displayed regularly (at least every hour) and when closing. This allows you to easily fine tune the pool sizes.
+
+The last advantage of this library is that it does not destroy the physical pool data source when the logical pool data sources are closed: they are just virtual and use the physical pool data source to do the actual work and it will not be closed by the library.

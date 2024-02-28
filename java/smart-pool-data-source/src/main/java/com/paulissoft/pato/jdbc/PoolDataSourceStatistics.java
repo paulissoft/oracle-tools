@@ -343,12 +343,12 @@ public class PoolDataSourceStatistics {
     }
 
     private boolean mustShowTotals() {
-        // Show statistics if the last update hour is not equal to the last shown hour
+        // Show statistics if the last update moment is not equal to the last shown moment
+        // When checkInvariants is true (i.e. debug enabled) the moment is minute else hour
+        final int lastUpdateMoment = checkInvariants ? lastUpdate.getMinute() : lastUpdate.getHour();
+        final int lastShownMoment = lastShown != null ? (checkInvariants ? lastShown.getMinute() : lastShown.getHour()) : -1;
         
-        final int lastUpdateHour = lastUpdate.getHour();
-        final int lastShownHour = lastShown != null ? lastShown.getHour() : -1;
-        
-        return lastUpdateHour != lastShownHour;
+        return lastUpdateMoment != lastShownMoment;
     }
 
     void close() {

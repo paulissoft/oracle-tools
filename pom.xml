@@ -162,7 +162,8 @@
                   <format>zip</format>
                 </formats>
                 <!-- so the archive does not prefix the files with ${artifactId}-${revision}/ -->
-                <includeBaseDirectory>false</includeBaseDirectory>
+                <!-- [WARNING] Parameter 'includeBaseDirectory' is unknown for plugin 'maven-assembly-plugin:3.3.0:single (create-archive)' -->
+                <!--includeBaseDirectory>false</includeBaseDirectory-->
                 <descriptorRefs>
                   <descriptorRef>src</descriptorRef>
                 </descriptorRefs>
