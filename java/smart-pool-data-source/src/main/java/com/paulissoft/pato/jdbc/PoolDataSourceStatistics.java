@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -607,9 +608,9 @@ public class PoolDataSourceStatistics {
 
                 if (firstUpdate != null && lastUpdate != null) {
                     method.invoke(logger, "{}first updated at: {}",
-                                  (Object) new Object[]{ prefix, firstUpdate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
+                                  (Object) new Object[]{ prefix, firstUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
                     method.invoke(logger, "{}last  updated at: {}",
-                                  (Object) new Object[]{ prefix, lastUpdate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
+                                  (Object) new Object[]{ prefix, lastUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
                 }
             
                 if (!showTotals) {
