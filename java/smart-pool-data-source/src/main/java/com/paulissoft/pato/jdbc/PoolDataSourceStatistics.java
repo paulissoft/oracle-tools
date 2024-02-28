@@ -356,11 +356,11 @@ public class PoolDataSourceStatistics {
             return;
         }
 
-        logger.info(">close({})", getDescription());
+        logger.debug(">close({})", getDescription());
 
         consolidate();
 
-        logger.info("<close()");
+        logger.debug("<close()");
     }    
     
     private void consolidate() {
