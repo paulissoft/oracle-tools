@@ -133,22 +133,22 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
     
     private void updatePoolSizes(final PoolDataSourceConfigurationOracle pds) throws SQLException {
-        log.info(">updatePoolSizes()");
+        log.debug(">updatePoolSizes({})", pds);
 
         try {
-            log.info("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                     getInitialPoolSize(),
-                     getMinPoolSize(),
-                     getMaxPoolSize());
+            log.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                      getInitialPoolSize(),
+                      getMinPoolSize(),
+                      getMaxPoolSize());
 
             int oldSize, newSize;
 
             newSize = pds.getInitialPoolSize();
             oldSize = getInitialPoolSize();
 
-            log.info("initial pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+            log.debug("initial pool sizes before setting it: old/new: {}/{}",
+                      oldSize,
+                      newSize);
 
             if (newSize >= 0) {
                 setInitialPoolSize(newSize + Integer.max(oldSize, 0));
@@ -157,9 +157,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             newSize = pds.getMinPoolSize();
             oldSize = getMinPoolSize();
 
-            log.info("minimum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+            log.debug("minimum pool sizes before setting it: old/new: {}/{}",
+                      oldSize,
+                      newSize);
 
             if (newSize >= 0) {                
                 setMinPoolSize(newSize + Integer.max(oldSize, 0));
@@ -168,20 +168,20 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             newSize = pds.getMaxPoolSize();
             oldSize = getMaxPoolSize();
 
-            log.info("maximum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+            log.debug("maximum pool sizes before setting it: old/new: {}/{}",
+                      oldSize,
+                      newSize);
 
             if (newSize >= 0) {
                 setMaxPoolSize(newSize + Integer.max(oldSize, 0));
             }
         } finally {
-            log.info("pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                     getInitialPoolSize(),
-                     getMinPoolSize(),
-                     getMaxPoolSize());
+            log.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                      getInitialPoolSize(),
+                      getMinPoolSize(),
+                      getMaxPoolSize());
 
-            log.info("<updatePoolSizes()");
+            log.debug("<updatePoolSizes()");
         }
     }
     
@@ -253,10 +253,14 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public void open(final PoolDataSourceConfiguration pds) {
+        log.debug("open({})", pds);
+        
         cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(true);
     }
 
     public void close(final PoolDataSourceConfiguration pds) {
+        log.debug("close({})", pds);
+        
         cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(false);
     }
 
@@ -266,14 +270,19 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public boolean isClosed() {
+        log.debug(">isClosed()");
+        
         // when there is at least one attached pool open: return false
-        final Boolean found = cachedPoolDataSourceConfigurations.searchValues(Long.MAX_VALUE, (v) -> {
-                if (v.get()) {
+        final Boolean found = cachedPoolDataSourceConfigurations.searchEntries(Long.MAX_VALUE, (e) -> {
+                log.debug("key: {}; value: {}", e.getKey(), e.getValue().get());
+                if (e.getValue().get()) {                    
                     return true;
                 }
                 return null;
             });
 
+        log.debug("<isClosed() = {}", found == null);
+        
         return found == null; // all closed
     }
 

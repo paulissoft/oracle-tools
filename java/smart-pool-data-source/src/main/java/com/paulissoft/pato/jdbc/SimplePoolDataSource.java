@@ -38,10 +38,6 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public String getPoolName();
 
-    //*TBD*/public String getUrl();
-
-    //*TBD*/public void setUrl(String url) throws SQLException;
-
     public String getUsername();
 
     // signature used by HikariDataSource

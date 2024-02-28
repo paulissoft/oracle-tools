@@ -136,21 +136,21 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
     
     private void updatePoolSizes(final PoolDataSourceConfigurationHikari pds) throws SQLException {
-        log.info(">updatePoolSizes()");
+        log.debug(">updatePoolSizes({})", pds);
 
         try {
-            log.info("pool sizes before: minimum/maximum: {}/{}",
-                     getMinimumIdle(),
-                     getMaximumPoolSize());
+            log.debug("pool sizes before: minimum/maximum: {}/{}",
+                      getMinimumIdle(),
+                      getMaximumPoolSize());
 
             int oldSize, newSize;
 
             newSize = pds.getMinimumIdle();
             oldSize = getMinimumIdle();
 
-            log.info("minimum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+            log.debug("minimum pool sizes before setting it: old/new: {}/{}",
+                      oldSize,
+                      newSize);
 
             if (newSize >= 0) {                
                 setMinimumIdle(newSize + Integer.max(oldSize, 0));
@@ -159,32 +159,21 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             newSize = pds.getMaximumPoolSize();
             oldSize = getMaximumPoolSize();
 
-            log.info("maximum pool sizes before setting it: old/new: {}/{}",
-                     oldSize,
-                     newSize);
+            log.debug("maximum pool sizes before setting it: old/new: {}/{}",
+                      oldSize,
+                      newSize);
 
             if (newSize >= 0) {
                 setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
             }
         } finally {
-            log.info("pool sizes after: minimum/maximum: {}/{}",
-                     getMinimumIdle(),
-                     getMaximumPoolSize());
+            log.debug("pool sizes after: minimum/maximum: {}/{}",
+                      getMinimumIdle(),
+                      getMaximumPoolSize());
             
-            log.info("<updatePoolSizes()");
+            log.debug("<updatePoolSizes()");
         }
     }
-
-    /*TBD*/
-    /*
-    public String getUrl() {
-        return getJdbcUrl();
-    }
-    
-    public void setUrl(String url) {
-        setJdbcUrl(url);
-    }
-    */
 
     // HikariCP does NOT know of an initial pool size so just return getMinPoolSize()
     public int getInitialPoolSize() {
@@ -234,10 +223,14 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public void open(final PoolDataSourceConfiguration pds) {
+        log.debug("open({})", pds);
+        
         cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(true);
     }
 
     public void close(final PoolDataSourceConfiguration pds) {
+        log.debug("close({})", pds);
+                
         cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> v).set(false);
     }
  
@@ -247,13 +240,18 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public boolean isClosed() {
+        log.debug(">isClosed()");
+        
         // when there is at least one attached pool open: return false
-        final Boolean found = cachedPoolDataSourceConfigurations.searchValues(Long.MAX_VALUE, (v) -> {
-                if (v.get()) {
+        final Boolean found = cachedPoolDataSourceConfigurations.searchEntries(Long.MAX_VALUE, (e) -> {
+                log.debug("key: {}; value: {}", e.getKey(), e.getValue().get());
+                if (e.getValue().get()) {                    
                     return true;
                 }
                 return null;
             });
+
+        log.debug("<isClosed() = {}", found == null);
 
         return found == null; // all closed
     }

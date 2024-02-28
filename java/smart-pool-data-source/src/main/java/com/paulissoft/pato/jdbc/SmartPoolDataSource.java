@@ -275,8 +275,10 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
 
         try {
             if (opened.getAndSet(false)) {
-                // switched from open to closed: show statistics and close (which will update and show the parent statistics too)
-                commonPoolDataSource.open(this.getPoolDataSourceConfiguration());
+                // switched from open to closed:
+                // - inform the common pool data source that this item has closed
+                // - close statistics
+                commonPoolDataSource.close(this.getPoolDataSourceConfiguration());
                 pdsStatistics.close();
             }
         } finally {
