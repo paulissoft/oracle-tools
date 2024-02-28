@@ -56,10 +56,13 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     
     private long leakDetectionThreshold;
 
+    //*TBD*/
+    /*
     @Override
     public String getPoolName() {
         return poolName;
     }
+    */
 
     @Override
     public int getInitialPoolSize() {

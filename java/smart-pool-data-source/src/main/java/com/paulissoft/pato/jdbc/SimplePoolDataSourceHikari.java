@@ -249,31 +249,65 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         return !found; // all closed
     }
 
-    public void show() {
-        log.info("pool: {}", getPoolName());
+    public void show(final PoolDataSourceConfiguration pds) {
+        show((PoolDataSourceConfigurationHikari)pds);
+    }
+    
+    private void show(final PoolDataSourceConfigurationHikari pds) {
+        final String indentPrefix = PoolDataSourceStatistics.INDENT_PREFIX;
+
+        /* Smart Pool Data Source */
+
+        log.info("properties for pool connecting to {}", pds.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
-        log.info("driverClassName: {}", getDriverClassName());
-        log.info("url: {}", getJdbcUrl());
-        log.info("username: {}", getUsername());
-        // log.info("password: {}", getPassword());
+        log.info("{}url: {}", indentPrefix, pds.getUrl());
+        log.info("{}username: {}", indentPrefix, pds.getUsername());
+        // do not log passwords
+        log.info("{}type: {}", indentPrefix, pds.getType());
 
         /* info from PoolDataSourceConfigurationHikari */
-        log.info("maximumPoolSize: {}", getMaximumPoolSize());
-        log.info("minimumIdle: {}", getMinimumIdle());
-        log.info("dataSourceClassName: {}", getDataSourceClassName());
-        log.info("autoCommit: {}", isAutoCommit());
-        log.info("connectionTimeout: {}", getConnectionTimeout());
-        log.info("idleTimeout: {}", getIdleTimeout());
-        log.info("maxLifetime: {}", getMaxLifetime());
-        log.info("connectionTestQuery: {}", getConnectionTestQuery());
-        log.info("initializationFailTimeout: {}", getInitializationFailTimeout());
-        log.info("isolateInternalQueries: {}", isIsolateInternalQueries());
-        log.info("allowPoolSuspension: {}", isAllowPoolSuspension());
-        log.info("readOnly: {}", isReadOnly());
-        log.info("registerMbeans: {}", isRegisterMbeans());
-        log.info("validationTimeout: {}", getValidationTimeout());
-        log.info("leakDetectionThreshold: {}", getLeakDetectionThreshold());
+        log.info("{}maximumPoolSize: {}", indentPrefix, pds.getMaximumPoolSize());
+        log.info("{}minimumIdle: {}", indentPrefix, pds.getMinimumIdle());
+        log.info("{}dataSourceClassName: {}", indentPrefix, pds.getDataSourceClassName());
+        log.info("{}autoCommit: {}", indentPrefix, pds.isAutoCommit());
+        log.info("{}connectionTimeout: {}", indentPrefix, pds.getConnectionTimeout());
+        log.info("{}idleTimeout: {}", indentPrefix, pds.getIdleTimeout());
+        log.info("{}maxLifetime: {}", indentPrefix, pds.getMaxLifetime());
+        log.info("{}connectionTestQuery: {}", indentPrefix, pds.getConnectionTestQuery());
+        log.info("{}initializationFailTimeout: {}", indentPrefix, pds.getInitializationFailTimeout());
+        log.info("{}isolateInternalQueries: {}", indentPrefix, pds.isIsolateInternalQueries());
+        log.info("{}allowPoolSuspension: {}", indentPrefix, pds.isAllowPoolSuspension());
+        log.info("{}readOnly: {}", indentPrefix, pds.isReadOnly());
+        log.info("{}registerMbeans: {}", indentPrefix, pds.isRegisterMbeans());
+        log.info("{}validationTimeout: {}", indentPrefix, pds.getValidationTimeout());
+        log.info("{}leakDetectionThreshold: {}", indentPrefix, pds.getLeakDetectionThreshold());
+
+        /* Common Simple Pool Data Source */
+        
+        log.info("properties for common pool: {}", getPoolName());
+        
+        /* info from PoolDataSourceConfiguration */
+        log.info("{}driverClassName: {}", indentPrefix, getDriverClassName());
+        log.info("{}url: {}", indentPrefix, getJdbcUrl());
+        log.info("{}username: {}", indentPrefix, getUsername());
+        // do not log passwords
+        /* info from PoolDataSourceConfigurationHikari */
+        log.info("{}maximumPoolSize: {}", indentPrefix, getMaximumPoolSize());
+        log.info("{}minimumIdle: {}", indentPrefix, getMinimumIdle());
+        log.info("{}dataSourceClassName: {}", indentPrefix, getDataSourceClassName());
+        log.info("{}autoCommit: {}", indentPrefix, isAutoCommit());
+        log.info("{}connectionTimeout: {}", indentPrefix, getConnectionTimeout());
+        log.info("{}idleTimeout: {}", indentPrefix, getIdleTimeout());
+        log.info("{}maxLifetime: {}", indentPrefix, getMaxLifetime());
+        log.info("{}connectionTestQuery: {}", indentPrefix, getConnectionTestQuery());
+        log.info("{}initializationFailTimeout: {}", indentPrefix, getInitializationFailTimeout());
+        log.info("{}isolateInternalQueries: {}", indentPrefix, isIsolateInternalQueries());
+        log.info("{}allowPoolSuspension: {}", indentPrefix, isAllowPoolSuspension());
+        log.info("{}readOnly: {}", indentPrefix, isReadOnly());
+        log.info("{}registerMbeans: {}", indentPrefix, isRegisterMbeans());
+        log.info("{}validationTimeout: {}", indentPrefix, getValidationTimeout());
+        log.info("{}leakDetectionThreshold: {}", indentPrefix, getLeakDetectionThreshold());
         /*
         log.info("metricRegistry: {}", getMetricRegistry());
         log.info("healthCheckRegistry: {}", getHealthCheckRegistry());

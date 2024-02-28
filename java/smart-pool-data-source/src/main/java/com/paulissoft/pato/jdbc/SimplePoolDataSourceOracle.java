@@ -279,29 +279,61 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return !found; // all closed
     }
 
-    public void show() {
-        log.info("pool: {}", getConnectionPoolName());
+    public void show(final PoolDataSourceConfiguration pds) {
+        show((PoolDataSourceConfigurationOracle)pds);
+    }
+    
+    private void show(final PoolDataSourceConfigurationOracle pds) {
+        final String indentPrefix = PoolDataSourceStatistics.INDENT_PREFIX;
+
+        /* Smart Pool Data Source */
+
+        log.info("properties for pool connecting to {}", pds.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
-        log.info("url: {}", getURL());
-        log.info("username: {}", getUser());
-        // log.info("password: {}", getPassword());
-
+        log.info("{}url: {}", indentPrefix, pds.getUrl());
+        log.info("{}username: {}", indentPrefix, pds.getUsername());
+        // do not log passwords
+        log.info("{}type: {}", indentPrefix, pds.getType());
         /* info from PoolDataSourceConfigurationOracle */
-        log.info("initialPoolSize: {}", getInitialPoolSize());
-        log.info("minPoolSize: {}", getMinPoolSize());
-        log.info("maxPoolSize: {}", getMaxPoolSize());
-        log.info("connectionFactoryClassName: {}", getConnectionFactoryClassName());
-        log.info("validateConnectionOnBorrow: {}", getValidateConnectionOnBorrow());
-        log.info("abandonedConnectionTimeout: {}", getAbandonedConnectionTimeout());
-        log.info("timeToLiveConnectionTimeout: {}", getTimeToLiveConnectionTimeout()); 
-        log.info("inactiveConnectionTimeout: {}", getInactiveConnectionTimeout());
-        log.info("timeoutCheckInterval: {}", getTimeoutCheckInterval());
-        log.info("maxStatements: {}", getMaxStatements());
-        log.info("connectionWaitTimeout: {}", getConnectionWaitTimeout());
-        log.info("maxConnectionReuseTime: {}", getMaxConnectionReuseTime());
-        log.info("secondsToTrustIdleConnection: {}", getSecondsToTrustIdleConnection());
-        log.info("connectionValidationTimeout: {}", getConnectionValidationTimeout());
+        log.info("{}initialPoolSize: {}", indentPrefix, pds.getInitialPoolSize());
+        log.info("{}minPoolSize: {}", indentPrefix, pds.getMinPoolSize());
+        log.info("{}maxPoolSize: {}", indentPrefix, pds.getMaxPoolSize());
+        log.info("{}connectionFactoryClassName: {}", indentPrefix, pds.getConnectionFactoryClassName());
+        log.info("{}validateConnectionOnBorrow: {}", indentPrefix, pds.getValidateConnectionOnBorrow());
+        log.info("{}abandonedConnectionTimeout: {}", indentPrefix, pds.getAbandonedConnectionTimeout());
+        log.info("{}timeToLiveConnectionTimeout: {}", indentPrefix, pds.getTimeToLiveConnectionTimeout()); 
+        log.info("{}inactiveConnectionTimeout: {}", indentPrefix, pds.getInactiveConnectionTimeout());
+        log.info("{}timeoutCheckInterval: {}", indentPrefix, pds.getTimeoutCheckInterval());
+        log.info("{}maxStatements: {}", indentPrefix, pds.getMaxStatements());
+        log.info("{}connectionWaitTimeout: {}", indentPrefix, pds.getConnectionWaitTimeout());
+        log.info("{}maxConnectionReuseTime: {}", indentPrefix, pds.getMaxConnectionReuseTime());
+        log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, pds.getSecondsToTrustIdleConnection());
+        log.info("{}connectionValidationTimeout: {}", indentPrefix, pds.getConnectionValidationTimeout());
+
+        /* Common Simple Pool Data Source */
+
+        log.info("properties for common pool: {}", getConnectionPoolName());
+
+        /* info from PoolDataSourceConfiguration */
+        log.info("{}url: {}", indentPrefix, getURL());
+        log.info("{}username: {}", indentPrefix, getUser());
+        // do not log passwords
+        /* info from PoolDataSourceConfigurationOracle */
+        log.info("{}initialPoolSize: {}", indentPrefix, getInitialPoolSize());
+        log.info("{}minPoolSize: {}", indentPrefix, getMinPoolSize());
+        log.info("{}maxPoolSize: {}", indentPrefix, getMaxPoolSize());
+        log.info("{}connectionFactoryClassName: {}", indentPrefix, getConnectionFactoryClassName());
+        log.info("{}validateConnectionOnBorrow: {}", indentPrefix, getValidateConnectionOnBorrow());
+        log.info("{}abandonedConnectionTimeout: {}", indentPrefix, getAbandonedConnectionTimeout());
+        log.info("{}timeToLiveConnectionTimeout: {}", indentPrefix, getTimeToLiveConnectionTimeout()); 
+        log.info("{}inactiveConnectionTimeout: {}", indentPrefix, getInactiveConnectionTimeout());
+        log.info("{}timeoutCheckInterval: {}", indentPrefix, getTimeoutCheckInterval());
+        log.info("{}maxStatements: {}", indentPrefix, getMaxStatements());
+        log.info("{}connectionWaitTimeout: {}", indentPrefix, getConnectionWaitTimeout());
+        log.info("{}maxConnectionReuseTime: {}", indentPrefix, getMaxConnectionReuseTime());
+        log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, getSecondsToTrustIdleConnection());
+        log.info("{}connectionValidationTimeout: {}", indentPrefix, getConnectionValidationTimeout());
     }
 
     @Override

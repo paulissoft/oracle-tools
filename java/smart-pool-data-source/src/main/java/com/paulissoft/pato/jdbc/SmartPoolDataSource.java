@@ -357,7 +357,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
             if (!firstConnection.getAndSet(true)) {
                 // Only show the first time a pool has gotten a connection.
                 // Not earlier because these (fixed) values may change before and after the first connection.
-                commonPoolDataSource.show();
+                commonPoolDataSource.show(getPoolDataSourceConfiguration());
             }
 
             // if the current schema is not the requested schema try to open/close the proxy session
