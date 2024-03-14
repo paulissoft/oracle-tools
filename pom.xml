@@ -59,8 +59,9 @@
     <!--flyway.version>5.0.0</flyway.version-->
     <!-- flyway.version>5.1.4</flyway.version--> <!-- last one to support Oracle 12.1 -->
     <!-- flyway.version>7.4.0</flyway.version--> <!-- does not support Oracle 19.1 -->
-    <!--flyway.version>9.1.6</flyway.version-->
-    <flyway.version>9.22.0</flyway.version> <!-- latest and greatest at 2023-09-06 -->
+    <!--flyway.version>9.22.0</flyway.version--> <!-- latest and greatest at 2023-09-06 -->
+
+    <flyway.version>10.10.0</flyway.version> <!-- latest and greatest at 2024-03-14 -->
 
     <!-- Oracle JDBC stuff -->
     <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
@@ -88,6 +89,13 @@
     </repository>
   </distributionManagement>
   
+  <pluginRepositories>
+    <pluginRepository>
+      <id>redgate</id>
+      <url>https://download.red-gate.com/maven/release</url>
+    </pluginRepository>
+  </pluginRepositories>
+
   <build>
     <defaultGoal>${default.goal}</defaultGoal>
     <pluginManagement>
@@ -126,7 +134,8 @@
           </dependencies>              
         </plugin>
         <plugin>
-          <groupId>org.flywaydb</groupId>
+          <!--groupId>org.flywaydb</groupId-->
+          <groupId>com.redgate.flyway</groupId>
           <artifactId>flyway-maven-plugin</artifactId>
           <version>${flyway.version}</version>
         </plugin>
