@@ -43,5 +43,6 @@ then
   gem "just-the-docs"
   gem 'html-proofer'
   gem 'rake'
+  gem 'jekyll-include-cache'
 end
 
