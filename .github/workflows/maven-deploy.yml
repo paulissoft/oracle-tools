@@ -14,11 +14,11 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v20
+        with:
+          servers: '[{ "id": "github-paulissoft", "username": "x-access-token", "password": "${{ secrets.GITHUB_TOKEN }}" }]'          
       - name: Publish package in root
         run: mvn --batch-mode -N deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish package in java directory
         run: mvn -f java/pom.xml --batch-mode deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
