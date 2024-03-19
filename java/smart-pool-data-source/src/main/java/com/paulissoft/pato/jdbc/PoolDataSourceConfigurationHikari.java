@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -17,7 +18,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@ConfigurationProperties
+@Component
+@ConfigurationProperties(prefix = "spring.datasource.hikari")
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
 
     // properties that may differ, i.e. are ignored

@@ -78,7 +78,7 @@
   </properties>
 
   <scm>
-    <developerConnection>scm:svn:https://github.com/paulissoft/oracle-tools.git/trunk</developerConnection>
+    <developerConnection>scm:git:git@github.com:paulissoft/oracle-tools.git</developerConnection>   
   </scm>
 
   <distributionManagement>
