@@ -10,13 +10,15 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 
+@Slf4j
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@ConfigurationProperties
-@Slf4j
+@Component
+@ConfigurationProperties(prefix = "spring.datasource")
 public class PoolDataSourceConfiguration implements ConnectInfo {
 
     private String driverClassName;
