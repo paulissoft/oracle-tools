@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
+//import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
@@ -26,13 +26,13 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
 
     private String driverClassName;
 
-    @NonNull
+    //@NonNull
     private String url;
 
-    @NonNull
+    //@NonNull
     private String username;
 
-    @NonNull
+    //@NonNull
     private String password;
 
     private String type;
@@ -40,12 +40,12 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     // username like:
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String proxyUsername;
 
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String schema; // needed to build the PoolName
@@ -55,11 +55,11 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
                                        final String username,
                                        final String password) {
         this.driverClassName = driverClassName;
-        assert(url != null);
+        //assert(url != null);
         this.url = url;
-        assert(username != null);
+        //assert(username != null);
         this.username = username;
-        assert(password != null);
+        //assert(password != null);
         this.password = password;
     }
 
