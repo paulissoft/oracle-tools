@@ -31,7 +31,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     private SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
         // super();
-        pdsConfigurationOracle.copy(this);
+        pdsConfigurationOracle.copyTo(this);
     }
 
     public static SimplePoolDataSourceOracle build(final PoolDataSourceConfiguration pdsConfiguration) {

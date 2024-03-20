@@ -118,7 +118,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     }
 
     // copy parent fields
-    public void copy(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+    public void copyFrom(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         this.driverClassName = poolDataSourceConfiguration.driverClassName;
         this.url = poolDataSourceConfiguration.url;    
         this.username = poolDataSourceConfiguration.username;

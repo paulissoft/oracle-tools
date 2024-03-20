@@ -89,14 +89,14 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
     // copy parent fields
     @Override
-    public void copy(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
-        super.copy(poolDataSourceConfiguration);
+    public void copyFrom(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+        super.copyFrom(poolDataSourceConfiguration);
 
         // not used for Oracle
         setDriverClassName(null);
     }
 
-    void copy(final PoolDataSource poolDataSource) {
+    public void copyTo(final PoolDataSource poolDataSource) {
         int nr = 0;
         final int maxNr = 17;
         

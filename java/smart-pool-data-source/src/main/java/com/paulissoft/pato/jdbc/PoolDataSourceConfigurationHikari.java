@@ -139,7 +139,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
         this.poolName = null;
     }
 
-    void copy(final HikariDataSource hikariDataSource) {
+    public void copyTo(final HikariDataSource hikariDataSource) {
         int nr = 0;
         final int maxNr = 18;
         

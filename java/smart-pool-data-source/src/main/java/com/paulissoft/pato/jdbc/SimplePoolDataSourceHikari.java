@@ -33,7 +33,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     // constructor
     private SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari pdsConfigurationHikari) {
         // super();
-        pdsConfigurationHikari.copy(this);
+        pdsConfigurationHikari.copyTo(this);
     }
 
     public static SimplePoolDataSourceHikari build(final PoolDataSourceConfiguration pdsConfiguration) {

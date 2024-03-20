@@ -120,7 +120,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                         // make a copy
                         final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle =
                             (PoolDataSourceConfigurationOracle) poolDataSourceConfiguration.toBuilder().build();
-                        poolDataSourceConfigurationOracle.copy(dataSourceConfiguration);
+                        poolDataSourceConfigurationOracle.copyFrom(dataSourceConfiguration);
 
                         return build(poolDataSourceConfigurationOracle);
                     }
@@ -131,7 +131,7 @@ public class SmartPoolDataSource implements DataSource, Closeable, /*SimplePoolD
                         // make a copy
                         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
                             (PoolDataSourceConfigurationHikari) poolDataSourceConfiguration.toBuilder().build();
-                        poolDataSourceConfigurationHikari.copy(dataSourceConfiguration);
+                        poolDataSourceConfigurationHikari.copyFrom(dataSourceConfiguration);
 
                         return build(poolDataSourceConfigurationHikari);
                     }
