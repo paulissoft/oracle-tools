@@ -5,15 +5,18 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 
 @Slf4j
+// @Data: A shortcut for @ToString, @EqualsAndHashCode, @Getter on all fields, @Setter on all non-final fields, and @RequiredArgsConstructor!
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
@@ -23,10 +26,13 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
 
     private String driverClassName;
 
+    @NonNull
     private String url;
-    
+
+    @NonNull
     private String username;
 
+    @NonNull
     private String password;
 
     private String type;
@@ -43,6 +49,26 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String schema; // needed to build the PoolName
+
+    public PoolDataSourceConfiguration(final String driverClassName,
+                                       final String url,
+                                       final String username,
+                                       final String password) {
+        this.driverClassName = driverClassName;
+        assert(url != null);
+        this.url = url;
+        assert(username != null);
+        this.username = username;
+        assert(password != null);
+        this.password = password;
+    }
+
+    public PoolDataSourceConfiguration(final DataSourceProperties dataSourceProperties) {
+        this(dataSourceProperties.getDriverClassName(),
+             dataSourceProperties.getUrl(),
+             dataSourceProperties.getUsername(),
+             dataSourceProperties.getPassword());
+    }
 
     public String getPoolName() {
         return null;

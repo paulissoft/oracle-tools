@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
+import oracle.ucp.jdbc.PoolDataSource;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -93,6 +94,41 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
         // not used for Oracle
         setDriverClassName(null);
+    }
+
+    void copy(final PoolDataSource poolDataSource) {
+        int nr = 0;
+        final int maxNr = 17;
+        
+        do {
+            try {
+                /* this.driverClassName is ignored */
+                switch(nr) {
+                case 0: poolDataSource.setURL(this.getUrl()); break;
+                case 1: poolDataSource.setUser(this.getUsername()); break;
+                case 2: poolDataSource.setPassword(this.getPassword()); break;
+                case 3: /* connection pool name is not copied here */ break;
+                case 4: poolDataSource.setInitialPoolSize(this.getInitialPoolSize()); break;
+                case 5: poolDataSource.setMinPoolSize(this.getMinPoolSize()); break;
+                case 6: poolDataSource.setMaxPoolSize(this.getMaxPoolSize()); break;
+                case 7: poolDataSource.setConnectionFactoryClassName(this.getConnectionFactoryClassName()); break;
+                case 8: poolDataSource.setValidateConnectionOnBorrow(this.getValidateConnectionOnBorrow()); break;
+                case 9: poolDataSource.setAbandonedConnectionTimeout(this.getAbandonedConnectionTimeout()); break;
+                case 10: poolDataSource.setTimeToLiveConnectionTimeout(this.getTimeToLiveConnectionTimeout()); break;
+                case 11: poolDataSource.setInactiveConnectionTimeout(this.getInactiveConnectionTimeout()); break;
+                case 12: poolDataSource.setTimeoutCheckInterval(this.getTimeoutCheckInterval()); break;
+                case 13: poolDataSource.setMaxStatements(this.getMaxStatements()); break;
+                case 14: poolDataSource.setConnectionWaitTimeout(this.getConnectionWaitTimeout()); break;
+                case 15: poolDataSource.setMaxConnectionReuseTime(this.getMaxConnectionReuseTime()); break;
+                case 16: poolDataSource.setSecondsToTrustIdleConnection(this.getSecondsToTrustIdleConnection()); break;
+                case 17: poolDataSource.setConnectionValidationTimeout(this.getConnectionValidationTimeout()); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
+            }
+        } while (++nr <= maxNr);
     }
 
     @Override

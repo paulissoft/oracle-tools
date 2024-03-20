@@ -31,38 +31,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
 
     private SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
         // super();
-
-        int nr = 0;
-        final int maxNr = 17;
-        
-        do {
-            try {
-                switch(nr) {
-                case 0: setURL(pdsConfigurationOracle.getUrl()); break;
-                case 1: setUsername(pdsConfigurationOracle.getUsername()); break;
-                case 2: setPassword(pdsConfigurationOracle.getPassword()); break;
-                case 3: /* set in super() via join() */ break;
-                case 4: setInitialPoolSize(pdsConfigurationOracle.getInitialPoolSize()); break;
-                case 5: setMinPoolSize(pdsConfigurationOracle.getMinPoolSize()); break;
-                case 6: setMaxPoolSize(pdsConfigurationOracle.getMaxPoolSize()); break;
-                case 7: setConnectionFactoryClassName(pdsConfigurationOracle.getConnectionFactoryClassName()); break;
-                case 8: setValidateConnectionOnBorrow(pdsConfigurationOracle.getValidateConnectionOnBorrow()); break;
-                case 9: setAbandonedConnectionTimeout(pdsConfigurationOracle.getAbandonedConnectionTimeout()); break;
-                case 10: setTimeToLiveConnectionTimeout(pdsConfigurationOracle.getTimeToLiveConnectionTimeout()); break;
-                case 11: setInactiveConnectionTimeout(pdsConfigurationOracle.getInactiveConnectionTimeout()); break;
-                case 12: setTimeoutCheckInterval(pdsConfigurationOracle.getTimeoutCheckInterval()); break;
-                case 13: setMaxStatements(pdsConfigurationOracle.getMaxStatements()); break;
-                case 14: setConnectionWaitTimeout(pdsConfigurationOracle.getConnectionWaitTimeout()); break;
-                case 15: setMaxConnectionReuseTime(pdsConfigurationOracle.getMaxConnectionReuseTime()); break;
-                case 16: setSecondsToTrustIdleConnection(pdsConfigurationOracle.getSecondsToTrustIdleConnection()); break;
-                case 17: setConnectionValidationTimeout(pdsConfigurationOracle.getConnectionValidationTimeout()); break;
-                default:
-                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
-                }
-            } catch (Exception ex) {
-                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
-            }
-        } while (++nr <= maxNr);
+        pdsConfigurationOracle.copy(this);
     }
 
     public static SimplePoolDataSourceOracle build(final PoolDataSourceConfiguration pdsConfiguration) {
