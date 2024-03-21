@@ -118,7 +118,7 @@ public class ConfigurationFactory {
     public DataSource dataSource(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyHikariDataSource.class)
+            //.type(MyHikariDataSource.class)
             .build();
     }
 }
