@@ -75,8 +75,12 @@ public class CheckConnectionUnitTest {
     private DataSourceProperties dataSourceProperties;
 
     @Autowired
-    @Qualifier("operatorDataSource")
-    private DataSource dataSource;
+    @Qualifier("operatorDataSourceHikari")
+    private DataSource dataSourceHikari;
+    
+    @Autowired
+    @Qualifier("operatorDataSourceOracle")
+    private DataSource dataSourceOracle;
     
     @BeforeAll
     static void clear() {
@@ -373,7 +377,7 @@ public class CheckConnectionUnitTest {
     void testConnectionMyHikariDataSource() throws SQLException {
         log.debug("testConnectionMyHikariDataSource()");
 
-        final MyHikariDataSource ds = (MyHikariDataSource) dataSource;
+        final MyHikariDataSource ds = (MyHikariDataSource) dataSourceHikari;
 
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getJdbcUrl());
         assertEquals("bc_proxy[boopapij]", ds.getUsername());
@@ -381,6 +385,27 @@ public class CheckConnectionUnitTest {
         assertEquals(60, ds.getMinimumIdle());
         assertEquals(60, ds.getMaximumPoolSize());
         assertEquals("HikariPool-boopapij", ds.getPoolName());
+
+        final Connection conn = ds.getConnection();
+
+        assertNotNull(conn);
+        assertEquals("BOOPAPIJ", conn.getSchema());
+
+        conn.close();
+    }
+
+    @Test
+    void testConnectionMyOracleDataSource() throws SQLException {
+        log.debug("testConnectionMyPoolDataSource()");
+
+        final MyOracleDataSource ds = (MyOracleDataSource) dataSourceOracle;
+
+        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+        assertEquals("bc_proxy[boopapij]", ds.getUser());
+        assertEquals("bc_proxy", ds.getPassword());
+        assertEquals(10, ds.getMinPoolSize());
+        assertEquals(20, ds.getMaxPoolSize());
+        assertEquals("common-pool", ds.getConnectionPoolName());
 
         final Connection conn = ds.getConnection();
 

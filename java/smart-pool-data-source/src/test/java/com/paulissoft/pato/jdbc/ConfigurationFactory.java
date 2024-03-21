@@ -113,12 +113,21 @@ public class ConfigurationFactory {
         return new DataSourceProperties();
     }
     
-    @Bean(name = {"operatorDataSource"})
+    @Bean(name = {"operatorDataSourceHikari"})
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    public DataSource dataSource(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    public DataSource dataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            //.type(MyHikariDataSource.class)
+            //.type(MyHikariDataSource.class) // app.operator.datasource.type is correct
+            .build();
+    }
+
+    @Bean(name = {"operatorDataSourceOracle"})
+    @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
+    public DataSource dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(MyOracleDataSource.class) // app.operator.datasource.type is NOT correct
             .build();
     }
 }
