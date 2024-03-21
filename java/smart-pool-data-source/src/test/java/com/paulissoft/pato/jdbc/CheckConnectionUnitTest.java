@@ -375,6 +375,9 @@ public class CheckConnectionUnitTest {
 
         final MyHikariDataSource ds = (MyHikariDataSource) dataSource;
 
+        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getJdbcUrl());
+        assertEquals("bc_proxy[boopapij]", ds.getUsername());
+        assertEquals("bc_proxy", ds.getPassword());
         assertEquals(60, ds.getMinimumIdle());
         assertEquals(60, ds.getMaximumPoolSize());
         assertEquals("HikariPool-boopapij", ds.getPoolName());
