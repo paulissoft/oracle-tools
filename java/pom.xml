@@ -45,6 +45,7 @@
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
     <commons-lang3.version>3.9</commons-lang3.version>
 
+    <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
     <!--test>CheckConfigurationUnitTest,CheckLifeCycleUnitTest</test-->
   </properties>
