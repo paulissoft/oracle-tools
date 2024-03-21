@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+//import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +21,15 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+//import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
-@EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
+@EnableConfigurationProperties({PoolDataSourceConfiguration.class,
+            PoolDataSourceConfiguration.class,
+            PoolDataSourceConfigurationHikari.class,
+            MyHikariDataSource.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConnectionUnitTest {
@@ -64,6 +70,16 @@ public class CheckConnectionUnitTest {
     @Qualifier("app-domain-datasource-oracle")
     private PoolDataSourceConfigurationOracle poolAppDomainDataSourceConfigurationOracle;
 
+    /*
+    @Autowired
+    @Qualifier("operatorDataSourceProperties")
+    private DataSourceProperties dataSourceProperties;
+
+    @Autowired
+    @Qualifier("operatorDataSource")
+    private DataSource dataSource;
+    */
+    
     @BeforeAll
     static void clear() {
         SmartPoolDataSource.clear();
@@ -354,4 +370,16 @@ public class CheckConnectionUnitTest {
             assertTrue(thrown.getMessage().matches(rex));
         }
     }
+    /*
+    @Test
+    void testConnectionMyHikariDataSource() throws SQLException {
+        log.debug("testConnectionMyHikariDataSource()");
+
+        final MyHikariDataSource ds = (MyHikariDataSource) dataSource;
+
+        assertEquals(60, ds.getMinimumIdle());
+        assertEquals(60, ds.getMaximumPoolSize());
+        assertEquals("MyHikariPool", ds.getPoolName());
+    }
+    */
 }
