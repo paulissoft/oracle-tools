@@ -27,7 +27,7 @@ public class ConfigurationFactory {
     }
 
     @Bean(name = "app-auth-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.auth.datasource.ucp")
+    @ConfigurationProperties(prefix = "app.auth.datasource.oracleucp")
     public PoolDataSourceConfigurationOracle getAppAuthDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
@@ -45,7 +45,7 @@ public class ConfigurationFactory {
     }
 
     @Bean(name = "app-ocpp-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.ocpp.datasource.ucp")
+    @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
     public PoolDataSourceConfigurationOracle getAppOcppDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
@@ -63,7 +63,7 @@ public class ConfigurationFactory {
     }
 
     @Bean(name = "app-config-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.config.datasource.ucp")
+    @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
     public PoolDataSourceConfigurationOracle getAppConfigDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
@@ -81,7 +81,7 @@ public class ConfigurationFactory {
     }
 
     @Bean(name = "app-ocpi-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.ocpi.datasource.ucp")
+    @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
     public PoolDataSourceConfigurationOracle getAppOcpiDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }
@@ -99,7 +99,7 @@ public class ConfigurationFactory {
     }
 
     @Bean(name = "app-domain-datasource-oracle")
-    @ConfigurationProperties(prefix = "app.domain.datasource.ucp")
+    @ConfigurationProperties(prefix = "app.domain.datasource.oracleucp")
     public PoolDataSourceConfigurationOracle getAppDomainDataSourceConfigurationOracle() {
         return new PoolDataSourceConfigurationOracle();
     }

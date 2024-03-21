@@ -74,13 +74,13 @@ public class CheckConfigurationUnitTest {
         final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracleCopy =
             poolDataSourceConfigurationOracle.toBuilder().build();
 
-        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationAuth);
+        poolDataSourceConfigurationHikariCopy.copyFrom(poolDataSourceConfigurationAuth);
         idAuth = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
 
-        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationOcpp);
+        poolDataSourceConfigurationHikariCopy.copyFrom(poolDataSourceConfigurationOcpp);
         idOcpp = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
 
-        poolDataSourceConfigurationHikariCopy.copy(poolDataSourceConfigurationDomain);
+        poolDataSourceConfigurationHikariCopy.copyFrom(poolDataSourceConfigurationDomain);
         idDomain = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
 
         log.debug("idAuth: {}", idAuth);
@@ -90,13 +90,13 @@ public class CheckConfigurationUnitTest {
         assertTrue(idAuth.equals(idOcpp));
         assertFalse(idAuth.equals(idDomain)); // different user to logon to
 
-        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationAuth);
+        poolDataSourceConfigurationOracleCopy.copyFrom(poolDataSourceConfigurationAuth);
         idAuth = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationOracleCopy);
         
-        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationOcpp);
+        poolDataSourceConfigurationOracleCopy.copyFrom(poolDataSourceConfigurationOcpp);
         idOcpp = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationOracleCopy);
 
-        poolDataSourceConfigurationOracleCopy.copy(poolDataSourceConfigurationDomain);
+        poolDataSourceConfigurationOracleCopy.copyFrom(poolDataSourceConfigurationDomain);
         idDomain = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationOracleCopy);
 
         log.debug("idAuth: {}", idAuth);
@@ -111,7 +111,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testPoolDataSourceConfigurationHikari() {
-        poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
+        poolDataSourceConfigurationHikari.copyFrom(poolDataSourceConfiguration);
         assertEquals("HikariPool-boauth", poolDataSourceConfigurationHikari.getPoolName());
         assertEquals(60, poolDataSourceConfigurationHikari.getMaximumPoolSize());
         assertEquals(60, poolDataSourceConfigurationHikari.getMinimumIdle());
@@ -166,7 +166,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
-        poolDataSourceConfigurationHikari.copy(poolDataSourceConfiguration);
+        poolDataSourceConfigurationHikari.copyFrom(poolDataSourceConfiguration);
 
         log.debug("testSimplePoolDataSourceHikariJoinTwice()");
         log.debug("poolDataSourceConfigurationHikari.getType(): {}", poolDataSourceConfigurationHikari.getType());
@@ -213,7 +213,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testPoolDataSourceConfigurationOracle() {
-        poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
+        poolDataSourceConfigurationOracle.copyFrom(poolDataSourceConfiguration);
 
         assertEquals("common-pool", poolDataSourceConfigurationOracle.getConnectionPoolName());
         assertEquals(0, poolDataSourceConfigurationOracle.getInitialPoolSize());
@@ -263,7 +263,7 @@ public class CheckConfigurationUnitTest {
 
     @Test
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
-        poolDataSourceConfigurationOracle.copy(poolDataSourceConfiguration);
+        poolDataSourceConfigurationOracle.copyFrom(poolDataSourceConfiguration);
 
         log.debug("testSimplePoolDataSourceOracleJoinTwice()");
         log.debug("poolDataSourceConfigurationOracle.getType(): {}", poolDataSourceConfigurationOracle.getType());

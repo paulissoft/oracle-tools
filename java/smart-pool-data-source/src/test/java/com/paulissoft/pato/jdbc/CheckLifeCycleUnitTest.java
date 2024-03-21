@@ -55,8 +55,8 @@ public class CheckLifeCycleUnitTest {
 
     @Test
     void testSimplePoolDataSourceHikariJoinTwice() throws SQLException {
-        poolAppAuthDataSourceConfigurationHikari.copy(poolAppAuthDataSourceConfiguration);
-        poolAppOcppDataSourceConfigurationHikari.copy(poolAppOcppDataSourceConfiguration);
+        poolAppAuthDataSourceConfigurationHikari.copyFrom(poolAppAuthDataSourceConfiguration);
+        poolAppOcppDataSourceConfigurationHikari.copyFrom(poolAppOcppDataSourceConfiguration);
 
         log.debug("testSimplePoolDataSourceHikariJoinTwice()");
 
@@ -142,8 +142,8 @@ public class CheckLifeCycleUnitTest {
 
     @Test
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
-        poolAppAuthDataSourceConfigurationOracle.copy(poolAppAuthDataSourceConfiguration);
-        poolAppOcppDataSourceConfigurationOracle.copy(poolAppOcppDataSourceConfiguration);
+        poolAppAuthDataSourceConfigurationOracle.copyFrom(poolAppAuthDataSourceConfiguration);
+        poolAppOcppDataSourceConfigurationOracle.copyFrom(poolAppOcppDataSourceConfiguration);
 
         log.debug("testSimplePoolDataSourceOracleJoinTwice()");
 

@@ -80,16 +80,16 @@ public class CheckConnectionUnitTest {
         log.debug("testConnection()");
 
         // config
-        poolAppConfigDataSourceConfigurationHikari.copy(poolAppConfigDataSourceConfiguration);
-        poolAppConfigDataSourceConfigurationOracle.copy(poolAppConfigDataSourceConfiguration);
+        poolAppConfigDataSourceConfigurationHikari.copyFrom(poolAppConfigDataSourceConfiguration);
+        poolAppConfigDataSourceConfigurationOracle.copyFrom(poolAppConfigDataSourceConfiguration);
 
         // ocpi
-        poolAppOcpiDataSourceConfigurationHikari.copy(poolAppOcpiDataSourceConfiguration);
-        poolAppOcpiDataSourceConfigurationOracle.copy(poolAppOcpiDataSourceConfiguration);
+        poolAppOcpiDataSourceConfigurationHikari.copyFrom(poolAppOcpiDataSourceConfiguration);
+        poolAppOcpiDataSourceConfigurationOracle.copyFrom(poolAppOcpiDataSourceConfiguration);
 
         // domain
-        poolAppDomainDataSourceConfigurationHikari.copy(poolAppDomainDataSourceConfiguration);
-        poolAppDomainDataSourceConfigurationOracle.copy(poolAppDomainDataSourceConfiguration);
+        poolAppDomainDataSourceConfigurationHikari.copyFrom(poolAppDomainDataSourceConfiguration);
+        poolAppDomainDataSourceConfigurationOracle.copyFrom(poolAppDomainDataSourceConfiguration);
 
         for (int i = 0; i < 2; i++) {
             // these two will be combined
