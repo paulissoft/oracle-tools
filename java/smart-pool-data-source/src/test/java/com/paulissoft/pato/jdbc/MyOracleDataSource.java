@@ -12,6 +12,8 @@ public class MyOracleDataSource extends PoolDataSourceImpl {
     // we need to store it here via setPassword()
     // and return it via getPassword().
     private String password;
+
+    // just add a dummy constructor and override methods to see the logging
     
     public MyOracleDataSource() {
         log.info("MyOracleDataSource()");
@@ -21,7 +23,7 @@ public class MyOracleDataSource extends PoolDataSourceImpl {
         log.info("getConnectionPoolName(): {}", getConnectionPoolName());
         log.info("getUser(): {}", getUser());
     }
-
+    
     @Override
     public void setURL(java.lang.String jdbcUrl) throws SQLException {
         log.info("setURL({})", jdbcUrl);
@@ -51,7 +53,7 @@ public class MyOracleDataSource extends PoolDataSourceImpl {
         log.info("setUser({})", username);
         super.setUser(username);
     }
-
+    
     @Override
     public void setPassword(String password) throws SQLException {
         log.info("setPassword({})", password);

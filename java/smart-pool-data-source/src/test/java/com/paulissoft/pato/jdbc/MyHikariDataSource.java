@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 //@Component
 public class MyHikariDataSource extends HikariDataSource {
+
+    // just add a dummy constructor and override methods to see the logging
+
     public MyHikariDataSource() {
         log.info("MyHikariDataSource()");
         log.info("getJdbcUrl(): {}", getJdbcUrl());
