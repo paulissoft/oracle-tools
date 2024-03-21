@@ -10,6 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 public class MyHikariDataSource extends HikariDataSource {
     public MyHikariDataSource() {
         log.info("MyHikariDataSource()");
+        log.info("getJdbcUrl(): {}", getJdbcUrl());
+        log.info("getMaximumPoolSize(): {}", getMaximumPoolSize());
+        log.info("getMinimumIdle(): {}", getMinimumIdle());
+        log.info("getPoolName(): {}", getPoolName());
+        log.info("getUsername(): {}", getUsername());
     }
 
     public void setJdbcUrl(java.lang.String jdbcUrl) {
