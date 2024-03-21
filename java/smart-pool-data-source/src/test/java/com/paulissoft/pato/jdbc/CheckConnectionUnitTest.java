@@ -381,5 +381,12 @@ public class CheckConnectionUnitTest {
         assertEquals(60, ds.getMinimumIdle());
         assertEquals(60, ds.getMaximumPoolSize());
         assertEquals("HikariPool-boopapij", ds.getPoolName());
+
+        final Connection conn = ds.getConnection();
+
+        assertNotNull(conn);
+        assertEquals("BOOPAPIJ", conn.getSchema());
+
+        conn.close();
     }
 }
