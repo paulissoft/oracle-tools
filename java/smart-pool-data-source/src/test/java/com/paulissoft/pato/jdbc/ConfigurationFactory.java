@@ -1,11 +1,11 @@
 package com.paulissoft.pato.jdbc;
 
-//import javax.sql.DataSource;
-//import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import javax.sql.DataSource;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-//import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 
 @Configuration
@@ -107,13 +107,12 @@ public class ConfigurationFactory {
         return new PoolDataSourceConfigurationOracle();
     }
 
-    /*
     @Bean(name = {"operatorDataSourceProperties"})
     @ConfigurationProperties(prefix = "app.operator.datasource")
     public DataSourceProperties dataSourceProperties() {
         return new DataSourceProperties();
     }
-
+    
     @Bean(name = {"operatorDataSource"})
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
     public DataSource dataSource(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
@@ -122,5 +121,4 @@ public class ConfigurationFactory {
             .type(MyHikariDataSource.class)
             .build();
     }
-    */
 }

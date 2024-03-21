@@ -2,11 +2,11 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+//import org.springframework.stereotype.Component;
 
 
 @Slf4j
-@Component
+//@Component
 public class MyHikariDataSource extends HikariDataSource {
     public MyHikariDataSource() {
         log.info("MyHikariDataSource()");
