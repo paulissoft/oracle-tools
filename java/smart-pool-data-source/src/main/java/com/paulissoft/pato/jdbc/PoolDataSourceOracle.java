@@ -16,7 +16,7 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
 
         public Connection getConnection(String username, String password) throws SQLException;
 
-        // don't know why?
+        // overridden method does not throw java.sql.SQLException
         public void setPassword(String password) throws SQLException;
 
         // is final in PoolDataSourceImpl
@@ -64,6 +64,29 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
               connectionValidationTimeout);
     }
 
+    public Connection getConnection() throws SQLException {
+        return commonPoolDataSourceOracle.getConnection(getUsernameSession1(),
+                                                        getPasswordSession1(),
+                                                        getUsernameSession2());
+    }
+
+    public Connection getConnection(String username, String password) throws SQLException {
+        final PoolDataSourceConfiguration poolDataSourceConfiguration =
+            new PoolDataSourceConfiguration("", "", username, password);
+
+        final String usernameSession2 = poolDataSourceConfiguration.getSchema();
+        // there may be no proxy session at all
+        final String usernameSession1 =
+            poolDataSourceConfiguration.getProxyUsername() != null
+            ? poolDataSourceConfiguration.getProxyUsername()
+            : usernameSession2;
+        final String passwordSession1 = password;
+
+        return commonPoolDataSourceOracle.getConnection(usernameSession1,
+                                                        passwordSession1,
+                                                        usernameSession2);
+    }
+
     public void join(final PoolDataSourceImpl ds) {
         join((CommonPoolDataSourceOracle)ds);
     }
@@ -89,7 +112,9 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
     }
 
     public void close() {
-        leave(commonPoolDataSourceOracle);
+        if (commonPoolDataSourceOracle != null) {
+            leave(commonPoolDataSourceOracle);
+        }
     }
 
     @Override
