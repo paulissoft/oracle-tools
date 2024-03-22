@@ -290,6 +290,10 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
     }
     
     private void join(final CommonPoolDataSourceOracle pds) {
+        if (commonPoolDataSourceOracle != null) {
+            return;
+        }
+        
         try {
             pds.join(this);
         } finally {
@@ -302,11 +306,8 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
     }
 
     private void leave(final CommonPoolDataSourceOracle pds) {
-        try {
-            pds.leave(this);
-        } finally {
-            commonPoolDataSourceOracle = null;
-        }
+        commonPoolDataSourceOracle = null; // this will force getXXX functions to use super.getXXX (see above)
+        pds.leave(this);
     }
 
     public void close() {

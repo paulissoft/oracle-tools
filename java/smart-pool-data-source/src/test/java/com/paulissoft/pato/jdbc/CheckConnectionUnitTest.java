@@ -377,7 +377,7 @@ public class CheckConnectionUnitTest {
     void testConnectionMyHikariDataSource() throws SQLException {
         log.debug("testConnectionMyHikariDataSource()");
 
-        final MyHikariDataSource ds = (MyHikariDataSource) dataSourceHikari;
+        final BasePoolDataSourceHikari ds = (BasePoolDataSourceHikari) dataSourceHikari;
 
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getJdbcUrl());
         assertEquals("bc_proxy[boopapij]", ds.getUsername());

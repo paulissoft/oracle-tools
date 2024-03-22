@@ -25,10 +25,16 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
         
         public void setPassword(String password);
 
+        public String getPoolName();
+        
         public void setPoolName(String poolName);
 
+        public int getMaximumPoolSize();
+        
         public void setMaximumPoolSize(int maximumPoolSize);
         
+        public int getMinimumIdle();
+
         public void setMinimumIdle(int minimumIdle);
         
         public void setDataSourceClassName(String dataSourceClassName);
@@ -129,11 +135,201 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
                                                         usernameSession2);
     }
 
+    public void setDriverClassName(String driverClassName) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setDriverClassName(driverClassName);
+        } else {
+            commonPoolDataSourceHikari.setDriverClassName(driverClassName);
+        }
+    }
+        
+    public void setJdbcUrl(String url) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setJdbcUrl(url);
+        } else {
+            commonPoolDataSourceHikari.setJdbcUrl(url);
+        }
+    }
+
+    public void setUsername(String username) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setUsername(username);
+        } else {
+            commonPoolDataSourceHikari.setUsername(username);
+        }
+    }
+        
+    public void setPassword(String password) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setPassword(password);
+        } else {
+            commonPoolDataSourceHikari.setPassword(password);
+        }
+    }
+
+    public String getPoolName() {
+        if (commonPoolDataSourceHikari == null) {
+            return super.getPoolName();
+        } else {
+            return commonPoolDataSourceHikari.getPoolName();
+        }
+    }
+
+    public void setPoolName(String poolName) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setPoolName(poolName);
+        } else {
+            commonPoolDataSourceHikari.setPoolName(poolName);
+        }
+    }
+
+    public int getMaximumPoolSize() {
+        if (commonPoolDataSourceHikari == null) {
+            return super.getMaximumPoolSize();
+        } else {
+            return commonPoolDataSourceHikari.getMaximumPoolSize();
+        }
+    }
+        
+    public void setMaximumPoolSize(int maximumPoolSize) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setMaximumPoolSize(maximumPoolSize);
+        } else {
+            commonPoolDataSourceHikari.setMaximumPoolSize(maximumPoolSize);
+        }
+    }
+        
+    public int getMinimumIdle() {
+        if (commonPoolDataSourceHikari == null) {
+            return super.getMinimumIdle();
+        } else {
+            return commonPoolDataSourceHikari.getMinimumIdle();
+        }
+    }
+        
+    public void setMinimumIdle(int minimumIdle) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setMinimumIdle(minimumIdle);
+        } else {
+            commonPoolDataSourceHikari.setMinimumIdle(minimumIdle);
+        }
+    }
+        
+    public void setDataSourceClassName(String dataSourceClassName) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setDataSourceClassName(dataSourceClassName);
+        } else {
+            commonPoolDataSourceHikari.setDataSourceClassName(dataSourceClassName);
+        }
+    }
+        
+    public void setAutoCommit(boolean autoCommit) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setAutoCommit(autoCommit);
+        } else {
+            commonPoolDataSourceHikari.setAutoCommit(autoCommit);
+        }
+    }
+        
+    public void setConnectionTimeout(long connectionTimeout) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setConnectionTimeout(connectionTimeout);
+        } else {
+            commonPoolDataSourceHikari.setConnectionTimeout(connectionTimeout);
+        }
+    }
+        
+    public void setIdleTimeout(long idleTimeout) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setIdleTimeout(idleTimeout);
+        } else {
+            commonPoolDataSourceHikari.setIdleTimeout(idleTimeout);
+        }
+    }
+        
+    public void setMaxLifetime(long maxLifetime) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setMaxLifetime(maxLifetime);
+        } else {
+            commonPoolDataSourceHikari.setMaxLifetime(maxLifetime);
+        }
+    }
+        
+    public void setConnectionTestQuery(String connectionTestQuery) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setConnectionTestQuery(connectionTestQuery);
+        } else {
+            commonPoolDataSourceHikari.setConnectionTestQuery(connectionTestQuery);
+        }
+    }
+        
+    public void setInitializationFailTimeout(long initializationFailTimeout) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setInitializationFailTimeout(initializationFailTimeout);
+        } else {
+            commonPoolDataSourceHikari.setInitializationFailTimeout(initializationFailTimeout);
+        }
+    }
+
+    public void setIsolateInternalQueries(boolean isolateInternalQueries) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setIsolateInternalQueries(isolateInternalQueries);
+        } else {
+            commonPoolDataSourceHikari.setIsolateInternalQueries(isolateInternalQueries);
+        }
+    }
+        
+    public void setAllowPoolSuspension(boolean allowPoolSuspension) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setAllowPoolSuspension(allowPoolSuspension);
+        } else {
+            commonPoolDataSourceHikari.setAllowPoolSuspension(allowPoolSuspension);
+        }
+    }
+        
+    public void setReadOnly(boolean readOnly) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setReadOnly(readOnly);
+        } else {
+            commonPoolDataSourceHikari.setReadOnly(readOnly);
+        }
+    }
+        
+    public void setRegisterMbeans(boolean registerMbeans) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setRegisterMbeans(registerMbeans);
+        } else {
+            commonPoolDataSourceHikari.setRegisterMbeans(registerMbeans);
+        }
+    }
+        
+    public void setValidationTimeout(long validationTimeout) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setValidationTimeout(validationTimeout);
+        } else {
+            commonPoolDataSourceHikari.setValidationTimeout(validationTimeout);
+        }
+    }
+        
+    public void setLeakDetectionThreshold(long leakDetectionThreshold) {
+        if (commonPoolDataSourceHikari == null) {
+            super.setLeakDetectionThreshold(leakDetectionThreshold);
+        } else {
+            commonPoolDataSourceHikari.setLeakDetectionThreshold(leakDetectionThreshold);
+        }
+    }
+
+    /* from the interface */
+    
     public void join(final HikariDataSource ds) {
         join((CommonPoolDataSourceHikari)ds);
     }
     
     private void join(final CommonPoolDataSourceHikari pds) {
+        if (commonPoolDataSourceHikari != null) {
+            return;
+        }
+        
         try {
             pds.join(this);
         } finally {
@@ -146,11 +342,8 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
     }
 
     private void leave(final CommonPoolDataSourceHikari pds) {
-        try {
-            pds.leave(this);
-        } finally {
-            commonPoolDataSourceHikari = null;
-        }
+        commonPoolDataSourceHikari = null; // this will force getXXX functions to use super.getXXX (see above)
+        pds.leave(this);
     }
 
     @Override

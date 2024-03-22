@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import lombok.extern.slf4j.Slf4j;
+
 
 @Configuration
 public class ConfigurationFactory {
@@ -115,6 +117,7 @@ public class ConfigurationFactory {
     
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
     CommonPoolDataSourceHikari dataSourceHikariCommon() {
+        log.info("dataSourceHikariCommon()");
         return dataSourceProperties()
             .initializeDataSourceBuilder()
             .type(CommonPoolDataSourceHikari.class)
@@ -123,14 +126,17 @@ public class ConfigurationFactory {
 
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
     PoolDataSourceHikari dataSourceHikariStandard() {
+        log.info("dataSourceHikariStandard()");
         return dataSourceProperties()
             .initializeDataSourceBuilder()
-            .type(PoolDataSourceHikari.class) // app.operator.datasource.type is correct
+            .type(PoolDataSourceHikari.class)
             .build();
     }
 
     @Bean(name = {"operatorDataSourceHikari"})
     public DataSource dataSourceHikari() {
+        log.info("dataSourceHikari()");
+        
         final PoolDataSourceHikari poolDataSourceHikari = dataSourceHikariStandard();
 
         poolDataSourceHikari.join(dataSourceHikariCommon());
