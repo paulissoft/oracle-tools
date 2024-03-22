@@ -66,18 +66,32 @@ public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
         if (poolName == null || poolName.isEmpty()) {
             setPoolName(POOL_NAME_PREFIX);
         }
-        setPoolName(POOL_NAME_PREFIX);
+        setPoolName(getPoolName() + "-" + getUsernameSession2());
     }
 
-    public void join(final HikariDataSource pds) {
-        update(pds, true);
+    public void join(final BasePoolDataSourceHikari pds) {
+        try {
+            update((PoolDataSourceHikari) pds, true);
+        } finally {
+            dataSources.add(pds);
+        }
     }
 
-    public void leave(final HikariDataSource pds) {
-        update(pds, false);
+    public void leave(final BasePoolDataSourceHikari pds) {
+        try {
+            update((PoolDataSourceHikari) pds, false);
+        } finally {
+            dataSources.remove(pds);
+        }
     }
 
-    private void update(final HikariDataSource pds, final boolean joinPoolDataSource) {
+    public void close() {
+        if (dataSources.isEmpty()) {
+            super.close();
+        }
+    }
+
+    private void update(final PoolDataSourceHikari pds, final boolean joinPoolDataSource) {
         log.debug(">update({}, {})", pds, joinPoolDataSource);
 
         final int sign = joinPoolDataSource ? +1 : -1;
@@ -110,6 +124,8 @@ public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
             if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
                 setMaximumPoolSize(sign * pdsSize + thisSize);
             }
+
+            setPoolName(getPoolName() + "-" + pds.getUsernameSession2());
         } finally {
             log.debug("pool sizes after: minimum/maximum: {}/{}",
                       getMinimumIdle(),

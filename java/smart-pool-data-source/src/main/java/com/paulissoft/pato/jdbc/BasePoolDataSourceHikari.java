@@ -2,16 +2,19 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
+import lombok.Getter;
 import lombok.NonNull;
 
 
 @Slf4j
-public abstract class BasePoolDataSourceHikari extends HikariDataSource implements BasePoolDataSource<HikariDataSource> {
+public abstract class BasePoolDataSourceHikari extends HikariDataSource implements BasePoolDataSource {
 
+    @Getter
     private final String usernameSession1;
 
     private final String passwordSession1;
 
+    @Getter
     private final String usernameSession2;
 
     public BasePoolDataSourceHikari(String driverClassName,
@@ -98,4 +101,8 @@ public abstract class BasePoolDataSourceHikari extends HikariDataSource implemen
     public final boolean isFixedUsernamePassword() {
         return true; // DataSource.getConnection(username, password) deprecated and issues a run-time error
     }
+
+    public abstract void join(final BasePoolDataSourceHikari ds);
+    
+    public abstract void leave(final BasePoolDataSourceHikari ds);    
 }

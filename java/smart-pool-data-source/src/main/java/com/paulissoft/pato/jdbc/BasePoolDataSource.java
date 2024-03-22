@@ -9,12 +9,8 @@ import lombok.NonNull;
 import oracle.jdbc.OracleConnection;
 
 
-public interface BasePoolDataSource<T extends DataSource> extends DataSource, Closeable {
+public interface BasePoolDataSource extends DataSource, Closeable {
 
-    void join(final T ds);
-    
-    void leave(final T ds);
-    
     boolean isSingleSessionProxyModel();
 
     boolean isFixedUsernamePassword();
@@ -25,6 +21,7 @@ public interface BasePoolDataSource<T extends DataSource> extends DataSource, Cl
 
     void setPassword(String password);
 
+    // get a standard connection (session 1) but maybe with a different username/password than the default
     default Connection getConnection1(@NonNull final String usernameSession1,
                                       @NonNull final String passwordSession1) throws SQLException {
         if (isFixedUsernamePassword()) {
@@ -38,7 +35,7 @@ public interface BasePoolDataSource<T extends DataSource> extends DataSource, Cl
         }
     }
 
-    // get a connection for the multi-session proxy model
+    // get a connection for the multi-session proxy model (session 2)
     default Connection getConnection2(@NonNull final String usernameSession1,
                                       @NonNull final String passwordSession1,
                                       @NonNull final String usernameSession2) throws SQLException {
