@@ -1,66 +1,121 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
+import java.sql.Connection;
 import java.sql.SQLException;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 
 @Slf4j
-public class CommonPoolDataSourceHikari extends HikariDataSource {
+public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
-    // Only at the first PoolDataSourceHikari.getConnection() time we need to join a PoolDataSourceHikari to a CommonPoolDataSourceHikari.
-    // Before it is not reliable since properties may not have been set yet.
-    private static final Set<CommonPoolDataSourceHikari> commonPoolDataSources;
+    private static final Set<HikariDataSource> dataSources;
 
     static {
         // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
-        final ConcurrentHashMap<CommonPoolDataSourceHikari, Integer> dummy = new ConcurrentHashMap<>();
+        final ConcurrentHashMap<HikariDataSource, Integer> dummy = new ConcurrentHashMap<>();
  
-        commonPoolDataSources = dummy.newKeySet();
+        dataSources = dummy.newKeySet();
     }
 
-    // join a PoolDataSourceHikari to a CommonPoolDataSourceHikari.
-    public void join(final PoolDataSourceHikari pds) {
-        log.debug(">join({})", pds);
+    public CommonPoolDataSourceHikari(String driverClassName,
+                                      @NonNull String url,
+                                      @NonNull String username,
+                                      @NonNull String password,
+                                      String poolName,
+                                      int maximumPoolSize,
+                                      int minimumIdle,
+                                      String dataSourceClassName,
+                                      boolean autoCommit,
+                                      long connectionTimeout,
+                                      long idleTimeout,
+                                      long maxLifetime,
+                                      String connectionTestQuery,
+                                      long initializationFailTimeout,
+                                      boolean isolateInternalQueries,
+                                      boolean allowPoolSuspension,
+                                      boolean readOnly,
+                                      boolean registerMbeans,
+                                      long validationTimeout,
+                                      long leakDetectionThreshold) {
+        super(driverClassName,
+              url,
+              username,
+              password,
+              poolName,
+              maximumPoolSize,
+              minimumIdle,
+              dataSourceClassName,
+              autoCommit,
+              connectionTimeout,
+              idleTimeout,
+              maxLifetime,
+              connectionTestQuery,
+              initializationFailTimeout,
+              isolateInternalQueries,
+              allowPoolSuspension,
+              readOnly,
+              registerMbeans,
+              validationTimeout,
+              leakDetectionThreshold);
+        if (poolName == null || poolName.isEmpty()) {
+            setPoolName(POOL_NAME_PREFIX);
+        }
+        setPoolName(POOL_NAME_PREFIX);
+    }
+
+    public void join(final HikariDataSource pds) {
+        update(pds, true);
+    }
+
+    public void leave(final HikariDataSource pds) {
+        update(pds, false);
+    }
+
+    private void update(final HikariDataSource pds, final boolean joinPoolDataSource) {
+        log.debug(">update({}, {})", pds, joinPoolDataSource);
+
+        final int sign = joinPoolDataSource ? +1 : -1;
 
         try {
             log.debug("pool sizes before: minimum/maximum: {}/{}",
                       getMinimumIdle(),
                       getMaximumPoolSize());
 
-            int oldSize, newSize;
+            int thisSize, pdsSize;
 
-            newSize = pds.getMinimumIdle();
-            oldSize = getMinimumIdle();
+            pdsSize = pds.getMinimumIdle();
+            thisSize = Integer.max(getMinimumIdle(), 0);
 
-            log.debug("minimum pool sizes before setting it: old/new: {}/{}",
-                      oldSize,
-                      newSize);
+            log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
+                      thisSize,
+                      pdsSize);
 
-            if (newSize >= 0) {                
-                setMinimumIdle(newSize + Integer.max(oldSize, 0));
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
+                setMinimumIdle(sign * pdsSize + thisSize);
             }
                 
-            newSize = pds.getMaximumPoolSize();
-            oldSize = getMaximumPoolSize();
+            pdsSize = pds.getMaximumPoolSize();
+            thisSize = Integer.max(getMaximumPoolSize(), 0);
 
-            log.debug("maximum pool sizes before setting it: old/new: {}/{}",
-                      oldSize,
-                      newSize);
+            log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
+                      thisSize,
+                      pdsSize);
 
-            if (newSize >= 0) {
-                setMaximumPoolSize(newSize + Integer.max(oldSize, 0));
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
+                setMaximumPoolSize(sign * pdsSize + thisSize);
             }
         } finally {
             log.debug("pool sizes after: minimum/maximum: {}/{}",
                       getMinimumIdle(),
                       getMaximumPoolSize());
             
-            log.debug("<join()");
+            log.debug("<update()");
         }
     }
 }
