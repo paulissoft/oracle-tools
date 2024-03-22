@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
+import lombok.NonNull;
 
 
 @Slf4j
@@ -13,8 +14,46 @@ public class MyOracleDataSource extends CommonPoolDataSourceOracle {
     private String password;
 
     // just add a dummy constructor and override methods to see the logging
-    
     public MyOracleDataSource() {
+    }
+
+    public MyOracleDataSource(@NonNull String url,
+                              @NonNull String username,
+                              @NonNull String password,
+                              String connectionPoolName,
+                              int initialPoolSize,
+                              int minPoolSize,
+                              int maxPoolSize,
+                              @NonNull String connectionFactoryClassName,
+                              boolean validateConnectionOnBorrow,
+                              int abandonedConnectionTimeout,
+                              int timeToLiveConnectionTimeout,
+                              int inactiveConnectionTimeout,
+                              int timeoutCheckInterval,
+                              int maxStatements,
+                              int connectionWaitTimeout,
+                              long maxConnectionReuseTime,
+                              int secondsToTrustIdleConnection,
+                              int connectionValidationTimeout) {
+        super(url,
+              username,
+              password,
+              connectionPoolName,
+              initialPoolSize,
+              minPoolSize,
+              maxPoolSize,
+              connectionFactoryClassName,
+              validateConnectionOnBorrow,
+              abandonedConnectionTimeout,
+              timeToLiveConnectionTimeout,
+              inactiveConnectionTimeout,
+              timeoutCheckInterval,
+              maxStatements,
+              connectionWaitTimeout,
+              maxConnectionReuseTime,
+              secondsToTrustIdleConnection,
+              connectionValidationTimeout);
+
         log.info("MyOracleDataSource()");
         log.info("getURL(): {}", getURL());
         log.info("getMaxPoolSize(): {}", getMaxPoolSize());
