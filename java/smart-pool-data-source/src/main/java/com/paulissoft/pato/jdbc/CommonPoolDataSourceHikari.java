@@ -12,6 +12,7 @@ public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
+    // as long as there are data sources (still) joined we can not close
     private static final Set<HikariDataSource> dataSources;
 
     static {
