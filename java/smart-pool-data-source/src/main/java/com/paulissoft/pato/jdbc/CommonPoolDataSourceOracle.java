@@ -105,29 +105,29 @@ public class CommonPoolDataSourceOracle extends BasePoolDataSourceOracle {
             pdsSize = pds.getInitialPoolSize();
             thisSize = Integer.max(getInitialPoolSize(), 0);
 
-            log.debug("initial pool sizes before setting it: old/new: {}/{}",
+            log.debug("initial pool sizes before changing it: this/pds: {}/{}",
                       thisSize,
                       pdsSize);
 
             if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
-                setInitialPoolSize(pdsSize + Integer.max(thisSize, 0));
+                setInitialPoolSize(pdsSize + thisSize);
             }
 
             pdsSize = pds.getMinPoolSize();
             thisSize = Integer.max(getMinPoolSize(), 0);
 
-            log.debug("minimum pool sizes before setting it: old/new: {}/{}",
+            log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
                       thisSize,
                       pdsSize);
 
             if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {                
-                setMinPoolSize(pdsSize + Integer.max(thisSize, 0));
+                setMinPoolSize(pdsSize + thisSize);
             }
                 
             pdsSize = pds.getMaxPoolSize();
             thisSize = Integer.max(getMaxPoolSize(), 0);
 
-            log.debug("maximum pool sizes before setting it: old/new: {}/{}",
+            log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
                       thisSize,
                       pdsSize);
 
@@ -144,7 +144,7 @@ public class CommonPoolDataSourceOracle extends BasePoolDataSourceOracle {
                       getMinPoolSize(),
                       getMaxPoolSize());
 
-            log.debug("<updatePoolSizes()");
+            log.debug("<update()");
         }
     }
 }
