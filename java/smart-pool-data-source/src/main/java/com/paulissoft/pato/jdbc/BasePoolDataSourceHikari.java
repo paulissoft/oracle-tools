@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -12,6 +13,7 @@ public abstract class BasePoolDataSourceHikari extends HikariDataSource implemen
     @Getter
     private final String usernameSession1;
 
+    @Getter(AccessLevel.PROTECTED)
     private final String passwordSession1;
 
     @Getter
