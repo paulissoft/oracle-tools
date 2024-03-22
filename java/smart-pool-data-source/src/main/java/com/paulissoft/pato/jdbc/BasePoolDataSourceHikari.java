@@ -99,6 +99,6 @@ public abstract class BasePoolDataSourceHikari extends HikariDataSource implemen
     }
 
     public final boolean isFixedUsernamePassword() {
-        return true; // DataSource.getConnection(username, password) deprecated and issues a run-time error
+        return true; // DataSource.getConnection(username, password) is deprecated and issues a run-time error
     }
 }
