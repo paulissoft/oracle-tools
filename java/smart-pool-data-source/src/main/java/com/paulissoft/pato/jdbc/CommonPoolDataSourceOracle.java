@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-import oracle.ucp.jdbc.PoolDataSource;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -14,11 +14,11 @@ public class CommonPoolDataSourceOracle extends BasePoolDataSourceOracle {
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    private static final Set<PoolDataSource> dataSources;
+    private static final Set<PoolDataSourceImpl> dataSources;
 
     static {
         // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
-        final ConcurrentHashMap<PoolDataSource, Integer> dummy = new ConcurrentHashMap<>();
+        final ConcurrentHashMap<PoolDataSourceImpl, Integer> dummy = new ConcurrentHashMap<>();
  
         dataSources = dummy.newKeySet();
     }
@@ -70,7 +70,7 @@ public class CommonPoolDataSourceOracle extends BasePoolDataSourceOracle {
         }
     }
 
-    public void join(final PoolDataSource pds) {
+    public void join(final PoolDataSourceImpl pds) {
         try {
             update((BasePoolDataSourceOracle)pds, true);
         } finally {
@@ -78,7 +78,7 @@ public class CommonPoolDataSourceOracle extends BasePoolDataSourceOracle {
         }
     }
 
-    public void leave(final PoolDataSource pds) {
+    public void leave(final PoolDataSourceImpl pds) {
         try {
             update((BasePoolDataSourceOracle)pds, false);
         } finally {

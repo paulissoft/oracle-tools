@@ -83,7 +83,7 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
         }
     }
 
-    public void leave(final CommonPoolDataSourceHikari pds) {
+    private void leave(final CommonPoolDataSourceHikari pds) {
         try {
             pds.leave(this);
         } finally {

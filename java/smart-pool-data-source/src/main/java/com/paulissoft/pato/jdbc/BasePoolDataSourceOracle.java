@@ -10,7 +10,7 @@ import lombok.NonNull;
 
 
 @Slf4j
-public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implements BasePoolDataSource<PoolDataSource> {
+public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implements BasePoolDataSource<PoolDataSourceImpl> {
 
     @Getter
     private final String usernameSession1;

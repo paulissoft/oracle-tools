@@ -21,9 +21,9 @@ public interface BasePoolDataSource<T extends DataSource> extends DataSource, Cl
 
     String getUsername();
 
-    void setUsername(String username);
+    void setUsername(String username) throws SQLException;
 
-    void setPassword(String password);
+    void setPassword(String password) throws SQLException;
 
     // get a standard connection (session 1) but maybe with a different username/password than the default
     default Connection getConnection1(@NonNull final String usernameSession1,
