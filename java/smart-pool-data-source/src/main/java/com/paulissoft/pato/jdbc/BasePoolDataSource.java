@@ -25,6 +25,18 @@ public interface BasePoolDataSource<T extends DataSource> extends DataSource, Cl
 
     void setPassword(String password);
 
+    // two purposes:
+    // 1) get a standard connection (session 1) but maybe with a different username/password than the default
+    // 2) get a connection for the multi-session proxy model (session 2)
+    default Connection getConnection(@NonNull final String usernameSession1,
+                                     @NonNull final String passwordSession1,
+                                     @NonNull final String usernameSession2) throws SQLException {
+        return getConnection2(getConnection1(usernameSession1, passwordSession1),
+                              usernameSession1,
+                              passwordSession1,
+                              usernameSession2);
+    }
+
     // get a standard connection (session 1) but maybe with a different username/password than the default
     default Connection getConnection1(@NonNull final String usernameSession1,
                                       @NonNull final String passwordSession1) throws SQLException {
@@ -40,15 +52,13 @@ public interface BasePoolDataSource<T extends DataSource> extends DataSource, Cl
     }
 
     // get a connection for the multi-session proxy model (session 2)
-    default Connection getConnection2(@NonNull final String usernameSession1,
+    default Connection getConnection2(@NonNull final Connection conn,
+                                      @NonNull final String usernameSession1,
                                       @NonNull final String passwordSession1,
                                       @NonNull final String usernameSession2) throws SQLException {
-        assert(!isSingleSessionProxyModel());
-
-        final Connection conn = getConnection1(usernameSession1, passwordSession1);                                      
-                
         // if the current schema is not the requested schema try to open/close the proxy session
         if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
+            assert(!isSingleSessionProxyModel());
 
             OracleConnection oraConn = null;
 
