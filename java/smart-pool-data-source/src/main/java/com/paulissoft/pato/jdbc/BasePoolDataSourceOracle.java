@@ -1,6 +1,8 @@
 package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
+import javax.sql.DataSource;
+import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import lombok.extern.slf4j.Slf4j;
 import lombok.Getter;
@@ -8,7 +10,7 @@ import lombok.NonNull;
 
 
 @Slf4j
-public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implements BasePoolDataSource {
+public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implements BasePoolDataSource<PoolDataSource> {
 
     @Getter
     private final String usernameSession1;
@@ -122,8 +124,4 @@ public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implem
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
-
-    public abstract void join(final BasePoolDataSourceOracle ds);
-    
-    public abstract void leave(final BasePoolDataSourceOracle ds);    
 }

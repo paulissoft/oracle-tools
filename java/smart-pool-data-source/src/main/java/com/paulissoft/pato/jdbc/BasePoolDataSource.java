@@ -9,7 +9,11 @@ import lombok.NonNull;
 import oracle.jdbc.OracleConnection;
 
 
-public interface BasePoolDataSource extends DataSource, Closeable {
+public interface BasePoolDataSource<T extends DataSource> extends DataSource, Closeable {
+
+    void join(final T ds);
+    
+    void leave(final T ds);    
 
     boolean isSingleSessionProxyModel();
 

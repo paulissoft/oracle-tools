@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -62,12 +63,12 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
               leakDetectionThreshold);
     }
 
-    public void join(final BasePoolDataSourceHikari pds) {
-        join((CommonPoolDataSourceHikari)pds);
+    public void join(final HikariDataSource ds) {
+        join((CommonPoolDataSourceHikari)ds);
     }
-
-    public void leave(final BasePoolDataSourceHikari pds) {
-        leave((CommonPoolDataSourceHikari)pds);
+    
+    public void leave(final HikariDataSource ds) {
+        leave((CommonPoolDataSourceHikari)ds);
     }
 
     public void close() {

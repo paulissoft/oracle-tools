@@ -63,13 +63,14 @@ public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
               registerMbeans,
               validationTimeout,
               leakDetectionThreshold);
+        
         if (poolName == null || poolName.isEmpty()) {
             setPoolName(POOL_NAME_PREFIX);
         }
         setPoolName(getPoolName() + "-" + getUsernameSession2());
     }
 
-    public void join(final BasePoolDataSourceHikari pds) {
+    public void join(final HikariDataSource pds) {
         try {
             update((PoolDataSourceHikari) pds, true);
         } finally {
@@ -77,7 +78,7 @@ public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
         }
     }
 
-    public void leave(final BasePoolDataSourceHikari pds) {
+    public void leave(final HikariDataSource pds) {
         try {
             update((PoolDataSourceHikari) pds, false);
         } finally {
