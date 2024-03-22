@@ -3,6 +3,7 @@ package com.paulissoft.pato.jdbc;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import lombok.extern.slf4j.Slf4j;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -13,6 +14,7 @@ public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implem
     @Getter
     private final String usernameSession1;
 
+    @Getter(AccessLevel.PROTECTED)
     private final String passwordSession1;
 
     @Getter
