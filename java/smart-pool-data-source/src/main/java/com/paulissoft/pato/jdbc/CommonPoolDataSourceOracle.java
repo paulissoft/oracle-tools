@@ -22,6 +22,9 @@ public class CommonPoolDataSourceOracle extends BasePoolDataSourceOracle {
         dataSources = dummy.newKeySet();
     }
 
+    public CommonPoolDataSourceOracle() {
+    }    
+
     public CommonPoolDataSourceOracle(@NonNull String url,
                                       @NonNull String username,
                                       @NonNull String password,

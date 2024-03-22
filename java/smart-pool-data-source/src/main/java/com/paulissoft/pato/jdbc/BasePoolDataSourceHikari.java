@@ -11,13 +11,16 @@ import lombok.NonNull;
 public abstract class BasePoolDataSourceHikari extends HikariDataSource implements BasePoolDataSource<HikariDataSource> {
 
     @Getter
-    private final String usernameSession1;
+    private String usernameSession1;
 
     @Getter(AccessLevel.PROTECTED)
-    private final String passwordSession1;
+    private String passwordSession1;
 
     @Getter
-    private final String usernameSession2;
+    private String usernameSession2;
+
+    public BasePoolDataSourceHikari() {
+    }
 
     public BasePoolDataSourceHikari(String driverClassName,
                                     @NonNull String url,
@@ -59,48 +62,32 @@ public abstract class BasePoolDataSourceHikari extends HikariDataSource implemen
         setRegisterMbeans(registerMbeans);
         setValidationTimeout(validationTimeout);
         setLeakDetectionThreshold(leakDetectionThreshold);
-
-        final PoolDataSourceConfiguration poolDataSourceConfiguration = getPoolDataSourceConfiguration(true);
-        
-        usernameSession2 = poolDataSourceConfiguration.getSchema();
-        // there may be no proxy session at all
-        usernameSession1 = poolDataSourceConfiguration.getProxyUsername() != null ? poolDataSourceConfiguration.getProxyUsername() : usernameSession2;
-        passwordSession1 = password;
     }
 
-    public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
-        return PoolDataSourceConfigurationHikari
-            .builder()
-            .driverClassName(getDriverClassName())
-            .url(getJdbcUrl())
-            .username(getUsername())
-            .password(excludeNonIdConfiguration ? null : getPassword())
-            .type(SimplePoolDataSourceHikari.class.getName())
-            .poolName(excludeNonIdConfiguration ? null : getPoolName())
-            .maximumPoolSize(getMaximumPoolSize())
-            .minimumIdle(getMinimumIdle())
-            .autoCommit(isAutoCommit())
-            .connectionTimeout(getConnectionTimeout())
-            .idleTimeout(getIdleTimeout())
-            .maxLifetime(getMaxLifetime())
-            .connectionTestQuery(getConnectionTestQuery())
-            .initializationFailTimeout(getInitializationFailTimeout())
-            .isolateInternalQueries(isIsolateInternalQueries())
-            .allowPoolSuspension(isAllowPoolSuspension())
-            .readOnly(isReadOnly())
-            .registerMbeans(isRegisterMbeans())
-            .validationTimeout(getValidationTimeout())
-            .leakDetectionThreshold(getLeakDetectionThreshold())
-            .build();
-    }
-
-    /* to be implemented from the interface */
-    
     public final boolean isSingleSessionProxyModel(){
         return false;
     }
 
     public final boolean isFixedUsernamePassword() {
         return true; // DataSource.getConnection(username, password) is deprecated and issues a run-time error
+    }
+
+    @Override
+    public void setUsername(String username) {
+        super.setUsername(username);
+        
+        final PoolDataSourceConfiguration poolDataSourceConfiguration =
+            new PoolDataSourceConfiguration("", "", username, "");
+        
+        usernameSession2 = poolDataSourceConfiguration.getSchema();
+        // there may be no proxy session at all
+        usernameSession1 = poolDataSourceConfiguration.getProxyUsername() != null ? poolDataSourceConfiguration.getProxyUsername() : usernameSession2;
+    }
+
+    @Override
+    public void setPassword(String password) {
+        super.setPassword(password);
+
+        passwordSession1 = password;
     }
 }

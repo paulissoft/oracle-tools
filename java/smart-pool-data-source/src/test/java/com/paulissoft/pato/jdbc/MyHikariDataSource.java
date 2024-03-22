@@ -1,13 +1,10 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-//import org.springframework.stereotype.Component;
 
 
 @Slf4j
-//@Component
-public class MyHikariDataSource extends HikariDataSource {
+public class MyHikariDataSource extends CommonPoolDataSourceHikari {
 
     // just add a dummy constructor and override methods to see the logging
 

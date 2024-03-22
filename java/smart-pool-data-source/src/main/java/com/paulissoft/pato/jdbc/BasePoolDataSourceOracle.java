@@ -12,14 +12,17 @@ import lombok.NonNull;
 public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implements BasePoolDataSource<PoolDataSourceImpl> {
 
     @Getter
-    private final String usernameSession1;
+    private String usernameSession1;
 
     @Getter(AccessLevel.PROTECTED)
-    private final String passwordSession1;
+    private String passwordSession1;
 
     @Getter
-    private final String usernameSession2;
+    private String usernameSession2;
 
+    public BasePoolDataSourceOracle() {
+    }
+    
     public BasePoolDataSourceOracle(@NonNull String url,
                                     @NonNull String username,
                                     @NonNull String password,
@@ -57,13 +60,6 @@ public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implem
             setMaxConnectionReuseTime(maxConnectionReuseTime);
             setSecondsToTrustIdleConnection(secondsToTrustIdleConnection);
             setConnectionValidationTimeout(connectionValidationTimeout);
-
-            final PoolDataSourceConfiguration poolDataSourceConfiguration = getPoolDataSourceConfiguration(true);
-        
-            usernameSession2 = poolDataSourceConfiguration.getSchema();
-            // there may be no proxy session at all
-            usernameSession1 = poolDataSourceConfiguration.getProxyUsername() != null ? poolDataSourceConfiguration.getProxyUsername() : usernameSession2;
-            passwordSession1 = password;
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
@@ -112,6 +108,13 @@ public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implem
     public void setUsername(String username) {
         try {
             super.setUser(username);
+
+            final PoolDataSourceConfiguration poolDataSourceConfiguration =
+                new PoolDataSourceConfiguration("", "", username, "");
+        
+            usernameSession2 = poolDataSourceConfiguration.getSchema();
+            // there may be no proxy session at all
+            usernameSession1 = poolDataSourceConfiguration.getProxyUsername() != null ? poolDataSourceConfiguration.getProxyUsername() : usernameSession2;
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
@@ -120,6 +123,8 @@ public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implem
     public void setPassword(String password) {
         try {
             super.setPassword(password);
+            
+            passwordSession1 = password;
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }

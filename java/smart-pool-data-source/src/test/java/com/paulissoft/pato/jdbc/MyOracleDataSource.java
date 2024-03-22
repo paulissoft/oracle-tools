@@ -2,11 +2,10 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
-public class MyOracleDataSource extends PoolDataSourceImpl {
+public class MyOracleDataSource extends CommonPoolDataSourceOracle {
 
     // Since getPassword is deprecated in PoolDataSourceImpl
     // we need to store it here via setPassword()
@@ -55,7 +54,7 @@ public class MyOracleDataSource extends PoolDataSourceImpl {
     }
     
     @Override
-    public void setPassword(String password) throws SQLException {
+    public void setPassword(String password) {
         log.info("setPassword({})", password);
         super.setPassword(password);
         this.password = password;

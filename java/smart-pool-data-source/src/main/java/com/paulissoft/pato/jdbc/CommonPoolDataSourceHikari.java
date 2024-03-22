@@ -22,6 +22,9 @@ public class CommonPoolDataSourceHikari extends BasePoolDataSourceHikari {
         dataSources = dummy.newKeySet();
     }
 
+    public CommonPoolDataSourceHikari() {
+    }
+    
     public CommonPoolDataSourceHikari(String driverClassName,
                                       @NonNull String url,
                                       @NonNull String username,
