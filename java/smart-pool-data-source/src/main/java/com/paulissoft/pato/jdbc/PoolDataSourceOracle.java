@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import java.sql.Connection;
-import javax.sql.DataSource;
 import java.sql.SQLException;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -69,8 +68,24 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
         join((CommonPoolDataSourceOracle)ds);
     }
     
+    private void join(final CommonPoolDataSourceOracle pds) {
+        try {
+            pds.join(this);
+        } finally {
+            commonPoolDataSourceOracle = pds;
+        }
+    }
+
     public void leave(final PoolDataSourceImpl ds) {
         leave((CommonPoolDataSourceOracle)ds);
+    }
+
+    private void leave(final CommonPoolDataSourceOracle pds) {
+        try {
+            pds.leave(this);
+        } finally {
+            commonPoolDataSourceOracle = null;
+        }
     }
 
     public void close() {
@@ -80,21 +95,5 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
     @Override
     public void setPassword(String password) {
         commonPoolDataSourceOracle.setPassword(password);
-    }
-
-    private void join(final CommonPoolDataSourceOracle pds) {
-        try {
-            pds.join(this);
-        } finally {
-            commonPoolDataSourceOracle = pds;
-        }
-    }
-
-    private void leave(final CommonPoolDataSourceOracle pds) {
-        try {
-            pds.leave(this);
-        } finally {
-            commonPoolDataSourceOracle = null;
-        }
     }
 }

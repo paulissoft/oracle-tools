@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
-import javax.sql.DataSource;
 import java.sql.SQLException;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -67,20 +66,16 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
         join((CommonPoolDataSourceHikari)ds);
     }
     
-    public void leave(final HikariDataSource ds) {
-        leave((CommonPoolDataSourceHikari)ds);
-    }
-
-    public void close() {
-        leave(commonPoolDataSourceHikari);
-    }
-
     private void join(final CommonPoolDataSourceHikari pds) {
         try {
             pds.join(this);
         } finally {
             commonPoolDataSourceHikari = pds;
         }
+    }
+
+    public void leave(final HikariDataSource ds) {
+        leave((CommonPoolDataSourceHikari)ds);
     }
 
     private void leave(final CommonPoolDataSourceHikari pds) {

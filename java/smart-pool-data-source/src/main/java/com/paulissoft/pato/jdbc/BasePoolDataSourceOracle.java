@@ -1,8 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
-import javax.sql.DataSource;
-import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import lombok.extern.slf4j.Slf4j;
 import lombok.Getter;

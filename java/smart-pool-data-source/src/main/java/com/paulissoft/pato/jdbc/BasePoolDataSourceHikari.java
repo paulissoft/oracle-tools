@@ -1,7 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
-import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import lombok.Getter;
 import lombok.NonNull;
