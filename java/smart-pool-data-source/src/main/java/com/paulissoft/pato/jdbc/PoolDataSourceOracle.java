@@ -16,11 +16,45 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
 
         public Connection getConnection(String username, String password) throws SQLException;
 
+        // is final in PoolDataSourceImpl       
+        public void setTokenSupplier​(java.util.function.Supplier<? extends oracle.jdbc.AccessToken> tokenSupplier) throws java.sql.SQLException;
+
+        public void setURL(String url) throws SQLException;
+
+        public void setUser(String username) throws SQLException;
+
         // overridden method does not throw java.sql.SQLException
         public void setPassword(String password) throws SQLException;
 
-        // is final in PoolDataSourceImpl
-        public void setTokenSupplier​(java.util.function.Supplier<? extends oracle.jdbc.AccessToken> tokenSupplier) throws java.sql.SQLException;
+        public void setConnectionPoolName(String connectionPoolName) throws SQLException;
+        
+        public void setInitialPoolSize(int initialPoolSize) throws SQLException;
+        
+        public void setMinPoolSize(int minPoolSize) throws SQLException;
+        
+        public void setMaxPoolSize(int maxPoolSize) throws SQLException;
+        
+        public void setConnectionFactoryClassName(String connectionFactoryClassName) throws SQLException;
+        
+        public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException;
+        
+        public void setAbandonedConnectionTimeout(int abandonedConnectionTimeout) throws SQLException;
+        
+        public void setTimeToLiveConnectionTimeout(int timeToLiveConnectionTimeout) throws SQLException;
+        
+        public void setInactiveConnectionTimeout(int inactiveConnectionTimeout) throws SQLException;
+        
+        public void setTimeoutCheckInterval(int timeoutCheckInterval) throws SQLException;
+        
+        public void setMaxStatements(int maxStatements) throws SQLException;
+        
+        public void setConnectionWaitTimeout(int connectionWaitTimeout) throws SQLException;
+        
+        public void setMaxConnectionReuseTime(long maxConnectionReuseTime) throws SQLException;
+        
+        public void setSecondsToTrustIdleConnection(int secondsToTrustIdleConnection) throws SQLException;
+        
+        public void setConnectionValidationTimeout(int connectionValidationTimeout) throws SQLException;        
     }
 
     @Delegate(types=PoolDataSourceImpl.class, excludes=ToOverride.class)
@@ -87,6 +121,170 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
                                                         usernameSession2);
     }
 
+    @Override
+    public void setURL(String url) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setURL(url);
+        } else {
+            commonPoolDataSourceOracle.setURL(url);
+        }
+    }
+
+    @Override
+    public void setUser(String username) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setUser(username);
+        } else {
+            commonPoolDataSourceOracle.setUser(username);
+        }
+    }
+
+    @Override
+    public void setPassword(String password) {
+        if (commonPoolDataSourceOracle == null) {
+            super.setPassword(password);
+        } else {
+            commonPoolDataSourceOracle.setPassword(password);
+        }
+    }
+
+    @Override
+    public void setConnectionPoolName(String connectionPoolName) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setConnectionPoolName(connectionPoolName);
+        } else {
+            commonPoolDataSourceOracle.setConnectionPoolName(connectionPoolName);
+        }
+    }
+        
+    @Override
+    public void setInitialPoolSize(int initialPoolSize) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setInitialPoolSize(initialPoolSize);
+        } else {
+            commonPoolDataSourceOracle.setInitialPoolSize(initialPoolSize);
+        }
+    }
+        
+    @Override
+    public void setMinPoolSize(int minPoolSize) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setMinPoolSize(minPoolSize);
+        } else {
+            commonPoolDataSourceOracle.setMinPoolSize(minPoolSize);
+        }
+    }
+        
+    @Override
+    public void setMaxPoolSize(int maxPoolSize) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setMaxPoolSize(maxPoolSize);
+        } else {
+            commonPoolDataSourceOracle.setMaxPoolSize(maxPoolSize);
+        }
+    }
+        
+    @Override
+    public void setConnectionFactoryClassName(String connectionFactoryClassName) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setConnectionFactoryClassName(connectionFactoryClassName);
+        } else {
+            commonPoolDataSourceOracle.setConnectionFactoryClassName(connectionFactoryClassName);
+        }
+    }
+        
+    @Override
+    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+        } else {
+            commonPoolDataSourceOracle.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+        }
+    }
+        
+    @Override
+    public void setAbandonedConnectionTimeout(int abandonedConnectionTimeout) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setAbandonedConnectionTimeout(abandonedConnectionTimeout);
+        } else {
+            commonPoolDataSourceOracle.setAbandonedConnectionTimeout(abandonedConnectionTimeout);
+        }
+    }
+        
+    @Override
+    public void setTimeToLiveConnectionTimeout(int timeToLiveConnectionTimeout) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setTimeToLiveConnectionTimeout(timeToLiveConnectionTimeout);
+        } else {
+            commonPoolDataSourceOracle.setTimeToLiveConnectionTimeout(timeToLiveConnectionTimeout);
+        }
+    }
+        
+    @Override
+    public void setInactiveConnectionTimeout(int inactiveConnectionTimeout) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setInactiveConnectionTimeout(inactiveConnectionTimeout);
+        } else {
+            commonPoolDataSourceOracle.setInactiveConnectionTimeout(inactiveConnectionTimeout);
+        }
+    }
+        
+    @Override
+    public void setTimeoutCheckInterval(int timeoutCheckInterval) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setTimeoutCheckInterval(timeoutCheckInterval);
+        } else {
+            commonPoolDataSourceOracle.setTimeoutCheckInterval(timeoutCheckInterval);
+        }
+    }
+        
+    @Override
+    public void setMaxStatements(int maxStatements) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setMaxStatements(maxStatements);
+        } else {
+            commonPoolDataSourceOracle.setMaxStatements( maxStatements);
+        }
+    }
+        
+    @Override
+    public void setConnectionWaitTimeout(int connectionWaitTimeout) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setConnectionWaitTimeout(connectionWaitTimeout);
+        } else {
+            commonPoolDataSourceOracle.setConnectionWaitTimeout(connectionWaitTimeout);
+        }
+    }
+        
+    @Override
+    public void setMaxConnectionReuseTime(long maxConnectionReuseTime) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setMaxConnectionReuseTime(maxConnectionReuseTime);
+        } else {
+            commonPoolDataSourceOracle.setMaxConnectionReuseTime(maxConnectionReuseTime);
+        }
+    }
+        
+    @Override
+    public void setSecondsToTrustIdleConnection(int secondsToTrustIdleConnection) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setSecondsToTrustIdleConnection(secondsToTrustIdleConnection);
+        } else {
+            commonPoolDataSourceOracle.setSecondsToTrustIdleConnection(secondsToTrustIdleConnection);
+        }
+    }
+        
+    @Override
+    public void setConnectionValidationTimeout(int connectionValidationTimeout) throws SQLException {
+        if (commonPoolDataSourceOracle == null) {
+            super.setConnectionValidationTimeout(connectionValidationTimeout);
+        } else {
+            commonPoolDataSourceOracle.setConnectionValidationTimeout(connectionValidationTimeout);
+        }
+    }
+
+    /* from the interface */
+    
     public void join(final PoolDataSourceImpl ds) {
         join((CommonPoolDataSourceOracle)ds);
     }
@@ -115,10 +313,5 @@ public class PoolDataSourceOracle extends BasePoolDataSourceOracle {
         if (commonPoolDataSourceOracle != null) {
             leave(commonPoolDataSourceOracle);
         }
-    }
-
-    @Override
-    public void setPassword(String password) {
-        commonPoolDataSourceOracle.setPassword(password);
     }
 }

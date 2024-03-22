@@ -15,11 +15,55 @@ public class PoolDataSourceHikari extends BasePoolDataSourceHikari {
         public Connection getConnection() throws SQLException;
 
         public Connection getConnection(String username, String password) throws SQLException;
+
+        // the following methods must be invoked for this instance
+        public void setDriverClassName(String driverClassName);
+        
+        public void setJdbcUrl(String url);
+
+        public void setUsername(String username);
+        
+        public void setPassword(String password);
+
+        public void setPoolName(String poolName);
+
+        public void setMaximumPoolSize(int maximumPoolSize);
+        
+        public void setMinimumIdle(int minimumIdle);
+        
+        public void setDataSourceClassName(String dataSourceClassName);
+        
+        public void setAutoCommit(boolean autoCommit);
+        
+        public void setConnectionTimeout(long connectionTimeout);
+        
+        public void setIdleTimeout(long idleTimeout);
+        
+        public void setMaxLifetime(long maxLifetime);
+        
+        public void setConnectionTestQuery(String connectionTestQuery);
+        
+        public void setInitializationFailTimeout(long initializationFailTimeout);
+
+        public void setIsolateInternalQueries(boolean isolateInternalQueries);
+        
+        public void setAllowPoolSuspension(boolean allowPoolSuspension);
+        
+        public void setReadOnly(boolean readOnly);
+        
+        public void setRegisterMbeans(boolean registerMbeans);
+        
+        public void setValidationTimeout(long validationTimeout);
+        
+        public void setLeakDetectionThreshold(long leakDetectionThreshold);
     }
 
     @Delegate(types=HikariDataSource.class, excludes=ToOverride.class)
     private CommonPoolDataSourceHikari commonPoolDataSourceHikari = null;
 
+    public PoolDataSourceHikari() {
+    }
+                                
     public PoolDataSourceHikari(String driverClassName,
                                 @NonNull String url,
                                 @NonNull String username,
