@@ -33,13 +33,13 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     public static CombiPoolDataSourceOracle build(@NonNull final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
         return new CombiPoolDataSourceOracle(poolDataSourceConfig, poolDataSourceExec);
     }
-
+        
     protected boolean isSingleSessionProxyModel() {
-        return true;
+        return PoolDataSourceConfiguration.SINGLE_SESSION_PROXY_MODEL;
     }
 
     protected boolean isFixedUsernamePassword() {
-        return false;
+        return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
     }
     
     public String getUsername() {
@@ -48,6 +48,12 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     public void setUsername(String username) throws SQLException {
         setUser(username);        
+    }
+
+    @Override
+    public void setPassword(String password) throws SQLException {
+        super.setPassword(password);
+        getPoolDataSourceConfig().setPassword(password);
     }
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
@@ -81,7 +87,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
 
     // only setters and getters
-    @Delegate(types=PoolDataSourcePropertiesOracle.class)
+    @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     @Override
     protected PoolDataSource getPoolDataSourceConfig() {
         return super.getPoolDataSourceConfig();
