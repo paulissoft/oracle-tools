@@ -5,7 +5,6 @@ import java.sql.SQLException;
 
 public interface PoolDataSourcePropertiesOracle {
 
-    /*
     void setURL(String paramString) throws SQLException;
   
     String getURL();
@@ -18,7 +17,6 @@ public interface PoolDataSourcePropertiesOracle {
     
     @Deprecated
     String getPassword();
-    */
 
     void setConnectionPoolName(String paramString) throws SQLException;
   

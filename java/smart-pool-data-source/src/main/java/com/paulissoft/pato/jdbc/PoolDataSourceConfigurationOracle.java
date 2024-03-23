@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import java.sql.SQLException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -81,7 +82,23 @@ public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfigurati
 
         assert(cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls));
     }
-    
+
+    public void setURL(String paramString) throws SQLException {
+        setUrl(paramString);
+    }
+  
+    public String getURL() {
+        return getUrl();
+    }
+  
+    public void setUser(String paramString) throws SQLException {
+        setUsername(paramString);
+    }
+  
+    public String getUser() {
+        return getUsername();
+    }
+  
     @Override
     public String getPoolName() {
         return connectionPoolName;

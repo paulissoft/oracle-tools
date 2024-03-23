@@ -11,7 +11,7 @@ import java.sql.SQLException;
 
 
 @Slf4j
-public class CombiPoolDataSourceOracle implements PoolDataSourceImpl, PoolDataSourcePropertiesOracle {
+public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSourcePropertiesOracle {
 
     private final PoolDataSource poolDataSourceConfig;
 
