@@ -3,7 +3,7 @@ package com.paulissoft.pato.jdbc;
 import java.sql.SQLException;
 
 
-public interface PoolDataSourcePropertiesOracle {
+public interface PoolDataSourcePropertiesOracle extends PoolDataSourceProperties {
 
     void setURL(String paramString) throws SQLException;
   
@@ -13,11 +13,6 @@ public interface PoolDataSourcePropertiesOracle {
   
     String getUser();
   
-    void setPassword(String paramString) throws SQLException;
-    
-    @Deprecated
-    String getPassword();
-
     void setConnectionPoolName(String paramString) throws SQLException;
   
     String getConnectionPoolName();
@@ -79,7 +74,11 @@ public interface PoolDataSourcePropertiesOracle {
     void setConnectionValidationTimeout(int paramInt) throws SQLException;
   
     int getConnectionValidationTimeout();
- 
+
+    /*
+     * Properties as derived from the getters/setters below are not implemented yet.
+     */
+    
     /*    
           void setFastConnectionFailoverEnabled(boolean paramBoolean) throws SQLException;
   
