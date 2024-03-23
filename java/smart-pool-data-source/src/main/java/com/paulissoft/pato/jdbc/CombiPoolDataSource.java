@@ -74,7 +74,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     // only setters and getters
     // @Delegate(types=P.class)
-    private T getPoolDataSourceConfig() {
+    protected T getPoolDataSourceConfig() {
         return poolDataSourceConfig;
     }
 
@@ -86,7 +86,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     // the rest
     // @Delegate(excludes=ToOverride.class)
-    private T getPoolDataSourceExec() {        
+    protected T getPoolDataSourceExec() {        
         return initializing ? null : poolDataSourceExec;
     }
 }

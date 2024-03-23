@@ -1,7 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
+//import jakarta.annotation.PostConstruct;
+//import jakarta.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -12,27 +12,18 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
-public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSourcePropertiesOracle {
+public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSource> implements PoolDataSource, PoolDataSourcePropertiesOracle {
 
-    @NonNull
-    private final PoolDataSource poolDataSourceConfig;
-
-    @NonNull
-    private final PoolDataSource poolDataSourceExec;
-
-    private boolean initializing = true;
-    
     private CombiPoolDataSourceOracle() {
         this(new PoolDataSourceImpl());
     }
 
     private CombiPoolDataSourceOracle(@NonNull final PoolDataSource poolDataSourceConfig) {
-        this(poolDataSourceConfig, null);
+        super(poolDataSourceConfig, null);
     }
     
     private CombiPoolDataSourceOracle(@NonNull final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
-        this.poolDataSourceConfig = poolDataSourceConfig;
-        this.poolDataSourceExec = poolDataSourceExec != null ? poolDataSourceExec.poolDataSourceExec : poolDataSourceConfig;
+        super(poolDataSourceConfig, poolDataSourceExec);
     }
 
     public static CombiPoolDataSourceOracle build(@NonNull final PoolDataSource poolDataSourceConfig) {
@@ -43,40 +34,48 @@ public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSource
         return new CombiPoolDataSourceOracle(poolDataSourceConfig, poolDataSourceExec);
     }
 
-    @PostConstruct
-    public void init() {
-        if (initializing) {
-            updatePool();
-            initializing = false;
-        }
+    public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        return getPoolDataSourceConfiguration(true);
     }
-
-    @PreDestroy
-    public void done(){
-        if (!initializing) {
-            updatePool();
-            initializing = true;
-        }
+    
+    private PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
+        return PoolDataSourceConfigurationOracle
+            .builder()
+            .driverClassName(null)
+            .url(getURL())
+            .username(getUser())
+            .password(excludeNonIdConfiguration ? null : getPassword())
+            .type(SimplePoolDataSourceOracle.class.getName())
+            .connectionPoolName(excludeNonIdConfiguration ? null : getConnectionPoolName())
+            .initialPoolSize(getInitialPoolSize())
+            .minPoolSize(getMinPoolSize())
+            .maxPoolSize(getMaxPoolSize())
+            .connectionFactoryClassName(getConnectionFactoryClassName())
+            .validateConnectionOnBorrow(getValidateConnectionOnBorrow())
+            .abandonedConnectionTimeout(getAbandonedConnectionTimeout())
+            .timeToLiveConnectionTimeout(getTimeToLiveConnectionTimeout())
+            .inactiveConnectionTimeout(getInactiveConnectionTimeout())
+            .timeoutCheckInterval(getTimeoutCheckInterval())
+            .maxStatements(getMaxStatements())
+            .connectionWaitTimeout(getConnectionWaitTimeout())
+            .maxConnectionReuseTime(getMaxConnectionReuseTime())
+            .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
+            .connectionValidationTimeout(getConnectionValidationTimeout())
+            .build();
     }
 
     // only setters and getters
     @Delegate(types=PoolDataSourcePropertiesOracle.class)
-    private PoolDataSource getPoolDataSourceConfig() {
-        return poolDataSourceConfig;
-    }
-
-    private interface ToOverride {
-        public Connection getConnection() throws SQLException;
-
-        public Connection getConnection(String username, String password) throws SQLException;
-
-        //public PoolDataSourceConfiguration getPoolDataSourceConfiguration();
+    @Override
+    protected PoolDataSource getPoolDataSourceConfig() {
+        return super.getPoolDataSourceConfig();
     }
 
     // the rest
     @Delegate(excludes=ToOverride.class)
-    private PoolDataSource getPoolDataSourceExec() {        
-        return initializing ? null : poolDataSourceExec;
+    @Override
+    protected PoolDataSource getPoolDataSourceExec() {        
+        return super.getPoolDataSourceExec();
     }
 
     public Connection getConnection() throws SQLException {
@@ -87,6 +86,6 @@ public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSource
         return null;
     }
     
-    private void updatePool() {
+    protected void updatePool() {
     }
 }
