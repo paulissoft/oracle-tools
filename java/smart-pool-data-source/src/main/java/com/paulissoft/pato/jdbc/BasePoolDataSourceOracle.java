@@ -94,11 +94,11 @@ public abstract class BasePoolDataSourceOracle extends PoolDataSourceImpl implem
     /* to be implemented from the interface */
     
     public final boolean isSingleSessionProxyModel(){
-        return true;
+        return PoolDataSourceConfiguration.SINGLE_SESSION_PROXY_MODEL;
     }
 
     public final boolean isFixedUsernamePassword() {
-        return false;
+        return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
     }
 
     public String getUsername() {
