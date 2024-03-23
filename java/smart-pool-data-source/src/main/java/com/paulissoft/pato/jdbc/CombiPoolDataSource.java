@@ -9,6 +9,8 @@ import java.util.Properties;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NonNull;
 import javax.sql.DataSource;
 import oracle.jdbc.OracleConnection;
@@ -26,7 +28,30 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     private final T poolDataSourceExec;
 
     private boolean initializing = true;
-    
+
+    @Getter
+    private String usernameSession1;
+
+    /**
+     * Since getPassword() is a deprecated method (in Oracle UCP) we need another way of getting it.
+     * The idea is to implement setPassword() here and store it in passwordSession1.
+     * We need also override it in classes that extend this one like this:
+     *
+     * <code>
+     * @Override
+     * public void setPassword(String password) throws SQLException {
+     *   super.setPassword(password); // sets passwordSession1
+     *   getPoolDataSourceConfig().setPassword(password);
+     * }
+     * </code>
+     */
+
+    @Getter(AccessLevel.PROTECTED)
+    private String passwordSession1;
+
+    @Getter
+    private String usernameSession2;
+
     protected CombiPoolDataSource(@NonNull final T poolDataSourceConfig) {
         this(poolDataSourceConfig, null);
     }
@@ -39,6 +64,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @PostConstruct
     public void init() {
         if (initializing) {
+            determineConnectInfo();
             updateConfigurationsPerExec();
             updatePool();
             initializing = false;
@@ -83,6 +109,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     private void updateConfigurationsPerExec() {
         if (this.poolDataSourceConfig != this.poolDataSourceExec) {
+            // this is a Combi where the executing data source is not the same as the configuration data source
             if (initializing) {
                 configurationsPerExec.computeIfAbsent(this.poolDataSourceExec.toString(), k -> new HashSet<T>()).add(this.poolDataSourceConfig);
             } else {
@@ -99,6 +126,14 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     protected abstract void updatePool();
 
+    private void determineConnectInfo() {
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = getPoolDataSourceConfiguration();
+
+        poolDataSourceConfiguration.determineConnectInfo();
+        usernameSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
+        usernameSession2 = poolDataSourceConfiguration.getSchema();        
+    }
+
     // only setters and getters
     // @Delegate(types=P.class)
     protected T getPoolDataSourceConfig() {
@@ -109,6 +144,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         public Connection getConnection() throws SQLException;
 
         public Connection getConnection(String username, String password) throws SQLException;
+
+        public void setPassword(String password) throws SQLException;
     }
 
     // the rest
@@ -125,7 +162,11 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     public abstract void setUsername(String username) throws SQLException;
 
-    public abstract void setPassword(String password) throws SQLException;
+    public void setPassword(String password) throws SQLException {
+        if (initializing) {
+            passwordSession1 = password;
+        }
+    }
 
     // two purposes:
     // 1) get a standard connection (session 1) but maybe with a different username/password than the default
