@@ -1,49 +1,52 @@
 package com.paulissoft.pato.jdbc;
 
-import lombok.extern.slf4j.Slf4j;
-import oracle.ucp.jdbc.PoolDataSource;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import lombok.experimental.Delegate;
 import java.sql.Connection;
 import java.sql.SQLException;
-//import javax.sql.DataSource;
+import lombok.NonNull;
+import lombok.experimental.Delegate;
+import lombok.extern.slf4j.Slf4j;
+import oracle.ucp.jdbc.PoolDataSource;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
 public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSourcePropertiesOracle {
 
+    @NonNull
     private final PoolDataSource poolDataSourceConfig;
 
+    @NonNull
     private final PoolDataSource poolDataSourceExec;
 
     private boolean initializing = true;
     
     private CombiPoolDataSourceOracle() {
-        this(null);
+        this(new PoolDataSourceImpl());
     }
 
-    private CombiPoolDataSourceOracle(final PoolDataSource poolDataSourceConfig) {
+    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource poolDataSourceConfig) {
         this(poolDataSourceConfig, null);
     }
     
-    private CombiPoolDataSourceOracle(final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
+    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
         this.poolDataSourceConfig = poolDataSourceConfig;
         this.poolDataSourceExec = poolDataSourceExec != null ? poolDataSourceExec.poolDataSourceExec : poolDataSourceConfig;
     }
 
-    public static CombiPoolDataSourceOracle build(final PoolDataSource poolDataSourceConfig) {
+    public static CombiPoolDataSourceOracle build(@NonNull final PoolDataSource poolDataSourceConfig) {
         return new CombiPoolDataSourceOracle(poolDataSourceConfig);
     }
     
-    public static CombiPoolDataSourceOracle build(final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
+    public static CombiPoolDataSourceOracle build(@NonNull final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
         return new CombiPoolDataSourceOracle(poolDataSourceConfig, poolDataSourceExec);
     }
 
     @PostConstruct
     public void init() {
         if (initializing) {
-            updatePool(poolDataSourceConfig, poolDataSourceExec);
+            updatePool();
             initializing = false;
         }
     }
@@ -51,7 +54,7 @@ public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSource
     @PreDestroy
     public void done(){
         if (!initializing) {
-            updatePool(poolDataSourceConfig, poolDataSourceExec);
+            updatePool();
             initializing = true;
         }
     }
@@ -72,8 +75,8 @@ public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSource
 
     // the rest
     @Delegate(excludes=ToOverride.class)
-    private PoolDataSource getPoolDataSourceExec() {
-        return poolDataSourceExec;
+    private PoolDataSource getPoolDataSourceExec() {        
+        return initializing ? null : poolDataSourceExec;
     }
 
     public Connection getConnection() throws SQLException {
@@ -84,8 +87,6 @@ public class CombiPoolDataSourceOracle implements PoolDataSource, PoolDataSource
         return null;
     }
     
-    private static void updatePool(final PoolDataSource poolDataSourceConfig,
-                                   final PoolDataSource poolDataSourceExec) {
-
+    private void updatePool() {
     }
 }
