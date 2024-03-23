@@ -65,11 +65,11 @@ public abstract class BasePoolDataSourceHikari extends HikariDataSource implemen
     }
 
     public final boolean isSingleSessionProxyModel(){
-        return false;
+        return PoolDataSourceConfigurationHikari.SINGLE_SESSION_PROXY_MODEL;
     }
 
     public final boolean isFixedUsernamePassword() {
-        return true; // DataSource.getConnection(username, password) is deprecated and issues a run-time error
+        return PoolDataSourceConfigurationHikari.FIXED_USERNAME_PASSWORD;
     }
 
     @Override
