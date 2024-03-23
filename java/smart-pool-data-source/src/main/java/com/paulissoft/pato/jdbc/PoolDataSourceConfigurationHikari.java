@@ -23,6 +23,10 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "spring.datasource.hikari")
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
 
+    public static final boolean SINGLE_SESSION_PROXY_MODEL = false;
+    
+    public static final boolean FIXED_USERNAME_PASSWORD = true;
+
     // properties that may differ, i.e. are ignored
     
     private String poolName;
@@ -96,7 +100,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
 
     @Override
     public boolean isSingleSessionProxyModel() {
-        return false;
+        return SINGLE_SESSION_PROXY_MODEL;
     }
 
     /*
@@ -108,7 +112,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
 
     @Override
     public boolean isFixedUsernamePassword() {
-        return true;
+        return FIXED_USERNAME_PASSWORD;
     }
     
     public PoolDataSourceConfigurationHikari() {
