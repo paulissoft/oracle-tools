@@ -24,6 +24,10 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "spring.datasource")
 public class PoolDataSourceConfiguration implements ConnectInfo {
 
+    public static final boolean SINGLE_SESSION_PROXY_MODEL = true;
+    
+    public static final boolean FIXED_USERNAME_PASSWORD = false;
+
     private String driverClassName;
 
     //@NonNull
@@ -90,11 +94,11 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     // true - do not use openProxySession() but use proxyUsername[schema]
     // false - use openProxySession() (two sessions will appear in v$session)
     public boolean isSingleSessionProxyModel() {
-        return true;
+        return SINGLE_SESSION_PROXY_MODEL;
     }
 
     public boolean isFixedUsernamePassword() {
-        return false;
+        return FIXED_USERNAME_PASSWORD;
     }
         
     public Class getType() {
