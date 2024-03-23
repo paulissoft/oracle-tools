@@ -44,6 +44,7 @@
     <spring.version>5.2.3.RELEASE</spring.version>
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
     <commons-lang3.version>3.9</commons-lang3.version>
+    <jakarta.annotation-api.version>3.0.0-M1</jakarta.annotation-api.version>
 
     <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
@@ -121,7 +122,13 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${commons-lang3.version}</version>
-    </dependency-->
+      </dependency-->
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+      <version>${jakarta.annotation-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
   
   <build>
