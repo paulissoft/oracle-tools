@@ -34,6 +34,22 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         return new CombiPoolDataSourceOracle(poolDataSourceConfig, poolDataSourceExec);
     }
 
+    protected boolean isSingleSessionProxyModel() {
+        return true;
+    }
+
+    protected boolean isFixedUsernamePassword() {
+        return false;
+    }
+    
+    public String getUsername() {
+        return getUser();
+    }
+
+    public void setUsername(String username) throws SQLException {
+        setUser(username);        
+    }
+
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }
@@ -87,5 +103,8 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
     
     protected void updatePool() {
+    }
+
+    public void close() {
     }
 }
