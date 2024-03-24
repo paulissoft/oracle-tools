@@ -17,7 +17,8 @@ import oracle.jdbc.OracleConnection;
 
 public abstract class CombiPoolDataSource<T extends DataSource> implements DataSource, Closeable {
 
-    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource> commonPoolDataSources = new ConcurrentHashMap<>();
+    // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, T> so use DataSource instead of T
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> commonPoolDataSources = new ConcurrentHashMap<>();
 
     // a matrix of (active) configPoolDataSource instances per commonPoolDataSource: needed for canClose()
     private final Set<T> activeConfigPoolDataSources = (new ConcurrentHashMap<T, Integer>()).newKeySet();
@@ -25,10 +26,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @NonNull
     private final T configPoolDataSource;
 
-    @NonNull
-    private final CombiPoolDataSource<T> combiPoolDataSource;
-
-    private T commonPoolDataSource = null; // combiPoolDataSource.commonPoolDataSource
+    private T commonPoolDataSource = null;
 
     private boolean initializing = true;
 
@@ -61,7 +59,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     
     protected CombiPoolDataSource(@NonNull final T configPoolDataSource, final CombiPoolDataSource<T> combiPoolDataSource) {
         this.configPoolDataSource = configPoolDataSource;
-        this.combiPoolDataSource = combiPoolDataSource;
+        this.commonPoolDataSource = combiPoolDataSource != null ? combiPoolDataSource.commonPoolDataSource : null;
     }
 
     @PostConstruct
@@ -110,20 +108,25 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
-    private void updateCombiPoolAdministration() {
-        if (initializing && this.combiPoolDataSource == null) {
+    private void updateCombiPoolAdministration() {            
+        if (initializing) {
             final PoolDataSourceConfigurationCommonId commonId = new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
-            final CombiPoolDataSource<T> combiPoolDataSource = commonPoolDataSources.get(commonId);
 
-            if (combiPoolDataSource == null) {
-                this.commonPoolDataSource = this.configPoolDataSource;
-            } else {
-                this.commonPoolDataSource = combiPoolDataSource.commonPoolDataSource;
-            }                
+            if (this.commonPoolDataSource == null) {
+                final T commonPoolDataSource = (T) commonPoolDataSources.get(commonId);
+
+                if (commonPoolDataSource == null) {
+                    this.commonPoolDataSource = this.configPoolDataSource;
+                    commonPoolDataSources.computeIfAbsent(commonId, k -> this.commonPoolDataSource);
+                } else {
+                    this.commonPoolDataSource = commonPoolDataSource;
+                }
+            }
         }
+
+        assert this.commonPoolDataSource != null;
         
-        if (this.configPoolDataSource != this.combiPoolDataSource.commonPoolDataSource) {
-            // this is a Combi where the executing data source is not the same as the configuration data source
+        if (this.configPoolDataSource != this.commonPoolDataSource) {
             if (initializing) {
                 activeConfigPoolDataSources.add(this.configPoolDataSource);
             } else {
@@ -163,7 +166,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     // the rest
     // @Delegate(excludes=ToOverride.class)
     protected T getCommonPoolDataSource() {        
-        return initializing || commonPoolDataSource == null ? null : combiPoolDataSource.commonPoolDataSource;
+        return initializing ? null : commonPoolDataSource;
     }
 
     protected abstract boolean isSingleSessionProxyModel();
