@@ -12,10 +12,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import javax.sql.DataSource;
 import oracle.jdbc.OracleConnection;
 
 
+@Slf4j
 public abstract class CombiPoolDataSource<T extends DataSource> implements DataSource, Closeable {
 
     // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, T> so use DataSource instead of T
@@ -27,7 +29,9 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @NonNull
     private final T configPoolDataSource;
 
-    private T commonPoolDataSource = null;
+    private final CombiPoolDataSource<T> commonCombiPoolDataSource;
+        
+    private T commonPoolDataSource = null; // commonCombiPoolDataSource.commonPoolDataSource
 
     private boolean initializing = true;
 
@@ -58,13 +62,14 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         this(configPoolDataSource, null);
     }
     
-    protected CombiPoolDataSource(@NonNull final T configPoolDataSource, final CombiPoolDataSource<T> combiPoolDataSource) {
+    protected CombiPoolDataSource(@NonNull final T configPoolDataSource, final CombiPoolDataSource<T> commonCombiPoolDataSource) {
         this.configPoolDataSource = configPoolDataSource;
-        this.commonPoolDataSource = combiPoolDataSource != null ? combiPoolDataSource.commonPoolDataSource : null;
+        this.commonCombiPoolDataSource = commonCombiPoolDataSource;
     }
 
     @PostConstruct
     public void init() {
+        log.debug("init(initializing={})", initializing);
         if (initializing) {
             determineConnectInfo();
             updateCombiPoolAdministration();
@@ -75,54 +80,46 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     @PreDestroy
     public void done(){
+        log.debug("done(initializing={})", initializing);
         if (!initializing) {
             updateCombiPoolAdministration();
             updatePool(configPoolDataSource, commonPoolDataSource, initializing);
             initializing = true;
         }
     }
-    
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-
-        try {
-            final T other = (T) obj;
-        
-            return other.toString().equals(this.toString());
-        } catch (Exception ex) {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return this.getPoolDataSourceConfiguration().hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return this.getPoolDataSourceConfiguration().toString();
-    }
 
     public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
-    private void updateCombiPoolAdministration() {            
-        if (initializing && this.commonPoolDataSource == null) {
-            final PoolDataSourceConfigurationCommonId commonId = new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
-            final T commonPoolDataSource = (T) commonPoolDataSources.get(commonId);
+    private void updateCombiPoolAdministration() {
+        log.debug("updateCombiPoolAdministration(initializing={})", initializing);
+        
+        if (initializing) {
+            final PoolDataSourceConfigurationCommonId thisCommonId =
+                new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
+            
+            if (this.commonCombiPoolDataSource == null) {
+                final T commonPoolDataSource = (T) commonPoolDataSources.get(thisCommonId);
 
-            if (commonPoolDataSource == null) {
-                this.commonPoolDataSource = this.configPoolDataSource;
-                commonPoolDataSources.computeIfAbsent(commonId, k -> this.commonPoolDataSource);
+                if (commonPoolDataSource == null) {
+                    this.commonPoolDataSource = this.configPoolDataSource;
+                } else {
+                    this.commonPoolDataSource = commonPoolDataSource;
+                }
             } else {
-                this.commonPoolDataSource = commonPoolDataSource;
+                final PoolDataSourceConfigurationCommonId thatCommonId =
+                    new PoolDataSourceConfigurationCommonId(this.commonCombiPoolDataSource.getPoolDataSourceConfiguration());
+
+                log.debug("thisCommonId: {}; thatCommonId: {}", thisCommonId, thatCommonId);
+                
+                assert thisCommonId.equals(thatCommonId) : "The config and common pool data source should have the same common id";
+                
+                this.commonPoolDataSource = this.commonCombiPoolDataSource.commonPoolDataSource;
             }
+
+            commonPoolDataSources.computeIfAbsent(thisCommonId, k -> this.commonPoolDataSource);
         }
 
-        assert this.commonPoolDataSource != null;
+        assert this.commonPoolDataSource != null : "The common pool data source must NOT be null";
         
         if (this.configPoolDataSource != this.commonPoolDataSource) {
             if (initializing) {
@@ -134,14 +131,20 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     protected boolean canClose() {
+        log.debug("canClose()");
+
         final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
 
         return configurations == null || configurations.isEmpty();
     }
 
-    protected abstract void updatePool(@NonNull final T configPoolDataSource, @NonNull final T commonPoolDataSource, final boolean initializing);
+    protected abstract void updatePool(@NonNull final T configPoolDataSource,
+                                       @NonNull final T commonPoolDataSource,
+                                       final boolean initializing);
 
     protected void determineConnectInfo() {
+        log.debug("determineConnectInfo()");
+        
         final PoolDataSourceConfiguration configPoolDataSourceuration = getPoolDataSourceConfiguration();
 
         configPoolDataSourceuration.determineConnectInfo();
@@ -150,7 +153,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     // only setters and getters
-    // @Delegate(types=P.class)
+    // @Delegate(types=PoolDataSourcePropertiesX.class)
     protected T getConfigPoolDataSource() {
         return configPoolDataSource;
     }
@@ -216,7 +219,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
                                         @NonNull final String usernameSession2) throws SQLException {
         // if the current schema is not the requested schema try to open/close the proxy session
         if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
-            assert(!isSingleSessionProxyModel());
+            assert !isSingleSessionProxyModel()
+                : "Schema name requested should be the same as the current schema name in the single-session proy model";
 
             OracleConnection oraConn = null;
 
@@ -261,9 +265,12 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
                     }
                 } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
             }                
-        }
 
-        assert(conn.getSchema().equalsIgnoreCase(usernameSession2));
+            assert conn.getSchema().equalsIgnoreCase(usernameSession2)
+                : String.format("Current schema name (%s) should be the same as the requested name (%s)",
+                                conn.getSchema(),
+                                usernameSession2);
+        }
         
         return conn;
     }

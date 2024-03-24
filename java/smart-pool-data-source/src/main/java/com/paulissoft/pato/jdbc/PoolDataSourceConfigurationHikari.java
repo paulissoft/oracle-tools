@@ -71,6 +71,14 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     }
     */
 
+    public void setJdbcUrl(String jdbcUrl) {
+        setUrl(jdbcUrl);
+    }
+  
+    public String getJdbcUrl() {
+        return getUrl();
+    }
+
     @Override
     public int getInitialPoolSize() {
         return minimumIdle;
