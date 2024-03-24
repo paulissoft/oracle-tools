@@ -138,6 +138,9 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         return configurations == null || configurations.isEmpty();
     }
 
+    public void close() {
+    }
+
     protected abstract void updatePool(@NonNull final T configPoolDataSource,
                                        @NonNull final T commonPoolDataSource,
                                        final boolean initializing);
@@ -164,6 +167,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         public Connection getConnection(String username, String password) throws SQLException;
 
         public void setPassword(String password) throws SQLException;
+
+        public void close();
     }
 
     // the rest
@@ -172,10 +177,14 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         return initializing ? null : commonPoolDataSource;
     }
 
-    protected abstract boolean isSingleSessionProxyModel();
+    protected boolean isSingleSessionProxyModel() {
+        return PoolDataSourceConfiguration.SINGLE_SESSION_PROXY_MODEL;
+    }
 
-    protected abstract boolean isFixedUsernamePassword();
-
+    protected boolean isFixedUsernamePassword() {
+        return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
+    }
+    
     public abstract String getUsername();
 
     public abstract void setUsername(String username) throws SQLException;
@@ -201,6 +210,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     // get a standard connection (session 1) but maybe with a different username/password than the default
     protected Connection getConnection1(@NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
+        log.debug("getConnection1(usernameSession1={})", usernameSession1);
+        
         if (isFixedUsernamePassword()) {
             if (!getUsername().equalsIgnoreCase(usernameSession1)) {
                 setUsername(usernameSession1);
@@ -217,6 +228,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1,
                                         @NonNull final String usernameSession2) throws SQLException {
+        log.debug("getConnection2(usernameSession1={}, usernameSession2={})",
+                  usernameSession1,
+                  usernameSession2);
+
         // if the current schema is not the requested schema try to open/close the proxy session
         if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
             assert !isSingleSessionProxyModel()

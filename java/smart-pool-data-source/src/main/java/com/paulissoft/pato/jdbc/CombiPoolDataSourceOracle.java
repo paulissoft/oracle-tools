@@ -24,30 +24,14 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         this(new PoolDataSourceImpl());
     }
 
-    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource poolDataSourceConfig) {
-        super(poolDataSourceConfig, null);
+    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource) {
+        super(configPoolDataSource, null);
     }
     
-    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
-        super(poolDataSourceConfig, poolDataSourceExec);
-    }
-
-    public static CombiPoolDataSourceOracle build(@NonNull final PoolDataSource poolDataSourceConfig) {
-        return new CombiPoolDataSourceOracle(poolDataSourceConfig);
-    }
-    
-    public static CombiPoolDataSourceOracle build(@NonNull final PoolDataSource poolDataSourceConfig, final CombiPoolDataSourceOracle poolDataSourceExec) {
-        return new CombiPoolDataSourceOracle(poolDataSourceConfig, poolDataSourceExec);
+    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource, final CombiPoolDataSourceOracle combiCommonPoolDataSource) {
+        super(configPoolDataSource, combiCommonPoolDataSource);
     }
         
-    protected boolean isSingleSessionProxyModel() {
-        return PoolDataSourceConfiguration.SINGLE_SESSION_PROXY_MODEL;
-    }
-
-    protected boolean isFixedUsernamePassword() {
-        return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
-    }
-    
     public String getUsername() {
         return getUser();
     }
