@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @SuperBuilder(toBuilder = true)
 @Component
 @ConfigurationProperties(prefix = "spring.datasource.hikari")
-public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
+public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration implements PoolDataSourcePropertiesHikari {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = false;
     
@@ -60,7 +60,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     private boolean registerMbeans;
     
     private long validationTimeout;
-    
+
     private long leakDetectionThreshold;
 
     //*TBD*/

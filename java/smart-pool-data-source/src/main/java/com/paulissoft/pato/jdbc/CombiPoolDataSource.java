@@ -5,6 +5,7 @@ import jakarta.annotation.PreDestroy;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +22,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> commonPoolDataSources = new ConcurrentHashMap<>();
 
     // a matrix of (active) configPoolDataSource instances per commonPoolDataSource: needed for canClose()
-    private final Set<T> activeConfigPoolDataSources = (new ConcurrentHashMap<T, Integer>()).newKeySet();
+    private static final ConcurrentHashMap<DataSource, Set<DataSource>> activeConfigPoolDataSources = new ConcurrentHashMap<>();
     
     @NonNull
     private final T configPoolDataSource;
@@ -109,18 +110,15 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
     private void updateCombiPoolAdministration() {            
-        if (initializing) {
+        if (initializing && this.commonPoolDataSource == null) {
             final PoolDataSourceConfigurationCommonId commonId = new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
+            final T commonPoolDataSource = (T) commonPoolDataSources.get(commonId);
 
-            if (this.commonPoolDataSource == null) {
-                final T commonPoolDataSource = (T) commonPoolDataSources.get(commonId);
-
-                if (commonPoolDataSource == null) {
-                    this.commonPoolDataSource = this.configPoolDataSource;
-                    commonPoolDataSources.computeIfAbsent(commonId, k -> this.commonPoolDataSource);
-                } else {
-                    this.commonPoolDataSource = commonPoolDataSource;
-                }
+            if (commonPoolDataSource == null) {
+                this.commonPoolDataSource = this.configPoolDataSource;
+                commonPoolDataSources.computeIfAbsent(commonId, k -> this.commonPoolDataSource);
+            } else {
+                this.commonPoolDataSource = commonPoolDataSource;
             }
         }
 
@@ -128,15 +126,17 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         
         if (this.configPoolDataSource != this.commonPoolDataSource) {
             if (initializing) {
-                activeConfigPoolDataSources.add(this.configPoolDataSource);
+                activeConfigPoolDataSources.computeIfAbsent(this.commonPoolDataSource, k -> new HashSet<>()).add(this.configPoolDataSource);
             } else {
-                activeConfigPoolDataSources.remove(this.configPoolDataSource);
+                activeConfigPoolDataSources.computeIfPresent(this.commonPoolDataSource, (k, v) -> { v.remove(this.configPoolDataSource); return v; });
             }
         }
     }
 
     protected boolean canClose() {
-        return activeConfigPoolDataSources.isEmpty();
+        final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
+
+        return configurations == null || configurations.isEmpty();
     }
 
     protected abstract void updatePool(@NonNull final T configPoolDataSource, @NonNull final T commonPoolDataSource, final boolean initializing);
