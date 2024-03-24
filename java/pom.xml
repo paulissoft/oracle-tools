@@ -48,7 +48,7 @@
 
     <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
-    <!--test>CheckConfigurationUnitTest,CheckLifeCycleUnitTest</test-->
+    <!--test>CheckConfigurationUnitTest,CheckLifeCycleUnitTest,CheckConnectionUnitTest#testConnectionMyOracleDataSource</test-->
   </properties>
 
   <dependencies>

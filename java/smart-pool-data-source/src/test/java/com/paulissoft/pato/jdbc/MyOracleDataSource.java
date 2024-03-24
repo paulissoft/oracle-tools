@@ -6,7 +6,7 @@ import lombok.NonNull;
 
 
 @Slf4j
-public class MyOracleDataSource extends CommonPoolDataSourceOracle {
+public class MyOracleDataSource extends CombiPoolDataSourceOracle {
 
     // Since getPassword is deprecated in PoolDataSourceImpl
     // we need to store it here via setPassword()

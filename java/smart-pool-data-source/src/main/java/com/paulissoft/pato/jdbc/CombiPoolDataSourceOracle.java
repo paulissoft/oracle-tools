@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-//import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 //import jakarta.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -14,7 +14,13 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 @Slf4j
 public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSource> implements PoolDataSource, PoolDataSourcePropertiesOracle {
 
-    private CombiPoolDataSourceOracle() {
+    @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
+    private PoolDataSource configPoolDataSource = null;
+
+    @Delegate(excludes=ToOverride.class)
+    private PoolDataSource commonPoolDataSource = null;
+
+    public CombiPoolDataSourceOracle() {
         this(new PoolDataSourceImpl());
     }
 
@@ -53,7 +59,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     @Override
     public void setPassword(String password) throws SQLException {
         super.setPassword(password);
-        getPoolDataSourceConfig().setPassword(password);
+        getConfigPoolDataSource().setPassword(password);
     }
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
@@ -87,28 +93,89 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
 
     // only setters and getters
-    @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     @Override
-    protected PoolDataSource getPoolDataSourceConfig() {
-        return super.getPoolDataSourceConfig();
+    protected PoolDataSource getConfigPoolDataSource() {
+        return super.getConfigPoolDataSource();
     }
 
-    // the rest
-    @Delegate(excludes=ToOverride.class)
+    @PostConstruct
     @Override
-    protected PoolDataSource getPoolDataSourceExec() {        
-        return super.getPoolDataSourceExec();
+    public void init() {
+        super.init();
+        configPoolDataSource = getConfigPoolDataSource();
+        commonPoolDataSource = getCommonPoolDataSource();
     }
 
     public Connection getConnection() throws SQLException {
-        return null;
+        // we do use single-session proxy model so no need to invoke getConnection2()
+        return getConnection1(getUsernameSession1(), getPasswordSession1());
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
-        return null;
+        return getCommonPoolDataSource().getConnection(username, password);
     }
-    
-    protected void updatePool() {
+
+    protected void updatePool(@NonNull final PoolDataSource configPoolDataSource,
+                              @NonNull final PoolDataSource commonPoolDataSource,
+                              final boolean initializing) {
+        if (configPoolDataSource == commonPoolDataSource) {
+            return;
+        }
+        
+        final int sign = initializing ? +1 : -1;
+
+        try {
+            log.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource.getInitialPoolSize(),
+                      commonPoolDataSource.getMinPoolSize(),
+                      commonPoolDataSource.getMaxPoolSize());
+
+            int thisSize, pdsSize;
+
+            pdsSize = configPoolDataSource.getInitialPoolSize();
+            thisSize = Integer.max(commonPoolDataSource.getInitialPoolSize(), 0);
+
+            log.debug("initial pool sizes before changing it: this/pds: {}/{}",
+                      thisSize,
+                      pdsSize);
+
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
+                commonPoolDataSource.setInitialPoolSize(pdsSize + thisSize);
+            }
+
+            pdsSize = configPoolDataSource.getMinPoolSize();
+            thisSize = Integer.max(commonPoolDataSource.getMinPoolSize(), 0);
+
+            log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
+                      thisSize,
+                      pdsSize);
+
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {                
+                commonPoolDataSource.setMinPoolSize(pdsSize + thisSize);
+            }
+                
+            pdsSize = configPoolDataSource.getMaxPoolSize();
+            thisSize = Integer.max(commonPoolDataSource.getMaxPoolSize(), 0);
+
+            log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
+                      thisSize,
+                      pdsSize);
+
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
+                commonPoolDataSource.setMaxPoolSize(pdsSize + thisSize);
+            }
+
+            commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName() + "-" + getUsernameSession2());
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        } finally {
+            log.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource.getInitialPoolSize(),
+                      commonPoolDataSource.getMinPoolSize(),
+                      commonPoolDataSource.getMaxPoolSize());
+
+            log.debug("<update()");
+        }
     }
 
     public void close() {

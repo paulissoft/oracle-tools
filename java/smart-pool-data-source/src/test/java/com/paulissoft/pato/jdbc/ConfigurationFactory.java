@@ -116,33 +116,13 @@ public class ConfigurationFactory {
         return new DataSourceProperties();
     }
     
-    @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    CommonPoolDataSourceHikari dataSourceHikariCommon() {
-        log.info("dataSourceHikariCommon()");
-        return dataSourceProperties()
-            .initializeDataSourceBuilder()
-            .type(CommonPoolDataSourceHikari.class)
-            .build();
-    }
-
-    @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    PoolDataSourceHikari dataSourceHikariStandard() {
-        log.info("dataSourceHikariStandard()");
-        return dataSourceProperties()
-            .initializeDataSourceBuilder()
-            .type(PoolDataSourceHikari.class)
-            .build();
-    }
-
     @Bean(name = {"operatorDataSourceHikari"})
-    public DataSource dataSourceHikari() {
-        log.info("dataSourceHikari()");
-        
-        final PoolDataSourceHikari poolDataSourceHikari = dataSourceHikariStandard();
-
-        poolDataSourceHikari.join(dataSourceHikariCommon());
-
-        return poolDataSourceHikari;
+    @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
+    public DataSource dataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            //.type(HikariDataSource.class) // app.operator.datasource.type is NOT correct
+            .build();
     }
 
     @Bean(name = {"operatorDataSourceOracle"})
