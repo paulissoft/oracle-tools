@@ -2,8 +2,8 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariConfigMXBean;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;

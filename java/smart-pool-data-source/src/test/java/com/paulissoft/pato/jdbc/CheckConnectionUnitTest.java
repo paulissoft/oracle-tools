@@ -405,9 +405,7 @@ public class CheckConnectionUnitTest {
         assertEquals("bc_proxy", ds.getPassword());
         assertEquals(10, ds.getMinPoolSize());
         assertEquals(20, ds.getMaxPoolSize());
-        assertEquals("common-pool", ds.getConnectionPoolName());
-
-        ds.init();
+        assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
 
         final Connection conn = ds.getConnection();
 
