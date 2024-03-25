@@ -212,5 +212,9 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
 
     public void close() {
+        if (canClose()) {
+            super.close();
+            // a PoolDataSource can not get closed
+        }
     }
 }
