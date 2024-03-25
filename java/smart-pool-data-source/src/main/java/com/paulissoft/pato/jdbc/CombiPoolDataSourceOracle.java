@@ -54,12 +54,6 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         setUser(username);        
     }
 
-    @Override
-    public void setPassword(String password) throws SQLException {
-        super.setPassword(password);
-        getConfigPoolDataSource().setPassword(password);
-    }
-
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return getPoolDataSourceConfiguration(true);
     }
@@ -88,12 +82,6 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
             .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
-    }
-
-    // only setters and getters
-    @Override
-    protected PoolDataSource getConfigPoolDataSource() {
-        return super.getConfigPoolDataSource();
     }
 
     @PostConstruct

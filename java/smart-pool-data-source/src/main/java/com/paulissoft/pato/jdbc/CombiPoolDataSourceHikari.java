@@ -56,17 +56,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     
     @Override
     public void setUsername(String username) {
-        getConfigPoolDataSource().setUsername(username);
-    }
-
-    @Override
-    public void setPassword(String password) {
-        try {
-            super.setPassword(password);
-            getConfigPoolDataSource().setPassword(password);
-        } catch (SQLException ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
+        configPoolDataSource.setUsername(username);
     }
 
     public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
@@ -97,12 +87,6 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
             .validationTimeout(getValidationTimeout())
             .leakDetectionThreshold(getLeakDetectionThreshold())
             .build();
-    }
-
-    // only setters and getters
-    @Override
-    protected HikariDataSource getConfigPoolDataSource() {
-        return super.getConfigPoolDataSource();
     }
 
     @PostConstruct

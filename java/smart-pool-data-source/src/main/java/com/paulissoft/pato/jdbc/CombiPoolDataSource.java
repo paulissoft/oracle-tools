@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import java.lang.reflect.Method;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.Closeable;
@@ -27,7 +28,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     private static final ConcurrentHashMap<DataSource, Set<DataSource>> activeConfigPoolDataSources = new ConcurrentHashMap<>();
     
     @NonNull
-    private final T configPoolDataSource;
+    private T configPoolDataSource = null; // set in constructor, reset to null in init()
 
     private final CombiPoolDataSource<T> commonCombiPoolDataSource;
         
@@ -48,15 +49,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     /**
      * Since getPassword() is a deprecated method (in Oracle UCP) we need another way of getting it.
      * The idea is to implement setPassword() here and store it in passwordSession1.
-     * We need also override it in classes that extend this one like this:
-     *
-     * <code>
-     * @Override
-     * public void setPassword(String password) throws SQLException {
-     *   super.setPassword(password); // sets passwordSession1
-     *   getConfigPoolDataSource().setPassword(password);
-     * }
-     * </code>
+     * We need also to invoke configPoolDataSource.setPassword(password) via reflection.
      */
 
     @Getter(AccessLevel.PROTECTED)
@@ -174,12 +167,6 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         usernameSession2 = configPoolDataSourceuration.getSchema();        
     }
 
-    // only setters and getters
-    // @Delegate(types=PoolDataSourcePropertiesX.class)
-    protected T getConfigPoolDataSource() {
-        return configPoolDataSource;
-    }
-
     protected interface ToOverride {
         public Connection getConnection() throws SQLException;
 
@@ -188,6 +175,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         public void setUsername(String password) throws SQLException;
 
         public void setPassword(String password) throws SQLException;
+
+        public String getPassword(); /* deprecated in oracle.ucp.jdbc.PoolDataSourceImpl */
 
         public void close();
     }
@@ -210,9 +199,19 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     public abstract void setUsername(String username) throws SQLException;
 
-    public void setPassword(String password) throws SQLException {
-        if (state == State.INITIALIZING) {
-            passwordSession1 = password;
+    public final String getPassword() {
+        return passwordSession1;
+    }
+
+    public final void setPassword(String password) {
+        passwordSession1 = password;
+
+        try {
+            final Method setPasswordMethod = configPoolDataSource.getClass().getMethod("setPassword", String.class);
+            
+            setPasswordMethod.invoke(configPoolDataSource, password);
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
 
