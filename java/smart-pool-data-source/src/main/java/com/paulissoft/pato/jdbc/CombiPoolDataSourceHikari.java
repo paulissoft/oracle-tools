@@ -39,11 +39,11 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     }
         
     protected boolean isSingleSessionProxyModel() {
-        return PoolDataSourceConfiguration.SINGLE_SESSION_PROXY_MODEL;
+        return PoolDataSourceConfigurationHikari.SINGLE_SESSION_PROXY_MODEL;
     }
 
     protected boolean isFixedUsernamePassword() {
-        return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
+        return PoolDataSourceConfigurationHikari.FIXED_USERNAME_PASSWORD;
     }
 
     public String getUrl() {

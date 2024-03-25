@@ -3,6 +3,10 @@ package com.paulissoft.pato.jdbc;
 
 public interface PoolDataSourcePropertiesHikari extends PoolDataSourceProperties {
 
+    String getDriverClassName();
+
+    void setDriverClassName(String driverClassName);
+    
     String getJdbcUrl();
   
     void setJdbcUrl(String jdbcUrl);

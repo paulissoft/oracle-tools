@@ -374,12 +374,12 @@ public class CheckConnectionUnitTest {
     }
 
     @Test
-    void testConnectionMyHikariDataSource() throws SQLException {
-        log.debug("testConnectionMyHikariDataSource()");
+    void testConnectionCombiPoolDataSourceHikari() throws SQLException {
+        log.debug("testConnectionCombiPoolDataSourceHikari()");
 
-        final BasePoolDataSourceHikari ds = (BasePoolDataSourceHikari) dataSourceHikari;
+        final CombiPoolDataSourceHikari ds = (CombiPoolDataSourceHikari) dataSourceHikari;
 
-        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getJdbcUrl());
+        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
         assertEquals("bc_proxy[boopapij]", ds.getUsername());
         assertEquals("bc_proxy", ds.getPassword());
         assertEquals(60, ds.getMinimumIdle());
@@ -400,7 +400,7 @@ public class CheckConnectionUnitTest {
 
         final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) dataSourceOracle;
 
-        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
         assertEquals("bc_proxy[boopapij]", ds.getUser());
         assertEquals("bc_proxy", ds.getPassword());
         assertEquals(10, ds.getMinPoolSize());
