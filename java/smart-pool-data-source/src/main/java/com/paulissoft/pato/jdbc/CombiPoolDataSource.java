@@ -33,7 +33,13 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         
     private T commonPoolDataSource = null; // commonCombiPoolDataSource.commonPoolDataSource
 
-    private boolean initializing = true;
+    enum State {
+        INITIALIZING,
+        READY,
+        CLOSED
+    }
+    
+    private State state;
 
     @Getter
     private String usernameSession1;
@@ -69,31 +75,31 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     @PostConstruct
     public void init() {
-        log.debug("init(initializing={})", initializing);
-        if (initializing) {
+        log.debug("init(state={})", state);
+        if (state == State.INITIALIZING) {
             determineConnectInfo();
             updateCombiPoolAdministration();
-            updatePool(configPoolDataSource, commonPoolDataSource, initializing);
-            initializing = false;
+            updatePool(configPoolDataSource, commonPoolDataSource, true);
+            state = State.READY;
         }
     }
 
     @PreDestroy
     public void done(){
-        log.debug("done(initializing={})", initializing);
-        if (!initializing) {
+        log.debug("done(state={})", state);
+        if (state != State.CLOSED) {
             updateCombiPoolAdministration();
-            updatePool(configPoolDataSource, commonPoolDataSource, initializing);
-            initializing = true;
+            updatePool(configPoolDataSource, commonPoolDataSource, false);
+            state = State.CLOSED;
         }
     }
 
     public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
     private void updateCombiPoolAdministration() {
-        log.debug("updateCombiPoolAdministration(initializing={})", initializing);
+        log.debug("updateCombiPoolAdministration(state={})", state);
         
-        if (initializing) {
+        if (state == State.INITIALIZING) {
             final PoolDataSourceConfigurationCommonId thisCommonId =
                 new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
             
@@ -122,10 +128,13 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         assert this.commonPoolDataSource != null : "The common pool data source must NOT be null";
         
         if (this.configPoolDataSource != this.commonPoolDataSource) {
-            if (initializing) {
+            switch (state) {
+            case INITIALIZING:
                 activeConfigPoolDataSources.computeIfAbsent(this.commonPoolDataSource, k -> new HashSet<>()).add(this.configPoolDataSource);
-            } else {
+                break;
+            case READY:
                 activeConfigPoolDataSources.computeIfPresent(this.commonPoolDataSource, (k, v) -> { v.remove(this.configPoolDataSource); return v; });
+                break;
             }
         }
     }
@@ -133,12 +142,19 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     protected boolean canClose() {
         log.debug("canClose()");
 
+        if (state == State.CLOSED) {
+            return false;
+        }
+
         final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
 
         return configurations == null || configurations.isEmpty();
     }
 
     public void close() {
+        if (canClose()) {
+            done();
+        }
     }
 
     protected abstract void updatePool(@NonNull final T configPoolDataSource,
@@ -174,7 +190,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     // the rest
     // @Delegate(excludes=ToOverride.class)
     protected T getCommonPoolDataSource() {        
-        return initializing ? null : commonPoolDataSource;
+        return state != State.READY ? null : commonPoolDataSource;
     }
 
     protected boolean isSingleSessionProxyModel() {
@@ -190,7 +206,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     public abstract void setUsername(String username) throws SQLException;
 
     public void setPassword(String password) throws SQLException {
-        if (initializing) {
+        if (state == State.INITIALIZING) {
             passwordSession1 = password;
         }
     }
@@ -208,20 +224,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     // get a standard connection (session 1) but maybe with a different username/password than the default
-    protected Connection getConnection1(@NonNull final String usernameSession1,
-                                        @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(usernameSession1={})", usernameSession1);
-        
-        if (isFixedUsernamePassword()) {
-            if (!getUsername().equalsIgnoreCase(usernameSession1)) {
-                setUsername(usernameSession1);
-                setPassword(passwordSession1);
-            }
-            return getConnection();
-        } else {
-            return getConnection(usernameSession1, passwordSession1);
-        }
-    }
+    protected abstract Connection getConnection1(@NonNull final String usernameSession1,
+                                                 @NonNull final String passwordSession1) throws SQLException;
 
     // get a connection for the multi-session proxy model (session 2)
     protected Connection getConnection2(@NonNull final Connection conn,

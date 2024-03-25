@@ -14,6 +14,8 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 @Slf4j
 public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSource> implements PoolDataSource, PoolDataSourcePropertiesOracle {
 
+    private static final String POOL_NAME_PREFIX = "OraclePool";
+
     @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     private PoolDataSource configPoolDataSource = null;
 
@@ -90,6 +92,13 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         commonPoolDataSource = getCommonPoolDataSource();
     }
 
+    protected Connection getConnection1(@NonNull final String usernameSession1,
+                                        @NonNull final String passwordSession1) throws SQLException {
+        log.debug("getConnection1(usernameSession1={})", usernameSession1);
+
+        return commonPoolDataSource.getConnection(usernameSession1, passwordSession1);
+    }
+    
     public Connection getConnection() throws SQLException {
         // we do use single-session proxy model so no need to invoke getConnection2()
         return getConnection1(getUsernameSession1(), getPasswordSession1());
@@ -102,17 +111,34 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     protected void updatePool(@NonNull final PoolDataSource configPoolDataSource,
                               @NonNull final PoolDataSource commonPoolDataSource,
                               final boolean initializing) {
-        if (configPoolDataSource == commonPoolDataSource) {
-            return;
-        }
-        
-        final int sign = initializing ? +1 : -1;
-
         try {
-            log.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
+            log.debug(">updatePool()");
+            
+            log.debug("pool name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource.getConnectionPoolName(),
                       commonPoolDataSource.getInitialPoolSize(),
                       commonPoolDataSource.getMinPoolSize(),
                       commonPoolDataSource.getMaxPoolSize());
+
+            // set pool name
+            if (initializing && configPoolDataSource == commonPoolDataSource) {
+                commonPoolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
+            }
+
+            final String suffix = "-" + getUsernameSession2();
+
+            if (initializing) {
+                commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName() + suffix);
+            } else {
+                commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName().replace(suffix, ""));
+            }
+
+            // when configPoolDataSource equals commonPoolDataSource there is no need to adjust pool sizes
+            if (configPoolDataSource == commonPoolDataSource) {
+                return;
+            }
+        
+            final int sign = initializing ? +1 : -1;
 
             int thisSize, pdsSize;
 
@@ -148,17 +174,16 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
             if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
                 commonPoolDataSource.setMaxPoolSize(pdsSize + thisSize);
             }
-
-            commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName() + "-" + getUsernameSession2());
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
-            log.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
+            log.debug("pool name: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource.getConnectionPoolName(),
                       commonPoolDataSource.getInitialPoolSize(),
                       commonPoolDataSource.getMinPoolSize(),
                       commonPoolDataSource.getMaxPoolSize());
 
-            log.debug("<update()");
+            log.debug("<updatePool()");
         }
     }
 
