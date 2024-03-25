@@ -120,7 +120,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
                               @NonNull final PoolDataSource commonPoolDataSource,
                               final boolean initializing) {
         try {
-            log.debug(">updatePool()");
+            log.debug(">updatePool(isParentPoolDataSource={})", isParentPoolDataSource());
             
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
                       configPoolDataSource,
@@ -137,7 +137,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
                       commonPoolDataSource.getMaxPoolSize());
 
             // set pool name
-            if (initializing && configPoolDataSource == commonPoolDataSource) {
+            if (initializing && isParentPoolDataSource()) {
                 commonPoolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
             }
 
@@ -150,7 +150,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
             }
 
             // when configPoolDataSource equals commonPoolDataSource there is no need to adjust pool sizes
-            if (configPoolDataSource == commonPoolDataSource) {
+            if (isParentPoolDataSource()) {
                 return;
             }
         
