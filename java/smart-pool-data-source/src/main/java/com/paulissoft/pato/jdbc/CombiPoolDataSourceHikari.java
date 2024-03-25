@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -102,7 +103,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     public void done() {
         super.done();
         configPoolDataSource = null;
-        commonPoolDataSource = null;
+        // commonPoolDataSource = null; /* do not do this because it is needed in close() below */
     }
 
     protected Connection getConnection1(@NonNull final String usernameSession1,
@@ -143,19 +144,32 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     protected void updatePool(@NonNull final HikariDataSource configPoolDataSource,
                               @NonNull final HikariDataSource commonPoolDataSource,
                               final boolean initializing) {
+        log.debug(">updatePool(isParentPoolDataSource={})", isParentPoolDataSource());
+
+        final HikariConfig newConfig = new HikariConfig();
+
+        commonPoolDataSource.copyStateTo(newConfig);
+            
         updatePoolName(configPoolDataSource,
-                       commonPoolDataSource,
+                       newConfig,
                        initializing);
-        updatePoolSizes(configPoolDataSource.getHikariConfigMXBean(),
-                        commonPoolDataSource.getHikariConfigMXBean(),
+        updatePoolSizes(configPoolDataSource,
+                        newConfig,
                         initializing);
+
+        newConfig.copyStateTo(commonPoolDataSource);
+
+        log.debug("<updatePool()");
     }
     
     private void updatePoolName(@NonNull final HikariDataSource configPoolDataSource,
-                                @NonNull final HikariDataSource commonPoolDataSource,
+                                @NonNull final HikariConfig commonPoolDataSource,
                                 final boolean initializing) {
         try {
             log.debug(">updatePoolName()");
+
+            assert configPoolDataSource != null;
+            assert commonPoolDataSource != null;
             
             log.debug("config pool data source; address: {}; name: {}",
                       configPoolDataSource,
@@ -169,14 +183,14 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
 
             // set pool name
             if (initializing) {
-                if (configPoolDataSource == commonPoolDataSource) {
+                if (isParentPoolDataSource()) {
                     commonPoolDataSource.setPoolName(POOL_NAME_PREFIX);
                     commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + suffix);
                 }
                 //configPoolDataSource.setPoolName(POOL_NAME_PREFIX);
                 //configPoolDataSource.setPoolName(configPoolDataSource.getPoolName() + suffix);
             } else {
-                if (configPoolDataSource == commonPoolDataSource) {
+                if (isParentPoolDataSource()) {
                     commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName().replace(suffix, ""));
                 }
                 //configPoolDataSource.setPoolName(configPoolDataSource.getPoolName().replace(suffix, ""));
@@ -194,12 +208,15 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
         }
     }
 
-    private void updatePoolSizes(@NonNull final HikariConfigMXBean configPoolDataSource,
-                                 @NonNull final HikariConfigMXBean commonPoolDataSource,
+    private void updatePoolSizes(@NonNull final HikariDataSource configPoolDataSource,
+                                 @NonNull final HikariConfig commonPoolDataSource,
                                  final boolean initializing) {
         try {
             log.debug(">updatePoolSizes()");
-            
+
+            assert configPoolDataSource != null;
+            assert commonPoolDataSource != null;
+
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}",
                       configPoolDataSource,
                       configPoolDataSource.getPoolName(),
@@ -213,7 +230,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
                       commonPoolDataSource.getMaximumPoolSize());
 
             // when configPoolDataSource equals commonPoolDataSource there is no need to adjust pool sizes
-            if (configPoolDataSource == commonPoolDataSource) {
+            if (isParentPoolDataSource()) {
                 return;
             }
             
