@@ -49,6 +49,7 @@ public class CheckLifeCycleUnitTest {
     @BeforeAll
     static void clear() {
         SmartPoolDataSource.clear();
+        CombiPoolDataSource.clear();
     }
 
     //=== Hikari ===

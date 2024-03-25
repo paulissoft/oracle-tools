@@ -17,7 +17,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
     @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
-    private PoolDataSource configPoolDataSource = null; // must be set in constructor
+    private PoolDataSource configPoolDataSource = null; // must be set in constructor and changed to commonPoolDataSource in init()
 
     @Delegate(excludes=ToOverride.class)
     private PoolDataSource commonPoolDataSource = null; // must be set in init
@@ -88,7 +88,8 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     @Override
     public void init() {
         super.init();
-        commonPoolDataSource = getCommonPoolDataSource();
+        // from now on getX() calls wil return common characterics (think of getMaximumPoolSize())
+        configPoolDataSource = commonPoolDataSource = getCommonPoolDataSource();
     }
 
     @PreDestroy
@@ -112,7 +113,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
-        return getCommonPoolDataSource().getConnection(username, password);
+        return commonPoolDataSource.getConnection(username, password);
     }
 
     protected void updatePool(@NonNull final PoolDataSource configPoolDataSource,
@@ -121,7 +122,15 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         try {
             log.debug(">updatePool()");
             
-            log.debug("pool name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
+            log.debug("config pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                      configPoolDataSource,
+                      configPoolDataSource.getConnectionPoolName(),
+                      configPoolDataSource.getInitialPoolSize(),
+                      configPoolDataSource.getMinPoolSize(),
+                      configPoolDataSource.getMaxPoolSize());
+
+            log.debug("common pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource,
                       commonPoolDataSource.getConnectionPoolName(),
                       commonPoolDataSource.getInitialPoolSize(),
                       commonPoolDataSource.getMinPoolSize(),
@@ -184,7 +193,15 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
-            log.debug("pool name: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
+            log.debug("config pool data source; address: {}; name: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                      configPoolDataSource,
+                      configPoolDataSource.getConnectionPoolName(),
+                      configPoolDataSource.getInitialPoolSize(),
+                      configPoolDataSource.getMinPoolSize(),
+                      configPoolDataSource.getMaxPoolSize());
+
+            log.debug("common pool data source; address: {}; name: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource,
                       commonPoolDataSource.getConnectionPoolName(),
                       commonPoolDataSource.getInitialPoolSize(),
                       commonPoolDataSource.getMinPoolSize(),

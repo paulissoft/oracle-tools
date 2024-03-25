@@ -26,7 +26,12 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     // a matrix of (active) configPoolDataSource instances per commonPoolDataSource: needed for canClose()
     private static final ConcurrentHashMap<DataSource, Set<DataSource>> activeConfigPoolDataSources = new ConcurrentHashMap<>();
-    
+
+    static void clear() {
+        commonPoolDataSources.clear();
+        activeConfigPoolDataSources.clear();
+    }    
+
     @NonNull
     private T configPoolDataSource = null; // set in constructor, reset to null in init()
 

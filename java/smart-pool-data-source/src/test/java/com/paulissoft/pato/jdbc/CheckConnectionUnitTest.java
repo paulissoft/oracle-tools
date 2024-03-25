@@ -85,6 +85,7 @@ public class CheckConnectionUnitTest {
     @BeforeAll
     static void clear() {
         SmartPoolDataSource.clear();
+        CombiPoolDataSource.clear();
     }
 
     //=== Hikari ===

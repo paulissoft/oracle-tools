@@ -51,6 +51,7 @@ public class CheckConfigurationUnitTest {
     @BeforeAll
     static void clear() {
         SmartPoolDataSource.clear();
+        CombiPoolDataSource.clear();
     }
 
     @Test

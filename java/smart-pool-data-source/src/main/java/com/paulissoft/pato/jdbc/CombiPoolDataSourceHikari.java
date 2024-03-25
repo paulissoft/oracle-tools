@@ -17,7 +17,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
     @Delegate(types=PoolDataSourcePropertiesHikari.class, excludes=ToOverride.class) // do not delegate setPassword()
-    private HikariDataSource configPoolDataSource = null; // must be set in constructor
+    private HikariDataSource configPoolDataSource = null; // must be set in constructor and changed to commonPoolDataSource in init()
 
     @Delegate(excludes=ToOverride.class)
     private HikariDataSource commonPoolDataSource = null; // must be set in init
@@ -93,7 +93,8 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     @Override
     public void init() {
         super.init();
-        commonPoolDataSource = getCommonPoolDataSource();
+        // from now on getX() calls wil return common characterics (think of getMaximumPoolSize())
+        configPoolDataSource = commonPoolDataSource = getCommonPoolDataSource();
     }
 
     @PreDestroy
@@ -112,7 +113,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
         String passwordOrig = null;
 
         try {
-            if (!getUsername().equalsIgnoreCase(usernameSession1)) {
+            if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
                 usernameOrig = commonPoolDataSource.getUsername();
                 passwordOrig = commonPoolDataSource.getPassword();
                 commonPoolDataSource.setUsername(usernameSession1);
@@ -136,7 +137,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
-        return getCommonPoolDataSource().getConnection(username, password);
+        return commonPoolDataSource.getConnection(username, password);
     }
 
     protected void updatePool(@NonNull final HikariDataSource configPoolDataSource,
@@ -145,22 +146,33 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
         try {
             log.debug(">updatePool()");
             
-            log.debug("pool name: {}; pool sizes before: minimum/maximum: {}/{}/{}",
+            log.debug("config pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}/{}",
+                      configPoolDataSource,
+                      configPoolDataSource.getPoolName(),
+                      configPoolDataSource.getMinimumIdle(),
+                      configPoolDataSource.getMaximumPoolSize());
+
+            log.debug("common pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource,
                       commonPoolDataSource.getPoolName(),
                       commonPoolDataSource.getMinimumIdle(),
                       commonPoolDataSource.getMaximumPoolSize());
 
-            // set pool name
-            if (initializing && configPoolDataSource == commonPoolDataSource) {
-                commonPoolDataSource.setPoolName(POOL_NAME_PREFIX);
-            }
-
             final String suffix = "-" + getUsernameSession2();
 
+            // set pool name
             if (initializing) {
-                commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + suffix);
+                if (configPoolDataSource == commonPoolDataSource) {
+                    commonPoolDataSource.setPoolName(POOL_NAME_PREFIX);
+                    commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName() + suffix);
+                }
+                //configPoolDataSource.setPoolName(POOL_NAME_PREFIX);
+                //configPoolDataSource.setPoolName(configPoolDataSource.getPoolName() + suffix);
             } else {
-                commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName().replace(suffix, ""));
+                if (configPoolDataSource == commonPoolDataSource) {
+                    commonPoolDataSource.setPoolName(commonPoolDataSource.getPoolName().replace(suffix, ""));
+                }
+                //configPoolDataSource.setPoolName(configPoolDataSource.getPoolName().replace(suffix, ""));
             }
 
             // when configPoolDataSource equals commonPoolDataSource there is no need to adjust pool sizes
@@ -194,7 +206,14 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
                 commonPoolDataSource.setMaximumPoolSize(pdsSize + thisSize);
             }
         } finally {
-            log.debug("pool name: {}; pool sizes after: minimum/maximum: {}/{}/{}",
+            log.debug("config pool data source; address: {}; name: {}; name: {}; pool sizes after: minimum/maximum: {}/{}/{}",
+                      configPoolDataSource,
+                      configPoolDataSource.getPoolName(),
+                      configPoolDataSource.getMinimumIdle(),
+                      configPoolDataSource.getMaximumPoolSize());
+
+            log.debug("common pool data source; address: {}; name: {}; name: {}; pool sizes after: minimum/maximum: {}/{}/{}",
+                      commonPoolDataSource,
                       commonPoolDataSource.getPoolName(),
                       commonPoolDataSource.getMinimumIdle(),
                       commonPoolDataSource.getMaximumPoolSize());

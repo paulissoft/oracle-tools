@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
+//import com.zaxxer.hikari.HikariConfigMXBean;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Set;
