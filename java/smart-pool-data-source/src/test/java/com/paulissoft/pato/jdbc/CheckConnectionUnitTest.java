@@ -375,8 +375,8 @@ public class CheckConnectionUnitTest {
     }
 
     @Test
-    void testConnectionCombiPoolDataSourceHikari() throws SQLException {
-        log.debug("testConnectionCombiPoolDataSourceHikari()");
+    void testConnectionHikari() throws SQLException {
+        log.debug("testConnectionHikari()");
 
         final CombiPoolDataSourceHikari ds = (CombiPoolDataSourceHikari) dataSourceHikari;
 
@@ -396,8 +396,8 @@ public class CheckConnectionUnitTest {
     }
 
     @Test
-    void testConnectionCombiPoolDataSourceOracle() throws SQLException {
-        log.debug("testConnectionCombiPoolDataSourceOracle()");
+    void testConnectionOracle() throws SQLException {
+        log.debug("testConnectionOracle()");
 
         final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) dataSourceOracle;
 
