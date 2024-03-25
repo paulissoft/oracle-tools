@@ -262,6 +262,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     @Override
     public void close() {
         if (canClose()) {
+            super.close();
             commonPoolDataSource.close();
         }
     }
