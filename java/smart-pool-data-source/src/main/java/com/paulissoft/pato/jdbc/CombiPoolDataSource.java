@@ -65,18 +65,21 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     protected CombiPoolDataSource(@NonNull final T configPoolDataSource) {
         this(configPoolDataSource, null);
+        
         log.info("CombiCommonPoolDataSource({})", configPoolDataSource);
     }
     
     protected CombiPoolDataSource(@NonNull final T configPoolDataSource, final CombiPoolDataSource<T> commonCombiPoolDataSource) {
         this.configPoolDataSource = configPoolDataSource;
         this.commonCombiPoolDataSource = commonCombiPoolDataSource;
+        
         log.info("CombiCommonPoolDataSource({}, {})", configPoolDataSource, commonCombiPoolDataSource);
     }
 
     @PostConstruct
     public void init() {
         log.debug("init(state={})", state);
+        
         if (state == State.INITIALIZING) {
             determineConnectInfo();
             updateCombiPoolAdministration();
@@ -88,6 +91,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @PreDestroy
     public void done(){
         log.debug("done(state={})", state);
+        
         if (state != State.CLOSED) {
             updateCombiPoolAdministration();
             updatePool(configPoolDataSource, commonPoolDataSource, false);
@@ -153,6 +157,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     public void close() {
+        log.debug("close()");
+        
         if (canClose()) {
             done();
         }
@@ -248,7 +254,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         // if the current schema is not the requested schema try to open/close the proxy session
         if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
             assert !isSingleSessionProxyModel()
-                : "Schema name requested should be the same as the current schema name in the single-session proy model";
+                : "Requested schema name should be the same as the current schema name in the single-session proxy model";
 
             OracleConnection oraConn = null;
 
