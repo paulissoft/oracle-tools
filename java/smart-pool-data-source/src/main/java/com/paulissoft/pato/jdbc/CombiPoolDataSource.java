@@ -33,7 +33,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }    
 
     @NonNull
-    private T configPoolDataSource = null; // set in constructor, reset to null in init()
+    private final T configPoolDataSource; // set in constructor
 
     private final CombiPoolDataSource<T> commonCombiPoolDataSource;
         
@@ -104,10 +104,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     private void updateCombiPoolAdministration() {
         log.debug("updateCombiPoolAdministration(state={})", state);
         
-        if (state == State.INITIALIZING) {
-            final PoolDataSourceConfigurationCommonId thisCommonId =
-                new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
+        final PoolDataSourceConfigurationCommonId thisCommonId =
+            new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
             
+        if (state == State.INITIALIZING) {
             if (this.commonCombiPoolDataSource == null) {
                 final T commonPoolDataSource = (T) commonPoolDataSources.get(thisCommonId);
 
@@ -131,8 +131,23 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         }
 
         assert this.commonPoolDataSource != null : "The common pool data source must NOT be null";
-        
-        if (this.configPoolDataSource != this.commonPoolDataSource) {
+
+        // isParentPoolDataSource() == true || isParentPoolDataSource() == false, due to this.commonPoolDataSource != null
+        if (isParentPoolDataSource()) {
+            switch (state) {
+            case READY: // close()
+                final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
+                
+                if (configurations == null || configurations.isEmpty()) {
+                    // no children waiting for their parent
+                    activeConfigPoolDataSources.remove(this.commonPoolDataSource);
+                    commonPoolDataSources.remove(thisCommonId);
+                }
+                break;
+            default:
+                break;
+            }
+        } else {
             switch (state) {
             case INITIALIZING:
                 activeConfigPoolDataSources.computeIfAbsent(this.commonPoolDataSource, k -> new HashSet<>()).add(this.configPoolDataSource);
@@ -140,7 +155,17 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
             case READY:
                 activeConfigPoolDataSources.computeIfPresent(this.commonPoolDataSource, (k, v) -> { v.remove(this.configPoolDataSource); return v; });
                 break;
+            default:
+                break;
             }
+        }
+    }
+
+    public Boolean isParentPoolDataSource() {
+        if (this.configPoolDataSource != null && this.commonPoolDataSource != null) {
+            return this.configPoolDataSource == this.commonPoolDataSource;
+        } else {
+            return null; // we don't know yet
         }
     }
 
