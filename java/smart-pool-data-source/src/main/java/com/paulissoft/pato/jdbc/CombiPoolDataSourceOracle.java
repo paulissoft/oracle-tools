@@ -1,7 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import jakarta.annotation.PostConstruct;
-//import jakarta.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -17,23 +17,35 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
     @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
-    private PoolDataSource configPoolDataSource = null;
+    private PoolDataSource configPoolDataSource = null; // must be set in constructor
 
     @Delegate(excludes=ToOverride.class)
-    private PoolDataSource commonPoolDataSource = null;
+    private PoolDataSource commonPoolDataSource = null; // must be set in init
 
     public CombiPoolDataSourceOracle() {
         this(new PoolDataSourceImpl());
+        log.info("CombiPoolDataSourceOracle()");
     }
 
     private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource) {
-        super(configPoolDataSource, null);
+        this(configPoolDataSource, null);
+        log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
     }
     
-    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource, final CombiPoolDataSourceOracle combiCommonPoolDataSource) {
-        super(configPoolDataSource, combiCommonPoolDataSource);
+    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource, final CombiPoolDataSourceOracle commonCombiPoolDataSource) {
+        super(configPoolDataSource, commonCombiPoolDataSource);
+        this.configPoolDataSource = configPoolDataSource;
+        log.info("CombiPoolDataSourceOracle({}, {})", configPoolDataSource, commonCombiPoolDataSource);
     }
         
+    public String getUrl() {
+        return getURL();
+    }
+  
+    public void setUrl(String jdbcUrl) throws SQLException {
+        setURL(jdbcUrl);
+    }
+  
     public String getUsername() {
         return getUser();
     }
@@ -88,8 +100,15 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     @Override
     public void init() {
         super.init();
-        configPoolDataSource = getConfigPoolDataSource();
         commonPoolDataSource = getCommonPoolDataSource();
+    }
+
+    @PreDestroy
+    @Override
+    public void done() {
+        super.done();
+        configPoolDataSource = null;
+        commonPoolDataSource = null;
     }
 
     protected Connection getConnection1(@NonNull final String usernameSession1,

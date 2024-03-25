@@ -38,8 +38,9 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         READY,
         CLOSED
     }
-    
-    private State state;
+
+    @NonNull
+    private State state = State.INITIALIZING;
 
     @Getter
     private String usernameSession1;
@@ -66,11 +67,13 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     protected CombiPoolDataSource(@NonNull final T configPoolDataSource) {
         this(configPoolDataSource, null);
+        log.info("CombiCommonPoolDataSource({})", configPoolDataSource);
     }
     
     protected CombiPoolDataSource(@NonNull final T configPoolDataSource, final CombiPoolDataSource<T> commonCombiPoolDataSource) {
         this.configPoolDataSource = configPoolDataSource;
         this.commonCombiPoolDataSource = commonCombiPoolDataSource;
+        log.info("CombiCommonPoolDataSource({}, {})", configPoolDataSource, commonCombiPoolDataSource);
     }
 
     @PostConstruct
@@ -181,6 +184,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         public Connection getConnection() throws SQLException;
 
         public Connection getConnection(String username, String password) throws SQLException;
+
+        public void setUsername(String password) throws SQLException;
 
         public void setPassword(String password) throws SQLException;
 

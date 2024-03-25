@@ -407,6 +407,8 @@ public class CheckConnectionUnitTest {
         assertEquals(20, ds.getMaxPoolSize());
         assertEquals("common-pool", ds.getConnectionPoolName());
 
+        ds.init();
+
         final Connection conn = ds.getConnection();
 
         assertNotNull(conn);

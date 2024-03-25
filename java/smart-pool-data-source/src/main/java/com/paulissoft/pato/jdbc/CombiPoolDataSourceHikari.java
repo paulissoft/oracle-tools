@@ -3,7 +3,7 @@ package com.paulissoft.pato.jdbc;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import jakarta.annotation.PostConstruct;
-//import jakarta.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -17,21 +17,25 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
     @Delegate(types=PoolDataSourcePropertiesHikari.class, excludes=ToOverride.class) // do not delegate setPassword()
-    private HikariDataSource configPoolDataSource = null;
+    private HikariDataSource configPoolDataSource = null; // must be set in constructor
 
     @Delegate(excludes=ToOverride.class)
-    private HikariDataSource commonPoolDataSource = null;
+    private HikariDataSource commonPoolDataSource = null; // must be set in init
 
     public CombiPoolDataSourceHikari() {
         this(new HikariDataSource());
+        log.info("CombiPoolDataSourceHikari()");
     }
 
     private CombiPoolDataSourceHikari(@NonNull final HikariDataSource configPoolDataSource) {
-        super(configPoolDataSource, null);
+        this(configPoolDataSource, null);
+        log.info("CombiPoolDataSourceHikari({})", configPoolDataSource);
     }
     
     private CombiPoolDataSourceHikari(@NonNull final HikariDataSource configPoolDataSource, final CombiPoolDataSourceHikari commonCombiPoolDataSource) {
         super(configPoolDataSource, commonCombiPoolDataSource);
+        this.configPoolDataSource = configPoolDataSource;
+        log.info("CombiPoolDataSourceHikari({}, {})", configPoolDataSource, commonCombiPoolDataSource);
     }
         
     protected boolean isSingleSessionProxyModel() {
@@ -40,6 +44,19 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
 
     protected boolean isFixedUsernamePassword() {
         return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
+    }
+
+    public String getUrl() {
+        return getJdbcUrl();
+    }
+  
+    public void setUrl(String jdbcUrl) {
+        setJdbcUrl(jdbcUrl);
+    }
+    
+    @Override
+    public void setUsername(String username) {
+        getConfigPoolDataSource().setUsername(username);
     }
 
     @Override
@@ -92,8 +109,15 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     @Override
     public void init() {
         super.init();
-        configPoolDataSource = getConfigPoolDataSource();
         commonPoolDataSource = getCommonPoolDataSource();
+    }
+
+    @PreDestroy
+    @Override
+    public void done() {
+        super.done();
+        configPoolDataSource = null;
+        commonPoolDataSource = null;
     }
 
     protected Connection getConnection1(@NonNull final String usernameSession1,

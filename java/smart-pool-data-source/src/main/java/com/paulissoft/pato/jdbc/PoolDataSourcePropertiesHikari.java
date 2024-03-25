@@ -3,14 +3,10 @@ package com.paulissoft.pato.jdbc;
 
 public interface PoolDataSourcePropertiesHikari extends PoolDataSourceProperties {
 
-    void setJdbcUrl(String jdbcUrl);
-  
     String getJdbcUrl();
   
-    String getUsername();
-
-    void setUsername(java.lang.String username);
-
+    void setJdbcUrl(String jdbcUrl);
+  
     String getPoolName();
 
     void setPoolName(String poolName);    

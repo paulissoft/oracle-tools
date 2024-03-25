@@ -1,8 +1,9 @@
 package com.paulissoft.pato.jdbc;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
-import lombok.NonNull;
 
 
 @Slf4j
@@ -13,59 +14,15 @@ public class MyOracleDataSource extends CombiPoolDataSourceOracle {
     // and return it via getPassword().
     private String password;
 
-    // just add a dummy constructor and override methods to see the logging
     public MyOracleDataSource() {
-    }
-
-    public MyOracleDataSource(@NonNull String url,
-                              @NonNull String username,
-                              @NonNull String password,
-                              String connectionPoolName,
-                              int initialPoolSize,
-                              int minPoolSize,
-                              int maxPoolSize,
-                              @NonNull String connectionFactoryClassName,
-                              boolean validateConnectionOnBorrow,
-                              int abandonedConnectionTimeout,
-                              int timeToLiveConnectionTimeout,
-                              int inactiveConnectionTimeout,
-                              int timeoutCheckInterval,
-                              int maxStatements,
-                              int connectionWaitTimeout,
-                              long maxConnectionReuseTime,
-                              int secondsToTrustIdleConnection,
-                              int connectionValidationTimeout) {
-        super(url,
-              username,
-              password,
-              connectionPoolName,
-              initialPoolSize,
-              minPoolSize,
-              maxPoolSize,
-              connectionFactoryClassName,
-              validateConnectionOnBorrow,
-              abandonedConnectionTimeout,
-              timeToLiveConnectionTimeout,
-              inactiveConnectionTimeout,
-              timeoutCheckInterval,
-              maxStatements,
-              connectionWaitTimeout,
-              maxConnectionReuseTime,
-              secondsToTrustIdleConnection,
-              connectionValidationTimeout);
-
+        // super(); /* unnecessary call */
         log.info("MyOracleDataSource()");
-        log.info("getURL(): {}", getURL());
-        log.info("getMaxPoolSize(): {}", getMaxPoolSize());
-        log.info("getMinPoolSize(): {}", getMinPoolSize());
-        log.info("getConnectionPoolName(): {}", getConnectionPoolName());
-        log.info("getUser(): {}", getUser());
     }
-    
+
     @Override
-    public void setURL(java.lang.String jdbcUrl) throws SQLException {
-        log.info("setURL({})", jdbcUrl);
-        super.setURL(jdbcUrl);
+    public void setUrl(java.lang.String jdbcUrl) throws SQLException {
+        log.info("setUrl({})", jdbcUrl);
+        super.setUrl(jdbcUrl);
     }
 
     @Override
@@ -87,13 +44,13 @@ public class MyOracleDataSource extends CombiPoolDataSourceOracle {
     }
 
     @Override
-    public void setUser(java.lang.String username) throws SQLException {
-        log.info("setUser({})", username);
-        super.setUser(username);
+    public void setUsername(java.lang.String username) throws SQLException {
+        log.info("setUsername({})", username);
+        super.setUsername(username);
     }
     
     @Override
-    public void setPassword(String password) {
+    public void setPassword(String password) throws SQLException {
         log.info("setPassword({})", password);
         super.setPassword(password);
         this.password = password;
@@ -103,5 +60,17 @@ public class MyOracleDataSource extends CombiPoolDataSourceOracle {
     public String getPassword() {
         log.info("getPassword()");
         return password;
+    }
+
+    @PostConstruct
+    @Override
+    public void init() {
+        super.init();
+    }
+
+    @PreDestroy
+    @Override
+    public void done() {
+        super.done();
     }
 }
