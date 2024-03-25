@@ -145,15 +145,17 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     protected boolean canClose() {
-        log.debug("canClose()");
+        boolean result = false;
+        
+        if (state != State.CLOSED) {
+            final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
 
-        if (state == State.CLOSED) {
-            return false;
+            result = configurations == null || configurations.isEmpty();
         }
 
-        final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
+        log.debug("canClose() = {}", result);
 
-        return configurations == null || configurations.isEmpty();
+        return result;
     }
 
     public void close() {
