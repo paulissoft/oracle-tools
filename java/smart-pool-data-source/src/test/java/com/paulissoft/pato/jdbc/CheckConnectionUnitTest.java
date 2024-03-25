@@ -395,10 +395,10 @@ public class CheckConnectionUnitTest {
     }
 
     @Test
-    void testConnectionMyOracleDataSource() throws SQLException {
-        log.debug("testConnectionMyPoolDataSource()");
+    void testConnectionCombiPoolDataSourceOracle() throws SQLException {
+        log.debug("testConnectionCombiPoolDataSourceOracle()");
 
-        final MyOracleDataSource ds = (MyOracleDataSource) dataSourceOracle;
+        final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) dataSourceOracle;
 
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
         assertEquals("bc_proxy[boopapij]", ds.getUser());
