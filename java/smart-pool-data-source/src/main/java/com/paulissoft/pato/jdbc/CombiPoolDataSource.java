@@ -6,7 +6,7 @@ import javax.annotation.PreDestroy;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.HashSet;
+//import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,23 +21,20 @@ import oracle.jdbc.OracleConnection;
 @Slf4j
 public abstract class CombiPoolDataSource<T extends DataSource> implements DataSource, Closeable {
 
-    // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, T> so use DataSource instead of T
-    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> commonPoolDataSources = new ConcurrentHashMap<>();
+    // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T>> so use DataSource instead of T
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> parents = new ConcurrentHashMap<>();
 
     // a matrix of (active) configPoolDataSource instances per commonPoolDataSource: needed for canClose()
-    private static final ConcurrentHashMap<DataSource, Set<DataSource>> activeConfigPoolDataSources = new ConcurrentHashMap<>();
+    private final Set<CombiPoolDataSource<T>> activePoolDataSources = (new ConcurrentHashMap<CombiPoolDataSource<T>, Integer>()).newKeySet();
 
     static void clear() {
-        commonPoolDataSources.clear();
-        activeConfigPoolDataSources.clear();
+        parents.clear();
     }    
 
     @NonNull
-    private final T configPoolDataSource; // set in constructor
+    private final T poolDataSource; // set in constructor
 
-    private final CombiPoolDataSource<T> commonCombiPoolDataSource;
-        
-    private T commonPoolDataSource = null; // commonCombiPoolDataSource.commonPoolDataSource
+    private CombiPoolDataSource<T> parent = null;
 
     enum State {
         INITIALIZING,
@@ -55,7 +52,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     /**
      * Since getPassword() is a deprecated method (in Oracle UCP) we need another way of getting it.
      * The idea is to implement setPassword() here and store it in passwordSession1.
-     * We need also to invoke configPoolDataSource.setPassword(password) via reflection.
+     * We need also to invoke poolDataSource.setPassword(password) via reflection.
      */
 
     @Getter(AccessLevel.PROTECTED)
@@ -64,17 +61,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @Getter
     private String usernameSession2;
 
-    protected CombiPoolDataSource(@NonNull final T configPoolDataSource) {
-        this(configPoolDataSource, null);
+    protected CombiPoolDataSource(@NonNull final T poolDataSource) {
+        this.poolDataSource = poolDataSource;
         
-        log.info("CombiCommonPoolDataSource({})", configPoolDataSource);
-    }
-    
-    protected CombiPoolDataSource(@NonNull final T configPoolDataSource, final CombiPoolDataSource<T> commonCombiPoolDataSource) {
-        this.configPoolDataSource = configPoolDataSource;
-        this.commonCombiPoolDataSource = commonCombiPoolDataSource;
-        
-        log.info("CombiCommonPoolDataSource({}, {})", configPoolDataSource, commonCombiPoolDataSource);
+        log.info("CombiCommonPoolDataSource({})", poolDataSource);
     }
 
     @PostConstruct
@@ -84,7 +74,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         if (state == State.INITIALIZING) {
             determineConnectInfo();
             updateCombiPoolAdministration();
-            updatePool(configPoolDataSource, commonPoolDataSource, true);
+            updatePool(getConfigPoolDataSource(), getCommonPoolDataSource(), true, parent == null);
             state = State.READY;
         }
     }
@@ -95,7 +85,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         
         if (state != State.CLOSED) {
             updateCombiPoolAdministration();
-            updatePool(configPoolDataSource, commonPoolDataSource, false);
+            updatePool(getConfigPoolDataSource(), getCommonPoolDataSource(), false, parent == null);
             state = State.CLOSED;
         }
     }
@@ -105,56 +95,27 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     private void updateCombiPoolAdministration() {
         log.debug("updateCombiPoolAdministration(state={})", state);
         
-        final PoolDataSourceConfigurationCommonId thisCommonId =
+        final PoolDataSourceConfigurationCommonId commonId =
             new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
             
         if (state == State.INITIALIZING) {
-            if (this.commonCombiPoolDataSource == null) {
-                final T commonPoolDataSource = (T) commonPoolDataSources.get(thisCommonId);
+            // Since the configuration is fixed now we can do lookups for a parent.
+            // The first pool data source (for same properties) will have parent == null
+            parent = (CombiPoolDataSource<T>) parents.get(commonId); 
 
-                if (commonPoolDataSource == null) {
-                    this.commonPoolDataSource = this.configPoolDataSource;
-                } else {
-                    this.commonPoolDataSource = commonPoolDataSource;
-                }
-            } else {
-                final PoolDataSourceConfigurationCommonId thatCommonId =
-                    new PoolDataSourceConfigurationCommonId(this.commonCombiPoolDataSource.getPoolDataSourceConfiguration());
-
-                log.debug("thisCommonId: {}; thatCommonId: {}", thisCommonId, thatCommonId);
-                
-                assert thisCommonId.equals(thatCommonId) : "The config and common pool data source should have the same common id";
-                
-                this.commonPoolDataSource = this.commonCombiPoolDataSource.commonPoolDataSource;
+            if (parent == null) {
+                // The next with the same properties will get this one as parent
+                parents.computeIfAbsent(commonId, k -> this);
             }
-
-            commonPoolDataSources.computeIfAbsent(thisCommonId, k -> this.commonPoolDataSource);
         }
 
-        assert this.commonPoolDataSource != null : "The common pool data source must NOT be null";
-
-        // isParentPoolDataSource() == true || isParentPoolDataSource() == false, due to this.commonPoolDataSource != null
-        if (isParentPoolDataSource()) {
-            switch (state) {
-            case READY: // close()
-                final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
-                
-                if (configurations == null || configurations.isEmpty()) {
-                    // no children waiting for their parent
-                    activeConfigPoolDataSources.remove(this.commonPoolDataSource);
-                    commonPoolDataSources.remove(thisCommonId);
-                }
-                break;
-            default:
-                break;
-            }
-        } else {
+        if (parent != null) {
             switch (state) {
             case INITIALIZING:
-                activeConfigPoolDataSources.computeIfAbsent(this.commonPoolDataSource, k -> new HashSet<>()).add(this.configPoolDataSource);
+                parent.activePoolDataSources.add(this);
                 break;
             case READY:
-                activeConfigPoolDataSources.computeIfPresent(this.commonPoolDataSource, (k, v) -> { v.remove(this.configPoolDataSource); return v; });
+                parent.activePoolDataSources.remove(this);
                 break;
             default:
                 break;
@@ -163,20 +124,25 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     public Boolean isParentPoolDataSource() {
-        if (this.configPoolDataSource != null && this.commonPoolDataSource != null) {
-            return this.configPoolDataSource == this.commonPoolDataSource;
-        } else {
-            return null; // we don't know yet
+        switch(state) {
+        case INITIALIZING:
+            return null; // we don't know yet since parent will be determined in updateCombiPoolAdministration()
+        default:
+            return parent == null;
         }
     }
 
     protected boolean canClose() {
         boolean result = false;
         
-        if (state != State.CLOSED) {
-            final Set configurations = activeConfigPoolDataSources.get(this.commonPoolDataSource);
-
-            result = configurations == null || configurations.isEmpty();
+        switch(state) {
+        case INITIALIZING:
+            result = true;
+            break;
+        case CLOSED:
+            break;
+        default:
+            result = parent == null || parent.activePoolDataSources.isEmpty();
         }
 
         log.debug("canClose() = {}", result);
@@ -194,16 +160,17 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     protected abstract void updatePool(@NonNull final T configPoolDataSource,
                                        @NonNull final T commonPoolDataSource,
-                                       final boolean initializing);
+                                       final boolean initializing,
+                                       final boolean isParentPoolDataSource);
 
     protected void determineConnectInfo() {
         log.debug("determineConnectInfo()");
         
-        final PoolDataSourceConfiguration configPoolDataSourceuration = getPoolDataSourceConfiguration();
+        final PoolDataSourceConfiguration configPoolDataSourceConfiguration = getPoolDataSourceConfiguration();
 
-        configPoolDataSourceuration.determineConnectInfo();
-        usernameSession1 = configPoolDataSourceuration.getUsernameToConnectTo();
-        usernameSession2 = configPoolDataSourceuration.getSchema();        
+        configPoolDataSourceConfiguration.determineConnectInfo();
+        usernameSession1 = configPoolDataSourceConfiguration.getUsernameToConnectTo();
+        usernameSession2 = configPoolDataSourceConfiguration.getSchema();        
     }
 
     protected interface ToOverride {
@@ -224,7 +191,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     protected T poolDataSourceSetter() {
         switch (state) {
         case INITIALIZING:
-            return configPoolDataSource;
+            return poolDataSource;
         default:
             throw new IllegalStateException("The configuration of the pool is sealed once started.");
         }
@@ -234,10 +201,15 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     protected T poolDataSourceGetter() {
         switch (state) {
         case INITIALIZING:
-            return configPoolDataSource;
+            return poolDataSource;
         default:
-            return commonPoolDataSource;
+            return parent != null ? parent.poolDataSource : poolDataSource;
         }
+    }
+
+    // @Delegate(types=DataSource.class, excludes=ToOverride.class)
+    protected T getConfigPoolDataSource() {
+        return poolDataSource;
     }
 
     // @Delegate(types=DataSource.class, excludes=ToOverride.class)
@@ -246,7 +218,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
         default:
-            return commonPoolDataSource;
+            return parent != null ? parent.poolDataSource : poolDataSource;
         }
     }
 
@@ -270,9 +242,9 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         passwordSession1 = password;
 
         try {
-            final Method setPasswordMethod = configPoolDataSource.getClass().getMethod("setPassword", String.class);
+            final Method setPasswordMethod = poolDataSource.getClass().getMethod("setPassword", String.class);
             
-            setPasswordMethod.invoke(configPoolDataSource, password);
+            setPasswordMethod.invoke(poolDataSource, password);
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }

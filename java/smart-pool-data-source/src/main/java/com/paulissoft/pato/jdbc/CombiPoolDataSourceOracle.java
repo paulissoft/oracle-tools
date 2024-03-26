@@ -28,14 +28,9 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
 
     private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource) {
-        this(configPoolDataSource, null);
-        log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
-    }
-    
-    private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource, final CombiPoolDataSourceOracle commonCombiPoolDataSource) {
-        super(configPoolDataSource, commonCombiPoolDataSource);
+        super(configPoolDataSource);
         this.configPoolDataSource = configPoolDataSource;
-        log.info("CombiPoolDataSourceOracle({}, {})", configPoolDataSource, commonCombiPoolDataSource);
+        log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
     }
         
     public String getUrl() {
@@ -118,9 +113,10 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     protected void updatePool(@NonNull final PoolDataSource configPoolDataSource,
                               @NonNull final PoolDataSource commonPoolDataSource,
-                              final boolean initializing) {
+                              final boolean initializing,
+                              final boolean isParentPoolDataSource) {
         try {
-            log.debug(">updatePool(isParentPoolDataSource={})", isParentPoolDataSource());
+            log.debug(">updatePool(isParentPoolDataSource={})", isParentPoolDataSource);
             
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
                       configPoolDataSource,
@@ -137,7 +133,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
                       commonPoolDataSource.getMaxPoolSize());
 
             // set pool name
-            if (initializing && isParentPoolDataSource()) {
+            if (initializing && isParentPoolDataSource) {
                 commonPoolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
             }
 
@@ -150,7 +146,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
             }
 
             // when configPoolDataSource equals commonPoolDataSource there is no need to adjust pool sizes
-            if (isParentPoolDataSource()) {
+            if (isParentPoolDataSource) {
                 return;
             }
         
