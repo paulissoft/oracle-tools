@@ -4,6 +4,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
+//import javax.sql.DataSource;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -16,10 +17,8 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    @Delegate(types=PoolDataSourcePropertiesOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     private PoolDataSource configPoolDataSource = null; // must be set in constructor and changed to commonPoolDataSource in init()
 
-    @Delegate(excludes=ToOverride.class)
     private PoolDataSource commonPoolDataSource = null; // must be set in init
 
     public CombiPoolDataSourceOracle() {
@@ -32,7 +31,24 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         this.configPoolDataSource = configPoolDataSource;
         log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
     }
-        
+
+    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class)
+    @Override
+    protected PoolDataSource poolDataSourceSetter() {
+        return super.poolDataSourceSetter();
+    }
+
+    @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverride.class)
+    @Override
+    protected PoolDataSource poolDataSourceGetter() {
+        return super.poolDataSourceGetter();
+    }
+
+    @Delegate(types=PoolDataSource.class, excludes={PoolDataSourcePropertiesOracle.class, ToOverride.class})
+    protected PoolDataSource getCommonPoolDataSource() {
+        return super.getCommonPoolDataSource();
+    }
+
     public String getUrl() {
         return getURL();
     }

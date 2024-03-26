@@ -74,7 +74,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         if (state == State.INITIALIZING) {
             determineConnectInfo();
             updateCombiPoolAdministration();
-            updatePool(getConfigPoolDataSource(), getCommonPoolDataSource(), true, parent == null);
+            updatePool(poolDataSource, getCommonPoolDataSource(), true, parent == null);
             state = State.READY;
         }
     }
@@ -85,7 +85,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         
         if (state != State.CLOSED) {
             updateCombiPoolAdministration();
-            updatePool(getConfigPoolDataSource(), getCommonPoolDataSource(), false, parent == null);
+            updatePool(poolDataSource, getCommonPoolDataSource(), false, parent == null);
             state = State.CLOSED;
         }
     }
@@ -205,11 +205,6 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         default:
             return parent != null ? parent.poolDataSource : poolDataSource;
         }
-    }
-
-    // @Delegate(types=DataSource.class, excludes=ToOverride.class)
-    protected T getConfigPoolDataSource() {
-        return poolDataSource;
     }
 
     // @Delegate(types=DataSource.class, excludes=ToOverride.class)
