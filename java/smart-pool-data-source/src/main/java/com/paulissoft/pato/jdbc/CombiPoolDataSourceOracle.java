@@ -17,8 +17,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    private PoolDataSource configPoolDataSource = null; // must be set in constructor and changed to commonPoolDataSource in init()
-
+    @Delegate(types=PoolDataSource.class, excludes={PoolDataSourcePropertiesOracle.class, ToOverride.class})
     private PoolDataSource commonPoolDataSource = null; // must be set in init
 
     public CombiPoolDataSourceOracle() {
@@ -28,7 +27,6 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     private CombiPoolDataSourceOracle(@NonNull final PoolDataSource configPoolDataSource) {
         super(configPoolDataSource);
-        this.configPoolDataSource = configPoolDataSource;
         log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
     }
 
@@ -42,11 +40,6 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     @Override
     protected PoolDataSource poolDataSourceGetter() {
         return super.poolDataSourceGetter();
-    }
-
-    @Delegate(types=PoolDataSource.class, excludes={PoolDataSourcePropertiesOracle.class, ToOverride.class})
-    protected PoolDataSource getCommonPoolDataSource() {
-        return super.getCommonPoolDataSource();
     }
 
     public String getUrl() {
@@ -100,14 +93,13 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     public void init() {
         super.init();
         // from now on getX() calls wil return common characterics (think of getMaximumPoolSize())
-        configPoolDataSource = commonPoolDataSource = getCommonPoolDataSource();
+        commonPoolDataSource = getCommonPoolDataSource();
     }
 
     @PreDestroy
     @Override
     public void done() {
         super.done();
-        configPoolDataSource = null;
         commonPoolDataSource = null;
     }
 
