@@ -42,6 +42,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     enum State {
         INITIALIZING,
         READY,
+        CLOSING, // can not close due to children not closed yet
         CLOSED
     }
 
@@ -219,10 +220,34 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         public void close();
     }
 
-    // the rest
-    // @Delegate(excludes=ToOverride.class)
-    protected T getCommonPoolDataSource() {        
-        return state != State.READY ? null : commonPoolDataSource;
+    // @Delegate(types=PoolDataSourcePropertiesSettersX.class, excludes=PoolDataSourcePropertiesGettersX.class)
+    protected T poolDataSourceSetter() {
+        switch (state) {
+        case INITIALIZING:
+            return configPoolDataSource;
+        default:
+            throw new IllegalStateException("The configuration of the pool is sealed once started.");
+        }
+    }
+
+    // @Delegate(types=PoolDataSourcePropertiesGettersX.class, excludes=ToOverride.class)
+    protected T poolDataSourceGetter() {
+        switch (state) {
+        case INITIALIZING:
+            return configPoolDataSource;
+        default:
+            return commonPoolDataSource;
+        }
+    }
+
+    // @Delegate(types=DataSource.class, excludes=ToOverride.class)
+    protected T getCommonPoolDataSource() {
+        switch (state) {
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
+        default:
+            return commonPoolDataSource;
+        }
     }
 
     protected boolean isSingleSessionProxyModel() {
