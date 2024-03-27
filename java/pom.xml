@@ -45,9 +45,10 @@
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
     <commons-lang3.version>3.9</commons-lang3.version>
 
-    <!-- we have to use the old javax:annotation-api, not the new jakarta:annotation-api -->
-    <!--jakarta.annotation-api.version>3.0.0-M1</jakarta.annotation-api.version-->
+    <!-- For Spring we have to use the old javax:annotation-api, not the new jakarta:annotation-api. -->
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
+    <!-- But we include the new one as well for other frameworks. -->
+    <jakarta.annotation-api.version>3.0.0-M1</jakarta.annotation-api.version>
 
     <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
@@ -126,17 +127,18 @@
       <artifactId>commons-lang3</artifactId>
       <version>${commons-lang3.version}</version>
       </dependency-->
-    <!-- we have to use the old javax:annotation-api, not the new jakarta:annotation-api -->
-    <!--dependency>
-      <groupId>jakarta.annotation</groupId>
-      <artifactId>jakarta.annotation-api</artifactId>
-      <version>${jakarta.annotation-api.version}</version>
-      <scope>provided</scope>
-    </dependency-->
+    <!-- For Spring we have to use the old javax:annotation-api, not the new jakarta:annotation-api. -->
     <dependency>
       <groupId>javax.annotation</groupId>
       <artifactId>javax.annotation-api</artifactId>
       <version>${javax.annotation-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- But other frameworks may need this new one. -->
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+      <version>${jakarta.annotation-api.version}</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

@@ -1,10 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
-//import javax.sql.DataSource;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +14,8 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    @Delegate(types=PoolDataSource.class, excludes={PoolDataSourcePropertiesOracle.class, ToOverride.class})
+    // no getXXX() nor setXXX(), just the rest
+    @Delegate(excludes={ PoolDataSourcePropertiesOracle.class, ToOverride.class })
     private PoolDataSource commonPoolDataSource = null; // must be set in init
 
     public CombiPoolDataSourceOracle() {
@@ -30,18 +28,18 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
     }
 
-    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class)
-    @Override
-    protected PoolDataSource poolDataSourceSetter() {
-        return super.poolDataSourceSetter();
+    // setXXX methods only
+    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
+    private PoolDataSource getPoolDataSourceSetter() {
+        return determinePoolDataSourceSetter();
     }
 
+    // getXXX methods only
     @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverride.class)
-    @Override
-    protected PoolDataSource poolDataSourceGetter() {
-        return super.poolDataSourceGetter();
+    private PoolDataSource getPoolDataSourceGetter() {
+        return determinePoolDataSourceGetter();
     }
-
+    
     public String getUrl() {
         return getURL();
     }
@@ -88,19 +86,10 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
             .build();
     }
 
-    @PostConstruct
     @Override
-    public void init() {
-        super.init();
-        // from now on getX() calls wil return common characterics (think of getMaximumPoolSize())
-        commonPoolDataSource = getCommonPoolDataSource();
-    }
-
-    @PreDestroy
-    @Override
-    public void done() {
-        super.done();
-        commonPoolDataSource = null;
+    protected void setUp() {
+        super.setUp();
+        commonPoolDataSource = determineCommonPoolDataSource();
     }
 
     protected Connection getConnection1(@NonNull final String usernameSession1,
@@ -234,13 +223,6 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
                       commonPoolDataSource.getMaxPoolSize());
 
             log.debug("<updatePool()");
-        }
-    }
-
-    public void close() {
-        if (canClose()) {
-            super.close();
-            // a PoolDataSource can not get closed
         }
     }
 }

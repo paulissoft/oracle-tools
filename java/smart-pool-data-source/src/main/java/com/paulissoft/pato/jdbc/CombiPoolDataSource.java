@@ -8,8 +8,6 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -68,7 +66,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         log.info("CombiCommonPoolDataSource({})", poolDataSource);
     }
 
-    private boolean isActive() {
+    protected boolean isActive() {
         switch(state) {
         case READY:
             return true;
@@ -77,26 +75,32 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         }
     }
 
-    @PostConstruct
-    public void init() {
-        log.debug("init(state={})", state);
+    protected boolean isClosed() {
+        switch(state) {
+        case CLOSED:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    @jakarta.annotation.PostConstruct
+    @javax.annotation.PostConstruct
+    public final void open() {
+        log.debug("open()");
+        
+        setUp();
+    }
+
+    // you can override this one
+    protected void setUp() {
+        log.debug("setUp(state={})", state);
         
         if (state == State.INITIALIZING) {
             determineConnectInfo();
             updateCombiPoolAdministration();
-            updatePool(poolDataSource, getCommonPoolDataSource(), true, activeParent == null);
+            updatePool(poolDataSource, determineCommonPoolDataSource(), true, activeParent == null);
             state = State.READY;
-        }
-    }
-
-    @PreDestroy
-    public void done(){
-        log.debug("done(state={})", state);
-        
-        if (state != State.CLOSED) {
-            updateCombiPoolAdministration();
-            updatePool(poolDataSource, getCommonPoolDataSource(), false, activeParent == null);
-            state = State.CLOSED;
         }
     }
 
@@ -144,10 +148,15 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         case INITIALIZING:
             result = true;
             break;
+        case READY:
+        case CLOSING:
+            result = activeParent == null || activeParent.activeChildren.get() == 0;
+            break;
+        case ERROR:
+            result = true;
+            break;
         case CLOSED:
             break;
-        default:
-            result = activeParent == null || activeParent.activeChildren.get() == 0;
         }
 
         log.debug("canClose() = {}", result);
@@ -155,11 +164,24 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         return result;
     }
 
-    public void close() {
+    @jakarta.annotation.PreDestroy
+    @javax.annotation.PreDestroy
+    public final void close() {
         log.debug("close()");
         
         if (canClose()) {
-            done();
+            tearDown();
+        }
+    }
+
+    // you may override this one
+    protected void tearDown(){
+        log.debug("tearDown(state={})", state);
+        
+        if (state != State.CLOSED) {
+            updateCombiPoolAdministration();
+            updatePool(poolDataSource, determineCommonPoolDataSource(), false, activeParent == null);
+            state = State.CLOSED;
         }
     }
 
@@ -214,8 +236,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         public void close();
     }
 
-    // @Delegate(types=PoolDataSourcePropertiesSettersX.class, excludes=PoolDataSourcePropertiesGettersX.class)
-    protected T poolDataSourceSetter() {
+    // @Delegate(types=PoolDataSourcePropertiesSetters<T>.class, excludes=ToOverride.class)
+    protected T determinePoolDataSourceSetter() {
         switch (state) {
         case INITIALIZING:
             return poolDataSource;
@@ -226,8 +248,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         }
     }
 
-    // @Delegate(types=PoolDataSourcePropertiesGettersX.class, excludes=ToOverride.class)
-    protected T poolDataSourceGetter() {
+    // @Delegate(types=PoolDataSourcePropertiesGetters<T>.class, excludes=ToOverride.class)
+    protected T determinePoolDataSourceGetter() {
         switch (state) {
         case INITIALIZING:
             return poolDataSource;
@@ -238,8 +260,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         }
     }
 
-    // @Delegate(types=DataSource.class, excludes=ToOverride.class)
-    protected T getCommonPoolDataSource() {
+    // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
+    protected T determineCommonPoolDataSource() {
         switch (state) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
@@ -277,6 +299,19 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     public final Connection getConnection() throws SQLException {
+        switch (state) {
+        case INITIALIZING:
+            open();
+            assert(state == State.READY);
+            // fall through
+        case READY:
+        case CLOSING:
+            break;
+        default:
+            throw new IllegalStateException(String.format("You can only get a connection when the pool state is READY or CLOSING but its state is %s.",
+                                                          state.toString()));
+        }
+        
         final Connection conn = getConnection(usernameSession1,
                                               passwordSession1,
                                               usernameSession2);
