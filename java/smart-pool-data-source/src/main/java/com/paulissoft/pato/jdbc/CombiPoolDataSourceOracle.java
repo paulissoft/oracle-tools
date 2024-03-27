@@ -110,13 +110,11 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         return commonPoolDataSource.getConnection(usernameSession1, passwordSession1);
     }
     
-    public Connection getConnection() throws SQLException {
+    protected Connection getConnection(@NonNull final String usernameSession1,
+                                       @NonNull final String passwordSession1,
+                                       @NonNull final String usernameSession2) throws SQLException {
         // we do use single-session proxy model so no need to invoke getConnection2()
-        return getConnection1(getUsernameSession1(), getPasswordSession1());
-    }
-
-    public Connection getConnection(String username, String password) throws SQLException {
-        return commonPoolDataSource.getConnection(username, password);
+        return getConnection1(usernameSession1, passwordSession1);
     }
 
     protected void updatePool(@NonNull final PoolDataSource configPoolDataSource,
@@ -124,7 +122,48 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
         try {
-            log.debug(">updatePool(isParentPoolDataSource={})", isParentPoolDataSource);
+            log.debug(">updatePoolName(isParentPoolDataSource={})", isParentPoolDataSource);
+            
+            log.debug("config pool data source; address: {}; name: {}",
+                      configPoolDataSource,
+                      configPoolDataSource.getConnectionPoolName());
+
+            log.debug("common pool data source; address: {}; name: {}",
+                      commonPoolDataSource,
+                      commonPoolDataSource.getConnectionPoolName());
+
+            // set pool name
+            if (initializing && isParentPoolDataSource) {
+                commonPoolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
+            }
+
+            final String suffix = "-" + getUsernameSession2();
+
+            if (initializing) {
+                commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName() + suffix);
+            } else {
+                commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName().replace(suffix, ""));
+            }
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        } finally {
+            log.debug("config pool data source; address: {}; name: {}",
+                      configPoolDataSource,
+                      configPoolDataSource.getConnectionPoolName());
+
+            log.debug("common pool data source; address: {}; name: {}",
+                      commonPoolDataSource,
+                      commonPoolDataSource.getConnectionPoolName());
+
+            log.debug("<updatePoolName()");
+        }
+    }
+
+    protected void updatePoolSizes(@NonNull final PoolDataSource configPoolDataSource,
+                                   @NonNull final PoolDataSource commonPoolDataSource,
+                                   final boolean initializing) {
+        try {
+            log.debug(">updatePoolSizes()");
             
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
                       configPoolDataSource,
@@ -139,25 +178,8 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
                       commonPoolDataSource.getInitialPoolSize(),
                       commonPoolDataSource.getMinPoolSize(),
                       commonPoolDataSource.getMaxPoolSize());
-
-            // set pool name
-            if (initializing && isParentPoolDataSource) {
-                commonPoolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
-            }
-
-            final String suffix = "-" + getUsernameSession2();
-
-            if (initializing) {
-                commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName() + suffix);
-            } else {
-                commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName().replace(suffix, ""));
-            }
-
+            
             // when configPoolDataSource equals commonPoolDataSource there is no need to adjust pool sizes
-            if (isParentPoolDataSource) {
-                return;
-            }
-        
             final int sign = initializing ? +1 : -1;
 
             int thisSize, pdsSize;

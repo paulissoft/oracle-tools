@@ -1,45 +1,46 @@
 package com.paulissoft.pato.jdbc;
 
-import java.lang.reflect.Method;
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.io.Closeable;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
-//import java.util.HashSet;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.sql.DataSource;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import javax.sql.DataSource;
 import oracle.jdbc.OracleConnection;
 
 
 @Slf4j
 public abstract class CombiPoolDataSource<T extends DataSource> implements DataSource, Closeable {
 
+    // We need to know the active parents in order to assign a value to an active parent so that a data source can use a common data source.
     // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T>> so use DataSource instead of T
-    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> parents = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> activeParents = new ConcurrentHashMap<>();
 
-    // a matrix of (active) configPoolDataSource instances per commonPoolDataSource: needed for canClose()
-    private final Set<CombiPoolDataSource<T>> activePoolDataSources = (new ConcurrentHashMap<CombiPoolDataSource<T>, Integer>()).newKeySet();
+    private final AtomicInteger activeChildren = new AtomicInteger(0);
 
     static void clear() {
-        parents.clear();
+        activeParents.clear();
     }    
 
     @NonNull
     private final T poolDataSource; // set in constructor
 
-    private CombiPoolDataSource<T> parent = null;
+    private CombiPoolDataSource<T> activeParent = null;
 
     enum State {
         INITIALIZING,
         READY,
         CLOSING, // can not close due to children not closed yet
+        ERROR,
         CLOSED
     }
 
@@ -67,6 +68,15 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         log.info("CombiCommonPoolDataSource({})", poolDataSource);
     }
 
+    private boolean isActive() {
+        switch(state) {
+        case READY:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     @PostConstruct
     public void init() {
         log.debug("init(state={})", state);
@@ -74,7 +84,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         if (state == State.INITIALIZING) {
             determineConnectInfo();
             updateCombiPoolAdministration();
-            updatePool(poolDataSource, getCommonPoolDataSource(), true, parent == null);
+            updatePool(poolDataSource, getCommonPoolDataSource(), true, activeParent == null);
             state = State.READY;
         }
     }
@@ -85,7 +95,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         
         if (state != State.CLOSED) {
             updateCombiPoolAdministration();
-            updatePool(poolDataSource, getCommonPoolDataSource(), false, parent == null);
+            updatePool(poolDataSource, getCommonPoolDataSource(), false, activeParent == null);
             state = State.CLOSED;
         }
     }
@@ -99,36 +109,31 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
             new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
             
         if (state == State.INITIALIZING) {
-            // Since the configuration is fixed now we can do lookups for a parent.
-            // The first pool data source (for same properties) will have parent == null
-            parent = (CombiPoolDataSource<T>) parents.get(commonId); 
+            // Since the configuration is fixed now we can do lookups for an active parent.
+            // The first pool data source (for same properties) will have activeParent == null
+            activeParent = (CombiPoolDataSource<T>) activeParents.get(commonId); 
 
-            if (parent == null) {
-                // The next with the same properties will get this one as parent
-                parents.computeIfAbsent(commonId, k -> this);
+            if (activeParent != null && !activeParent.isActive()) {
+                activeParent = null;
+            }
+            
+            if (activeParent == null) {
+                // The next with the same properties will get this one as activeParent
+                activeParents.computeIfAbsent(commonId, k -> this);
             }
         }
 
-        if (parent != null) {
+        if (activeParent != null) {
             switch (state) {
             case INITIALIZING:
-                parent.activePoolDataSources.add(this);
+                activeParent.activeChildren.incrementAndGet();
                 break;
             case READY:
-                parent.activePoolDataSources.remove(this);
+                activeParent.activeChildren.decrementAndGet();
                 break;
             default:
                 break;
             }
-        }
-    }
-
-    public Boolean isParentPoolDataSource() {
-        switch(state) {
-        case INITIALIZING:
-            return null; // we don't know yet since parent will be determined in updateCombiPoolAdministration()
-        default:
-            return parent == null;
         }
     }
 
@@ -142,7 +147,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         case CLOSED:
             break;
         default:
-            result = parent == null || parent.activePoolDataSources.isEmpty();
+            result = activeParent == null || activeParent.activeChildren.get() == 0;
         }
 
         log.debug("canClose() = {}", result);
@@ -158,10 +163,32 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         }
     }
 
-    protected abstract void updatePool(@NonNull final T configPoolDataSource,
-                                       @NonNull final T commonPoolDataSource,
-                                       final boolean initializing,
-                                       final boolean isParentPoolDataSource);
+    protected void updatePoolName(@NonNull final T configPoolDataSource,
+                                  @NonNull final T commonPoolDataSource,
+                                  final boolean initializing,
+                                  final boolean isParentPoolDataSource) {
+    }
+
+    protected void updatePoolSizes(@NonNull final T configPoolDataSource,
+                                   @NonNull final T commonPoolDataSource,
+                                   final boolean initializing) {
+
+    }
+
+    protected void updatePool(@NonNull final T configPoolDataSource,
+                              @NonNull final T commonPoolDataSource,
+                              final boolean initializing,
+                              final boolean isParentPoolDataSource) {
+        updatePoolName(configPoolDataSource,
+                       commonPoolDataSource,
+                       initializing,
+                       isParentPoolDataSource);
+        if (!isParentPoolDataSource) { // do not double the pool size when it is a activeParent
+            updatePoolSizes(configPoolDataSource,
+                            commonPoolDataSource,
+                            initializing);
+        }
+    }
 
     protected void determineConnectInfo() {
         log.debug("determineConnectInfo()");
@@ -192,6 +219,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         switch (state) {
         case INITIALIZING:
             return poolDataSource;
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
         default:
             throw new IllegalStateException("The configuration of the pool is sealed once started.");
         }
@@ -202,8 +231,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         switch (state) {
         case INITIALIZING:
             return poolDataSource;
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
         default:
-            return parent != null ? parent.poolDataSource : poolDataSource;
+            return activeParent != null ? activeParent.poolDataSource : poolDataSource;
         }
     }
 
@@ -213,7 +244,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
         default:
-            return parent != null ? parent.poolDataSource : poolDataSource;
+            return activeParent != null ? activeParent.poolDataSource : poolDataSource;
         }
     }
 
@@ -243,6 +274,26 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
+    }
+
+    public final Connection getConnection() throws SQLException {
+        final Connection conn = getConnection(usernameSession1,
+                                              passwordSession1,
+                                              usernameSession2);
+
+        // check check double check
+        assert conn.getSchema().equalsIgnoreCase(usernameSession2)
+            : String.format("Current schema name (%s) should be the same as the requested name (%s)",
+                            conn.getSchema(),
+                            usernameSession2);
+
+        return conn;
+    }
+
+    @Deprecated
+    public final Connection getConnection(String username, String password) throws SQLException {
+      throw new SQLFeatureNotSupportedException();
+
     }
 
     // two purposes:
@@ -318,11 +369,6 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
                     }
                 } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
             }                
-
-            assert conn.getSchema().equalsIgnoreCase(usernameSession2)
-                : String.format("Current schema name (%s) should be the same as the requested name (%s)",
-                                conn.getSchema(),
-                                usernameSession2);
         }
         
         return conn;
