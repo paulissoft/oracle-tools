@@ -34,7 +34,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     private volatile CombiPoolDataSource<T> activeParent = null; // changed in a synchronized method: open() or close()
 
-    enum State {        
+    protected enum State {        
         INITIALIZING, // next possible states: ERROR, READY or CLOSED
         ERROR,        // INITIALIZATING error: next possible states: CLOSED
         READY,        // next possible states: CLOSING (a parent that has active children) or CLOSED (otherwise)
@@ -66,12 +66,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         log.info("CombiCommonPoolDataSource({})", poolDataSource);
     }
 
-    protected boolean isActive() {
-        return state == State.READY;
-    }
-
-    protected boolean isClosed() {
-        return state == State.CLOSED;
+    protected State getState() {
+        return state;
     }
 
     @jakarta.annotation.PostConstruct
@@ -120,7 +116,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         // shadow this.activeParent
         CombiPoolDataSource<T> activeParent = (CombiPoolDataSource<T>) activeParents.get(commonId); 
 
-        if (activeParent != null && !activeParent.isActive()) {
+        if (activeParent != null && activeParent.state != State.READY) {
             activeParent = null;
         }
 
@@ -329,7 +325,8 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         final String passwordSession1 = this.passwordSession1;
         final String usernameSession2 = this.usernameSession2;
 
-        final Connection conn = getConnection(usernameSession1,
+        final Connection conn = getConnection(determineCommonPoolDataSource(),
+                                              usernameSession1,
                                               passwordSession1,
                                               usernameSession2);
 
@@ -350,17 +347,19 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     // two purposes:
     // 1) get a standard connection (session 1) but maybe with a different username/password than the default
     // 2) get a connection for the multi-session proxy model (session 2)
-    protected Connection getConnection(@NonNull final String usernameSession1,
+    protected Connection getConnection(@NonNull final T commonPoolDataSource,
+                                       @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
-        return getConnection2(getConnection1(usernameSession1, passwordSession1),
+        return getConnection2(getConnection1(commonPoolDataSource, usernameSession1, passwordSession1),
                               usernameSession1,
                               passwordSession1,
                               usernameSession2);
     }
 
     // get a standard connection (session 1) but maybe with a different username/password than the default
-    protected abstract Connection getConnection1(@NonNull final String usernameSession1,
+    protected abstract Connection getConnection1(@NonNull final T commonPoolDataSource,
+                                                 @NonNull final String usernameSession1,
                                                  @NonNull final String passwordSession1) throws SQLException;
 
     // get a connection for the multi-session proxy model (session 2)

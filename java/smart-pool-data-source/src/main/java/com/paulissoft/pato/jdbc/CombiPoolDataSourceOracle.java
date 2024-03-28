@@ -14,10 +14,6 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
-    // no getXXX() nor setXXX(), just the rest
-    @Delegate(excludes={ PoolDataSourcePropertiesOracle.class, ToOverride.class })
-    private PoolDataSource commonPoolDataSource = null; // must be set in init
-
     public CombiPoolDataSourceOracle() {
         this(new PoolDataSourceImpl());
         log.info("CombiPoolDataSourceOracle()");
@@ -28,18 +24,24 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
         log.info("CombiPoolDataSourceOracle({})", configPoolDataSource);
     }
 
-    // setXXX methods only
+    // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     private PoolDataSource getPoolDataSourceSetter() {
         return determinePoolDataSourceSetter();
     }
 
-    // getXXX methods only
+    // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverride.class)
     private PoolDataSource getPoolDataSourceGetter() {
         return determinePoolDataSourceGetter();
     }
     
+    // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
+    @Delegate(excludes={ PoolDataSourcePropertiesOracle.class, ToOverride.class })
+    private PoolDataSource getCommonPoolDataSource() {
+        return determineCommonPoolDataSource();
+    }
+
     public String getUrl() {
         return getURL();
     }
@@ -86,24 +88,20 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
             .build();
     }
 
-    @Override
-    protected void setUp() {
-        super.setUp();
-        commonPoolDataSource = determineCommonPoolDataSource();
-    }
-
-    protected Connection getConnection1(@NonNull final String usernameSession1,
+    protected Connection getConnection1(@NonNull final PoolDataSource commonPoolDataSource,
+                                        @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug("getConnection1(usernameSession1={})", usernameSession1);
 
         return commonPoolDataSource.getConnection(usernameSession1, passwordSession1);
     }
     
-    protected Connection getConnection(@NonNull final String usernameSession1,
+    protected Connection getConnection(@NonNull final PoolDataSource commonPoolDataSource,
+                                       @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
         // we do use single-session proxy model so no need to invoke getConnection2()
-        return getConnection1(usernameSession1, passwordSession1);
+        return getConnection1(commonPoolDataSource, usernameSession1, passwordSession1);
     }
 
     protected void updatePool(@NonNull final PoolDataSource configPoolDataSource,

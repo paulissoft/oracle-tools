@@ -15,10 +15,6 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
-    // no getXXX() nor setXXX(), just the rest
-    @Delegate(excludes={ PoolDataSourcePropertiesHikari.class, ToOverride.class })
-    private HikariDataSource commonPoolDataSource = null; // must be set in init
-
     public CombiPoolDataSourceHikari() {
         this(new HikariDataSource());
         log.info("CombiPoolDataSourceHikari()");
@@ -29,16 +25,22 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
         log.info("CombiPoolDataSourceHikari({})", configPoolDataSource);
     }
 
-    // setXXX methods only (only valid while INITIALIZING hence use a function)
+    // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverride.class) // do not delegate setPassword()
     private HikariDataSource getPoolDataSourceSetter() {
         return determinePoolDataSourceSetter();
     }
         
-    // getXXX methods only (changes from configPoolDataSource to commonPoolDataSource after INITIALIZING hence use a function)
+    // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverride.class)
     private HikariDataSource getPoolDataSourceGetter() {
         return determinePoolDataSourceGetter();
+    }
+
+    // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
+    @Delegate(excludes={ PoolDataSourcePropertiesHikari.class, ToOverride.class })
+    private HikariDataSource getCommonPoolDataSource() {
+        return determineCommonPoolDataSource();
     }
 
     protected boolean isSingleSessionProxyModel() {
@@ -93,26 +95,25 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     }
 
     @Override
-    protected void setUp() {
-        super.setUp();
-        commonPoolDataSource = determineCommonPoolDataSource();
-    }
-
-    @Override
     protected void tearDown() {
+        // must get this info before it is actually closed since then getCommonPoolDataSource() will return a error
+        final HikariDataSource commonPoolDataSource = getCommonPoolDataSource(); 
+        
+        // we are in a synchronized context
         super.tearDown();
-        if (isClosed()) {
+        if (getState() == State.CLOSED) {
             commonPoolDataSource.close();
         }
     }
 
-    protected Connection getConnection1(@NonNull final String usernameSession1,
+    protected Connection getConnection1(@NonNull final HikariDataSource commonPoolDataSource,
+                                        @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug("getConnection1(usernameSession1={})", usernameSession1);
 
         String usernameOrig = null;
         String passwordOrig = null;
-
+        
         try {
             if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
                 usernameOrig = commonPoolDataSource.getUsername();
