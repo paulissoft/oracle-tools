@@ -23,7 +23,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T>> so use DataSource instead of T
     private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> activeParents = new ConcurrentHashMap<>();
 
-    private final AtomicInteger activeChildren = new AtomicInteger(0);
+    private final AtomicInteger activeChildren = new AtomicInteger(0); // safe in threads
 
     static void clear() {
         activeParents.clear();
@@ -117,7 +117,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         // Since the configuration is fixed now we can do lookups for an active parent.
         // The first pool data source (for same properties) will have activeParent == null
 
-        // shadown this.activeParent
+        // shadow this.activeParent
         CombiPoolDataSource<T> activeParent = (CombiPoolDataSource<T>) activeParents.get(commonId); 
 
         if (activeParent != null && !activeParent.isActive()) {
@@ -164,7 +164,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         State state = this.state;
         CombiPoolDataSource<T> activeParent = this.activeParent;
         
-        log.debug("state while leaving setUp(): {}", state);
+        log.debug("state while entering tearDown(): {}", state);
 
         switch(state) {
         case READY:
@@ -256,6 +256,9 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     // @Delegate(types=PoolDataSourcePropertiesGetters<T>.class, excludes=ToOverride.class)
     protected T determinePoolDataSourceGetter() {
+        // minimize accessing volatile variables by shadowing them
+        CombiPoolDataSource<T> activeParent = this.activeParent;
+        
         switch (state) {
         case INITIALIZING:
             return poolDataSource;
@@ -268,6 +271,9 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
     protected T determineCommonPoolDataSource() {
+        // minimize accessing volatile variables by shadowing them
+        CombiPoolDataSource<T> activeParent = this.activeParent;
+        
         switch (state) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
@@ -307,17 +313,22 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     public final Connection getConnection() throws SQLException {
         switch (state) {
         case INITIALIZING:
-            open();
+            open(); // will change state to READY
             assert(state == State.READY);
             // fall through
         case READY:
         case CLOSING:
             break;
         default:
-            throw new IllegalStateException(String.format("You can only get a connection when the pool state is READY or CLOSING but its state is %s.",
+            throw new IllegalStateException(String.format("You can only get a connection when the pool state is READY or CLOSING but it is %s.",
                                                           state.toString()));
         }
-        
+
+        // minimize accessing volatile variables by shadowing them
+        final String usernameSession1 = this.usernameSession1;
+        final String passwordSession1 = this.passwordSession1;
+        final String usernameSession2 = this.usernameSession2;
+
         final Connection conn = getConnection(usernameSession1,
                                               passwordSession1,
                                               usernameSession2);
@@ -333,8 +344,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     @Deprecated
     public final Connection getConnection(String username, String password) throws SQLException {
-      throw new SQLFeatureNotSupportedException();
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     // two purposes:
