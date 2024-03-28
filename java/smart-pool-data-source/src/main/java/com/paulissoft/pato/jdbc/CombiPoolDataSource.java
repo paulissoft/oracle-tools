@@ -32,21 +32,21 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @NonNull
     private final T poolDataSource; // set in constructor
 
-    private CombiPoolDataSource<T> activeParent = null;
+    private volatile CombiPoolDataSource<T> activeParent = null; // changed in a synchronized method: open() or close()
 
-    enum State {
-        INITIALIZING,
-        READY,
-        CLOSING, // can not close due to children not closed yet
-        ERROR,
+    enum State {        
+        INITIALIZING, // next possible states: ERROR, READY or CLOSED
+        ERROR,        // INITIALIZATING error: next possible states: CLOSED
+        READY,        // next possible states: CLOSING (a parent that has active children) or CLOSED (otherwise)
+        CLOSING,      // can not close yet since there are active children: next possible states: CLOSED
         CLOSED
     }
 
     @NonNull
-    private State state = State.INITIALIZING;
+    private volatile State state = State.INITIALIZING; // changed in a synchronized method: open() or close()
 
     @Getter
-    private String usernameSession1;
+    private volatile String usernameSession1; // changed in a synchronized method: open() or close()
 
     /**
      * Since getPassword() is a deprecated method (in Oracle UCP) we need another way of getting it.
@@ -55,10 +55,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
      */
 
     @Getter(AccessLevel.PROTECTED)
-    private String passwordSession1;
+    private volatile String passwordSession1; // changed in a synchronized method: open() or close()
 
     @Getter
-    private String usernameSession2;
+    private volatile String usernameSession2; // changed in a synchronized method: open() or close()
 
     protected CombiPoolDataSource(@NonNull final T poolDataSource) {
         this.poolDataSource = poolDataSource;
@@ -67,26 +67,16 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     }
 
     protected boolean isActive() {
-        switch(state) {
-        case READY:
-            return true;
-        default:
-            return false;
-        }
+        return state == State.READY;
     }
 
     protected boolean isClosed() {
-        switch(state) {
-        case CLOSED:
-            return true;
-        default:
-            return false;
-        }
+        return state == State.CLOSED;
     }
 
     @jakarta.annotation.PostConstruct
     @javax.annotation.PostConstruct
-    public final void open() {
+    public final synchronized void open() {
         log.debug("open()");
         
         setUp();
@@ -94,46 +84,64 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     // you can override this one
     protected void setUp() {
-        log.debug("setUp(state={})", state);
-        
+        // minimize accessing volatile variables by shadowing them
+        State state = this.state;
+        CombiPoolDataSource<T> activeParent = this.activeParent;
+
+        log.debug("state while entering setUp(): {}", state);
+
         if (state == State.INITIALIZING) {
-            determineConnectInfo();
-            updateCombiPoolAdministration();
-            updatePool(poolDataSource, determineCommonPoolDataSource(), true, activeParent == null);
-            state = State.READY;
+            try {
+                determineConnectInfo();
+                activeParent = this.activeParent = determineActiveParent();
+                updateCombiPoolAdministration(state, activeParent);
+                updatePool(poolDataSource, determineCommonPoolDataSource(), true, activeParent == null);
+                state = this.state = State.READY;
+            } catch (Exception ex) {
+                state = this.state = State.ERROR;
+                throw ex;
+            }
         }
+
+        log.debug("state while leaving setUp(): {}", state);
     }
 
     public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
-    private void updateCombiPoolAdministration() {
-        log.debug("updateCombiPoolAdministration(state={})", state);
+    private CombiPoolDataSource<T> determineActiveParent() {
+        log.debug("determineActiveParent()");
         
         final PoolDataSourceConfigurationCommonId commonId =
             new PoolDataSourceConfigurationCommonId(getPoolDataSourceConfiguration());
-            
-        if (state == State.INITIALIZING) {
-            // Since the configuration is fixed now we can do lookups for an active parent.
-            // The first pool data source (for same properties) will have activeParent == null
-            activeParent = (CombiPoolDataSource<T>) activeParents.get(commonId); 
 
-            if (activeParent != null && !activeParent.isActive()) {
-                activeParent = null;
-            }
-            
-            if (activeParent == null) {
-                // The next with the same properties will get this one as activeParent
-                activeParents.computeIfAbsent(commonId, k -> this);
-            }
+        // Since the configuration is fixed now we can do lookups for an active parent.
+        // The first pool data source (for same properties) will have activeParent == null
+
+        // shadown this.activeParent
+        CombiPoolDataSource<T> activeParent = (CombiPoolDataSource<T>) activeParents.get(commonId); 
+
+        if (activeParent != null && !activeParent.isActive()) {
+            activeParent = null;
         }
 
+        if (activeParent == null) {
+            // The next with the same properties will get this one as activeParent
+            activeParents.computeIfAbsent(commonId, k -> this);
+        }
+
+        return activeParent;
+    }
+
+    private void updateCombiPoolAdministration(final State state, final CombiPoolDataSource<T> activeParent) {
         if (activeParent != null) {
             switch (state) {
             case INITIALIZING:
                 activeParent.activeChildren.incrementAndGet();
                 break;
             case READY:
-                activeParent.activeChildren.decrementAndGet();
+                if (activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
+                    activeParent.close(); // try to close() again
+                }
                 break;
             default:
                 break;
@@ -141,48 +149,46 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         }
     }
 
-    protected boolean canClose() {
-        boolean result = false;
-        
-        switch(state) {
-        case INITIALIZING:
-            result = true;
-            break;
-        case READY:
-        case CLOSING:
-            result = activeParent == null || activeParent.activeChildren.get() == 0;
-            break;
-        case ERROR:
-            result = true;
-            break;
-        case CLOSED:
-            break;
-        }
-
-        log.debug("canClose() = {}", result);
-
-        return result;
-    }
-
     @jakarta.annotation.PreDestroy
     @javax.annotation.PreDestroy
-    public final void close() {
+    public final synchronized void close() {
         log.debug("close()");
         
-        if (canClose()) {
-            tearDown();
-        }
+        tearDown();
     }
 
     // you may override this one
+    // already called in an synchronized context
     protected void tearDown(){
-        log.debug("tearDown(state={})", state);
+        // minimize accessing volatile variables by shadowing them
+        State state = this.state;
+        CombiPoolDataSource<T> activeParent = this.activeParent;
         
-        if (state != State.CLOSED) {
-            updateCombiPoolAdministration();
+        log.debug("state while leaving setUp(): {}", state);
+
+        switch(state) {
+        case READY:
+        case CLOSING:
+            if (activeParent == null && activeChildren.get() != 0) {
+                // parent having active children can not get CLOSED now but mark it as CLOSING (or keep it like that)
+                if (state != State.CLOSING) {
+                    state = this.state = State.CLOSING;
+                }
+                break;
+            }
+            // fall thru
+        case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
+        case ERROR:
+            updateCombiPoolAdministration(state, activeParent);
             updatePool(poolDataSource, determineCommonPoolDataSource(), false, activeParent == null);
-            state = State.CLOSED;
+            state = this.state = State.CLOSED;
+            break;
+            
+        case CLOSED:
+            break;
         }
+        
+        log.debug("state while leaving tearDown(): {}", state);
     }
 
     protected void updatePoolName(@NonNull final T configPoolDataSource,
