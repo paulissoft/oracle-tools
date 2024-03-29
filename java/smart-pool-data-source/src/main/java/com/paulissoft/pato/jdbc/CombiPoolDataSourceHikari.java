@@ -11,20 +11,118 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSource> implements HikariConfigMXBean, PoolDataSourcePropertiesHikari {
+public class CombiPoolDataSourceHikari
+    extends CombiPoolDataSource<HikariDataSource>
+    implements HikariConfigMXBean, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
-    public CombiPoolDataSourceHikari() {
-        this(new HikariDataSource());
-        log.info("CombiPoolDataSourceHikari()");
+    public CombiPoolDataSourceHikari(String driverClassName,
+                                     String url,
+                                     String username,
+                                     String password,
+                                     String poolName,
+                                     int maximumPoolSize,
+                                     int minimumIdle,
+                                     String dataSourceClassName,
+                                     boolean autoCommit,
+                                     long connectionTimeout,
+                                     long idleTimeout,
+                                     long maxLifetime,
+                                     String connectionTestQuery,
+                                     long initializationFailTimeout,
+                                     boolean isolateInternalQueries,
+                                     boolean allowPoolSuspension,
+                                     boolean readOnly,
+                                     boolean registerMbeans,    
+                                     long validationTimeout,
+                                     long leakDetectionThreshold)
+                                         {
+        this(build(driverClassName,
+                   url,
+                   username,
+                   password,
+                   poolName,
+                   maximumPoolSize,
+                   minimumIdle,
+                   dataSourceClassName,
+                   autoCommit,
+                   connectionTimeout,
+                   idleTimeout,
+                   maxLifetime,
+                   connectionTestQuery,
+                   initializationFailTimeout,
+                   isolateInternalQueries,
+                   allowPoolSuspension,
+                   readOnly,
+                   registerMbeans,    
+                   validationTimeout,
+                   leakDetectionThreshold));
     }
 
-    private CombiPoolDataSourceHikari(@NonNull final HikariDataSource configPoolDataSource) {
-        super(configPoolDataSource);
-        log.info("CombiPoolDataSourceHikari({})", configPoolDataSource);
+    private CombiPoolDataSourceHikari(final Object[] fields) {
+        super(fields);
     }
 
+    protected static Object[] build(String driverClassName,
+                                    String url,
+                                    String username,
+                                    String password,
+                                    String poolName,
+                                    int maximumPoolSize,
+                                    int minimumIdle,
+                                    String dataSourceClassName,
+                                    boolean autoCommit,
+                                    long connectionTimeout,
+                                    long idleTimeout,
+                                    long maxLifetime,
+                                    String connectionTestQuery,
+                                    long initializationFailTimeout,
+                                    boolean isolateInternalQueries,
+                                    boolean allowPoolSuspension,
+                                    boolean readOnly,
+                                    boolean registerMbeans,    
+                                    long validationTimeout,
+                                    long leakDetectionThreshold)
+    {
+        final HikariDataSource hikariDataSource = new HikariDataSource();
+        
+        int nr = 0;
+        final int maxNr = 18;
+        
+        do {
+            try {
+                switch(nr) {
+                case 0: hikariDataSource.setDriverClassName(driverClassName); break;
+                case 1: hikariDataSource.setJdbcUrl(url); break;
+                case 2: hikariDataSource.setUsername(username); break;
+                case 3: hikariDataSource.setPassword(password); break;
+                case 4: /* connection pool name is not copied here */ break;
+                case 5: hikariDataSource.setMaximumPoolSize(maximumPoolSize); break;
+                case 6: hikariDataSource.setMinimumIdle(minimumIdle); break;
+                case 7: hikariDataSource.setAutoCommit(autoCommit); break;
+                case 8: hikariDataSource.setConnectionTimeout(connectionTimeout); break;
+                case 9: hikariDataSource.setIdleTimeout(idleTimeout); break;
+                case 10: hikariDataSource.setMaxLifetime(maxLifetime); break;
+                case 11: hikariDataSource.setConnectionTestQuery(connectionTestQuery); break;
+                case 12: hikariDataSource.setInitializationFailTimeout(initializationFailTimeout); break;
+                case 13: hikariDataSource.setIsolateInternalQueries(isolateInternalQueries); break;
+                case 14: hikariDataSource.setAllowPoolSuspension(allowPoolSuspension); break;
+                case 15: hikariDataSource.setReadOnly(readOnly); break;
+                case 16: hikariDataSource.setRegisterMbeans(registerMbeans); break;
+                case 17: hikariDataSource.setValidationTimeout(validationTimeout); break;
+                case 18: hikariDataSource.setLeakDetectionThreshold(leakDetectionThreshold); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
+            }
+        } while (++nr <= maxNr);
+
+        return new Object[] { hikariDataSource, password };
+    }
+    
     // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverride.class) // do not delegate setPassword()
     private HikariDataSource getPoolDataSourceSetter() {
@@ -38,7 +136,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
     }
 
     // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
-    @Delegate(excludes={ PoolDataSourcePropertiesHikari.class, ToOverride.class })
+    @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverride.class })
     private HikariDataSource getCommonPoolDataSource() {
         return determineCommonPoolDataSource();
     }
@@ -68,7 +166,7 @@ public class CombiPoolDataSourceHikari extends CombiPoolDataSource<HikariDataSou
         return getPoolDataSourceConfiguration(true);
     }
     
-    public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
+    private PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())

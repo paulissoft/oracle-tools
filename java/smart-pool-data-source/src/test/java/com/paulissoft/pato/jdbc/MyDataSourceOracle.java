@@ -1,14 +1,11 @@
 package com.paulissoft.pato.jdbc;
 
-import javax.sql.DataSource;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.ConstructorBinding;
-import oracle.ucp.jdbc.PoolDataSource;
-import lombok.experimental.Delegate;
 
 
 @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
-public class MyDataSourceOracle extends PoolDataSourcePropertiesOracle implements PoolDataSource {
+public class MyDataSourceOracle extends CombiPoolDataSourceOracle {
 
     @ConstructorBinding
     public MyDataSourceOracle(String url,
@@ -48,12 +45,6 @@ public class MyDataSourceOracle extends PoolDataSourcePropertiesOracle implement
               maxConnectionReuseTime,
               secondsToTrustIdleConnection,
               connectionValidationTimeout);
-        System.out.println("Killroy was here");
-    }
-
-    @Delegate
-    protected PoolDataSource getPoolDataSource() {
-        return super.getPoolDataSource();
     }
 }
 

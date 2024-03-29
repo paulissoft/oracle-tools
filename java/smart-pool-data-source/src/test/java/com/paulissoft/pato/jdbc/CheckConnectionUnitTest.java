@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import oracle.ucp.jdbc.PoolDataSource;
-import org.springframework.context.annotation.Bean;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -32,6 +28,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
             PoolDataSourceConfiguration.class,
             PoolDataSourceConfigurationHikari.class,
             DataSourceProperties.class,
+            MyDataSourceHikari.class,
             MyDataSourceOracle.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
 @TestPropertySource("classpath:application-test.properties")
@@ -78,12 +75,10 @@ public class CheckConnectionUnitTest {
     private DataSourceProperties dataSourceProperties;
 
     @Autowired
-    @Qualifier("operatorDataSourceHikari")
-    private DataSource dataSourceHikari;
+    private MyDataSourceHikari dataSourceHikari;
     
     @Autowired
-    //@Qualifier("operatorDataSourceOracle")
-    private PoolDataSource dataSourceOracle;
+    private MyDataSourceOracle dataSourceOracle;
     
     @BeforeAll
     static void clear() {
@@ -402,20 +397,20 @@ public class CheckConnectionUnitTest {
     void testConnectionOracle() throws SQLException {
         log.debug("testConnectionOracle()");
 
-        final PoolDataSource ds = (PoolDataSource) dataSourceOracle;
-        
-        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
-        assertEquals("bc_proxy[boopapij]", ds.getUser());
-        // assertEquals("bc_proxy", ds.getPassword());
-        assertEquals(10, ds.getMinPoolSize());
-        assertEquals(20, ds.getMaxPoolSize());
-        // assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
+        try (final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) dataSourceOracle) {
+            assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+            assertEquals("bc_proxy[boopapij]", ds.getUser());
+            // assertEquals("bc_proxy", ds.getPassword());
+            assertEquals(10, ds.getMinPoolSize());
+            assertEquals(20, ds.getMaxPoolSize());
+            // assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
 
-        final Connection conn = ds.getConnection();
+            final Connection conn = ds.getConnection();
 
-        assertNotNull(conn);
-        assertEquals("BOOPAPIJ", conn.getSchema());
+            assertNotNull(conn);
+            assertEquals("BOOPAPIJ", conn.getSchema());
 
-        conn.close();
+            conn.close();
+        }
     }
 }

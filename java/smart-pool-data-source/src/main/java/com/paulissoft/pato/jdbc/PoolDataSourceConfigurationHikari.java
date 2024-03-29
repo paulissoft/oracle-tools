@@ -21,7 +21,9 @@ import org.springframework.stereotype.Component;
 @SuperBuilder(toBuilder = true)
 @Component
 @ConfigurationProperties(prefix = "spring.datasource.hikari")
-public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration implements PoolDataSourcePropertiesHikari {
+public class PoolDataSourceConfigurationHikari
+    extends PoolDataSourceConfiguration
+    implements PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = false;
     

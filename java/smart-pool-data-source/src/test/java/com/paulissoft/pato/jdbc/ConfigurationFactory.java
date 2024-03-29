@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -116,27 +115,16 @@ public class ConfigurationFactory {
         return new DataSourceProperties();
     }
     
-    @Bean(name = {"operatorDataSourceHikari"})
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    public DataSource dataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    public MyDataSourceHikari dataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            //.type(HikariDataSource.class) // app.operator.datasource.type is NOT correct
+            .type(MyDataSourceHikari.class) // app.operator.datasource.type is NOT correct
             .build();
     }
 
-    /*
     @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
-    public DataSource dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(CombiPoolDataSourceOracle.class) // app.operator.datasource.type is NOT correct
-            .build();
-    }
-    */
-
-    @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
-    public DataSource dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    public MyDataSourceOracle dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(MyDataSourceOracle.class) // app.operator.datasource.type is NOT correct
