@@ -130,7 +130,8 @@ public class ConfigurationFactory {
     public DataSource dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(CombiPoolDataSourceOracle.class) // app.operator.datasource.type is NOT correct
+            //.type(CombiPoolDataSourceOracle.class) // app.operator.datasource.type is NOT correct
+            .type(MyDataSourceOracle.class) // app.operator.datasource.type is NOT correct
             .build();
     }
 }

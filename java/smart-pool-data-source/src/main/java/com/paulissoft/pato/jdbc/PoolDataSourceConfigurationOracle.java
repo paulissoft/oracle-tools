@@ -10,8 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
 import oracle.ucp.jdbc.PoolDataSource;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+//import org.springframework.boot.context.properties.ConfigurationProperties;
+//import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -20,8 +20,8 @@ import org.springframework.stereotype.Component;
 @ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource.oracleucp")
+//@Component
+//@ConfigurationProperties(prefix = "spring.datasource.oracleucp")
 public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfiguration implements PoolDataSourcePropertiesOracle {
 
     // properties that may differ, i.e. are ignored

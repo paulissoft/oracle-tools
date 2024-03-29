@@ -9,8 +9,8 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+//import org.springframework.boot.context.properties.ConfigurationProperties;
+//import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component;
 @ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource.hikari")
+//@Component
+//@ConfigurationProperties(prefix = "spring.datasource.hikari")
 public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration implements PoolDataSourcePropertiesHikari {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = false;

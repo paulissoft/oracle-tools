@@ -11,8 +11,8 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+//import org.springframework.boot.context.properties.ConfigurationProperties;
+//import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -20,8 +20,8 @@ import org.springframework.stereotype.Component;
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource")
+//@Component
+//@ConfigurationProperties(prefix = "spring.datasource")
 public class PoolDataSourceConfiguration implements ConnectInfo {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = true;
