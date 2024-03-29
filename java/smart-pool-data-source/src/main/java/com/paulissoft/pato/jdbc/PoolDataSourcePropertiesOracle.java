@@ -2,8 +2,10 @@ package com.paulissoft.pato.jdbc;
 
 import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 public class PoolDataSourcePropertiesOracle extends PoolDataSourceProperties<PoolDataSource> {
 
     PoolDataSourcePropertiesOracle(final BuildResult buildResult) {
@@ -60,7 +62,7 @@ public class PoolDataSourcePropertiesOracle extends PoolDataSourceProperties<Poo
                     throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
-                // log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
             }
         } while (++nr <= maxNr);
 
