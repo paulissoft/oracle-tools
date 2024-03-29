@@ -1,7 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-//import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -75,10 +75,16 @@ public class CheckConnectionUnitTest {
     private DataSourceProperties dataSourceProperties;
 
     @Autowired
-    private MyDataSourceHikari dataSourceHikari;
+    private MyDataSourceHikari dataSourceHikari1;
     
     @Autowired
-    private MyDataSourceOracle dataSourceOracle;
+    private MyDataSourceHikari dataSourceHikari2;
+    
+    @Autowired
+    private MyDataSourceOracle dataSourceOracle1;
+    
+    @Autowired
+    private MyDataSourceOracle dataSourceOracle2;
     
     @BeforeAll
     static void clear() {
@@ -376,20 +382,27 @@ public class CheckConnectionUnitTest {
     void testConnectionHikari() throws SQLException {
         log.debug("testConnectionHikari()");
 
-        try (final CombiPoolDataSourceHikari ds = (CombiPoolDataSourceHikari) dataSourceHikari) {
-            assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
-            assertEquals("bc_proxy[boopapij]", ds.getUsername());
-            assertEquals("bc_proxy", ds.getPassword());
-            assertEquals(60, ds.getMinimumIdle());
-            assertEquals(60, ds.getMaximumPoolSize());
-            assertEquals("HikariPool-boopapij", ds.getPoolName());
+        assertNotEquals(dataSourceHikari1, dataSourceHikari2);
 
-            final Connection conn = ds.getConnection();
+        assertTrue(dataSourceHikari1.isParentPoolDataSource());
+        assertFalse(dataSourceHikari2.isParentPoolDataSource());
 
-            assertNotNull(conn);
-            assertEquals("BOOPAPIJ", conn.getSchema());
+        for (int nr = 1; nr <= 2; nr++) {
+            try (final CombiPoolDataSourceHikari ds = (CombiPoolDataSourceHikari) (nr == 1 ? dataSourceHikari1 : dataSourceHikari2)) {
+                assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
+                assertEquals("bc_proxy[boopapij]", ds.getUsername());
+                assertEquals("bc_proxy", ds.getPassword());
+                assertEquals(60, ds.getMinimumIdle());
+                assertEquals(60, ds.getMaximumPoolSize());
+                assertEquals("HikariPool-boopapij", ds.getPoolName());
 
-            conn.close();
+                final Connection conn = ds.getConnection();
+
+                assertNotNull(conn);
+                assertEquals("BOOPAPIJ", conn.getSchema());
+
+                conn.close();
+            }
         }
     }
 
@@ -397,20 +410,27 @@ public class CheckConnectionUnitTest {
     void testConnectionOracle() throws SQLException {
         log.debug("testConnectionOracle()");
 
-        try (final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) dataSourceOracle) {
-            assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
-            assertEquals("bc_proxy[boopapij]", ds.getUser());
-            // assertEquals("bc_proxy", ds.getPassword());
-            assertEquals(10, ds.getMinPoolSize());
-            assertEquals(20, ds.getMaxPoolSize());
-            // assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
+        assertNotEquals(dataSourceOracle1, dataSourceOracle2);
 
-            final Connection conn = ds.getConnection();
+        assertTrue(dataSourceOracle1.isParentPoolDataSource());
+        assertFalse(dataSourceOracle2.isParentPoolDataSource());
 
-            assertNotNull(conn);
-            assertEquals("BOOPAPIJ", conn.getSchema());
+        for (int nr = 1; nr <= 2; nr++) {
+            try (final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) (nr == 1 ? dataSourceOracle1 : dataSourceOracle2)) {
+                assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+                assertEquals("bc_proxy[boopapij]", ds.getUser());
+                assertEquals("bc_proxy", ds.getPassword());
+                assertEquals(10, ds.getMinPoolSize());
+                assertEquals(20, ds.getMaxPoolSize());
+                assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
 
-            conn.close();
+                final Connection conn = ds.getConnection();
+
+                assertNotNull(conn);
+                assertEquals("BOOPAPIJ", conn.getSchema());
+                
+                conn.close();
+            }
         }
     }
 }

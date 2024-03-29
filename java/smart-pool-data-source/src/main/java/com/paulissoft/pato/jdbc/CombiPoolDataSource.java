@@ -92,6 +92,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
         return state;
     }
 
+    public final boolean isParentPoolDataSource() {
+        return activeParent == null;
+    }
+        
     public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
 
     private CombiPoolDataSource<T> determineActiveParent() {
