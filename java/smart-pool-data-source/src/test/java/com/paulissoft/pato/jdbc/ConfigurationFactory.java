@@ -114,20 +114,38 @@ public class ConfigurationFactory {
     public DataSourceProperties dataSourceProperties() {
         return new DataSourceProperties();
     }
+
+    // new standard: DataSourceBuilder
     
-    @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    public MyDataSourceHikari dataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
+    public MyDomainDataSourceHikari domainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyDataSourceHikari.class) // app.operator.datasource.type is NOT correct
+            .type(MyDomainDataSourceHikari.class)
+            .build();
+    }
+
+    @ConfigurationProperties(prefix = "app.domain.datasource.oracleucp")
+    public MyDomainDataSourceOracle domainDataSourceOracle(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(MyDomainDataSourceOracle.class)
+            .build();
+    } 
+
+    @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
+    public MyOperatorDataSourceHikari operatorDataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(MyOperatorDataSourceHikari.class) // app.operator.datasource.type is NOT correct
             .build();
     }
 
     @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
-    public MyDataSourceOracle dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    public MyOperatorDataSourceOracle operatorDataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyDataSourceOracle.class) // app.operator.datasource.type is NOT correct
+            .type(MyOperatorDataSourceOracle.class) // app.operator.datasource.type is NOT correct
             .build();
     } 
 }

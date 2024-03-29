@@ -28,8 +28,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
             PoolDataSourceConfiguration.class,
             PoolDataSourceConfigurationHikari.class,
             DataSourceProperties.class,
-            MyDataSourceHikari.class,
-            MyDataSourceOracle.class})
+            MyDomainDataSourceHikari.class,
+            MyDomainDataSourceOracle.class,
+            MyOperatorDataSourceHikari.class,
+            MyOperatorDataSourceOracle.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConnectionUnitTest {
@@ -75,16 +77,16 @@ public class CheckConnectionUnitTest {
     private DataSourceProperties dataSourceProperties;
 
     @Autowired
-    private MyDataSourceHikari dataSourceHikari1;
+    private MyDomainDataSourceHikari domainDataSourceHikari;
     
     @Autowired
-    private MyDataSourceHikari dataSourceHikari2;
+    private MyOperatorDataSourceHikari operatorDataSourceHikari;
     
     @Autowired
-    private MyDataSourceOracle dataSourceOracle1;
+    private MyDomainDataSourceOracle domainDataSourceOracle;
     
     @Autowired
-    private MyDataSourceOracle dataSourceOracle2;
+    private MyOperatorDataSourceOracle operatorDataSourceOracle;
     
     @BeforeAll
     static void clear() {
@@ -382,24 +384,30 @@ public class CheckConnectionUnitTest {
     void testConnectionHikari() throws SQLException {
         log.debug("testConnectionHikari()");
 
-        assertNotEquals(dataSourceHikari1, dataSourceHikari2);
+        assertNotEquals(domainDataSourceHikari, operatorDataSourceHikari);
 
-        assertTrue(dataSourceHikari1.isParentPoolDataSource());
-        assertFalse(dataSourceHikari2.isParentPoolDataSource());
+        assertNotEquals(domainDataSourceHikari.isParentPoolDataSource(), operatorDataSourceHikari.isParentPoolDataSource());
+
+        final CombiPoolDataSourceHikari parent = domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
+
+        final CombiPoolDataSourceHikari child = !domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
 
         for (int nr = 1; nr <= 2; nr++) {
-            try (final CombiPoolDataSourceHikari ds = (CombiPoolDataSourceHikari) (nr == 1 ? dataSourceHikari1 : dataSourceHikari2)) {
+            log.debug("round #{}", nr);
+            try (final CombiPoolDataSourceHikari ds = (nr == 1 ? parent : child)) {                
+                // the data source will always show the same (modified) properties from the common data source
+
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
-                assertEquals("bc_proxy[boopapij]", ds.getUsername());
+                assertEquals(parent.getUsername(), ds.getUsername());
                 assertEquals("bc_proxy", ds.getPassword());
-                assertEquals(60, ds.getMinimumIdle());
-                assertEquals(60, ds.getMaximumPoolSize());
-                assertEquals("HikariPool-boopapij", ds.getPoolName());
+                assertEquals(2 * 60, ds.getMinimumIdle());
+                assertEquals(2 * 60, ds.getMaximumPoolSize());
+                assertEquals("HikariPool-bodomain-boopapij", ds.getPoolName());
 
                 final Connection conn = ds.getConnection();
 
                 assertNotNull(conn);
-                assertEquals("BOOPAPIJ", conn.getSchema());
+                assertEquals(ds == domainDataSourceHikari ? "BODOMAIN" : "BOOPAPIJ", conn.getSchema());
 
                 conn.close();
             }
@@ -410,24 +418,30 @@ public class CheckConnectionUnitTest {
     void testConnectionOracle() throws SQLException {
         log.debug("testConnectionOracle()");
 
-        assertNotEquals(dataSourceOracle1, dataSourceOracle2);
+        assertNotEquals(domainDataSourceOracle, operatorDataSourceOracle);
 
-        assertTrue(dataSourceOracle1.isParentPoolDataSource());
-        assertFalse(dataSourceOracle2.isParentPoolDataSource());
+        assertNotEquals(domainDataSourceOracle.isParentPoolDataSource(), operatorDataSourceOracle.isParentPoolDataSource());
+
+        final CombiPoolDataSourceOracle parent = domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
+
+        final CombiPoolDataSourceOracle child = !domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
 
         for (int nr = 1; nr <= 2; nr++) {
-            try (final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) (nr == 1 ? dataSourceOracle1 : dataSourceOracle2)) {
+            log.debug("round #{}", nr);
+            try (final CombiPoolDataSourceOracle ds = (nr == 1 ? parent : child)) {
+                // the data source will always show the same (modified) properties from the common data source
+                
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
-                assertEquals("bc_proxy[boopapij]", ds.getUser());
-                assertEquals("bc_proxy", ds.getPassword());
+                assertEquals(parent.getUser(), ds.getUser());
+                assertEquals(parent.getPassword(), ds.getPassword());
                 assertEquals(10, ds.getMinPoolSize());
                 assertEquals(20, ds.getMaxPoolSize());
-                assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
+                assertEquals(parent.getConnectionPoolName(), ds.getConnectionPoolName());
 
                 final Connection conn = ds.getConnection();
 
                 assertNotNull(conn);
-                assertEquals("BOOPAPIJ", conn.getSchema());
+                assertEquals(ds == domainDataSourceOracle ? "BODOMAIN" : "BOOPAPIJ", conn.getSchema());
                 
                 conn.close();
             }
