@@ -30,24 +30,24 @@ public class MyDataSourceOracle extends PoolDataSourcePropertiesOracle implement
                               int secondsToTrustIdleConnection,
                               int connectionValidationTimeout)
     {
-        super(PoolDataSourcePropertiesOracle.build(url,
-                                                   username,
-                                                   password,
-                                                   connectionPoolName,
-                                                   initialPoolSize,
-                                                   minPoolSize,
-                                                   maxPoolSize,
-                                                   connectionFactoryClassName,
-                                                   validateConnectionOnBorrow,
-                                                   abandonedConnectionTimeout,
-                                                   timeToLiveConnectionTimeout,
-                                                   inactiveConnectionTimeout,
-                                                   timeoutCheckInterval,
-                                                   maxStatements,
-                                                   connectionWaitTimeout,
-                                                   maxConnectionReuseTime,
-                                                   secondsToTrustIdleConnection,
-                                                   connectionValidationTimeout));
+        super(url,
+              username,
+              password,
+              connectionPoolName,
+              initialPoolSize,
+              minPoolSize,
+              maxPoolSize,
+              connectionFactoryClassName,
+              validateConnectionOnBorrow,
+              abandonedConnectionTimeout,
+              timeToLiveConnectionTimeout,
+              inactiveConnectionTimeout,
+              timeoutCheckInterval,
+              maxStatements,
+              connectionWaitTimeout,
+              maxConnectionReuseTime,
+              secondsToTrustIdleConnection,
+              connectionValidationTimeout);
         System.out.println("Killroy was here");
     }
 

@@ -8,7 +8,47 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PoolDataSourcePropertiesOracle extends PoolDataSourceProperties<PoolDataSource> {
 
-    PoolDataSourcePropertiesOracle(final BuildResult buildResult) {
+    public PoolDataSourcePropertiesOracle(String url,
+                                          String username,
+                                          String password,
+                                          String connectionPoolName,
+                                          int initialPoolSize,
+                                          int minPoolSize,
+                                          int maxPoolSize,
+                                          String connectionFactoryClassName,
+                                          boolean validateConnectionOnBorrow,
+                                          int abandonedConnectionTimeout,
+                                          int timeToLiveConnectionTimeout,
+                                          int inactiveConnectionTimeout,
+                                          int timeoutCheckInterval,
+                                          int maxStatements,
+                                          int connectionWaitTimeout,
+                                          long maxConnectionReuseTime,
+                                          int secondsToTrustIdleConnection,
+                                          int connectionValidationTimeout)
+    {
+        super(PoolDataSourcePropertiesOracle.build(url,
+                                                   username,
+                                                   password,
+                                                   connectionPoolName,
+                                                   initialPoolSize,
+                                                   minPoolSize,
+                                                   maxPoolSize,
+                                                   connectionFactoryClassName,
+                                                   validateConnectionOnBorrow,
+                                                   abandonedConnectionTimeout,
+                                                   timeToLiveConnectionTimeout,
+                                                   inactiveConnectionTimeout,
+                                                   timeoutCheckInterval,
+                                                   maxStatements,
+                                                   connectionWaitTimeout,
+                                                   maxConnectionReuseTime,
+                                                   secondsToTrustIdleConnection,
+                                                   connectionValidationTimeout));
+        System.out.println("Killroy was here");
+    }
+
+    private PoolDataSourcePropertiesOracle(final BuildResult buildResult) {
         super(buildResult);
     }
 
