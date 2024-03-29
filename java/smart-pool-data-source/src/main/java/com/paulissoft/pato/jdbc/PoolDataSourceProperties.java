@@ -15,26 +15,10 @@ public class PoolDataSourceProperties<T extends DataSource> implements DataSourc
 
     private final String usernameSession2;
 
-    protected static class BuildResult {
-        final DataSource pds;
-
-        final String username;
-
-        final String password;
-        
-        BuildResult(final DataSource pds,
-                    final String username,
-                    final String password) {
-            this.pds = pds;
-            this.username = username;
-            this.password = password;
-        }
-    }
-
-    protected PoolDataSourceProperties(final BuildResult buildResult) {
-        this.pds = (T) buildResult.pds;
-        this.usernameSession1 = buildResult.username;
-        this.passwordSession1 = buildResult.password;
+    protected PoolDataSourceProperties(final Object[] fields) {
+        this.pds = (T) fields[0];
+        this.usernameSession1 = (String) fields[1];
+        this.passwordSession1 = (String) fields[2];
         this.usernameSession2 = null;
     }
 

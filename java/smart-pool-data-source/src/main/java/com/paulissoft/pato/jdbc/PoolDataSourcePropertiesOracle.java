@@ -48,28 +48,28 @@ public class PoolDataSourcePropertiesOracle extends PoolDataSourceProperties<Poo
         System.out.println("Killroy was here");
     }
 
-    private PoolDataSourcePropertiesOracle(final BuildResult buildResult) {
-        super(buildResult);
+    private PoolDataSourcePropertiesOracle(final Object[] fields) {
+        super(fields);
     }
 
-    protected static BuildResult build(String url,
-                                       String username,
-                                       String password,
-                                       String connectionPoolName,
-                                       int initialPoolSize,
-                                       int minPoolSize,
-                                       int maxPoolSize,
-                                       String connectionFactoryClassName,
-                                       boolean validateConnectionOnBorrow,
-                                       int abandonedConnectionTimeout,
-                                       int timeToLiveConnectionTimeout,
-                                       int inactiveConnectionTimeout,
-                                       int timeoutCheckInterval,
-                                       int maxStatements,
-                                       int connectionWaitTimeout,
-                                       long maxConnectionReuseTime,
-                                       int secondsToTrustIdleConnection,
-                                       int connectionValidationTimeout) {
+    protected static Object[] build(String url,
+                                    String username,
+                                    String password,
+                                    String connectionPoolName,
+                                    int initialPoolSize,
+                                    int minPoolSize,
+                                    int maxPoolSize,
+                                    String connectionFactoryClassName,
+                                    boolean validateConnectionOnBorrow,
+                                    int abandonedConnectionTimeout,
+                                    int timeToLiveConnectionTimeout,
+                                    int inactiveConnectionTimeout,
+                                    int timeoutCheckInterval,
+                                    int maxStatements,
+                                    int connectionWaitTimeout,
+                                    long maxConnectionReuseTime,
+                                    int secondsToTrustIdleConnection,
+                                    int connectionValidationTimeout) {
 
         final PoolDataSourceImpl poolDataSource = new PoolDataSourceImpl();
 
@@ -106,6 +106,6 @@ public class PoolDataSourcePropertiesOracle extends PoolDataSourceProperties<Poo
             }
         } while (++nr <= maxNr);
 
-        return new BuildResult(poolDataSource, username, password);
+        return new Object[]{ poolDataSource, username, password };
     }
 }
