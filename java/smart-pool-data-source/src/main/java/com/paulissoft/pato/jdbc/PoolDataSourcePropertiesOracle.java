@@ -4,22 +4,10 @@ import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
-public class PoolDataSourcePropertiesOracle {
+public class PoolDataSourcePropertiesOracle extends PoolDataSourceProperties<PoolDataSource> {
 
-    protected static class BuildResult {
-        final PoolDataSource pds;
-
-        final String username;
-
-        final String password;
-        
-        BuildResult(final PoolDataSource pds,
-                    final String username,
-                    final String password) {
-            this.pds = pds;
-            this.username = username;
-            this.password = password;
-        }
+    PoolDataSourcePropertiesOracle(final BuildResult buildResult) {
+        super(buildResult);
     }
 
     protected static BuildResult build(String url,

@@ -37,7 +37,7 @@ public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSourc
     }
     
     // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
-    @Delegate(excludes={ PoolDataSourcePropertiesOracle.class, ToOverride.class })
+    @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverride.class })
     private PoolDataSource getCommonPoolDataSource() {
         return determineCommonPoolDataSource();
     }

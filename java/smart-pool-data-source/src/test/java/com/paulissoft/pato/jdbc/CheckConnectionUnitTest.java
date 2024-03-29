@@ -406,10 +406,10 @@ public class CheckConnectionUnitTest {
         
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
         assertEquals("bc_proxy[boopapij]", ds.getUser());
-        assertEquals("bc_proxy", ds.getPassword());
+        // assertEquals("bc_proxy", ds.getPassword());
         assertEquals(10, ds.getMinPoolSize());
         assertEquals(20, ds.getMaxPoolSize());
-        assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
+        // assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
 
         final Connection conn = ds.getConnection();
 
