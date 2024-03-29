@@ -22,14 +22,17 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-
+import oracle.ucp.jdbc.PoolDataSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
 @EnableConfigurationProperties({PoolDataSourceConfiguration.class,
             PoolDataSourceConfiguration.class,
             PoolDataSourceConfigurationHikari.class,
-            DataSourceProperties.class})
+            DataSourceProperties.class,
+            MyDataSourceOracle.class})
 @ContextConfiguration(classes = ConfigurationFactory.class)
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConnectionUnitTest {
@@ -79,8 +82,8 @@ public class CheckConnectionUnitTest {
     private DataSource dataSourceHikari;
     
     @Autowired
-    @Qualifier("operatorDataSourceOracle")
-    private DataSource dataSourceOracle;
+    //@Qualifier("operatorDataSourceOracle")
+    private PoolDataSource dataSourceOracle;
     
     @BeforeAll
     static void clear() {
@@ -399,20 +402,20 @@ public class CheckConnectionUnitTest {
     void testConnectionOracle() throws SQLException {
         log.debug("testConnectionOracle()");
 
-        try (final CombiPoolDataSourceOracle ds = (CombiPoolDataSourceOracle) dataSourceOracle) {
-            assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
-            assertEquals("bc_proxy[boopapij]", ds.getUser());
-            assertEquals("bc_proxy", ds.getPassword());
-            assertEquals(10, ds.getMinPoolSize());
-            assertEquals(20, ds.getMaxPoolSize());
-            assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
+        final PoolDataSource ds = (PoolDataSource) dataSourceOracle;
+        
+        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+        assertEquals("bc_proxy[boopapij]", ds.getUser());
+        assertEquals("bc_proxy", ds.getPassword());
+        assertEquals(10, ds.getMinPoolSize());
+        assertEquals(20, ds.getMaxPoolSize());
+        assertEquals("OraclePool-boopapij", ds.getConnectionPoolName());
 
-            final Connection conn = ds.getConnection();
+        final Connection conn = ds.getConnection();
 
-            assertNotNull(conn);
-            assertEquals("BOOPAPIJ", conn.getSchema());
+        assertNotNull(conn);
+        assertEquals("BOOPAPIJ", conn.getSchema());
 
-            conn.close();
-        }
+        conn.close();
     }
 }

@@ -10,7 +10,7 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
-public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSource> implements PoolDataSource, PoolDataSourcePropertiesOracle {
+public class CombiPoolDataSourceOracle extends CombiPoolDataSource<PoolDataSource> implements PoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 

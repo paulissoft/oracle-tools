@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 @SuperBuilder(toBuilder = true)
 @Component
 @ConfigurationProperties(prefix = "spring.datasource.oracleucp")
-public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfiguration implements PoolDataSourcePropertiesOracle {
+public class PoolDataSourceConfigurationOracle extends PoolDataSourceConfiguration implements PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     // properties that may differ, i.e. are ignored
     

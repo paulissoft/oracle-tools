@@ -125,7 +125,7 @@ public class ConfigurationFactory {
             .build();
     }
 
-    @Bean(name = {"operatorDataSourceOracle"})
+    /*
     @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
     public DataSource dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
@@ -133,4 +133,13 @@ public class ConfigurationFactory {
             .type(CombiPoolDataSourceOracle.class) // app.operator.datasource.type is NOT correct
             .build();
     }
+    */
+
+    @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
+    public DataSource dataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(MyDataSourceOracle.class) // app.operator.datasource.type is NOT correct
+            .build();
+    } 
 }
