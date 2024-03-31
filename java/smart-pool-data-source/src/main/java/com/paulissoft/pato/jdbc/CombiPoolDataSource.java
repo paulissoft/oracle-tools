@@ -2,6 +2,9 @@ package com.paulissoft.pato.jdbc;
 
 import java.io.Closeable;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -17,49 +20,32 @@ import oracle.jdbc.OracleConnection;
 
 
 @Slf4j
-public abstract class CombiPoolDataSource<T extends DataSource> implements DataSource, Closeable {
+public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDataSourceConfiguration> implements DataSource, Closeable {
 
     // We need to know the active parents in order to assign a value to an active parent so that a data source can use a common data source.
-    // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T>> so use DataSource instead of T
+    // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P>> so use DataSource instead of T
     private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> activeParents = new ConcurrentHashMap<>();
 
     static void clear() {
         activeParents.clear();
     }    
 
-    /*
-     * The first two instance fields (poolDataSource and passwordSession1) are passed in the array fields in the constructor.
-     * The password is needed to later con switch to another user while connecting.
-     */
-    
+    @Getter(AccessLevel.PACKAGE)
     @NonNull
-    private final T poolDataSource; // set in constructor
+    private final P poolDataSourceConfiguration;
 
-    /**
-     * Since getPassword() is a deprecated method (in Oracle UCP) we need another way of getting it.
-     * The idea is to pass it via the constructor.
-     */
+    /* either poolDataSource or activeParent is null */
+    
+    private final T poolDataSource;
 
-    @Getter(AccessLevel.PROTECTED)
-    private final String passwordSession1;
+    private final CombiPoolDataSource<T, P> activeParent;
 
     @NonNull
     private final AtomicInteger activeChildren = new AtomicInteger(0); // safe in threads
 
-    private final PoolDataSourceConfiguration poolDataSourceConfiguration;
-
-    private final PoolDataSourceConfigurationCommonId commonId;
-
-    private final CombiPoolDataSource<T> activeParent;
-
-    @Getter
-    private final String usernameSession1;
-
-    @Getter
-    private final String usernameSession2;
-
     protected enum State {
-        INITIALIZING, // next state: OPEN
+        INITIALIZING, // next possible states: ERROR, OPEN or CLOSED
+        ERROR,        // INITIALIZATING error: next possible states: CLOSED
         OPEN,         // next possible states: CLOSING (a parent that has active children) or CLOSED (otherwise)
         CLOSING,      // can not close yet since there are active children: next possible states: CLOSED
         CLOSED
@@ -68,43 +54,109 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     @NonNull
     private volatile State state = State.INITIALIZING; // changed in a synchronized method close()
 
-    protected CombiPoolDataSource(@NonNull final Object[] fields) {
-        assert(fields.length == 2);
-        
-        poolDataSource = (T) fields[0];
-        passwordSession1 = (String) fields[1];        
-        poolDataSourceConfiguration = getPoolDataSourceConfiguration();
+    /* 1: everything null, INITIALIZING */
+    protected CombiPoolDataSource() {
+        this(null, null, null, State.INITIALIZING);
+    }
 
-        log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration);
+    /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
+    protected CombiPoolDataSource(@NonNull final P poolDataSourceConfiguration) {
+        this(poolDataSourceConfiguration, null, null, State.OPEN);
+    }
+
+    /* 3: activeParent != null, INITIALIZING */
+    protected CombiPoolDataSource(@NonNull final CombiPoolDataSource<T, P> activeParent) {
+        this(null, null, activeParent, State.INITIALIZING);
+    }
+
+    private CombiPoolDataSource(final P poolDataSourceConfiguration,
+                                final T poolDataSource,
+                                final CombiPoolDataSource<T, P> activeParent,
+                                final State state) {
+        try {
+            final Type t = getClass().getGenericSuperclass();
+            final ParameterizedType pt = (ParameterizedType) t;
+            final Class<T> typeT = (Class) pt.getActualTypeArguments()[0];
+            final Class<P> typeP = (Class) pt.getActualTypeArguments()[1];
         
-        poolDataSourceConfiguration.determineConnectInfo();
-        usernameSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
-        usernameSession2 = poolDataSourceConfiguration.getSchema();
-        commonId = new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
-        activeParent = determineActiveParent();        
-        updateCombiPoolAdministration();
-        updatePool(poolDataSource, determineCommonPoolDataSource(), true, activeParent == null);
-        state = State.OPEN;
-        log.info("CombiCommonPoolDataSource({})", poolDataSource);
+            if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent == null) {
+                this.poolDataSourceConfiguration = typeP.newInstance();
+                this.poolDataSource = typeT.newInstance();
+                this.activeParent = null;
+            } else if (poolDataSourceConfiguration != null && poolDataSource == null && activeParent == null) {
+                this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+                this.activeParent = determineActiveParent();
+                this.poolDataSource = this.activeParent == null ? typeT.newInstance() : null;
+            } else if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent != null) {
+                this.poolDataSourceConfiguration = typeP.newInstance();
+                this.poolDataSource = null;
+                this.activeParent = activeParent;
+            } else {
+                throw new IllegalStateException("Illegal combination of poolDataSourceConfiguration, poolDataSource and activeParent");
+            }
+
+            // are we done INITIALIZING?
+            if (state == State.OPEN) {
+                setUp();
+            }
+        
+            this.state = state;
+
+            assert this.poolDataSourceConfiguration != null;
+            assert (this.poolDataSource != null) == (this.activeParent == null);
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
 
     protected State getState() {
         return state;
     }
 
+    @jakarta.annotation.PostConstruct
+    @javax.annotation.PostConstruct
+    public final synchronized void open() {
+        log.debug("open()");
+        
+        setUp();
+    }
+
+    // you can override this one
+    protected void setUp() {
+        // minimize accessing volatile variables by shadowing them
+        State state = this.state;
+        CombiPoolDataSource<T, P> activeParent = this.activeParent;
+
+        log.debug("state while entering setUp(): {}", state);
+
+        if (state == State.INITIALIZING) {
+            try {
+                poolDataSourceConfiguration.determineConnectInfo();
+                updateCombiPoolAdministration();
+                updatePool(poolDataSource, determineCommonPoolDataSource(), true, activeParent == null);
+                state = this.state = State.OPEN;
+            } catch (Exception ex) {
+                state = this.state = State.ERROR;
+                throw ex;
+            }
+        }
+
+        log.debug("state while leaving setUp(): {}", state);
+    }
+
     public final boolean isParentPoolDataSource() {
         return activeParent == null;
     }
         
-    public abstract PoolDataSourceConfiguration getPoolDataSourceConfiguration();
-
-    private CombiPoolDataSource<T> determineActiveParent() {
+    private CombiPoolDataSource<T, P> determineActiveParent() {
         log.debug("determineActiveParent()");
         
         // Since the configuration is fixed now we can do lookups for an active parent.
         // The first pool data source (for same properties) will have activeParent == null
+        final PoolDataSourceConfigurationCommonId commonId =
+            new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
 
-        CombiPoolDataSource<T> activeParent = (CombiPoolDataSource<T>) activeParents.get(commonId); 
+        CombiPoolDataSource<T, P> activeParent = (CombiPoolDataSource<T, P>) activeParents.get(commonId); 
 
         if (activeParent != null && activeParent.state != State.OPEN) {
             activeParent = null;
@@ -163,6 +215,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
             }
             // fall thru
         case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
+        case ERROR:
             updateCombiPoolAdministration();
             updatePool(poolDataSource, determineCommonPoolDataSource(), false, activeParent == null);
             state = this.state = State.CLOSED;
@@ -265,7 +318,7 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
 
     @Deprecated
     public final String getPassword() {
-        return passwordSession1;
+        return poolDataSourceConfiguration.getPassword();
     }
 
     public final void setPassword(String password) {
@@ -280,6 +333,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
     
     public final Connection getConnection() throws SQLException {
         switch (state) {
+        case INITIALIZING:
+            open(); // will change state to OPEN
+            assert(state == State.OPEN);
+            // fall through
         case OPEN:
         case CLOSING:
             break;
@@ -288,11 +345,10 @@ public abstract class CombiPoolDataSource<T extends DataSource> implements DataS
                                                           state.toString()));
         }
 
-        // minimize accessing volatile variables by shadowing them
-        final String usernameSession1 = this.usernameSession1;
-        final String passwordSession1 = this.passwordSession1;
-        final String usernameSession2 = this.usernameSession2;
-
+        final String usernameSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
+        final String passwordSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
+        final String usernameSession2 = poolDataSourceConfiguration.getSchema();
+        
         final Connection conn = getConnection(determineCommonPoolDataSource(),
                                               usernameSession1,
                                               passwordSession1,

@@ -11,7 +11,7 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 @Slf4j
 public class CombiPoolDataSourceOracle
-    extends CombiPoolDataSource<PoolDataSource>
+    extends CombiPoolDataSource<PoolDataSource, PoolDataSourceConfigurationOracle>
     implements PoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
@@ -55,65 +55,50 @@ public class CombiPoolDataSourceOracle
                    connectionValidationTimeout));
     }
 
-    private CombiPoolDataSourceOracle(final Object[] fields) {
-        super(fields);
+    public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+        super(poolDataSourceConfigurationOracle);
     }
 
-    protected static Object[] build(String url,
-                                    String username,
-                                    String password,
-                                    String connectionPoolName,
-                                    int initialPoolSize,
-                                    int minPoolSize,
-                                    int maxPoolSize,
-                                    String connectionFactoryClassName,
-                                    boolean validateConnectionOnBorrow,
-                                    int abandonedConnectionTimeout,
-                                    int timeToLiveConnectionTimeout,
-                                    int inactiveConnectionTimeout,
-                                    int timeoutCheckInterval,
-                                    int maxStatements,
-                                    int connectionWaitTimeout,
-                                    long maxConnectionReuseTime,
-                                    int secondsToTrustIdleConnection,
-                                    int connectionValidationTimeout) {
-
-        final PoolDataSourceImpl poolDataSource = new PoolDataSourceImpl();
-
-        int nr = 0;
-        final int maxNr = 17;
-        
-        do {
-            try {
-                /* this.driverClassName is ignored */
-                switch(nr) {
-                case 0: poolDataSource.setURL(url); break;
-                case 1: poolDataSource.setUser(username); break;
-                case 2: poolDataSource.setPassword(password); break;
-                case 3: /* connection pool name is not copied here */ break;
-                case 4: poolDataSource.setInitialPoolSize(initialPoolSize); break;
-                case 5: poolDataSource.setMinPoolSize(minPoolSize); break;
-                case 6: poolDataSource.setMaxPoolSize(maxPoolSize); break;
-                case 7: poolDataSource.setConnectionFactoryClassName(connectionFactoryClassName); break;
-                case 8: poolDataSource.setValidateConnectionOnBorrow(validateConnectionOnBorrow); break;
-                case 9: poolDataSource.setAbandonedConnectionTimeout(abandonedConnectionTimeout); break;
-                case 10: poolDataSource.setTimeToLiveConnectionTimeout(timeToLiveConnectionTimeout); break;
-                case 11: poolDataSource.setInactiveConnectionTimeout(inactiveConnectionTimeout); break;
-                case 12: poolDataSource.setTimeoutCheckInterval(timeoutCheckInterval); break;
-                case 13: poolDataSource.setMaxStatements(maxStatements); break;
-                case 14: poolDataSource.setConnectionWaitTimeout(connectionWaitTimeout); break;
-                case 15: poolDataSource.setMaxConnectionReuseTime(maxConnectionReuseTime); break;
-                case 16: poolDataSource.setSecondsToTrustIdleConnection(secondsToTrustIdleConnection); break;
-                case 17: poolDataSource.setConnectionValidationTimeout(connectionValidationTimeout); break;
-                default:
-                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
-                }
-            } catch (Exception ex) {
-                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
-            }
-        } while (++nr <= maxNr);
-
-        return new Object[]{ poolDataSource, password };
+    protected static PoolDataSourceConfigurationOracle build(String url,
+                                                             String username,
+                                                             String password,
+                                                             String connectionPoolName,
+                                                             int initialPoolSize,
+                                                             int minPoolSize,
+                                                             int maxPoolSize,
+                                                             String connectionFactoryClassName,
+                                                             boolean validateConnectionOnBorrow,
+                                                             int abandonedConnectionTimeout,
+                                                             int timeToLiveConnectionTimeout,
+                                                             int inactiveConnectionTimeout,
+                                                             int timeoutCheckInterval,
+                                                             int maxStatements,
+                                                             int connectionWaitTimeout,
+                                                             long maxConnectionReuseTime,
+                                                             int secondsToTrustIdleConnection,
+                                                             int connectionValidationTimeout) {
+        return PoolDataSourceConfigurationOracle
+            .builder()
+            .type(CombiPoolDataSourceOracle.class.getName())
+            .url(url)
+            .username(username)
+            .password(password)
+            .connectionPoolName(connectionPoolName)
+            .initialPoolSize(initialPoolSize)
+            .minPoolSize(minPoolSize)
+            .maxPoolSize(maxPoolSize)
+            .connectionFactoryClassName(connectionFactoryClassName)
+            .validateConnectionOnBorrow(validateConnectionOnBorrow)
+            .abandonedConnectionTimeout(abandonedConnectionTimeout)
+            .timeToLiveConnectionTimeout(timeToLiveConnectionTimeout)
+            .inactiveConnectionTimeout(inactiveConnectionTimeout)
+            .timeoutCheckInterval(timeoutCheckInterval)
+            .maxStatements(maxStatements)
+            .connectionWaitTimeout(connectionWaitTimeout)
+            .maxConnectionReuseTime(maxConnectionReuseTime)
+            .secondsToTrustIdleConnection(secondsToTrustIdleConnection)
+            .connectionValidationTimeout(connectionValidationTimeout)
+            .build();
     }
 
     // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -148,36 +133,6 @@ public class CombiPoolDataSourceOracle
 
     public void setUsername(String username) throws SQLException {
         setUser(username);        
-    }
-
-    public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
-        return getPoolDataSourceConfiguration(true);
-    }
-    
-    private PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
-        return PoolDataSourceConfigurationOracle
-            .builder()
-            .driverClassName(null)
-            .url(getURL())
-            .username(getUser())
-            .password(excludeNonIdConfiguration ? null : getPassword())
-            .type(SimplePoolDataSourceOracle.class.getName())
-            .connectionPoolName(excludeNonIdConfiguration ? null : getConnectionPoolName())
-            .initialPoolSize(getInitialPoolSize())
-            .minPoolSize(getMinPoolSize())
-            .maxPoolSize(getMaxPoolSize())
-            .connectionFactoryClassName(getConnectionFactoryClassName())
-            .validateConnectionOnBorrow(getValidateConnectionOnBorrow())
-            .abandonedConnectionTimeout(getAbandonedConnectionTimeout())
-            .timeToLiveConnectionTimeout(getTimeToLiveConnectionTimeout())
-            .inactiveConnectionTimeout(getInactiveConnectionTimeout())
-            .timeoutCheckInterval(getTimeoutCheckInterval())
-            .maxStatements(getMaxStatements())
-            .connectionWaitTimeout(getConnectionWaitTimeout())
-            .maxConnectionReuseTime(getMaxConnectionReuseTime())
-            .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
-            .connectionValidationTimeout(getConnectionValidationTimeout())
-            .build();
     }
 
     protected Connection getConnection1(@NonNull final PoolDataSource commonPoolDataSource,
@@ -216,7 +171,7 @@ public class CombiPoolDataSourceOracle
                 commonPoolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
             }
 
-            final String suffix = "-" + getUsernameSession2();
+            final String suffix = "-" + getPoolDataSourceConfiguration().getSchema();
 
             if (initializing) {
                 commonPoolDataSource.setConnectionPoolName(commonPoolDataSource.getConnectionPoolName() + suffix);
