@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -115,7 +116,11 @@ public class PoolDataSourceConfigurationOracle
         setDriverClassName(null);
     }
 
-    public void copyTo(final PoolDataSource poolDataSource) {
+    void copyTo(final DataSource dataSource) {
+        copyTo((PoolDataSource) dataSource);
+    }
+
+    private void copyTo(final PoolDataSource poolDataSource) {
         int nr = 0;
         final int maxNr = 17;
         

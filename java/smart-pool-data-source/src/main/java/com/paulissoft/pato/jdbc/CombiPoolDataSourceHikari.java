@@ -110,14 +110,26 @@ public class CombiPoolDataSourceHikari
     
     // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverride.class) // do not delegate setPassword()
-    private HikariDataSource getPoolDataSourceSetter() {
-        return determinePoolDataSourceSetter();
+    private PoolDataSourcePropertiesSettersHikari getPoolDataSourceSetter() {
+        switch (getState()) {
+        case INITIALIZING:
+            return getPoolDataSourceConfiguration();
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
+        default:
+            throw new IllegalStateException("The configuration of the pool is sealed once started.");
+        }
     }
         
     // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverride.class)
-    private HikariDataSource getPoolDataSourceGetter() {
-        return determinePoolDataSourceGetter();
+    private PoolDataSourcePropertiesGettersHikari getPoolDataSourceGetter() {
+        switch (getState()) {
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
+        default:
+            return getPoolDataSourceConfiguration();
+        }
     }
 
     // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
@@ -144,7 +156,11 @@ public class CombiPoolDataSourceHikari
     
     @Override
     public void setUsername(String username) {
-        determinePoolDataSourceGetter().setUsername(username);
+        try {
+            getPoolDataSourceSetter().setUsername(username);
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
 
     @Override

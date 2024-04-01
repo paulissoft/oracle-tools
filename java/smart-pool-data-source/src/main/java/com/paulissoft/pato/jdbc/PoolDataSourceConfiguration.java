@@ -143,6 +143,10 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         this.password = null;
     }
 
+    void copyTo(final DataSource DataSource) {
+        throw new UnsupportedOperationException("Operation not implemented.");
+    }    
+
     /**
      * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into
      * schema (bodomain) and proxy username (bc_proxy respectively empty).

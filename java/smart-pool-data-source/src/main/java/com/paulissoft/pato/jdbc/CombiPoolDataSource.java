@@ -4,7 +4,6 @@ import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -20,10 +19,12 @@ import oracle.jdbc.OracleConnection;
 
 
 @Slf4j
-public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDataSourceConfiguration> implements DataSource, Closeable {
+public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDataSourceConfiguration>
+    implements DataSource, Closeable {
 
     // We need to know the active parents in order to assign a value to an active parent so that a data source can use a common data source.
-    // syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P>> so use DataSource instead of T
+    // Syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P, S, G>>,
+    // so use DataSource instead of T.
     private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> activeParents = new ConcurrentHashMap<>();
 
     static void clear() {
@@ -56,23 +57,22 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
     /* 1: everything null, INITIALIZING */
     protected CombiPoolDataSource() {
-        this(null, null, null, State.INITIALIZING);
+        this(null, null, null);
     }
 
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
     protected CombiPoolDataSource(@NonNull final P poolDataSourceConfiguration) {
-        this(poolDataSourceConfiguration, null, null, State.OPEN);
+        this(poolDataSourceConfiguration, null, null);
     }
 
     /* 3: activeParent != null, INITIALIZING */
     protected CombiPoolDataSource(@NonNull final CombiPoolDataSource<T, P> activeParent) {
-        this(null, null, activeParent, State.INITIALIZING);
+        this(null, null, activeParent);
     }
 
     private CombiPoolDataSource(final P poolDataSourceConfiguration,
                                 final T poolDataSource,
-                                final CombiPoolDataSource<T, P> activeParent,
-                                final State state) {
+                                final CombiPoolDataSource<T, P> activeParent) {
         try {
             final Type t = getClass().getGenericSuperclass();
             final ParameterizedType pt = (ParameterizedType) t;
@@ -87,6 +87,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 this.poolDataSourceConfiguration = poolDataSourceConfiguration;
                 this.activeParent = determineActiveParent();
                 this.poolDataSource = this.activeParent == null ? typeT.newInstance() : null;
+                setUp();
             } else if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent != null) {
                 this.poolDataSourceConfiguration = typeP.newInstance();
                 this.poolDataSource = null;
@@ -95,15 +96,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 throw new IllegalStateException("Illegal combination of poolDataSourceConfiguration, poolDataSource and activeParent");
             }
 
-            // are we done INITIALIZING?
-            if (state == State.OPEN) {
-                setUp();
-            }
-        
-            this.state = state;
-
             assert this.poolDataSourceConfiguration != null;
-            assert (this.poolDataSource != null) == (this.activeParent == null);
+            assert (this.poolDataSource == null) != (this.activeParent == null);
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
@@ -121,11 +115,9 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         setUp();
     }
 
-    // you can override this one
-    protected void setUp() {
+    private void setUp() {
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
-        CombiPoolDataSource<T, P> activeParent = this.activeParent;
 
         log.debug("state while entering setUp(): {}", state);
 
@@ -162,28 +154,39 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             activeParent = null;
         }
 
-        if (activeParent == null) {
-            // The next with the same properties will get this one as activeParent
-            activeParents.computeIfAbsent(commonId, k -> this);
-        }
-
         return activeParent;
     }
 
     private void updateCombiPoolAdministration() {
-        if (activeParent != null) {
-            switch (state) {
-            case INITIALIZING:
-                activeParent.activeChildren.incrementAndGet();
-                break;
-            case OPEN:
-                if (activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
-                    activeParent.close(); // try to close() again
+        switch (state) {
+        case INITIALIZING:
+            final PoolDataSourceConfigurationCommonId commonId =
+                new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
+            
+            if (activeParent == null) {
+                // The next with the same properties will get this one as activeParent
+                activeParents.computeIfAbsent(commonId, k -> this);
+            } else {
+                final PoolDataSourceConfigurationCommonId parentCommonId =
+                    new PoolDataSourceConfigurationCommonId(activeParent.poolDataSourceConfiguration);
+
+                if (!parentCommonId.equals(commonId)) {
+                    throw new IllegalArgumentException("The parent and this common configuration should be the same.");
                 }
-                break;
-            default:
-                break;
+                
+                activeParent.activeChildren.incrementAndGet();
             }
+
+            poolDataSourceConfiguration.copyTo(determineCommonPoolDataSource());
+            
+            break;
+        case OPEN:
+            if (activeParent != null && activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
+                activeParent.close(); // try to close() again
+            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -268,30 +271,6 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         public String getPassword(); /* deprecated in oracle.ucp.jdbc.PoolDataSourceImpl */
 
         public void close();
-    }
-
-    // @Delegate(types=PoolDataSourcePropertiesSetters<T>.class, excludes=ToOverride.class)
-    protected T determinePoolDataSourceSetter() {
-        switch (state) {
-        case INITIALIZING:
-            return poolDataSource;
-        case CLOSED:
-            throw new IllegalStateException("You can not use the pool once it is closed().");
-        default:
-            throw new IllegalStateException("The configuration of the pool is sealed once started.");
-        }
-    }
-
-    // @Delegate(types=PoolDataSourcePropertiesGetters<T>.class, excludes=ToOverride.class)
-    protected T determinePoolDataSourceGetter() {
-        switch (state) {
-        case INITIALIZING:
-            return poolDataSource;
-        case CLOSED:
-            throw new IllegalStateException("You can not use the pool once it is closed().");
-        default:
-            return activeParent != null ? activeParent.poolDataSource : poolDataSource;
-        }
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })

@@ -6,7 +6,6 @@ import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSource;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
@@ -103,14 +102,26 @@ public class CombiPoolDataSourceOracle
 
     // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
-    private PoolDataSource getPoolDataSourceSetter() {
-        return determinePoolDataSourceSetter();
+    private PoolDataSourcePropertiesSettersOracle getPoolDataSourceSetter() {
+        switch (getState()) {
+        case INITIALIZING:
+            return getPoolDataSourceConfiguration();
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
+        default:
+            throw new IllegalStateException("The configuration of the pool is sealed once started.");
+        }
     }
 
     // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverride.class)
-    private PoolDataSource getPoolDataSourceGetter() {
-        return determinePoolDataSourceGetter();
+    private PoolDataSourcePropertiesGettersOracle getPoolDataSourceGetter() {
+        switch (getState()) {
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed().");
+        default:
+            return getPoolDataSourceConfiguration();
+        }
     }
     
     // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)

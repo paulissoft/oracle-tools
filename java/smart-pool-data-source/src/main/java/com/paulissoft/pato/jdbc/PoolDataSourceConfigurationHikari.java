@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -153,7 +154,11 @@ public class PoolDataSourceConfigurationHikari
         this.poolName = null;
     }
 
-    public void copyTo(final HikariDataSource hikariDataSource) {
+    void copyTo(final DataSource dataSource) {
+        copyTo((HikariDataSource) dataSource);
+    }
+    
+    private void copyTo(final HikariDataSource hikariDataSource) {
         int nr = 0;
         final int maxNr = 18;
         
