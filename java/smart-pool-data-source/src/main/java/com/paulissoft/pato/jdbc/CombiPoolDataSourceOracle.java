@@ -125,10 +125,10 @@ public class CombiPoolDataSourceOracle
         }
     }
     
-    // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
+    // no getXXX() nor setXXX(), just the rest (getCommonPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverride.class })
-    private PoolDataSource getCommonPoolDataSource() {
-        return determineCommonPoolDataSource();
+    protected PoolDataSource getCommonPoolDataSource() {
+        return super.getCommonPoolDataSource();
     }
 
     public String getUrl() {
@@ -145,6 +145,10 @@ public class CombiPoolDataSourceOracle
 
     public void setUsername(String username) throws SQLException {
         setUser(username);        
+    }
+
+    public void setPassword(String password) throws SQLException {
+        getPoolDataSourceSetter().setPassword(password);        
     }
 
     protected Connection getConnection1(@NonNull final PoolDataSource commonPoolDataSource,

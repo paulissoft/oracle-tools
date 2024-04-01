@@ -132,18 +132,10 @@ public class CombiPoolDataSourceHikari
         }
     }
 
-    // no getXXX() nor setXXX(), just the rest (determineCommonPoolDataSource() may return different values depending on state hence use a function)
+    // no getXXX() nor setXXX(), just the rest (getCommonPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverride.class })
-    private HikariDataSource getCommonPoolDataSource() {
-        return determineCommonPoolDataSource();
-    }
-
-    protected boolean isSingleSessionProxyModel() {
-        return PoolDataSourceConfigurationHikari.SINGLE_SESSION_PROXY_MODEL;
-    }
-
-    protected boolean isFixedUsernamePassword() {
-        return PoolDataSourceConfigurationHikari.FIXED_USERNAME_PASSWORD;
+    protected HikariDataSource getCommonPoolDataSource() {
+        return super.getCommonPoolDataSource();
     }
 
     public String getUrl() {
@@ -158,6 +150,14 @@ public class CombiPoolDataSourceHikari
     public void setUsername(String username) {
         try {
             getPoolDataSourceSetter().setUsername(username);
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
+    }
+
+    public void setPassword(String password) {
+        try {
+            getPoolDataSourceSetter().setPassword(password);        
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }

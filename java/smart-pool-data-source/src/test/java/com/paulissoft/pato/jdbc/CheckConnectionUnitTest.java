@@ -393,16 +393,20 @@ public class CheckConnectionUnitTest {
         final CombiPoolDataSourceHikari child = !domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
 
         for (int nr = 1; nr <= 2; nr++) {
-            log.debug("round #{}", nr);
             try (final CombiPoolDataSourceHikari ds = (nr == 1 ? parent : child)) {                
-                // the data source will always show the same (modified) properties from the common data source
-
+                log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
+                
+                assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
-                assertEquals(parent.getUsername(), ds.getUsername());
+                assertEquals(ds == domainDataSourceHikari ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
+                assertEquals(parent.getUsername(), ds.getCommonPoolDataSource().getUsername());
                 assertEquals("bc_proxy", ds.getPassword());
-                assertEquals(2 * 60, ds.getMinimumIdle());
-                assertEquals(2 * 60, ds.getMaximumPoolSize());
-                assertEquals("HikariPool-bodomain-boopapij", ds.getPoolName());
+                assertEquals(60, ds.getMinimumIdle());
+                assertEquals(2 * 60, ds.getCommonPoolDataSource().getMinimumIdle());
+                assertEquals(60, ds.getMaximumPoolSize());
+                assertEquals(2 * 60, ds.getCommonPoolDataSource().getMaximumPoolSize());
+                assertEquals(ds == domainDataSourceHikari ? "HikariPool-bodomain" : "HikariPool-boopapij", ds.getPoolName());
+                assertEquals("HikariPool-bodomain-boopapij", ds.getCommonPoolDataSource().getPoolName());
 
                 final Connection conn = ds.getConnection();
 

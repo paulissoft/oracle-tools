@@ -1,7 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import java.io.Closeable;
-import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -55,7 +54,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
 
     @NonNull
-    private volatile State state = State.INITIALIZING; // changed in a synchronized method close()
+    private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
 
     /* 1: everything null, INITIALIZING */
     protected CombiPoolDataSource(final Supplier<T> supplierT,
@@ -133,7 +132,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             try {
                 poolDataSourceConfiguration.determineConnectInfo();
                 updateCombiPoolAdministration();
-                updatePool(poolDataSourceConfiguration, determineCommonPoolDataSource(), true, activeParent == null);
+                updatePool(poolDataSourceConfiguration, getCommonPoolDataSource(), true, activeParent == null);
                 state = this.state = State.OPEN;
             } catch (Exception ex) {
                 state = this.state = State.ERROR;
@@ -185,7 +184,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 activeParent.activeChildren.incrementAndGet();
             }
 
-            poolDataSourceConfiguration.copyTo(determineCommonPoolDataSource());
+            poolDataSourceConfiguration.copyTo(getCommonPoolDataSource());
             
             break;
         case OPEN:
@@ -228,7 +227,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
         case ERROR:
             updateCombiPoolAdministration();
-            updatePool(poolDataSourceConfiguration, determineCommonPoolDataSource(), false, activeParent == null);
+            updatePool(poolDataSourceConfiguration, getCommonPoolDataSource(), false, activeParent == null);
             state = this.state = State.CLOSED;
             break;
             
@@ -282,7 +281,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
-    protected T determineCommonPoolDataSource() {
+    protected T getCommonPoolDataSource() {
         switch (state) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
@@ -291,12 +290,12 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         }
     }
 
-    protected boolean isSingleSessionProxyModel() {
-        return PoolDataSourceConfiguration.SINGLE_SESSION_PROXY_MODEL;
+    protected final boolean isSingleSessionProxyModel() {
+        return poolDataSourceConfiguration.isSingleSessionProxyModel();
     }
 
-    protected boolean isFixedUsernamePassword() {
-        return PoolDataSourceConfiguration.FIXED_USERNAME_PASSWORD;
+    protected final boolean isFixedUsernamePassword() {
+        return poolDataSourceConfiguration.isFixedUsernamePassword();
     }
 
     // public abstract String getUsername();
@@ -308,15 +307,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         return poolDataSourceConfiguration.getPassword();
     }
 
-    public final void setPassword(String password) {
-        try {
-            final Method setPasswordMethod = poolDataSource.getClass().getMethod("setPassword", String.class);
-            
-            setPasswordMethod.invoke(poolDataSource, password);
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
-    }
+    public abstract void setPassword(String password) throws SQLException;
     
     public final Connection getConnection() throws SQLException {
         switch (state) {
@@ -336,7 +327,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         final String passwordSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
         final String usernameSession2 = poolDataSourceConfiguration.getSchema();
         
-        final Connection conn = getConnection(determineCommonPoolDataSource(),
+        final Connection conn = getConnection(getCommonPoolDataSource(),
                                               usernameSession1,
                                               passwordSession1,
                                               usernameSession2);
