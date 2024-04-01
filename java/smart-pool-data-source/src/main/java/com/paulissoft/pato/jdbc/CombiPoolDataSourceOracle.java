@@ -144,7 +144,7 @@ public class CombiPoolDataSourceOracle
     protected Connection getConnection1(@NonNull final PoolDataSource commonPoolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(usernameSession1={})", usernameSession1);
+        log.debug("getConnection1(usernameSession1={}, passwordSession1={})", usernameSession1, passwordSession1);
 
         return commonPoolDataSource.getConnection(usernameSession1, passwordSession1);
     }
@@ -153,6 +153,8 @@ public class CombiPoolDataSourceOracle
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
+        log.debug("getConnection(usernameSession1={}, passwordSession1={}, usernameSession2={})", usernameSession1, passwordSession1, usernameSession2);
+
         // we do use single-session proxy model so no need to invoke getConnection2()
         return getConnection1(commonPoolDataSource, usernameSession1, passwordSession1);
     }

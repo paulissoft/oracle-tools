@@ -232,16 +232,19 @@ public class CheckConnectionUnitTestOracle {
         final CombiPoolDataSourceOracle child = !domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
 
         for (int nr = 1; nr <= 2; nr++) {
-            log.debug("round #{}", nr);
             try (final CombiPoolDataSourceOracle ds = (nr == 1 ? parent : child)) {
-                // the data source will always show the same (modified) properties from the common data source
+                log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
                 
+                assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
-                assertEquals(parent.getUser(), ds.getUser());
+                assertEquals(ds == domainDataSourceOracle ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
                 assertEquals(parent.getPassword(), ds.getPassword());
                 assertEquals(10, ds.getMinPoolSize());
+                assertEquals(2 * 10, ds.getCommonPoolDataSource().getMinPoolSize());
                 assertEquals(20, ds.getMaxPoolSize());
-                assertEquals(parent.getConnectionPoolName(), ds.getConnectionPoolName());
+                assertEquals(2 * 20, ds.getCommonPoolDataSource().getMaxPoolSize());
+                assertEquals(ds == domainDataSourceOracle ? "OraclePool-bodomain" : "OraclePool-boopapij", ds.getConnectionPoolName());
+                assertEquals("OraclePool-bodomain-boopapij", ds.getCommonPoolDataSource().getConnectionPoolName());
 
                 final Connection conn = ds.getConnection();
 

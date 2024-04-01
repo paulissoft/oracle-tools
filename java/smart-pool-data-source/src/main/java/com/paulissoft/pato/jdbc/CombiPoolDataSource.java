@@ -176,11 +176,11 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     private void updateCombiPoolAdministration() {
         log.debug(">updateCombiPoolAdministration()");
         
+        final PoolDataSourceConfigurationCommonId commonId =
+            new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
+            
         switch (state) {
         case INITIALIZING:
-            final PoolDataSourceConfigurationCommonId commonId =
-                new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
-            
             if (activeParent == null) {
                 // The next with the same properties will get this one as activeParent
                 activeParents.computeIfAbsent(commonId, k -> this);
@@ -195,15 +195,19 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 activeParent.activeChildren.incrementAndGet();
             }
 
-            poolDataSourceConfiguration.copyTo(getCommonPoolDataSource());
-            
+            poolDataSourceConfiguration.copyTo(getCommonPoolDataSource());            
             break;
+            
         case OPEN:
             if (activeParent != null && activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
                 activeParent.close(); // try to close() again
             }
-            break;
+            // fall thru        
         default:
+            if (activeParent == null) {
+                // remove the active parent
+                activeParents.computeIfPresent(commonId, (k, v) -> null);
+            }            
             break;
         }
 
@@ -319,7 +323,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         }
 
         final String usernameSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
-        final String passwordSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
+        final String passwordSession1 = poolDataSourceConfiguration.getPassword();
         final String usernameSession2 = poolDataSourceConfiguration.getSchema();
         
         final Connection conn = getConnection(getCommonPoolDataSource(),
