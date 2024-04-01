@@ -130,7 +130,8 @@ public class CombiPoolDataSourceOracle
     protected PoolDataSource getCommonPoolDataSource() {
         return super.getCommonPoolDataSource();
     }
-
+    
+    /*
     public String getUrl() {
         return getURL();
     }
@@ -138,18 +139,7 @@ public class CombiPoolDataSourceOracle
     public void setUrl(String jdbcUrl) throws SQLException {
         setURL(jdbcUrl);
     }
-  
-    public String getUsername() {
-        return getUser();
-    }
-
-    public void setUsername(String username) throws SQLException {
-        setUser(username);        
-    }
-
-    public void setPassword(String password) throws SQLException {
-        getPoolDataSourceSetter().setPassword(password);        
-    }
+    */
 
     protected Connection getConnection1(@NonNull final PoolDataSource commonPoolDataSource,
                                         @NonNull final String usernameSession1,

@@ -82,6 +82,11 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                                 final T poolDataSource,
                                 final CombiPoolDataSource<T, P> activeParent) {
         try {
+            log.debug(">CombiPoolDataSource(poolDataSourceConfiguration={}, poolDataSource={}, activeParent={})",
+                      poolDataSourceConfiguration,
+                      poolDataSource,
+                      activeParent);
+            
             // https://stackoverflow.com/questions/75175/create-instance-of-generic-type-in-java
             this.supplierT = supplierT;
             this.supplierP = supplierP;
@@ -107,6 +112,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             assert (this.poolDataSource == null) != (this.activeParent == null);
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        } finally {
+            log.debug("<CombiPoolDataSource()");
         }
     }
 
@@ -126,7 +133,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
 
-        log.debug("state while entering setUp(): {}", state);
+        log.debug(">setUp(state={})", state);
 
         if (state == State.INITIALIZING) {
             try {
@@ -140,7 +147,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             }
         }
 
-        log.debug("state while leaving setUp(): {}", state);
+        log.debug("<setUp(state={})", state);
     }
 
     public final boolean isParentPoolDataSource() {
@@ -148,7 +155,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
         
     private CombiPoolDataSource<T, P> determineActiveParent() {
-        log.debug("determineActiveParent()");
+        log.debug(">determineActiveParent()");
         
         // Since the configuration is fixed now we can do lookups for an active parent.
         // The first pool data source (for same properties) will have activeParent == null
@@ -161,10 +168,14 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             activeParent = null;
         }
 
+        log.debug("<determineActiveParent() = {}", activeParent);
+
         return activeParent;
     }
 
     private void updateCombiPoolAdministration() {
+        log.debug(">updateCombiPoolAdministration()");
+        
         switch (state) {
         case INITIALIZING:
             final PoolDataSourceConfigurationCommonId commonId =
@@ -195,6 +206,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         default:
             break;
         }
+
+        log.debug("<updateCombiPoolAdministration()");
     }
 
     @jakarta.annotation.PreDestroy
@@ -270,13 +283,6 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
         public Connection getConnection(String username, String password) throws SQLException;
 
-        public void setUsername(String password) throws SQLException;
-
-        // to prevent this error in Hikari: overridden method does not throw java.sql.SQLException
-        public void setPassword(String password) throws SQLException;
-
-        public String getPassword(); /* deprecated in oracle.ucp.jdbc.PoolDataSourceImpl */
-
         public void close();
     }
 
@@ -298,17 +304,6 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         return poolDataSourceConfiguration.isFixedUsernamePassword();
     }
 
-    // public abstract String getUsername();
-
-    public abstract void setUsername(String username) throws SQLException;
-
-    @Deprecated
-    public final String getPassword() {
-        return poolDataSourceConfiguration.getPassword();
-    }
-
-    public abstract void setPassword(String password) throws SQLException;
-    
     public final Connection getConnection() throws SQLException {
         switch (state) {
         case INITIALIZING:

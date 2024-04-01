@@ -177,6 +177,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     }
 
     public void setUsername(String username) throws SQLException {
+        log.debug("setUsername({})", username);
         setUser(username);
     }
 

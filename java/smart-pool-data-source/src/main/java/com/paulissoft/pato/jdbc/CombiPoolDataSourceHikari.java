@@ -107,9 +107,21 @@ public class CombiPoolDataSourceHikari
             .leakDetectionThreshold(leakDetectionThreshold)
             .build();
     }
-    
+
+    protected interface ToOverrideHikari extends ToOverride {
+        // setUsername(java.lang.String) in com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari
+        // cannot implement setUsername(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
+        // overridden method does not throw java.sql.SQLException
+        public void setUsername(String password) throws SQLException;
+
+        // setPassword(java.lang.String) in com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari
+        // cannot implement setPassword(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
+        // overridden method does not throw java.sql.SQLException
+        public void setPassword(String password) throws SQLException;
+    }
+
     // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverride.class) // do not delegate setPassword()
+    @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverrideHikari.class) // do not delegate setPassword()
     private PoolDataSourcePropertiesSettersHikari getPoolDataSourceSetter() {
         switch (getState()) {
         case INITIALIZING:
@@ -122,7 +134,7 @@ public class CombiPoolDataSourceHikari
     }
         
     // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverride.class)
+    @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverrideHikari.class)
     private PoolDataSourcePropertiesGettersHikari getPoolDataSourceGetter() {
         switch (getState()) {
         case CLOSED:
@@ -133,11 +145,12 @@ public class CombiPoolDataSourceHikari
     }
 
     // no getXXX() nor setXXX(), just the rest (getCommonPoolDataSource() may return different values depending on state hence use a function)
-    @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverride.class })
+    @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
     protected HikariDataSource getCommonPoolDataSource() {
         return super.getCommonPoolDataSource();
     }
 
+    /*
     public String getUrl() {
         return getJdbcUrl();
     }
@@ -145,10 +158,11 @@ public class CombiPoolDataSourceHikari
     public void setUrl(String jdbcUrl) {
         setJdbcUrl(jdbcUrl);
     }
-    
-    @Override
+    */
+
     public void setUsername(String username) {
         try {
+            log.debug("setUsername({})", username);
             getPoolDataSourceSetter().setUsername(username);
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
@@ -187,12 +201,14 @@ public class CombiPoolDataSourceHikari
             if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
                 usernameOrig = commonPoolDataSource.getUsername();
                 passwordOrig = commonPoolDataSource.getPassword();
+                log.debug("commonPoolDataSource.setUsername({})", usernameSession1);
                 commonPoolDataSource.setUsername(usernameSession1);
                 commonPoolDataSource.setPassword(passwordSession1);
             }
             return commonPoolDataSource.getConnection();
         } finally {
             if (usernameOrig != null) {
+                log.debug("commonPoolDataSource.setUsername({})", usernameOrig);
                 commonPoolDataSource.setUsername(usernameOrig);
                 usernameOrig = null;
             }
