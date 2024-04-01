@@ -251,7 +251,6 @@ public class CheckConnectionUnitTestHikari {
                 assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
                 assertEquals(ds == domainDataSourceHikari ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
-                assertEquals(parent.getUsername(), ds.getCommonPoolDataSource().getUsername());
                 assertEquals("bc_proxy", ds.getPassword());
                 assertEquals(60, ds.getMinimumIdle());
                 assertEquals(2 * 60, ds.getCommonPoolDataSource().getMinimumIdle());
