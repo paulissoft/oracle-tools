@@ -60,7 +60,7 @@ public class CombiPoolDataSourceHikari
     }
 
     public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-        super(poolDataSourceConfigurationHikari);
+        super(HikariDataSource::new, PoolDataSourceConfigurationHikari::new, poolDataSourceConfigurationHikari);
     }
 
     protected static PoolDataSourceConfigurationHikari build(String driverClassName,
@@ -203,7 +203,7 @@ public class CombiPoolDataSourceHikari
         }
     }
 
-    protected void updatePool(@NonNull final HikariDataSource configPoolDataSource,
+    protected void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
                               @NonNull final HikariDataSource commonPoolDataSource,
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
@@ -214,12 +214,12 @@ public class CombiPoolDataSourceHikari
 
             commonPoolDataSource.copyStateTo(newConfig);
             
-            updatePoolName(configPoolDataSource,
+            updatePoolName(poolDataSourceConfiguration,
                            newConfig,
                            initializing,
                            isParentPoolDataSource);
             if (!isParentPoolDataSource) {
-                updatePoolSizes(configPoolDataSource,
+                updatePoolSizes(poolDataSourceConfiguration,
                                 newConfig,
                                 initializing);
             }
@@ -230,19 +230,16 @@ public class CombiPoolDataSourceHikari
         }
     }
     
-    private void updatePoolName(@NonNull final HikariDataSource configPoolDataSource,
+    private void updatePoolName(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
                                 @NonNull final HikariConfig commonPoolDataSource,
                                 final boolean initializing,
                                 final boolean isParentPoolDataSource) {
         try {
             log.debug(">updatePoolName()");
 
-            assert configPoolDataSource != null;
-            assert commonPoolDataSource != null;
-            
             log.debug("config pool data source; address: {}; name: {}",
-                      configPoolDataSource,
-                      configPoolDataSource.getPoolName());
+                      poolDataSourceConfiguration,
+                      poolDataSourceConfiguration.getPoolName());
 
             log.debug("common pool data source; address: {}; name: {}",
                       commonPoolDataSource,
@@ -262,8 +259,8 @@ public class CombiPoolDataSourceHikari
             }
         } finally {
             log.debug("config pool data source; address: {}; name: {}",
-                      configPoolDataSource,
-                      configPoolDataSource.getPoolName());
+                      poolDataSourceConfiguration,
+                      poolDataSourceConfiguration.getPoolName());
 
             log.debug("common pool data source; address: {}; name: {}",
                       commonPoolDataSource,
@@ -273,20 +270,20 @@ public class CombiPoolDataSourceHikari
         }
     }
 
-    private void updatePoolSizes(@NonNull final HikariDataSource configPoolDataSource,
+    private void updatePoolSizes(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
                                  @NonNull final HikariConfig commonPoolDataSource,
                                  final boolean initializing) {
         try {
             log.debug(">updatePoolSizes()");
 
-            assert configPoolDataSource != null;
+            assert poolDataSourceConfiguration != null;
             assert commonPoolDataSource != null;
 
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}",
-                      configPoolDataSource,
-                      configPoolDataSource.getPoolName(),
-                      configPoolDataSource.getMinimumIdle(),
-                      configPoolDataSource.getMaximumPoolSize());
+                      poolDataSourceConfiguration,
+                      poolDataSourceConfiguration.getPoolName(),
+                      poolDataSourceConfiguration.getMinimumIdle(),
+                      poolDataSourceConfiguration.getMaximumPoolSize());
 
             log.debug("common pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}",
                       commonPoolDataSource,
@@ -298,7 +295,7 @@ public class CombiPoolDataSourceHikari
 
             int thisSize, pdsSize;
 
-            pdsSize = configPoolDataSource.getMinimumIdle();
+            pdsSize = poolDataSourceConfiguration.getMinimumIdle();
             thisSize = Integer.max(commonPoolDataSource.getMinimumIdle(), 0);
 
             log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
@@ -309,7 +306,7 @@ public class CombiPoolDataSourceHikari
                 commonPoolDataSource.setMinimumIdle(pdsSize + thisSize);
             }
                 
-            pdsSize = configPoolDataSource.getMaximumPoolSize();
+            pdsSize = poolDataSourceConfiguration.getMaximumPoolSize();
             thisSize = Integer.max(commonPoolDataSource.getMaximumPoolSize(), 0);
 
             log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
@@ -321,10 +318,10 @@ public class CombiPoolDataSourceHikari
             }
         } finally {
             log.debug("config pool data source; address: {}; name: {}; pool sizes after: minimum/maximum: {}/{}",
-                      configPoolDataSource,
-                      configPoolDataSource.getPoolName(),
-                      configPoolDataSource.getMinimumIdle(),
-                      configPoolDataSource.getMaximumPoolSize());
+                      poolDataSourceConfiguration,
+                      poolDataSourceConfiguration.getPoolName(),
+                      poolDataSourceConfiguration.getMinimumIdle(),
+                      poolDataSourceConfiguration.getMaximumPoolSize());
 
             log.debug("common pool data source; address: {}; name: {}; pool sizes after: minimum/maximum: {}/{}",
                       commonPoolDataSource,

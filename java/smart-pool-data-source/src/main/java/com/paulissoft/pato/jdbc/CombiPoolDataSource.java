@@ -2,21 +2,19 @@ package com.paulissoft.pato.jdbc;
 
 import java.io.Closeable;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import javax.sql.DataSource;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import oracle.jdbc.OracleConnection;
-
 
 @Slf4j
 public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDataSourceConfiguration>
@@ -31,6 +29,10 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         activeParents.clear();
     }    
 
+    private final Supplier<T> supplierT;
+    
+    private final Supplier<P> supplierP;
+    
     @Getter(AccessLevel.PACKAGE)
     @NonNull
     private final P poolDataSourceConfiguration;
@@ -56,40 +58,46 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     private volatile State state = State.INITIALIZING; // changed in a synchronized method close()
 
     /* 1: everything null, INITIALIZING */
-    protected CombiPoolDataSource() {
-        this(null, null, null);
+    protected CombiPoolDataSource(final Supplier<T> supplierT,
+                                  final Supplier<P> supplierP) {
+        this(supplierT, supplierP, null, null, null);
     }
 
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
-    protected CombiPoolDataSource(@NonNull final P poolDataSourceConfiguration) {
-        this(poolDataSourceConfiguration, null, null);
+    protected CombiPoolDataSource(final Supplier<T> supplierT,
+                                  final Supplier<P> supplierP,
+                                  @NonNull final P poolDataSourceConfiguration) {
+        this(supplierT, supplierP, poolDataSourceConfiguration, null, null);
     }
 
     /* 3: activeParent != null, INITIALIZING */
-    protected CombiPoolDataSource(@NonNull final CombiPoolDataSource<T, P> activeParent) {
-        this(null, null, activeParent);
+    protected CombiPoolDataSource(Supplier<T> supplierT,
+                                  Supplier<P> supplierP,
+                                  @NonNull final CombiPoolDataSource<T, P> activeParent) {
+        this(supplierT, supplierP, null, null, activeParent);
     }
 
-    private CombiPoolDataSource(final P poolDataSourceConfiguration,
+    private CombiPoolDataSource(final Supplier<T> supplierT,
+                                final Supplier<P> supplierP,
+                                final P poolDataSourceConfiguration,
                                 final T poolDataSource,
                                 final CombiPoolDataSource<T, P> activeParent) {
         try {
-            final Type t = getClass().getGenericSuperclass();
-            final ParameterizedType pt = (ParameterizedType) t;
-            final Class<T> typeT = (Class) pt.getActualTypeArguments()[0];
-            final Class<P> typeP = (Class) pt.getActualTypeArguments()[1];
+            // https://stackoverflow.com/questions/75175/create-instance-of-generic-type-in-java
+            this.supplierT = supplierT;
+            this.supplierP = supplierP;
         
             if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent == null) {
-                this.poolDataSourceConfiguration = typeP.newInstance();
-                this.poolDataSource = typeT.newInstance();
+                this.poolDataSourceConfiguration = supplierP.get();
+                this.poolDataSource = supplierT.get();
                 this.activeParent = null;
             } else if (poolDataSourceConfiguration != null && poolDataSource == null && activeParent == null) {
                 this.poolDataSourceConfiguration = poolDataSourceConfiguration;
                 this.activeParent = determineActiveParent();
-                this.poolDataSource = this.activeParent == null ? typeT.newInstance() : null;
+                this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
                 setUp();
             } else if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent != null) {
-                this.poolDataSourceConfiguration = typeP.newInstance();
+                this.poolDataSourceConfiguration = supplierP.get();
                 this.poolDataSource = null;
                 this.activeParent = activeParent;
             } else {
@@ -125,7 +133,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             try {
                 poolDataSourceConfiguration.determineConnectInfo();
                 updateCombiPoolAdministration();
-                updatePool(poolDataSource, determineCommonPoolDataSource(), true, activeParent == null);
+                updatePool(poolDataSourceConfiguration, determineCommonPoolDataSource(), true, activeParent == null);
                 state = this.state = State.OPEN;
             } catch (Exception ex) {
                 state = this.state = State.ERROR;
@@ -220,7 +228,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
         case ERROR:
             updateCombiPoolAdministration();
-            updatePool(poolDataSource, determineCommonPoolDataSource(), false, activeParent == null);
+            updatePool(poolDataSourceConfiguration, determineCommonPoolDataSource(), false, activeParent == null);
             state = this.state = State.CLOSED;
             break;
             
@@ -231,28 +239,28 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         log.debug("state while leaving tearDown(): {}", state);
     }
 
-    protected void updatePoolName(@NonNull final T configPoolDataSource,
+    protected void updatePoolName(@NonNull final P poolDataSourceConfiguration,
                                   @NonNull final T commonPoolDataSource,
                                   final boolean initializing,
                                   final boolean isParentPoolDataSource) {
     }
 
-    protected void updatePoolSizes(@NonNull final T configPoolDataSource,
+    protected void updatePoolSizes(@NonNull final P poolDataSourceConfiguration,
                                    @NonNull final T commonPoolDataSource,
                                    final boolean initializing) {
 
     }
 
-    protected void updatePool(@NonNull final T configPoolDataSource,
+    protected void updatePool(@NonNull final P poolDataSourceConfiguration,
                               @NonNull final T commonPoolDataSource,
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
-        updatePoolName(configPoolDataSource,
+        updatePoolName(poolDataSourceConfiguration,
                        commonPoolDataSource,
                        initializing,
                        isParentPoolDataSource);
         if (!isParentPoolDataSource) { // do not double the pool size when it is a activeParent
-            updatePoolSizes(configPoolDataSource,
+            updatePoolSizes(poolDataSourceConfiguration,
                             commonPoolDataSource,
                             initializing);
         }
