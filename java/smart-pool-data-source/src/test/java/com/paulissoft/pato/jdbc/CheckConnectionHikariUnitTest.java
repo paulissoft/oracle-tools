@@ -249,16 +249,23 @@ public class CheckConnectionHikariUnitTest {
                 log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
                 
                 assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
+                
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
-                assertEquals(parent.getUsername(), ds.getUsername());
+                
                 assertEquals(ds == domainDataSourceHikari ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
+                assertEquals(parent.getUsername(), ds.getPoolDataSource().getUsername());
+                
                 assertEquals("bc_proxy", ds.getPassword());
+                assertEquals(parent.getPassword(), ds.getPoolDataSource().getPassword());
+
                 assertEquals(60, ds.getMinimumIdle());
-                assertEquals(2 * 60, ds.getPoolDataSource().getMinimumIdle());
+                assertEquals(parent.getMinimumIdle() + child.getMinimumIdle(), ds.getPoolDataSource().getMinimumIdle());
+
                 assertEquals(60, ds.getMaximumPoolSize());
-                assertEquals(2 * 60, ds.getPoolDataSource().getMaximumPoolSize());
+                assertEquals(parent.getMaximumPoolSize() + child.getMaximumPoolSize(), ds.getPoolDataSource().getMaximumPoolSize());
+
                 assertEquals(parent.getPoolName(), ds.getPoolName());
-                assertEquals(ds == domainDataSourceHikari ? "HikariPool-bodomain" : "HikariPool-boopapij", ds.getPoolName());
+                assertEquals(ds == domainDataSourceHikari ? "HikariPool-bodomain" : "HikariPool-bodomain-boopapij", ds.getPoolName());
                 assertEquals("HikariPool-bodomain-boopapij", ds.getPoolDataSource().getPoolName());
 
                 final Connection conn = ds.getConnection();

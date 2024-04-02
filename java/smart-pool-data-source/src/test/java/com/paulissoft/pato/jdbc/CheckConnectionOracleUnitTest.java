@@ -236,10 +236,15 @@ public class CheckConnectionOracleUnitTest {
                 log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
                 
                 assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
+                
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
-                assertEquals(parent.getUser(), ds.getUser());
+                
                 assertEquals(ds == domainDataSourceOracle ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
-                assertEquals(parent.getPassword(), ds.getPassword());
+                assertEquals(parent.getUser(), ds.getPoolDataSource().getUser());
+
+                assertEquals("bc_proxy", ds.getPassword());
+                // NoSuchMethod this method is deprecated
+                // assertEquals(parent.getPassword(), ds.getPoolDataSource().getPassword());
 
                 assertEquals(10, ds.getMinPoolSize());
                 assertEquals(parent.getMinPoolSize() + child.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
@@ -247,7 +252,7 @@ public class CheckConnectionOracleUnitTest {
                 assertEquals(20, ds.getMaxPoolSize());
                 assertEquals(parent.getMaxPoolSize() + child.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                                 
-                assertEquals(ds == domainDataSourceOracle ? "OraclePool-bodomain" : "OraclePool-boopapij", ds.getConnectionPoolName());
+                assertEquals(ds == domainDataSourceOracle ? "OraclePool-bodomain" : "OraclePool-bodomain-boopapij", ds.getConnectionPoolName());
                 assertEquals("OraclePool-bodomain-boopapij", ds.getPoolDataSource().getConnectionPoolName());
 
                 final Connection conn = ds.getConnection();
