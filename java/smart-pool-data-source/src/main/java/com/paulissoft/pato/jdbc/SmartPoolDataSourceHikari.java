@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.DirectFieldAccessor;
@@ -18,40 +17,30 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
-    // Every parent must have statistics at level 3
-    private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, PoolDataSourceStatistics> activeParentPoolDataSourceStatistics =
-        new ConcurrentHashMap<>();
+    // Only the parent (getActiveParent() == null) must have statistics at level 3
+    private final PoolDataSourceStatistics parentPoolDataSourceStatistics;
 
-    static void clear() {
-        activeParentPoolDataSourceStatistics.clear();
-    }
-    
     // Every item must have statistics at level 4
+    @NonNull
     private final PoolDataSourceStatistics poolDataSourceStatistics;
 
     public SmartPoolDataSourceHikari() {
         // super();
         assert getActiveParent() == null;
-
-        // level 3
-        final PoolDataSourceStatistics poolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                         poolDataSourceStatisticsTotal,
-                                         () -> getState() != CombiPoolDataSource.State.OPEN,
-                                         this::getCommonPoolDataSourceConfiguration);
         
-        final PoolDataSourceConfigurationCommonId commonId =
-            new PoolDataSourceConfigurationCommonId(getCommonPoolDataSourceConfiguration());
+        final PoolDataSourceStatistics[] fields = updateStatistics(null);
 
-        activeParentPoolDataSourceStatistics.computeIfAbsent(commonId, k -> poolDataSourceStatistics);
+        parentPoolDataSourceStatistics = fields[0];
+        poolDataSourceStatistics = fields[1];
+    }
 
-        // level 4
-        this.poolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolDataSourceConfiguration().getPoolName() + ": (only " +
-                                         this.getPoolDataSourceConfiguration().getSchema() + ")",
-                                         poolDataSourceStatistics, // level 3
-                                         () -> getState() != CombiPoolDataSource.State.OPEN,
-                                         this::getPoolDataSourceConfiguration);
+    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+        super(poolDataSourceConfigurationHikari);
+        
+        final PoolDataSourceStatistics[] fields = updateStatistics((SmartPoolDataSourceHikari) getActiveParent());
+
+        parentPoolDataSourceStatistics = fields[0];
+        poolDataSourceStatistics = fields[1];
     }
     
     public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
@@ -59,22 +48,31 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
         assert getActiveParent() != null;
 
-        final PoolDataSourceConfigurationCommonId commonId =
-            new PoolDataSourceConfigurationCommonId(getCommonPoolDataSourceConfiguration());
+        final PoolDataSourceStatistics[] fields = updateStatistics(activeParent);
 
-        // level 3
-        final PoolDataSourceStatistics poolDataSourceStatistics =
-            activeParentPoolDataSourceStatistics.get(commonId);
+        parentPoolDataSourceStatistics = fields[0];
+        poolDataSourceStatistics = fields[1];
+    }
 
-        assert poolDataSourceStatistics != null;
+    private PoolDataSourceStatistics[] updateStatistics(final SmartPoolDataSourceHikari activeParent) {
+        // level 3        
+        final PoolDataSourceStatistics parentPoolDataSourceStatistics =
+            activeParent == null
+            ? new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
+                                           poolDataSourceStatisticsTotal,
+                                           () -> getState() != CombiPoolDataSource.State.OPEN,
+                                           this::getCommonPoolDataSourceConfiguration)
+            : activeParent.parentPoolDataSourceStatistics;
         
         // level 4
-        this.poolDataSourceStatistics =
+        final PoolDataSourceStatistics poolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> this.getPoolDataSourceConfiguration().getPoolName() + ": (only " +
                                          this.getPoolDataSourceConfiguration().getSchema() + ")",
-                                         poolDataSourceStatistics, // level 3
+                                         parentPoolDataSourceStatistics, // level 3
                                          () -> getState() != CombiPoolDataSource.State.OPEN,
                                          this::getPoolDataSourceConfiguration);
+
+        return new PoolDataSourceStatistics[]{ parentPoolDataSourceStatistics, poolDataSourceStatistics };
     }
 
     PoolDataSourceConfigurationHikari getCommonPoolDataSourceConfiguration() {

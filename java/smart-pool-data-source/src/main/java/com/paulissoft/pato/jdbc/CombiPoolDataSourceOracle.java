@@ -14,7 +14,7 @@ public class CombiPoolDataSourceOracle
     extends CombiPoolDataSource<PoolDataSource, PoolDataSourceConfigurationOracle>
     implements PoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    private static final String POOL_NAME_PREFIX = "OraclePool";
+    static final String POOL_NAME_PREFIX = "OraclePool";
 
     public CombiPoolDataSourceOracle() {
         super(PoolDataSourceImpl::new, PoolDataSourceConfigurationOracle::new);
