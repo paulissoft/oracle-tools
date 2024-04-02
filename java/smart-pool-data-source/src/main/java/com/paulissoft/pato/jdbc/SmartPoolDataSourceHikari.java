@@ -27,19 +27,14 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
     
     // Every item must have statistics at level 4
     private final PoolDataSourceStatistics poolDataSourceStatistics;
-    /*
-        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                     poolDataSourceStatisticsTotal,
-                                     () -> getState() != CombiPoolDataSource.State.OPEN,
-                                     this::getPoolDataSourceConfiguration);
-    */
 
-    public SmartPoolDataSourceHikari(){
+    public SmartPoolDataSourceHikari() {
+        // super();
+        assert getActiveParent() == null;
+        
         poolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                         getActiveParent() == null ?
-                                         poolDataSourceStatisticsTotal :
-                                         ((SmartPoolDataSourceHikari)getActiveParent()).poolDataSourceStatistics,
+                                         poolDataSourceStatisticsTotal,
                                          () -> getState() != CombiPoolDataSource.State.OPEN,
                                          this::getPoolDataSourceConfiguration);
     }
@@ -57,10 +52,11 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
     public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
         super(activeParent);
+
+        assert getActiveParent() != null;
+
         poolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                         getActiveParent() == null ?
-                                         poolDataSourceStatisticsTotal :
                                          ((SmartPoolDataSourceHikari)getActiveParent()).poolDataSourceStatistics,
                                          () -> getState() != CombiPoolDataSource.State.OPEN,
                                          this::getPoolDataSourceConfiguration);

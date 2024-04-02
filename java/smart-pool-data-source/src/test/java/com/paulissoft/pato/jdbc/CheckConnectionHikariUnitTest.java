@@ -264,7 +264,6 @@ public class CheckConnectionHikariUnitTest {
                 assertEquals(60, ds.getMaximumPoolSize());
                 assertEquals(parent.getMaximumPoolSize() + child.getMaximumPoolSize(), ds.getPoolDataSource().getMaximumPoolSize());
 
-                assertEquals(parent.getPoolName(), ds.getPoolName());
                 assertEquals(ds == domainDataSourceHikari ? "HikariPool-bodomain" : "HikariPool-bodomain-boopapij", ds.getPoolName());
                 assertEquals("HikariPool-bodomain-boopapij", ds.getPoolDataSource().getPoolName());
 
