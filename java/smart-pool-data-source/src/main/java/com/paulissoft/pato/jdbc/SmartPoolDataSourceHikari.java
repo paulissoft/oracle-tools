@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.NonNull;
@@ -31,125 +32,82 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
     public SmartPoolDataSourceHikari() {
         // super();
         assert getActiveParent() == null;
-        
-        poolDataSourceStatistics =
+
+        // level 3
+        final PoolDataSourceStatistics poolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
                                          poolDataSourceStatisticsTotal,
+                                         () -> getState() != CombiPoolDataSource.State.OPEN,
+                                         this::getCommonPoolDataSourceConfiguration);
+        
+        final PoolDataSourceConfigurationCommonId commonId =
+            new PoolDataSourceConfigurationCommonId(getCommonPoolDataSourceConfiguration());
+
+        activeParentPoolDataSourceStatistics.computeIfAbsent(commonId, k -> poolDataSourceStatistics);
+
+        // level 4
+        this.poolDataSourceStatistics =
+            new PoolDataSourceStatistics(() -> this.getPoolDataSourceConfiguration().getPoolName() + ": (only " +
+                                         this.getPoolDataSourceConfiguration().getSchema() + ")",
+                                         poolDataSourceStatistics, // level 3
                                          () -> getState() != CombiPoolDataSource.State.OPEN,
                                          this::getPoolDataSourceConfiguration);
     }
     
-    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-        super(poolDataSourceConfigurationHikari);
-        poolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                         getActiveParent() == null ?
-                                         poolDataSourceStatisticsTotal :
-                                         ((SmartPoolDataSourceHikari)getActiveParent()).poolDataSourceStatistics,
-                                         () -> getState() != CombiPoolDataSource.State.OPEN,
-                                         this::getPoolDataSourceConfiguration);
-    }
-
     public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
         super(activeParent);
 
         assert getActiveParent() != null;
 
-        poolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                         ((SmartPoolDataSourceHikari)getActiveParent()).poolDataSourceStatistics,
+        final PoolDataSourceConfigurationCommonId commonId =
+            new PoolDataSourceConfigurationCommonId(getCommonPoolDataSourceConfiguration());
+
+        // level 3
+        final PoolDataSourceStatistics poolDataSourceStatistics =
+            activeParentPoolDataSourceStatistics.get(commonId);
+
+        assert poolDataSourceStatistics != null;
+        
+        // level 4
+        this.poolDataSourceStatistics =
+            new PoolDataSourceStatistics(() -> this.getPoolDataSourceConfiguration().getPoolName() + ": (only " +
+                                         this.getPoolDataSourceConfiguration().getSchema() + ")",
+                                         poolDataSourceStatistics, // level 3
                                          () -> getState() != CombiPoolDataSource.State.OPEN,
                                          this::getPoolDataSourceConfiguration);
     }
 
-    public SmartPoolDataSourceHikari(String driverClassName,
-                                     String url,
-                                     String username,
-                                     String password,
-                                     String poolName,
-                                     int maximumPoolSize,
-                                     int minimumIdle,
-                                     String dataSourceClassName,
-                                     boolean autoCommit,
-                                     long connectionTimeout,
-                                     long idleTimeout,
-                                     long maxLifetime,
-                                     String connectionTestQuery,
-                                     long initializationFailTimeout,
-                                     boolean isolateInternalQueries,
-                                     boolean allowPoolSuspension,
-                                     boolean readOnly,
-                                     boolean registerMbeans,    
-                                     long validationTimeout,
-                                     long leakDetectionThreshold) {
-        this(build(driverClassName,
-                   url,
-                   username,
-                   password,
-                   poolName,
-                   maximumPoolSize,
-                   minimumIdle,
-                   dataSourceClassName,
-                   autoCommit,
-                   connectionTimeout,
-                   idleTimeout,
-                   maxLifetime,
-                   connectionTestQuery,
-                   initializationFailTimeout,
-                   isolateInternalQueries,
-                   allowPoolSuspension,
-                   readOnly,
-                   registerMbeans,    
-                   validationTimeout,
-                   leakDetectionThreshold));
+    PoolDataSourceConfigurationHikari getCommonPoolDataSourceConfiguration() {
+        return getCommonPoolDataSourceConfiguration(getPoolDataSource(), true);
     }
-
-    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
-                                                             String url,
-                                                             String username,
-                                                             String password,
-                                                             String poolName,
-                                                             int maximumPoolSize,
-                                                             int minimumIdle,
-                                                             String dataSourceClassName,
-                                                             boolean autoCommit,
-                                                             long connectionTimeout,
-                                                             long idleTimeout,
-                                                             long maxLifetime,
-                                                             String connectionTestQuery,
-                                                             long initializationFailTimeout,
-                                                             boolean isolateInternalQueries,
-                                                             boolean allowPoolSuspension,
-                                                             boolean readOnly,
-                                                             boolean registerMbeans,    
-                                                             long validationTimeout,
-                                                             long leakDetectionThreshold) {
+    
+    PoolDataSourceConfigurationHikari getCommonPoolDataSourceConfiguration(final HikariDataSource hikariDataSource,
+                                                                           final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationHikari
             .builder()
-            .driverClassName(driverClassName)
-            .url(url)
-            .username(username)
-            .password(password)
-            // cannot reference this before supertype constructor has been called, hence can not use this in constructor above
-            .type(SmartPoolDataSourceHikari.class.getName())
-            .poolName(poolName)
-            .maximumPoolSize(maximumPoolSize)
-            .minimumIdle(minimumIdle)
-            .autoCommit(autoCommit)
-            .connectionTimeout(connectionTimeout)
-            .idleTimeout(idleTimeout)
-            .maxLifetime(maxLifetime)
-            .connectionTestQuery(connectionTestQuery)
-            .initializationFailTimeout(initializationFailTimeout)
-            .isolateInternalQueries(isolateInternalQueries)
-            .allowPoolSuspension(allowPoolSuspension)
-            .readOnly(readOnly)
-            .registerMbeans(registerMbeans)
-            .validationTimeout(validationTimeout)
-            .leakDetectionThreshold(leakDetectionThreshold)
+            .driverClassName(hikariDataSource.getDriverClassName())
+            .url(hikariDataSource.getJdbcUrl())
+            .username(hikariDataSource.getUsername())
+            .password(excludeNonIdConfiguration ? null : hikariDataSource.getPassword())
+            .type(hikariDataSource.getClass().getName())
+            .poolName(excludeNonIdConfiguration ? null : hikariDataSource.getPoolName())
+            .maximumPoolSize(hikariDataSource.getMaximumPoolSize())
+            .minimumIdle(hikariDataSource.getMinimumIdle())
+            .autoCommit(hikariDataSource.isAutoCommit())
+            .connectionTimeout(hikariDataSource.getConnectionTimeout())
+            .idleTimeout(hikariDataSource.getIdleTimeout())
+            .maxLifetime(hikariDataSource.getMaxLifetime())
+            .connectionTestQuery(hikariDataSource.getConnectionTestQuery())
+            .initializationFailTimeout(hikariDataSource.getInitializationFailTimeout())
+            .isolateInternalQueries(hikariDataSource.isIsolateInternalQueries())
+            .allowPoolSuspension(hikariDataSource.isAllowPoolSuspension())
+            .readOnly(hikariDataSource.isReadOnly())
+            .registerMbeans(hikariDataSource.isRegisterMbeans())
+            .validationTimeout(hikariDataSource.getValidationTimeout())
+            .leakDetectionThreshold(hikariDataSource.getLeakDetectionThreshold())
             .build();
     }
-
+    
     // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
     private HikariPool getHikariPool() {
         return (HikariPool) new DirectFieldAccessor(this).getPropertyValue("pool");
