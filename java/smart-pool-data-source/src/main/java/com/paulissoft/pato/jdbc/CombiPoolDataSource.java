@@ -36,6 +36,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     
     private final T poolDataSource;
 
+    @Getter(AccessLevel.PACKAGE)
     private final CombiPoolDataSource<T, P> activeParent;
 
     @NonNull
@@ -220,29 +221,39 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
 
     protected void updatePoolName(@NonNull final P poolDataSourceConfiguration,
-                                  @NonNull final T commonPoolDataSource,
+                                  @NonNull final T poolDataSource,
                                   final boolean initializing,
                                   final boolean isParentPoolDataSource) {
+        throw new UnsupportedOperationException("Operation updatePoolName() not implemented.");
     }
 
     protected void updatePoolSizes(@NonNull final P poolDataSourceConfiguration,
-                                   @NonNull final T commonPoolDataSource,
+                                   @NonNull final T poolDataSource,
                                    final boolean initializing) {
-
+        throw new UnsupportedOperationException("Operation updatePoolSizes() not implemented.");
     }
 
     protected void updatePool(@NonNull final P poolDataSourceConfiguration,
-                              @NonNull final T commonPoolDataSource,
+                              @NonNull final T poolDataSource,
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
-        updatePoolName(poolDataSourceConfiguration,
-                       commonPoolDataSource,
-                       initializing,
-                       isParentPoolDataSource);
-        if (!isParentPoolDataSource) { // do not double the pool size when it is a activeParent
-            updatePoolSizes(poolDataSourceConfiguration,
-                            commonPoolDataSource,
-                            initializing);
+        log.debug(">updatePool(poolDataSourceConfiguration={}, poolDataSource={}, initializing={}, isParentPoolDataSource={})",
+                  poolDataSourceConfiguration,
+                  poolDataSource,
+                  initializing,
+                  isParentPoolDataSource);
+        try {
+            updatePoolName(poolDataSourceConfiguration,
+                           poolDataSource,
+                           initializing,
+                           isParentPoolDataSource);
+            if (!isParentPoolDataSource) { // do not double the pool size when it is an active parent
+                updatePoolSizes(poolDataSourceConfiguration,
+                                poolDataSource,
+                                initializing);
+            }
+        } finally {
+            log.debug("<updatePool");
         }
     }
 
@@ -288,8 +299,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
         final String usernameSession1 = poolDataSourceConfiguration.getUsernameToConnectTo();
         final String passwordSession1 = poolDataSourceConfiguration.getPassword();
-        final String usernameSession2 = poolDataSourceConfiguration.getSchema();
-        
+        final String usernameSession2 = poolDataSourceConfiguration.getSchema();        
         final Connection conn = getConnection(getPoolDataSource(),
                                               usernameSession1,
                                               passwordSession1,
@@ -312,18 +322,18 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     // two purposes:
     // 1) get a standard connection (session 1) but maybe with a different username/password than the default
     // 2) get a connection for the multi-session proxy model (session 2)
-    protected Connection getConnection(@NonNull final T commonPoolDataSource,
+    protected Connection getConnection(@NonNull final T poolDataSource,
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
-        return getConnection2(getConnection1(commonPoolDataSource, usernameSession1, passwordSession1),
+        return getConnection2(getConnection1(poolDataSource, usernameSession1, passwordSession1),
                               usernameSession1,
                               passwordSession1,
                               usernameSession2);
     }
 
     // get a standard connection (session 1) but maybe with a different username/password than the default
-    protected abstract Connection getConnection1(@NonNull final T commonPoolDataSource,
+    protected abstract Connection getConnection1(@NonNull final T poolDataSource,
                                                  @NonNull final String usernameSession1,
                                                  @NonNull final String passwordSession1) throws SQLException;
 
@@ -332,58 +342,62 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1,
                                         @NonNull final String usernameSession2) throws SQLException {
-        log.debug("getConnection2(usernameSession1={}, usernameSession2={})",
+        log.debug(">getConnection2(usernameSession1={}, usernameSession2={})",
                   usernameSession1,
                   usernameSession2);
 
-        // if the current schema is not the requested schema try to open/close the proxy session
-        if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
-            assert !isSingleSessionProxyModel()
-                : "Requested schema name should be the same as the current schema name in the single-session proxy model";
+        try {
+            // if the current schema is not the requested schema try to open/close the proxy session
+            if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
+                assert !isSingleSessionProxyModel()
+                    : "Requested schema name should be the same as the current schema name in the single-session proxy model";
 
-            OracleConnection oraConn = null;
+                OracleConnection oraConn = null;
 
-            try {
-                if (conn.isWrapperFor(OracleConnection.class)) {
-                    oraConn = conn.unwrap(OracleConnection.class);
-                }
-            } catch (SQLException ex) {
-                oraConn = null;
-            }
-
-            if (oraConn != null) {
-                int nr = 0;
-                    
-                do {
-                    switch(nr) {
-                    case 0:
-                        if (oraConn.isProxySession()) {
-                            // go back to the session with the first username
-                            oraConn.close(OracleConnection.PROXY_SESSION);
-                            oraConn.setSchema(usernameSession1);
-                        }
-                        break;
-                            
-                    case 1:
-                        if (!usernameSession1.equals(usernameSession2)) {
-                             // open a proxy session with the second username
-                            final Properties proxyProperties = new Properties();
-
-                            proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, usernameSession2);
-                            oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
-                            oraConn.setSchema(usernameSession2);
-                        }
-                        break;
-                            
-                    case 2:
-                        oraConn.setSchema(usernameSession2);
-                        break;
-                            
-                    default:
-                        throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
+                try {
+                    if (conn.isWrapperFor(OracleConnection.class)) {
+                        oraConn = conn.unwrap(OracleConnection.class);
                     }
-                } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
-            }                
+                } catch (SQLException ex) {
+                    oraConn = null;
+                }
+
+                if (oraConn != null) {
+                    int nr = 0;
+                    
+                    do {
+                        switch(nr) {
+                        case 0:
+                            if (oraConn.isProxySession()) {
+                                // go back to the session with the first username
+                                oraConn.close(OracleConnection.PROXY_SESSION);
+                                oraConn.setSchema(usernameSession1);
+                            }
+                            break;
+                            
+                        case 1:
+                            if (!usernameSession1.equals(usernameSession2)) {
+                                // open a proxy session with the second username
+                                final Properties proxyProperties = new Properties();
+
+                                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, usernameSession2);
+                                oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
+                                oraConn.setSchema(usernameSession2);
+                            }
+                            break;
+                            
+                        case 2:
+                            oraConn.setSchema(usernameSession2);
+                            break;
+                            
+                        default:
+                            throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
+                        }
+                    } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
+                }                
+            }
+        } finally {
+            log.debug("<getConnection2()");
         }
         
         return conn;

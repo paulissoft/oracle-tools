@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 @EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
 @ContextConfiguration(classes = ConfigurationFactoryOracle.class)
 @TestPropertySource("classpath:application-test.properties")
-public class CheckConfigurationUnitTestOracle {
+public class CheckConfigurationOracleUnitTest {
 
     @Autowired
     @Qualifier("spring-datasource")

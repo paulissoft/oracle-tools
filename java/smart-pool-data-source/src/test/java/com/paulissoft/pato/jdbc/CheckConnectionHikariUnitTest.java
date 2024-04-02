@@ -32,7 +32,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
             MyOperatorDataSourceHikari.class})
 @ContextConfiguration(classes = ConfigurationFactoryHikari.class)
 @TestPropertySource("classpath:application-test.properties")
-public class CheckConnectionUnitTestHikari {
+public class CheckConnectionHikariUnitTest {
 
     @Autowired
     @Qualifier("app-config-datasource")

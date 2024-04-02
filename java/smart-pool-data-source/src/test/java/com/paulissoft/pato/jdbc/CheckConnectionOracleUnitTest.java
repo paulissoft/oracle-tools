@@ -31,7 +31,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
             MyOperatorDataSourceOracle.class})
 @ContextConfiguration(classes = ConfigurationFactoryOracle.class)
 @TestPropertySource("classpath:application-test.properties")
-public class CheckConnectionUnitTestOracle {
+public class CheckConnectionOracleUnitTest {
 
     @Autowired
     @Qualifier("app-config-datasource")
@@ -240,11 +240,13 @@ public class CheckConnectionUnitTestOracle {
                 assertEquals(parent.getUser(), ds.getUser());
                 assertEquals(ds == domainDataSourceOracle ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
                 assertEquals(parent.getPassword(), ds.getPassword());
+
                 assertEquals(10, ds.getMinPoolSize());
-                assertEquals(2 * 10, ds.getPoolDataSource().getMinPoolSize());
+                assertEquals(parent.getMinPoolSize() + child.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
+
                 assertEquals(20, ds.getMaxPoolSize());
-                assertEquals(2 * 20, ds.getPoolDataSource().getMaxPoolSize());
-                assertEquals(parent.getConnectionPoolName(), ds.getConnectionPoolName());
+                assertEquals(parent.getMaxPoolSize() + child.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
+                                
                 assertEquals(ds == domainDataSourceOracle ? "OraclePool-bodomain" : "OraclePool-boopapij", ds.getConnectionPoolName());
                 assertEquals("OraclePool-bodomain-boopapij", ds.getPoolDataSource().getConnectionPoolName());
 

@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 @EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
 @ContextConfiguration(classes = ConfigurationFactoryOracle.class)
 @TestPropertySource("classpath:application-test.properties")
-public class CheckLifeCycleUnitTestOracle {
+public class CheckLifeCycleOracleUnitTest {
 
     @Autowired
     @Qualifier("app-auth-datasource")

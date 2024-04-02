@@ -52,7 +52,7 @@
 
     <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
-    <!--test>CheckConfigurationUnitTest,CheckLifeCycleUnitTest,CheckConnectionUnitTest#testConnectionOracle</test-->
+    <!--test>CheckConfigurationOracleUnitTest,CheckLifeCycleOracleUnitTest,CheckConnectionOracleUnitTest#testConnectionOracle</test-->
   </properties>
 
   <dependencies>
