@@ -17,6 +17,18 @@ public class CombiPoolDataSourceHikari
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
+    public CombiPoolDataSourceHikari(){
+        super(HikariDataSource::new, PoolDataSourceConfigurationHikari::new);
+    }
+    
+    public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+        super(HikariDataSource::new, poolDataSourceConfigurationHikari);
+    }
+
+    public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
+        super(PoolDataSourceConfigurationHikari::new, activeParent);
+    }
+
     public CombiPoolDataSourceHikari(String driverClassName,
                                      String url,
                                      String username,
@@ -59,10 +71,6 @@ public class CombiPoolDataSourceHikari
                    leakDetectionThreshold));
     }
 
-    public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-        super(HikariDataSource::new, PoolDataSourceConfigurationHikari::new, poolDataSourceConfigurationHikari);
-    }
-
     protected static PoolDataSourceConfigurationHikari build(String driverClassName,
                                                              String url,
                                                              String username,
@@ -85,11 +93,12 @@ public class CombiPoolDataSourceHikari
                                                              long leakDetectionThreshold) {
         return PoolDataSourceConfigurationHikari
             .builder()
-            .type(CombiPoolDataSourceHikari.class.getName())
             .driverClassName(driverClassName)
             .url(url)
             .username(username)
             .password(password)
+            // cannot reference this before supertype constructor has been called, hence can not use this in constructor above
+            .type(CombiPoolDataSourceHikari.class.getName())
             .poolName(poolName)
             .maximumPoolSize(maximumPoolSize)
             .minimumIdle(minimumIdle)
@@ -144,10 +153,10 @@ public class CombiPoolDataSourceHikari
         }
     }
 
-    // no getXXX() nor setXXX(), just the rest (getCommonPoolDataSource() may return different values depending on state hence use a function)
+    // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
-    protected HikariDataSource getCommonPoolDataSource() {
-        return super.getCommonPoolDataSource();
+    protected HikariDataSource getPoolDataSource() {
+        return super.getPoolDataSource();
     }
 
     /*
@@ -179,8 +188,8 @@ public class CombiPoolDataSourceHikari
 
     @Override
     protected void tearDown() {
-        // must get this info before it is actually closed since then getCommonPoolDataSource() will return a error
-        final HikariDataSource commonPoolDataSource = getCommonPoolDataSource(); 
+        // must get this info before it is actually closed since then getPoolDataSource() will return a error
+        final HikariDataSource commonPoolDataSource = getPoolDataSource(); 
         
         // we are in a synchronized context
         super.tearDown();

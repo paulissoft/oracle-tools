@@ -16,6 +16,18 @@ public class CombiPoolDataSourceOracle
 
     private static final String POOL_NAME_PREFIX = "OraclePool";
 
+    public CombiPoolDataSourceOracle(){
+        super(PoolDataSourceImpl::new, PoolDataSourceConfigurationOracle::new);
+    }
+    
+    public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+        super(PoolDataSourceImpl::new, poolDataSourceConfigurationOracle);
+    }
+
+    public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent) {
+        super(PoolDataSourceConfigurationOracle::new, activeParent);
+    }
+
     public CombiPoolDataSourceOracle(String url,
                                      String username,
                                      String password,
@@ -55,10 +67,6 @@ public class CombiPoolDataSourceOracle
                    connectionValidationTimeout));
     }
 
-    public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
-        super(PoolDataSourceImpl::new, PoolDataSourceConfigurationOracle::new, poolDataSourceConfigurationOracle);
-    }
-
     protected static PoolDataSourceConfigurationOracle build(String url,
                                                              String username,
                                                              String password,
@@ -79,10 +87,11 @@ public class CombiPoolDataSourceOracle
                                                              int connectionValidationTimeout) {
         return PoolDataSourceConfigurationOracle
             .builder()
-            .type(CombiPoolDataSourceOracle.class.getName())
             .url(url)
             .username(username)
             .password(password)
+            // cannot reference this before supertype constructor has been called, hence can not use this in constructor above
+            .type(CombiPoolDataSourceOracle.class.getName())
             .connectionPoolName(connectionPoolName)
             .initialPoolSize(initialPoolSize)
             .minPoolSize(minPoolSize)
@@ -125,10 +134,10 @@ public class CombiPoolDataSourceOracle
         }
     }
     
-    // no getXXX() nor setXXX(), just the rest (getCommonPoolDataSource() may return different values depending on state hence use a function)
+    // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverride.class })
-    protected PoolDataSource getCommonPoolDataSource() {
-        return super.getCommonPoolDataSource();
+    protected PoolDataSource getPoolDataSource() {
+        return super.getPoolDataSource();
     }
     
     /*

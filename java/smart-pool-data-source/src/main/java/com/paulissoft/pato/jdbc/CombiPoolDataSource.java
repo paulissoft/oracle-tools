@@ -27,10 +27,6 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     static void clear() {
         activeParents.clear();
     }    
-
-    private final Supplier<T> supplierT;
-    
-    private final Supplier<P> supplierP;
     
     @Getter(AccessLevel.PACKAGE)
     @NonNull
@@ -57,64 +53,31 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
 
     /* 1: everything null, INITIALIZING */
-    protected CombiPoolDataSource(final Supplier<T> supplierT,
-                                  final Supplier<P> supplierP) {
-        this(supplierT, supplierP, null, null, null);
+    protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
+                                  @NonNull final Supplier<P> supplierP) {
+        this.poolDataSourceConfiguration = supplierP.get();
+        this.poolDataSource = supplierT.get();
+        this.activeParent = null;
     }
 
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
-    protected CombiPoolDataSource(final Supplier<T> supplierT,
-                                  final Supplier<P> supplierP,
+    protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final P poolDataSourceConfiguration) {
-        this(supplierT, supplierP, poolDataSourceConfiguration, null, null);
+        this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+        this.activeParent = determineActiveParent();
+        this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
+        setUp();
+        assert state == State.OPEN : "After setting up the state must be OPEN.";
     }
 
     /* 3: activeParent != null, INITIALIZING */
-    protected CombiPoolDataSource(Supplier<T> supplierT,
-                                  Supplier<P> supplierP,
+    protected CombiPoolDataSource(@NonNull Supplier<P> supplierP,
                                   @NonNull final CombiPoolDataSource<T, P> activeParent) {
-        this(supplierT, supplierP, null, null, activeParent);
-    }
-
-    private CombiPoolDataSource(final Supplier<T> supplierT,
-                                final Supplier<P> supplierP,
-                                final P poolDataSourceConfiguration,
-                                final T poolDataSource,
-                                final CombiPoolDataSource<T, P> activeParent) {
-        try {
-            log.debug(">CombiPoolDataSource(poolDataSourceConfiguration={}, poolDataSource={}, activeParent={})",
-                      poolDataSourceConfiguration,
-                      poolDataSource,
-                      activeParent);
-            
-            // https://stackoverflow.com/questions/75175/create-instance-of-generic-type-in-java
-            this.supplierT = supplierT;
-            this.supplierP = supplierP;
-        
-            if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent == null) {
-                this.poolDataSourceConfiguration = supplierP.get();
-                this.poolDataSource = supplierT.get();
-                this.activeParent = null;
-            } else if (poolDataSourceConfiguration != null && poolDataSource == null && activeParent == null) {
-                this.poolDataSourceConfiguration = poolDataSourceConfiguration;
-                this.activeParent = determineActiveParent();
-                this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
-                setUp();
-            } else if (poolDataSourceConfiguration == null && poolDataSource == null && activeParent != null) {
-                this.poolDataSourceConfiguration = supplierP.get();
-                this.poolDataSource = null;
-                this.activeParent = activeParent;
-            } else {
-                throw new IllegalStateException("Illegal combination of poolDataSourceConfiguration, poolDataSource and activeParent");
-            }
-
-            assert this.poolDataSourceConfiguration != null;
-            assert (this.poolDataSource == null) != (this.activeParent == null);
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        } finally {
-            log.debug("<CombiPoolDataSource()");
-        }
+        this.poolDataSourceConfiguration = supplierP.get();
+        this.poolDataSource = null;
+        this.activeParent = activeParent;
+        assert activeParent.activeParent == null : "A parent can not have a parent itself.";
+        assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
     }
 
     protected State getState() {
@@ -129,7 +92,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         setUp();
     }
 
-    private void setUp() {
+    protected void setUp() {
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
 
@@ -139,7 +102,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             try {
                 poolDataSourceConfiguration.determineConnectInfo();
                 updateCombiPoolAdministration();
-                updatePool(poolDataSourceConfiguration, getCommonPoolDataSource(), true, activeParent == null);
+                updatePool(poolDataSourceConfiguration, getPoolDataSource(), true, activeParent == null);
                 state = this.state = State.OPEN;
             } catch (Exception ex) {
                 state = this.state = State.ERROR;
@@ -184,6 +147,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             if (activeParent == null) {
                 // The next with the same properties will get this one as activeParent
                 activeParents.computeIfAbsent(commonId, k -> this);
+                // only copy when there is no active parent
+                poolDataSourceConfiguration.copyTo(poolDataSource);            
             } else {
                 final PoolDataSourceConfigurationCommonId parentCommonId =
                     new PoolDataSourceConfigurationCommonId(activeParent.poolDataSourceConfiguration);
@@ -195,7 +160,6 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 activeParent.activeChildren.incrementAndGet();
             }
 
-            poolDataSourceConfiguration.copyTo(getCommonPoolDataSource());            
             break;
             
         case OPEN:
@@ -244,7 +208,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
         case ERROR:
             updateCombiPoolAdministration();
-            updatePool(poolDataSourceConfiguration, getCommonPoolDataSource(), false, activeParent == null);
+            updatePool(poolDataSourceConfiguration, getPoolDataSource(), false, activeParent == null);
             state = this.state = State.CLOSED;
             break;
             
@@ -291,7 +255,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
-    protected T getCommonPoolDataSource() {
+    protected T getPoolDataSource() {
         switch (state) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
@@ -326,7 +290,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         final String passwordSession1 = poolDataSourceConfiguration.getPassword();
         final String usernameSession2 = poolDataSourceConfiguration.getSchema();
         
-        final Connection conn = getConnection(getCommonPoolDataSource(),
+        final Connection conn = getConnection(getPoolDataSource(),
                                               usernameSession1,
                                               passwordSession1,
                                               usernameSession2);

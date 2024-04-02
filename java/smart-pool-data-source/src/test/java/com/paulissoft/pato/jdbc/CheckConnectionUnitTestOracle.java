@@ -237,14 +237,16 @@ public class CheckConnectionUnitTestOracle {
                 
                 assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+                assertEquals(parent.getUser(), ds.getUser());
                 assertEquals(ds == domainDataSourceOracle ? "bc_proxy[bodomain]" : "bc_proxy[boopapij]", ds.getUsername());
                 assertEquals(parent.getPassword(), ds.getPassword());
                 assertEquals(10, ds.getMinPoolSize());
-                assertEquals(2 * 10, ds.getCommonPoolDataSource().getMinPoolSize());
+                assertEquals(2 * 10, ds.getPoolDataSource().getMinPoolSize());
                 assertEquals(20, ds.getMaxPoolSize());
-                assertEquals(2 * 20, ds.getCommonPoolDataSource().getMaxPoolSize());
+                assertEquals(2 * 20, ds.getPoolDataSource().getMaxPoolSize());
+                assertEquals(parent.getConnectionPoolName(), ds.getConnectionPoolName());
                 assertEquals(ds == domainDataSourceOracle ? "OraclePool-bodomain" : "OraclePool-boopapij", ds.getConnectionPoolName());
-                assertEquals("OraclePool-bodomain-boopapij", ds.getCommonPoolDataSource().getConnectionPoolName());
+                assertEquals("OraclePool-bodomain-boopapij", ds.getPoolDataSource().getConnectionPoolName());
 
                 final Connection conn = ds.getConnection();
 
