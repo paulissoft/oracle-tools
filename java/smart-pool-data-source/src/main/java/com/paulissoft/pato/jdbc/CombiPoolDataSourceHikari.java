@@ -172,7 +172,6 @@ public class CombiPoolDataSourceHikari
 
     public void setUsername(String username) {
         try {
-            log.debug("setUsername({})", username);
             getPoolDataSourceSetter().setUsername(username);
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
@@ -202,7 +201,7 @@ public class CombiPoolDataSourceHikari
     protected Connection getConnection1(@NonNull final HikariDataSource poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(usernameSession1={})", usernameSession1);
+        log.debug("getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
 
         String usernameOrig = null;
         String passwordOrig = null;
@@ -211,14 +210,12 @@ public class CombiPoolDataSourceHikari
             if (!poolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
                 usernameOrig = poolDataSource.getUsername();
                 passwordOrig = poolDataSource.getPassword();
-                log.debug("poolDataSource.setUsername({})", usernameSession1);
                 poolDataSource.setUsername(usernameSession1);
                 poolDataSource.setPassword(passwordSession1);
             }
             return poolDataSource.getConnection();
         } finally {
             if (usernameOrig != null) {
-                log.debug("poolDataSource.setUsername({})", usernameOrig);
                 poolDataSource.setUsername(usernameOrig);
                 usernameOrig = null;
             }
@@ -234,7 +231,7 @@ public class CombiPoolDataSourceHikari
                               @NonNull final HikariDataSource poolDataSource,
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
-        log.debug(">updatePool(isParentPoolDataSource={})", isParentPoolDataSource);
+        log.debug(">updatePool(id={}, isParentPoolDataSource={})", getId(), isParentPoolDataSource);
 
         try {
             final HikariConfig newConfig = new HikariConfig();
@@ -253,7 +250,7 @@ public class CombiPoolDataSourceHikari
 
             newConfig.copyStateTo(poolDataSource);
         } finally {
-            log.debug("<updatePool()");
+            log.debug("<updatePool(id={})", getId());
         }
     }
     
@@ -262,7 +259,7 @@ public class CombiPoolDataSourceHikari
                                 final boolean initializing,
                                 final boolean isParentPoolDataSource) {
         try {
-            log.debug(">updatePoolName()");
+            log.debug(">updatePoolName(id={})", getId());
 
             log.debug("config pool data source; address: {}; name: {}",
                       poolDataSourceConfiguration,
@@ -295,7 +292,7 @@ public class CombiPoolDataSourceHikari
                       poolDataSource,
                       poolDataSource.getPoolName());
 
-            log.debug("<updatePoolName()");
+            log.debug("<updatePoolName(id={})", getId());
         }
     }
 
@@ -303,7 +300,7 @@ public class CombiPoolDataSourceHikari
                                  @NonNull final HikariConfig poolDataSource,
                                  final boolean initializing) {
         try {
-            log.debug(">updatePoolSizes()");
+            log.debug(">updatePoolSizes(id={})", getId());
 
             assert poolDataSourceConfiguration != null;
             assert poolDataSource != null;
@@ -358,7 +355,7 @@ public class CombiPoolDataSourceHikari
                       poolDataSource.getMinimumIdle(),
                       poolDataSource.getMaximumPoolSize());
 
-            log.debug("<updatePoolSizes()");
+            log.debug("<updatePoolSizes(id={})", getId());
         }
     }
 }

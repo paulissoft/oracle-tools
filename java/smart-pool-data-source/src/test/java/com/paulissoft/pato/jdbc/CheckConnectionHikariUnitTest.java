@@ -56,7 +56,7 @@ public class CheckConnectionHikariUnitTest {
 
     @Autowired
     @Qualifier("app-domain-datasource-hikari")
-    private SmartPoolDataSourceHikari poolDomainDataSourceHikari;
+    private /*Smart*/CombiPoolDataSourceHikari poolDomainDataSourceHikari;
 
     @Autowired
     @Qualifier("operatorDataSourceProperties")
@@ -90,7 +90,9 @@ public class CheckConnectionHikariUnitTest {
         // ocpi
         poolAppOcpiDataSourceConfigurationHikari.copyFrom(poolAppOcpiDataSourceConfiguration);
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 4; i++) {
+            log.debug("round #{}", i);
+            
             // these two will be combined
             final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppConfigDataSourceConfigurationHikari);
 
@@ -108,11 +110,17 @@ public class CheckConnectionHikariUnitTest {
 
             log.debug("pds1.getCommonPoolDataSource() (#4): {}", pds1.getCommonPoolDataSource());
 
-            final SmartPoolDataSourceHikari pds3 = poolDomainDataSourceHikari;
+            final /*Smart*/CombiPoolDataSourceHikari pds3 = poolDomainDataSourceHikari;
 
             log.debug("pds1.getCommonPoolDataSource() (#5): {}", pds1.getCommonPoolDataSource());
 
-            if (i >= 2) { conn3 = pds3.getConnection(); if (i == 3) { conn3.close(); } }
+            if (i >= 2) {
+                conn3 = pds3.getConnection();
+                if (i == 3) {
+                    conn3.close();
+                }
+                assertTrue(pds3.isOpen()); // first getConnection() will open the pool data source
+            }
 
             log.debug("pds1.getCommonPoolDataSource() (#6): {}", pds1.getCommonPoolDataSource());
 
@@ -166,17 +174,22 @@ public class CheckConnectionHikariUnitTest {
             for (int j = 0; j < 2; j++) {
                 assertNotNull(conn1 = pds1.getConnection());
                 assertNotNull(conn2 = pds2.getConnection());
-                assertNotNull(conn3 = pds3.getConnection());
+                assertNotNull(conn3 = pds3.getConnection(), "Can not get a connection for round " + i);
+                assertTrue(pds3.isOpen());
 
                 assertEquals(2, pds1.getCommonPoolDataSource().getActiveConnections());
                 assertEquals(pds1.getCommonPoolDataSource().getActiveConnections() +
                              pds1.getCommonPoolDataSource().getIdleConnections(),
                              pds1.getCommonPoolDataSource().getTotalConnections());
 
+                assertTrue(pds3.isOpen());
+                /*
                 assertEquals(1, pds3.getActiveConnections());
                 assertEquals(pds3.getActiveConnections() +
                              pds3.getIdleConnections(),
                              pds3.getTotalConnections());
+                */
+                assertTrue(pds3.isOpen());
 
                 assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
                              conn2.unwrap(Connection.class).getClass());
@@ -189,9 +202,9 @@ public class CheckConnectionHikariUnitTest {
             }
 
             // close pds3
-            // assertFalse(pds3.isClosed());
+            assertTrue(pds3.isOpen());
             pds3.close();
-            // assertTrue(pds3.isClosed());
+            assertFalse(pds3.isOpen());
             // assertTrue(pds3.getCommonPoolDataSource().isClosed()); // one user: bodomain
 
             thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());

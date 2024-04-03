@@ -122,7 +122,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     protected Connection getConnection1(@NonNull final PoolDataSource poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(usernameSession1={}, passwordSession1={})", usernameSession1, passwordSession1);
+        log.debug("getConnection1(usernameSession1={})", usernameSession1);
 
         return getConnection(poolDataSource, usernameSession1, passwordSession1, statisticsEnabled.get(), true);
     }

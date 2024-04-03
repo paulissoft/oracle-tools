@@ -167,8 +167,7 @@ public class PoolDataSourceConfigurationHikari
                 switch(nr) {
                 case 0: hikariDataSource.setDriverClassName(this.getDriverClassName()); break;
                 case 1: hikariDataSource.setJdbcUrl(this.getUrl()); break;
-                case 2: log.debug("hikariDataSource.setUsername({})", this.getUsername());
-                        hikariDataSource.setUsername(this.getUsername()); break;
+                case 2: hikariDataSource.setUsername(this.getUsername()); break;
                 case 3: hikariDataSource.setPassword(this.getPassword()); break;
                 case 4: /* connection pool name is not copied here */ break;
                 case 5: hikariDataSource.setMaximumPoolSize(this.getMaximumPoolSize()); break;

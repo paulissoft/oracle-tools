@@ -39,10 +39,10 @@ public class ConfigurationFactoryHikari extends ConfigurationFactory {
 
     @Bean(name = "app-domain-datasource-hikari")
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
-    public SmartPoolDataSourceHikari getAppDomainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+    public /*Smart*/CombiPoolDataSourceHikari getAppDomainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(SmartPoolDataSourceHikari.class)
+            .type(/*Smart*/CombiPoolDataSourceHikari.class)
             .build();
     }
 

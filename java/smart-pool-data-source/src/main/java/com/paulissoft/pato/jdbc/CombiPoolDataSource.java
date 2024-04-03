@@ -27,7 +27,10 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     static void clear() {
         activeParents.clear();
     }    
-    
+
+    @Getter(AccessLevel.PACKAGE)
+    private final StringBuffer id = new StringBuffer("UNKNOWN");
+
     @Getter(AccessLevel.PACKAGE)
     @NonNull
     private final P poolDataSourceConfiguration;
@@ -59,6 +62,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         this.poolDataSourceConfiguration = supplierP.get();
         this.poolDataSource = supplierT.get();
         this.activeParent = null;
+
+        setId(this.poolDataSourceConfiguration.getUsername());
     }
 
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
@@ -67,7 +72,11 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
         this.activeParent = determineActiveParent();
         this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
+        
+        setId(this.poolDataSourceConfiguration.getUsername());
+
         setUp();
+
         assert state == State.OPEN : "After setting up the state must be OPEN.";
     }
 
@@ -77,6 +86,9 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         this.poolDataSourceConfiguration = supplierP.get();
         this.poolDataSource = null;
         this.activeParent = activeParent;
+
+        setId(this.poolDataSourceConfiguration.getUsername());
+
         assert activeParent.activeParent == null : "A parent can not have a parent itself.";
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
     }
@@ -85,10 +97,27 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         return state;
     }
 
+    public final boolean isOpen() {
+        switch(state) {
+        case OPEN:
+        case CLOSING:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    private void setId(final String id) {
+        this.id.delete(0, this.id.length());
+        if (id != null) {
+            this.id.append(id);
+        }
+    }
+    
     @jakarta.annotation.PostConstruct
     @javax.annotation.PostConstruct
     public final synchronized void open() {
-        log.debug("open()");
+        log.debug("open(id={})", id);
 
         setUp();
     }
@@ -98,10 +127,12 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         State state = this.state;
 
         try {
-            log.debug(">setUp(state={}, config={})", state, poolDataSourceConfiguration);
+            log.debug(">setUp(id={}, state={})", id, state);
 
             if (state == State.INITIALIZING) {
                 try {
+                    setId(poolDataSourceConfiguration.getSchema());
+
                     poolDataSourceConfiguration.determineConnectInfo();
                     updateCombiPoolAdministration();
                     updatePool(poolDataSourceConfiguration, getPoolDataSource(), true, activeParent == null);
@@ -112,7 +143,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 }
             }
         } finally {
-            log.debug("<setUp(state={})", state);
+            log.debug("<setUp(id={}, state={})", id, state);
         }
     }
 
@@ -121,7 +152,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
         
     private CombiPoolDataSource<T, P> determineActiveParent() {
-        log.debug(">determineActiveParent()");
+        log.debug(">determineActiveParent(id={})", id);
         
         // Since the configuration is fixed now we can do lookups for an active parent.
         // The first pool data source (for same properties) will have activeParent == null
@@ -134,13 +165,13 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             activeParent = null;
         }
 
-        log.debug("<determineActiveParent() = {}", activeParent);
+        log.debug("<determineActiveParent(id={}) = {}", id, activeParent);
 
         return activeParent;
     }
 
     private void updateCombiPoolAdministration() {
-        log.debug(">updateCombiPoolAdministration()");
+        log.debug(">updateCombiPoolAdministration(id={})", id);
         
         final PoolDataSourceConfigurationCommonId commonId =
             new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
@@ -167,6 +198,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             
         case OPEN:
             if (activeParent != null && activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
+                log.info("Trying to close the parent again since there are no more active children and the parent state is CLOSING.");
                 activeParent.close(); // try to close() again
             }
             // fall thru        
@@ -178,13 +210,13 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             break;
         }
 
-        log.debug("<updateCombiPoolAdministration()");
+        log.debug("<updateCombiPoolAdministration(id={})", id);
     }
 
     @jakarta.annotation.PreDestroy
     @javax.annotation.PreDestroy
     public final synchronized void close() {
-        log.debug("close()");
+        log.debug("close(id={})", id);
 
         // why did we get here?
         if (log.isDebugEnabled()) {
@@ -201,7 +233,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         State state = this.state;
 
         try {
-            log.debug(">tearDown(state={}, config={})", state, poolDataSourceConfiguration);
+            log.debug(">tearDown(id={}, state={})", id, state);
 
             switch(state) {
             case OPEN:
@@ -209,6 +241,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 if (activeParent == null && activeChildren.get() != 0) {
                     // parent having active children can not get CLOSED now but mark it as CLOSING (or keep it like that)
                     if (state != State.CLOSING) {
+                        log.info("Can not close this parent since there are active children ({}), hence setting its state to CLOSING.",
+                                 activeChildren.get());
                         state = this.state = State.CLOSING;
                     }
                     break;
@@ -225,7 +259,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 break;
             }
         } finally {
-            log.debug("<tearDown(state={})", state);
+            log.debug("<tearDown(id={}, state={})", id, state);
         }
     }
 
@@ -246,9 +280,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                               @NonNull final T poolDataSource,
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
-        log.debug(">updatePool(poolDataSourceConfiguration={}, poolDataSource={}, initializing={}, isParentPoolDataSource={})",
-                  poolDataSourceConfiguration,
-                  poolDataSource,
+        log.debug(">updatePool(id={}, initializing={}, isParentPoolDataSource={})",
+                  id,
                   initializing,
                   isParentPoolDataSource);
         try {
@@ -262,7 +295,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                                 initializing);
             }
         } finally {
-            log.debug("<updatePool");
+            log.debug("<updatePool(id={})", id);
         }
     }
 
@@ -351,7 +384,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1,
                                         @NonNull final String usernameSession2) throws SQLException {
-        log.debug(">getConnection2(usernameSession1={}, usernameSession2={})",
+        log.debug(">getConnection2(id={}, usernameSession1={}, usernameSession2={})",
+                  id,
                   usernameSession1,
                   usernameSession2);
 
@@ -406,7 +440,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 }                
             }
         } finally {
-            log.debug("<getConnection2()");
+            log.debug("<getConnection2(id={})", id);
         }
         
         return conn;

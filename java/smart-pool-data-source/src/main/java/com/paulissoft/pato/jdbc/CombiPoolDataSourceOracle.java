@@ -154,7 +154,7 @@ public class CombiPoolDataSourceOracle
     protected Connection getConnection1(@NonNull final PoolDataSource poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(usernameSession1={}, passwordSession1={})", usernameSession1, passwordSession1);
+        log.debug("getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
 
         return poolDataSource.getConnection(usernameSession1, passwordSession1);
     }
@@ -164,7 +164,7 @@ public class CombiPoolDataSourceOracle
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
-        log.debug("getConnection(usernameSession1={}, passwordSession1={}, usernameSession2={})", usernameSession1, passwordSession1, usernameSession2);
+        log.debug("getConnection(id={}, usernameSession1={}, usernameSession2={})", getId(), usernameSession1, usernameSession2);
 
         // we do use single-session proxy model so no need to invoke getConnection2()
         return getConnection1(poolDataSource, usernameSession1, passwordSession1);
@@ -176,7 +176,7 @@ public class CombiPoolDataSourceOracle
                                   final boolean initializing,
                                   final boolean isParentPoolDataSource) {
         try {
-            log.debug(">updatePoolName(isParentPoolDataSource={})", isParentPoolDataSource);
+            log.debug(">updatePoolName(id={}, isParentPoolDataSource={})", getId(), isParentPoolDataSource);
             
             log.debug("config pool data source; address: {}; name: {}",
                       poolDataSourceConfiguration,
@@ -211,7 +211,7 @@ public class CombiPoolDataSourceOracle
                       poolDataSource,
                       poolDataSource.getConnectionPoolName());
 
-            log.debug("<updatePoolName()");
+            log.debug("<updatePoolName(id={})", getId());
         }
     }
 
@@ -220,7 +220,7 @@ public class CombiPoolDataSourceOracle
                                    @NonNull final PoolDataSource poolDataSource,
                                    final boolean initializing) {
         try {
-            log.debug(">updatePoolSizes()");
+            log.debug(">updatePoolSizes(id={})", getId());
             
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
                       poolDataSourceConfiguration,
@@ -290,7 +290,7 @@ public class CombiPoolDataSourceOracle
                       poolDataSource.getMinPoolSize(),
                       poolDataSource.getMaxPoolSize());
 
-            log.debug("<updatePoolSizes()");
+            log.debug("<updatePoolSizes(id={})", getId());
         }
     }
 }

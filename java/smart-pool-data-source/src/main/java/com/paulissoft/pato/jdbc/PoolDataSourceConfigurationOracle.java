@@ -95,7 +95,6 @@ public class PoolDataSourceConfigurationOracle
     }
   
     public void setUser(String paramString) throws SQLException {
-        log.debug("setUser({})", paramString);
         setUsername(paramString);
     }
   
@@ -130,10 +129,7 @@ public class PoolDataSourceConfigurationOracle
                 /* this.driverClassName is ignored */
                 switch(nr) {
                 case 0: poolDataSource.setURL(this.getUrl()); break;
-                case 1:
-                    log.debug("poolDataSource.setUser({})", this.getUsername());
-                    poolDataSource.setUser(this.getUsername());
-                    break;
+                case 1: poolDataSource.setUser(this.getUsername()); break;
                 case 2: poolDataSource.setPassword(this.getPassword()); break;
                 case 3: /* connection pool name is not copied here */ break;
                 case 4: poolDataSource.setInitialPoolSize(this.getInitialPoolSize()); break;
