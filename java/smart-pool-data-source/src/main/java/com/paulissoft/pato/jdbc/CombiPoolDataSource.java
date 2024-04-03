@@ -136,9 +136,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
             if (state == State.INITIALIZING) {
                 try {
-                    setId(poolDataSourceConfiguration.getSchema());
-
                     poolDataSourceConfiguration.determineConnectInfo();
+                    setId(poolDataSourceConfiguration.getSchema());
                     updateCombiPoolAdministration();
                     updatePool(poolDataSourceConfiguration, getPoolDataSource(), true, activeParent == null);
                     state = this.state = State.OPEN;
@@ -164,11 +163,15 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         final PoolDataSourceConfigurationCommonId commonId =
             new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
 
+        log.debug("commonId: {}", commonId);
+        
         CombiPoolDataSource<T, P> activeParent = (CombiPoolDataSource<T, P>) activeParents.get(commonId); 
 
         if (activeParent != null && activeParent.state != State.OPEN) {
             activeParent = null;
         }
+
+        log.debug("activeParent: {}", activeParent);
 
         log.debug("<determineActiveParent(id={}) = {}", id, activeParent);
 
@@ -180,37 +183,50 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         
         final PoolDataSourceConfigurationCommonId commonId =
             new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
-            
+
+        log.debug("commonId: {}", commonId);
+
         switch (state) {
         case INITIALIZING:
             if (activeParent == null) {
                 // The next with the same properties will get this one as activeParent
                 activeParents.computeIfAbsent(commonId, k -> this);
                 // only copy when there is no active parent
-                poolDataSourceConfiguration.copyTo(poolDataSource);            
+                poolDataSourceConfiguration.copyTo(poolDataSource);
+
+                log.debug("(parent) copied configuration to the pool data source: {}", poolDataSource);
             } else {
                 final PoolDataSourceConfigurationCommonId parentCommonId =
                     new PoolDataSourceConfigurationCommonId(activeParent.poolDataSourceConfiguration);
+
+                log.debug("parentCommonId: {}", parentCommonId);
 
                 if (!parentCommonId.equals(commonId)) {
                     throw new IllegalArgumentException("The parent and this common configuration should be the same.");
                 }
                 
                 activeParent.activeChildren.incrementAndGet();
+                
+                log.debug("(child) # active children for this parent: {}", activeParent.activeChildren.get());
             }
-
             break;
             
         case OPEN:
-            if (activeParent != null && activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
-                log.info("Trying to close the parent again since there are no more active children and the parent state is CLOSING.");
-                activeParent.close(); // try to close() again
+            if (activeParent != null) {
+                if (activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
+                    log.info("Trying to close the parent again since there are no more active children and the parent state is CLOSING.");
+                    activeParent.close(); // try to close() again
+                }
+
+                log.debug("(child) # active children for this parent: {}", activeParent.activeChildren.get());
             }
             // fall thru        
         default:
             if (activeParent == null) {
-                // remove the active parent
-                activeParents.computeIfPresent(commonId, (k, v) -> null);
+                // remove the active parent (if any)
+                activeParents.remove(commonId);
+
+                log.debug("(parent) removed default parent");
             }            
             break;
         }

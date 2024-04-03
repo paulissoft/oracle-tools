@@ -154,11 +154,14 @@ public class PoolDataSourceConfigurationHikari
         this.poolName = null;
     }
 
+    @Override
     void copyTo(final DataSource dataSource) {
         copyTo((HikariDataSource) dataSource);
     }
     
     private void copyTo(final HikariDataSource hikariDataSource) {
+        log.debug(">copyTo(hikariDataSource={})", hikariDataSource);
+        
         int nr = 0;
         final int maxNr = 18;
         
@@ -191,6 +194,8 @@ public class PoolDataSourceConfigurationHikari
                 log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
             }
         } while (++nr <= maxNr);
+
+        log.debug("<copyTo(hikariDataSource={})", hikariDataSource);
     }
     
 //**/    @Override

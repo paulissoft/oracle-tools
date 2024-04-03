@@ -144,7 +144,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     }
 
     void copyTo(final DataSource DataSource) {
-        throw new UnsupportedOperationException("Operation not implemented.");
+        throw new UnsupportedOperationException("Operation copyTo() not implemented.");
     }    
 
     /**

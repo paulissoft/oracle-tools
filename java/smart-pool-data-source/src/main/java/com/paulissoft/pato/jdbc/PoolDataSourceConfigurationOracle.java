@@ -116,11 +116,14 @@ public class PoolDataSourceConfigurationOracle
         setDriverClassName(null);
     }
 
+    @Override
     void copyTo(final DataSource dataSource) {
         copyTo((PoolDataSource) dataSource);
     }
 
     private void copyTo(final PoolDataSource poolDataSource) {
+        log.debug(">copyTo(poolDataSource={})", poolDataSource);
+        
         int nr = 0;
         final int maxNr = 17;
         
@@ -153,6 +156,8 @@ public class PoolDataSourceConfigurationOracle
                 log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
             }
         } while (++nr <= maxNr);
+
+        log.debug("<copyTo(poolDataSource={})", poolDataSource);
     }
 
     @Override

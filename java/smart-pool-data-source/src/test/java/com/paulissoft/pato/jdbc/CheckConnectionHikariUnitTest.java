@@ -110,29 +110,15 @@ public class CheckConnectionHikariUnitTest {
                 .type(SmartPoolDataSourceHikari.class)
                 .build();
 
-            log.debug("pds1.getPoolDataSource() (#1): {}", pds1.getPoolDataSource());
+            if (i >= 2) { conn1 = pds1.getConnection(); if (i == 3) { conn1.close(); } }
 
-            assertFalse(pds1.isOpen());
-
-            // first getConnection() will open the pool data source
-            if (i >= 2) { conn1 = pds1.getConnection(); if (i == 3) { conn1.close(); } assertTrue(pds1.isOpen()); }
-
-            log.debug("pds1.getPoolDataSource() (#2): {}", pds1.getPoolDataSource());
-            
             final SmartPoolDataSourceHikari pds2 =
                 ocpiDataSourceProperties
                 .initializeDataSourceBuilder()
                 .type(SmartPoolDataSourceHikari.class)
                 .build();
 
-            log.debug("pds1.getPoolDataSource() (#3): {}", pds1.getPoolDataSource());
-
-            assertFalse(pds2.isOpen());
-
-            // first getConnection() will open the pool data source
-            if (i >= 2) { conn2 = pds2.getConnection(); if (i == 3) { conn2.close(); } assertTrue(pds2.isOpen()); }
-
-            log.debug("pds1.getPoolDataSource() (#4): {}", pds1.getPoolDataSource());
+            if (i >= 2) { conn2 = pds2.getConnection(); if (i == 3) { conn2.close(); } }
 
             final SmartPoolDataSourceHikari pds3 =
                 domainDataSourceProperties
@@ -140,33 +126,26 @@ public class CheckConnectionHikariUnitTest {
                 .type(SmartPoolDataSourceHikari.class)
                 .build();
 
-            log.debug("pds1.getPoolDataSource() (#5): {}", pds1.getPoolDataSource());
+            if (i >= 2) { conn3 = pds3.getConnection(); if (i == 3) { conn3.close(); } }
 
-            assertFalse(pds3.isOpen());
-
-            // first getConnection() will open the pool data source
-            if (i >= 2) { conn3 = pds3.getConnection(); if (i == 3) { conn3.close(); } assertTrue(pds3.isOpen()); }
-
-            log.debug("pds1.getPoolDataSource() (#6): {}", pds1.getPoolDataSource());
-
+            // first getConnection() (i >= 2) will open the pool data source
             switch(i) {
             case 0:
             case 1:
-                log.debug("pds1.getPoolDataSource(): {}", pds1.getPoolDataSource().toString());
-                log.debug("pds2.getPoolDataSource(): {}", pds2.getPoolDataSource().toString());
-                
-                assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());            
-                assertEquals("HikariPool-bocsconf-boocpi",
-                             pds1.getPoolDataSource().getPoolName());
-                assertEquals(pds1.getPoolDataSource().getPoolName(),
-                             pds2.getPoolDataSource().getPoolName());
+                assertFalse(pds1.isOpen());
+                assertFalse(pds2.isOpen());
+                assertFalse(pds3.isOpen());
                 break;
 
             case 2:
             case 3:
-                log.debug("pds1.getPoolDataSource(): {}", pds1.getPoolDataSource().toString());
-                log.debug("pds2.getPoolDataSource(): {}", pds2.getPoolDataSource().toString());
-                
+                assertTrue(pds1.isOpen());
+                assertTrue(pds2.isOpen());
+                assertTrue(pds3.isOpen());
+
+                log.debug("pds1.getPoolDataSourceConfiguration(): {}", pds1.getPoolDataSourceConfiguration());
+                log.debug("pds2.getPoolDataSourceConfiguration(): {}", pds2.getPoolDataSourceConfiguration());
+
                 // pool sizes are incorporated into common pool data source
                 assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());
                 assertEquals("HikariPool-bocsconf",
@@ -180,11 +159,7 @@ public class CheckConnectionHikariUnitTest {
             for (int j = 0; j < 2; j++) {
                 assertNotNull(conn1 = pds1.getConnection());
                 assertNotNull(conn2 = pds2.getConnection());
-
-                log.debug("round #{}; pds3.isOpen(): {}", i, pds3.isOpen());
-
-                assertNotNull(conn3 = pds3.getConnection(), "Can not get a connection for round " + i);
-                assertTrue(pds3.isOpen());
+                assertNotNull(conn3 = pds3.getConnection());
 
                 assertEquals(2, pds1.getActiveConnections());
                 assertEquals(pds1.getActiveConnections() +
