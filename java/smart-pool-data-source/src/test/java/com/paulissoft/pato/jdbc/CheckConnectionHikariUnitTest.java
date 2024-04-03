@@ -34,6 +34,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConnectionHikariUnitTest {
 
+    /*
     @Autowired
     @Qualifier("app-config-datasource")
     private PoolDataSourceConfiguration poolAppConfigDataSourceConfiguration;
@@ -53,11 +54,20 @@ public class CheckConnectionHikariUnitTest {
     @Autowired
     @Qualifier("app-ocpi-datasource-hikari")
     private PoolDataSourceConfigurationHikari poolAppOcpiDataSourceConfigurationHikari;
-
+    */
+        
     @Autowired
-    @Qualifier("app-domain-datasource-hikari")
-    private /*Smart*/CombiPoolDataSourceHikari poolDomainDataSourceHikari;
-
+    @Qualifier("configDataSourceProperties")
+    private DataSourceProperties configDataSourceProperties;
+        
+    @Autowired
+    @Qualifier("ocpiDataSourceProperties")
+    private DataSourceProperties ocpiDataSourceProperties;
+        
+    @Autowired
+    @Qualifier("domainDataSourceProperties")
+    private DataSourceProperties domainDataSourceProperties;
+        
     @Autowired
     @Qualifier("operatorDataSourceProperties")
     private DataSourceProperties dataSourceProperties;
@@ -85,88 +95,84 @@ public class CheckConnectionHikariUnitTest {
         log.debug("testConnection()");
 
         // config
-        poolAppConfigDataSourceConfigurationHikari.copyFrom(poolAppConfigDataSourceConfiguration);
+        // poolAppConfigDataSourceConfigurationHikari.copyFrom(poolAppConfigDataSourceConfiguration);
 
         // ocpi
-        poolAppOcpiDataSourceConfigurationHikari.copyFrom(poolAppOcpiDataSourceConfiguration);
+        // poolAppOcpiDataSourceConfigurationHikari.copyFrom(poolAppOcpiDataSourceConfiguration);
 
         for (int i = 0; i < 4; i++) {
             log.debug("round #{}", i);
             
             // these two will be combined
-            final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolAppConfigDataSourceConfigurationHikari);
+            final SmartPoolDataSourceHikari pds1 =
+                configDataSourceProperties
+                .initializeDataSourceBuilder()
+                .type(SmartPoolDataSourceHikari.class)
+                .build();
 
-            log.debug("pds1.getCommonPoolDataSource() (#1): {}", pds1.getCommonPoolDataSource());
+            log.debug("pds1.getPoolDataSource() (#1): {}", pds1.getPoolDataSource());
 
-            if (i >= 2) { conn1 = pds1.getConnection(); if (i == 3) { conn1.close(); } }
+            assertFalse(pds1.isOpen());
 
-            log.debug("pds1.getCommonPoolDataSource() (#2): {}", pds1.getCommonPoolDataSource());
+            // first getConnection() will open the pool data source
+            if (i >= 2) { conn1 = pds1.getConnection(); if (i == 3) { conn1.close(); } assertTrue(pds1.isOpen()); }
+
+            log.debug("pds1.getPoolDataSource() (#2): {}", pds1.getPoolDataSource());
             
-            final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolAppOcpiDataSourceConfigurationHikari);
+            final SmartPoolDataSourceHikari pds2 =
+                ocpiDataSourceProperties
+                .initializeDataSourceBuilder()
+                .type(SmartPoolDataSourceHikari.class)
+                .build();
 
-            log.debug("pds1.getCommonPoolDataSource() (#3): {}", pds1.getCommonPoolDataSource());
+            log.debug("pds1.getPoolDataSource() (#3): {}", pds1.getPoolDataSource());
 
-            if (i >= 2) { conn2 = pds2.getConnection(); if (i == 3) { conn2.close(); } }
+            assertFalse(pds2.isOpen());
 
-            log.debug("pds1.getCommonPoolDataSource() (#4): {}", pds1.getCommonPoolDataSource());
+            // first getConnection() will open the pool data source
+            if (i >= 2) { conn2 = pds2.getConnection(); if (i == 3) { conn2.close(); } assertTrue(pds2.isOpen()); }
 
-            final /*Smart*/CombiPoolDataSourceHikari pds3 = poolDomainDataSourceHikari;
+            log.debug("pds1.getPoolDataSource() (#4): {}", pds1.getPoolDataSource());
 
-            log.debug("pds1.getCommonPoolDataSource() (#5): {}", pds1.getCommonPoolDataSource());
+            final SmartPoolDataSourceHikari pds3 =
+                domainDataSourceProperties
+                .initializeDataSourceBuilder()
+                .type(SmartPoolDataSourceHikari.class)
+                .build();
 
-            if (i >= 2) {
-                conn3 = pds3.getConnection();
-                if (i == 3) {
-                    conn3.close();
-                }
-                assertTrue(pds3.isOpen()); // first getConnection() will open the pool data source
-            }
+            log.debug("pds1.getPoolDataSource() (#5): {}", pds1.getPoolDataSource());
 
-            log.debug("pds1.getCommonPoolDataSource() (#6): {}", pds1.getCommonPoolDataSource());
+            assertFalse(pds3.isOpen());
 
-            log.debug("pds1.getCommonPoolDataSource(): {}", pds1.getCommonPoolDataSource());
-            log.debug("pds2.getCommonPoolDataSource(): {}", pds2.getCommonPoolDataSource());
-            
-            // do not use assertEquals(pds1.getCommonPoolDataSource(), pds2.getCommonPoolDataSource()) since equals() is overridden
+            // first getConnection() will open the pool data source
+            if (i >= 2) { conn3 = pds3.getConnection(); if (i == 3) { conn3.close(); } assertTrue(pds3.isOpen()); }
+
+            log.debug("pds1.getPoolDataSource() (#6): {}", pds1.getPoolDataSource());
 
             switch(i) {
             case 0:
             case 1:
-                assertTrue(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
-            
-                assertEquals(poolAppConfigDataSourceConfigurationHikari.getMinimumIdle() +
-                             poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle(),
-                             pds1.getCommonPoolDataSource().getMinPoolSize());
-
-                assertEquals(poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize() +
-                             poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize(),
-                             pds2.getCommonPoolDataSource().getMaxPoolSize());
-
+                log.debug("pds1.getPoolDataSource(): {}", pds1.getPoolDataSource().toString());
+                log.debug("pds2.getPoolDataSource(): {}", pds2.getPoolDataSource().toString());
+                
+                assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());            
                 assertEquals("HikariPool-bocsconf-boocpi",
-                             pds1.getCommonPoolDataSource().getPoolName());
-                assertEquals(pds1.getCommonPoolDataSource().getPoolName(),
-                             pds2.getCommonPoolDataSource().getPoolName());
+                             pds1.getPoolDataSource().getPoolName());
+                assertEquals(pds1.getPoolDataSource().getPoolName(),
+                             pds2.getPoolDataSource().getPoolName());
                 break;
 
             case 2:
             case 3:
+                log.debug("pds1.getPoolDataSource(): {}", pds1.getPoolDataSource().toString());
+                log.debug("pds2.getPoolDataSource(): {}", pds2.getPoolDataSource().toString());
+                
                 // pool sizes are incorporated into common pool data source
-                assertFalse(pds1.getCommonPoolDataSource() == pds2.getCommonPoolDataSource());
-
-                assertEquals(poolAppConfigDataSourceConfigurationHikari.getMinimumIdle(),
-                             pds1.getCommonPoolDataSource().getMinPoolSize());
-                assertEquals(poolAppOcpiDataSourceConfigurationHikari.getMinimumIdle(),
-                             pds2.getCommonPoolDataSource().getMinPoolSize());
-
-                assertEquals(poolAppConfigDataSourceConfigurationHikari.getMaximumPoolSize(),
-                             pds1.getCommonPoolDataSource().getMaxPoolSize());
-                assertEquals(poolAppOcpiDataSourceConfigurationHikari.getMaximumPoolSize(),
-                             pds2.getCommonPoolDataSource().getMaxPoolSize());
-
+                assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());
                 assertEquals("HikariPool-bocsconf",
-                             pds1.getCommonPoolDataSource().getPoolName());
+                             pds1.getPoolDataSource().getPoolName());
                 assertEquals("HikariPool-boocpi",
-                             pds2.getCommonPoolDataSource().getPoolName());
+                             pds2.getPoolDataSource().getPoolName());
                 break;
             }
 
@@ -174,21 +180,22 @@ public class CheckConnectionHikariUnitTest {
             for (int j = 0; j < 2; j++) {
                 assertNotNull(conn1 = pds1.getConnection());
                 assertNotNull(conn2 = pds2.getConnection());
+
+                log.debug("round #{}; pds3.isOpen(): {}", i, pds3.isOpen());
+
                 assertNotNull(conn3 = pds3.getConnection(), "Can not get a connection for round " + i);
                 assertTrue(pds3.isOpen());
 
-                assertEquals(2, pds1.getCommonPoolDataSource().getActiveConnections());
-                assertEquals(pds1.getCommonPoolDataSource().getActiveConnections() +
-                             pds1.getCommonPoolDataSource().getIdleConnections(),
-                             pds1.getCommonPoolDataSource().getTotalConnections());
+                assertEquals(2, pds1.getActiveConnections());
+                assertEquals(pds1.getActiveConnections() +
+                             pds1.getIdleConnections(),
+                             pds1.getTotalConnections());
 
                 assertTrue(pds3.isOpen());
-                /*
                 assertEquals(1, pds3.getActiveConnections());
                 assertEquals(pds3.getActiveConnections() +
                              pds3.getIdleConnections(),
                              pds3.getTotalConnections());
-                */
                 assertTrue(pds3.isOpen());
 
                 assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
@@ -205,25 +212,22 @@ public class CheckConnectionHikariUnitTest {
             assertTrue(pds3.isOpen());
             pds3.close();
             assertFalse(pds3.isOpen());
-            // assertTrue(pds3.getCommonPoolDataSource().isClosed()); // one user: bodomain
 
             thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
-            // assertTrue(thrown.getMessage().matches(rex));
+            assertTrue(thrown.getMessage().matches(rex));
 
             // close pds2
-            assertFalse(pds2.isClosed());
+            assertTrue(pds2.isOpen());
             pds2.close();
-            assertTrue(pds2.isClosed());
-            assertFalse(pds2.getCommonPoolDataSource().isClosed()); // must close pds1 too
+            assertFalse(pds2.isOpen());
 
             thrown = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
             assertTrue(thrown.getMessage().matches(rex));
 
             // close pds1
-            assertFalse(pds1.isClosed());
+            assertTrue(pds1.isOpen());
             pds1.close();
-            assertTrue(pds1.isClosed());
-            assertTrue(pds1.getCommonPoolDataSource().isClosed()); // done
+            assertFalse(pds1.isOpen());
 
             thrown = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
             assertTrue(thrown.getMessage().matches(rex));

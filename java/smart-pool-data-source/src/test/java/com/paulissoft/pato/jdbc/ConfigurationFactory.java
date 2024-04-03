@@ -54,6 +54,18 @@ public class ConfigurationFactory {
         return new DataSourceProperties();
     }
 
+    @Bean(name = {"configDataSourceProperties"})
+    @ConfigurationProperties(prefix = "app.config.datasource")
+    public DataSourceProperties configDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = {"ocpiDataSourceProperties"})
+    @ConfigurationProperties(prefix = "app.ocpi.datasource")
+    public DataSourceProperties ocpiDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
     @Bean(name = {"ocppDataSourceProperties"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource")
     public DataSourceProperties ocppDataSourceProperties() {

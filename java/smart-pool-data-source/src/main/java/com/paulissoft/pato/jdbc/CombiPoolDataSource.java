@@ -29,7 +29,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }    
 
     @Getter(AccessLevel.PACKAGE)
-    private final StringBuffer id = new StringBuffer("UNKNOWN");
+    private final StringBuffer id = new StringBuffer();
 
     @Getter(AccessLevel.PACKAGE)
     @NonNull
@@ -64,6 +64,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         this.activeParent = null;
 
         setId(this.poolDataSourceConfiguration.getUsername());
+
+        assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
 
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
@@ -78,6 +80,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         setUp();
 
         assert state == State.OPEN : "After setting up the state must be OPEN.";
+        assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
 
     /* 3: activeParent != null, INITIALIZING */
@@ -91,6 +94,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
         assert activeParent.activeParent == null : "A parent can not have a parent itself.";
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
+        assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
 
     protected State getState() {
@@ -109,9 +113,10 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
     private void setId(final String id) {
         this.id.delete(0, this.id.length());
-        if (id != null) {
-            this.id.append(id);
-        }
+        this.id.append(this.hashCode());
+        this.id.append(" (");
+        this.id.append(id != null && id.length() > 0 ? id : "UNKNOWN");
+        this.id.append(")");
     }
     
     @jakarta.annotation.PostConstruct
@@ -329,7 +334,8 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         switch (state) {
         case INITIALIZING:
             open(); // will change state to OPEN
-            assert(state == State.OPEN);
+            assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
+                "did you override setUp() correctly by invoking super.setUp()?";
             // fall through
         case OPEN:
         case CLOSING:
