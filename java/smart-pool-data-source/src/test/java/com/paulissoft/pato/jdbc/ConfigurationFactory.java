@@ -48,9 +48,27 @@ public class ConfigurationFactory {
         return new PoolDataSourceConfiguration();
     }
 
+    @Bean(name = {"authDataSourceProperties"})
+    @ConfigurationProperties(prefix = "app.auth.datasource")
+    public DataSourceProperties authDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = {"ocppDataSourceProperties"})
+    @ConfigurationProperties(prefix = "app.ocpp.datasource")
+    public DataSourceProperties ocppDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = {"domainDataSourceProperties"})
+    @ConfigurationProperties(prefix = "app.domain.datasource")
+    public DataSourceProperties domainDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
     @Bean(name = {"operatorDataSourceProperties"})
     @ConfigurationProperties(prefix = "app.operator.datasource")
-    public DataSourceProperties dataSourceProperties() {
+    public DataSourceProperties operatorDataSourceProperties() {
         return new DataSourceProperties();
     }
 }

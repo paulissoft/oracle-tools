@@ -1,5 +1,10 @@
 package com.paulissoft.pato.jdbc;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSource;
@@ -15,6 +20,9 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
+    // for all smart pool data sources the same
+    private static AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
+    
     // Only the parent (getActiveParent() == null) must have statistics at level 3
     private final PoolDataSourceStatistics parentPoolDataSourceStatistics;
 
@@ -22,11 +30,13 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     @NonNull
     private final PoolDataSourceStatistics poolDataSourceStatistics;
 
+    private AtomicBoolean firstConnection = new AtomicBoolean(false);    
+
     public SmartPoolDataSourceOracle() {
         // super();
         assert getActiveParent() == null;
         
-        final PoolDataSourceStatistics[] fields = updateStatistics(null);
+        final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(null);
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
@@ -35,7 +45,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
         super(poolDataSourceConfigurationOracle);
         
-        final PoolDataSourceStatistics[] fields = updateStatistics((SmartPoolDataSourceOracle) getActiveParent());
+        final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics((SmartPoolDataSourceOracle) getActiveParent());
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
@@ -46,13 +56,13 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
 
         assert getActiveParent() != null;
 
-        final PoolDataSourceStatistics[] fields = updateStatistics(activeParent);
+        final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(activeParent);
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
     }
 
-    private PoolDataSourceStatistics[] updateStatistics(final SmartPoolDataSourceOracle activeParent) {
+    private PoolDataSourceStatistics[] updatePoolDataSourceStatistics(final SmartPoolDataSourceOracle activeParent) {
         // level 3        
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
             activeParent == null
@@ -78,7 +88,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     }
     
     static PoolDataSourceConfigurationOracle getCommonPoolDataSourceConfiguration(final PoolDataSource oracleDataSource,
-                                                                           final boolean excludeNonIdConfiguration) {
+                                                                                  final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
@@ -106,6 +116,197 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
 
     public PoolDataSourceStatistics getPoolDataSourceStatistics() {
         return poolDataSourceStatistics;
+    }
+
+    @Override
+    protected Connection getConnection1(@NonNull final PoolDataSource poolDataSource,
+                                        @NonNull final String usernameSession1,
+                                        @NonNull final String passwordSession1) throws SQLException {
+        log.debug("getConnection1(usernameSession1={}, passwordSession1={})", usernameSession1, passwordSession1);
+
+        return getConnection(poolDataSource, usernameSession1, passwordSession1, statisticsEnabled.get(), true);
+    }
+
+    private Connection getConnection(final PoolDataSource poolDataSource,
+                                     final String usernameToConnectTo,
+                                     final String password,
+                                     final boolean updateStatistics,
+                                     final boolean showStatistics) throws SQLException {
+        log.debug(">getConnection(usernameToConnectTo={}, updateStatistics={}, showStatistics={})",
+                  usernameToConnectTo,
+                  updateStatistics,
+                  showStatistics);
+
+        try {    
+            final Instant t1 = Instant.now();
+            Connection conn;
+            int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
+            Instant t2 = null;
+            
+            if (isFixedUsernamePassword()) {
+                if (!poolDataSource.getUser().equalsIgnoreCase(usernameToConnectTo)) {
+                    poolDataSource.setUser(usernameToConnectTo);
+                    poolDataSource.setPassword(password);
+                }
+                conn = poolDataSource.getConnection();
+            } else {
+                // see observations in constructor
+                conn = poolDataSource.getConnection(usernameToConnectTo, password);
+            }
+
+            if (!firstConnection.getAndSet(true)) {
+                // Only show the first time a pool has gotten a connection.
+                // Not earlier because these (fixed) values may change before and after the first connection.
+                show(getPoolDataSourceConfiguration());
+            }
+
+            if (updateStatistics) {
+                if (t2 == null) {
+                    updateStatistics(conn,
+                                     Duration.between(t1, Instant.now()).toMillis(),
+                                     showStatistics);
+                } else {
+                    updateStatistics(conn,
+                                     Duration.between(t1, t2).toMillis(),
+                                     Duration.between(t2, Instant.now()).toMillis(),
+                                     showStatistics,
+                                     proxyLogicalConnectionCount,
+                                     proxyOpenSessionCount,
+                                     proxyCloseSessionCount);
+                }
+            }
+
+            log.debug("<getConnection() = {}", conn);
+        
+            return conn;
+        } catch (SQLException ex) {
+            signalSQLException(ex);
+            log.debug("<getConnection()");
+            throw ex;
+        } catch (Exception ex) {
+            signalException(ex);
+            log.debug("<getConnection()");
+            throw ex;
+        }        
+    }    
+
+    public static boolean isStatisticsEnabled() {
+        return statisticsEnabled.get();
+    }
+
+    public static void setStatisticsEnabled(final boolean statisticsEnabled) {
+        SmartPoolDataSourceOracle.statisticsEnabled.set(statisticsEnabled);
+    }
+
+    protected void updateStatistics(final Connection conn,
+                                    final long timeElapsed,
+                                    final boolean showStatistics) {
+        try {
+            poolDataSourceStatistics.update(conn,
+                                            timeElapsed,
+                                            getActiveConnections(),
+                                            getIdleConnections(),
+                                            getTotalConnections());
+        } catch (Exception e) {
+            log.error(SimplePoolDataSource.exceptionToString(e));
+        }
+
+        if (showStatistics) {
+            showDataSourceStatistics(timeElapsed, false);
+        }
+    }
+
+    protected void updateStatistics(final Connection conn,
+                                    final long timeElapsed,
+                                    final long proxyTimeElapsed,
+                                    final boolean showStatistics,
+                                    final int proxyLogicalConnectionCount,
+                                    final int proxyOpenSessionCount,
+                                    final int proxyCloseSessionCount) {
+        try {
+            poolDataSourceStatistics.update(conn,
+                                            timeElapsed,
+                                            proxyTimeElapsed,
+                                            proxyLogicalConnectionCount,
+                                            proxyOpenSessionCount,
+                                            proxyCloseSessionCount,
+                                            getActiveConnections(),
+                                            getIdleConnections(),
+                                            getTotalConnections());
+        } catch (Exception e) {
+            log.error(SimplePoolDataSource.exceptionToString(e));
+        }
+
+        if (showStatistics) {
+            showDataSourceStatistics(timeElapsed, proxyTimeElapsed, false);
+        }
+    }
+
+    protected void signalException(final Exception ex) {        
+        try {
+            final long nrOccurrences = 0;
+
+            if (nrOccurrences > 0) {
+                poolDataSourceStatistics.signalException(ex);
+                // show the message
+                log.error("While connecting to {}{} this was occurrence # {} for this exception: ({})",
+                          getPoolDataSourceConfiguration().getSchema(),
+                          ( getPoolDataSourceConfiguration().getProxyUsername() != null
+                            ? " (via " + getPoolDataSourceConfiguration().getProxyUsername() + ")"
+                            : "" ),
+                          nrOccurrences,
+                          SimplePoolDataSource.exceptionToString(ex));
+            }
+        } catch (Exception e) {
+            log.error(SimplePoolDataSource.exceptionToString(e));
+        }
+    }
+
+    protected void signalSQLException(final SQLException ex) {        
+        try {
+            final long nrOccurrences = 0;
+
+            if (nrOccurrences > 0) {
+                poolDataSourceStatistics.signalSQLException(ex);
+                // show the message
+                log.error("While connecting to {}{} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
+                          getPoolDataSourceConfiguration().getSchema(),
+                          ( getPoolDataSourceConfiguration().getProxyUsername() != null
+                            ? " (via " + getPoolDataSourceConfiguration().getProxyUsername() + ")"
+                            : "" ),
+                          nrOccurrences,
+                          ex.getErrorCode(),
+                          ex.getSQLState(),
+                          SimplePoolDataSource.exceptionToString(ex));
+            }
+        } catch (Exception e) {
+            log.error(SimplePoolDataSource.exceptionToString(e));
+        }
+    }
+
+    /**
+     * Show data source statistics.
+     *
+     * Normally first the statistics of a schema are displayed and then the statistics
+     * for all schemas in a pool (unless there is just one).
+     *
+     * From this it follows that first the connection is displayed.
+     *
+     * @param timeElapsed             The elapsed time
+     * @param proxyTimeElapsed        The elapsed time for proxy connection (after the connection)
+     * @param showTotals               Is this the final call?
+     */
+    private void showDataSourceStatistics(final long timeElapsed,
+                                          final boolean showTotals) {
+        showDataSourceStatistics(timeElapsed, -1L, showTotals);
+    }
+    
+    private void showDataSourceStatistics(final long timeElapsed,
+                                          final long proxyTimeElapsed,
+                                          final boolean showTotals) {
+        assert(poolDataSourceStatistics != null);
+
+        poolDataSourceStatistics.showStatistics(timeElapsed, proxyTimeElapsed, showTotals);
     }
 
     // connection statistics

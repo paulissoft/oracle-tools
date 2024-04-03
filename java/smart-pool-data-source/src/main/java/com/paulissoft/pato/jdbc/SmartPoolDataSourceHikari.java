@@ -1,10 +1,8 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.pool.HikariPool;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.DirectFieldAccessor;
 
 
 @Slf4j
@@ -106,14 +104,9 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
             .build();
     }
     
-    // https://stackoverflow.com/questions/40784965/how-to-get-the-number-of-active-connections-for-hikaricp
-    private HikariPool getHikariPool() {
-        return (HikariPool) new DirectFieldAccessor(this).getPropertyValue("pool");
-    }
-
     public int getActiveConnections() {
         try {
-            return getHikariPool().getActiveConnections();
+            return getHikariPoolMXBean().getActiveConnections();
         } catch (NullPointerException ex) {
             return -1;
         }
@@ -121,7 +114,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
     public int getIdleConnections() {
         try {
-            return getHikariPool().getIdleConnections();
+            return getHikariPoolMXBean().getIdleConnections();
         } catch (NullPointerException ex) {
             return -1;
         }
@@ -129,7 +122,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
     public int getTotalConnections() {
         try {
-            return getHikariPool().getTotalConnections();
+            return getHikariPoolMXBean().getTotalConnections();
         } catch (NullPointerException ex) {
             return -1;
         }

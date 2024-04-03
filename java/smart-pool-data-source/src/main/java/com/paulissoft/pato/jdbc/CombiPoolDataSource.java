@@ -89,7 +89,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     @javax.annotation.PostConstruct
     public final synchronized void open() {
         log.debug("open()");
-        
+
         setUp();
     }
 
@@ -97,21 +97,23 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
 
-        log.debug(">setUp(state={})", state);
+        try {
+            log.debug(">setUp(state={}, config={})", state, poolDataSourceConfiguration);
 
-        if (state == State.INITIALIZING) {
-            try {
-                poolDataSourceConfiguration.determineConnectInfo();
-                updateCombiPoolAdministration();
-                updatePool(poolDataSourceConfiguration, getPoolDataSource(), true, activeParent == null);
-                state = this.state = State.OPEN;
-            } catch (Exception ex) {
-                state = this.state = State.ERROR;
-                throw ex;
+            if (state == State.INITIALIZING) {
+                try {
+                    poolDataSourceConfiguration.determineConnectInfo();
+                    updateCombiPoolAdministration();
+                    updatePool(poolDataSourceConfiguration, getPoolDataSource(), true, activeParent == null);
+                    state = this.state = State.OPEN;
+                } catch (Exception ex) {
+                    state = this.state = State.ERROR;
+                    throw ex;
+                }
             }
+        } finally {
+            log.debug("<setUp(state={})", state);
         }
-
-        log.debug("<setUp(state={})", state);
     }
 
     public final boolean isParentPoolDataSource() {
@@ -183,6 +185,11 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     @javax.annotation.PreDestroy
     public final synchronized void close() {
         log.debug("close()");
+
+        // why did we get here?
+        if (log.isDebugEnabled()) {
+            Thread.dumpStack();
+        }
         
         tearDown();
     }
@@ -192,32 +199,34 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     protected void tearDown(){
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
-        
-        log.debug("state while entering tearDown(): {}", state);
 
-        switch(state) {
-        case OPEN:
-        case CLOSING:
-            if (activeParent == null && activeChildren.get() != 0) {
-                // parent having active children can not get CLOSED now but mark it as CLOSING (or keep it like that)
-                if (state != State.CLOSING) {
-                    state = this.state = State.CLOSING;
+        try {
+            log.debug(">tearDown(state={}, config={})", state, poolDataSourceConfiguration);
+
+            switch(state) {
+            case OPEN:
+            case CLOSING:
+                if (activeParent == null && activeChildren.get() != 0) {
+                    // parent having active children can not get CLOSED now but mark it as CLOSING (or keep it like that)
+                    if (state != State.CLOSING) {
+                        state = this.state = State.CLOSING;
+                    }
+                    break;
                 }
+                // fall thru
+            case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
+            case ERROR:
+                updateCombiPoolAdministration();
+                updatePool(poolDataSourceConfiguration, getPoolDataSource(), false, activeParent == null);
+                state = this.state = State.CLOSED;
+                break;
+            
+            case CLOSED:
                 break;
             }
-            // fall thru
-        case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
-        case ERROR:
-            updateCombiPoolAdministration();
-            updatePool(poolDataSourceConfiguration, getPoolDataSource(), false, activeParent == null);
-            state = this.state = State.CLOSED;
-            break;
-            
-        case CLOSED:
-            break;
+        } finally {
+            log.debug("<tearDown(state={})", state);
         }
-        
-        log.debug("state while leaving tearDown(): {}", state);
     }
 
     protected void updatePoolName(@NonNull final P poolDataSourceConfiguration,

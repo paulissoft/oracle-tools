@@ -39,12 +39,37 @@ public class ConfigurationFactoryHikari extends ConfigurationFactory {
 
     @Bean(name = "app-domain-datasource-hikari")
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
-    public PoolDataSourceConfigurationHikari getAppDomainDataSourceConfigurationHikari() {
-        return new PoolDataSourceConfigurationHikari();
+    public SmartPoolDataSourceHikari getAppDomainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(SmartPoolDataSourceHikari.class)
+            .build();
     }
 
     // new standard: DataSourceBuilder
-    
+
+    /*
+    @Bean(name = "app-auth-datasource-hikari")
+    @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+    public SmartPoolDataSourceHikari authDataSourceHikari(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(SmartPoolDataSourceHikari.class)
+            .build();
+    }
+    */
+
+    /*
+    @Bean(name = "app-ocpp-datasource-hikari")
+    @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
+    public SmartPoolDataSourceHikari ocppDataSourceHikari(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(SmartPoolDataSourceHikari.class)
+            .build();
+    }
+    */
+
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
     public MyDomainDataSourceHikari domainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
         return properties
