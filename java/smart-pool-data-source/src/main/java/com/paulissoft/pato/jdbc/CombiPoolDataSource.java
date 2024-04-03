@@ -60,10 +60,9 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final Supplier<P> supplierP) {
         this.poolDataSourceConfiguration = supplierP.get();
+        setId(this.poolDataSourceConfiguration.getUsername());
         this.poolDataSource = supplierT.get();
         this.activeParent = null;
-
-        setId(this.poolDataSourceConfiguration.getUsername());
 
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
@@ -72,10 +71,9 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final P poolDataSourceConfiguration) {
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+        setId(this.poolDataSourceConfiguration.getUsername());
         this.activeParent = determineActiveParent();
         this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
-        
-        setId(this.poolDataSourceConfiguration.getUsername());
 
         setUp();
 
@@ -87,10 +85,9 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     protected CombiPoolDataSource(@NonNull Supplier<P> supplierP,
                                   @NonNull final CombiPoolDataSource<T, P> activeParent) {
         this.poolDataSourceConfiguration = supplierP.get();
+        setId(this.poolDataSourceConfiguration.getUsername());
         this.poolDataSource = null;
         this.activeParent = activeParent;
-
-        setId(this.poolDataSourceConfiguration.getUsername());
 
         assert activeParent.activeParent == null : "A parent can not have a parent itself.";
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
