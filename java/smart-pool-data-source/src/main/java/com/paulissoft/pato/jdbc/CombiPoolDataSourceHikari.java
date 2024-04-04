@@ -1,8 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariConfigMXBean;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -12,17 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CombiPoolDataSourceHikari
-    extends CombiPoolDataSource<HikariDataSource, PoolDataSourceConfigurationHikari>
-    implements HikariConfigMXBean, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
+    extends CombiPoolDataSource<SimplePoolDataSourceHikari, PoolDataSourceConfigurationHikari>
+    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
     static final String POOL_NAME_PREFIX = "HikariPool";
 
     public CombiPoolDataSourceHikari(){
-        super(HikariDataSource::new, PoolDataSourceConfigurationHikari::new);
+        super(SimplePoolDataSourceHikari::new, PoolDataSourceConfigurationHikari::new);
     }
     
     public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-        super(HikariDataSource::new, poolDataSourceConfigurationHikari);
+        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
     }
 
     public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
@@ -156,7 +154,7 @@ public class CombiPoolDataSourceHikari
     // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
     @Override
-    protected HikariDataSource getPoolDataSource() {
+    protected SimplePoolDataSourceHikari getPoolDataSource() {
         return super.getPoolDataSource();
     }
 
@@ -189,7 +187,7 @@ public class CombiPoolDataSourceHikari
     @Override
     protected void tearDown() {
         // must get this info before it is actually closed since then getPoolDataSource() will return a error
-        final HikariDataSource poolDataSource = getPoolDataSource(); 
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource(); 
         
         // we are in a synchronized context
         super.tearDown();
@@ -198,7 +196,7 @@ public class CombiPoolDataSourceHikari
         }
     }
 
-    protected Connection getConnection1(@NonNull final HikariDataSource poolDataSource,
+    protected Connection getConnection1(@NonNull final SimplePoolDataSourceHikari poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug("getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
@@ -228,7 +226,7 @@ public class CombiPoolDataSourceHikari
 
     @Override
     protected void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
-                              @NonNull final HikariDataSource poolDataSource,
+                              @NonNull final SimplePoolDataSourceHikari poolDataSource,
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
         log.debug(">updatePool(id={}, isParentPoolDataSource={})", getId(), isParentPoolDataSource);

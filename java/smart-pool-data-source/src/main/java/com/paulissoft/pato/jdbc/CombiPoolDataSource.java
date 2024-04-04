@@ -16,8 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import oracle.jdbc.OracleConnection;
 
 @Slf4j
-public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDataSourceConfiguration>
-    implements DataSource, Closeable {
+public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P extends PoolDataSourceConfiguration>
+    implements SimplePoolDataSource, Closeable {
 
     // We need to know the active parents in order to assign a value to an active parent so that a data source can use a common data source.
     // Syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P, S, G>>,
@@ -27,9 +27,6 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     static void clear() {
         activeParents.clear();
     }    
-
-    @Getter(AccessLevel.PACKAGE)
-    private final StringBuffer id = new StringBuffer();
 
     @Getter(AccessLevel.PACKAGE)
     @NonNull
@@ -108,18 +105,10 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         }
     }
 
-    private void setId(final String id) {
-        this.id.delete(0, this.id.length());
-        this.id.append(this.hashCode());
-        this.id.append(" (");
-        this.id.append(id != null && id.length() > 0 ? id : "UNKNOWN");
-        this.id.append(")");
-    }
-    
     @jakarta.annotation.PostConstruct
     @javax.annotation.PostConstruct
     public final synchronized void open() {
-        log.debug("open(id={})", id);
+        log.debug("open(id={})", getId());
 
         setUp();
     }
@@ -129,7 +118,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         State state = this.state;
 
         try {
-            log.debug(">setUp(id={}, state={})", id, state);
+            log.debug(">setUp(id={}, state={})", getId(), state);
 
             if (state == State.INITIALIZING) {
                 try {
@@ -144,7 +133,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 }
             }
         } finally {
-            log.debug("<setUp(id={}, state={})", id, state);
+            log.debug("<setUp(id={}, state={})", getId(), state);
         }
     }
 
@@ -153,7 +142,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
     }
         
     private CombiPoolDataSource<T, P> determineActiveParent() {
-        log.debug(">determineActiveParent(id={})", id);
+        log.debug(">determineActiveParent(id={})", getId());
         
         // Since the configuration is fixed now we can do lookups for an active parent.
         // The first pool data source (for same properties) will have activeParent == null
@@ -170,13 +159,13 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
 
         log.debug("activeParent: {}", activeParent);
 
-        log.debug("<determineActiveParent(id={}) = {}", id, activeParent);
+        log.debug("<determineActiveParent(id={}) = {}", getId(), activeParent);
 
         return activeParent;
     }
 
     private void updateCombiPoolAdministration() {
-        log.debug(">updateCombiPoolAdministration(id={})", id);
+        log.debug(">updateCombiPoolAdministration(id={})", getId());
         
         final PoolDataSourceConfigurationCommonId commonId =
             new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
@@ -189,7 +178,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 // The next with the same properties will get this one as activeParent
                 activeParents.computeIfAbsent(commonId, k -> this);
                 // only copy when there is no active parent
-                poolDataSourceConfiguration.copyTo(poolDataSource);
+                poolDataSource.set(poolDataSourceConfiguration);
 
                 log.debug("(parent) copied configuration to the pool data source: {}", poolDataSource);
             } else {
@@ -228,13 +217,13 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
             break;
         }
 
-        log.debug("<updateCombiPoolAdministration(id={})", id);
+        log.debug("<updateCombiPoolAdministration(id={})", getId());
     }
 
     @jakarta.annotation.PreDestroy
     @javax.annotation.PreDestroy
     public final synchronized void close() {
-        log.debug("close(id={})", id);
+        log.debug("close(id={})", getId());
 
         // why did we get here?
         if (log.isDebugEnabled()) {
@@ -251,7 +240,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
         State state = this.state;
 
         try {
-            log.debug(">tearDown(id={}, state={})", id, state);
+            log.debug(">tearDown(id={}, state={})", getId(), state);
 
             switch(state) {
             case OPEN:
@@ -277,7 +266,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 break;
             }
         } finally {
-            log.debug("<tearDown(id={}, state={})", id, state);
+            log.debug("<tearDown(id={}, state={})", getId(), state);
         }
     }
 
@@ -299,7 +288,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                               final boolean initializing,
                               final boolean isParentPoolDataSource) {
         log.debug(">updatePool(id={}, initializing={}, isParentPoolDataSource={})",
-                  id,
+                  getId(),
                   initializing,
                   isParentPoolDataSource);
         try {
@@ -313,7 +302,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                                 initializing);
             }
         } finally {
-            log.debug("<updatePool(id={})", id);
+            log.debug("<updatePool(id={})", getId());
         }
     }
 
@@ -404,7 +393,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                                         @NonNull final String passwordSession1,
                                         @NonNull final String usernameSession2) throws SQLException {
         log.debug(">getConnection2(id={}, usernameSession1={}, usernameSession2={})",
-                  id,
+                  getId(),
                   usernameSession1,
                   usernameSession2);
 
@@ -459,7 +448,7 @@ public abstract class CombiPoolDataSource<T extends DataSource, P extends PoolDa
                 }                
             }
         } finally {
-            log.debug("<getConnection2(id={})", id);
+            log.debug("<getConnection2(id={})", getId());
         }
         
         return conn;

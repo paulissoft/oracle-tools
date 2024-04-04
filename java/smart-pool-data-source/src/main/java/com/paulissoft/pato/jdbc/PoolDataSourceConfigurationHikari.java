@@ -1,7 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariDataSource;
-import javax.sql.DataSource;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -10,8 +8,6 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -20,8 +16,6 @@ import org.springframework.stereotype.Component;
 @ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource.hikari")
 public class PoolDataSourceConfigurationHikari
     extends PoolDataSourceConfiguration
     implements PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
@@ -152,50 +146,6 @@ public class PoolDataSourceConfigurationHikari
     void keepIdConfiguration() {
         super.keepIdConfiguration();
         this.poolName = null;
-    }
-
-    @Override
-    void copyTo(final DataSource dataSource) {
-        copyTo((HikariDataSource) dataSource);
-    }
-    
-    private void copyTo(final HikariDataSource hikariDataSource) {
-        log.debug(">copyTo(hikariDataSource={})", hikariDataSource);
-        
-        int nr = 0;
-        final int maxNr = 18;
-        
-        do {
-            try {
-                switch(nr) {
-                case 0: hikariDataSource.setDriverClassName(this.getDriverClassName()); break;
-                case 1: hikariDataSource.setJdbcUrl(this.getUrl()); break;
-                case 2: hikariDataSource.setUsername(this.getUsername()); break;
-                case 3: hikariDataSource.setPassword(this.getPassword()); break;
-                case 4: /* connection pool name is not copied here */ break;
-                case 5: hikariDataSource.setMaximumPoolSize(this.getMaximumPoolSize()); break;
-                case 6: hikariDataSource.setMinimumIdle(this.getMinimumIdle()); break;
-                case 7: hikariDataSource.setAutoCommit(this.isAutoCommit()); break;
-                case 8: hikariDataSource.setConnectionTimeout(this.getConnectionTimeout()); break;
-                case 9: hikariDataSource.setIdleTimeout(this.getIdleTimeout()); break;
-                case 10: hikariDataSource.setMaxLifetime(this.getMaxLifetime()); break;
-                case 11: hikariDataSource.setConnectionTestQuery(this.getConnectionTestQuery()); break;
-                case 12: hikariDataSource.setInitializationFailTimeout(this.getInitializationFailTimeout()); break;
-                case 13: hikariDataSource.setIsolateInternalQueries(this.isIsolateInternalQueries()); break;
-                case 14: hikariDataSource.setAllowPoolSuspension(this.isAllowPoolSuspension()); break;
-                case 15: hikariDataSource.setReadOnly(this.isReadOnly()); break;
-                case 16: hikariDataSource.setRegisterMbeans(this.isRegisterMbeans()); break;
-                case 17: hikariDataSource.setValidationTimeout(this.getValidationTimeout()); break;
-                case 18: hikariDataSource.setLeakDetectionThreshold(this.getLeakDetectionThreshold()); break;
-                default:
-                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
-                }
-            } catch (Exception ex) {
-                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
-            }
-        } while (++nr <= maxNr);
-
-        log.debug("<copyTo(hikariDataSource={})", hikariDataSource);
     }
     
 //**/    @Override

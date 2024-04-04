@@ -10,9 +10,6 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -20,8 +17,6 @@ import org.springframework.stereotype.Component;
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource")
 public class PoolDataSourceConfiguration implements ConnectInfo {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = true;
@@ -65,13 +60,6 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         this.username = username;
         //assert(password != null);
         this.password = password;
-    }
-
-    public PoolDataSourceConfiguration(final DataSourceProperties dataSourceProperties) {
-        this(dataSourceProperties.getDriverClassName(),
-             dataSourceProperties.getUrl(),
-             dataSourceProperties.getUsername(),
-             dataSourceProperties.getPassword());
     }
 
     public String getPoolName() {
@@ -142,10 +130,6 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     void keepIdConfiguration() {
         this.password = null;
     }
-
-    void copyTo(final DataSource DataSource) {
-        throw new UnsupportedOperationException("Operation copyTo() not implemented.");
-    }    
 
     /**
      * Turn a proxy connection username (bc_proxy[bodomain] or bodomain) into

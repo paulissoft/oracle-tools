@@ -5,23 +5,21 @@ import java.sql.SQLException;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
-import oracle.ucp.jdbc.PoolDataSource;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
 public class CombiPoolDataSourceOracle
-    extends CombiPoolDataSource<PoolDataSource, PoolDataSourceConfigurationOracle>
-    implements PoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
+    extends CombiPoolDataSource<SimplePoolDataSourceOracle, PoolDataSourceConfigurationOracle>
+    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     static final String POOL_NAME_PREFIX = "OraclePool";
 
     public CombiPoolDataSourceOracle() {
-        super(PoolDataSourceImpl::new, PoolDataSourceConfigurationOracle::new);
+        super(SimplePoolDataSourceOracle::new, PoolDataSourceConfigurationOracle::new);
     }
     
     public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
-        super(PoolDataSourceImpl::new, poolDataSourceConfigurationOracle);
+        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
     }
 
     public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent) {
@@ -137,7 +135,7 @@ public class CombiPoolDataSourceOracle
     // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverride.class })
     @Override
-    protected PoolDataSource getPoolDataSource() {
+    protected SimplePoolDataSourceOracle getPoolDataSource() {
         return super.getPoolDataSource();
     }
     
@@ -151,7 +149,7 @@ public class CombiPoolDataSourceOracle
     }
     */
 
-    protected Connection getConnection1(@NonNull final PoolDataSource poolDataSource,
+    protected Connection getConnection1(@NonNull final SimplePoolDataSourceOracle poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug("getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
@@ -160,7 +158,7 @@ public class CombiPoolDataSourceOracle
     }
 
     @Override
-    protected Connection getConnection(@NonNull final PoolDataSource poolDataSource,
+    protected Connection getConnection(@NonNull final SimplePoolDataSourceOracle poolDataSource,
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
@@ -172,7 +170,7 @@ public class CombiPoolDataSourceOracle
 
     @Override
     protected void updatePoolName(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfiguration,
-                                  @NonNull final PoolDataSource poolDataSource,
+                                  @NonNull final SimplePoolDataSourceOracle poolDataSource,
                                   final boolean initializing,
                                   final boolean isParentPoolDataSource) {
         try {
@@ -217,7 +215,7 @@ public class CombiPoolDataSourceOracle
 
     @Override
     protected void updatePoolSizes(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfiguration,
-                                   @NonNull final PoolDataSource poolDataSource,
+                                   @NonNull final SimplePoolDataSourceOracle poolDataSource,
                                    final boolean initializing) {
         try {
             log.debug(">updatePoolSizes(id={})", getId());
