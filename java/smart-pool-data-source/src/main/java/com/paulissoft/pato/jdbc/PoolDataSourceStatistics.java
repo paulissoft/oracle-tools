@@ -1,13 +1,13 @@
 package com.paulissoft.pato.jdbc;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.math.BigDecimal;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,10 +43,6 @@ public class PoolDataSourceStatistics {
 
     private static final int DISPLAY_SCALE = 0;
 
-    private static Method loggerInfo;
-
-    private static Method loggerDebug;
-
     static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
@@ -56,20 +53,6 @@ public class PoolDataSourceStatistics {
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
-        
-        try {
-            loggerInfo = logger.getClass().getMethod("info", String.class, Object[].class);
-        } catch (Exception e) {
-            logger.error(exceptionToString(e));
-            loggerInfo = null;
-        }
-
-        try {
-            loggerDebug = logger.getClass().getMethod("debug", String.class, Object[].class);
-        } catch (Exception e) {
-            logger.error(exceptionToString(e));
-            loggerDebug = null;
-        }
     }
 
     static void clear() {
@@ -78,82 +61,82 @@ public class PoolDataSourceStatistics {
     
     // all instance stuff
     
-    private Supplier<String> descriptionSupplier = null;
+    private final Supplier<String> descriptionSupplier;
 
-    private Supplier<Boolean> isClosedSupplier = null;
+    private final Supplier<Boolean> isClosedSupplier;
 
-    private int level;
+    private final int level;
 
-    private Supplier<PoolDataSourceConfiguration> pdsSupplier = null;
+    private final Supplier<PoolDataSourceConfiguration> pdsSupplier;
 
-    private LocalDateTime firstUpdate = null;
+    private final AtomicLong firstUpdate = new AtomicLong(0L);
 
-    private LocalDateTime lastUpdate = null;
+    private final AtomicLong lastUpdate = new AtomicLong(0L);
 
-    private LocalDateTime lastShown = null;
+    private final AtomicLong lastShown = new AtomicLong(0L);
     
     // all physical time elapsed stuff
     
-    private Set<Connection> physicalConnections = null;
+    private final Set<Connection> physicalConnections;
 
-    private AtomicLong physicalConnectionCount = new AtomicLong();
+    private final AtomicLong physicalConnectionCount = new AtomicLong();
 
-    private AtomicLong physicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
+    private final AtomicLong physicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
-    private AtomicLong physicalTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
+    private final AtomicLong physicalTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
     
-    private AtomicBigDecimal physicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private final AtomicBigDecimal physicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
     // all logical time elapsed stuff
     
-    private AtomicLong logicalConnectionCount = new AtomicLong();
+    private final AtomicLong logicalConnectionCount = new AtomicLong();
 
-    private AtomicLong logicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
+    private final AtomicLong logicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
-    private AtomicLong logicalTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
+    private final AtomicLong logicalTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
     
-    private AtomicBigDecimal logicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private final AtomicBigDecimal logicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
     // all proxy time elapsed stuff
 
-    private AtomicLong proxyLogicalConnectionCount = new AtomicLong();
+    private final AtomicLong proxyLogicalConnectionCount = new AtomicLong();
         
-    private AtomicLong proxyOpenSessionCount = new AtomicLong();
+    private final AtomicLong proxyOpenSessionCount = new AtomicLong();
         
-    private AtomicLong proxyCloseSessionCount = new AtomicLong();
+    private final AtomicLong proxyCloseSessionCount = new AtomicLong();
 
-    private AtomicLong proxyTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
+    private final AtomicLong proxyTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
-    private AtomicLong proxyTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
+    private final AtomicLong proxyTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
     
-    private AtomicBigDecimal proxyTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+    private final AtomicBigDecimal proxyTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
     // all connection related stuff (level 3 and less)
 
-    private AtomicLong activeConnectionsMin = null;
+    private final AtomicLong activeConnectionsMin;
         
-    private AtomicLong activeConnectionsMax = null;
+    private final AtomicLong activeConnectionsMax;
 
-    private AtomicBigDecimal activeConnectionsAvg = null;
+    private final AtomicBigDecimal activeConnectionsAvg;
             
-    private AtomicLong idleConnectionsMin = null;
+    private final AtomicLong idleConnectionsMin;
         
-    private AtomicLong idleConnectionsMax = null;
+    private final AtomicLong idleConnectionsMax;
 
-    private AtomicBigDecimal idleConnectionsAvg = null;
+    private final AtomicBigDecimal idleConnectionsAvg;
             
-    private AtomicLong totalConnectionsMin = null;
+    private final AtomicLong totalConnectionsMin;
         
-    private AtomicLong totalConnectionsMax = null;
+    private final AtomicLong totalConnectionsMax;
 
-    private AtomicBigDecimal totalConnectionsAvg = null;
+    private final AtomicBigDecimal totalConnectionsAvg;
 
     // the error attributes (error code and SQL state) and its count
-    private ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
 
-    private PoolDataSourceStatistics parent = null;
+    private final PoolDataSourceStatistics parent;
 
-    private CopyOnWriteArraySet<PoolDataSourceStatistics> children = null;
+    private final CopyOnWriteArraySet<PoolDataSourceStatistics> children;
 
     public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier) {
         this(descriptionSupplier, null);
@@ -182,6 +165,8 @@ public class PoolDataSourceStatistics {
 
             this.level = 1;
         } else {
+            this.physicalConnections = null;
+            
             this.level = 1 + this.parent.level;
         }
 
@@ -190,6 +175,16 @@ public class PoolDataSourceStatistics {
 
         switch(this.level) {
         case 4:
+            this.children = null;
+            this.activeConnectionsMin = null;
+            this.activeConnectionsMax = null;
+            this.activeConnectionsAvg = null;
+            this.idleConnectionsMin = null;
+            this.idleConnectionsMax = null;
+            this.idleConnectionsAvg = null;
+            this.totalConnectionsMin = null;
+            this.totalConnectionsMax = null;
+            this.totalConnectionsAvg = null;
             break;
             
         default:
@@ -238,7 +233,18 @@ public class PoolDataSourceStatistics {
     private PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
         return pdsSupplier != null ? pdsSupplier.get() : null;
     }        
-        
+
+    private long now() {
+        final LocalDateTime localDateTime = LocalDateTime.now();
+        final ZonedDateTime zdt = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
+
+        return zdt.toInstant().toEpochMilli();
+    }
+
+    private LocalDateTime long2LocalDateTime(final long epoch) {
+        return epoch != 0L ? Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).toLocalDateTime() : null;
+    }
+    
     public void updateStatistics(final SimplePoolDataSource pds,
                                  final Connection conn,
                                  final long timeElapsed,
@@ -294,8 +300,8 @@ public class PoolDataSourceStatistics {
             return;
         }
 
-        if (firstUpdate == null) {
-            firstUpdate = LocalDateTime.now();
+        if (firstUpdate.get() == 0L) {
+            firstUpdate.set(now());
         }
         
         final boolean isPhysicalConnection = add(conn);
@@ -332,8 +338,8 @@ public class PoolDataSourceStatistics {
             return;
         }
 
-        if (firstUpdate == null) {
-            firstUpdate = LocalDateTime.now();
+        if (firstUpdate.get() == 0L) {
+            firstUpdate.set(now());
         }
         
         final boolean isPhysicalConnection = add(conn);
@@ -383,7 +389,7 @@ public class PoolDataSourceStatistics {
         updateMinMax(idleConnections, parent.idleConnectionsMin, parent.idleConnectionsMax);
         updateMinMax(totalConnections, parent.totalConnectionsMin, parent.totalConnectionsMax);
 
-        lastUpdate = LocalDateTime.now();
+        lastUpdate.set(now());
 
         // Show statistics if necessary
         if (mustShowTotals()) {
@@ -394,7 +400,9 @@ public class PoolDataSourceStatistics {
     private boolean mustShowTotals() {
         // Show statistics if the last update moment is not equal to the last shown moment
         // When checkStatistics is true (i.e. debug enabled) the moment is minute else hour
-        final int lastUpdateMoment = checkStatistics ? lastUpdate.getMinute() : lastUpdate.getHour();
+        final LocalDateTime lastUpdate = long2LocalDateTime(this.lastUpdate.get());
+        final LocalDateTime lastShown = long2LocalDateTime(this.lastShown.get());
+        final int lastUpdateMoment = lastUpdate != null ? ( checkStatistics ? lastUpdate.getMinute() : lastUpdate.getHour() ) : -1;
         final int lastShownMoment = lastShown != null ? (checkStatistics ? lastShown.getMinute() : lastShown.getHour()) : -1;
         
         return lastUpdateMoment != lastShownMoment;
@@ -515,7 +523,9 @@ public class PoolDataSourceStatistics {
     }
 
     void reset() {
-        firstUpdate = lastUpdate = lastShown = null;
+        firstUpdate.set(0L);
+        lastUpdate.set(0L);
+        lastShown.set(0L);
         physicalConnectionCount.set(0L);
         physicalTimeElapsedMin.set(Long.MAX_VALUE);    
         physicalTimeElapsedMax.set(Long.MIN_VALUE);    
@@ -676,7 +686,7 @@ public class PoolDataSourceStatistics {
             return;
         }
         
-        final Method method = (showTotals ? loggerInfo : loggerDebug);
+        final BiConsumer<String, Object> method = showTotals ? logger::info : logger::debug;
         final boolean showPoolSizes = level <= 3;
         final boolean showErrors = showTotals && level <= 3;
         final String prefix = INDENT_PREFIX;
@@ -685,25 +695,26 @@ public class PoolDataSourceStatistics {
 
         try {
             if (method != null) {
-                method.invoke(logger, "Statistics for {} (level {}):",
+                method.accept("Statistics for {} (level {}):",
                               (Object) new Object[]{ poolDescription, level });
 
+                final LocalDateTime firstUpdate = long2LocalDateTime(this.firstUpdate.get());
+                final LocalDateTime lastUpdate = long2LocalDateTime(this.lastUpdate.get());
+
                 if (firstUpdate != null && lastUpdate != null) {
-                    method.invoke(logger, "{}first updated at: {}",
+                    method.accept("{}first updated at: {}",
                                   (Object) new Object[]{ prefix, firstUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
-                    method.invoke(logger, "{}last  updated at: {}",
+                    method.accept("{}last  updated at: {}",
                                   (Object) new Object[]{ prefix, lastUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
                 }
             
                 if (!showTotals) {
                     if (timeElapsed >= 0L) {
-                        method.invoke(logger,
-                                      "{}time needed to open last connection (ms): {}",
+                        method.accept(                                      "{}time needed to open last connection (ms): {}",
                                       (Object) new Object[]{ prefix, timeElapsed });
                     }
                     if (proxyTimeElapsed >= 0L) {
-                        method.invoke(logger,
-                                      "{}time needed to open last proxy connection (ms): {}",
+                        method.accept(                                      "{}time needed to open last proxy connection (ms): {}",
                                       (Object) new Object[]{ prefix, proxyTimeElapsed });
                     }
                 }
@@ -715,8 +726,7 @@ public class PoolDataSourceStatistics {
             
                 if ((val1 >= 0L && val2 >= 0L) &&
                     (val1 >= 0L || val2 > 0L)) {
-                    method.invoke(logger,
-                                  "{}physical/logical connections opened: {}/{}",
+                    method.accept("{}physical/logical connections opened: {}/{}",
                                   (Object) new Object[]{ prefix, val1, val2 });
                 }
 
@@ -726,8 +736,7 @@ public class PoolDataSourceStatistics {
 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}min/avg/max physical connection time (ms): {}/{}/{}",
+                    method.accept("{}min/avg/max physical connection time (ms): {}/{}/{}",
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             
@@ -737,8 +746,7 @@ public class PoolDataSourceStatistics {
 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}min/avg/max logical connection time (ms): {}/{}/{}",
+                    method.accept("{}min/avg/max logical connection time (ms): {}/{}/{}",
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             
@@ -748,8 +756,7 @@ public class PoolDataSourceStatistics {
 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}min/avg/max proxy connection time (ms): {}/{}/{}",
+                    method.accept("{}min/avg/max proxy connection time (ms): {}/{}/{}",
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
 
@@ -759,14 +766,12 @@ public class PoolDataSourceStatistics {
                 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.invoke(logger,
-                                  "{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
+                    method.accept("{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
                                   (Object) new Object[]{ prefix, val1, val2, val3 });
                 }
             
                 if (showPoolSizes && pds != null) {
-                    method.invoke(logger,
-                                  "{}initial/min/max pool size: {}/{}/{}",
+                    method.accept("{}initial/min/max pool size: {}/{}/{}",
                                   (Object) new Object[]{ prefix,
                                                          pds.getInitialPoolSize(),
                                                          pds.getMinPoolSize(),
@@ -780,8 +785,7 @@ public class PoolDataSourceStatistics {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.invoke(logger,
-                                      "{}min/avg/max active connections: {}/{}/{}",
+                        method.accept("{}min/avg/max active connections: {}/{}/{}",
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
                     
@@ -791,8 +795,7 @@ public class PoolDataSourceStatistics {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.invoke(logger,
-                                      "{}min/avg/max idle connections: {}/{}/{}",
+                        method.accept("{}min/avg/max idle connections: {}/{}/{}",
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
 
@@ -802,8 +805,7 @@ public class PoolDataSourceStatistics {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.invoke(logger,
-                                      "{}min/avg/max total connections: {}/{}/{}",
+                        method.accept("{}min/avg/max total connections: {}/{}/{}",
                                       (Object) new Object[]{ prefix, val1, val2, val3 });
                     }
                 }
@@ -842,10 +844,8 @@ public class PoolDataSourceStatistics {
                             });
                 }
             }
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            logger.error(exceptionToString(e));
         } finally {
-            lastShown = LocalDateTime.now();
+            lastShown.set(now());
         }
     }
     
