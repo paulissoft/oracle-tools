@@ -14,6 +14,10 @@ public class CombiPoolDataSourceOracle
 
     static final String POOL_NAME_PREFIX = "OraclePool";
 
+    /*
+     * Constructors
+     */
+
     public CombiPoolDataSourceOracle() {
         super(SimplePoolDataSourceOracle::new, PoolDataSourceConfigurationOracle::new);
     }
@@ -138,16 +142,10 @@ public class CombiPoolDataSourceOracle
     protected SimplePoolDataSourceOracle getPoolDataSource() {
         return super.getPoolDataSource();
     }
-    
+
     /*
-    public String getUrl() {
-        return getURL();
-    }
-  
-    public void setUrl(String jdbcUrl) throws SQLException {
-        setURL(jdbcUrl);
-    }
-    */
+     * Connection
+     */
 
     protected Connection getConnection1(@NonNull final SimplePoolDataSourceOracle poolDataSource,
                                         @NonNull final String usernameSession1,
@@ -268,7 +266,7 @@ public class CombiPoolDataSourceOracle
                       thisSize,
                       pdsSize);
 
-            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize && pdsSize + thisSize > 0) {
                 poolDataSource.setMaxPoolSize(pdsSize + thisSize);
             }
         } catch (SQLException ex) {

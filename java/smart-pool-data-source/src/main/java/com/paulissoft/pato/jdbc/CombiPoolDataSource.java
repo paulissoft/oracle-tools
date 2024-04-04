@@ -53,6 +53,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     @NonNull
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
 
+    /*
+     * Constructors
+     */
+
     /* 1: everything null, INITIALIZING */
     protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final Supplier<P> supplierP) {
@@ -91,6 +95,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
 
+    /*
+     * State
+     */
+    
     protected State getState() {
         return state;
     }
@@ -104,6 +112,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
             return false;
         }
     }
+
+    /*
+     * Open / setUp
+     */
 
     @jakarta.annotation.PostConstruct
     @javax.annotation.PostConstruct
@@ -220,6 +232,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         log.debug("<updateCombiPoolAdministration(id={})", getId());
     }
 
+    /*
+     * Close / tearDown
+     */
+
     @jakarta.annotation.PreDestroy
     @javax.annotation.PreDestroy
     public final synchronized void close() {
@@ -332,6 +348,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         return poolDataSourceConfiguration.isFixedUsernamePassword();
     }
 
+    /*
+     * Connection
+     */
+    
     public final Connection getConnection() throws SQLException {
         switch (state) {
         case INITIALIZING:

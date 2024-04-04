@@ -60,14 +60,6 @@ public class PoolDataSourceConfigurationHikari
 
     private long leakDetectionThreshold;
 
-    //*TBD*/
-    /*
-    @Override
-    public String getPoolName() {
-        return poolName;
-    }
-    */
-
     public void setJdbcUrl(String jdbcUrl) {
         setUrl(jdbcUrl);
     }

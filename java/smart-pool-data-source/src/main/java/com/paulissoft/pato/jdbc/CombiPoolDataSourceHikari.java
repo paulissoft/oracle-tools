@@ -15,6 +15,10 @@ public class CombiPoolDataSourceHikari
 
     static final String POOL_NAME_PREFIX = "HikariPool";
 
+    /*
+     * Constructors
+     */
+    
     public CombiPoolDataSourceHikari(){
         super(SimplePoolDataSourceHikari::new, PoolDataSourceConfigurationHikari::new);
     }
@@ -158,16 +162,6 @@ public class CombiPoolDataSourceHikari
         return super.getPoolDataSource();
     }
 
-    /*
-    public String getUrl() {
-        return getJdbcUrl();
-    }
-  
-    public void setUrl(String jdbcUrl) {
-        setJdbcUrl(jdbcUrl);
-    }
-    */
-
     public void setUsername(String username) {
         try {
             getPoolDataSourceSetter().setUsername(username);
@@ -195,6 +189,10 @@ public class CombiPoolDataSourceHikari
             poolDataSource.close();
         }
     }
+
+    /*
+     * Connection
+     */
 
     protected Connection getConnection1(@NonNull final SimplePoolDataSourceHikari poolDataSource,
                                         @NonNull final String usernameSession1,
@@ -337,7 +335,7 @@ public class CombiPoolDataSourceHikari
                       thisSize,
                       pdsSize);
 
-            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize) {
+            if (pdsSize >= 0 && sign * pdsSize <= Integer.MAX_VALUE - thisSize && pdsSize + thisSize > 0) {
                 poolDataSource.setMaximumPoolSize(pdsSize + thisSize);
             }
         } finally {
