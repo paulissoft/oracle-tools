@@ -20,16 +20,16 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
     // for all smart pool data sources the same
-    private static AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
+    private static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
     
+    private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
+
     // Only the parent (getActiveParent() == null) must have statistics at level 3
     private final PoolDataSourceStatistics parentPoolDataSourceStatistics;
 
     // Every item must have statistics at level 4
     @NonNull
     private final PoolDataSourceStatistics poolDataSourceStatistics;
-
-    private AtomicBoolean firstConnection = new AtomicBoolean(false);    
 
     public SmartPoolDataSourceOracle() {
         // super();
