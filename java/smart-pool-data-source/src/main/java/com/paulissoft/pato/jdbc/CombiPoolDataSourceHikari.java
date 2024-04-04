@@ -51,72 +51,29 @@ public class CombiPoolDataSourceHikari
                                      boolean registerMbeans,    
                                      long validationTimeout,
                                      long leakDetectionThreshold) {
-        this(build(driverClassName,
-                   url,
-                   username,
-                   password,
-                   poolName,
-                   maximumPoolSize,
-                   minimumIdle,
-                   dataSourceClassName,
-                   autoCommit,
-                   connectionTimeout,
-                   idleTimeout,
-                   maxLifetime,
-                   connectionTestQuery,
-                   initializationFailTimeout,
-                   isolateInternalQueries,
-                   allowPoolSuspension,
-                   readOnly,
-                   registerMbeans,    
-                   validationTimeout,
-                   leakDetectionThreshold));
-    }
-
-    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
-                                                             String url,
-                                                             String username,
-                                                             String password,
-                                                             String poolName,
-                                                             int maximumPoolSize,
-                                                             int minimumIdle,
-                                                             String dataSourceClassName,
-                                                             boolean autoCommit,
-                                                             long connectionTimeout,
-                                                             long idleTimeout,
-                                                             long maxLifetime,
-                                                             String connectionTestQuery,
-                                                             long initializationFailTimeout,
-                                                             boolean isolateInternalQueries,
-                                                             boolean allowPoolSuspension,
-                                                             boolean readOnly,
-                                                             boolean registerMbeans,    
-                                                             long validationTimeout,
-                                                             long leakDetectionThreshold) {
-        return PoolDataSourceConfigurationHikari
-            .builder()
-            .driverClassName(driverClassName)
-            .url(url)
-            .username(username)
-            .password(password)
-            // cannot reference this before supertype constructor has been called, hence can not use this in constructor above
-            .type(CombiPoolDataSourceHikari.class.getName())
-            .poolName(poolName)
-            .maximumPoolSize(maximumPoolSize)
-            .minimumIdle(minimumIdle)
-            .autoCommit(autoCommit)
-            .connectionTimeout(connectionTimeout)
-            .idleTimeout(idleTimeout)
-            .maxLifetime(maxLifetime)
-            .connectionTestQuery(connectionTestQuery)
-            .initializationFailTimeout(initializationFailTimeout)
-            .isolateInternalQueries(isolateInternalQueries)
-            .allowPoolSuspension(allowPoolSuspension)
-            .readOnly(readOnly)
-            .registerMbeans(registerMbeans)
-            .validationTimeout(validationTimeout)
-            .leakDetectionThreshold(leakDetectionThreshold)
-            .build();
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     CombiPoolDataSourceHikari.class.getName(),
+                                                     poolName,
+                                                     maximumPoolSize,
+                                                     minimumIdle,
+                                                     dataSourceClassName,
+                                                     autoCommit,
+                                                     connectionTimeout,
+                                                     idleTimeout,
+                                                     maxLifetime,
+                                                     connectionTestQuery,
+                                                     initializationFailTimeout,
+                                                     isolateInternalQueries,
+                                                     allowPoolSuspension,
+                                                     readOnly,
+                                                     registerMbeans,    
+                                                     validationTimeout,
+                                                     leakDetectionThreshold));
     }
 
     protected interface ToOverrideHikari extends ToOverride {

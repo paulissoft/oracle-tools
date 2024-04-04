@@ -49,67 +49,27 @@ public class CombiPoolDataSourceOracle
                                      int secondsToTrustIdleConnection,
                                      int connectionValidationTimeout)
     {
-        this(build(url,
-                   username,
-                   password,
-                   connectionPoolName,
-                   initialPoolSize,
-                   minPoolSize,
-                   maxPoolSize,
-                   connectionFactoryClassName,
-                   validateConnectionOnBorrow,
-                   abandonedConnectionTimeout,
-                   timeToLiveConnectionTimeout,
-                   inactiveConnectionTimeout,
-                   timeoutCheckInterval,
-                   maxStatements,
-                   connectionWaitTimeout,
-                   maxConnectionReuseTime,
-                   secondsToTrustIdleConnection,
-                   connectionValidationTimeout));
-    }
-
-    protected static PoolDataSourceConfigurationOracle build(String url,
-                                                             String username,
-                                                             String password,
-                                                             String connectionPoolName,
-                                                             int initialPoolSize,
-                                                             int minPoolSize,
-                                                             int maxPoolSize,
-                                                             String connectionFactoryClassName,
-                                                             boolean validateConnectionOnBorrow,
-                                                             int abandonedConnectionTimeout,
-                                                             int timeToLiveConnectionTimeout,
-                                                             int inactiveConnectionTimeout,
-                                                             int timeoutCheckInterval,
-                                                             int maxStatements,
-                                                             int connectionWaitTimeout,
-                                                             long maxConnectionReuseTime,
-                                                             int secondsToTrustIdleConnection,
-                                                             int connectionValidationTimeout) {
-        return PoolDataSourceConfigurationOracle
-            .builder()
-            .url(url)
-            .username(username)
-            .password(password)
-            // cannot reference this before supertype constructor has been called, hence can not use this in constructor above
-            .type(CombiPoolDataSourceOracle.class.getName())
-            .connectionPoolName(connectionPoolName)
-            .initialPoolSize(initialPoolSize)
-            .minPoolSize(minPoolSize)
-            .maxPoolSize(maxPoolSize)
-            .connectionFactoryClassName(connectionFactoryClassName)
-            .validateConnectionOnBorrow(validateConnectionOnBorrow)
-            .abandonedConnectionTimeout(abandonedConnectionTimeout)
-            .timeToLiveConnectionTimeout(timeToLiveConnectionTimeout)
-            .inactiveConnectionTimeout(inactiveConnectionTimeout)
-            .timeoutCheckInterval(timeoutCheckInterval)
-            .maxStatements(maxStatements)
-            .connectionWaitTimeout(connectionWaitTimeout)
-            .maxConnectionReuseTime(maxConnectionReuseTime)
-            .secondsToTrustIdleConnection(secondsToTrustIdleConnection)
-            .connectionValidationTimeout(connectionValidationTimeout)
-            .build();
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     CombiPoolDataSourceOracle.class.getName(),
+                                                     connectionPoolName,
+                                                     initialPoolSize,
+                                                     minPoolSize,
+                                                     maxPoolSize,
+                                                     connectionFactoryClassName,
+                                                     validateConnectionOnBorrow,
+                                                     abandonedConnectionTimeout,
+                                                     timeToLiveConnectionTimeout,
+                                                     inactiveConnectionTimeout,
+                                                     timeoutCheckInterval,
+                                                     maxStatements,
+                                                     connectionWaitTimeout,
+                                                     maxConnectionReuseTime,
+                                                     secondsToTrustIdleConnection,
+                                                     connectionValidationTimeout));
     }
 
     // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)

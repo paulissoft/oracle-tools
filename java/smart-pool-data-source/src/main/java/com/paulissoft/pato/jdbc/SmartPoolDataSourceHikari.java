@@ -67,6 +67,49 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         poolDataSourceStatistics = fields[1];
     }
 
+    public SmartPoolDataSourceHikari(String driverClassName,
+                                     String url,
+                                     String username,
+                                     String password,
+                                     String poolName,
+                                     int maximumPoolSize,
+                                     int minimumIdle,
+                                     String dataSourceClassName,
+                                     boolean autoCommit,
+                                     long connectionTimeout,
+                                     long idleTimeout,
+                                     long maxLifetime,
+                                     String connectionTestQuery,
+                                     long initializationFailTimeout,
+                                     boolean isolateInternalQueries,
+                                     boolean allowPoolSuspension,
+                                     boolean readOnly,
+                                     boolean registerMbeans,    
+                                     long validationTimeout,
+                                     long leakDetectionThreshold) {
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     SmartPoolDataSourceHikari.class.getName(),
+                                                     poolName,
+                                                     maximumPoolSize,
+                                                     minimumIdle,
+                                                     dataSourceClassName,
+                                                     autoCommit,
+                                                     connectionTimeout,
+                                                     idleTimeout,
+                                                     maxLifetime,
+                                                     connectionTestQuery,
+                                                     initializationFailTimeout,
+                                                     isolateInternalQueries,
+                                                     allowPoolSuspension,
+                                                     readOnly,
+                                                     registerMbeans,    
+                                                     validationTimeout,
+                                                     leakDetectionThreshold));
+    }
+
     /*
      * Connection
      */

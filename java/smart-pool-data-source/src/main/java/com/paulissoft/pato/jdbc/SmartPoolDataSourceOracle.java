@@ -65,6 +65,48 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
         poolDataSourceStatistics = fields[1];
     }
 
+    public SmartPoolDataSourceOracle(String url,
+                                     String username,
+                                     String password,
+                                     String connectionPoolName,
+                                     int initialPoolSize,
+                                     int minPoolSize,
+                                     int maxPoolSize,
+                                     String connectionFactoryClassName,
+                                     boolean validateConnectionOnBorrow,
+                                     int abandonedConnectionTimeout,
+                                     int timeToLiveConnectionTimeout,
+                                     int inactiveConnectionTimeout,
+                                     int timeoutCheckInterval,
+                                     int maxStatements,
+                                     int connectionWaitTimeout,
+                                     long maxConnectionReuseTime,
+                                     int secondsToTrustIdleConnection,
+                                     int connectionValidationTimeout)
+    {
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     SmartPoolDataSourceOracle.class.getName(),
+                                                     connectionPoolName,
+                                                     initialPoolSize,
+                                                     minPoolSize,
+                                                     maxPoolSize,
+                                                     connectionFactoryClassName,
+                                                     validateConnectionOnBorrow,
+                                                     abandonedConnectionTimeout,
+                                                     timeToLiveConnectionTimeout,
+                                                     inactiveConnectionTimeout,
+                                                     timeoutCheckInterval,
+                                                     maxStatements,
+                                                     connectionWaitTimeout,
+                                                     maxConnectionReuseTime,
+                                                     secondsToTrustIdleConnection,
+                                                     connectionValidationTimeout));
+    }
+
     /*
      * Connection
      */

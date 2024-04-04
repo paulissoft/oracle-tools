@@ -80,6 +80,49 @@ public class PoolDataSourceConfigurationOracle
         assert(cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls));
     }
 
+    protected static PoolDataSourceConfigurationOracle build(String url,
+                                                             String username,
+                                                             String password,
+                                                             String type,
+                                                             String connectionPoolName,
+                                                             int initialPoolSize,
+                                                             int minPoolSize,
+                                                             int maxPoolSize,
+                                                             String connectionFactoryClassName,
+                                                             boolean validateConnectionOnBorrow,
+                                                             int abandonedConnectionTimeout,
+                                                             int timeToLiveConnectionTimeout,
+                                                             int inactiveConnectionTimeout,
+                                                             int timeoutCheckInterval,
+                                                             int maxStatements,
+                                                             int connectionWaitTimeout,
+                                                             long maxConnectionReuseTime,
+                                                             int secondsToTrustIdleConnection,
+                                                             int connectionValidationTimeout) {
+        return PoolDataSourceConfigurationOracle
+            .builder()
+            .url(url)
+            .username(username)
+            .password(password)
+            .type(type)
+            .connectionPoolName(connectionPoolName)
+            .initialPoolSize(initialPoolSize)
+            .minPoolSize(minPoolSize)
+            .maxPoolSize(maxPoolSize)
+            .connectionFactoryClassName(connectionFactoryClassName)
+            .validateConnectionOnBorrow(validateConnectionOnBorrow)
+            .abandonedConnectionTimeout(abandonedConnectionTimeout)
+            .timeToLiveConnectionTimeout(timeToLiveConnectionTimeout)
+            .inactiveConnectionTimeout(inactiveConnectionTimeout)
+            .timeoutCheckInterval(timeoutCheckInterval)
+            .maxStatements(maxStatements)
+            .connectionWaitTimeout(connectionWaitTimeout)
+            .maxConnectionReuseTime(maxConnectionReuseTime)
+            .secondsToTrustIdleConnection(secondsToTrustIdleConnection)
+            .connectionValidationTimeout(connectionValidationTimeout)
+            .build();
+    }
+
     public void setURL(String paramString) throws SQLException {
         setUrl(paramString);
     }

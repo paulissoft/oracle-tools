@@ -60,6 +60,52 @@ public class PoolDataSourceConfigurationHikari
 
     private long leakDetectionThreshold;
 
+    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
+                                                             String url,
+                                                             String username,
+                                                             String password,
+                                                             String type,
+                                                             String poolName,
+                                                             int maximumPoolSize,
+                                                             int minimumIdle,
+                                                             String dataSourceClassName,
+                                                             boolean autoCommit,
+                                                             long connectionTimeout,
+                                                             long idleTimeout,
+                                                             long maxLifetime,
+                                                             String connectionTestQuery,
+                                                             long initializationFailTimeout,
+                                                             boolean isolateInternalQueries,
+                                                             boolean allowPoolSuspension,
+                                                             boolean readOnly,
+                                                             boolean registerMbeans,    
+                                                             long validationTimeout,
+                                                             long leakDetectionThreshold) {
+        return PoolDataSourceConfigurationHikari
+            .builder()
+            .driverClassName(driverClassName)
+            .url(url)
+            .username(username)
+            .password(password)
+            .type(type)
+            .poolName(poolName)
+            .maximumPoolSize(maximumPoolSize)
+            .minimumIdle(minimumIdle)
+            .autoCommit(autoCommit)
+            .connectionTimeout(connectionTimeout)
+            .idleTimeout(idleTimeout)
+            .maxLifetime(maxLifetime)
+            .connectionTestQuery(connectionTestQuery)
+            .initializationFailTimeout(initializationFailTimeout)
+            .isolateInternalQueries(isolateInternalQueries)
+            .allowPoolSuspension(allowPoolSuspension)
+            .readOnly(readOnly)
+            .registerMbeans(registerMbeans)
+            .validationTimeout(validationTimeout)
+            .leakDetectionThreshold(leakDetectionThreshold)
+            .build();
+    }
+
     public void setJdbcUrl(String jdbcUrl) {
         setUrl(jdbcUrl);
     }
