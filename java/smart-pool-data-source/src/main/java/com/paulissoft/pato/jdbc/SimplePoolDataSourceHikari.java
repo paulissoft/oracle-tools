@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource {
+public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource, PoolDataSourcePropertiesGettersHikari {
 
     private final StringBuffer id = new StringBuffer();
          
@@ -161,6 +161,10 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         log.info("scheduledExecutor: {}", getScheduledExecutor());
         */
     }
+
+    public String getUrl() {
+        return getJdbcUrl();
+    }  
 
     // public void setPoolName(String poolName) throws SQLException;
 

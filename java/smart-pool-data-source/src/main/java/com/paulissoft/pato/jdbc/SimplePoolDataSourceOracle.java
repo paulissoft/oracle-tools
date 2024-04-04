@@ -6,7 +6,7 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
-public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
+public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource, PoolDataSourcePropertiesGettersOracle {
 
     private final StringBuffer id = new StringBuffer();
          
@@ -146,6 +146,10 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         log.info("{}maxConnectionReuseTime: {}", indentPrefix, getMaxConnectionReuseTime());
         log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, getSecondsToTrustIdleConnection());
         log.info("{}connectionValidationTimeout: {}", indentPrefix, getConnectionValidationTimeout());
+    }
+
+    public String getUrl() {
+        return getURL();
     }
 
     public void setPoolName(String poolName) throws SQLException {

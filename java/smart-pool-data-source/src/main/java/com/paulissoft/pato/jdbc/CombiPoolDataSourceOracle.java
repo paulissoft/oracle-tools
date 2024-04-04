@@ -91,8 +91,10 @@ public class CombiPoolDataSourceOracle
         switch (getState()) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
-        default:
+        case INITIALIZING:
             return getPoolDataSourceConfiguration();
+        default:
+            return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
         }
     }
     
