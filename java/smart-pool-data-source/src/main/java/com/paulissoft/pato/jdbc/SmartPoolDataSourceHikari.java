@@ -128,10 +128,6 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         }
     }
 
-    public PoolDataSourceStatistics getPoolDataSourceStatistics() {
-        return poolDataSourceStatistics;
-    }
-
     public void show(final PoolDataSourceConfiguration pds) {
         show((PoolDataSourceConfigurationHikari)pds);
     }
@@ -203,4 +199,127 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         log.info("scheduledExecutor: {}", getScheduledExecutor());
         */
     }
+
+    /*
+    // one may override this one
+    protected Connection getConnection(final String usernameToConnectTo,
+                                       final String password,
+                                       final String schema,
+                                       final String proxyUsername,
+                                       final boolean updateStatistics,
+                                       final boolean showStatistics) throws SQLException {
+        logger.debug(">getConnection(usernameToConnectTo={}, schema={}, proxyUsername={}, updateStatistics={}, showStatistics={})",
+                     usernameToConnectTo,
+                     schema,
+                     proxyUsername,
+                     updateStatistics,
+                     showStatistics);
+
+        try {    
+            final Instant t1 = Instant.now();
+            Connection conn;
+            int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
+            Instant t2 = null;
+            
+            if (isFixedUsernamePassword()) {
+                if (!commonPoolDataSource.getUsername().equalsIgnoreCase(usernameToConnectTo)) {
+                    commonPoolDataSource.setUsername(usernameToConnectTo);
+                    commonPoolDataSource.setPassword(password);
+                }
+                conn = commonPoolDataSource.getConnection();
+            } else {
+                // see observations in constructor
+                conn = commonPoolDataSource.getConnection(usernameToConnectTo, password);
+            }
+
+            if (!firstConnection.getAndSet(true)) {
+                // Only show the first time a pool has gotten a connection.
+                // Not earlier because these (fixed) values may change before and after the first connection.
+                commonPoolDataSource.show(getPoolDataSourceConfiguration());
+            }
+
+            // if the current schema is not the requested schema try to open/close the proxy session
+            if (!conn.getSchema().equalsIgnoreCase(schema)) {
+                assert(!isSingleSessionProxyModel());
+
+                t2 = Instant.now();
+
+                OracleConnection oraConn = null;
+
+                try {
+                    if (conn.isWrapperFor(OracleConnection.class)) {
+                        oraConn = conn.unwrap(OracleConnection.class);
+                    }
+                } catch (SQLException ex) {
+                    oraConn = null;
+                }
+
+                if (oraConn != null) {
+                    int nr = 0;
+                    
+                    do {
+                        logger.debug("current schema: {}; schema: {}", conn.getSchema(), schema);
+
+                        switch(nr) {
+                        case 0:
+                            if (oraConn.isProxySession()) {
+                                closeProxySession(oraConn, proxyUsername != null ? proxyUsername : schema);
+                                proxyCloseSessionCount++;
+                            }
+                            break;
+                            
+                        case 1:
+                            if (proxyUsername != null) { // proxyUsername is username to connect to
+                                assert(proxyUsername.equalsIgnoreCase(usernameToConnectTo));
+                        
+                                openProxySession(oraConn, schema);
+                                proxyOpenSessionCount++;
+                            }
+                            break;
+                            
+                        case 2:
+                            oraConn.setSchema(schema);
+                            break;
+                            
+                        default:
+                            throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
+                        }
+                    } while (!conn.getSchema().equalsIgnoreCase(schema) && nr++ < 3);
+                }                
+            }
+
+            assert(conn.getSchema().equalsIgnoreCase(schema));
+            
+            showConnection(conn);
+
+            if (updateStatistics) {
+                if (t2 == null) {
+                    updateStatistics(conn,
+                                     Duration.between(t1, Instant.now()).toMillis(),
+                                     showStatistics);
+                } else {
+                    updateStatistics(conn,
+                                     Duration.between(t1, t2).toMillis(),
+                                     Duration.between(t2, Instant.now()).toMillis(),
+                                     showStatistics,
+                                     proxyLogicalConnectionCount,
+                                     proxyOpenSessionCount,
+                                     proxyCloseSessionCount);
+                }
+            }
+
+            logger.debug("<getConnection() = {}", conn);
+        
+            return conn;
+        } catch (SQLException ex) {
+            signalSQLException(ex);
+            logger.debug("<getConnection()");
+            throw ex;
+        } catch (Exception ex) {
+            signalException(ex);
+            logger.debug("<getConnection()");
+            throw ex;
+        }        
+    }    
+    */
 }

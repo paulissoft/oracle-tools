@@ -239,6 +239,52 @@ public class PoolDataSourceStatistics {
         return pdsSupplier != null ? pdsSupplier.get() : null;
     }        
         
+    public void updateStatistics(final SimplePoolDataSource pds,
+                                 final Connection conn,
+                                 final long timeElapsed,
+                                 final boolean showStatistics) {
+        try {
+            update(conn,
+                   timeElapsed,
+                   pds.getActiveConnections(),
+                   pds.getIdleConnections(),
+                   pds.getTotalConnections());
+            if (showStatistics) {
+                showStatistics(timeElapsed, -1, false);
+            }
+        } catch (Exception e) {
+            // errors while updating / showing statistics must be ignored
+            logger.error(SimplePoolDataSource.exceptionToString(e));
+        }
+    }
+
+    public void updateStatistics(final SimplePoolDataSource pds,
+                                 final Connection conn,
+                                 final long timeElapsed,
+                                 final long proxyTimeElapsed,
+                                 final boolean showStatistics,
+                                 final int proxyLogicalConnectionCount,
+                                 final int proxyOpenSessionCount,
+                                 final int proxyCloseSessionCount) {
+        try {
+            update(conn,
+                   timeElapsed,
+                   proxyTimeElapsed,
+                   proxyLogicalConnectionCount,
+                   proxyOpenSessionCount,
+                   proxyCloseSessionCount,
+                   pds.getActiveConnections(),
+                   pds.getIdleConnections(),
+                   pds.getTotalConnections());
+            if (showStatistics) {
+                showStatistics(timeElapsed, proxyTimeElapsed, false);
+            }
+        } catch (Exception e) {
+            // errors while updating / showing statistics must be ignored
+            logger.error(SimplePoolDataSource.exceptionToString(e));
+        }
+    }
+
     void update(final Connection conn,
                 final long timeElapsed,
                 final int activeConnections,
@@ -504,6 +550,25 @@ public class PoolDataSourceStatistics {
         return ( parent != null ? parent.add(conn) : physicalConnections.add(conn.unwrap(Connection.class)) );
     }
     
+    void signalSQLException(final SimplePoolDataSource pds, final SQLException ex) {        
+        try {
+            final long nrOccurrences = 0;
+
+            if (nrOccurrences > 0) {
+                signalSQLException(ex);
+                // show the message
+                logger.error("While connecting to {} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
+                             pds.getUsername(),
+                             nrOccurrences,
+                             ex.getErrorCode(),
+                             ex.getSQLState(),
+                             SimplePoolDataSource.exceptionToString(ex));
+            }
+        } catch (Exception e) {
+            logger.error(SimplePoolDataSource.exceptionToString(e));
+        }
+    }
+
     long signalSQLException(final SQLException ex) {
         if (isClosed()) {
             return -1L;
@@ -518,6 +583,23 @@ public class PoolDataSourceStatistics {
         return this.errors.computeIfAbsent(attrs, msg -> new AtomicLong(0)).incrementAndGet();
     }
         
+    void signalException(final SimplePoolDataSource pds, final Exception ex) {        
+        try {
+            final long nrOccurrences = 0;
+
+            if (nrOccurrences > 0) {
+                signalException(ex);
+                // show the message
+                logger.error("While connecting to {} this was occurrence # {} for this exception: ({})",
+                             pds.getUsername(),
+                             nrOccurrences,
+                             SimplePoolDataSource.exceptionToString(ex));
+            }
+        } catch (Exception e) {
+            logger.error(SimplePoolDataSource.exceptionToString(e));
+        }
+    }
+
     long signalException(final Exception ex) {
         if (isClosed()) {
             return -1L;
@@ -583,13 +665,13 @@ public class PoolDataSourceStatistics {
         }
     }
 
-    public void showStatistics(final boolean showTotals) {
+    private void showStatistics(final boolean showTotals) {
         showStatistics(-1L, -1L, showTotals);
     }
     
-    public void showStatistics(final long timeElapsed,
-                               final long proxyTimeElapsed,
-                               final boolean showTotals) {
+    private void showStatistics(final long timeElapsed,
+                                final long proxyTimeElapsed,
+                                final boolean showTotals) {
         if (!showTotals && !logger.isDebugEnabled()) {
             return;
         }
