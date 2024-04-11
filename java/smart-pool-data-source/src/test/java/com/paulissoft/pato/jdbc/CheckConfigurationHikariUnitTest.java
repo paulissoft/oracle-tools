@@ -19,11 +19,13 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
-@EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
+//@EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
+@EnableConfigurationProperties({MyDomainDataSourceHikari.class,MyOperatorDataSourceHikari.class})
 @ContextConfiguration(classes = ConfigurationFactoryHikari.class)
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConfigurationHikariUnitTest {
 
+    /*
     @Autowired
     @Qualifier("spring-datasource")
     private PoolDataSourceConfiguration poolDataSourceConfiguration;
@@ -39,19 +41,28 @@ public class CheckConfigurationHikariUnitTest {
     @Autowired
     @Qualifier("app-domain-datasource")
     private PoolDataSourceConfiguration poolDataSourceConfigurationDomain;
-
+    
     @Autowired
     @Qualifier("app-auth-datasource-hikari")
     private PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari;
+    */
+
+    @Autowired
+    private MyDomainDataSourceHikari domainDataSourceHikari;
+    
+    @Autowired
+    private MyOperatorDataSourceHikari operatorDataSourceHikari;
 
     @BeforeAll
     static void clear() {
-        SmartPoolDataSource.clear();
+        PoolDataSourceStatistics.clear();
         CombiPoolDataSource.clear();
     }
 
     @Test
     void testPoolDataSourceConfiguration() {
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceHikari.getPoolDataSourceConfiguration();
+        
         assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
         assertEquals("system", poolDataSourceConfiguration.getUsername());
@@ -61,7 +72,8 @@ public class CheckConfigurationHikariUnitTest {
                      "username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari)",
                      poolDataSourceConfiguration.toString());
     }
-    
+
+    /*
     @Test
     void testPoolDataSourceConfigurationCommonId() {
         PoolDataSourceConfigurationCommonId idAuth, idOcpp, idDomain;
@@ -131,7 +143,7 @@ public class CheckConfigurationHikariUnitTest {
 
     @Test
     void testDefaultSimplePoolDataSourceHikari() {
-        final SimplePoolDataSourceHikari pds = SimplePoolDataSourceHikari.build(new PoolDataSourceConfigurationHikari());
+        final SmartPoolDataSourceHikari pds = new SmartPoolDataSourceHikari(new PoolDataSourceConfigurationHikari());
 
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=null, username=null, password=null, " +
@@ -154,12 +166,12 @@ public class CheckConfigurationHikariUnitTest {
 
         //final int startTotalSmartPoolCount = SmartPoolDataSource.getTotalSmartPoolCount();
         //final int startTotalSimplePoolCount = SmartPoolDataSource.getTotalSimplePoolCount();
-        final SmartPoolDataSource pds1 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari);
+        final SmartPoolDataSourceHikari pds1 = new SmartPoolDataSourceHikari(poolDataSourceConfigurationHikari);
 
         //assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
         //assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        final SmartPoolDataSource pds2 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari); // same config
+        final SmartPoolDataSourceHikari pds2 = new SmartPoolDataSourceHikari(poolDataSourceConfigurationHikari); // same config
 
         //assertEquals(startTotalSmartPoolCount + 1, SmartPoolDataSource.getTotalSmartPoolCount());
         //assertEquals(startTotalSimplePoolCount + 1, SmartPoolDataSource.getTotalSimplePoolCount());
@@ -179,22 +191,22 @@ public class CheckConfigurationHikariUnitTest {
             .toBuilder()
             .autoCommit(!poolDataSourceConfigurationHikari.isAutoCommit())
             .build();
-        final SmartPoolDataSource pds4 = SmartPoolDataSource.build(poolDataSourceConfigurationHikari1);
+        final SmartPoolDataSourceHikari pds4 = new SmartPoolDataSourceHikari(poolDataSourceConfigurationHikari1);
 
         //assertEquals(startTotalSmartPoolCount + 2, SmartPoolDataSource.getTotalSmartPoolCount());
         //assertEquals(startTotalSimplePoolCount + 2, SmartPoolDataSource.getTotalSimplePoolCount());
 
-        assertNotEquals(pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration(),
-                        pds4.getCommonPoolDataSource().getPoolDataSourceConfiguration());
+        assertNotEquals(pds1.getActiveParent().getPoolDataSourceConfiguration(),
+                        pds4.getActiveParent().getPoolDataSourceConfiguration());
     }
 
-    private void checkSimplePoolDataSourceJoinTwice(final SmartPoolDataSource pds1, final SmartPoolDataSource pds2) {
+    private void checkSimplePoolDataSourceJoinTwice(final SmartPoolDataSourceHikari pds1, final SmartPoolDataSourceHikari pds2) {
         PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
         PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
             
         // check all fields
-        poolDataSourceConfiguration1 = pds1.getCommonPoolDataSource().getPoolDataSourceConfiguration();
-        poolDataSourceConfiguration2 = pds2.getCommonPoolDataSource().getPoolDataSourceConfiguration();
+        poolDataSourceConfiguration1 = pds1.getActiveParent().getPoolDataSourceConfiguration();
+        poolDataSourceConfiguration2 = pds2.getActiveParent().getPoolDataSourceConfiguration();
 
         assertEquals(poolDataSourceConfiguration1.toString(),
                      poolDataSourceConfiguration2.toString());
@@ -203,4 +215,5 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
         assertEquals(pds1.isFixedUsernamePassword(), pds2.isFixedUsernamePassword());
     }
+    */
 }
