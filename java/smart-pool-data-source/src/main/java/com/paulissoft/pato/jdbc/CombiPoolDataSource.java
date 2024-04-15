@@ -61,9 +61,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final Supplier<P> supplierP) {
         this.poolDataSourceConfiguration = supplierP.get();
-        setId(this.poolDataSourceConfiguration.getUsername());
         this.poolDataSource = supplierT.get();
         this.activeParent = null;
+        
+        setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
 
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
@@ -72,10 +73,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final P poolDataSourceConfiguration) {
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
-        setId(this.poolDataSourceConfiguration.getUsername());
-        this.activeParent = determineActiveParent();
+        this.activeParent = determineActiveParent(); // can not use getId()
         this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
 
+        setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
         setUp();
 
         assert state == State.OPEN : "After setting up the state must be OPEN.";
@@ -86,9 +87,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     protected CombiPoolDataSource(@NonNull Supplier<P> supplierP,
                                   @NonNull final CombiPoolDataSource<T, P> activeParent) {
         this.poolDataSourceConfiguration = supplierP.get();
-        setId(this.poolDataSourceConfiguration.getUsername());
         this.poolDataSource = null;
         this.activeParent = activeParent;
+
+        setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
 
         assert activeParent.activeParent == null : "A parent can not have a parent itself.";
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
@@ -117,7 +119,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
      * Open / setUp
      */
 
-    @jakarta.annotation.PostConstruct
+    //@jakarta.annotation.PostConstruct
     @javax.annotation.PostConstruct
     public final synchronized void open() {
         log.debug("open(id={})", getId());
@@ -154,7 +156,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
         
     private CombiPoolDataSource<T, P> determineActiveParent() {
-        log.debug(">determineActiveParent(id={})", getId());
+        // can not use getId()
+        log.debug(">determineActiveParent()");
         
         // Since the configuration is fixed now we can do lookups for an active parent.
         // The first pool data source (for same properties) will have activeParent == null
@@ -171,7 +174,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
         log.debug("activeParent: {}", activeParent);
 
-        log.debug("<determineActiveParent(id={}) = {}", getId(), activeParent);
+        log.debug("<determineActiveParent() = {}", activeParent);
 
         return activeParent;
     }
@@ -236,7 +239,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
      * Close / tearDown
      */
 
-    @jakarta.annotation.PreDestroy
+    //@jakarta.annotation.PreDestroy
     @javax.annotation.PreDestroy
     public final synchronized void close() {
         log.debug("close(id={})", getId());

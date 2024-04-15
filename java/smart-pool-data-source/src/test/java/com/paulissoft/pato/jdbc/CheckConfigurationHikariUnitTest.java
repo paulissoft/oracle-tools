@@ -3,6 +3,7 @@ package com.paulissoft.pato.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
@@ -19,33 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
-//@EnableConfigurationProperties({PoolDataSourceConfiguration.class, PoolDataSourceConfiguration.class, PoolDataSourceConfigurationHikari.class})
-@EnableConfigurationProperties({MyDomainDataSourceHikari.class,MyOperatorDataSourceHikari.class})
-@ContextConfiguration(classes = ConfigurationFactoryHikari.class)
+@EnableConfigurationProperties({MyDomainDataSourceHikari.class, MyOperatorDataSourceHikari.class})
+@ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConfigurationHikariUnitTest {
-
-    /*
-    @Autowired
-    @Qualifier("spring-datasource")
-    private PoolDataSourceConfiguration poolDataSourceConfiguration;
-
-    @Autowired
-    @Qualifier("app-auth-datasource")
-    private PoolDataSourceConfiguration poolDataSourceConfigurationAuth;
-
-    @Autowired
-    @Qualifier("app-ocpp-datasource")
-    private PoolDataSourceConfiguration poolDataSourceConfigurationOcpp;
-
-    @Autowired
-    @Qualifier("app-domain-datasource")
-    private PoolDataSourceConfiguration poolDataSourceConfigurationDomain;
-    
-    @Autowired
-    @Qualifier("app-auth-datasource-hikari")
-    private PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari;
-    */
 
     @Autowired
     private MyDomainDataSourceHikari domainDataSourceHikari;
@@ -60,46 +38,49 @@ public class CheckConfigurationHikariUnitTest {
     }
 
     @Test
-    void testPoolDataSourceConfiguration() {
+    void testPoolDataSourceConfigurationDomain() {
         final PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceHikari.getPoolDataSourceConfiguration();
         
-        assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
+        log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
+        
+        assertNull(poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
-        assertEquals("system", poolDataSourceConfiguration.getUsername());
-        assertEquals("change_on_install", poolDataSourceConfiguration.getPassword());
-        assertEquals(SimplePoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
-        assertEquals("PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, " +
-                     "username=system, password=change_on_install, type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari)",
+        assertEquals("bc_proxy[bodomain]", poolDataSourceConfiguration.getUsername());
+        assertEquals("bc_proxy", poolDataSourceConfiguration.getPassword());
+        assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[bodomain], password=bc_proxy, " + 
+                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-boopapij-bodomain, " +
+                     "maximumPoolSize=60, minimumIdle=60, dataSourceClassName=null, autoCommit=true, connectionTimeout=30000, " + 
+                     "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
+                     "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
+                     "validationTimeout=5000, leakDetectionThreshold=0)",
                      poolDataSourceConfiguration.toString());
     }
-
-    /*
+    
     @Test
-    void testPoolDataSourceConfigurationCommonId() {
-        PoolDataSourceConfigurationCommonId idAuth, idOcpp, idDomain;
+    void testPoolDataSourceConfigurationOperator() {
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceHikari.getPoolDataSourceConfiguration();
         
-        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikariCopy =
-            poolDataSourceConfigurationHikari.toBuilder().build();
-
-        poolDataSourceConfigurationHikariCopy.copyFrom(poolDataSourceConfigurationAuth);
-        idAuth = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
-
-        poolDataSourceConfigurationHikariCopy.copyFrom(poolDataSourceConfigurationOcpp);
-        idOcpp = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
-
-        poolDataSourceConfigurationHikariCopy.copyFrom(poolDataSourceConfigurationDomain);
-        idDomain = new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikariCopy);
-
-        log.debug("idAuth: {}", idAuth);
-        log.debug("idOcpp: {}", idOcpp);
-        log.debug("idDomain: {}", idDomain);
+        log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
-        assertTrue(idAuth.equals(idOcpp));
-        assertFalse(idAuth.equals(idDomain)); // different user to logon to
+        assertNull(poolDataSourceConfiguration.getDriverClassName());
+        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
+        assertEquals("bc_proxy[boopapij]", poolDataSourceConfiguration.getUsername());
+        assertEquals("bc_proxy", poolDataSourceConfiguration.getPassword());
+        assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boopapij], password=bc_proxy, " + 
+                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-boopapij, " +
+                     "maximumPoolSize=60, minimumIdle=60, dataSourceClassName=null, autoCommit=true, connectionTimeout=30000, " + 
+                     "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
+                     "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
+                     "validationTimeout=5000, leakDetectionThreshold=0)",
+                     poolDataSourceConfiguration.toString());
     }
     
     //=== Hikari ===
-
+    /*
     @Test
     void testPoolDataSourceConfigurationHikari() {
         poolDataSourceConfigurationHikari.copyFrom(poolDataSourceConfiguration);
