@@ -88,7 +88,7 @@ public class CombiPoolDataSourceHikari
         public void setPassword(String password) throws SQLException;
     }
 
-    // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
+    // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverrideHikari.class) // do not delegate setPassword()
     private PoolDataSourcePropertiesSettersHikari getPoolDataSourceSetter() {
         switch (getState()) {
@@ -101,7 +101,7 @@ public class CombiPoolDataSourceHikari
         }
     }
         
-    // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
+    // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverrideHikari.class)
     private PoolDataSourcePropertiesGettersHikari getPoolDataSourceGetter() {
         switch (getState()) {

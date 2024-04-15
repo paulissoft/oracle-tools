@@ -72,7 +72,7 @@ public class CombiPoolDataSourceOracle
                                                      connectionValidationTimeout));
     }
 
-    // setXXX methods only (determinePoolDataSourceSetter() may return different values depending on state hence use a function)
+    // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     private PoolDataSourcePropertiesSettersOracle getPoolDataSourceSetter() {
         switch (getState()) {
@@ -85,7 +85,7 @@ public class CombiPoolDataSourceOracle
         }
     }
 
-    // getXXX methods only (determinePoolDataSourceGetter() may return different values depending on state hence use a function)
+    // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverride.class)
     private PoolDataSourcePropertiesGettersOracle getPoolDataSourceGetter() {
         switch (getState()) {
