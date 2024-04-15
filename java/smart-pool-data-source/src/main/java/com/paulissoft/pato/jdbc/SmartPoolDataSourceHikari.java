@@ -130,22 +130,11 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                   updateStatistics,
                   showStatistics);
 
-        String usernameOrig = null;
-        String passwordOrig = null;
-        
         try {    
             final Instant t1 = Instant.now();
-            Connection conn;
+            Connection conn = getConnection1(poolDataSource, usernameSession1, passwordSession1);
             int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
             Instant t2 = null;
-            
-            if (!poolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
-                usernameOrig = poolDataSource.getUsername();
-                passwordOrig = poolDataSource.getPassword();
-                poolDataSource.setUsername(usernameSession1);
-                poolDataSource.setPassword(passwordSession1);
-            }
-            conn = poolDataSource.getConnection();
 
             if (!firstConnection.getAndSet(true)) {
                 // Only show the first time a pool has gotten a connection.
@@ -240,15 +229,6 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
             poolDataSourceStatistics.signalException(this, ex);
             log.debug("<getConnection()");
             throw ex;
-        } finally {
-            if (usernameOrig != null) {
-                poolDataSource.setUsername(usernameOrig);
-                usernameOrig = null;
-            }
-            if (passwordOrig != null) {
-                poolDataSource.setPassword(passwordOrig);
-                passwordOrig = null;
-            }
         }
     }    
 

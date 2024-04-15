@@ -128,8 +128,6 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
         try {    
             final Instant t1 = Instant.now();
             Connection conn;
-            int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
-            Instant t2 = null;
             
             if (isFixedUsernamePassword()) {
                 if (!poolDataSource.getUser().equalsIgnoreCase(usernameToConnectTo)) {
@@ -149,21 +147,10 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
             }
 
             if (updateStatistics) {
-                if (t2 == null) {
-                    poolDataSourceStatistics.updateStatistics(this,
-                                                              conn,
-                                                              Duration.between(t1, Instant.now()).toMillis(),
-                                                              showStatistics);
-                } else {
-                    poolDataSourceStatistics.updateStatistics(this,
-                                                              conn,
-                                                              Duration.between(t1, t2).toMillis(),
-                                                              Duration.between(t2, Instant.now()).toMillis(),
-                                                              showStatistics,
-                                                              proxyLogicalConnectionCount,
-                                                              proxyOpenSessionCount,
-                                                              proxyCloseSessionCount);
-                }
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(t1, Instant.now()).toMillis(),
+                                                          showStatistics);
             }
 
             log.debug("<getConnection() = {}", conn);

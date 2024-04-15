@@ -89,6 +89,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         return FIXED_USERNAME_PASSWORD;
     }
         
+    @SuppressWarnings("rawtypes")
     public Class getType() {
         try {
             final Class cls = type != null ? Class.forName(type) : null;
