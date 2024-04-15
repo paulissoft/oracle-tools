@@ -20,7 +20,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     implements SimplePoolDataSource, Closeable {
 
     // We need to know the active parents in order to assign a value to an active parent so that a data source can use a common data source.
-    // Syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P, S, G>>,
+    // Syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P>>,
     // so use DataSource instead of T.
     private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, DataSource> activeParents = new ConcurrentHashMap<>();
 
@@ -166,6 +166,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
         log.debug("commonId: {}", commonId);
         
+        @SuppressWarnings("unchecked")
         CombiPoolDataSource<T, P> activeParent = (CombiPoolDataSource<T, P>) activeParents.get(commonId); 
 
         if (activeParent != null && activeParent.state != State.OPEN) {

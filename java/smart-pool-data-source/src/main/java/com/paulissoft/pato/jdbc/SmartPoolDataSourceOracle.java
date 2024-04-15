@@ -36,9 +36,6 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
      */
     
     public SmartPoolDataSourceOracle() {
-        // super();
-        assert getActiveParent() == null;
-        
         final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(null);
 
         parentPoolDataSourceStatistics = fields[0];
@@ -56,8 +53,6 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     
     public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent) {
         super(activeParent);
-
-        assert getActiveParent() != null;
 
         final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(activeParent);
 

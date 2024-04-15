@@ -1,6 +1,9 @@
 package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
+
+import javax.sql.DataSource;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -73,7 +76,7 @@ public class PoolDataSourceConfigurationOracle
             setType(SimplePoolDataSourceOracle.class.getName());
         }
         
-        final Class cls = getType();
+        final Class<DataSource> cls = getType();
 
         log.debug("PoolDataSourceConfigurationOracle type: {}", cls);
 

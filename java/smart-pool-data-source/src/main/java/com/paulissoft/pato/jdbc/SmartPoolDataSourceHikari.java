@@ -38,9 +38,6 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
      */
     
     public SmartPoolDataSourceHikari() {
-        // super();
-        assert getActiveParent() == null;
-        
         final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(null);
 
         parentPoolDataSourceStatistics = fields[0];
@@ -58,8 +55,6 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
     
     public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
         super(activeParent);
-
-        assert getActiveParent() != null;
 
         final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(activeParent);
 

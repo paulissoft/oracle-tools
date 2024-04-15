@@ -1,5 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
+import javax.sql.DataSource;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -165,7 +167,7 @@ public class PoolDataSourceConfigurationHikari
             setType(SimplePoolDataSourceHikari.class.getName());
         }
         
-        final Class cls = getType();
+        final Class<DataSource> cls = getType();
 
         log.debug("PoolDataSourceConfigurationHikari type: {}", cls);
 

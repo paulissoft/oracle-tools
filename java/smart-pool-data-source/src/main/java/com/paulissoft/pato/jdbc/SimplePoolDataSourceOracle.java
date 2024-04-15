@@ -8,6 +8,8 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 @Slf4j
 public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource, PoolDataSourcePropertiesGettersOracle {
 
+    private static final long serialVersionUID = 3886083682048526889L;
+    
     private final StringBuffer id = new StringBuffer();
          
     public void setId(final String srcId) {

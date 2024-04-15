@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -159,10 +158,12 @@ public class PoolDataSourceStatistics {
         // only the overall instance tracks note of physical connections
         if (parent == null) {
             // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
-            final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
+            
+            //final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
+            //this.physicalConnections = dummy.newKeySet();
  
-            this.physicalConnections = dummy.newKeySet();
-
+            this.physicalConnections = ConcurrentHashMap.newKeySet();
+            
             this.level = 1;
         } else {
             this.physicalConnections = null;
@@ -188,7 +189,7 @@ public class PoolDataSourceStatistics {
             break;
             
         default:
-            this.children = new CopyOnWriteArraySet();
+            this.children = new CopyOnWriteArraySet<PoolDataSourceStatistics>();
             this.activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
             this.activeConnectionsMax = new AtomicLong(Long.MIN_VALUE);
             this.activeConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
@@ -849,10 +850,6 @@ public class PoolDataSourceStatistics {
         }
     }
     
-    private static String exceptionToString(final Exception ex) {
-        return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
-    }
-    
     // getter(s)
 
     public long getConnectionCount() {
@@ -972,7 +969,7 @@ public class PoolDataSourceStatistics {
     }
 
     public Map<Properties, Long> getErrors() {
-        final Map<Properties, Long> result = new HashMap();
+        final Map<Properties, Long> result = new HashMap<>();
             
         errors.forEach((k, v) -> result.put(k, Long.valueOf(v.get())));
             
