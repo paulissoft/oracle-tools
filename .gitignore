@@ -9,3 +9,14 @@ node_modules/
 \.DS_Store
 docker/\.env
 apex/src/scripts/f138/*
+java/.project
+java/.settings/org.eclipse.core.resources.prefs
+java/.settings/org.eclipse.m2e.core.prefs
+java/smart-pool-data-source/.settings/org.springframework.ide.eclipse.prefs
+java/smart-pool-data-source/.settings/org.eclipse.m2e.core.prefs
+java/smart-pool-data-source/.settings/org.eclipse.jdt.core.prefs
+java/smart-pool-data-source/.settings/org.eclipse.jdt.apt.core.prefs
+java/smart-pool-data-source/.settings/org.eclipse.core.resources.prefs
+java/smart-pool-data-source/.project
+java/smart-pool-data-source/.factorypath
+java/smart-pool-data-source/.classpath

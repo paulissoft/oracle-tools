@@ -64,7 +64,11 @@ $end
       ,       r.constraint_name as r_constraint_name
       ,       r.table_name as r_table_name
       ,       r.constraint_type as r_constraint_type
-      ,       ( select o.object_type from all_objects o where o.owner = r.owner and o.object_name = r.table_name ) as r_object_type
+      ,       ( select  o.object_type
+                from    all_objects o
+                where   o.owner = r.owner
+                and     o.object_type <> 'MATERIALIZED VIEW'
+                and     o.object_name = r.table_name ) as r_object_type
       from    all_constraints t -- this object (constraint)
               inner join all_constraints r -- remote object (constraint)
               on r.owner = t.r_owner and r.constraint_name = t.r_constraint_name
