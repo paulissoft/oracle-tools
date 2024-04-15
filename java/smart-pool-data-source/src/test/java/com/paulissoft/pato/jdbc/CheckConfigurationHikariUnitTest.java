@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -38,6 +39,7 @@ public class CheckConfigurationHikariUnitTest {
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
+        assertNotEquals(operatorDataSourceHikari.isParentPoolDataSource(), domainDataSourceHikari.isParentPoolDataSource());
         assertNull(poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
         assertEquals("bodomain", poolDataSourceConfiguration.getUsername());
@@ -45,7 +47,8 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=bodomain, " + 
-                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-boopapij-bodomain, " +
+                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-" +
+                     (domainDataSourceHikari.isParentPoolDataSource() ? "bodomain" : "boopapij-bodomain") + ", " +
                      "maximumPoolSize=60, minimumIdle=60, dataSourceClassName=null, autoCommit=true, connectionTimeout=30000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
@@ -66,7 +69,8 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=bodomain, " + 
-                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-boopapij, " +
+                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-" +
+                     (operatorDataSourceHikari.isParentPoolDataSource() ? "boopapij" : "boopapij-bodomain") + ", " +
                      "maximumPoolSize=60, minimumIdle=60, dataSourceClassName=null, autoCommit=true, connectionTimeout=30000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
@@ -77,26 +81,25 @@ public class CheckConfigurationHikariUnitTest {
     @Test
     void testPoolDataSource() {
         // the combined pool data source
-        for (int nr = 0; nr < 2; nr++) {
-            final SimplePoolDataSourceHikari simplePoolDataSourceHikari =
-                nr == 0 ? domainDataSourceHikari.getPoolDataSource() : operatorDataSourceHikari.getPoolDataSource();
+        assertEquals(domainDataSourceHikari.getPoolDataSource(), operatorDataSourceHikari.getPoolDataSource());
+        
+        final SimplePoolDataSourceHikari simplePoolDataSourceHikari = domainDataSourceHikari.getPoolDataSource();
             
-            assertEquals("HikariPool-boopapij-bodomain", simplePoolDataSourceHikari.getPoolName());
-            assertEquals(2 * 60, simplePoolDataSourceHikari.getMaximumPoolSize());
-            assertEquals(2 * 60, simplePoolDataSourceHikari.getMinimumIdle());
-            assertEquals(null, simplePoolDataSourceHikari.getDataSourceClassName());
-            assertEquals(true, simplePoolDataSourceHikari.isAutoCommit());
-            assertEquals(30000, simplePoolDataSourceHikari.getConnectionTimeout());
-            assertEquals(600000, simplePoolDataSourceHikari.getIdleTimeout());
-            assertEquals(1800000, simplePoolDataSourceHikari.getMaxLifetime());
-            assertEquals("select 1 from dual", simplePoolDataSourceHikari.getConnectionTestQuery());
-            assertEquals(1, simplePoolDataSourceHikari.getInitializationFailTimeout());
-            assertEquals(false, simplePoolDataSourceHikari.isIsolateInternalQueries());
-            assertEquals(false, simplePoolDataSourceHikari.isAllowPoolSuspension());
-            assertEquals(false, simplePoolDataSourceHikari.isReadOnly());
-            assertEquals(false, simplePoolDataSourceHikari.isRegisterMbeans());
-            assertEquals(5000, simplePoolDataSourceHikari.getValidationTimeout());
-            assertEquals(0, simplePoolDataSourceHikari.getLeakDetectionThreshold());
-        }
+        assertEquals("HikariPool-boopapij-bodomain", simplePoolDataSourceHikari.getPoolName());
+        assertEquals(2 * 60, simplePoolDataSourceHikari.getMaximumPoolSize());
+        assertEquals(2 * 60, simplePoolDataSourceHikari.getMinimumIdle());
+        assertEquals(null, simplePoolDataSourceHikari.getDataSourceClassName());
+        assertEquals(true, simplePoolDataSourceHikari.isAutoCommit());
+        assertEquals(30000, simplePoolDataSourceHikari.getConnectionTimeout());
+        assertEquals(600000, simplePoolDataSourceHikari.getIdleTimeout());
+        assertEquals(1800000, simplePoolDataSourceHikari.getMaxLifetime());
+        assertEquals("select 1 from dual", simplePoolDataSourceHikari.getConnectionTestQuery());
+        assertEquals(1, simplePoolDataSourceHikari.getInitializationFailTimeout());
+        assertEquals(false, simplePoolDataSourceHikari.isIsolateInternalQueries());
+        assertEquals(false, simplePoolDataSourceHikari.isAllowPoolSuspension());
+        assertEquals(false, simplePoolDataSourceHikari.isReadOnly());
+        assertEquals(false, simplePoolDataSourceHikari.isRegisterMbeans());
+        assertEquals(5000, simplePoolDataSourceHikari.getValidationTimeout());
+        assertEquals(0, simplePoolDataSourceHikari.getLeakDetectionThreshold());
     }
 }

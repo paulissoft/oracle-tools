@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.ConstructorBinding;
@@ -8,6 +9,10 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 @Slf4j
 @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
 public class MyOperatorDataSourceOracle extends CombiPoolDataSourceOracle {
+
+    public MyOperatorDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent) {
+        super(activeParent);
+    }
 
     @ConstructorBinding
     public MyOperatorDataSourceOracle(String url,

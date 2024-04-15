@@ -21,10 +21,7 @@ public class ConfigurationFactoryHikari {
     }
 
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    public MyOperatorDataSourceHikari operatorDataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(MyOperatorDataSourceHikari.class) // app.operator.datasource.type is NOT correct
-            .build();
+    public MyOperatorDataSourceHikari operatorDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+        return new MyOperatorDataSourceHikari(domainDataSourceHikari(properties));
     }
 }

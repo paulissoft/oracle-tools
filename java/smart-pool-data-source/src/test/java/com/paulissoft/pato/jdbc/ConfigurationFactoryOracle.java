@@ -22,10 +22,7 @@ public class ConfigurationFactoryOracle {
     } 
 
     @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
-    public MyOperatorDataSourceOracle operatorDataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(MyOperatorDataSourceOracle.class) // app.operator.datasource.type is NOT correct
-            .build();
+    public MyOperatorDataSourceOracle operatorDataSourceOracle(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+        return new MyOperatorDataSourceOracle(domainDataSourceOracle(properties));
     } 
 }
