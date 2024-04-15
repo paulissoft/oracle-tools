@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
@@ -30,17 +29,17 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class CheckConnectionHikariUnitTest {
 
     @Autowired
-    @Qualifier("configDataSourceProperties")
-    private DataSourceProperties configDataSourceProperties;
-        
+    @Qualifier("configDataSource")
+    private CombiPoolDataSourceHikari configDataSourceHikari;
+
     @Autowired
-    @Qualifier("ocpiDataSourceProperties")
-    private DataSourceProperties ocpiDataSourceProperties;
-        
+    @Qualifier("ocpiDataSource")
+    private CombiPoolDataSourceHikari ocpiDataSourceHikari;
+
     @Autowired
-    @Qualifier("domainDataSourceProperties")
-    private DataSourceProperties domainDataSourceProperties;
-        
+    @Qualifier("ocppDataSource")
+    private CombiPoolDataSourceHikari ocppDataSourceHikari;
+
     @Autowired
     private MyDomainDataSourceHikari domainDataSourceHikari;
     
@@ -67,27 +66,15 @@ public class CheckConnectionHikariUnitTest {
             log.debug("round #{}", i);
             
             // these two will be combined
-            final SmartPoolDataSourceHikari pds1 =
-                configDataSourceProperties
-                .initializeDataSourceBuilder()
-                .type(SmartPoolDataSourceHikari.class)
-                .build();
+            final CombiPoolDataSourceHikari pds1 = configDataSourceHikari;
 
             if (i >= 2) { conn1 = pds1.getConnection(); if (i == 3) { conn1.close(); } }
 
-            final SmartPoolDataSourceHikari pds2 =
-                ocpiDataSourceProperties
-                .initializeDataSourceBuilder()
-                .type(SmartPoolDataSourceHikari.class)
-                .build();
+            final CombiPoolDataSourceHikari pds2 = ocpiDataSourceHikari;
 
             if (i >= 2) { conn2 = pds2.getConnection(); if (i == 3) { conn2.close(); } }
 
-            final SmartPoolDataSourceHikari pds3 =
-                domainDataSourceProperties
-                .initializeDataSourceBuilder()
-                .type(SmartPoolDataSourceHikari.class)
-                .build();
+            final CombiPoolDataSourceHikari pds3 = ocppDataSourceHikari;
 
             if (i >= 2) { conn3 = pds3.getConnection(); if (i == 3) { conn3.close(); } }
 
