@@ -157,9 +157,9 @@ public class CheckConnectionOracleUnitTest {
                 assertEquals(ds == domainDataSourceOracle ? "bodomain" : "bodomain[boopapij]", ds.getPoolDataSourceConfiguration().getUsername());
                 assertEquals(parent.getUser(), ds.getPoolDataSource().getUser());
 
-                assertEquals("bodomain", ds.getPassword());
                 // NoSuchMethod this method is deprecated
-                // assertEquals(parent.getPassword(), ds.getPoolDataSource().getPassword());
+                // assertEquals("bodomain", ds.getPassword());
+                assertEquals("bodomain", ds.getPoolDataSourceConfiguration().getPassword());
 
                 assertEquals(2 * 10, ds.getMinPoolSize());
                 //assertEquals(parent.getMinPoolSize() + child.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
@@ -169,7 +169,7 @@ public class CheckConnectionOracleUnitTest {
                 //assertEquals(parent.getMaxPoolSize() + child.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                 assertEquals(ds.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                                 
-                assertEquals("OraclePool-bodomain-boopapij", ds.getConnectionPoolName());
+                assertEquals("OraclePool-boopapij-bodomain", ds.getConnectionPoolName());
                 assertEquals(ds.getConnectionPoolName(), ds.getPoolDataSource().getConnectionPoolName());
 
                 final Connection conn = ds.getConnection();
