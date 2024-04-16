@@ -24,14 +24,24 @@ public class ConfigurationFactoryHikari {
 
     @Bean(name = {"ocpiDataSource"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
-    public CombiPoolDataSourceHikari ocpiDataSource(@Qualifier("configDataSource") CombiPoolDataSourceHikari configDataSource) {
-        return new CombiPoolDataSourceHikari(configDataSource);
+    public CombiPoolDataSourceHikari ocpiDataSource(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
+                                                    @Qualifier("configDataSource") CombiPoolDataSourceHikari configDataSource) {
+        return new CombiPoolDataSourceHikari(configDataSource,
+                                             properties.getDriverClassName(),
+                                             properties.getUrl(),
+                                             properties.getUsername(),
+                                             properties.getPassword());
     }
 
     @Bean(name = {"ocppDataSource"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
-    public CombiPoolDataSourceHikari ocppDataSource(@Qualifier("configDataSource") CombiPoolDataSourceHikari configDataSource) {
-        return new CombiPoolDataSourceHikari(configDataSource);
+    public CombiPoolDataSourceHikari ocppDataSource(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
+                                                    @Qualifier("configDataSource") CombiPoolDataSourceHikari configDataSource) {
+        return new CombiPoolDataSourceHikari(configDataSource,
+                                             properties.getDriverClassName(),
+                                             properties.getUrl(),
+                                             properties.getUsername(),
+                                             properties.getPassword());
     }
 
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
@@ -43,7 +53,10 @@ public class ConfigurationFactoryHikari {
     }
 
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    public MyOperatorDataSourceHikari operatorDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
-        return new MyOperatorDataSourceHikari(domainDataSourceHikari(properties));
+    public MyOperatorDataSourceHikari operatorDataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(MyOperatorDataSourceHikari.class)
+            .build();
     }
 }

@@ -66,6 +66,21 @@ public class PoolDataSourceConfigurationHikari
                                                              String url,
                                                              String username,
                                                              String password,
+                                                             String type) {
+        return PoolDataSourceConfigurationHikari
+            .builder()
+            .driverClassName(driverClassName)
+            .url(url)
+            .username(username)
+            .password(password)
+            .type(type)
+            .build();
+    }
+
+    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
+                                                             String url,
+                                                             String username,
+                                                             String password,
                                                              String type,
                                                              String poolName,
                                                              int maximumPoolSize,

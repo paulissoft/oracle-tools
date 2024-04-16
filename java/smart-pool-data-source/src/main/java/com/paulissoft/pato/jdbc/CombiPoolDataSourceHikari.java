@@ -20,7 +20,7 @@ public class CombiPoolDataSourceHikari
      */
     
     public CombiPoolDataSourceHikari(){
-        super(SimplePoolDataSourceHikari::new, PoolDataSourceConfigurationHikari::new);
+        super(new SimplePoolDataSourceHikari(), new PoolDataSourceConfigurationHikari());
     }
     
     public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
@@ -28,7 +28,22 @@ public class CombiPoolDataSourceHikari
     }
 
     public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
-        super(PoolDataSourceConfigurationHikari::new, activeParent);
+        super(new PoolDataSourceConfigurationHikari(), activeParent);
+    }
+
+    public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent,
+                                     String driverClassName,
+                                     String url,
+                                     String username,
+                                     String password) {
+        super(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                      url,
+                                                      username,
+                                                      password,
+                                                      // cannot reference this before supertype constructor has been called,
+                                                      // hence can not use this in constructor above
+                                                      CombiPoolDataSourceHikari.class.getName()),
+              activeParent);
     }
 
     public CombiPoolDataSourceHikari(String driverClassName,

@@ -86,6 +86,19 @@ public class PoolDataSourceConfigurationOracle
     protected static PoolDataSourceConfigurationOracle build(String url,
                                                              String username,
                                                              String password,
+                                                             String type) {
+        return PoolDataSourceConfigurationOracle
+            .builder()
+            .url(url)
+            .username(username)
+            .password(password)
+            .type(type)
+            .build();
+    }
+
+    protected static PoolDataSourceConfigurationOracle build(String url,
+                                                             String username,
+                                                             String password,
                                                              String type,
                                                              String connectionPoolName,
                                                              int initialPoolSize,

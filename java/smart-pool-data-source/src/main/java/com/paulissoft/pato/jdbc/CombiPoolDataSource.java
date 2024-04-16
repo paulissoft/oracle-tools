@@ -58,10 +58,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
      */
 
     /* 1: everything null, INITIALIZING */
-    protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
-                                  @NonNull final Supplier<P> supplierP) {
-        this.poolDataSourceConfiguration = supplierP.get();
-        this.poolDataSource = supplierT.get();
+    protected CombiPoolDataSource(@NonNull final T poolDataSource,
+                                  @NonNull final P poolDataSourceConfiguration) {
+        this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+        this.poolDataSource = poolDataSource;
         this.activeParent = null;
         
         setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
@@ -84,9 +84,9 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
 
     /* 3: activeParent != null, INITIALIZING */
-    protected CombiPoolDataSource(@NonNull Supplier<P> supplierP,
+    protected CombiPoolDataSource(@NonNull final P poolDataSourceConfiguration,
                                   @NonNull final CombiPoolDataSource<T, P> activeParent) {
-        this.poolDataSourceConfiguration = supplierP.get();
+        this.poolDataSourceConfiguration = poolDataSourceConfiguration;
         this.poolDataSource = null;
         this.activeParent = activeParent;
 
@@ -96,7 +96,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
-
+    
     /*
      * State
      */
