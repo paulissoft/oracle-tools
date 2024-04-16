@@ -9,9 +9,3 @@ node_modules/
 \.DS_Store
 docker/\.env
 apex/src/scripts/f138/*
-java/.project
-/java/.settings
-java/smart-pool-data-source/.classpath
-java/smart-pool-data-source/.factorypath
-/java/smart-pool-data-source/.settings
-java/smart-pool-data-source/.project
