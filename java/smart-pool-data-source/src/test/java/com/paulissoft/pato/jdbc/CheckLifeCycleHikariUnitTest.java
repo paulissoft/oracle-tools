@@ -117,13 +117,8 @@ public class CheckLifeCycleHikariUnitTest {
         log.debug("poolDataSourceConfiguration1: {}", poolDataSourceConfiguration1);
         log.debug("poolDataSourceConfiguration2: {}", poolDataSourceConfiguration2);
 
-        assertTrue(poolDataSourceConfiguration1.toString().equals(poolDataSourceConfiguration2.toString()));
-        
-        poolDataSourceConfiguration1 = pds1.getPoolDataSourceConfiguration();
-        poolDataSourceConfiguration2 = pds2.getPoolDataSourceConfiguration();
-
-        assertEquals(equal,
-                     poolDataSourceConfiguration1.toString().equals(poolDataSourceConfiguration2.toString()));
+        // usernames differ
+        assertNotEquals(poolDataSourceConfiguration1.toString(), poolDataSourceConfiguration2.toString());
         
         assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
         assertEquals(pds1.isFixedUsernamePassword(), pds2.isFixedUsernamePassword());
