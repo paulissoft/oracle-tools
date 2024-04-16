@@ -138,7 +138,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
 
     /*
-     * Open / setUp
+     * Open / setUp (javax.annotation.PostConstruct is used by Spring)
      */
 
     //@jakarta.annotation.PostConstruct
@@ -261,7 +261,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
 
     /*
-     * Close / tearDown
+     * Close / tearDown (javax.annotation.PreDestroy is used by Spring)
      */
 
     //@jakarta.annotation.PreDestroy
@@ -270,7 +270,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         log.debug("close(id={})", getId());
 
         // why did we get here?
-        if (log.isDebugEnabled()) {
+        if (log.isTraceEnabled()) {
             Thread.dumpStack();
         }
         
