@@ -176,10 +176,11 @@ public class CombiPoolDataSourceHikari
     protected Connection getConnection1(@NonNull final SimplePoolDataSourceHikari poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
+        log.debug(">getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
 
         String usernameOrig = null;
         String passwordOrig = null;
+        Connection conn = null;
         
         try {
             if (!poolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
@@ -188,7 +189,12 @@ public class CombiPoolDataSourceHikari
                 poolDataSource.setUsername(usernameSession1);
                 poolDataSource.setPassword(passwordSession1);
             }
-            return poolDataSource.getConnection();
+            
+            conn = poolDataSource.getConnection();
+
+            log.debug("current schema: {}; usernameOrig: {}", conn.getSchema(), usernameOrig);
+
+            return conn;
         } finally {
             if (usernameOrig != null) {
                 poolDataSource.setUsername(usernameOrig);
@@ -198,6 +204,7 @@ public class CombiPoolDataSourceHikari
                 poolDataSource.setPassword(passwordOrig);
                 passwordOrig = null;
             }
+            log.debug("<getConnection1(id={})", getId());
         }
     }
 
