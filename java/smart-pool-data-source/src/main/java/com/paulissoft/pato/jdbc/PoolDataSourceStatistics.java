@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -681,7 +681,7 @@ public class PoolDataSourceStatistics {
             return;
         }
         
-        final BiConsumer<String, Object> method = showTotals ? logger::info : logger::debug;
+        final Consumer<String> method = showTotals ? logger::info : logger::debug;
         final boolean showPoolSizes = level <= 3;
         final boolean showErrors = showTotals && level <= 3;
         final String prefix = INDENT_PREFIX;
@@ -690,27 +690,26 @@ public class PoolDataSourceStatistics {
 
         try {
             if (method != null) {
-                method.accept("Statistics for {} (level {}):",
-                              (Object) new Object[]{ poolDescription, level });
+                method.accept(String.format("Statistics for %s (level %d):", poolDescription, level));
 
                 final LocalDateTime firstUpdate = long2LocalDateTime(this.firstUpdate.get());
                 final LocalDateTime lastUpdate = long2LocalDateTime(this.lastUpdate.get());
 
                 if (firstUpdate != null && lastUpdate != null) {
-                    method.accept("{}first updated at: {}",
-                                  (Object) new Object[]{ prefix, firstUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
-                    method.accept("{}last  updated at: {}",
-                                  (Object) new Object[]{ prefix, lastUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) });
+                    method.accept(String.format("%sfirst updated at: %s",
+                                                prefix, firstUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+                    method.accept(String.format("%slast  updated at: %s",
+                                                prefix, lastUpdate.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
                 }
             
                 if (!showTotals) {
                     if (timeElapsed >= 0L) {
-                        method.accept(                                      "{}time needed to open last connection (ms): {}",
-                                      (Object) new Object[]{ prefix, timeElapsed });
+                        method.accept(String.format("%stime needed to open last connection (ms): %d",
+                                                    prefix, timeElapsed));
                     }
                     if (proxyTimeElapsed >= 0L) {
-                        method.accept(                                      "{}time needed to open last proxy connection (ms): {}",
-                                      (Object) new Object[]{ prefix, proxyTimeElapsed });
+                        method.accept(String.format("%stime needed to open last proxy connection (ms): %d",
+                                                    prefix, proxyTimeElapsed));
                     }
                 }
             
@@ -721,8 +720,8 @@ public class PoolDataSourceStatistics {
             
                 if ((val1 >= 0L && val2 >= 0L) &&
                     (val1 >= 0L || val2 > 0L)) {
-                    method.accept("{}physical/logical connections opened: {}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2 });
+                    method.accept(String.format("%sphysical/logical connections opened: %d/%d",
+                                                prefix, val1, val2));
                 }
 
                 val1 = getPhysicalTimeElapsedMin();
@@ -731,8 +730,8 @@ public class PoolDataSourceStatistics {
 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept("{}min/avg/max physical connection time (ms): {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                    method.accept(String.format("%smin/avg/max physical connection time (ms): %d/%d/%d",
+                                                prefix, val1, val2, val3));
                 }
             
                 val1 = getLogicalTimeElapsedMin();
@@ -741,8 +740,8 @@ public class PoolDataSourceStatistics {
 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept("{}min/avg/max logical connection time (ms): {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                    method.accept(String.format("%smin/avg/max logical connection time (ms): %d/%d/%d",
+                                                prefix, val1, val2, val3));
                 }
             
                 val1 = getProxyTimeElapsedMin();
@@ -751,8 +750,8 @@ public class PoolDataSourceStatistics {
 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept("{}min/avg/max proxy connection time (ms): {}/{}/{}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                    method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
+                                                prefix, val1, val2, val3));
                 }
 
                 val1 = getProxyOpenSessionCount();
@@ -761,16 +760,16 @@ public class PoolDataSourceStatistics {
                 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept("{}proxy sessions opened/closed: {}/{}; logical connections rejected while searching for optimal proxy session: {}",
-                                  (Object) new Object[]{ prefix, val1, val2, val3 });
+                    method.accept(String.format("%sproxy sessions opened/closed: %d/%d; logical connections rejected while searching for optimal proxy session: %d",
+                                                prefix, val1, val2, val3));
                 }
             
                 if (showPoolSizes && pds != null) {
-                    method.accept("{}initial/min/max pool size: {}/{}/{}",
-                                  (Object) new Object[]{ prefix,
-                                                         pds.getInitialPoolSize(),
-                                                         pds.getMinPoolSize(),
-                                                         pds.getMaxPoolSize() });
+                    method.accept(String.format("%sinitial/min/max pool size: %d/%d/%d",
+                                                prefix,
+                                                pds.getInitialPoolSize(),
+                                                pds.getMinPoolSize(),
+                                                pds.getMaxPoolSize()));
                 }
 
                 if (showTotals) {
@@ -780,8 +779,8 @@ public class PoolDataSourceStatistics {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept("{}min/avg/max active connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                        method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
+                                                    prefix, val1, val2, val3));
                     }
                     
                     val1 = getIdleConnectionsMin();
@@ -790,8 +789,8 @@ public class PoolDataSourceStatistics {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept("{}min/avg/max idle connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                        method.accept(String.format("%smin/avg/max idle connections: %d/%d/%d",
+                                                    prefix, val1, val2, val3));
                     }
 
                     val1 = getTotalConnectionsMin();
@@ -800,8 +799,8 @@ public class PoolDataSourceStatistics {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept("{}min/avg/max total connections: {}/{}/{}",
-                                      (Object) new Object[]{ prefix, val1, val2, val3 });
+                        method.accept(String.format("%smin/avg/max total connections: %d/%d/%d",
+                                                    prefix, val1, val2, val3));
                     }
                 }
             }

@@ -92,20 +92,22 @@ public class CheckConnectionHikariUnitTest {
                 
                 // fall thru
             case 1:
-                assertFalse(pds1.isOpen());
-                assertFalse(pds2.isOpen());
-                assertFalse(pds3.isOpen());
+                break;
+                
+            case 2:
+                assertTrue(pds1.isOpen());
+                assertTrue(pds2.isOpen());
+                assertTrue(pds3.isOpen());
                 break;
 
-            case 2:
             case 3:
                 log.debug("pds1.getPoolDataSourceConfiguration(): {}", pds1.getPoolDataSourceConfiguration());
                 log.debug("pds2.getPoolDataSourceConfiguration(): {}", pds2.getPoolDataSourceConfiguration());
                 log.debug("pds3.getPoolDataSourceConfiguration(): {}", pds3.getPoolDataSourceConfiguration());
 
-                assertTrue(pds1.isOpen());
-                assertTrue(pds2.isOpen());
-                assertTrue(pds3.isOpen());
+                assertFalse(pds1.isOpen());
+                assertFalse(pds2.isOpen());
+                assertFalse(pds3.isOpen());
                 break;
             }
 

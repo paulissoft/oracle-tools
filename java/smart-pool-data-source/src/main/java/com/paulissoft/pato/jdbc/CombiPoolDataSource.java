@@ -450,6 +450,9 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                   usernameSession2);
 
         try {
+            log.debug("before proxy session - current schema: {}",
+                      conn.getSchema());
+
             // if the current schema is not the requested schema try to open/close the proxy session
             if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
                 assert !isSingleSessionProxyModel()
@@ -467,13 +470,22 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
                 if (oraConn != null) {
                     int nr = 0;
+
+                    log.debug("before open proxy session - current schema: {}; is proxy session: {}",
+                              conn.getSchema(),
+                              oraConn.isProxySession());
                     
                     do {
+                    
                         switch(nr) {
                         case 0:
-                            if (oraConn.isProxySession()) {
+                            if (!conn.getSchema().equalsIgnoreCase(usernameSession1) /*oraConn.isProxySession()*/) {
                                 // go back to the session with the first username
-                                oraConn.close(OracleConnection.PROXY_SESSION);
+                                try {
+                                    oraConn.close(OracleConnection.PROXY_SESSION);
+                                } catch (SQLException ex) {
+                                    log.warn("SQL warning: {}", ex.getMessage());
+                                }
                                 oraConn.setSchema(usernameSession1);
                             }
                             break;
@@ -484,7 +496,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                                 final Properties proxyProperties = new Properties();
 
                                 proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, usernameSession2);
-                                oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
+                                oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
                                 oraConn.setSchema(usernameSession2);
                             }
                             break;
@@ -496,9 +508,21 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                         default:
                             throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
                         }
+
+                        log.debug("after open proxy session (#{}) - current schema: {}; is proxy session: {}",
+                                  nr,
+                                  conn.getSchema(),
+                                  oraConn.isProxySession());
                     } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
+
                 }                
             }
+
+            log.debug("after proxy session - current schema: {}",
+                      conn.getSchema());
+        } catch (SQLException ex) {
+            log.debug("SQL error: {}", ex.getMessage());
+            throw ex;
         } finally {
             log.debug("<getConnection2(id={})", getId());
         }
