@@ -2,7 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+//import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -40,12 +40,12 @@ public class CheckConfigurationHikariUnitTest {
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
         assertNotEquals(operatorDataSourceHikari.isParentPoolDataSource(), domainDataSourceHikari.isParentPoolDataSource());
-        assertNull(poolDataSourceConfiguration.getDriverClassName());
+        assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
         assertEquals("bodomain", poolDataSourceConfiguration.getUsername());
         assertEquals("bodomain", poolDataSourceConfiguration.getPassword());
         assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
-        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-" +
                      (domainDataSourceHikari.isParentPoolDataSource() ? "bodomain" : "boopapij-bodomain") + ", " +
@@ -62,12 +62,12 @@ public class CheckConfigurationHikariUnitTest {
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
-        assertNull(poolDataSourceConfiguration.getDriverClassName());
+        assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
         assertEquals("bodomain[boopapij]", poolDataSourceConfiguration.getUsername());
         assertEquals("bodomain", poolDataSourceConfiguration.getPassword());
         assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
-        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=null, " +
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-" +
                      (operatorDataSourceHikari.isParentPoolDataSource() ? "boopapij" : "boopapij-bodomain") + ", " +
