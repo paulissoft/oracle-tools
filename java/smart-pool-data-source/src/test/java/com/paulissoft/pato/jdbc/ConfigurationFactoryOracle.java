@@ -29,7 +29,8 @@ public class ConfigurationFactoryOracle {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
-                                             properties.getPassword());
+                                             properties.getPassword(),
+                                             properties.getType().getClass().getName());
     }
 
     @Bean(name = {"ocppDataSource"})
@@ -39,7 +40,8 @@ public class ConfigurationFactoryOracle {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
-                                             properties.getPassword());
+                                             properties.getPassword(),
+                                             properties.getType().getClass().getName());
     }
 
     @ConfigurationProperties(prefix = "app.domain.datasource.oracleucp")

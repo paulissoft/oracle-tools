@@ -71,12 +71,13 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                                      String driverClassName,
                                      String url,
                                      String username,
-                                     String password) {
+                                     String password,
+                                     String type) {
         this(PoolDataSourceConfigurationHikari.build(driverClassName,
                                                      url,
                                                      username,
                                                      password,
-                                                     SmartPoolDataSourceHikari.class.getName()),
+                                                     type != null ? type : SmartPoolDataSourceHikari.class.getName()),
              activeParent);
     }
 

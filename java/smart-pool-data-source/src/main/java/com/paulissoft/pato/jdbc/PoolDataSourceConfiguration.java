@@ -53,6 +53,12 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
                                        final String url,
                                        final String username,
                                        final String password) {
+        // do not show password
+        log.debug("PoolDataSourceConfiguration(driverClassName={}, url={}, username={})",
+                  driverClassName,
+                  url,
+                  username);
+        
         this.driverClassName = driverClassName;
         //assert(url != null);
         this.url = url;
@@ -100,7 +106,15 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         }
     }
 
+    public void setDriverClassName(String driverClassName) {
+        log.debug("setDriverClassName(driverClassName={})", driverClassName);
+        
+        this.driverClassName = driverClassName;
+    }
+    
     public void setType(final String type) {
+        log.debug("setType(type={})", type);
+        
         try {
             if (DataSource.class.isAssignableFrom(Class.forName(type))) {
                 this.type = type;

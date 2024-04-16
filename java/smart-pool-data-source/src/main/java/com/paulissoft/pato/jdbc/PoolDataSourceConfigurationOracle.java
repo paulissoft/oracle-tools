@@ -72,15 +72,18 @@ public class PoolDataSourceConfigurationOracle
     public PoolDataSourceConfigurationOracle() {
         // super();
         
+        /*
         if (getType() == null) {
             setType(SimplePoolDataSourceOracle.class.getName());
         }
+        */
         
         final Class<DataSource> cls = getType();
 
         log.debug("PoolDataSourceConfigurationOracle type: {}", cls);
 
-        assert(cls != null && SimplePoolDataSourceOracle.class.isAssignableFrom(cls));
+        assert (cls == null || SimplePoolDataSourceOracle.class.isAssignableFrom(cls))
+            : "Type must be assignable from SimplePoolDataSourceOracle";
     }
 
     protected static PoolDataSourceConfigurationOracle build(String url,

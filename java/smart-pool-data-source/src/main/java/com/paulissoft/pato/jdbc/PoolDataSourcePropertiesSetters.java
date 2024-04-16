@@ -10,4 +10,6 @@ public interface PoolDataSourcePropertiesSetters {
     void setUsername(java.lang.String username) throws SQLException;
     
     void setPassword(String paramString) throws SQLException;
+
+    void setType(String paramString);
 }

@@ -38,14 +38,13 @@ public class CombiPoolDataSourceOracle
     public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent,
                                      String url,
                                      String username,
-                                     String password)
+                                     String password,
+                                     String type)
     {
         this(PoolDataSourceConfigurationOracle.build(url,
                                                      username,
                                                      password,
-                                                     // cannot reference this before supertype constructor has been called,
-                                                     // hence can not use this in constructor above
-                                                     CombiPoolDataSourceOracle.class.getName()),
+                                                     type != null ? type : CombiPoolDataSourceOracle.class.getName()),
              activeParent);
     }
 

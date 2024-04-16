@@ -19,7 +19,7 @@ public class CombiPoolDataSourceHikari
      * Constructors
      */
     
-    public CombiPoolDataSourceHikari(){
+    public CombiPoolDataSourceHikari() {
         super(new SimplePoolDataSourceHikari(), new PoolDataSourceConfigurationHikari());
     }
     
@@ -40,14 +40,13 @@ public class CombiPoolDataSourceHikari
                                      String driverClassName,
                                      String url,
                                      String username,
-                                     String password) {
+                                     String password,
+                                     String type) {
         this(PoolDataSourceConfigurationHikari.build(driverClassName,
                                                      url,
                                                      username,
                                                      password,
-                                                     // cannot reference this before supertype constructor has been called,
-                                                     // hence can not use this in constructor above
-                                                     CombiPoolDataSourceHikari.class.getName()),
+                                                     type != null ? type : CombiPoolDataSourceHikari.class.getName()),
              activeParent);
     }
 

@@ -34,7 +34,8 @@ public class ConfigurationFactoryHikari {
                                                                            properties.getDriverClassName(),
                                                                            properties.getUrl(),
                                                                            properties.getUsername(),
-                                                                           properties.getPassword());
+                                                                           properties.getPassword(),
+                                                                           properties.getType().getClass().getName());
         
         log.debug("ocpiDataSource({}, {}): {}", properties, configDataSource, ds);
 
@@ -49,7 +50,8 @@ public class ConfigurationFactoryHikari {
                                                                            properties.getDriverClassName(),
                                                                            properties.getUrl(),
                                                                            properties.getUsername(),
-                                                                           properties.getPassword());
+                                                                           properties.getPassword(),
+                                                                           properties.getType().getClass().getName());
 
         log.debug("ocppDataSource({}, {}): {}", properties, configDataSource, ds);
 
