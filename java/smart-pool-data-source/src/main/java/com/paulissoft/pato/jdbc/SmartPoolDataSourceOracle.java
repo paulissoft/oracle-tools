@@ -81,6 +81,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     public SmartPoolDataSourceOracle(String url,
                                      String username,
                                      String password,
+                                     String type,
                                      String connectionPoolName,
                                      int initialPoolSize,
                                      int minPoolSize,
@@ -102,7 +103,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
                                                      password,
                                                      // cannot reference this before supertype constructor has been called,
                                                      // hence can not use this in constructor above
-                                                     SmartPoolDataSourceOracle.class.getName(),
+                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName(),
                                                      connectionPoolName,
                                                      initialPoolSize,
                                                      minPoolSize,

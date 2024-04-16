@@ -54,6 +54,7 @@ public class CombiPoolDataSourceHikari
                                      String url,
                                      String username,
                                      String password,
+                                     String type,
                                      String poolName,
                                      int maximumPoolSize,
                                      int minimumIdle,
@@ -76,7 +77,7 @@ public class CombiPoolDataSourceHikari
                                                      password,
                                                      // cannot reference this before supertype constructor has been called,
                                                      // hence can not use this in constructor above
-                                                     CombiPoolDataSourceHikari.class.getName(),
+                                                     type != null ? type : CombiPoolDataSourceHikari.class.getName(),
                                                      poolName,
                                                      maximumPoolSize,
                                                      minimumIdle,

@@ -11,7 +11,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     private final StringBuffer id = new StringBuffer();
          
     public void setId(final String srcId) {
-        SimplePoolDataSource.setId(id, toString()/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
+        SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode())/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
     }
 
     public String getId() {
@@ -241,9 +241,4 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         return this.getPoolDataSourceConfiguration().toString();
     }
     */
-
-    @Override
-    public String toString() {
-        return String.format("%s@%08x", getClass().getName(), hashCode());
-    }
 }

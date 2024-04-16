@@ -511,11 +511,6 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
     
     public void setId(final String srcId) {
-        SimplePoolDataSource.setId(id, toString(), srcId);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s@%08x", getClass().getName(), hashCode());
+        SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
     }
 }

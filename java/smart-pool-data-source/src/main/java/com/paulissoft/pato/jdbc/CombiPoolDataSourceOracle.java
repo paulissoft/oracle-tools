@@ -51,6 +51,7 @@ public class CombiPoolDataSourceOracle
     public CombiPoolDataSourceOracle(String url,
                                      String username,
                                      String password,
+                                     String type,
                                      String connectionPoolName,
                                      int initialPoolSize,
                                      int minPoolSize,
@@ -72,7 +73,7 @@ public class CombiPoolDataSourceOracle
                                                      password,
                                                      // cannot reference this before supertype constructor has been called,
                                                      // hence can not use this in constructor above
-                                                     CombiPoolDataSourceOracle.class.getName(),
+                                                     type != null ? type : CombiPoolDataSourceOracle.class.getName(),
                                                      connectionPoolName,
                                                      initialPoolSize,
                                                      minPoolSize,
