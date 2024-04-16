@@ -56,7 +56,7 @@ public class CheckConnectionHikariUnitTest {
 
     @Test
     void testConnection() throws SQLException {
-        final String rex = "^Smart pool data source \\(.+\\) must be open.$";
+        final String rex = "^You can only get a connection when the pool state is OPEN or CLOSING but it is CLOSED.$";
         IllegalStateException thrown;
         Connection conn1, conn2, conn3;
         
@@ -148,6 +148,9 @@ public class CheckConnectionHikariUnitTest {
             assertFalse(pds3.isOpen());
 
             thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+
+            log.debug("exception: {}", thrown.getMessage());
+                
             assertTrue(thrown.getMessage().matches(rex));
 
             // close pds2
@@ -156,6 +159,9 @@ public class CheckConnectionHikariUnitTest {
             assertFalse(pds2.isOpen());
 
             thrown = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
+
+            log.debug("exception: {}", thrown.getMessage());
+
             assertTrue(thrown.getMessage().matches(rex));
 
             // close pds1
@@ -164,6 +170,9 @@ public class CheckConnectionHikariUnitTest {
             assertFalse(pds1.isOpen());
 
             thrown = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
+
+            log.debug("exception: {}", thrown.getMessage());
+
             assertTrue(thrown.getMessage().matches(rex));
         }
     }
