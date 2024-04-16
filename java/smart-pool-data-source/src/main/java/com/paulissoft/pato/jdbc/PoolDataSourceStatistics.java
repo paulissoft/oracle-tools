@@ -760,7 +760,8 @@ public class PoolDataSourceStatistics {
                 
                 if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                     (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept(String.format("%sproxy sessions opened/closed: %d/%d; logical connections rejected while searching for optimal proxy session: %d",
+                    method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
+                                                "logical connections rejected while searching for optimal proxy session: %d",
                                                 prefix, val1, val2, val3));
                 }
             
