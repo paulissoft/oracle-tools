@@ -94,7 +94,7 @@ public class CheckLifeCycleHikariUnitTest {
                             .build();
                         
                         try (final CombiPoolDataSourceHikari pds4 = new CombiPoolDataSourceHikari(poolDataSourceConfigurationHikari1)) {
-                            assertFalse(pds4.isOpen());
+                            assertTrue(pds4.isOpen());
                             assertTrue(pds4.isParentPoolDataSource()); // a parent too
 
                             assertNotEquals(pds1.getPoolDataSourceConfiguration().toString(),
