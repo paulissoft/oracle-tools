@@ -27,8 +27,13 @@ public class CombiPoolDataSourceHikari
         super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
     }
 
+    public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari,
+                                     @NonNull final CombiPoolDataSourceHikari activeParent) {
+        super(poolDataSourceConfigurationHikari, activeParent);
+    }
+    
     public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
-        super(new PoolDataSourceConfigurationHikari(), activeParent);
+        this(new PoolDataSourceConfigurationHikari(), activeParent);
     }
 
     public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent,
@@ -36,14 +41,14 @@ public class CombiPoolDataSourceHikari
                                      String url,
                                      String username,
                                      String password) {
-        super(PoolDataSourceConfigurationHikari.build(driverClassName,
-                                                      url,
-                                                      username,
-                                                      password,
-                                                      // cannot reference this before supertype constructor has been called,
-                                                      // hence can not use this in constructor above
-                                                      CombiPoolDataSourceHikari.class.getName()),
-              activeParent);
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     CombiPoolDataSourceHikari.class.getName()),
+             activeParent);
     }
 
     public CombiPoolDataSourceHikari(String driverClassName,
@@ -133,6 +138,8 @@ public class CombiPoolDataSourceHikari
     @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
     @Override
     protected SimplePoolDataSourceHikari getPoolDataSource() {
+        log.debug("getPoolDataSource()");
+
         return super.getPoolDataSource();
     }
 

@@ -28,6 +28,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         activeParents.clear();
     }    
 
+    private final StringBuffer id = new StringBuffer();
+
     @Getter(AccessLevel.PACKAGE)
     @NonNull
     private final P poolDataSourceConfiguration;
@@ -60,11 +62,17 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     /* 1: everything null, INITIALIZING */
     protected CombiPoolDataSource(@NonNull final T poolDataSource,
                                   @NonNull final P poolDataSourceConfiguration) {
+        log.debug("constructor 1: everything null, INITIALIZING");
+        
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
         this.poolDataSource = poolDataSource;
         this.activeParent = null;
         
         setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
+
+        log.debug("id: {}; active parent id: null; pool data source id: {}",
+                  getId(),
+                  getPoolDataSource().getId());
 
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
@@ -72,12 +80,19 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
     protected CombiPoolDataSource(@NonNull final Supplier<T> supplierT,
                                   @NonNull final P poolDataSourceConfiguration) {
+        log.debug("constructor 2: poolDataSourceConfiguration != null (fixed), OPEN");
+
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
-        this.activeParent = determineActiveParent(); // can not use getId()
+        this.activeParent = determineActiveParent(); // can not use getId() yet
         this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
 
         setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
         setUp();
+
+        log.debug("id: {}; active parent id: {}; pool data source id: {}",
+                  getId(),
+                  this.activeParent != null ? this.activeParent.getId() : null,
+                  getPoolDataSource().getId());
 
         assert state == State.OPEN : "After setting up the state must be OPEN.";
         assert getPoolDataSource() != null : "The pool data source should not be null.";
@@ -86,11 +101,18 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     /* 3: activeParent != null, INITIALIZING */
     protected CombiPoolDataSource(@NonNull final P poolDataSourceConfiguration,
                                   @NonNull final CombiPoolDataSource<T, P> activeParent) {
+        log.debug("constructor 3: activeParent != null, INITIALIZING");
+
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
         this.poolDataSource = null;
         this.activeParent = activeParent;
 
         setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
+
+        log.debug("id: {}; active parent id: {}; pool data source id: {}",
+                  getId(),
+                  this.activeParent.getId(),
+                  getPoolDataSource().getId());
 
         assert activeParent.activeParent == null : "A parent can not have a parent itself.";
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
@@ -204,7 +226,9 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 log.debug("parentCommonId: {}", parentCommonId);
 
                 if (!parentCommonId.equals(commonId)) {
-                    throw new IllegalArgumentException("The parent and this common configuration should be the same.");
+                    throw new IllegalArgumentException(String.format("The parent and this common configuration should be the same.\nParent: %s\nCommon: %s",
+                                                                     parentCommonId,
+                                                                     commonId));
                 }
                 
                 activeParent.activeChildren.incrementAndGet();
@@ -332,10 +356,16 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         public Connection getConnection(String username, String password) throws SQLException;
 
         public void close();
+
+        public String getId();
+        
+        public void setId(final String srcId);
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
     protected T getPoolDataSource() {
+        log.debug("getPoolDataSource()");
+        
         switch (state) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed().");
@@ -476,5 +506,20 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         }
         
         return conn;
+    }
+
+    public String getId() {
+        log.debug("getId()={}", id.toString());
+
+        return id.toString();
+    }
+    
+    public void setId(final String srcId) {
+        SimplePoolDataSource.setId(id, toString(), srcId);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s@%08x", getClass().getName(), hashCode());
     }
 }

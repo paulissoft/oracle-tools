@@ -184,7 +184,7 @@ public class PoolDataSourceConfigurationHikari
         
         final Class<DataSource> cls = getType();
 
-        log.debug("PoolDataSourceConfigurationHikari type: {}", cls);
+        log.debug("PoolDataSourceConfigurationHikari type: {}; driverClassName: {}", cls, getDriverClassName());
 
         assert(cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls));
     }

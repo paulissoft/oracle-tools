@@ -43,7 +43,7 @@
     <spring.version>5.2.3.RELEASE</spring.version>
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
     <commons-lang3.version>3.9</commons-lang3.version>
-
+    <jol-core.version>0.17</jol-core.version>
     <!-- For Spring we have to use the old javax:annotation-api, not the new jakarta:annotation-api. -->
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
     <!-- But we include the new one as well for other frameworks. -->
@@ -52,6 +52,8 @@
     <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
     <!--test>CheckConfigurationOracleUnitTest,CheckLifeCycleOracleUnitTest,CheckConnectionOracleUnitTest#testConnectionOracle</test-->
+
+    <jdk.attach.allowAttachSelf>true</jdk.attach.allowAttachSelf>
   </properties>
 
   <dependencyManagement>
@@ -131,6 +133,11 @@
         <artifactId>jakarta.annotation-api</artifactId>
         <version>${jakarta.annotation-api.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.openjdk.jol</groupId>
+        <artifactId>jol-core</artifactId>
+        <version>${jol-core.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -206,6 +213,10 @@
       <groupId>jakarta.annotation</groupId>
       <artifactId>jakarta.annotation-api</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jol</groupId>
+      <artifactId>jol-core</artifactId>
     </dependency>
   </dependencies>
 

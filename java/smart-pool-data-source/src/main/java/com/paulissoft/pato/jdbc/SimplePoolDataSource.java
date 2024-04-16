@@ -10,9 +10,9 @@ public interface SimplePoolDataSource extends DataSource {
         return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
     }
 
-    public static void setId(final StringBuffer dstId, final int dstHashCode, final String srcId) {
+    public static void setId(final StringBuffer dstId, final String id, final String srcId) {
         dstId.delete(0, dstId.length());
-        dstId.append(dstHashCode);
+        dstId.append(id);
         dstId.append(" (");
         dstId.append(srcId != null && srcId.length() > 0 ? srcId : "UNKNOWN");
         dstId.append(")");

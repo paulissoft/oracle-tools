@@ -3,6 +3,7 @@ package com.paulissoft.pato.jdbc;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
+//import org.openjdk.jol.vm.VM;
 
 
 @Slf4j
@@ -13,7 +14,7 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     private final StringBuffer id = new StringBuffer();
          
     public void setId(final String srcId) {
-        SimplePoolDataSource.setId(id, hashCode(), srcId);
+        SimplePoolDataSource.setId(id, toString()/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
     }
 
     public String getId() {
@@ -223,4 +224,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return this.getPoolDataSourceConfiguration().toString();
     }
     */
+
+    @Override
+    public String toString() {
+        return String.format("%s@%08x", getClass().getName(), hashCode());
+    }
 }

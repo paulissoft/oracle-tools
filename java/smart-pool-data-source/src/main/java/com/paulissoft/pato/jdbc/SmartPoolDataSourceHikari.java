@@ -53,13 +53,31 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         poolDataSourceStatistics = fields[1];
     }
     
-    public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
-        super(activeParent);
-
+    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari,
+                                     @NonNull final SmartPoolDataSourceHikari activeParent) {
+        super(poolDataSourceConfigurationHikari, activeParent);
+        
         final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(activeParent);
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+    }
+    
+    public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
+        this(new PoolDataSourceConfigurationHikari(), activeParent);
+    }
+
+    public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent,
+                                     String driverClassName,
+                                     String url,
+                                     String username,
+                                     String password) {
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     SmartPoolDataSourceHikari.class.getName()),
+             activeParent);
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,

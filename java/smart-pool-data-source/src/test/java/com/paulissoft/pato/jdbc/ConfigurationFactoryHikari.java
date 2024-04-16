@@ -16,32 +16,44 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"configDataSource"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
     public CombiPoolDataSourceHikari configDataSource(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
-        return properties
+        final CombiPoolDataSourceHikari ds = properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceHikari.class)
             .build();
+
+        log.debug("configDataSource({}): {}", properties, ds);
+        
+        return ds;
     }
 
     @Bean(name = {"ocpiDataSource"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
     public CombiPoolDataSourceHikari ocpiDataSource(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
                                                     @Qualifier("configDataSource") CombiPoolDataSourceHikari configDataSource) {
-        return new CombiPoolDataSourceHikari(configDataSource,
-                                             properties.getDriverClassName(),
-                                             properties.getUrl(),
-                                             properties.getUsername(),
-                                             properties.getPassword());
+        final CombiPoolDataSourceHikari ds = new CombiPoolDataSourceHikari(configDataSource,
+                                                                           properties.getDriverClassName(),
+                                                                           properties.getUrl(),
+                                                                           properties.getUsername(),
+                                                                           properties.getPassword());
+        
+        log.debug("ocpiDataSource({}, {}): {}", properties, configDataSource, ds);
+
+        return ds;
     }
 
     @Bean(name = {"ocppDataSource"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
     public CombiPoolDataSourceHikari ocppDataSource(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
                                                     @Qualifier("configDataSource") CombiPoolDataSourceHikari configDataSource) {
-        return new CombiPoolDataSourceHikari(configDataSource,
-                                             properties.getDriverClassName(),
-                                             properties.getUrl(),
-                                             properties.getUsername(),
-                                             properties.getPassword());
+        final CombiPoolDataSourceHikari ds = new CombiPoolDataSourceHikari(configDataSource,
+                                                                           properties.getDriverClassName(),
+                                                                           properties.getUrl(),
+                                                                           properties.getUsername(),
+                                                                           properties.getPassword());
+
+        log.debug("ocppDataSource({}, {}): {}", properties, configDataSource, ds);
+
+        return ds;
     }
 
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")

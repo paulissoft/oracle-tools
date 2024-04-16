@@ -26,8 +26,13 @@ public class CombiPoolDataSourceOracle
         super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
     }
 
+    public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle,
+                                     @NonNull final CombiPoolDataSourceOracle activeParent) {
+        super(poolDataSourceConfigurationOracle, activeParent);
+    }
+    
     public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent) {
-        super(new PoolDataSourceConfigurationOracle(), activeParent);
+        this(new PoolDataSourceConfigurationOracle(), activeParent);
     }
 
     public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent,
@@ -35,7 +40,7 @@ public class CombiPoolDataSourceOracle
                                      String username,
                                      String password)
     {
-        super(PoolDataSourceConfigurationOracle.build(url,
+        this(PoolDataSourceConfigurationOracle.build(url,
                                                      username,
                                                      password,
                                                      // cannot reference this before supertype constructor has been called,

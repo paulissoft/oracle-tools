@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
+//import org.openjdk.jol.vm.VM;
 
 
 @Slf4j
@@ -10,10 +11,12 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     private final StringBuffer id = new StringBuffer();
          
     public void setId(final String srcId) {
-        SimplePoolDataSource.setId(id, hashCode(), srcId);
+        SimplePoolDataSource.setId(id, toString()/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
     }
 
     public String getId() {
+        log.debug("getId()={}", id.toString());
+        
         return id.toString();
     }
 
@@ -71,7 +74,7 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
             .url(getJdbcUrl())
             .username(getUsername())
             .password(excludeNonIdConfiguration ? null : getPassword())
-            .type(SimplePoolDataSourceHikari.class.getName())
+            .type(this.getClass().getName()/*SimplePoolDataSourceHikari.class.getName()*/)
             .poolName(excludeNonIdConfiguration ? null : getPoolName())
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())
@@ -240,4 +243,9 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         return this.getPoolDataSourceConfiguration().toString();
     }
     */
+
+    @Override
+    public String toString() {
+        return String.format("%s@%08x", getClass().getName(), hashCode());
+    }
 }

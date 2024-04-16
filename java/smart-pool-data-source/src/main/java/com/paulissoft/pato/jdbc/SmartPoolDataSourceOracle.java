@@ -51,13 +51,30 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
         poolDataSourceStatistics = fields[1];
     }
     
-    public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent) {
-        super(activeParent);
-
+    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle,
+                                     @NonNull final SmartPoolDataSourceOracle activeParent) {
+        super(poolDataSourceConfigurationOracle, activeParent);
+        
         final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(activeParent);
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+    }
+    
+    public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent) {
+        this(new PoolDataSourceConfigurationOracle(), activeParent);
+    }
+
+    public SmartPoolDataSourceOracle(String url,
+                                     String username,
+                                     String password)
+    {
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     SmartPoolDataSourceOracle.class.getName()));
     }
 
     public SmartPoolDataSourceOracle(String url,
