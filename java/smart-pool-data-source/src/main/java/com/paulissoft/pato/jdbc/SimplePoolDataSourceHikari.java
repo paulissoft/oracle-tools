@@ -15,8 +15,6 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
     }
 
     public String getId() {
-        log.debug("getId()={}", id.toString());
-        
         return id.toString();
     }
 

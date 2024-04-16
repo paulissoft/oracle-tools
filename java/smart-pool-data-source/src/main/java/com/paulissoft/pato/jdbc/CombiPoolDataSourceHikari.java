@@ -138,8 +138,6 @@ public class CombiPoolDataSourceHikari
     @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
     @Override
     protected SimplePoolDataSourceHikari getPoolDataSource() {
-        log.debug("getPoolDataSource()");
-
         return super.getPoolDataSource();
     }
 
