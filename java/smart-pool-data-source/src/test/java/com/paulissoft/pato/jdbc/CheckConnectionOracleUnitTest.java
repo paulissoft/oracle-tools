@@ -161,6 +161,9 @@ public class CheckConnectionOracleUnitTest {
                 // assertEquals("bodomain", ds.getPassword());
                 assertEquals("bodomain", ds.getPoolDataSourceConfiguration().getPassword());
 
+                assertEquals(2 * 0, ds.getInitialPoolSize());
+                assertEquals(ds.getInitialPoolSize(), ds.getPoolDataSource().getInitialPoolSize());
+
                 assertEquals(2 * 10, ds.getMinPoolSize());
                 //assertEquals(parent.getMinPoolSize() + child.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
                 assertEquals(ds.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
