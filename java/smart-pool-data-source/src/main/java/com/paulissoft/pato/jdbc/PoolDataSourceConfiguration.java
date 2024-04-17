@@ -10,9 +10,6 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -20,9 +17,11 @@ import org.springframework.stereotype.Component;
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource")
 public class PoolDataSourceConfiguration implements ConnectInfo {
+
+    public static final boolean SINGLE_SESSION_PROXY_MODEL = true;
+    
+    public static final boolean FIXED_USERNAME_PASSWORD = false;
 
     private String driverClassName;
 
@@ -54,6 +53,12 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
                                        final String url,
                                        final String username,
                                        final String password) {
+        // do not show password
+        log.debug("PoolDataSourceConfiguration(driverClassName={}, url={}, username={})",
+                  driverClassName,
+                  url,
+                  username);
+        
         this.driverClassName = driverClassName;
         //assert(url != null);
         this.url = url;
@@ -61,13 +66,6 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         this.username = username;
         //assert(password != null);
         this.password = password;
-    }
-
-    public PoolDataSourceConfiguration(final DataSourceProperties dataSourceProperties) {
-        this(dataSourceProperties.getDriverClassName(),
-             dataSourceProperties.getUrl(),
-             dataSourceProperties.getUsername(),
-             dataSourceProperties.getPassword());
     }
 
     public String getPoolName() {
@@ -90,13 +88,14 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     // true - do not use openProxySession() but use proxyUsername[schema]
     // false - use openProxySession() (two sessions will appear in v$session)
     public boolean isSingleSessionProxyModel() {
-        return true;
+        return SINGLE_SESSION_PROXY_MODEL;
     }
 
     public boolean isFixedUsernamePassword() {
-        return false;
+        return FIXED_USERNAME_PASSWORD;
     }
         
+    @SuppressWarnings("rawtypes")
     public Class getType() {
         try {
             final Class cls = type != null ? Class.forName(type) : null;
@@ -108,6 +107,8 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     }
 
     public void setType(final String type) {
+        log.debug("setType(type={})", type);
+        
         try {
             if (DataSource.class.isAssignableFrom(Class.forName(type))) {
                 this.type = type;

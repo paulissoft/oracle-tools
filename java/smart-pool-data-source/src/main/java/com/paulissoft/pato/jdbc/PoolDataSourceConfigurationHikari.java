@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -9,8 +10,6 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 //**/import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 //**/import org.apache.commons.lang3.builder.ToStringStyle;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 
 @Slf4j
@@ -19,9 +18,13 @@ import org.springframework.stereotype.Component;
 @ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-@Component
-@ConfigurationProperties(prefix = "spring.datasource.hikari")
-public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfiguration {
+public class PoolDataSourceConfigurationHikari
+    extends PoolDataSourceConfiguration
+    implements PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
+
+    public static final boolean SINGLE_SESSION_PROXY_MODEL = false;
+    
+    public static final boolean FIXED_USERNAME_PASSWORD = true;
 
     // properties that may differ, i.e. are ignored
     
@@ -56,16 +59,77 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     private boolean registerMbeans;
     
     private long validationTimeout;
-    
+
     private long leakDetectionThreshold;
 
-    //*TBD*/
-    /*
-    @Override
-    public String getPoolName() {
-        return poolName;
+    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
+                                                             String url,
+                                                             String username,
+                                                             String password,
+                                                             String type) {
+        return PoolDataSourceConfigurationHikari
+            .builder()
+            .driverClassName(driverClassName)
+            .url(url)
+            .username(username)
+            .password(password)
+            .type(type)
+            .build();
     }
-    */
+
+    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
+                                                             String url,
+                                                             String username,
+                                                             String password,
+                                                             String type,
+                                                             String poolName,
+                                                             int maximumPoolSize,
+                                                             int minimumIdle,
+                                                             String dataSourceClassName,
+                                                             boolean autoCommit,
+                                                             long connectionTimeout,
+                                                             long idleTimeout,
+                                                             long maxLifetime,
+                                                             String connectionTestQuery,
+                                                             long initializationFailTimeout,
+                                                             boolean isolateInternalQueries,
+                                                             boolean allowPoolSuspension,
+                                                             boolean readOnly,
+                                                             boolean registerMbeans,    
+                                                             long validationTimeout,
+                                                             long leakDetectionThreshold) {
+        return PoolDataSourceConfigurationHikari
+            .builder()
+            .driverClassName(driverClassName)
+            .url(url)
+            .username(username)
+            .password(password)
+            .type(type)
+            .poolName(poolName)
+            .maximumPoolSize(maximumPoolSize)
+            .minimumIdle(minimumIdle)
+            .autoCommit(autoCommit)
+            .connectionTimeout(connectionTimeout)
+            .idleTimeout(idleTimeout)
+            .maxLifetime(maxLifetime)
+            .connectionTestQuery(connectionTestQuery)
+            .initializationFailTimeout(initializationFailTimeout)
+            .isolateInternalQueries(isolateInternalQueries)
+            .allowPoolSuspension(allowPoolSuspension)
+            .readOnly(readOnly)
+            .registerMbeans(registerMbeans)
+            .validationTimeout(validationTimeout)
+            .leakDetectionThreshold(leakDetectionThreshold)
+            .build();
+    }
+
+    public void setJdbcUrl(String jdbcUrl) {
+        setUrl(jdbcUrl);
+    }
+  
+    public String getJdbcUrl() {
+        return getUrl();
+    }
 
     @Override
     public int getInitialPoolSize() {
@@ -96,7 +160,7 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
 
     @Override
     public boolean isSingleSessionProxyModel() {
-        return false;
+        return SINGLE_SESSION_PROXY_MODEL;
     }
 
     /*
@@ -108,21 +172,15 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
 
     @Override
     public boolean isFixedUsernamePassword() {
-        return true;
+        return FIXED_USERNAME_PASSWORD;
     }
     
     public PoolDataSourceConfigurationHikari() {
         // super();
+        final Class<DataSource> cls = getType();
 
-        if (getType() == null) {
-            setType(SimplePoolDataSourceHikari.class.getName());
-        }
-        
-        final Class cls = getType();
-
-        log.debug("PoolDataSourceConfigurationHikari type: {}", cls);
-
-        assert(cls != null && SimplePoolDataSourceHikari.class.isAssignableFrom(cls));
+        assert (cls == null || SimplePoolDataSourceHikari.class.isAssignableFrom(cls))
+            : "Type must be assignable from SimplePoolDataSourceHikari";
     }
 
     @Override
@@ -137,41 +195,6 @@ public class PoolDataSourceConfigurationHikari extends PoolDataSourceConfigurati
     void keepIdConfiguration() {
         super.keepIdConfiguration();
         this.poolName = null;
-    }
-
-    public void copyTo(final HikariDataSource hikariDataSource) {
-        int nr = 0;
-        final int maxNr = 18;
-        
-        do {
-            try {
-                switch(nr) {
-                case 0: hikariDataSource.setDriverClassName(this.getDriverClassName()); break;
-                case 1: hikariDataSource.setJdbcUrl(this.getUrl()); break;
-                case 2: hikariDataSource.setUsername(this.getUsername()); break;
-                case 3: hikariDataSource.setPassword(this.getPassword()); break;
-                case 4: /* connection pool name is not copied here */ break;
-                case 5: hikariDataSource.setMaximumPoolSize(this.getMaximumPoolSize()); break;
-                case 6: hikariDataSource.setMinimumIdle(this.getMinimumIdle()); break;
-                case 7: hikariDataSource.setAutoCommit(this.isAutoCommit()); break;
-                case 8: hikariDataSource.setConnectionTimeout(this.getConnectionTimeout()); break;
-                case 9: hikariDataSource.setIdleTimeout(this.getIdleTimeout()); break;
-                case 10: hikariDataSource.setMaxLifetime(this.getMaxLifetime()); break;
-                case 11: hikariDataSource.setConnectionTestQuery(this.getConnectionTestQuery()); break;
-                case 12: hikariDataSource.setInitializationFailTimeout(this.getInitializationFailTimeout()); break;
-                case 13: hikariDataSource.setIsolateInternalQueries(this.isIsolateInternalQueries()); break;
-                case 14: hikariDataSource.setAllowPoolSuspension(this.isAllowPoolSuspension()); break;
-                case 15: hikariDataSource.setReadOnly(this.isReadOnly()); break;
-                case 16: hikariDataSource.setRegisterMbeans(this.isRegisterMbeans()); break;
-                case 17: hikariDataSource.setValidationTimeout(this.getValidationTimeout()); break;
-                case 18: hikariDataSource.setLeakDetectionThreshold(this.getLeakDetectionThreshold()); break;
-                default:
-                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
-                }
-            } catch (Exception ex) {
-                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
-            }
-        } while (++nr <= maxNr);
     }
     
 //**/    @Override

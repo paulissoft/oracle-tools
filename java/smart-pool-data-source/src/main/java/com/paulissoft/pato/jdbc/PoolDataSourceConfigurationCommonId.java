@@ -15,6 +15,7 @@ class PoolDataSourceConfigurationCommonId extends PoolDataSourceConfigurationId 
             }
         }
         
-        this.id = copy.toString();
+        this.id.delete(0, this.id.length());
+        this.id.append(copy.toString());
     }
 }

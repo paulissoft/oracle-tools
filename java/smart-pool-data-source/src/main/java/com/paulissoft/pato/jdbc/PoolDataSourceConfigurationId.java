@@ -3,10 +3,11 @@ package com.paulissoft.pato.jdbc;
 
 class PoolDataSourceConfigurationId {
 
-    protected String id;
+    protected final StringBuffer id;
 
     // necessary for PoolDataSourceConfigurationCommonId constructor
     PoolDataSourceConfigurationId() {
+        this.id = new StringBuffer();
     }
     
     PoolDataSourceConfigurationId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
@@ -14,7 +15,7 @@ class PoolDataSourceConfigurationId {
 
         copy.keepIdConfiguration();
         
-        this.id = copy.toString();
+        this.id = new StringBuffer(copy.toString());
     }
 
     @Override
@@ -25,16 +26,16 @@ class PoolDataSourceConfigurationId {
 
         final PoolDataSourceConfigurationId other = (PoolDataSourceConfigurationId) obj;
         
-        return other.id.equals(this.id);
+        return other.toString().equals(this.toString());
     }
 
     @Override
     public int hashCode() {
-        return this.id.hashCode();
+        return this.toString().hashCode();
     }
 
     @Override
     public String toString() {
-        return id;
+        return id.toString();
     }
 }

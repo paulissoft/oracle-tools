@@ -1,48 +1,74 @@
 package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
+//import org.openjdk.jol.vm.VM;
 
 
 @Slf4j
-public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource {
+public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource, PoolDataSourcePropertiesGettersOracle {
 
-    private static final String POOL_NAME_PREFIX = "OraclePool";
-
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-
-    private final PoolDataSourceStatistics poolDataSourceStatistics =
-        new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
-                                     poolDataSourceStatisticsTotal,
-                                     this::isClosed,
-                                     this::getPoolDataSourceConfiguration);
-
-    // for join(), value: pool data source open (true) or not (false)
-    private final ConcurrentHashMap<PoolDataSourceConfiguration, Boolean> cachedPoolDataSourceConfigurations = new ConcurrentHashMap<>();
+    private static final long serialVersionUID = 3886083682048526889L;
     
-    // for test purposes
-    static void clear() {
-        poolDataSourceStatisticsTotal.reset();
+    private final StringBuffer id = new StringBuffer();
+         
+    public void setId(final String srcId) {
+        SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode())/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
     }
 
-    private SimplePoolDataSourceOracle(final PoolDataSourceConfigurationOracle pdsConfigurationOracle) {
-        // super();
-        pdsConfigurationOracle.copyTo(this);
+    public String getId() {
+        return id.toString();
     }
 
-    public static SimplePoolDataSourceOracle build(final PoolDataSourceConfiguration pdsConfiguration) {
-        return new SimplePoolDataSourceOracle((PoolDataSourceConfigurationOracle)pdsConfiguration);
-    }
-
-    public PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
-        return getPoolDataSourceConfiguration(true);
+    public void set(final PoolDataSourceConfiguration pdsConfig) {
+        set((PoolDataSourceConfigurationOracle)pdsConfig);
     }
     
-    public PoolDataSourceConfiguration getPoolDataSourceConfiguration(final boolean excludeNonIdConfiguration) {
+    private void set(final PoolDataSourceConfigurationOracle pdsConfig) {
+        log.debug(">set(pdsConfig={})", pdsConfig);
+
+        int nr = 0;
+        final int maxNr = 17;
+        
+        do {
+            try {
+                /* this.driverClassName is ignored */
+                switch(nr) {
+                case  0: setURL(pdsConfig.getUrl()); break;
+                case  1: setUser(pdsConfig.getUsername()); break;
+                case  2: setPassword(pdsConfig.getPassword()); break;
+                case  3: setConnectionPoolName(pdsConfig.getConnectionPoolName()); break;
+                case  4: setInitialPoolSize(pdsConfig.getInitialPoolSize()); break;
+                case  5: setMinPoolSize(pdsConfig.getMinPoolSize()); break;
+                case  6: setMaxPoolSize(pdsConfig.getMaxPoolSize()); break;
+                case  7: setConnectionFactoryClassName(pdsConfig.getConnectionFactoryClassName()); break;
+                case  8: setValidateConnectionOnBorrow(pdsConfig.getValidateConnectionOnBorrow()); break;
+                case  9: setAbandonedConnectionTimeout(pdsConfig.getAbandonedConnectionTimeout()); break;
+                case 10: setTimeToLiveConnectionTimeout(pdsConfig.getTimeToLiveConnectionTimeout()); break;
+                case 11: setInactiveConnectionTimeout(pdsConfig.getInactiveConnectionTimeout()); break;
+                case 12: setTimeoutCheckInterval(pdsConfig.getTimeoutCheckInterval()); break;
+                case 13: setMaxStatements(pdsConfig.getMaxStatements()); break;
+                case 14: setConnectionWaitTimeout(pdsConfig.getConnectionWaitTimeout()); break;
+                case 15: setMaxConnectionReuseTime(pdsConfig.getMaxConnectionReuseTime()); break;
+                case 16: setSecondsToTrustIdleConnection(pdsConfig.getSecondsToTrustIdleConnection()); break;
+                case 17: setConnectionValidationTimeout(pdsConfig.getConnectionValidationTimeout()); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
+            }
+        } while (++nr <= maxNr);
+
+        log.debug("<set()");
+    }
+   
+    public PoolDataSourceConfiguration get() {
+        return get(true);
+    }
+    
+    public PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
@@ -68,217 +94,37 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
             .build();
     }
     
-    public void join(final PoolDataSourceConfiguration pds) {
-        final PoolDataSourceConfigurationCommonId otherCommonId =
-            new PoolDataSourceConfigurationCommonId(pds);
-        final PoolDataSourceConfigurationCommonId thisCommonId =
-            new PoolDataSourceConfigurationCommonId(this.getPoolDataSourceConfiguration());
-        final boolean firstPds = cachedPoolDataSourceConfigurations.isEmpty();
-
-        log.debug(">join(id={}, firstPds={})", pds.toString(), firstPds);
-
-        try {
-            try {
-                assert(otherCommonId.equals(thisCommonId));
-            } catch (AssertionError ex) {
-                log.error("otherCommonId: {}", otherCommonId);
-                log.error("thisCommonId: {}", thisCommonId);
-                throw ex;
-            }
-        
-            cachedPoolDataSourceConfigurations.computeIfAbsent(pds, k -> { join(pds, firstPds); return false; });
-        } finally {
-            log.debug("<join()");
-        }
+    public void show(final PoolDataSourceConfiguration pdsConfig) {
+        show((PoolDataSourceConfigurationOracle)pdsConfig);
     }
     
-    public String getPoolNamePrefix() {
-        return POOL_NAME_PREFIX;
-    }
-
-    public void updatePoolSizes(final PoolDataSourceConfiguration pds) throws SQLException {
-        updatePoolSizes((PoolDataSourceConfigurationOracle)pds);
-    }
-    
-    private void updatePoolSizes(final PoolDataSourceConfigurationOracle pds) throws SQLException {
-        log.debug(">updatePoolSizes({})", pds);
-
-        try {
-            log.debug("pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                      getInitialPoolSize(),
-                      getMinPoolSize(),
-                      getMaxPoolSize());
-
-            int oldSize, newSize;
-
-            newSize = pds.getInitialPoolSize();
-            oldSize = getInitialPoolSize();
-
-            log.debug("initial pool sizes before setting it: old/new: {}/{}",
-                      oldSize,
-                      newSize);
-
-            if (newSize >= 0) {
-                setInitialPoolSize(newSize + Integer.max(oldSize, 0));
-            }
-
-            newSize = pds.getMinPoolSize();
-            oldSize = getMinPoolSize();
-
-            log.debug("minimum pool sizes before setting it: old/new: {}/{}",
-                      oldSize,
-                      newSize);
-
-            if (newSize >= 0) {                
-                setMinPoolSize(newSize + Integer.max(oldSize, 0));
-            }
-                
-            newSize = pds.getMaxPoolSize();
-            oldSize = getMaxPoolSize();
-
-            log.debug("maximum pool sizes before setting it: old/new: {}/{}",
-                      oldSize,
-                      newSize);
-
-            if (newSize >= 0) {
-                setMaxPoolSize(newSize + Integer.max(oldSize, 0));
-            }
-        } finally {
-            log.debug("pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                      getInitialPoolSize(),
-                      getMinPoolSize(),
-                      getMaxPoolSize());
-
-            log.debug("<updatePoolSizes()");
-        }
-    }
-    
-    public String getPoolName() {
-        return getConnectionPoolName();
-    }
-
-    public void setPoolName(String poolName) throws SQLException {
-        setConnectionPoolName(poolName);
-    }
-
-    /*TBD*/
-    /*
-    public String getUrl() {
-        return getURL();
-    }
-    
-    public void setUrl(String url) throws SQLException {
-        setURL(url);
-    }
-    */
-
-    public String getUsername() {
-        return getUser();
-    }
-
-    public void setUsername(String username) throws SQLException {
-        setUser(username);
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public String getPassword() {
-        return super.getPassword();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public int getConnectionWaitTimeout() {
-        return super.getConnectionWaitTimeout();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public void setConnectionWaitTimeout(int waitTimeout) throws java.sql.SQLException {
-        super.setConnectionWaitTimeout(waitTimeout);
-    }
-
-    public long getConnectionTimeout() { // milliseconds
-        return 1000 * getConnectionWaitTimeout();
-    }
-
-    // connection statistics
-    
-    public int getActiveConnections() {
-        return getBorrowedConnectionsCount();
-    }
-
-    public int getIdleConnections() {
-        return getAvailableConnectionsCount();
-    }
-
-    public int getTotalConnections() {
-        return getActiveConnections() + getIdleConnections();
-    }
-
-    public PoolDataSourceStatistics getPoolDataSourceStatistics() {
-        return poolDataSourceStatistics;
-    }
-
-    public void open(final PoolDataSourceConfiguration pds) {
-        log.debug("open({})", pds);
-        
-        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> true);
-    }
-
-    public void close(final PoolDataSourceConfiguration pds) {
-        log.debug("close({})", pds);
-        
-        cachedPoolDataSourceConfigurations.computeIfPresent(pds, (k, v) -> false);
-    }
-
-    // to implement interface Closeable
-    public void close() {
-        // nothing
-    }
-
-    public boolean isClosed() {
-        log.debug(">isClosed()");
-        
-        // when there is at least one attached pool open: return false
-        final Boolean found = cachedPoolDataSourceConfigurations.containsValue(true);
-
-        log.debug("<isClosed() = {}", !found);
-
-        return !found; // all closed
-    }
-
-    public void show(final PoolDataSourceConfiguration pds) {
-        show((PoolDataSourceConfigurationOracle)pds);
-    }
-    
-    private void show(final PoolDataSourceConfigurationOracle pds) {
+    private void show(final PoolDataSourceConfigurationOracle pdsConfig) {
         final String indentPrefix = PoolDataSourceStatistics.INDENT_PREFIX;
 
         /* Smart Pool Data Source */
 
-        log.info("Properties for smart pool connecting to schema {} via {}", pds.getSchema(), pds.getUsernameToConnectTo());
+        log.info("Properties for smart pool connecting to schema {} via {}", pdsConfig.getSchema(), pdsConfig.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
-        log.info("{}url: {}", indentPrefix, pds.getUrl());
-        log.info("{}username: {}", indentPrefix, pds.getUsername());
+        log.info("{}url: {}", indentPrefix, pdsConfig.getUrl());
+        log.info("{}username: {}", indentPrefix, pdsConfig.getUsername());
         // do not log passwords
-        log.info("{}type: {}", indentPrefix, pds.getType());
+        log.info("{}type: {}", indentPrefix, pdsConfig.getType());
         /* info from PoolDataSourceConfigurationOracle */
-        log.info("{}initialPoolSize: {}", indentPrefix, pds.getInitialPoolSize());
-        log.info("{}minPoolSize: {}", indentPrefix, pds.getMinPoolSize());
-        log.info("{}maxPoolSize: {}", indentPrefix, pds.getMaxPoolSize());
-        log.info("{}connectionFactoryClassName: {}", indentPrefix, pds.getConnectionFactoryClassName());
-        log.info("{}validateConnectionOnBorrow: {}", indentPrefix, pds.getValidateConnectionOnBorrow());
-        log.info("{}abandonedConnectionTimeout: {}", indentPrefix, pds.getAbandonedConnectionTimeout());
-        log.info("{}timeToLiveConnectionTimeout: {}", indentPrefix, pds.getTimeToLiveConnectionTimeout()); 
-        log.info("{}inactiveConnectionTimeout: {}", indentPrefix, pds.getInactiveConnectionTimeout());
-        log.info("{}timeoutCheckInterval: {}", indentPrefix, pds.getTimeoutCheckInterval());
-        log.info("{}maxStatements: {}", indentPrefix, pds.getMaxStatements());
-        log.info("{}connectionWaitTimeout: {}", indentPrefix, pds.getConnectionWaitTimeout());
-        log.info("{}maxConnectionReuseTime: {}", indentPrefix, pds.getMaxConnectionReuseTime());
-        log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, pds.getSecondsToTrustIdleConnection());
-        log.info("{}connectionValidationTimeout: {}", indentPrefix, pds.getConnectionValidationTimeout());
+        log.info("{}initialPoolSize: {}", indentPrefix, pdsConfig.getInitialPoolSize());
+        log.info("{}minPoolSize: {}", indentPrefix, pdsConfig.getMinPoolSize());
+        log.info("{}maxPoolSize: {}", indentPrefix, pdsConfig.getMaxPoolSize());
+        log.info("{}connectionFactoryClassName: {}", indentPrefix, pdsConfig.getConnectionFactoryClassName());
+        log.info("{}validateConnectionOnBorrow: {}", indentPrefix, pdsConfig.getValidateConnectionOnBorrow());
+        log.info("{}abandonedConnectionTimeout: {}", indentPrefix, pdsConfig.getAbandonedConnectionTimeout());
+        log.info("{}timeToLiveConnectionTimeout: {}", indentPrefix, pdsConfig.getTimeToLiveConnectionTimeout()); 
+        log.info("{}inactiveConnectionTimeout: {}", indentPrefix, pdsConfig.getInactiveConnectionTimeout());
+        log.info("{}timeoutCheckInterval: {}", indentPrefix, pdsConfig.getTimeoutCheckInterval());
+        log.info("{}maxStatements: {}", indentPrefix, pdsConfig.getMaxStatements());
+        log.info("{}connectionWaitTimeout: {}", indentPrefix, pdsConfig.getConnectionWaitTimeout());
+        log.info("{}maxConnectionReuseTime: {}", indentPrefix, pdsConfig.getMaxConnectionReuseTime());
+        log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, pdsConfig.getSecondsToTrustIdleConnection());
+        log.info("{}connectionValidationTimeout: {}", indentPrefix, pdsConfig.getConnectionValidationTimeout());
 
         /* Common Simple Pool Data Source */
 
@@ -305,6 +151,58 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         log.info("{}connectionValidationTimeout: {}", indentPrefix, getConnectionValidationTimeout());
     }
 
+    public String getUrl() {
+        return getURL();
+    }
+
+    public void setPoolName(String poolName) throws SQLException {
+        setConnectionPoolName(poolName);
+    }
+
+    public String getPoolName() {
+        return getConnectionPoolName();
+    }
+
+    public void setUsername(String username) throws SQLException {
+        setUser(username);
+    }
+
+    public String getUsername() {
+        return getUser();
+    }
+
+    // public void setPassword(String password) throws SQLException;
+    
+    @SuppressWarnings("deprecation")
+    @Override
+    public String getPassword() {
+        return super.getPassword();
+    }
+
+    // public int getInitialPoolSize();
+
+    // public int getMinPoolSize();
+
+    // public int getMaxPoolSize();
+
+    @SuppressWarnings("deprecation")
+    public long getConnectionTimeout() { // milliseconds
+        return getConnectionWaitTimeout() * 1000;
+    }
+
+    public int getActiveConnections() {
+        return getBorrowedConnectionsCount();
+    }
+
+    public int getIdleConnections() {
+        return getAvailableConnectionsCount();
+    }
+
+    public int getTotalConnections() {
+        return getActiveConnections() + getIdleConnections();
+    }
+
+    /*
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof SimplePoolDataSourceOracle)) {
@@ -325,4 +223,5 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
     public String toString() {
         return this.getPoolDataSourceConfiguration().toString();
     }
+    */
 }
