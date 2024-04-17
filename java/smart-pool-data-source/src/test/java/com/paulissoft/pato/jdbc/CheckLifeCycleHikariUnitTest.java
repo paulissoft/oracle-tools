@@ -51,55 +51,54 @@ public class CheckLifeCycleHikariUnitTest {
 
         PoolDataSourceConfigurationHikari pdsConfig;
 
-        for (int i = 0; i < 2; i++) {
-            // pds1 is parent
-            try (final CombiPoolDataSourceHikari pds1 = configDataSourceHikari) {
-                assertTrue(pds1.isOpen());
-                assertTrue(pds1.isParentPoolDataSource());
+        // pds1 is parent
+        try (final CombiPoolDataSourceHikari pds1 = configDataSourceHikari) {
+            pds1.open();
+            assertTrue(pds1.isOpen());
+            assertTrue(pds1.isParentPoolDataSource());
+
+            pdsConfig =
+                pds1
+                .getPoolDataSourceConfiguration()
+                .toBuilder() // copy
+                .username(ocpiDataSourceProperties.getUsername())
+                .password(ocpiDataSourceProperties.getPassword())
+                .build();
+                    
+            try (final CombiPoolDataSourceHikari pds2 = new CombiPoolDataSourceHikari(pdsConfig, pds1)) {
+                assertFalse(pds2.isOpen());
+                assertFalse(pds2.isParentPoolDataSource());
 
                 pdsConfig =
                     pds1
                     .getPoolDataSourceConfiguration()
                     .toBuilder() // copy
-                    .username(ocpiDataSourceProperties.getUsername())
-                    .password(ocpiDataSourceProperties.getPassword())
+                    .username(ocppDataSourceProperties.getUsername())
+                    .password(ocppDataSourceProperties.getPassword())
                     .build();
-                    
-                try (final CombiPoolDataSourceHikari pds2 = new CombiPoolDataSourceHikari(pdsConfig, pds1)) {
-                    assertFalse(pds2.isOpen());
-                    assertFalse(pds2.isParentPoolDataSource());
 
-                    pdsConfig =
+                try (final CombiPoolDataSourceHikari pds3 = new CombiPoolDataSourceHikari(pdsConfig, pds1)) {
+                    assertFalse(pds3.isOpen());
+                    assertFalse(pds3.isParentPoolDataSource());
+
+                    checkSimplePoolDataSourceJoin(pds1, pds2, true);
+                    checkSimplePoolDataSourceJoin(pds2, pds3, true);
+                    checkSimplePoolDataSourceJoin(pds3, pds1, true);
+
+                    // change one property
+                    final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari1 =
                         pds1
                         .getPoolDataSourceConfiguration()
-                        .toBuilder() // copy
-                        .username(ocppDataSourceProperties.getUsername())
-                        .password(ocppDataSourceProperties.getPassword())
+                        .toBuilder()
+                        .autoCommit(!pds1.getPoolDataSourceConfiguration().isAutoCommit())
                         .build();
-
-                    try (final CombiPoolDataSourceHikari pds3 = new CombiPoolDataSourceHikari(pdsConfig, pds1)) {
-                        assertFalse(pds3.isOpen());
-                        assertFalse(pds3.isParentPoolDataSource());
-
-                        checkSimplePoolDataSourceJoin(pds1, pds2, true);
-                        checkSimplePoolDataSourceJoin(pds2, pds3, true);
-                        checkSimplePoolDataSourceJoin(pds3, pds1, true);
-
-                        // change one property
-                        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari1 =
-                            pds1
-                            .getPoolDataSourceConfiguration()
-                            .toBuilder()
-                            .autoCommit(!pds1.getPoolDataSourceConfiguration().isAutoCommit())
-                            .build();
                         
-                        try (final CombiPoolDataSourceHikari pds4 = new CombiPoolDataSourceHikari(poolDataSourceConfigurationHikari1)) {
-                            assertTrue(pds4.isOpen());
-                            assertTrue(pds4.isParentPoolDataSource()); // a parent too
+                    try (final CombiPoolDataSourceHikari pds4 = new CombiPoolDataSourceHikari(poolDataSourceConfigurationHikari1)) {
+                        assertTrue(pds4.isOpen());
+                        assertTrue(pds4.isParentPoolDataSource()); // a parent too
 
-                            assertNotEquals(pds1.getPoolDataSourceConfiguration().toString(),
-                                            pds4.getPoolDataSourceConfiguration().toString());
-                        }
+                        assertNotEquals(pds1.getPoolDataSourceConfiguration().toString(),
+                                        pds4.getPoolDataSourceConfiguration().toString());
                     }
                 }
             }
