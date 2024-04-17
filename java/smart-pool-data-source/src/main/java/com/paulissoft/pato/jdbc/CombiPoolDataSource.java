@@ -218,6 +218,25 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 // only copy when there is no active parent
                 poolDataSource.set(poolDataSourceConfiguration);
 
+                // set username to the final value so we do not need to check/change it in getConnection()
+                try {
+                    if (poolDataSourceConfiguration.isFixedUsernamePassword()) {
+                        // will always use getConnection()
+
+                        // username like bc_proxy[bodomain] to bc_proxy
+                        if (poolDataSourceConfiguration.getProxyUsername() != null) {
+                            poolDataSource.setUsername(poolDataSourceConfiguration.getProxyUsername());
+                        }
+                    } else {
+                        // will never use getConnection(), always getConnection(username, password)
+                        poolDataSource.setUsername(null);
+                        poolDataSource.setPassword(null);
+                    }
+                } catch (SQLException ex) {
+                    throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+                }
+
+                log.debug("pool data source username: {}", poolDataSource.getUsername());
                 log.debug("(parent) copied configuration to the pool data source: {}", poolDataSource);
             } else {
                 final PoolDataSourceConfigurationCommonId parentCommonId =

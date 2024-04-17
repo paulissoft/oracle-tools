@@ -187,9 +187,13 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
                         switch(nr) {
                         case 0:
-                            if (oraConn.isProxySession()) {
+                            if (!conn.getSchema().equalsIgnoreCase(usernameSession1) /*oraConn.isProxySession()*/) {
                                 // go back to the session with the first username
-                                oraConn.close(OracleConnection.PROXY_SESSION);
+                                try {
+                                    oraConn.close(OracleConnection.PROXY_SESSION);
+                                } catch (SQLException ex) {
+                                    log.warn("SQL warning: {}", ex.getMessage());
+                                }
                                 oraConn.setSchema(usernameSession1);
                                 
                                 proxyCloseSessionCount++;
@@ -238,17 +242,15 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                 }
             }
 
-            log.debug("<getConnection() = {}", conn);
-        
             return conn;
         } catch (SQLException ex) {
             poolDataSourceStatistics.signalSQLException(this, ex);
-            log.debug("<getConnection()");
             throw ex;
         } catch (Exception ex) {
             poolDataSourceStatistics.signalException(this, ex);
-            log.debug("<getConnection()");
             throw ex;
+        } finally {
+            log.debug("<getConnection()");
         }
     }    
 

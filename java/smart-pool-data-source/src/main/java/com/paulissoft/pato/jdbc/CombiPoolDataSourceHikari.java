@@ -178,32 +178,14 @@ public class CombiPoolDataSourceHikari
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug(">getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
 
-        String usernameOrig = null;
-        String passwordOrig = null;
-        Connection conn = null;
-        
         try {
-            if (!poolDataSource.getUsername().equalsIgnoreCase(usernameSession1)) {
-                usernameOrig = poolDataSource.getUsername();
-                passwordOrig = poolDataSource.getPassword();
-                poolDataSource.setUsername(usernameSession1);
-                poolDataSource.setPassword(passwordSession1);
-            }
-            
-            conn = poolDataSource.getConnection();
-
-            log.debug("current schema: {}; usernameOrig: {}", conn.getSchema(), usernameOrig);
-
-            return conn;
+            assert poolDataSource.getUsername().equalsIgnoreCase(usernameSession1)
+                : String.format("The pool data source username is '%s' but should be '%s'.",
+                                poolDataSource.getUsername(),
+                                usernameSession1);
+                
+            return poolDataSource.getConnection();
         } finally {
-            if (usernameOrig != null) {
-                poolDataSource.setUsername(usernameOrig);
-                usernameOrig = null;
-            }
-            if (passwordOrig != null) {
-                poolDataSource.setPassword(passwordOrig);
-                passwordOrig = null;
-            }
             log.debug("<getConnection1(id={})", getId());
         }
     }
