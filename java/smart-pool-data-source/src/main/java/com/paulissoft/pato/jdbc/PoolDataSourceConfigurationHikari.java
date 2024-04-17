@@ -177,16 +177,7 @@ public class PoolDataSourceConfigurationHikari
     
     public PoolDataSourceConfigurationHikari() {
         // super();
-
-        /*
-        if (getType() == null) {
-            setType(SimplePoolDataSourceHikari.class.getName());
-        }
-        */
-        
         final Class<DataSource> cls = getType();
-
-        log.debug("PoolDataSourceConfigurationHikari type: {}; driverClassName: {}", cls, getDriverClassName());
 
         assert (cls == null || SimplePoolDataSourceHikari.class.isAssignableFrom(cls))
             : "Type must be assignable from SimplePoolDataSourceHikari";
