@@ -145,9 +145,11 @@ public class CheckConnectionHikariUnitTest {
 
         assertNotEquals(domainDataSourceHikari.isParentPoolDataSource(), operatorDataSourceHikari.isParentPoolDataSource());
 
-        final CombiPoolDataSourceHikari parent = domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
+        final CombiPoolDataSourceHikari parent =
+            domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
 
-        final CombiPoolDataSourceHikari child = !domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
+        final CombiPoolDataSourceHikari child =
+            !domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
 
         for (int nr = 1; nr <= 2; nr++) {
             try (final CombiPoolDataSourceHikari ds = (nr == 1 ? parent : child)) {                
@@ -157,21 +159,21 @@ public class CheckConnectionHikariUnitTest {
                 
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
                 
-                assertEquals(ds == domainDataSourceHikari ? "bodomain" : "bodomain[boopapij]", ds.getPoolDataSourceConfiguration().getUsername());
+                assertEquals(ds == domainDataSourceHikari ? "bodomain" : "bodomain[boopapij]",
+                             ds.getPoolDataSourceConfiguration().getUsername());
                 assertEquals(parent.getUsername(), ds.getPoolDataSource().getUsername());
                 
                 assertEquals("bodomain", ds.getPassword());
                 assertEquals(parent.getPassword(), ds.getPoolDataSource().getPassword());
 
                 assertEquals(2 * 60, ds.getMinimumIdle());
-                //assertEquals(parent.getMinimumIdle() + child.getMinimumIdle(), ds.getPoolDataSource().getMinimumIdle());
                 assertEquals(ds.getMinimumIdle(), ds.getPoolDataSource().getMinimumIdle());
 
                 assertEquals(2 * 60, ds.getMaximumPoolSize());
-                //assertEquals(parent.getMaximumPoolSize() + child.getMaximumPoolSize(), ds.getPoolDataSource().getMaximumPoolSize());
                 assertEquals(ds.getMaximumPoolSize(), ds.getPoolDataSource().getMaximumPoolSize());
 
-                assertEquals("HikariPool-boopapij-bodomain", ds.getPoolName());
+                assertTrue(ds.getPoolName().equals("HikariPool-boopapij-bodomain") ||
+                           ds.getPoolName().equals("HikariPool-bodomain-boopapij"));
                 assertEquals(ds.getPoolName(), ds.getPoolDataSource().getPoolName());
 
                 final Connection conn = ds.getConnection();

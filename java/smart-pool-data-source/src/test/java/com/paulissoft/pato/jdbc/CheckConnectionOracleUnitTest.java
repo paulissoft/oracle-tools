@@ -142,9 +142,11 @@ public class CheckConnectionOracleUnitTest {
 
         assertNotEquals(domainDataSourceOracle.isParentPoolDataSource(), operatorDataSourceOracle.isParentPoolDataSource());
 
-        final CombiPoolDataSourceOracle parent = domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
+        final CombiPoolDataSourceOracle parent =
+            domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
 
-        final CombiPoolDataSourceOracle child = !domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
+        final CombiPoolDataSourceOracle child =
+            !domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
 
         for (int nr = 1; nr <= 2; nr++) {
             try (final CombiPoolDataSourceOracle ds = (nr == 1 ? parent : child)) {
@@ -154,7 +156,8 @@ public class CheckConnectionOracleUnitTest {
                 
                 assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
                 
-                assertEquals(ds == domainDataSourceOracle ? "bodomain" : "bodomain[boopapij]", ds.getPoolDataSourceConfiguration().getUsername());
+                assertEquals(ds == domainDataSourceOracle ? "bodomain" : "bodomain[boopapij]",
+                             ds.getPoolDataSourceConfiguration().getUsername());
                 assertEquals(parent.getUser(), ds.getPoolDataSource().getUser());
 
                 // NoSuchMethod this method is deprecated
@@ -165,14 +168,13 @@ public class CheckConnectionOracleUnitTest {
                 assertEquals(ds.getInitialPoolSize(), ds.getPoolDataSource().getInitialPoolSize());
 
                 assertEquals(2 * 10, ds.getMinPoolSize());
-                //assertEquals(parent.getMinPoolSize() + child.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
                 assertEquals(ds.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
 
                 assertEquals(2 * 20, ds.getMaxPoolSize());
-                //assertEquals(parent.getMaxPoolSize() + child.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                 assertEquals(ds.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                                 
-                assertEquals("OraclePool-boopapij-bodomain", ds.getConnectionPoolName());
+                assertTrue(ds.getConnectionPoolName().equals("OraclePool-boopapij-bodomain") ||
+                           ds.getConnectionPoolName().equals("OraclePool-bodomain-boopapij"));
                 assertEquals(ds.getConnectionPoolName(), ds.getPoolDataSource().getConnectionPoolName());
 
                 final Connection conn = ds.getConnection();

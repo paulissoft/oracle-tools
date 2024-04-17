@@ -537,4 +537,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
     }
+
+    public int getActiveChildren() {
+        return activeChildren.get();
+    }
 }
