@@ -53,7 +53,7 @@ public class CheckConfigurationOracleUnitTest {
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=3, " +
-                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
+                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
     
@@ -75,7 +75,7 @@ public class CheckConfigurationOracleUnitTest {
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=3, " +
-                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
+                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
     
@@ -100,7 +100,7 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals(10, simplePoolDataSourceOracle.getMaxStatements());
         assertEquals(3, simplePoolDataSourceOracle.getConnectionWaitTimeout());
         assertEquals(0, simplePoolDataSourceOracle.getMaxConnectionReuseTime());
-        assertEquals(120, simplePoolDataSourceOracle.getSecondsToTrustIdleConnection());
+        assertEquals(0, simplePoolDataSourceOracle.getSecondsToTrustIdleConnection());
         assertEquals(15, simplePoolDataSourceOracle.getConnectionValidationTimeout());
     }
 }

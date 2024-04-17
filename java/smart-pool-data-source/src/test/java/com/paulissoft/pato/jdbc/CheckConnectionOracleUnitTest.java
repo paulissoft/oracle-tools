@@ -29,15 +29,15 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class CheckConnectionOracleUnitTest {
 
     @Autowired
-    @Qualifier("configDataSource")
+    @Qualifier("configDataSource1")
     private CombiPoolDataSourceOracle configDataSourceOracle;
 
     @Autowired
-    @Qualifier("ocpiDataSource")
+    @Qualifier("ocpiDataSource1")
     private CombiPoolDataSourceOracle ocpiDataSourceOracle;
 
     @Autowired
-    @Qualifier("ocppDataSource")
+    @Qualifier("ocppDataSource1")
     private CombiPoolDataSourceOracle ocppDataSourceOracle;
         
     @Autowired
@@ -56,81 +56,81 @@ public class CheckConnectionOracleUnitTest {
     void testConnection() throws SQLException {
         final String rex = "^You can only get a connection when the pool state is OPEN or CLOSING but it is CLOSED.$";
         IllegalStateException thrown;
-        Connection conn4, conn5, conn6;
+        Connection conn1, conn2, conn3;
         
         log.debug("testConnection()");
 
-        final CombiPoolDataSourceOracle pds4 = configDataSourceOracle;
-        final CombiPoolDataSourceOracle pds5 = ocpiDataSourceOracle;
-        final CombiPoolDataSourceOracle pds6 = ocppDataSourceOracle;
+        final CombiPoolDataSourceOracle pds1 = configDataSourceOracle;
+        final CombiPoolDataSourceOracle pds2 = ocpiDataSourceOracle;
+        final CombiPoolDataSourceOracle pds3 = ocppDataSourceOracle;
 
         // the first to create will become the parent
-        assertTrue(pds4.isParentPoolDataSource());
-        assertFalse(pds5.isParentPoolDataSource());
-        assertFalse(pds6.isParentPoolDataSource());
+        assertTrue(pds1.isParentPoolDataSource());
+        assertFalse(pds2.isParentPoolDataSource());
+        assertFalse(pds3.isParentPoolDataSource());
 
         // all share the same common pool data source
-        assertTrue(pds4.getPoolDataSource() == pds5.getPoolDataSource());
-        assertTrue(pds4.getPoolDataSource() == pds6.getPoolDataSource());
+        assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());
+        assertTrue(pds1.getPoolDataSource() == pds3.getPoolDataSource());
 
         // get some connections
         for (int j = 0; j < 2; j++) {
-            assertNotNull(conn4 = pds4.getConnection());
-            assertTrue(pds4.isOpen());
+            assertNotNull(conn1 = pds1.getConnection());
+            assertTrue(pds1.isOpen());
             
-            assertNotNull(conn5 = pds5.getConnection());
-            assertTrue(pds5.isOpen());
+            assertNotNull(conn2 = pds2.getConnection());
+            assertTrue(pds2.isOpen());
 
-            assertNotNull(conn6 = pds6.getConnection());
-            assertTrue(pds6.isOpen());
+            assertNotNull(conn3 = pds3.getConnection());
+            assertTrue(pds3.isOpen());
 
-            assertTrue(pds4.getActiveConnections() >= 1);
-            assertEquals(pds4.getActiveConnections() +
-                         pds4.getIdleConnections(),
-                         pds4.getTotalConnections());
+            assertTrue(pds1.getActiveConnections() >= 1);
+            assertEquals(pds1.getActiveConnections() +
+                         pds1.getIdleConnections(),
+                         pds1.getTotalConnections());
 
-            assertTrue(pds5.getActiveConnections() >= 1);
-            assertEquals(pds5.getActiveConnections() +
-                         pds5.getIdleConnections(),
-                         pds5.getTotalConnections());
+            assertTrue(pds2.getActiveConnections() >= 1);
+            assertEquals(pds2.getActiveConnections() +
+                         pds2.getIdleConnections(),
+                         pds2.getTotalConnections());
 
-            assertTrue(pds6.getActiveConnections() >= 1);
-            assertEquals(pds6.getActiveConnections() +
-                         pds6.getIdleConnections(),
-                         pds6.getTotalConnections());
+            assertTrue(pds3.getActiveConnections() >= 1);
+            assertEquals(pds3.getActiveConnections() +
+                         pds3.getIdleConnections(),
+                         pds3.getTotalConnections());
 
-            assertEquals(conn4.unwrap(OracleConnection.class).getClass(),
-                         conn5.unwrap(Connection.class).getClass());
-            assertEquals(conn4.unwrap(OracleConnection.class).getClass(),
-                         conn6.unwrap(Connection.class).getClass());
+            assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
+                         conn2.unwrap(Connection.class).getClass());
+            assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
+                         conn3.unwrap(Connection.class).getClass());
 
-            conn4.close();
-            conn5.close();
-            conn6.close();
+            conn1.close();
+            conn2.close();
+            conn3.close();
         }
 
-        // close pds6
-        assertTrue(pds6.isOpen());
-        pds6.close();
-        assertFalse(pds6.isOpen());
+        // close pds3
+        assertTrue(pds3.isOpen());
+        pds3.close();
+        assertFalse(pds3.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds6.getConnection());
+        thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
         assertTrue(thrown.getMessage().matches(rex));
 
-        // close pds5
-        assertTrue(pds5.isOpen());
-        pds5.close();
-        assertFalse(pds5.isOpen());
+        // close pds2
+        assertTrue(pds2.isOpen());
+        pds2.close();
+        assertFalse(pds2.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds5.getConnection());
+        thrown = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
         assertTrue(thrown.getMessage().matches(rex));
 
-        // close pds4
-        assertTrue(pds4.isOpen());
-        pds4.close();
-        assertFalse(pds4.isOpen());
+        // close pds1
+        assertTrue(pds1.isOpen());
+        pds1.close();
+        assertFalse(pds1.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds4.getConnection());
+        thrown = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
         assertTrue(thrown.getMessage().matches(rex));
     }
 
@@ -149,41 +149,42 @@ public class CheckConnectionOracleUnitTest {
             !domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
 
         for (int nr = 1; nr <= 2; nr++) {
-            try (final CombiPoolDataSourceOracle ds = (nr == 1 ? parent : child)) {
-                log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
+            // no try open block in order not to interfere with other tests
+            final CombiPoolDataSourceOracle ds = (nr == 1 ? parent : child);
+
+            log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
                 
-                assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
+            assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
                 
-                assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
+            assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
                 
-                assertEquals(ds == domainDataSourceOracle ? "bodomain" : "bodomain[boopapij]",
-                             ds.getPoolDataSourceConfiguration().getUsername());
-                assertEquals(parent.getUser(), ds.getPoolDataSource().getUser());
+            assertEquals(ds == domainDataSourceOracle ? "bodomain" : "bodomain[boopapij]",
+                         ds.getPoolDataSourceConfiguration().getUsername());
+            assertEquals(parent.getUser(), ds.getPoolDataSource().getUser());
 
-                // NoSuchMethod this method is deprecated
-                // assertEquals("bodomain", ds.getPassword());
-                assertEquals("bodomain", ds.getPoolDataSourceConfiguration().getPassword());
+            // NoSuchMethod this method is deprecated
+            // assertEquals("bodomain", ds.getPassword());
+            assertEquals("bodomain", ds.getPoolDataSourceConfiguration().getPassword());
 
-                assertEquals(2 * 0, ds.getInitialPoolSize());
-                assertEquals(ds.getInitialPoolSize(), ds.getPoolDataSource().getInitialPoolSize());
+            assertEquals(2 * 0, ds.getInitialPoolSize());
+            assertEquals(ds.getInitialPoolSize(), ds.getPoolDataSource().getInitialPoolSize());
 
-                assertEquals(2 * 10, ds.getMinPoolSize());
-                assertEquals(ds.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
+            assertEquals(2 * 10, ds.getMinPoolSize());
+            assertEquals(ds.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
 
-                assertEquals(2 * 20, ds.getMaxPoolSize());
-                assertEquals(ds.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
+            assertEquals(2 * 20, ds.getMaxPoolSize());
+            assertEquals(ds.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                                 
-                assertTrue(ds.getConnectionPoolName().equals("OraclePool-boopapij-bodomain") ||
-                           ds.getConnectionPoolName().equals("OraclePool-bodomain-boopapij"));
-                assertEquals(ds.getConnectionPoolName(), ds.getPoolDataSource().getConnectionPoolName());
+            assertTrue(ds.getConnectionPoolName().equals("OraclePool-boopapij-bodomain") ||
+                       ds.getConnectionPoolName().equals("OraclePool-bodomain-boopapij"));
+            assertEquals(ds.getConnectionPoolName(), ds.getPoolDataSource().getConnectionPoolName());
 
-                final Connection conn = ds.getConnection();
+            final Connection conn = ds.getConnection();
 
-                assertNotNull(conn);
-                assertEquals(ds == domainDataSourceOracle ? "BODOMAIN" : "BOOPAPIJ", conn.getSchema());
+            assertNotNull(conn);
+            assertEquals(ds == domainDataSourceOracle ? "BODOMAIN" : "BOOPAPIJ", conn.getSchema());
                 
-                conn.close();
-            }
+            conn.close();
         }
     }
 }

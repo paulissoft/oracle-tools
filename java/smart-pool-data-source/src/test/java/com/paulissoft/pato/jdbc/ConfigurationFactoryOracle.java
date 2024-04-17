@@ -13,19 +13,28 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 public class ConfigurationFactoryOracle {
 
-    @Bean(name = {"configDataSource"})
+    @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public CombiPoolDataSourceOracle configDataSource(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public CombiPoolDataSourceOracle configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
 
-    @Bean(name = {"ocpiDataSource"})
+    @Bean(name = {"configDataSource2"})
+    @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
+    public CombiPoolDataSourceOracle configDataSource2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(SmartPoolDataSourceOracle.class)
+            .build();
+    }
+
+    @Bean(name = {"ocpiDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
-    public CombiPoolDataSourceOracle ocpiDataSource(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
-                                                    @Qualifier("configDataSource") CombiPoolDataSourceOracle configDataSource) {
+    public CombiPoolDataSourceOracle ocpiDataSource1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
+                                                     @Qualifier("configDataSource1") CombiPoolDataSourceOracle configDataSource) {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
@@ -33,10 +42,32 @@ public class ConfigurationFactoryOracle {
                                              properties.getType().getClass().getName());
     }
 
-    @Bean(name = {"ocppDataSource"})
+    @Bean(name = {"ocpiDataSource2"})
+    @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
+    public CombiPoolDataSourceOracle ocpiDataSource2(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
+                                                     @Qualifier("configDataSource2") CombiPoolDataSourceOracle configDataSource) {
+        return new CombiPoolDataSourceOracle(configDataSource,
+                                             properties.getUrl(),
+                                             properties.getUsername(),
+                                             properties.getPassword(),
+                                             properties.getType().getClass().getName());
+    }
+
+    @Bean(name = {"ocppDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
-    public CombiPoolDataSourceOracle ocppDataSource(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
-                                                    @Qualifier("configDataSource") CombiPoolDataSourceOracle configDataSource) {
+    public CombiPoolDataSourceOracle ocppDataSource1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
+                                                     @Qualifier("configDataSource1") CombiPoolDataSourceOracle configDataSource) {
+        return new CombiPoolDataSourceOracle(configDataSource,
+                                             properties.getUrl(),
+                                             properties.getUsername(),
+                                             properties.getPassword(),
+                                             properties.getType().getClass().getName());
+    }
+
+    @Bean(name = {"ocppDataSource2"})
+    @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
+    public CombiPoolDataSourceOracle ocppDataSource2(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
+                                                     @Qualifier("configDataSource2") CombiPoolDataSourceOracle configDataSource) {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
