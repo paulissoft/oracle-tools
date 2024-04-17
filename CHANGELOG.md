@@ -15,6 +15,16 @@ Types of changes:
 
 ## [Unreleased]
 
+## [2.8.0] - 2024-04-17
+
+### Added
+
+- [The Java Smart Pool Data Source must be ready for Spring.](https://github.com/paulissoft/oracle-tools/issues/152)
+
+### Fixed
+
+- [The DDL ref constraint object did not exclude materialized views in its lookup.](https://github.com/paulissoft/oracle-tools/issues/153)
+
 ## [2.6.1] - 2024-02-14
 
 ### Fixed
