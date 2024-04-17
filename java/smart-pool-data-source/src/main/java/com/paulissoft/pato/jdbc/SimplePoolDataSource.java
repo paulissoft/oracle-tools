@@ -28,22 +28,22 @@ public interface SimplePoolDataSource extends DataSource {
 
     public void show(final PoolDataSourceConfiguration pdsConfig);
     
-    // signature used by HikariDataSource
+    // signatures used by com.zaxxer.hikari.HikariDataSource
     public void setPoolName(String poolName) throws SQLException;
 
     public String getPoolName();
 
-    // signatures used by HikariDataSource
+    // signatures used by com.zaxxer.hikari.HikariDataSource
     public void setUsername(String username) throws SQLException;
 
     public String getUsername();
 
-    // signatures used by HikariDataSource / PoolDataSource
+    // signatures used by com.zaxxer.hikari.HikariDataSource / oracle.ucp.jdbc.PoolDataSource
     public void setPassword(String password) throws SQLException;
 
     public String getPassword();
 
-    // signatures used by PoolDataSource    
+    // signatures used by oracle.ucp.jdbc.PoolDataSource
     public int getInitialPoolSize();
 
     public int getMinPoolSize();
