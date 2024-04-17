@@ -53,6 +53,7 @@ public class CheckLifeCycleOracleUnitTest {
 
         try (final CombiPoolDataSourceOracle pds1 = configDataSourceOracle) {
             pds1.open();
+            log.debug("pds1.isOpen(): {}; pds1.getState(): {}", pds1.isOpen(), pds1.getState());
             assertTrue(pds1.isOpen());
             assertTrue(pds1.isParentPoolDataSource());
 
