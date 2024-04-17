@@ -106,12 +106,6 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
         }
     }
 
-    public void setDriverClassName(String driverClassName) {
-        log.debug("setDriverClassName(driverClassName={})", driverClassName);
-        
-        this.driverClassName = driverClassName;
-    }
-    
     public void setType(final String type) {
         log.debug("setType(type={})", type);
         
