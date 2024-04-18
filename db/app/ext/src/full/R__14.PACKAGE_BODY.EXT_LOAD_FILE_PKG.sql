@@ -107,7 +107,7 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -1320,7 +1320,7 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -2149,7 +2149,7 @@ $if cfg_pkg.c_debugging $then
   dbug.enter(l_module_name);
 $end
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -2254,7 +2254,7 @@ $end
 
 $end -- $if ext_load_file_pkg.create_collection_from_query $then
 
-$end -- $if not(ext_load_file_pkg.apex_installed) $then
+$end -- $if not(cfg_pkg.c_apex_installed) $then
 
 $if cfg_pkg.c_debugging $then
   dbug.leave;
@@ -2316,7 +2316,7 @@ is
 begin
   get_column_info_tab(p_apex_file_id, l_column_info_tab);
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -2709,7 +2709,7 @@ $end
 
   get_column_info_tab(p_apex_file_id, l_column_info_tab);
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -2870,7 +2870,7 @@ $if cfg_pkg.c_debugging $then
   print(dbug."input", p_object_info_rec);
 $end
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -2889,7 +2889,7 @@ $end
 
   p_csv_file := case when p_object_info_rec.mime_type = "text/csv" then 1 else 0 end;
   
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -3031,7 +3031,7 @@ $if cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_apex_file_id: %s', p_apex_file_id);
 $end
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 
@@ -3132,7 +3132,7 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
-$if not(ext_load_file_pkg.apex_installed) $then
+$if not(cfg_pkg.c_apex_installed) $then
 
   raise_application_error(-20000, 'Apex not installed.');
 

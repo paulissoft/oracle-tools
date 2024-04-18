@@ -15,6 +15,7 @@ Types of changes:
 
 ## [Unreleased]
 
+- [It must be possible to install PATO in a database without APEX installed.](https://github.com/paulissoft/oracle-tools/issues/156)
 - [The database directory may also contain a file env.properties to read environment properties from.](https://github.com/paulissoft/oracle-tools/issues/155)
 - [The EXT_LOAD_FILE_PKG should not contain references to APEX.](https://github.com/paulissoft/oracle-tools/issues/1)
 

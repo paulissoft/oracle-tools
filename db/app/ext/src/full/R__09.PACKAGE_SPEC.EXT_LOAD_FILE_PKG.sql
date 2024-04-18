@@ -1,7 +1,5 @@
 CREATE OR REPLACE PACKAGE "EXT_LOAD_FILE_PKG" authid definer as
 
-apex_installed constant boolean := true;
-
 -- to speed it up
 create_collection_from_query constant boolean := false;
 

@@ -99,6 +99,8 @@ begin
   end if;
 end data2json;
 
+$if oracle_tools.cfg_pkg.c_apex_installed $then
+
 procedure json2data
 ( p_http_headers in json_array_t
 , p_http_header_tab out nocopy apex_web_service.header_table
@@ -532,6 +534,20 @@ $end
            , p_http_headers_clob => null
            );
 end make_rest_request;
+
+$else
+
+function make_rest_request
+( p_request in rest_web_service_request_typ
+)
+return web_service_response_typ
+is
+begin
+  raise_application_error(-20000, 'APEX is not installed.');
+end;
+
+$end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
+
 
 $if msg_aq_pkg.c_testing $then
 

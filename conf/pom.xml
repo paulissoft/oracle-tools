@@ -258,6 +258,8 @@
 
                   <dirname file="${env.properties}" property="db.config.dir" />
 
+                  <property name="env.properties.abs" location="${env.properties}" />
+
                   <!-- READ THE env.properties FILE (from the db dir preferably when db is set). -->
                   <condition property="db.env.properties" value="${db.config.dir}/${db}/env.properties" else="${env.properties}">
                     <and>

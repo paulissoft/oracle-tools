@@ -16,6 +16,8 @@ procedure data2json
 );
 /** Convert a HTTP cookie table to a JSON array. **/
 
+$if oracle_tools.cfg_pkg.c_apex_installed $then
+
 procedure json2data
 ( p_http_headers in json_array_t
 , p_http_header_tab out nocopy apex_web_service.header_table
@@ -27,6 +29,8 @@ procedure data2json
 , p_http_headers out nocopy json_array_t
 );
 /** Convert a HTTP header table to a JSON array. **/
+
+$end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ

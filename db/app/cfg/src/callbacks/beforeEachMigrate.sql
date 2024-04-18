@@ -48,7 +48,24 @@ begin
     then
       l_plsql_flags := l_plsql_flags || ',Testing:true';
   end;
+
+  -- It must be possible to install PATO in a database without APEX installed.
   
+  begin
+    execute immediate 'begin :v := WWV_FLOW_API.C_CURRENT; end;' using out l_found;
+
+    if l_found >= 20100513
+    then
+      l_plsql_flags := l_plsql_flags || ',APEX:true';
+    else
+      raise no_data_found;
+    end if;
+  exception
+    when others
+    then
+      l_plsql_flags := l_plsql_flags || ',APEX:false';
+  end;
+
   if l_plsql_flags is not null
   then
     l_plsql_flags := ltrim(l_plsql_flags, ',');
@@ -60,7 +77,7 @@ begin
   then
     l_statement := l_statement || q'[ PLSQL_WARNINGS = ']' || p_plsql_warnings || q'[']';
   end if;
-  
+
   if l_statement is not null
   then
     l_statement := 'alter session set ' || l_statement;
