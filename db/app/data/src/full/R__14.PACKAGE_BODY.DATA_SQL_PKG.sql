@@ -158,40 +158,6 @@ begin
   return l_column_value_tab;
 end;
 
-function list2collection
-( p_value_list in varchar2
-, p_sep in varchar2
-, p_ignore_null in naturaln
-)
-return sys.odcivarchar2list
-is
-  l_collection sys.odcivarchar2list;
-  l_max_pos constant integer := 32767; -- or 4000
-begin
-  if p_sep is null
-  then
-    raise value_error;
-  end if;
-  
-  select  t.val
-  bulk collect
-  into    l_collection
-  from    ( select  substr(str, pos + 1, lead(pos, 1, l_max_pos) over(order by pos) - pos - 1) val
-            from    ( select  str
-                      ,       instr(str, p_sep, 1, level) pos
-                      from    ( select  p_value_list as str
-                                from    dual
-                                where   rownum <= 1
-                              )
-                      connect by
-                              level <= length(str) - nvl(length(replace(str, p_sep)), 0) /* number of separators */ + 1
-                    )
-          ) t
-  where   ( p_ignore_null = 0 or t.val is not null );
-
-  return l_collection;
-end list2collection;
-
 procedure do
 ( p_operation in varchar2
 , p_table_name in varchar2
@@ -284,27 +250,27 @@ is
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table, l_fetch_limit, 1);
-          
+
         when 'BINARY_FLOAT'
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table, l_fetch_limit, 1);
-          
+
         when 'BINARY_DOUBLE'
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table, l_fetch_limit, 1);
-          
+
         when 'BLOB'
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table, l_fetch_limit, 1);
-          
+
         when 'BFILE'
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table, l_fetch_limit, 1);
-          
+
         when 'DATE'
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table.delete;
@@ -319,7 +285,7 @@ is
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table.delete;
           dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table, l_fetch_limit, 1);
-          
+
         when 'VARCHAR2'
         then
           p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table.delete;
@@ -336,22 +302,22 @@ is
             then
               p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table, l_fetch_limit, 1);
-              
+
             when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
             then
               p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table, l_fetch_limit, 1);
-              
+
             when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
             then
               p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table, l_fetch_limit, 1);
-              
+
             when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
             then
               p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table.delete;
               dbms_sql.define_array(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table, l_fetch_limit, 1);
-            
+
             else
               raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
           end case;
@@ -382,7 +348,7 @@ $end
     end check_row_count;
   begin
     p_row_count := 0; -- total row count
-    
+
     <<fetch_loop>>
     loop
       l_rows_fetched := dbms_sql.fetch_rows(l_cursor);
@@ -394,7 +360,7 @@ $end
       exit fetch_loop when l_rows_fetched = 0;
 
       p_row_count := p_row_count + l_rows_fetched;
-      
+
       if l_max_row_count = 1 and p_row_count > l_max_row_count -- must fetch one more than needed for too_many_rows
       then
         raise too_many_rows;
@@ -407,27 +373,27 @@ $end
           when 'CLOB'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table);
-            
+
           when 'BINARY_FLOAT'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table);
-            
+
           when 'BINARY_DOUBLE'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table);
-            
+
           when 'BLOB'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table);
-            
+
           when 'BFILE'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table);
-            
+
           when 'DATE'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table);
-              
+
           when 'NUMBER'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).number$_table);
@@ -435,7 +401,7 @@ $end
           when 'UROWID'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table);
-            
+
           when 'VARCHAR2'
           then
             dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table);
@@ -449,25 +415,25 @@ $end
               when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
               then
                 dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table);
-                
+
               when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
               then
                 dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table);
-                
+
               when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
               then
                 dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table);
-                
+
               when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
               then
                 dbms_sql.column_value(l_cursor, i_idx, p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
-              
+
               else
                 raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
             end case;
         end case;
       end loop column_loop;
-      
+
       if l_max_row_count > 1 and p_row_count >= l_max_row_count -- no need to fetch more
       then
         exit fetch_loop;
@@ -570,23 +536,23 @@ $end
           when 'CLOB'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).clob$_table);
-            
+
           when 'BINARY_FLOAT'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_float$_table);
-            
+
           when 'BINARY_DOUBLE'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).binary_double$_table);
-            
+
           when 'BLOB'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).blob$_table);
-            
+
           when 'BFILE'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).bfile$_table);
-            
+
           when 'DATE'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).date$_table);
@@ -598,7 +564,7 @@ $end
           when 'UROWID'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).urowid$_table);
-            
+
           when 'VARCHAR2'
           then
             dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).varchar2$_table);
@@ -612,26 +578,26 @@ $end
               when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH LOCAL TIME ZONE'
               then
                 dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_ltz$_table);
-                
+
               when l_output_column_tab(i_idx).data_type like 'TIMESTAMP(_%) WITH TIME ZONE'
               then
                 dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).timestamp_tz$_table);
-                
+
               when l_output_column_tab(i_idx).data_type like 'INTERVAL DAY(_%) TO SECOND(_%)'
               then
                 dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ds$_table);
-                
+
               when l_output_column_tab(i_idx).data_type like 'INTERVAL YEAR(_%) TO MONTH'
               then
                 dbms_sql.variable_value(l_cursor, bind_variable(l_output_column_tab(i_idx).column_name, 'O'), p_column_value_tab(l_output_column_tab(i_idx).column_name).interval_ym$_table);
-              
+
               else
                 raise_application_error(-20000, 'Unknown data type "' || l_output_column_tab(i_idx).data_type || '"');
             end case;
         end case;
       end loop;
     end if;
-    
+
 $if data_sql_pkg.c_debugging >= 1 $then
     dbug.leave;
 $end
@@ -673,7 +639,7 @@ $end
   , p_input_column_tab => l_input_column_tab
   , p_output_column_tab => l_output_column_tab
   );
-  
+
   l_cursor := dbms_sql.open_cursor;
 
   begin
@@ -703,7 +669,7 @@ $end
   end;
 
   set_bind_variables;
-  
+
   -- query? define columns
   case p_operation
     when 'S'
@@ -811,7 +777,7 @@ $end
     then
       add_table(l_table_name);
     end if;
-    
+
     l_table_name := case p_operation when 'S' then p_table_column_value_tab.next(l_table_name) else p_table_bind_variable_tab.next(l_table_name) end;
   end loop;
 
@@ -887,7 +853,7 @@ begin
             inner join
             ( select  e.column_value as column_name_expr
               from    table
-                      ( oracle_tools.data_sql_pkg.list2collection
+                      ( oracle_tools.api_pkg.list2collection
                         ( p_value_list => p_column_name_list
                         , p_sep => ','
                         , p_ignore_null => 1
@@ -1149,7 +1115,7 @@ $end
       then
         raise value_error;
       end if;
-      
+
       p_input_column_tab(p_input_column_tab.count+1) := r;
 
       if p_operation = 'S'
@@ -1322,7 +1288,7 @@ $end
         end loop;
         p_statement_lines(p_statement_lines.count+1) :=
           ')';
-          
+
         p_statement_lines(p_statement_lines.count+1) :=
           'values';
         l_column_idx := p_input_column_tab.first;
@@ -1390,7 +1356,7 @@ $end
           'merge into ' || '"' || p_owner || '"."' || p_table_name || '" d';
         p_statement_lines(p_statement_lines.count+1) :=
           'using';
-          
+
         -- set up USING with bind variables
         l_column_idx := p_input_column_tab.first;
         while l_column_idx is not null
@@ -1583,7 +1549,7 @@ is
         then to_char(p_anydata.date$_table.count)
       end;
   end value_count;
-  
+
   function value_list(p_anydata in anydata_t)
   return varchar2
   is
@@ -1596,37 +1562,37 @@ is
         loop
           l_value_list := l_value_list || case when i_idx > p_anydata.number$_table.first then ',' end || to_char(p_anydata.number$_table(i_idx));
         end loop;
-        
+
       when p_anydata.data_type = 'NUMBER' and not(p_anydata.is_table)
       then
         l_value_list := to_char(p_anydata.number$);
-        
+
       when p_anydata.data_type = 'VARCHAR2' and p_anydata.is_table and p_anydata.varchar2$_table.first is not null
       then 
         for i_idx in p_anydata.varchar2$_table.first .. least(c_max_items, p_anydata.varchar2$_table.last)
         loop
           l_value_list := l_value_list || case when i_idx > p_anydata.varchar2$_table.first then ',' end || p_anydata.varchar2$_table(i_idx);
         end loop;
-        
+
       when p_anydata.data_type = 'VARCHAR2' and not(p_anydata.is_table)
       then
         l_value_list := p_anydata.varchar2$;
-        
+
       when p_anydata.data_type = 'DATE' and p_anydata.is_table and p_anydata.date$_table.first is not null
       then
         for i_idx in p_anydata.date$_table.first .. least(c_max_items, p_anydata.date$_table.last)
         loop
           l_value_list := l_value_list || case when i_idx > p_anydata.date$_table.first then ',' end || to_char(p_anydata.date$_table(i_idx), 'yyyy-mm-dd hh24:mi:ss');
         end loop;
-        
+
       when p_anydata.data_type = 'DATE' and not(p_anydata.is_table)
       then
         l_value_list := to_char(p_anydata.date$, 'yyyy-mm-dd hh24:mi:ss');
-        
+
       else
         null;
     end case;
-    
+
     return l_value_list;
   end value_list;
 begin
@@ -1651,10 +1617,10 @@ begin
     , value_count(p_column_value_tab(l_column_value))
     , value_list(p_column_value_tab(l_column_value))
     );
-  
+
     l_column_value := p_column_value_tab.next(l_column_value);
   end loop;
-  
+
   dbug.leave;
 end print;
 
@@ -1672,15 +1638,15 @@ begin
   , p_what
   , p_table_column_value_tab.count
   );
-  
+
   l_table_name := p_table_column_value_tab.first;
   while l_table_name is not null
   loop
     print('table ' || l_table_name, p_table_column_value_tab(l_table_name));
-    
+
     l_table_name := p_table_column_value_tab.next(l_table_name);
   end loop;
-  
+
   dbug.leave;
 end print;
 
@@ -1748,7 +1714,7 @@ is
 begin
   execute immediate 'drop table my_emp purge';
   execute immediate 'drop table my_dept purge';
-  
+
   commit;
 end ut_teardown;
 
@@ -1772,7 +1738,7 @@ $end
   l_column_value_tab('JOB') := null;
   l_column_value_tab('HIREDATE') := null;
   l_column_value_tab('DEPTNO') := null;
-  
+
   do
   ( p_operation => 'S'
   , p_table_name => 'MY_EMP'
@@ -1797,7 +1763,7 @@ $end
         ut.expect(l_number_tab.count, 'collection count ' || l_column_value).to_equal(l_row_count);
         ut.expect(l_number_tab(1), 'element #1 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7369 else 20 end);
         ut.expect(l_number_tab(5), 'element #5 for column ' || l_column_value).to_equal(case l_column_value when 'EMPNO' then 7902 else 20 end);
-        
+
       when l_column_value in ('JOB')
       then
         ut.expect(l_column_value_tab(l_column_value).data_type, 'data type ' || l_column_value).to_equal('VARCHAR2');
@@ -1806,7 +1772,7 @@ $end
         ut.expect(l_varchar2_tab.count, 'collection count ' || l_column_value).to_equal(l_row_count);
         ut.expect(l_varchar2_tab(1), 'element #1 for column ' || l_column_value).to_equal('CLERK');
         ut.expect(l_varchar2_tab(5), 'element #5 for column ' || l_column_value).to_equal('ANALYST');
-        
+
       when l_column_value in ('HIREDATE')
       then
         ut.expect(l_column_value_tab(l_column_value).data_type, 'data type ' || l_column_value).to_equal('DATE');
@@ -1881,7 +1847,7 @@ $end
   l_column_value_sel_tab('LOC') := null;
 
   open l_expected for l_query;
-  
+
   do
   ( p_operation => 'S'
   , p_table_name => 'MY_DEPT'
@@ -1917,7 +1883,7 @@ $end
   , p_output_column_tab => l_output_column_tab
   );
 
-  ut.expect(l_statement_lines(1), 'statement line #1').to_equal('update  "ORACLE_TOOLS"."MY_DEPT" d');
+  ut.expect(l_statement_lines(1), 'statement line #1').to_equal('update  "MY_DEPT" d');
   ut.expect(l_statement_lines(2), 'statement line #2').to_equal('set     d."DNAME" = :I_DNAME$');
   ut.expect(l_statement_lines(3), 'statement line #3').to_equal(',       d."LOC" = :I_LOC$');
   ut.expect(l_statement_lines(4), 'statement line #4').to_equal('where   d."DEPTNO" = :I_DEPTNO$');
@@ -1957,7 +1923,7 @@ $end
   loop
     set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
   end loop;
-  
+
   set_column_value
   ( p_data_type => 'NUMBER'
   , p_number$ => 20
@@ -2020,7 +1986,7 @@ $end
 
     ut.expect(l_count, l_table_name || ' count after delete').to_equal(case i_idx when 1 then 1 else 5 end);
   end loop;
-  
+
 $if data_sql_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
@@ -2090,7 +2056,7 @@ $if not(data_sql_pkg.c_support_time) $then
         null;
 $end        
     end case;
-    
+
     case i_idx
       when  1
       then
@@ -2232,7 +2198,7 @@ $end
         ut.expect(l_interval_year_to_month_table2(i_idx+1), 'second element ' || to_char(i_idx)).to_be_null();
         ut.expect(l_interval_year_to_month_table2(i_idx+3), 'fourth element ' || to_char(i_idx)).to_be_null();
     end case;
-    
+
     case i_idx
       when  1 then l_data := anydata.ConvertClob(l_clob_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.CLOB');
       when  2 then l_data := anydata.ConvertBFloat(l_binary_float_table1(i_idx)); ut.expect(l_data.gettypename(), 'scalar ' || to_char(i_idx)).to_equal('SYS.BINARY_FLOAT');
@@ -2264,3 +2230,4 @@ $end
 
 end data_sql_pkg;
 /
+
