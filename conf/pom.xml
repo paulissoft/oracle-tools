@@ -178,6 +178,7 @@
                   <echoproperties regex="(dbUrl|dbUser)" />
                   <echoproperties prefix="oracle-tools." />
                   <echoproperties prefix="oracle." />
+                  <echoproperties prefix="oracle_" />
                   <echoproperties prefix="conf." />                 
                 </target>
               </configuration>
@@ -256,18 +257,36 @@
                   </condition>
 
                   <dirname file="${env.properties}" property="db.config.dir" />
-                  
-                  <!-- READ THE env.properties FILE. -->
-                  <property name="env.properties.abs" location="${env.properties}" />
 
+                  <!-- READ THE env.properties FILE (from the db dir preferably when db is set). -->
+                  <condition property="db.env.properties" value="${db.config.dir}/${db}/env.properties" else="${env.properties}">
+                    <and>
+                      <isset property="db" />
+                      <available file="${db.config.dir}/${db}/env.properties" type="file" />
+                    </and>
+                  </condition>
+
+                  <property name="db.env.properties.abs" location="${db.env.properties}" />
+                  
                   <!--
                       1) read the file env.properties (file may not exist)
-                      2) the file should set db and maybe db.prev (for backwards compability we also check db.source and db.target)
+                      2) the file may set db and maybe db.prev (for backwards compatibility we also check db.source and db.target)
                   -->
-                  <echo level="${ant.log.level}" message="Reading environment properties from file ${env.properties.abs}" />
-                  <property file="${env.properties.abs}" />
                   
-                  <!-- backwards compability -->
+                  <ac:if xmlns:ac="antlib:net.sf.antcontrib">
+                    <available file="${db.env.properties.abs}" type="file" />
+                    <then>
+                      <echo level="${ant.log.level}" message="Reading environment properties from file ${db.env.properties.abs}" />
+                      <property file="${db.env.properties.abs}" />
+                    </then>
+                    <else>
+                      <echo level="${ant.log.level}" message="Could NOT read environment properties since file env.properties has NOT been found" />
+                    </else>
+                  </ac:if>
+
+                  <!-- determine DB -->
+                  
+                  <!-- backwards compatibility -->
                   <!-- db.target first because that is the installation database -->
                   <condition property="db" value="${db.target}">
                     <isset property="db.target" />
@@ -286,11 +305,19 @@
                     <available file="${db.config.dir}${file.separator}${db}${file.separator}db.properties" type="file" />
                   </condition>
                   <property name="db.properties.abs" location="${db.properties}" />
-                  <echo level="${ant.log.level}" message="Reading db properties from file ${db.properties.abs}" />
-                  <!-- prefixValues="true" is needed for correctly expanding
-                       username=prxy[${schema}] -->
-                  <property file="${db.properties.abs}" prefix="db"
-                            prefixValues="true" />
+
+                  <ac:if xmlns:ac="antlib:net.sf.antcontrib">
+                    <available file="${db.properties.abs}" type="file" />
+                    <then>
+                      <echo level="${ant.log.level}" message="Reading db properties from file ${db.properties.abs}" />
+                      <!-- prefixValues="true" is needed for correctly expanding
+                           username=prxy[${schema}] -->
+                      <property file="${db.properties.abs}" prefix="db" prefixValues="true" />
+                    </then>
+                    <else>
+                      <echo level="${ant.log.level}" message="Could NOT read db properties since file db.properties has NOT been found" />
+                    </else>
+                  </ac:if>
                   
                   <!-- new eazy connect syntax -->
                   <!-- db info -->
@@ -353,8 +380,18 @@
                   </condition>
                   <property name="db.prev.properties.abs" location="${db.prev.properties}" />
                   <!-- target info -->
-                  <echo level="${ant.log.level}" message="Reading db.prev properties from file ${db.prev.properties.abs}" />
-                  <property file="${db.prev.properties.abs}" prefix="db.prev" />
+                  <ac:if xmlns:ac="antlib:net.sf.antcontrib">
+                    <available file="${db.prev.properties.abs}" type="file" />
+                    <then>
+                      <echo level="${ant.log.level}" message="Reading db.prev properties from file ${db.prev.properties.abs}" />
+                      <property file="${db.prev.properties.abs}" prefix="db.prev" />
+                    </then>
+                    <else>
+                      <echo level="${ant.log.level}"
+                            message="Could NOT read db.prev properties since property db.prev is NOT set or file db.properties has NOT been found" />
+                    </else>
+                  </ac:if>
+
                   <!-- db.prev.database.link is empty meaning the previous database schema is used -->
                   <property name="db.prev.database.link"
                             value="${db.schema}@${db.prev.service}" />
@@ -454,6 +491,7 @@
                   <!-- also dbUrl, dbUser -->
                   <echoproperties regex="(dbUrl|dbUser)" />
                   <echoproperties prefix="oracle." />
+                  <echoproperties prefix="oracle_" />
                 </target>
               </configuration>
               <goals>
