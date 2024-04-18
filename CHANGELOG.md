@@ -15,6 +15,8 @@ Types of changes:
 
 ## [Unreleased]
 
+- [The EXT_LOAD_FILE_PKG should not contain references to APEX.](https://github.com/paulissoft/oracle-tools/issues/1)
+
 ## [2.8.0] - 2024-04-17
 
 ### Added

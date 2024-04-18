@@ -92,7 +92,7 @@ begin
 end default_read_method;
 
 procedure get_column_info_tab
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_column_info_tab out nocopy t_column_info_tab
 )
 is
@@ -106,6 +106,12 @@ $if cfg_pkg.c_debugging $then
   , p_apex_file_id
   );
 $end
+
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
 
   select  to_number(c.collection_name) as apex_file_id
   ,       c.seq_id
@@ -123,6 +129,8 @@ $end
   where   c.collection_name = to_char(p_apex_file_id)
   order by
           ext_load_file_pkg.excel_column_name2number(excel_column_name);
+
+$end
 
 $if cfg_pkg.c_debugging $then
   dbug.print
@@ -148,7 +156,7 @@ begin
 end unquote;
 
 procedure get_key
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_owner in varchar2
 , p_table_name in varchar2
 , p_key_columns out nocopy varchar2
@@ -211,7 +219,7 @@ $end
 end get_key;
 
 procedure validate
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_object_info_rec in t_object_info_rec
 , p_action in varchar2
 , p_key_columns out nocopy varchar2
@@ -1266,7 +1274,7 @@ begin
 end blob2clob;
 
 function display
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -1312,6 +1320,12 @@ $if cfg_pkg.c_debugging $then
   );
 $end
 
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
+
   select  f.blob_content
   ,       f.mime_type
   into    l_blob
@@ -1323,6 +1337,8 @@ $end
   ,       f.mime_type
   from    apex_application_files f
   where   f.id = p_apex_file_id;
+
+$end
 
   if l_mime_type = "text/csv"
   then
@@ -1604,7 +1620,7 @@ end determine_csv_info;
 
 procedure get_column_info_tab
 ( -- common parameters
-  p_apex_file_id in apex_application_temp_files.id%type
+  p_apex_file_id in t_apex_file_id
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
 , p_header_row_till in natural
@@ -2112,7 +2128,7 @@ $end
 end get_column_info_tab;
 
 procedure init
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -2126,10 +2142,23 @@ procedure init
 )
 is
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'INIT';
+
+  l_format_mask varchar2(100) := p_format_mask;
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter(l_module_name);
 $end
+
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
+
+  if l_format_mask is null
+  then
+    l_format_mask := v('APP_NLS_TIMESTAMP_FORMAT');
+  end if;
 
 $if ext_load_file_pkg.create_collection_from_query $then
 
@@ -2175,14 +2204,14 @@ from    table
           , p_data_row_from => ' || p_data_row_from || '
           , p_data_row_till => ' || p_data_row_till || '
           , p_determine_datatype => ' || p_determine_datatype || '
-          , p_format_mask => q''[' || p_format_mask || ']''
+          , p_format_mask => q''[' || l_format_mask || ']''
           , p_view_name => q''[' || p_view_name || ']''
           , p_nls_charset_name => q''[' || p_nls_charset_name || ']''
           )
         ) t'
   );
 
-$else
+$else -- $if ext_load_file_pkg.create_collection_from_query $then
 
 $if cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'create or truncate collection');
@@ -2202,7 +2231,7 @@ $end
               , p_data_row_from => p_data_row_from
               , p_data_row_till => p_data_row_till
               , p_determine_datatype => p_determine_datatype
-              , p_format_mask => p_format_mask
+              , p_format_mask => l_format_mask
               , p_view_name => p_view_name
               , p_nls_charset_name => p_nls_charset_name
               )
@@ -2223,7 +2252,9 @@ $end
     );
   end loop;
 
-$end
+$end -- $if ext_load_file_pkg.create_collection_from_query $then
+
+$end -- $if not(ext_load_file_pkg.apex_installed) $then
 
 $if cfg_pkg.c_debugging $then
   dbug.leave;
@@ -2236,7 +2267,7 @@ $end
 end init;
 
 function display
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 )
 return t_column_info_tab
 pipelined
@@ -2275,7 +2306,7 @@ $end
 end display;
 
 function create_table_statement
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_table_name in varchar2
 )
 return dbms_sql.varchar2a
@@ -2285,6 +2316,12 @@ is
 begin
   get_column_info_tab(p_apex_file_id, l_column_info_tab);
 
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
+
   select  f.mime_type
   into    l_mime_type
   from    apex_application_temp_files f
@@ -2293,6 +2330,8 @@ begin
   select  f.mime_type
   from    apex_application_files f
   where   f.id = p_apex_file_id;
+
+$end
 
   return create_table_statement
          ( p_column_info_tab => l_column_info_tab
@@ -2427,7 +2466,7 @@ $end
 end validate;
 
 procedure validate
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_object_info_rec in t_object_info_rec
 , p_action in varchar2
 )
@@ -2445,7 +2484,7 @@ begin
 end validate;
 
 procedure validate
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -2622,7 +2661,7 @@ $end
 end load_csv;
 
 function load
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -2669,6 +2708,12 @@ $end
   );
 
   get_column_info_tab(p_apex_file_id, l_column_info_tab);
+
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
 
   -- a for loop because I am too lazy to fetch this one record
   for r in
@@ -2729,6 +2774,8 @@ $end
     end if;
   end loop;
 
+$end
+
   if l_clob is not null
   then
     dbms_lob.freetemporary(l_clob);
@@ -2760,8 +2807,8 @@ procedure load
 ( p_apex_file in varchar2
 , p_owner in varchar2
 , p_object_info_rec in out nocopy t_object_info_rec
-, p_apex_file_id out nocopy apex_application_temp_files.id%type
-, p_apex_file_name out nocopy apex_application_temp_files.filename%type
+, p_apex_file_id out nocopy t_apex_file_id
+, p_apex_file_name out nocopy t_apex_file_name
 , p_csv_file out nocopy natural
 , p_action out nocopy varchar2
 , p_new_table out nocopy natural
@@ -2823,6 +2870,12 @@ $if cfg_pkg.c_debugging $then
   print(dbug."input", p_object_info_rec);
 $end
 
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
+
   select  f.mime_type
   ,       f.id
   ,       f.filename
@@ -2832,8 +2885,16 @@ $end
   from    apex_application_temp_files f
   where   f.name = p_apex_file;
 
+$end
+
   p_csv_file := case when p_object_info_rec.mime_type = "text/csv" then 1 else 0 end;
   
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
+
   for r in
   ( select  t.column_value
     from    apex_application_temp_files f
@@ -2851,6 +2912,8 @@ $end
       
     exit; -- only one sheet  
   end loop;
+
+$end
 
   init
   ( p_apex_file_id => p_apex_file_id
@@ -2958,7 +3021,7 @@ $end
 end load;
 
 procedure done
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 )
 is
   l_module_name constant varchar2(61 char) := g_package_name || '.' || 'DONE';
@@ -2968,7 +3031,15 @@ $if cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_apex_file_id: %s', p_apex_file_id);
 $end
 
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
+
   apex_collection.delete_collection(to_char(p_apex_file_id));
+
+$end
 
 $if cfg_pkg.c_debugging $then
   dbug.leave;
@@ -3026,8 +3097,8 @@ end dml;
 
 procedure dml
 ( p_action in varchar2
-, p_apex_file_id in apex_application_temp_files.id%type -- key part 1
-, p_seq_id in out apex_collections.seq_id%type -- key part 2
+, p_apex_file_id in t_apex_file_id -- key part 1
+, p_seq_id in out t_apex_seq_id -- key part 2
 , p_excel_column_name in varchar2
 , p_header_row in varchar2
 , p_data_row in varchar2
@@ -3060,6 +3131,12 @@ $if cfg_pkg.c_debugging $then
   , p_default_value
   );
 $end
+
+$if not(ext_load_file_pkg.apex_installed) $then
+
+  raise_application_error(-20000, 'Apex not installed.');
+
+$else
 
   case p_action
     when 'I'
@@ -3098,6 +3175,8 @@ $end
       );
     
   end case;
+
+$end
 
 $if cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_seq_id: %s', p_seq_id);  

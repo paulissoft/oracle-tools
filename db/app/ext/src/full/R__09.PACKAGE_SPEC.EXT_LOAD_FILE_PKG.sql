@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "EXT_LOAD_FILE_PKG" authid definer as
 
+apex_installed constant boolean := true;
+
 -- to speed it up
 create_collection_from_query constant boolean := false;
 
@@ -54,10 +56,13 @@ type t_object_info_rec is record
 
 type t_object_info_tab is table of t_object_info_rec;
 
+subtype t_apex_file_id is integer; -- apex_application_temp_files.id%type
+subtype t_apex_seq_id is integer; -- apex_collections.seq_id%type
+
 /* An object that describes how to load a column */
 type t_column_info_rec is record
-( apex_file_id apex_application_temp_files.id%type -- key part 1 for apex_collection
-, seq_id apex_collections.seq_id%type -- key part 2 for apex_collection
+( apex_file_id t_apex_file_id -- key part 1 for apex_collection
+, seq_id t_apex_seq_id -- key part 2 for apex_collection
 , view_name user_views.view_name%type -- this view contains excel name - database column name mapping plus key info
 , excel_column_name t_excel_column_name
 , header_row varchar2(4000 char)
@@ -224,7 +229,7 @@ return clob;
  * @return A collection
  */
 function display
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -285,7 +290,7 @@ procedure determine_csv_info
 -- helper function invoked by function display( p_apex_file_id ... )
 procedure get_column_info_tab
 ( -- common parameters
-  p_apex_file_id in apex_application_temp_files.id%type
+  p_apex_file_id in t_apex_file_id
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
 , p_header_row_till in natural
@@ -323,7 +328,7 @@ procedure get_column_info_tab
  * @param p_nls_charset_name        The NLS character set used to convert the flat file BLOB into a CLOB.
  */
 procedure init
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -331,7 +336,7 @@ procedure init
 , p_data_row_from in natural
 , p_data_row_till in natural
 , p_determine_datatype in t_determine_datatype
-, p_format_mask in varchar2 default v('APP_NLS_TIMESTAMP_FORMAT')
+, p_format_mask in varchar2 default null -- v('APP_NLS_TIMESTAMP_FORMAT')
 , p_view_name in varchar2 default null
 , p_nls_charset_name in t_nls_charset_name default csv_nls_charset_name
 );
@@ -344,7 +349,7 @@ procedure init
  * @return A collection
  */
 function display
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 )
 return t_column_info_tab
 pipelined;
@@ -358,7 +363,7 @@ pipelined;
  * @return Create table statement with primary key if there are key columns.
  */
 function create_table_statement
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_table_name in varchar2
 )
 return dbms_sql.varchar2a;
@@ -402,7 +407,7 @@ procedure validate
  *                                  (D)elete
  */
 procedure validate
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_object_info_rec in t_object_info_rec
 , p_action in varchar2
 );
@@ -429,7 +434,7 @@ procedure validate
  * @param p_nls_charset_name        The NLS character set used to convert the flat file BLOB into a CLOB.
  */
 procedure validate
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -538,7 +543,7 @@ return integer;
  * @return The number of rows affected
  */
 function load
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 , p_sheet_names in varchar2
 , p_last_excel_column_name in varchar2
 , p_header_row_from in natural
@@ -566,12 +571,15 @@ return integer;
  * @param p_new_table               Is the object a new table (0 = false; 1 = true)?
  * @param p_nr_rows                 The number of rows affected
  */
+
+subtype t_apex_file_name is varchar2(400 char); -- apex_application_temp_files.filename%type
+
 procedure load
 ( p_apex_file in varchar2
 , p_owner in varchar2
 , p_object_info_rec in out nocopy t_object_info_rec
-, p_apex_file_id out nocopy apex_application_temp_files.id%type
-, p_apex_file_name out nocopy apex_application_temp_files.filename%type
+, p_apex_file_id out nocopy t_apex_file_id
+, p_apex_file_name out nocopy t_apex_file_name
 , p_csv_file out nocopy natural
 , p_action out nocopy varchar2
 , p_new_table out nocopy natural
@@ -584,7 +592,7 @@ procedure load
  * @param p_apex_file_id            An apex_application_temp_files id
  */
 procedure done
-( p_apex_file_id in apex_application_temp_files.id%type
+( p_apex_file_id in t_apex_file_id
 );
 
 /**
@@ -638,8 +646,8 @@ procedure dml
  */
 procedure dml
 ( p_action in varchar2
-, p_apex_file_id in apex_application_temp_files.id%type -- key part 1
-, p_seq_id in out apex_collections.seq_id%type -- key part 2
+, p_apex_file_id in t_apex_file_id -- key part 1
+, p_seq_id in out t_apex_seq_id -- key part 2
 , p_excel_column_name in varchar2
 , p_header_row in varchar2
 , p_data_row in varchar2
