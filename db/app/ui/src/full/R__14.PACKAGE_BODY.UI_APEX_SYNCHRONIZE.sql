@@ -1,4 +1,4 @@
-create or replace package body ui_apex_synchronize is
+CREATE OR REPLACE PACKAGE BODY "UI_APEX_SYNCHRONIZE" IS
 
 -- LOCAL
 
@@ -336,5 +336,6 @@ begin
   );
 end post_import;
 
-end ui_apex_synchronize; 
+end ui_apex_synchronize;
 /
+

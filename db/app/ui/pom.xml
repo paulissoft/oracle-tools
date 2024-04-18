@@ -16,15 +16,9 @@
   <properties>
     <flyway.table>schema_version_tools_ui</flyway.table>
     <!-- this project uses Flyway placeholders -->
-    <db.generate.ddl.full.skip>true</db.generate.ddl.full.skip>
+    <!--db.generate.ddl.full.skip>true</db.generate.ddl.full.skip-->
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>UI_APEX_MESSAGES_PKG
-,UI_ERROR_PKG
-,UI_SESSION_PKG
-,UI_USER_MANAGEMENT_PKG
-,UI_APEX_MESSAGES_V
-,UI_RESET_PWD_JOB
-    </db.object.names>
+    <db.object.names>UI_RESET_PWD_JOB,UI_APEX_MESSAGES_PKG,UI_APEX_SYNCHRONIZE,UI_ERROR_PKG,UI_SESSION_PKG,UI_USER_MANAGEMENT_PKG,UI_APEX_MESSAGES_V</db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
 

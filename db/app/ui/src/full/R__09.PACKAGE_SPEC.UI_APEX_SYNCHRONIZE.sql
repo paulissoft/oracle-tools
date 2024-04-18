@@ -1,4 +1,4 @@
-create or replace package ui_apex_synchronize authid current_user is
+CREATE OR REPLACE PACKAGE "UI_APEX_SYNCHRONIZE" AUTHID CURRENT_USER IS
 
 procedure pre_export
 ( p_workspace_name in apex_workspaces.workspace%type
@@ -39,3 +39,4 @@ procedure post_import
 
 end ui_apex_synchronize;
 /
+

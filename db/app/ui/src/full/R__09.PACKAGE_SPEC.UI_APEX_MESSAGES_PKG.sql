@@ -1,4 +1,4 @@
-create or replace package ui_apex_messages_pkg authid current_user
+CREATE OR REPLACE PACKAGE "UI_APEX_MESSAGES_PKG" AUTHID CURRENT_USER
 as
 
 /**
@@ -201,3 +201,4 @@ $end
 
 end ui_apex_messages_pkg;
 /
+
