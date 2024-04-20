@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
+import java.util.Stack;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import oracle.jdbc.OracleConnection;
@@ -150,20 +151,35 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                   updateStatistics,
                   showStatistics);
 
+        final Stack<Connection> connectionsWithWrongUsernameSession2 = new Stack();
+
         try {    
             final Instant t1 = Instant.now();
-            Connection conn = getConnection1(poolDataSource, usernameSession1, passwordSession1);
+            Connection conn = null;
+            boolean found = false;
             int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
             Instant t2 = null;
+            
+            do {
+                if (conn != null) {
+                    connectionsWithWrongUsernameSession2.push(conn);
+                    
+                    proxyLogicalConnectionCount++;
+                }
+                
+                conn = getConnection1(poolDataSource, usernameSession1, passwordSession1);
 
-            if (!firstConnection.getAndSet(true)) {
-                // Only show the first time a pool has gotten a connection.
-                // Not earlier because these (fixed) values may change before and after the first connection.
-                poolDataSource.show(getPoolDataSourceConfiguration());
-            }
+                found = conn.getSchema().equalsIgnoreCase(usernameSession2);
+
+                if (!firstConnection.getAndSet(true)) {
+                    // Only show the first time a pool has gotten a connection.
+                    // Not earlier because these (fixed) values may change before and after the first connection.
+                    poolDataSource.show(getPoolDataSourceConfiguration());
+                }
+            } while (!found && poolDataSource.getIdleConnections() > 0 && connectionsWithWrongUsernameSession2.size() < getActiveChildren());
 
             // if the current schema is not the requested schema try to open/close the proxy session
-            if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
+            if (!found) {
                 assert !isSingleSessionProxyModel()
                     : "Requested schema name should be the same as the current schema name in the single-session proxy model";
 
@@ -250,6 +266,13 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
             poolDataSourceStatistics.signalException(this, ex);
             throw ex;
         } finally {
+            while (connectionsWithWrongUsernameSession2.size() > 0) {
+                try {
+                    connectionsWithWrongUsernameSession2.pop().close();
+                } catch (SQLException ex) {
+                    log.error("SQL exception on close(): {}", ex.getMessage());
+                }
+            }
             log.debug("<getConnection()");
         }
     }    

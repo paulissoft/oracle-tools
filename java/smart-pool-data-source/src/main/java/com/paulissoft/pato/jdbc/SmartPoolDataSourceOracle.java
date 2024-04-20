@@ -148,16 +148,9 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
             final Instant t1 = Instant.now();
             Connection conn;
             
-            if (isFixedUsernamePassword()) {
-                if (!poolDataSource.getUser().equalsIgnoreCase(usernameToConnectTo)) {
-                    poolDataSource.setUser(usernameToConnectTo);
-                    poolDataSource.setPassword(password);
-                }
-                conn = poolDataSource.getConnection();
-            } else {
-                // see observations in constructor
-                conn = poolDataSource.getConnection(usernameToConnectTo, password);
-            }
+            assert !isFixedUsernamePassword();
+
+            conn = poolDataSource.getConnection(usernameToConnectTo, password);
 
             if (!firstConnection.getAndSet(true)) {
                 // Only show the first time a pool has gotten a connection.

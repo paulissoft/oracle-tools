@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import lombok.extern.slf4j.Slf4j;
@@ -75,6 +76,7 @@ public class ConfigurationFactoryOracle {
                                              properties.getType().getClass().getName());
     }
 
+    @Primary
     @ConfigurationProperties(prefix = "app.domain.datasource.oracleucp")
     public MyDomainDataSourceOracle domainDataSourceOracle(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
         return properties

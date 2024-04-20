@@ -218,25 +218,6 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 // only copy when there is no active parent
                 poolDataSource.set(poolDataSourceConfiguration);
 
-                // set username to the final value so we do not need to check/change it in getConnection()
-                try {
-                    if (poolDataSourceConfiguration.isFixedUsernamePassword()) {
-                        // will always use getConnection()
-
-                        // username like bc_proxy[bodomain] to bc_proxy
-                        if (poolDataSourceConfiguration.getProxyUsername() != null) {
-                            poolDataSource.setUsername(poolDataSourceConfiguration.getProxyUsername());
-                        }
-                    } else {
-                        // will never use getConnection(), always getConnection(username, password)
-                        poolDataSource.setUsername(null);
-                        poolDataSource.setPassword(null);
-                    }
-                } catch (SQLException ex) {
-                    throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-                }
-
-                log.debug("pool data source username: {}", poolDataSource.getUsername());
                 log.debug("(parent) copied configuration to the pool data source: {}", poolDataSource);
             } else {
                 final PoolDataSourceConfigurationCommonId parentCommonId =
@@ -251,20 +232,56 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 }
                 
                 activeParent.activeChildren.incrementAndGet();
+
+                // set username to the final value so we do not need to check/change it in getConnection()
+                try {
+                    if (poolDataSourceConfiguration.isFixedUsernamePassword()) {
+                        // will always use getConnection()
+
+                        if (poolDataSourceConfiguration.getProxyUsername() != null) {
+                            // username like bc_proxy[bodomain] to bc_proxy
+                            activeParent.poolDataSource.setUsername(poolDataSourceConfiguration.getProxyUsername());
+                        } else {
+                            // username like bodomain
+                            activeParent.poolDataSource.setUsername(poolDataSourceConfiguration.getUsername());
+                        }
+                    } else {
+                        // will never use getConnection(), always getConnection(username, password)
+                        activeParent.poolDataSource.setUsername(null);
+                    }
+                } catch (SQLException ex) {
+                    throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+                }
                 
                 log.debug("(child) # active children for this parent: {}", activeParent.activeChildren.get());
             }
+            log.debug("fixed username/password: {}; username: {}; proxy username: {}",
+                      poolDataSourceConfiguration.isFixedUsernamePassword(),
+                      poolDataSourceConfiguration.getUsername(),
+                      poolDataSourceConfiguration.getProxyUsername());
+            log.debug("pool data source username (set): {}", getPoolDataSource().getUsername());
             break;
             
         case OPEN:
             if (activeParent != null) {
-                if (activeParent.activeChildren.decrementAndGet() == 0 && activeParent.state == State.CLOSING) {
-                    log.info("Trying to close the parent again since there are no more active children and the parent state is CLOSING.");
-                    activeParent.close(); // try to close() again
+                if (activeParent.activeChildren.decrementAndGet() == 0) {
+
+                    if (activeParent.state == State.CLOSING) {
+                        log.info("Trying to close the parent again since there are no more active children and the parent state is CLOSING.");
+                        activeParent.close(); // try to close() again
+                    } else {
+                        // restore original username
+                        try {
+                            activeParent.poolDataSource.setUsername(activeParent.poolDataSourceConfiguration.getUsername());
+                        } catch (SQLException ex) {
+                            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+                        }
+                    }
                 }
 
                 log.debug("(child) # active children for this parent: {}", activeParent.activeChildren.get());
             }
+            log.debug("pool data source username (reset): {}", getPoolDataSource().getUsername());
             // fall thru        
         default:
             if (activeParent == null) {
