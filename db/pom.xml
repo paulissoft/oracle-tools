@@ -137,24 +137,7 @@
               <configuration>
                 <exportAntProperties>true</exportAntProperties>
                 <target unless="${db.install.skip}">
-                  <!-- READ THE flyway-app.conf FILE. -->
-                  
-                  <!-- If the file is not there: no problem according to the Ant documentation. -->
-                  <dirname file="${env.properties.abs}"
-                           property="env.properties.dir" />
-                  <ac:if xmlns:ac="antlib:net.sf.antcontrib">
-                    <available file="${env.properties.dir}${file.separator}flyway-app.conf" type="file" />
-                    <then>
-                      <echo level="${ant.log.level}">Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf</echo>
-                      <!-- no prefix needed -->
-                      <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
-                    </then>
-                    <else>
-                      <echo level="${ant.log.level}">Could NOT read flyway-app properties since file flyway-app.conf has NOT been found</echo>
-                    </else>
-                  </ac:if>
-                  
-                  <!-- READ THE flyway-db.conf FILE. -->
+                  <!-- (1) READ THE flyway-db.conf FILE. -->
                   
                   <!-- If the file is not there: no problem according to the Ant documentation. -->
                   <dirname file="${db.properties.abs}"
@@ -167,9 +150,27 @@
                       <property file="${db.properties.dir}${file.separator}flyway-db.conf" />
                     </then>
                     <else>
-                      <echo level="${ant.log.level}">Could NOT read flyway-db properties since file flyway-db.conf has NOT been found</echo>
+                      <echo level="${ant.log.level}">Could NOT read flyway-db properties since file flyway-db.conf has NOT been found in ${db.properties.dir}</echo>
                     </else>
                   </ac:if>
+
+                  <!-- (2) READ THE flyway-app.conf FILE. -->
+                  
+                  <!-- If the file is not there: no problem according to the Ant documentation. -->
+                  <dirname file="${env.properties.abs}"
+                           property="env.properties.dir" />
+                  <ac:if xmlns:ac="antlib:net.sf.antcontrib">
+                    <available file="${env.properties.dir}${file.separator}flyway-app.conf" type="file" />
+                    <then>
+                      <echo level="${ant.log.level}">Reading flyway-app properties from file ${env.properties.dir}${file.separator}flyway-app.conf</echo>
+                      <!-- no prefix needed -->
+                      <property file="${env.properties.dir}${file.separator}flyway-app.conf" />
+                    </then>
+                    <else>
+                      <echo level="${ant.log.level}">Could NOT read flyway-app properties since file flyway-app.conf has NOT been found in ${env.properties.dir}</echo>
+                    </else>
+                  </ac:if>
+                  
                 </target>
               </configuration>
               <goals>
