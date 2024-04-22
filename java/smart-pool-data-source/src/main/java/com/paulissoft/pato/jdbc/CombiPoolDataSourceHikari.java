@@ -173,6 +173,19 @@ public class CombiPoolDataSourceHikari
      * Connection
      */
 
+    protected Connection getConnection(@NonNull final SimplePoolDataSourceHikari poolDataSource,
+                                       @NonNull final String usernameSession1,
+                                       @NonNull final String passwordSession1,
+                                       @NonNull final String usernameSession2) throws SQLException {
+        return getConnection2(poolDataSource,
+                              usernameSession1,
+                              passwordSession1,
+                              usernameSession2,
+                              getActiveChildren(),
+                              null,
+                              null);
+    }
+    
     protected Connection getConnection1(@NonNull final SimplePoolDataSourceHikari poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1) throws SQLException {

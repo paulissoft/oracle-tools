@@ -131,26 +131,11 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug("getConnection1(usernameSession1={})", usernameSession1);
 
-        return getConnection(poolDataSource, usernameSession1, passwordSession1, statisticsEnabled.get(), true);
-    }
-
-    private Connection getConnection(final SimplePoolDataSourceOracle poolDataSource,
-                                     final String usernameToConnectTo,
-                                     final String password,
-                                     final boolean updateStatistics,
-                                     final boolean showStatistics) throws SQLException {
-        log.debug(">getConnection(usernameToConnectTo={}, updateStatistics={}, showStatistics={})",
-                  usernameToConnectTo,
-                  updateStatistics,
-                  showStatistics);
-
         try {    
             final Instant t1 = Instant.now();
-            Connection conn;
+            final Connection conn = poolDataSource.getConnection(usernameSession1, passwordSession1);
             
             assert !isFixedUsernamePassword();
-
-            conn = poolDataSource.getConnection(usernameToConnectTo, password);
 
             if (!firstConnection.getAndSet(true)) {
                 // Only show the first time a pool has gotten a connection.
@@ -158,26 +143,24 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
                 show(getPoolDataSourceConfiguration());
             }
 
-            if (updateStatistics) {
+            if (statisticsEnabled.get()) {
                 poolDataSourceStatistics.updateStatistics(this,
                                                           conn,
                                                           Duration.between(t1, Instant.now()).toMillis(),
-                                                          showStatistics);
+                                                          true);
             }
 
-            log.debug("<getConnection() = {}", conn);
-        
             return conn;
         } catch (SQLException ex) {
             poolDataSourceStatistics.signalSQLException(this, ex);
-            log.debug("<getConnection()");
             throw ex;
         } catch (Exception ex) {
             poolDataSourceStatistics.signalException(this, ex);
-            log.debug("<getConnection()");
             throw ex;
-        }        
-    }    
+        } finally {
+            log.debug("<getConnection1()");
+        }
+    }
 
     /*
      * Config

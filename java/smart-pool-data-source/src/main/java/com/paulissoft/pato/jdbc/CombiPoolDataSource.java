@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.time.Instant;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -457,40 +458,62 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         throw new SQLFeatureNotSupportedException();
     }
 
-    // two purposes:
-    // 1) get a standard connection (session 1) but maybe with a different username/password than the default
-    // 2) get a connection for the multi-session proxy model (session 2)
-    protected Connection getConnection(@NonNull final T poolDataSource,
-                                       @NonNull final String usernameSession1,
-                                       @NonNull final String passwordSession1,
-                                       @NonNull final String usernameSession2) throws SQLException {
-        return getConnection2(getConnection1(poolDataSource, usernameSession1, passwordSession1),
-                              usernameSession1,
-                              passwordSession1,
-                              usernameSession2);
-    }
-
     // get a standard connection (session 1) but maybe with a different username/password than the default
+    protected abstract Connection getConnection(@NonNull final T poolDataSource,
+                                                @NonNull final String usernameSession1,
+                                                @NonNull final String passwordSession1,
+                                                @NonNull final String usernameSession2) throws SQLException;
+
+    // get a connection for the single-session proxy model (session 1)
     protected abstract Connection getConnection1(@NonNull final T poolDataSource,
                                                  @NonNull final String usernameSession1,
                                                  @NonNull final String passwordSession1) throws SQLException;
 
     // get a connection for the multi-session proxy model (session 2)
-    protected Connection getConnection2(@NonNull final Connection conn,
+    protected Connection getConnection2(@NonNull final T poolDataSource,
                                         @NonNull final String usernameSession1,
                                         @NonNull final String passwordSession1,
-                                        @NonNull final String usernameSession2) throws SQLException {
+                                        @NonNull final String usernameSession2,
+                                        final int maxProxyLogicalConnectionCount,
+                                        final Instant tm[],
+                                        final int[] counters) throws SQLException {
+        if (tm != null) { tm[0] = Instant.now(); }
+
         log.debug(">getConnection2(id={}, usernameSession1={}, usernameSession2={})",
                   getId(),
                   usernameSession1,
                   usernameSession2);
+        
+        final Connection[] connectionsWithWrongUsernameSession2 =
+            maxProxyLogicalConnectionCount > 0 ? new Connection[maxProxyLogicalConnectionCount] : null;
+        int nrProxyLogicalConnectionCount = 0;
+        Connection conn = null;
+        boolean found;
 
         try {
+            while (true) {
+                conn = getConnection1(poolDataSource, usernameSession1, passwordSession1);
+
+                found = conn.getSchema().equalsIgnoreCase(usernameSession2);
+
+                if (found || nrProxyLogicalConnectionCount >= maxProxyLogicalConnectionCount || poolDataSource.getIdleConnections() == 0) {
+                    break;
+                } else {
+                    // !found && nrProxyLogicalConnectionCount < maxProxyLogicalConnectionCount && poolDataSource.getIdleConnections() > 0
+
+                    connectionsWithWrongUsernameSession2[nrProxyLogicalConnectionCount++] = conn;
+                
+                    if (counters != null) { counters[0]++; }
+                }
+            }
+
             log.debug("before proxy session - current schema: {}",
                       conn.getSchema());
 
             // if the current schema is not the requested schema try to open/close the proxy session
-            if (!conn.getSchema().equalsIgnoreCase(usernameSession2)) {
+            if (!found) {
+                if (tm != null) { tm[1] = Instant.now(); }
+                
                 assert !isSingleSessionProxyModel()
                     : "Requested schema name should be the same as the current schema name in the single-session proxy model";
 
@@ -519,6 +542,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                                 // go back to the session with the first username
                                 try {
                                     oraConn.close(OracleConnection.PROXY_SESSION);
+                                    
+                                    if (counters != null) { counters[1]++; }
                                 } catch (SQLException ex) {
                                     log.warn("SQL warning: {}", ex.getMessage());
                                 }
@@ -534,6 +559,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                                 proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, usernameSession2);
                                 oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
                                 oraConn.setSchema(usernameSession2);
+                                
+                                if (counters != null) { counters[2]++; }
                             }
                             break;
                             
@@ -550,8 +577,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                                   conn.getSchema(),
                                   oraConn.isProxySession());
                     } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
-
-                }                
+                }
             }
 
             log.debug("after proxy session - current schema: {}",
@@ -560,6 +586,13 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
             log.debug("SQL error: {}", ex.getMessage());
             throw ex;
         } finally {
+            while (nrProxyLogicalConnectionCount > 0) {
+                try {
+                    connectionsWithWrongUsernameSession2[--nrProxyLogicalConnectionCount].close();
+                } catch (SQLException ex) {
+                    log.error("SQL exception on close(): {}", ex.getMessage());
+                }
+            }
             log.debug("<getConnection2(id={})", getId());
         }
         
@@ -575,6 +608,6 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
 
     public int getActiveChildren() {
-        return activeChildren.get();
+        return activeParent != null ? activeParent.activeChildren.get() : activeChildren.get();
     }
 }

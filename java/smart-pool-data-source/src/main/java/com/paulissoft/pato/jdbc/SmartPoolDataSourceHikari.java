@@ -5,11 +5,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Properties;
-import java.util.Stack;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import oracle.jdbc.OracleConnection;
 
 
 @Slf4j
@@ -135,147 +132,52 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
                                        @NonNull final String usernameSession2) throws SQLException {
-        return getConnection(getPoolDataSource(), usernameSession1, passwordSession1, usernameSession2, statisticsEnabled.get(), true);
-    }
+        final Instant tm[] = new Instant[2];
+        final int counters[] = new int[3];
+        Connection conn = null;
 
-    // A combination of CombiPoolDataSourceHikari.getConnection1() and CombiPoolDataSource.getConnection2()
-    private Connection getConnection(final SimplePoolDataSourceHikari poolDataSource,
-                                     final String usernameSession1,
-                                     final String passwordSession1,
-                                     final String usernameSession2,
-                                     final boolean updateStatistics,
-                                     final boolean showStatistics) throws SQLException {
-        log.debug(">getConnection(usernameSession1={}, usernameSession2={}, updateStatistics={}, showStatistics={})",
-                  usernameSession1,
-                  usernameSession2,
-                  updateStatistics,
-                  showStatistics);
-
-        final Stack<Connection> connectionsWithWrongUsernameSession2 = new Stack();
-
-        try {    
-            final Instant t1 = Instant.now();
-            Connection conn = null;
-            boolean found = false;
-            int proxyLogicalConnectionCount = 0, proxyOpenSessionCount = 0, proxyCloseSessionCount = 0;        
-            Instant t2 = null;
-            
-            do {
-                if (conn != null) {
-                    connectionsWithWrongUsernameSession2.push(conn);
-                    
-                    proxyLogicalConnectionCount++;
-                }
-                
-                conn = getConnection1(poolDataSource, usernameSession1, passwordSession1);
-
-                found = conn.getSchema().equalsIgnoreCase(usernameSession2);
-
-                if (!firstConnection.getAndSet(true)) {
-                    // Only show the first time a pool has gotten a connection.
-                    // Not earlier because these (fixed) values may change before and after the first connection.
-                    poolDataSource.show(getPoolDataSourceConfiguration());
-                }
-            } while (!found && poolDataSource.getIdleConnections() > 0 && connectionsWithWrongUsernameSession2.size() < getActiveChildren());
-
-            // if the current schema is not the requested schema try to open/close the proxy session
-            if (!found) {
-                assert !isSingleSessionProxyModel()
-                    : "Requested schema name should be the same as the current schema name in the single-session proxy model";
-
-                t2 = Instant.now();
-
-                OracleConnection oraConn = null;
-
-                try {
-                    if (conn.isWrapperFor(OracleConnection.class)) {
-                        oraConn = conn.unwrap(OracleConnection.class);
-                    }
-                } catch (SQLException ex) {
-                    oraConn = null;
-                }
-
-                if (oraConn != null) {
-                    int nr = 0;
-                    
-                    do {
-                        log.debug("current schema: {}; usernameSession2: {}", conn.getSchema(), usernameSession2);
-
-                        switch(nr) {
-                        case 0:
-                            if (!conn.getSchema().equalsIgnoreCase(usernameSession1) /*oraConn.isProxySession()*/) {
-                                // go back to the session with the first username
-                                try {
-                                    oraConn.close(OracleConnection.PROXY_SESSION);
-                                } catch (SQLException ex) {
-                                    log.warn("SQL warning: {}", ex.getMessage());
-                                }
-                                oraConn.setSchema(usernameSession1);
-                                
-                                proxyCloseSessionCount++;
-                            }
-                            break;
-                            
-                        case 1:
-                            if (!usernameSession1.equals(usernameSession2)) {
-                                // open a proxy session with the second username
-                                final Properties proxyProperties = new Properties();
-
-                                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, usernameSession2);
-                                oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);        
-                                oraConn.setSchema(usernameSession2);
-                                
-                                proxyOpenSessionCount++;
-                            }
-                            break;
-                            
-                        case 2:
-                            oraConn.setSchema(usernameSession2);
-                            break;
-                            
-                        default:
-                            throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
-                        }
-                    } while (!conn.getSchema().equalsIgnoreCase(usernameSession2) && nr++ < 3);
-                }                
-            }
-
-            if (updateStatistics) {
-                if (t2 == null) {
-                    poolDataSourceStatistics.updateStatistics(this,
-                                                              conn,
-                                                              Duration.between(t1, Instant.now()).toMillis(),
-                                                              showStatistics);
-                } else {
-                    poolDataSourceStatistics.updateStatistics(this,
-                                                              conn,
-                                                              Duration.between(t1, t2).toMillis(),
-                                                              Duration.between(t2, Instant.now()).toMillis(),
-                                                              showStatistics,
-                                                              proxyLogicalConnectionCount,
-                                                              proxyOpenSessionCount,
-                                                              proxyCloseSessionCount);
-                }
-            }
-
-            return conn;
+        try {
+            conn = getConnection2(poolDataSource,
+                                  usernameSession1,
+                                  passwordSession1,
+                                  usernameSession2,
+                                  getActiveChildren(),
+                                  tm,
+                                  counters);
         } catch (SQLException ex) {
             poolDataSourceStatistics.signalSQLException(this, ex);
             throw ex;
         } catch (Exception ex) {
             poolDataSourceStatistics.signalException(this, ex);
             throw ex;
-        } finally {
-            while (connectionsWithWrongUsernameSession2.size() > 0) {
-                try {
-                    connectionsWithWrongUsernameSession2.pop().close();
-                } catch (SQLException ex) {
-                    log.error("SQL exception on close(): {}", ex.getMessage());
-                }
-            }
-            log.debug("<getConnection()");
         }
-    }    
+
+        if (!firstConnection.getAndSet(true)) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            poolDataSource.show(getPoolDataSourceConfiguration());
+        }
+
+        if (statisticsEnabled.get()) {
+            if (tm[1] == null) {
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(tm[0], Instant.now()).toMillis(),
+                                                          true);
+            } else {
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(tm[0], tm[1]).toMillis(),
+                                                          Duration.between(tm[1], Instant.now()).toMillis(),
+                                                          true,
+                                                          counters[0],
+                                                          counters[1],
+                                                          counters[2]);
+            }
+        }
+
+        return conn;
+    }
 
     /*
      * Config
