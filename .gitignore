@@ -20,3 +20,5 @@ java/smart-pool-data-source/.settings/org.eclipse.core.resources.prefs
 java/smart-pool-data-source/.project
 java/smart-pool-data-source/.factorypath
 java/smart-pool-data-source/.classpath
+*.pkb
+*.pks
