@@ -16,11 +16,17 @@ procedure data2json
 );
 /** Convert a HTTP cookie table to a JSON array. **/
 
+function data2json
+( p_cookie_tab in sys.utl_http.cookie_table
+)
+return clob;
+/** Convert a HTTP cookie table to a JSON array (as a CLOB). **/
+
 $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 subtype header_table is apex_web_service.header_table;
 
-$else
+$else -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 -- from APEX_230200.WWV_FLOW_WEBSERVICES_API
 
@@ -31,6 +37,16 @@ type header is record (
 type header_table is table of header index by binary_integer;
 
 $end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
+
+subtype vc_arr2 is sys.dbms_sql.varchar2a;
+
+empty_vc_arr vc_arr2;
+
+g_request_cookies          sys.utl_http.cookie_table;
+g_response_cookies         sys.utl_http.cookie_table;
+
+g_headers                  header_table;
+g_request_headers          header_table;
 
 procedure json2data
 ( p_http_headers in json_array_t
@@ -43,6 +59,12 @@ procedure data2json
 , p_http_headers out nocopy json_array_t
 );
 /** Convert a HTTP header table to a JSON array. **/
+
+function data2json
+( p_http_header_tab in header_table
+)
+return clob;
+/** Convert a HTTP header table to a JSON array (as a CLOB). **/
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ

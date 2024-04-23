@@ -13,21 +13,9 @@ g_body_blob blob := null;
 
 $if not(oracle_tools.cfg_pkg.c_apex_installed) $then
 
--- from APEX_230200.WWV_FLOW_WEBSERVICES_API
-
-subtype vc_arr2 is sys.dbms_sql.varchar2a;
-
-empty_vc_arr vc_arr2;
-
-g_request_cookies          sys.utl_http.cookie_table;
-g_response_cookies         sys.utl_http.cookie_table;
-
-g_headers                  header_table;
-g_request_headers          header_table;
-
 g_status_code              pls_integer;
 
-$end -- $if not(oracle_tools.cfg_pkg.c_apex_installed) $then
+$end
 
 -- LOCAL
 
@@ -349,6 +337,17 @@ begin
   end if;
 end data2json;
 
+function data2json
+( p_cookie_tab in sys.utl_http.cookie_table
+)
+return clob
+is
+  l_cookies json_array_t;
+begin
+  data2json(p_cookie_tab, l_cookies);
+  return l_cookies.to_clob;
+end data2json;
+
 procedure json2data
 ( p_http_headers in json_array_t
 , p_http_header_tab out nocopy header_table
@@ -416,6 +415,17 @@ begin
       p_http_headers.append(l_http_header);
     end loop;
   end if;
+end data2json;
+
+function data2json
+( p_http_header_tab in header_table
+)
+return clob
+is
+  l_http_headers json_array_t;
+begin
+  data2json(p_http_header_tab, l_http_headers);
+  return l_http_headers.to_clob;
 end data2json;
 
 $if oracle_tools.cfg_pkg.c_apex_installed $then
