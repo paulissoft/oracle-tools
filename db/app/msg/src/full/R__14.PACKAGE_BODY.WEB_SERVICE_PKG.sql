@@ -121,14 +121,17 @@ is
 begin
   if p_body_clob is null or dbms_lob.getlength(p_body_clob) = 0
   then
-    for i_idx in 1 .. p_parm_names.count
-    loop
-      p_body_clob :=
-        case
-          when i_idx > 1 then p_body_clob||'&'
-        end ||
-        p_parm_names(i_idx) || '=' || url_encode2(p_parm_values(i_idx));
-    end loop;
+    if p_parm_names.count > 0
+    then
+      for i_idx in p_parm_names.first .. p_parm_names.last
+      loop
+        p_body_clob :=
+          case
+            when i_idx > 1 then p_body_clob||'&'
+          end ||
+          p_parm_names(i_idx) || '=' || url_encode2(p_parm_values(i_idx));
+      end loop;
+    end if;
   end if;
   
   if p_body_clob is not null
@@ -262,36 +265,38 @@ $end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
 function get_hdr_array_idx
 ( p_header_name in varchar2
 , p_request_headers in header_table
+, p_skip_if_exists in boolean default false
 )
-return pls_integer
+return pls_integer -- returns null only when p_skip_if_exists and the header was found
 is
   c_lower_header_name constant varchar2(32767) := lower(p_header_name);    
-  l_result pls_integer;
 begin
-  for j in 1 .. p_request_headers.count
-  loop
-    if lower( p_request_headers( j ).name ) = c_lower_header_name
-    then
-      l_result := j;
-      exit;
-    end if;
-  end loop;
-  return l_result;
+  if p_request_headers.count > 0
+  then
+    for j in p_request_headers.first .. p_request_headers.last
+    loop
+      if lower(p_request_headers(j).name) = c_lower_header_name
+      then
+        return case when not p_skip_if_exists then j else null end;
+      end if;
+    end loop;
+  end if;
+  return nvl(p_request_headers.last, 0) + 1;
 end get_hdr_array_idx;        
 
 procedure set_request_headers
-( p_name_01 in varchar2
-, p_value_01 in varchar2
-, p_name_02 in varchar2
-, p_value_02 in varchar2
-, p_name_03 in varchar2
-, p_value_03 in varchar2
-, p_name_04 in varchar2
-, p_value_04 in varchar2
-, p_name_05 in varchar2
-, p_value_05 in varchar2
-, p_reset in boolean
-, p_skip_if_exists in boolean
+( p_name_01 in varchar2 default null
+, p_value_01 in varchar2 default null
+, p_name_02 in varchar2 default null
+, p_value_02 in varchar2 default null
+, p_name_03 in varchar2 default null
+, p_value_03 in varchar2 default null
+, p_name_04 in varchar2 default null
+, p_value_04 in varchar2 default null
+, p_name_05 in varchar2 default null
+, p_value_05 in varchar2 default null
+, p_reset in boolean default true
+, p_skip_if_exists in boolean default false
 , p_request_headers in out nocopy header_table
 )
 is
@@ -304,13 +309,13 @@ is
   begin
     if p_name is null then return; end if;
 
-    pragma inline( get_hdr_array_idx, 'YES' );
-    l_array_idx := get_hdr_array_idx( p_name, p_request_headers );
+    pragma inline(get_hdr_array_idx, 'YES');
+    l_array_idx := get_hdr_array_idx(p_name, p_request_headers, p_skip_if_exists);
 
     if l_array_idx is not null
     then
-      p_request_headers( l_array_idx ).name := p_name;
-      p_request_headers( l_array_idx ).value := p_value;
+      p_request_headers(l_array_idx).name := p_name;
+      p_request_headers(l_array_idx).value := p_value;
     end if;
   end do_set_header;
 begin
@@ -335,10 +340,10 @@ is
 begin
   if p_name is null then return; end if;
 
-  pragma inline( get_hdr_array_idx, 'YES' );
-  l_array_idx := get_hdr_array_idx( p_name, p_request_headers );
+  pragma inline(get_hdr_array_idx, 'YES');
+  l_array_idx := get_hdr_array_idx(p_name, p_request_headers);
   
-  if l_array_idx is not null
+  if l_array_idx between p_request_headers.first and p_request_headers.last
   then
     if l_array_idx < p_request_headers.last
     then
@@ -1239,16 +1244,159 @@ $end
   end if;
 
   -- empty the response queue
-  msg_aq_pkg.empty_queue
-  ( p_queue_name => l_response_queue_name
-  , p_dequeue_and_process => false
-  );
+  begin
+    msg_aq_pkg.empty_queue
+    ( p_queue_name => l_response_queue_name
+    , p_dequeue_and_process => false
+    );
+  exception
+    when msg_aq_pkg.e_queue_does_not_exist
+    then null;
+  end;
 
   commit;
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 end ut_teardown;
+
+procedure ut_set_request_headers
+is
+  l_request_headers header_table;
+
+  procedure check_headers
+  is
+    l_name_exp varchar2(100);
+    l_value_exp varchar2(100);
+  begin
+    for i_idx in l_request_headers.first .. l_request_headers.last
+    loop
+      l_name_exp := case i_idx when 1 then 'Content-Type' when 2 then 'Accept' when 3 then 'User-Agent' when 4 then 'Authorization' end;
+      ut.expect(l_request_headers(i_idx).name, 'l_request_headers('||i_idx||').name').to_equal(l_name_exp);
+
+      l_value_exp := case i_idx when 1 then 'application/json' when 2 then '*/*' when 3 then 'APEX' when 4 then 'Basic abacadabra' end;
+      ut.expect(l_request_headers(i_idx).value, 'l_request_headers('||i_idx||').value').to_equal(l_value_exp);
+    end loop;
+  end check_headers;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_SET_REQUEST_HEADERS');
+$end
+
+  set_request_headers
+  ( p_name_01 => 'Content-Type'
+  , p_value_01 => 'application/json'
+  , p_name_02 => 'Accept'
+  , p_value_02 => '*/*'
+  , p_name_03 => 'User-Agent'
+  , p_value_03 => 'APEX'
+  , p_request_headers => l_request_headers
+  );
+
+  ut.expect(l_request_headers.first, 'l_request_headers.first').to_equal(1);
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(3);
+
+  check_headers;
+  
+  set_request_headers
+  ( p_name_04 => 'Authorization'
+  , p_value_04 => 'Basic abacadabra'
+  , p_reset => false
+  , p_skip_if_exists => true -- keep indices 1, 2 and 3
+  , p_request_headers => l_request_headers
+  );
+
+  ut.expect(l_request_headers.first, 'l_request_headers.first').to_equal(1);
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(4);
+
+  check_headers;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end ut_set_request_headers;
+
+procedure ut_remove_request_header
+is
+  l_request_headers header_table;
+
+  procedure check_headers
+  is
+    l_name_exp varchar2(100);
+    l_value_exp varchar2(100);
+  begin
+    if l_request_headers.first is null then return; end if;
+
+    -- check_headers is invoked when index 2 has been removed, then (original) index 3 and then 1
+    for i_idx in l_request_headers.first .. l_request_headers.last
+    loop
+      l_name_exp := case i_idx when 1 then 'Content-Type' when 2 then 'User-Agent' end;
+      ut.expect(l_request_headers(i_idx).name, 'l_request_headers('||i_idx||').name').to_equal(l_name_exp);
+
+      l_value_exp := case i_idx when 1 then 'application/json' when 2 then 'APEX' end;
+      ut.expect(l_request_headers(i_idx).value, 'l_request_headers('||i_idx||').value').to_equal(l_value_exp);
+    end loop;
+  end check_headers;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_SET_REQUEST_HEADERS');
+$end
+
+  set_request_headers
+  ( p_name_01 => 'Content-Type'
+  , p_value_01 => 'application/json'
+  , p_name_02 => 'Accept'
+  , p_value_02 => '*/*'
+  , p_name_03 => 'User-Agent'
+  , p_value_03 => 'APEX'
+  , p_request_headers => l_request_headers
+  );
+
+  ut.expect(l_request_headers.first, 'l_request_headers.first').to_equal(1);
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(3);
+  
+  remove_request_header('abcadabra', l_request_headers); -- non-existent
+  
+  ut.expect(l_request_headers.first, 'l_request_headers.first').to_equal(1);
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(3);
+  
+  remove_request_header(null, l_request_headers); -- non-existent
+  
+  ut.expect(l_request_headers.first, 'l_request_headers.first').to_equal(1);
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(3);
+  
+  remove_request_header('accept', l_request_headers); -- test lower case as well
+
+  -- only 2 left
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(2);
+  check_headers; 
+
+  remove_request_header('USER-AGENT', l_request_headers); -- test upper case as well
+
+  -- only 1 left
+  ut.expect(l_request_headers.last, 'l_request_headers.last').to_equal(1);
+  check_headers; 
+
+  remove_request_header('Content-Type', l_request_headers); -- exact match
+
+  -- none left
+  ut.expect(l_request_headers.count, 'l_request_headers.last').to_equal(0);
+  check_headers; 
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end ut_remove_request_header;
 
 procedure ut_rest_web_service_get_cb
 is

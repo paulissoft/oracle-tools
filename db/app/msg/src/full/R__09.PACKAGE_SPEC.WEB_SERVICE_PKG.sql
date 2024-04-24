@@ -70,8 +70,8 @@ return clob;
 /** Convert a HTTP header table to a JSON array (as a CLOB) but use the request header table set by set_request_headers/remove_request_header/clear_request_headers. **/
 
 procedure set_request_headers
-( p_name_01 in varchar2
-, p_value_01 in varchar2
+( p_name_01 in varchar2 default null
+, p_value_01 in varchar2 default null
 , p_name_02 in varchar2 default null
 , p_value_02 in varchar2 default null
 , p_name_03 in varchar2 default null
@@ -137,6 +137,12 @@ procedure ut_setup;
 --%aftereach
 --%rollback(manual)
 procedure ut_teardown;
+
+--%test
+procedure ut_set_request_headers;
+
+--%test
+procedure ut_remove_request_header;
 
 --%test
 --%rollback(manual)
