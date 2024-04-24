@@ -13,6 +13,12 @@ g_body_blob blob := null;
 
 $if not(oracle_tools.cfg_pkg.c_apex_installed) $then
 
+g_request_cookies          sys.utl_http.cookie_table;
+g_response_cookies         sys.utl_http.cookie_table;
+
+g_headers                  header_table;
+g_request_headers          header_table;
+
 g_status_code              pls_integer;
 
 $end
@@ -30,22 +36,15 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , 'p_request.scheme is null: %s; p_request.proxy_override is null: %s'
-  , dbug.cast_to_varchar2(p_request.scheme is null)
+  , 'p_request.proxy_override is null: %s; p_request.https_host is null: %s; p_request.credential_static_id is null: %s; p_request.token_url is null: %s'
   , dbug.cast_to_varchar2(p_request.proxy_override is null)
-  );                          
-
-  dbug.print
-  ( dbug."info"
-  , 'p_request.https_host is null: %s; p_request.credential_static_id is null: %s; p_request.token_url is null: %s'
   , dbug.cast_to_varchar2(p_request.https_host is null)
   , dbug.cast_to_varchar2(p_request.credential_static_id is null)
   , dbug.cast_to_varchar2(p_request.token_url is null)
   );
 $end
 
-  return p_request.scheme is null and
-         p_request.proxy_override is null and
+  return p_request.proxy_override is null and
          p_request.https_host is null and
          p_request.credential_static_id is null and
          p_request.token_url is null;
@@ -57,6 +56,9 @@ procedure utl_http_request
 , p_body_blob in out nocopy blob -- on input the request body, on output the response body
 , p_parm_names in vc_arr2
 , p_parm_values in vc_arr2
+, p_username in varchar2
+, p_password in varchar2
+, p_scheme in varchar2
 , p_wallet_path in varchar2
 , p_wallet_pwd in varchar2
 , p_request_cookies in sys.utl_http.cookie_table
@@ -154,6 +156,16 @@ begin
 
   l_http_request := utl_http.begin_request(p_request.url, p_request.http_method);
 
+  if p_username is not null
+  then
+    utl_http.set_authentication
+    ( r => l_http_request
+    , username => p_username
+    , password => p_password
+    , scheme => nvl(p_scheme, 'Basic')
+    );
+  end if;
+
   if p_request_headers.count > 0
   then
     for i_idx in p_request_headers.first .. p_request_headers.last
@@ -246,6 +258,103 @@ begin
 end utl_http_request;
 
 $end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+
+function get_hdr_array_idx
+( p_header_name in varchar2
+, p_request_headers in header_table
+)
+return pls_integer
+is
+  c_lower_header_name constant varchar2(32767) := lower(p_header_name);    
+  l_result pls_integer;
+begin
+  for j in 1 .. p_request_headers.count
+  loop
+    if lower( p_request_headers( j ).name ) = c_lower_header_name
+    then
+      l_result := j;
+      exit;
+    end if;
+  end loop;
+  return l_result;
+end get_hdr_array_idx;        
+
+procedure set_request_headers
+( p_name_01 in varchar2
+, p_value_01 in varchar2
+, p_name_02 in varchar2
+, p_value_02 in varchar2
+, p_name_03 in varchar2
+, p_value_03 in varchar2
+, p_name_04 in varchar2
+, p_value_04 in varchar2
+, p_name_05 in varchar2
+, p_value_05 in varchar2
+, p_reset in boolean
+, p_skip_if_exists in boolean
+, p_request_headers in out nocopy header_table
+)
+is
+  procedure do_set_header
+  ( p_name  in varchar2
+  , p_value in varchar2
+  )
+  is
+    l_array_idx pls_integer;
+  begin
+    if p_name is null then return; end if;
+
+    pragma inline( get_hdr_array_idx, 'YES' );
+    l_array_idx := get_hdr_array_idx( p_name, p_request_headers );
+
+    if l_array_idx is not null
+    then
+      p_request_headers( l_array_idx ).name := p_name;
+      p_request_headers( l_array_idx ).value := p_value;
+    end if;
+  end do_set_header;
+begin
+  if p_reset
+  then
+    p_request_headers.delete;
+  end if;
+
+  do_set_header( p_name_01, p_value_01 );
+  do_set_header( p_name_02, p_value_02 );
+  do_set_header( p_name_03, p_value_03 );
+  do_set_header( p_name_04, p_value_04 );
+  do_set_header( p_name_05, p_value_05 );
+end set_request_headers;
+
+procedure remove_request_header
+( p_name in varchar2
+, p_request_headers in out nocopy header_table
+)
+is
+  l_array_idx pls_integer;
+begin
+  if p_name is null then return; end if;
+
+  pragma inline( get_hdr_array_idx, 'YES' );
+  l_array_idx := get_hdr_array_idx( p_name, p_request_headers );
+  
+  if l_array_idx is not null
+  then
+    if l_array_idx < p_request_headers.last
+    then
+      p_request_headers(l_array_idx) := p_request_headers(p_request_headers.last);
+    end if;
+      
+    p_request_headers.delete(p_request_headers.last);
+  end if;
+end remove_request_header;
+
+procedure clear_request_headers
+( p_request_headers in out nocopy header_table )
+is
+begin
+  p_request_headers.delete;
+end clear_request_headers;
 
 -- PUBLIC
 
@@ -417,6 +526,17 @@ begin
   end if;
 end data2json;
 
+procedure data2json
+( p_http_headers out nocopy json_array_t
+)
+is
+begin
+  data2json
+  ( p_http_header_tab => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
+  , p_http_headers => p_http_headers
+  );
+end data2json;
+
 function data2json
 ( p_http_header_tab in header_table
 )
@@ -428,10 +548,72 @@ begin
   return l_http_headers.to_clob;
 end data2json;
 
+function data2json
+return clob
+is
+begin
+  return data2json( p_http_header_tab => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end );
+end data2json;
+
+procedure set_request_headers
+( p_name_01 in varchar2
+, p_value_01 in varchar2
+, p_name_02 in varchar2
+, p_value_02 in varchar2
+, p_name_03 in varchar2
+, p_value_03 in varchar2
+, p_name_04 in varchar2
+, p_value_04 in varchar2
+, p_name_05 in varchar2
+, p_value_05 in varchar2
+, p_reset in boolean
+, p_skip_if_exists in boolean
+)
+is
+begin
+  set_request_headers
+  ( p_name_01 => p_name_01
+  , p_value_01 => p_value_01
+  , p_name_02 => p_name_02
+  , p_value_02 => p_value_02
+  , p_name_03 => p_name_03
+  , p_value_03 => p_value_03
+  , p_name_04 => p_name_04
+  , p_value_04 => p_value_04
+  , p_name_05 => p_name_05
+  , p_value_05 => p_value_05
+  , p_reset => p_reset
+  , p_skip_if_exists => p_skip_if_exists
+  , p_request_headers => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
+  );
+end set_request_headers;
+
+procedure remove_request_header
+( p_name in varchar2
+)
+is
+begin
+  remove_request_header
+  ( p_name => p_name
+  , p_request_headers => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
+  );
+end remove_request_header;
+
+procedure clear_request_headers
+is
+begin
+  clear_request_headers
+  ( p_request_headers => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
+  );
+end clear_request_headers;
+
 $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ
+, p_username in varchar2
+, p_password in varchar2
+, p_wallet_pwd in varchar2
 )
 return web_service_response_typ
 is
@@ -497,9 +679,9 @@ $end
   end if;
 
   pragma inline (json2data, 'YES');
-  json2data(l_cookies, g_request_cookies);
+  json2data(l_cookies, apex_web_service.g_request_cookies);
   pragma inline (json2data, 'YES');
-  json2data(l_http_headers, g_request_headers);
+  json2data(l_http_headers, apex_web_service.g_request_headers);
 
   -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
@@ -518,8 +700,11 @@ $end
       , p_body_blob => l_body_blob
       , p_parm_names => l_parm_names
       , p_parm_values => l_parm_values
+      , p_username => p_username
+      , p_password => p_password
+      , p_scheme => p_request.scheme
       , p_wallet_path => p_request.wallet_path
-      , p_wallet_pwd => null
+      , p_wallet_pwd => p_wallet_pwd
       , p_request_cookies => apex_web_service.g_request_cookies
       , p_request_headers => apex_web_service.g_request_headers
       , p_response_cookies => apex_web_service.g_response_cookies
@@ -537,9 +722,9 @@ $end
       l_body_clob := apex_web_service.make_rest_request
                      ( p_url => p_request.url
                      , p_http_method => p_request.http_method
-                     , p_username => null
-                     , p_password => null
-/*APEX*/             , p_scheme => p_request.scheme
+                     , p_username => p_username
+                     , p_password => p_password
+                     , p_scheme => p_request.scheme
 /*APEX*/             , p_proxy_override => p_request.proxy_override
                      , p_transfer_timeout => p_request.transfer_timeout
                      , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
@@ -547,7 +732,7 @@ $end
                      , p_parm_name => l_parm_names
                      , p_parm_value => l_parm_values
                      , p_wallet_path => p_request.wallet_path
-                     , p_wallet_pwd => null
+                     , p_wallet_pwd => p_wallet_pwd
 /*APEX*/             , p_https_host => p_request.https_host
 /*APEX*/             , p_credential_static_id => p_request.credential_static_id
 /*APEX*/             , p_token_url => p_request.token_url
@@ -562,9 +747,9 @@ $end
       l_body_blob := apex_web_service.make_rest_request_b
                      ( p_url => p_request.url
                      , p_http_method => p_request.http_method
-                     , p_username => null
-                     , p_password => null
-/*APEX*/             , p_scheme => p_request.scheme
+                     , p_username => p_username
+                     , p_password => p_username
+                     , p_scheme => p_request.scheme
 /*APEX*/             , p_proxy_override => p_request.proxy_override
                      , p_transfer_timeout => p_request.transfer_timeout
                      , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
@@ -621,10 +806,13 @@ $end
            );
 end make_rest_request;
 
-$else
+$else -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ
+, p_username in varchar2
+, p_password in varchar2
+, p_wallet_pwd in varchar2
 )
 return web_service_response_typ
 is
@@ -708,8 +896,11 @@ $end
     , p_body_blob => l_body_blob
     , p_parm_names => l_parm_names
     , p_parm_values => l_parm_values
+    , p_username => p_username
+    , p_password => p_password
+    , p_scheme => p_request.scheme
     , p_wallet_path => p_request.wallet_path
-    , p_wallet_pwd => null
+    , p_wallet_pwd => p_wallet_pwd
     , p_request_cookies => g_request_cookies
     , p_request_headers => g_request_headers
     , p_response_cookies => g_response_cookies
@@ -769,6 +960,65 @@ end make_rest_request;
 
 $end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
+function make_rest_request
+( p_url in varchar2
+, p_http_method in varchar2
+, p_username in varchar2
+, p_password in varchar2
+, p_scheme in varchar2
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
+, p_body in clob
+, p_body_blob in blob
+, p_parm_name in vc_arr2
+, p_parm_value in vc_arr2
+, p_wallet_path in varchar2
+, p_wallet_pwd in varchar2
+, p_https_host in varchar2
+, p_credential_static_id in varchar2
+, p_token_url in varchar2
+)
+return web_service_response_typ
+is
+  l_rest_web_service_request rest_web_service_request_typ;
+  l_web_service_response web_service_response_typ;
+  l_parms json_object_t := json_object_t();
+begin
+  if p_parm_name.count > 0
+  then
+    for i_idx in p_parm_name.first .. p_parm_name.last
+    loop
+      l_parms.put(key => p_parm_name(i_idx), val => p_parm_value(i_idx));
+    end loop;
+  end if;
+
+  l_rest_web_service_request :=
+    new rest_web_service_request_typ
+        ( p_context$ => null
+        , p_url => p_url
+        , p_scheme => p_scheme
+        , p_proxy_override => p_proxy_override
+        , p_transfer_timeout => p_transfer_timeout
+        , p_wallet_path => p_wallet_path
+        , p_https_host => p_https_host
+        , p_credential_static_id => p_credential_static_id
+        , p_token_url => p_token_url
+        , p_cookies_clob => web_service_pkg.data2json($if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_cookies $else g_request_cookies $end)
+        , p_http_headers_clob => web_service_pkg.data2json($if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end)        
+        , p_http_method => p_http_method
+        , p_body_clob => p_body
+        , p_body_blob => p_body_blob
+        , p_parms_clob => l_parms.stringify
+        , p_binary_response => 0        
+        );
+  l_web_service_response :=
+    web_service_pkg.make_rest_request
+    ( p_request => l_rest_web_service_request
+    , p_username => p_username
+    , p_password => p_password
+    , p_wallet_pwd => p_wallet_pwd
+    );
+end make_rest_request;
 
 $if msg_aq_pkg.c_testing $then
 
