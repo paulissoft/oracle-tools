@@ -43,7 +43,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @RunWith(SpringRunner.class)
-public class HikariBenchmark {
+public class HikariTest extends AbstractBenchmark {
 
     private static final String[] schemas = new String[] {"boauth", "bocsconf", "boocpi", "boopapij", "bodomain", "boocpp15j"};
     private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
@@ -65,32 +65,32 @@ public class HikariBenchmark {
     
     @Autowired
     void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
-        HikariBenchmark.authDataSourceHikari = authDataSourceHikari;
+        HikariTest.authDataSourceHikari = authDataSourceHikari;
     }
 
     @Autowired
     void setConfigDataSourceHikari(@Qualifier("configDataSource1") HikariDataSource configDataSourceHikari) {
-        HikariBenchmark.configDataSourceHikari = configDataSourceHikari;
+        HikariTest.configDataSourceHikari = configDataSourceHikari;
     }
 
     @Autowired
     void setDomainDataSourceHikari(@Qualifier("domainDataSource1") HikariDataSource domainDataSourceHikari) {
-        HikariBenchmark.domainDataSourceHikari = domainDataSourceHikari;
+        HikariTest.domainDataSourceHikari = domainDataSourceHikari;
     }
 
     @Autowired
     void setOcpiDataSourceHikari(@Qualifier("ocpiDataSource1") HikariDataSource ocpiDataSourceHikari) {
-        HikariBenchmark.ocpiDataSourceHikari = ocpiDataSourceHikari;
+        HikariTest.ocpiDataSourceHikari = ocpiDataSourceHikari;
     }
 
     @Autowired
     void setOcppDataSourceHikari(@Qualifier("ocppDataSource1") HikariDataSource ocppDataSourceHikari) {
-        HikariBenchmark.ocppDataSourceHikari = ocppDataSourceHikari;
+        HikariTest.ocppDataSourceHikari = ocppDataSourceHikari;
     }
 
     @Autowired
     void setOperatorDataSourceHikari(@Qualifier("operatorDataSource1") HikariDataSource operatorDataSourceHikari) {
-        HikariBenchmark.operatorDataSourceHikari = operatorDataSourceHikari;
+        HikariTest.operatorDataSourceHikari = operatorDataSourceHikari;
     }
 
     private int getRandomNumber(int min, int max) {
@@ -99,7 +99,7 @@ public class HikariBenchmark {
     
     @Benchmark
     public void connectAll(Blackhole bh) throws SQLException {
-        final int[] logicalConnections = new int[HikariBenchmark.logicalConnections.length];
+        final int[] logicalConnections = new int[HikariTest.logicalConnections.length];
         final HikariDataSource[] dataSources = new HikariDataSource[]
             { authDataSourceHikari,
               configDataSourceHikari,
@@ -111,7 +111,7 @@ public class HikariBenchmark {
         int idx;
         
         for (idx = 0; idx < logicalConnections.length; idx++) {
-            logicalConnections[idx] = HikariBenchmark.logicalConnections[idx] / divideLogicalConnectionsBy;
+            logicalConnections[idx] = HikariTest.logicalConnections[idx] / divideLogicalConnectionsBy;
             totalLogicalConnections += logicalConnections[idx];    
         }
 
