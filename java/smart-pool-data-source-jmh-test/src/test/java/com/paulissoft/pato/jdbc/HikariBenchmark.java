@@ -26,6 +26,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.infra.Blackhole;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -34,57 +35,51 @@ import org.openjdk.jmh.annotations.Scope;
 @State(Scope.Benchmark)
 public class HikariBenchmark {
 
+    private static final String[] schemas = new String[] {"boauth", "bocsconf", "boocpi", "boopapij", "bodomain", "boocpp15j"};
+    private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
+        
+    private static HikariDataSource authDataSourceHikari;
+        
+    private static HikariDataSource configDataSourceHikari;
+    
+    private static HikariDataSource domainDataSourceHikari;
+    
+    private static HikariDataSource ocpiDataSourceHikari;
+    
+    private static HikariDataSource ocppDataSourceHikari;
+    
+    private static HikariDataSource operatorDataSourceHikari;
+
     @Param({"10000"})
     public int divideLogicalConnectionsBy;
     
-    private static final String[] schemas = new String[] {"boauth", "bocsconf", "boocpi", "boopapij", "bodomain", "boocpp15j"};
-    private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
-    
-    @Qualifier("authDataSource1")
-    private static HikariDataSource authDataSourceHikari;
-    
-    @Qualifier("configDataSource1")
-    private static HikariDataSource configDataSourceHikari;
-
-    @Qualifier("domainDataSource1")
-    private static HikariDataSource domainDataSourceHikari;
-
-    @Qualifier("ocpiDataSource1")
-    private static HikariDataSource ocpiDataSourceHikari;
-
-    @Qualifier("ocppDataSource1")
-    private static HikariDataSource ocppDataSourceHikari;
-
-    @Qualifier("operatorDataSource1")
-    private static HikariDataSource operatorDataSourceHikari;
-
     @Autowired
-    void setAuthDataSourceHikari(HikariDataSource authDataSourceHikari) {
+    void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
         HikariBenchmark.authDataSourceHikari = authDataSourceHikari;
     }
 
     @Autowired
-    void setConfigDataSourceHikari(HikariDataSource configDataSourceHikari) {
+    void setConfigDataSourceHikari(@Qualifier("configDataSource1") HikariDataSource configDataSourceHikari) {
         HikariBenchmark.configDataSourceHikari = configDataSourceHikari;
     }
 
     @Autowired
-    void setDomainDataSourceHikari(HikariDataSource domainDataSourceHikari) {
+    void setDomainDataSourceHikari(@Qualifier("domainDataSource1") HikariDataSource domainDataSourceHikari) {
         HikariBenchmark.domainDataSourceHikari = domainDataSourceHikari;
     }
 
     @Autowired
-    void setOcpiDataSourceHikari(HikariDataSource ocpiDataSourceHikari) {
+    void setOcpiDataSourceHikari(@Qualifier("ocpiDataSource1") HikariDataSource ocpiDataSourceHikari) {
         HikariBenchmark.ocpiDataSourceHikari = ocpiDataSourceHikari;
     }
 
     @Autowired
-    void setOcppDataSourceHikari(HikariDataSource ocppDataSourceHikari) {
+    void setOcppDataSourceHikari(@Qualifier("ocppDataSource1") HikariDataSource ocppDataSourceHikari) {
         HikariBenchmark.ocppDataSourceHikari = ocppDataSourceHikari;
     }
 
     @Autowired
-    void setOperatorDataSourceHikari(HikariDataSource operatorDataSourceHikari) {
+    void setOperatorDataSourceHikari(@Qualifier("operatorDataSource1") HikariDataSource operatorDataSourceHikari) {
         HikariBenchmark.operatorDataSourceHikari = operatorDataSourceHikari;
     }
 
@@ -93,13 +88,34 @@ public class HikariBenchmark {
     }
     
     @Benchmark
-    public void connectAll() {
+    public void connectAll(Blackhole bh) throws SQLException {
         final int[] logicalConnections = new int[HikariBenchmark.logicalConnections.length];
+        final HikariDataSource[] dataSources = new HikariDataSource[]
+            { authDataSourceHikari,
+              configDataSourceHikari,
+              domainDataSourceHikari,
+              ocpiDataSourceHikari,
+              ocppDataSourceHikari,
+              operatorDataSourceHikari };
         int totalLogicalConnections = 0;
+        int idx;
         
-        for (int idx = 0; idx < logicalConnections.length; idx++) {
+        for (idx = 0; idx < logicalConnections.length; idx++) {
             logicalConnections[idx] = HikariBenchmark.logicalConnections[idx] / divideLogicalConnectionsBy;
-            totalLogicalConnections += logicalConnections[idx];
-        }        
+            totalLogicalConnections += logicalConnections[idx];    
+        }
+
+        while (totalLogicalConnections > 0) {
+            do {
+                idx = getRandomNumber(0, logicalConnections.length);
+            } while (logicalConnections[idx] == 0);
+
+            try (final Connection conn = dataSources[idx].getConnection()) {
+                bh.consume(conn.getSchema());
+            }
+            
+            logicalConnections[idx]--;
+            totalLogicalConnections--;
+        }
     }    
 }
