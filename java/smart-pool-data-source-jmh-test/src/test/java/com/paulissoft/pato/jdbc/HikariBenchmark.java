@@ -8,31 +8,41 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.zaxxer.hikari.HikariDataSource;
-import java.util.Arrays;
-import java.util.List;
 import java.sql.Connection;
 import java.sql.SQLException;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.runner.RunWith;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
+import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.infra.Blackhole;
+import org.springframework.test.context.junit4.SpringRunner;
 
-@Slf4j
-@ExtendWith(SpringExtension.class)
+//@ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
 @TestPropertySource("classpath:application-test.properties")
+
+@SpringBootTest
 @State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
+@RunWith(SpringRunner.class)
 public class HikariBenchmark {
 
     private static final String[] schemas = new String[] {"boauth", "bocsconf", "boocpi", "boopapij", "bodomain", "boocpp15j"};
