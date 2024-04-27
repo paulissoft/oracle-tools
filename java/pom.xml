@@ -131,11 +131,11 @@
         <artifactId>jakarta.annotation-api</artifactId>
         <version>${jakarta.annotation-api.version}</version>
       </dependency>
-      <dependency>
+      <!--dependency>
         <groupId>org.openjdk.jol</groupId>
         <artifactId>jol-core</artifactId>
         <version>${jol-core.version}</version>
-      </dependency>
+      </dependency-->
     </dependencies>
   </dependencyManagement>
 
