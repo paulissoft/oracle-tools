@@ -3,7 +3,6 @@ package com.paulissoft.pato.jdbc;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
@@ -49,68 +48,44 @@ public class HikariTest extends AbstractBenchmark {
     
     private static HikariDataSource operatorDataSourceHikari;
 
-    @State(Scope.Benchmark)
-    public static class BenchmarkState {
-        // private static final String[] schemas = new String[] {"boauth", "bocsconf", "bodomain", "boocpi", "boocpp15j", "boopapij"};
+    // private static final String[] schemas = new String[] {"boauth", "bocsconf", "bodomain", "boocpi", "boocpp15j", "boopapij"};
 
-        private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
+    private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
         
-        @Param({"10000"})
-        public int divideLogicalConnectionsBy;
+    @Param({"10000"})
+    public int divideLogicalConnectionsBy;
 
-        public List<Integer> testList = new Vector(1000, 1000);
+    public List<Integer> testList = new Vector(1000, 1000);
 
-        @Setup(Level.Trial)
-        public void setUp() {
-            final int[] logicalConnections = new int[BenchmarkState.logicalConnections.length];
-            int[] exclude = new int[0];
-            int totalLogicalConnections = 0;
-            int idx;
+    @Setup(Level.Trial)
+    public void setUp() {
+        final int[] logicalConnections = new int[HikariTest.logicalConnections.length];
+        int totalLogicalConnections = 0;
+        int idx;
             
-            for (idx = 0; idx < logicalConnections.length; idx++) {
-                logicalConnections[idx] = BenchmarkState.logicalConnections[idx] / divideLogicalConnectionsBy;
-                assert logicalConnections[idx] > 0;
-                totalLogicalConnections += logicalConnections[idx];    
-            }
-
-            while (totalLogicalConnections > 0) {
-                while (true) {
-                    idx = getRandomWithExclusionUsingMathRandom(0, logicalConnections.length, exclude);
-
-                    if (logicalConnections[idx] == 0) {
-                        exclude = Arrays.copyOf(exclude, exclude.length + 1); 
-                        exclude[exclude.length] = idx;
-                        Arrays.sort(exclude);
-                    } else {
-                        break;
-                    }
-                }
-
-                assert logicalConnections[idx] > 0;
-
-                logicalConnections[idx]--;
-                totalLogicalConnections--;
-
-                testList.add(idx);
-            }
+        for (idx = 0; idx < logicalConnections.length; idx++) {
+            logicalConnections[idx] = HikariTest.logicalConnections[idx] / divideLogicalConnectionsBy;
+            assert logicalConnections[idx] > 0;
+            totalLogicalConnections += logicalConnections[idx];    
         }
 
-        // https://www.baeldung.com/java-generating-random-numbers-in-range
-        private static int getRandomNumber(int min, int max) {
-            return (int) ((Math.random() * (max - min)) + min);
+        while (totalLogicalConnections > 0) {
+            do {
+                idx = getRandomNumber(0, logicalConnections.length);
+            } while (logicalConnections[idx] == 0);
+
+            assert logicalConnections[idx] > 0;
+
+            logicalConnections[idx]--;
+            totalLogicalConnections--;
+
+            testList.add(idx);
         }
-        
-        private static int getRandomWithExclusionUsingMathRandom(int min, int max, int [] exclude) {
-            int random = min + (int) ((max - min + 1 - exclude.length) * Math.random());
-            
-            for (int ex : exclude) {
-                if (random < ex) {
-                    break;
-                }
-                random++;
-            }
-            return random;
-        }
+    }
+
+    // https://www.baeldung.com/java-generating-random-numbers-in-range
+    private static int getRandomNumber(int min, int max) {
+        return (int) ((Math.random() * (max - min)) + min);
     }
     
     @Autowired
@@ -145,7 +120,7 @@ public class HikariTest extends AbstractBenchmark {
     
     @Benchmark
     @BenchmarkMode(Mode.SingleShotTime)
-    public void connectAll(Blackhole bh, BenchmarkState state) throws SQLException {
+    public void connectAll(Blackhole bh) throws SQLException {
         final HikariDataSource[] dataSources = new HikariDataSource[]
             { authDataSourceHikari,
               configDataSourceHikari,
@@ -154,7 +129,7 @@ public class HikariTest extends AbstractBenchmark {
               ocppDataSourceHikari,
               operatorDataSourceHikari };
 
-        state.testList.parallelStream().forEach(idx -> {
+        testList.parallelStream().forEach(idx -> {
                 try (final Connection conn = dataSources[idx].getConnection()) {
                     bh.consume(conn.getSchema());
                 } catch (SQLException ex) {
