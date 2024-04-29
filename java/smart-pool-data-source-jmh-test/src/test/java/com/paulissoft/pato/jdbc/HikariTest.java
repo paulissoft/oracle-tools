@@ -3,38 +3,40 @@ package com.paulissoft.pato.jdbc;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import org.junit.runner.RunWith;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-//@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
-@TestPropertySource("classpath:application-test.properties")
 
-@SpringBootTest
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@RunWith(SpringRunner.class)
+// Spring annotations
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
+@TestPropertySource("classpath:application-test.properties")
 public class HikariTest extends AbstractBenchmark {
 
-    private static final String[] schemas = new String[] {"boauth", "bocsconf", "boocpi", "boopapij", "bodomain", "boocpp15j"};
+    public HikariTest() {
+    }
 
-    private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
-        
     private static HikariDataSource authDataSourceHikari;
         
     private static HikariDataSource configDataSourceHikari;
@@ -47,8 +49,69 @@ public class HikariTest extends AbstractBenchmark {
     
     private static HikariDataSource operatorDataSourceHikari;
 
-    @Param({"10000"})
-    public int divideLogicalConnectionsBy;
+    @State(Scope.Benchmark)
+    public static class BenchmarkState {
+        // private static final String[] schemas = new String[] {"boauth", "bocsconf", "bodomain", "boocpi", "boocpp15j", "boopapij"};
+
+        private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
+        
+        @Param({"10000"})
+        public int divideLogicalConnectionsBy;
+
+        public List<Integer> testList = new Vector(1000, 1000);
+
+        @Setup(Level.Trial)
+        public void setUp() {
+            final int[] logicalConnections = new int[BenchmarkState.logicalConnections.length];
+            int[] exclude = new int[0];
+            int totalLogicalConnections = 0;
+            int idx;
+            
+            for (idx = 0; idx < logicalConnections.length; idx++) {
+                logicalConnections[idx] = BenchmarkState.logicalConnections[idx] / divideLogicalConnectionsBy;
+                assert logicalConnections[idx] > 0;
+                totalLogicalConnections += logicalConnections[idx];    
+            }
+
+            while (totalLogicalConnections > 0) {
+                while (true) {
+                    idx = getRandomWithExclusionUsingMathRandom(0, logicalConnections.length, exclude);
+
+                    if (logicalConnections[idx] == 0) {
+                        exclude = Arrays.copyOf(exclude, exclude.length + 1); 
+                        exclude[exclude.length] = idx;
+                        Arrays.sort(exclude);
+                    } else {
+                        break;
+                    }
+                }
+
+                assert logicalConnections[idx] > 0;
+
+                logicalConnections[idx]--;
+                totalLogicalConnections--;
+
+                testList.add(idx);
+            }
+        }
+
+        // https://www.baeldung.com/java-generating-random-numbers-in-range
+        private static int getRandomNumber(int min, int max) {
+            return (int) ((Math.random() * (max - min)) + min);
+        }
+        
+        private static int getRandomWithExclusionUsingMathRandom(int min, int max, int [] exclude) {
+            int random = min + (int) ((max - min + 1 - exclude.length) * Math.random());
+            
+            for (int ex : exclude) {
+                if (random < ex) {
+                    break;
+                }
+                random++;
+            }
+            return random;
+        }
+    }
     
     @Autowired
     void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
@@ -79,14 +142,10 @@ public class HikariTest extends AbstractBenchmark {
     void setOperatorDataSourceHikari(@Qualifier("operatorDataSource1") HikariDataSource operatorDataSourceHikari) {
         HikariTest.operatorDataSourceHikari = operatorDataSourceHikari;
     }
-
-    private int getRandomNumber(int min, int max) {
-        return (int) ((Math.random() * (max - min)) + min);
-    }
     
     @Benchmark
-    public void connectAll(Blackhole bh) throws SQLException {
-        final int[] logicalConnections = new int[HikariTest.logicalConnections.length];
+    @BenchmarkMode(Mode.SingleShotTime)
+    public void connectAll(Blackhole bh, BenchmarkState state) throws SQLException {
         final HikariDataSource[] dataSources = new HikariDataSource[]
             { authDataSourceHikari,
               configDataSourceHikari,
@@ -94,25 +153,12 @@ public class HikariTest extends AbstractBenchmark {
               ocpiDataSourceHikari,
               ocppDataSourceHikari,
               operatorDataSourceHikari };
-        int totalLogicalConnections = 0;
-        int idx;
-        
-        for (idx = 0; idx < logicalConnections.length; idx++) {
-            logicalConnections[idx] = HikariTest.logicalConnections[idx] / divideLogicalConnectionsBy;
-            totalLogicalConnections += logicalConnections[idx];    
-        }
 
-        while (totalLogicalConnections > 0) {
-            do {
-                idx = getRandomNumber(0, logicalConnections.length);
-            } while (logicalConnections[idx] == 0);
-
-            try (final Connection conn = dataSources[idx].getConnection()) {
-                bh.consume(conn.getSchema());
-            }
-            
-            logicalConnections[idx]--;
-            totalLogicalConnections--;
-        }
+        state.testList.parallelStream().forEach(idx -> {
+                try (final Connection conn = dataSources[idx].getConnection()) {
+                    bh.consume(conn.getSchema());
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex.getMessage());
+                }});        
     }    
 }
