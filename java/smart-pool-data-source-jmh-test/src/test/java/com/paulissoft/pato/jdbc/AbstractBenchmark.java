@@ -10,6 +10,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 abstract public class AbstractBenchmark {
 
     private final static Integer MEASUREMENT_ITERATIONS = 3;
+    
     private final static Integer WARMUP_ITERATIONS = 3;
 
     @Test

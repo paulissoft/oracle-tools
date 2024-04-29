@@ -36,11 +36,11 @@ THE POSSIBILITY OF SUCH DAMAGE.
       When the parent is there, there will be problems with the dependency classpath as set by plugin maven-dependency-plugin below.
       See also https://stackoverflow.com/questions/29712865/maven-cannot-resolve-dependency-for-module-in-same-multi-module-project.
   -->
-  <!--parent>
+  <parent>
     <artifactId>pato</artifactId>
     <groupId>com.paulissoft</groupId>
     <version>${revision}</version>
-  </parent-->
+  </parent>
 
   <groupId>com.paulissoft.pato.jdbc</groupId>
   <artifactId>smart-pool-data-source-jmh-test</artifactId>
@@ -55,7 +55,6 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
     <!-- JMH version to use with this project. -->
     <exec-maven-plugin.version>3.2.0</exec-maven-plugin.version>
-    <jmh.version>1.37</jmh.version>
     <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
     <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
@@ -84,12 +83,11 @@ THE POSSIBILITY OF SUCH DAMAGE.
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>${jmh.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
-      <version>${jmh.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -153,7 +151,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
         </configuration>
       </plugin>
       <!-- https://stackoverflow.com/questions/35574688/how-to-run-a-jmh-benchmark-in-maven-using-execjava-instead-of-execexec -->
-      <plugin>
+      <!--plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
@@ -190,7 +188,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
             </systemProperty>
           </systemProperties>
         </configuration>
-      </plugin>
+      </plugin-->
     </plugins>
     <pluginManagement>
       <plugins>
@@ -242,7 +240,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
         </plugin>
-        <plugin>
+        <!--plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
           <version>${maven-dependency-plugin.version}</version>
@@ -251,7 +249,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
           <version>${exec-maven-plugin.version}</version>
-        </plugin>
+        </plugin-->
       </plugins>
     </pluginManagement>
   </build>
