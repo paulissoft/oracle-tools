@@ -67,7 +67,8 @@ public class PoolDataSourceConfigurationHikari
                                                              String username,
                                                              String password,
                                                              String type) {
-        return PoolDataSourceConfigurationHikari
+        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
+            PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(driverClassName)
             .url(url)
@@ -75,6 +76,10 @@ public class PoolDataSourceConfigurationHikari
             .password(password)
             .type(type)
             .build();
+
+        log.debug("PoolDataSourceConfigurationHikari.build() = {}", poolDataSourceConfigurationHikari);
+        
+        return poolDataSourceConfigurationHikari;
     }
 
     protected static PoolDataSourceConfigurationHikari build(String driverClassName,
@@ -98,7 +103,8 @@ public class PoolDataSourceConfigurationHikari
                                                              boolean registerMbeans,    
                                                              long validationTimeout,
                                                              long leakDetectionThreshold) {
-        return PoolDataSourceConfigurationHikari
+        final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
+            PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(driverClassName)
             .url(url)
@@ -121,6 +127,10 @@ public class PoolDataSourceConfigurationHikari
             .validationTimeout(validationTimeout)
             .leakDetectionThreshold(leakDetectionThreshold)
             .build();
+
+        log.debug("PoolDataSourceConfigurationHikari.build() = {}", poolDataSourceConfigurationHikari);
+
+        return poolDataSourceConfigurationHikari;
     }
 
     public void setJdbcUrl(String jdbcUrl) {
