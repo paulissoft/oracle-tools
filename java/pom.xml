@@ -50,7 +50,6 @@
 
     <checkstyle.skip>false</checkstyle.skip>
     <maven.test.skip>true</maven.test.skip>
-    <!--test>CheckConfigurationOracleUnitTest,CheckLifeCycleOracleUnitTest,CheckConnectionOracleUnitTest#testConnectionOracle</test-->
 
     <jdk.attach.allowAttachSelf>true</jdk.attach.allowAttachSelf>
   </properties>

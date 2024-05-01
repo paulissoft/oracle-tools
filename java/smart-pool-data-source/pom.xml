@@ -11,6 +11,14 @@
   <packaging>jar</packaging>
   <description>JDBC pool of pool data sources</description>
 
+  <properties>
+    <!--test>
+      CheckConfigurationHikariUnitTest#testPoolDataSourceConfigurationDomain,
+      CheckConfigurationHikariUnitTest#testPoolDataSource,
+      CheckConnectionHikariUnitTest#testConnectionHikari,
+    </test-->
+  </properties>
+
   <build>
     <finalName>${project.artifactId}-${project.version}</finalName>
   </build>
