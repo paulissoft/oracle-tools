@@ -191,14 +191,33 @@ public class CombiPoolDataSourceHikari
                                         @NonNull final String passwordSession1) throws SQLException {
         log.debug(">getConnection1(id={}, usernameSession1={})", getId(), usernameSession1);
 
+        // String usernameOrig = null;
+
         try {
-            assert poolDataSource.getUsername().equalsIgnoreCase(usernameSession1)
+            assert poolDataSource.getUsername().equalsIgnoreCase(usernameSession1) || getActiveChildren() == 0
                 : String.format("The pool data source username is '%s' but should be '%s'.",
                                 poolDataSource.getUsername(),
                                 usernameSession1);
+            
+            // There is only a need to switch from "bc_proxy[boauth]" to "bc_proxy" if there are active children.
+            // Because when it is not a combined pool just connect to "bc_proxy[boauth]"
+            // and do not use OracleConnection.openProxySession().
+            /*
+            if (!poolDataSource.getUsername().equalsIgnoreCase(usernameSession1) && getActiveChildren() > 0) {
+                usernameOrig = poolDataSource.getUsername();
+                poolDataSource.setUsername(usernameSession1);
+                // password stays the same
+            }
+            */
                 
             return poolDataSource.getConnection();
         } finally {
+            /*
+            if (usernameOrig != null) {
+                poolDataSource.setUsername(usernameOrig);
+                // password stays the same
+            }
+            */
             log.debug("<getConnection1(id={})", getId());
         }
     }
