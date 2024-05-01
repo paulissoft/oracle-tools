@@ -459,7 +459,7 @@ is
   l_cookies json_array_t;
 begin
   data2json(p_cookie_tab, l_cookies);
-  return l_cookies.to_clob;
+  return case when l_cookies is not null then l_cookies.to_clob end;
 end data2json;
 
 procedure json2data
@@ -550,14 +550,14 @@ is
   l_http_headers json_array_t;
 begin
   data2json(p_http_header_tab, l_http_headers);
-  return l_http_headers.to_clob;
+  return case when l_http_headers is not null then l_http_headers.to_clob end;
 end data2json;
 
 function data2json
 return clob
 is
 begin
-  return data2json( p_http_header_tab => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end );
+  return data2json(p_http_header_tab => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end);
 end data2json;
 
 procedure set_request_headers
@@ -674,7 +674,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
 $end
 
-  if l_parms is not null
+  if l_parms is not null and l_parms_keys.count > 0
   then
     for i_idx in l_parms_keys.first .. l_parms_keys.last
     loop
@@ -875,7 +875,7 @@ $end
 
 $if msg_constants_pkg.c_prefer_to_use_utl_http $then
 
-  if l_parms is not null
+  if l_parms is not null and l_parms_keys.count > 0
   then
     for i_idx in l_parms_keys.first .. l_parms_keys.last
     loop
@@ -1023,6 +1023,8 @@ begin
     , p_password => p_password
     , p_wallet_pwd => p_wallet_pwd
     );
+    
+  return l_web_service_response;
 end make_rest_request;
 
 $if msg_aq_pkg.c_testing $then
@@ -1102,7 +1104,7 @@ $end
     msg_aq_pkg.start_queue(p_queue_name => 'WEB_SERVICE_REQUEST', p_enqueue => true, p_dequeue => true);
   end if;
 
-  -- now the dequeue in reversed order
+  -- now the dequeue in reversed order (l_correlation_tab.count > 0 since p_count > 0)
   for i_idx in reverse l_correlation_tab.first .. l_correlation_tab.last
   loop
     l_msgid := null;
