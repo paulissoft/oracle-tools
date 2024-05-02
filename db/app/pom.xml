@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.paulissoft.oracle-tools</groupId>
+    <groupId>com.paulissoft.pato</groupId>
     <artifactId>db</artifactId>
     <version>${revision}</version>
   </parent>
-  <groupId>com.paulissoft.oracle-tools.db</groupId>
+  <groupId>com.paulissoft.pato.db</groupId>
   <artifactId>app</artifactId>
   <packaging>pom</packaging>
   <description>PATO database application POM</description>

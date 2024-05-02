@@ -3,10 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.paulissoft</groupId>
-    <artifactId>oracle-tools</artifactId>
+    <artifactId>pato</artifactId>
     <version>${revision}</version>
   </parent>
-  <artifactId>pato</artifactId>
+  <groupId>com.paulissoft.pato</groupId>
+  <artifactId>java</artifactId>
   <packaging>pom</packaging>
   <description>Java utilities</description>
 

@@ -5,10 +5,10 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.paulissoft</groupId>
-    <artifactId>oracle-tools</artifactId>
+    <artifactId>pato</artifactId>
     <version>${revision}</version>
   </parent>
-  <groupId>com.paulissoft.oracle-tools</groupId>
+  <groupId>com.paulissoft.pato</groupId>
   <artifactId>conf</artifactId>
   <packaging>pom</packaging>
   <description>Core POM for Database configuration</description>
@@ -97,7 +97,7 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>com.paulissoft.oracle-tools</groupId>
+        <groupId>com.paulissoft.pato</groupId>
         <artifactId>conf</artifactId>
         <version>${oracle-tools.db.version}</version>
         <classifier>src</classifier>
@@ -580,7 +580,7 @@
       </properties>
       <dependencies>
         <dependency>
-          <groupId>com.paulissoft.oracle-tools</groupId>
+          <groupId>com.paulissoft.pato</groupId>
           <artifactId>conf</artifactId>
           <classifier>src</classifier>
           <type>zip</type>

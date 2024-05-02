@@ -37,12 +37,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
       See also https://stackoverflow.com/questions/29712865/maven-cannot-resolve-dependency-for-module-in-same-multi-module-project.
   -->
   <parent>
-    <artifactId>pato</artifactId>
-    <groupId>com.paulissoft</groupId>
+    <groupId>com.paulissoft.pato</groupId>
+    <artifactId>java</artifactId>
     <version>${revision}</version>
   </parent>
 
-  <groupId>com.paulissoft.pato.jdbc</groupId>
+  <groupId>com.paulissoft.pato.java</groupId>
   <artifactId>smart-pool-data-source-jmh-test</artifactId>
   <version>${revision}</version>
   <packaging>jar</packaging>

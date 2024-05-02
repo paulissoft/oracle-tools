@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   
   <parent>
-    <groupId>com.paulissoft.oracle-tools.db</groupId>
+    <groupId>com.paulissoft.pato.db</groupId>
     <artifactId>app</artifactId>
     <version>${revision}</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.paulissoft.oracle-tools.db.app</groupId>
+  <groupId>com.paulissoft.pato.db.app</groupId>
   <artifactId>UI</artifactId>
   <packaging>pom</packaging>
   <description>Build UI component</description>
