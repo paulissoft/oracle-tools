@@ -21,21 +21,25 @@ public class CombiPoolDataSourceHikari
     
     public CombiPoolDataSourceHikari() {
         super(new SimplePoolDataSourceHikari(), new PoolDataSourceConfigurationHikari());
+        log.debug("constructor 1: everything null, INITIALIZING");
     }
     
     public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
         super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
+        log.debug("constructor 2: poolDataSourceConfigurationHikari != null (fixed), OPEN");
+    }
+
+    public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
+        this(new PoolDataSourceConfigurationHikari(), activeParent);
+        log.debug("constructor 3: activeParent != null, INITIALIZING");
     }
 
     public CombiPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari,
                                      @NonNull final CombiPoolDataSourceHikari activeParent) {
         super(poolDataSourceConfigurationHikari, activeParent);
+        log.debug("constructor 4: poolDataSourceConfigurationHikari != null (fixed), activeParent != null, INITIALIZING");
     }
     
-    public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
-        this(new PoolDataSourceConfigurationHikari(), activeParent);
-    }
-
     public CombiPoolDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent,
                                      String driverClassName,
                                      String url,
@@ -48,6 +52,7 @@ public class CombiPoolDataSourceHikari
                                                      password,
                                                      type != null ? type : CombiPoolDataSourceHikari.class.getName()),
              activeParent);
+        log.debug("constructor 5: connection properties != null (fixed), activeParent != null, INITIALIZING");
     }
 
     public CombiPoolDataSourceHikari(String driverClassName,
@@ -94,6 +99,7 @@ public class CombiPoolDataSourceHikari
                                                      registerMbeans,    
                                                      validationTimeout,
                                                      leakDetectionThreshold));
+        log.debug("constructor 6: properties != null (fixed), activeParent != null, OPEN");
     }
 
     protected interface ToOverrideHikari extends ToOverride {

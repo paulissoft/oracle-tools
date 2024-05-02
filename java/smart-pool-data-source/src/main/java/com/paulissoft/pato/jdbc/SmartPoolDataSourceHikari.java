@@ -40,6 +40,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+        log.debug("constructor 1: everything null, INITIALIZING");
     }
 
     public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
@@ -49,8 +50,14 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+        log.debug("constructor 2: poolDataSourceConfigurationHikari != null (fixed), OPEN");
     }
     
+    public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
+        this(new PoolDataSourceConfigurationHikari(), activeParent);
+        log.debug("constructor 3: activeParent != null, INITIALIZING");
+    }
+
     public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari,
                                      @NonNull final SmartPoolDataSourceHikari activeParent) {
         super(poolDataSourceConfigurationHikari, activeParent);
@@ -59,12 +66,9 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+        log.debug("constructor 4: poolDataSourceConfigurationHikari != null (fixed), activeParent != null, INITIALIZING");
     }
     
-    public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent) {
-        this(new PoolDataSourceConfigurationHikari(), activeParent);
-    }
-
     public SmartPoolDataSourceHikari(@NonNull final SmartPoolDataSourceHikari activeParent,
                                      String driverClassName,
                                      String url,
@@ -77,6 +81,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                                                      password,
                                                      type != null ? type : SmartPoolDataSourceHikari.class.getName()),
              activeParent);
+        log.debug("constructor 5: connection properties != null (fixed), activeParent != null, INITIALIZING");
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
@@ -121,6 +126,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                                                      registerMbeans,    
                                                      validationTimeout,
                                                      leakDetectionThreshold));
+        log.debug("constructor 6: properties != null (fixed), activeParent != null, OPEN");
     }
 
     /*

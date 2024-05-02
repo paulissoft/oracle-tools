@@ -40,6 +40,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+        log.debug("constructor 1: everything null, INITIALIZING");
     }
 
     public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
@@ -49,8 +50,14 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+        log.debug("constructor 2: poolDataSourceConfigurationOracle != null (fixed), OPEN");
     }
     
+    public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent) {
+        this(new PoolDataSourceConfigurationOracle(), activeParent);
+        log.debug("constructor 3: activeParent != null, INITIALIZING");
+    }
+
     public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle,
                                      @NonNull final SmartPoolDataSourceOracle activeParent) {
         super(poolDataSourceConfigurationOracle, activeParent);
@@ -59,12 +66,9 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
 
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
+        log.debug("constructor 4: poolDataSourceConfigurationOracle != null (fixed), activeParent != null, INITIALIZING");
     }
     
-    public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent) {
-        this(new PoolDataSourceConfigurationOracle(), activeParent);
-    }
-
     public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent,
                                      String url,
                                      String username,
@@ -76,6 +80,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
                                                      password,
                                                      type != null ? type : SmartPoolDataSourceOracle.class.getName()),
              activeParent);
+        log.debug("constructor 5: connection properties != null (fixed), activeParent != null, INITIALIZING");
     }
 
     public SmartPoolDataSourceOracle(String url,
@@ -119,6 +124,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
                                                      maxConnectionReuseTime,
                                                      secondsToTrustIdleConnection,
                                                      connectionValidationTimeout));
+        log.debug("constructor 6: properties != null (fixed), activeParent != null, OPEN");
     }
 
     /*

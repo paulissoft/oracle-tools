@@ -158,10 +158,12 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
             if (state == State.INITIALIZING) {
                 try {
+                    log.debug("poolDataSourceConfiguration before: {}", poolDataSourceConfiguration);
                     poolDataSourceConfiguration.determineConnectInfo();
                     setId(poolDataSourceConfiguration.getSchema());
                     updateCombiPoolAdministration();
                     updatePool(poolDataSourceConfiguration, getPoolDataSource(), true, activeParent == null);
+                    log.debug("poolDataSourceConfiguration after: {}", poolDataSourceConfiguration);
                     state = this.state = State.OPEN;
                 } catch (Exception ex) {
                     state = this.state = State.ERROR;

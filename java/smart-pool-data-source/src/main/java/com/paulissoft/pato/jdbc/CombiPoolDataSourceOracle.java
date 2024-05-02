@@ -20,21 +20,25 @@ public class CombiPoolDataSourceOracle
 
     public CombiPoolDataSourceOracle() {
         super(new SimplePoolDataSourceOracle(), new PoolDataSourceConfigurationOracle());
+        log.debug("constructor 1: everything null, INITIALIZING");
     }
     
     public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
         super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
+        log.debug("constructor 2: poolDataSourceConfigurationOracle != null (fixed), OPEN");
+    }
+
+    public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent) {
+        this(new PoolDataSourceConfigurationOracle(), activeParent);
+        log.debug("constructor 3: activeParent != null, INITIALIZING");
     }
 
     public CombiPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle,
                                      @NonNull final CombiPoolDataSourceOracle activeParent) {
         super(poolDataSourceConfigurationOracle, activeParent);
+        log.debug("constructor 4: poolDataSourceConfigurationOracle != null (fixed), activeParent != null, INITIALIZING");
     }
     
-    public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent) {
-        this(new PoolDataSourceConfigurationOracle(), activeParent);
-    }
-
     public CombiPoolDataSourceOracle(@NonNull final CombiPoolDataSourceOracle activeParent,
                                      String url,
                                      String username,
@@ -46,6 +50,7 @@ public class CombiPoolDataSourceOracle
                                                      password,
                                                      type != null ? type : CombiPoolDataSourceOracle.class.getName()),
              activeParent);
+        log.debug("constructor 5: connection properties != null (fixed), activeParent != null, INITIALIZING");
     }
 
     public CombiPoolDataSourceOracle(String url,
@@ -89,6 +94,7 @@ public class CombiPoolDataSourceOracle
                                                      maxConnectionReuseTime,
                                                      secondsToTrustIdleConnection,
                                                      connectionValidationTimeout));
+        log.debug("constructor 6: properties != null (fixed), activeParent != null, OPEN");
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
