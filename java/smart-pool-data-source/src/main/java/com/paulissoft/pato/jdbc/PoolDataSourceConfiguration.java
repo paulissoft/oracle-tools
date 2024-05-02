@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class PoolDataSourceConfiguration implements ConnectInfo {
+public abstract class PoolDataSourceConfiguration implements ConnectInfo {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = true;
     
@@ -203,4 +203,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
             proxyUsername /* case 3 */ :
             username /* case 1 & 2 */;
     }
+
+    // https://stackoverflow.com/questions/61633821/using-lombok-superbuilder-annotation-with-tobuilder-on-an-abstract-class/61633890#61633890
+    public abstract PoolDataSourceConfigurationBuilder<?, ?> toBuilder();
 }
