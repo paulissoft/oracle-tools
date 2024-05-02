@@ -135,7 +135,7 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
             final Instant t1 = Instant.now();
             final Connection conn = poolDataSource.getConnection(usernameSession1, passwordSession1);
             
-            assert !isFixedUsernamePassword();
+            assert !isFixedUsernamePassword() : "For Oracle UCP you should not have a fixed username and password.";
 
             if (!firstConnection.getAndSet(true)) {
                 // Only show the first time a pool has gotten a connection.

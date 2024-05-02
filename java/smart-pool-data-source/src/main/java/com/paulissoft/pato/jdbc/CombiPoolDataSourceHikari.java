@@ -297,16 +297,11 @@ public class CombiPoolDataSourceHikari
                                  final boolean initializing) {
         try {
             log.debug(">updatePoolSizes(id={})", getId());
-
-            assert poolDataSourceConfiguration != null;
-            assert poolDataSource != null;
-
             log.debug("config pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}",
                       poolDataSourceConfiguration,
                       poolDataSourceConfiguration.getPoolName(),
                       poolDataSourceConfiguration.getMinimumIdle(),
                       poolDataSourceConfiguration.getMaximumPoolSize());
-
             log.debug("common pool data source; address: {}; name: {}; pool sizes before: minimum/maximum: {}/{}",
                       poolDataSource,
                       poolDataSource.getPoolName(),

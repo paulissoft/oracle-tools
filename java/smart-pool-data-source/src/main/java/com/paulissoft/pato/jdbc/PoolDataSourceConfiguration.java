@@ -50,9 +50,9 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
     private String schema; // needed to build the PoolName
 
     public PoolDataSourceConfiguration(final String driverClassName,
-                                       final String url,
-                                       final String username,
-                                       final String password) {
+                                       /*@NonNull*/final String url,
+                                       /*@NonNull*/final String username,
+                                       /*@NonNull*/final String password) {
         // do not show password
         log.debug("PoolDataSourceConfiguration(driverClassName={}, url={}, username={})",
                   driverClassName,
@@ -60,11 +60,8 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
                   username);
         
         this.driverClassName = driverClassName;
-        //assert(url != null);
         this.url = url;
-        //assert(username != null);
         this.username = username;
-        //assert(password != null);
         this.password = password;
     }
 
@@ -199,7 +196,7 @@ public class PoolDataSourceConfiguration implements ConnectInfo {
      * @param singleSessionProxyModel  Do we use a single session proxy model?
      */
     String getUsernameToConnectTo() {
-        assert(username != null);
+        assert username != null : "Username should not be empty.";
         
         return !isSingleSessionProxyModel() && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */

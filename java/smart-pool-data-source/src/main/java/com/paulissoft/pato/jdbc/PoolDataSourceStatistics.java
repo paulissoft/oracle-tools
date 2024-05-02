@@ -171,8 +171,8 @@ public class PoolDataSourceStatistics {
             this.level = 1 + this.parent.level;
         }
 
-        assert(this.level >= 1 && this.level <= 4);
-        assert((this.level == 1) == (this.parent == null));
+        assert this.level >= 1 && this.level <= 4 : "Level must be between 1 and 4.";
+        assert (this.level == 1) == (this.parent == null) : "Level is 1 if and only if parent is null.";
 
         switch(this.level) {
         case 4:
@@ -202,7 +202,7 @@ public class PoolDataSourceStatistics {
             break;
         }
 
-        assert((this.level == 4) == (this.children == null));
+        assert (this.level == 4) == (this.children == null) : "Level is 4 if and only ifthere are no children." ;
 
         if (this.parent != null) {
             this.parent.children.add(this);
@@ -1084,9 +1084,14 @@ public class PoolDataSourceStatistics {
 
         try {
             nr++;
-            assert(Math.abs(totalBefore - totalAfter) <= diffThreshold);
+            assert Math.abs(totalBefore - totalAfter) <= diffThreshold
+                : String.format("Absolute difference between total before (%d) and total after (%d) must be at most %d.",
+                                totalBefore,
+                                totalAfter,
+                                diffThreshold);
             nr++;
-            assert(childTimeElapsedAfter == 0L);
+            assert childTimeElapsedAfter == 0L
+                : String.format("Child time elapsed after is %d but must be 0.", childTimeElapsedAfter);
         } catch (AssertionError ex) {
             logger.error(">checkTotalBeforeAndAfter()");
             logger.error("assertion # {} failed", nr);
@@ -1127,31 +1132,35 @@ public class PoolDataSourceStatistics {
         
         try {
             ++nr;
-            assert(childMinBefore == Long.MAX_VALUE ||
-                   childMaxBefore == Long.MIN_VALUE ||
-                   childMinBefore <= childMaxBefore);
+            assert (childMinBefore == Long.MAX_VALUE ||
+                    childMaxBefore == Long.MIN_VALUE ||
+                    childMinBefore <= childMaxBefore)
+                : String.format("Child min before (%d) should be at most child max before (%d).", childMinBefore, childMaxBefore);
             // child values are reset after
             ++nr;
-            assert(childMinAfter == Long.MAX_VALUE);
+            assert childMinAfter == Long.MAX_VALUE : String.format("Child min after (%d) should be the maximum value.", childMinAfter);
             ++nr;
-            assert(childMaxAfter == Long.MIN_VALUE);
-        
+            assert childMaxAfter == Long.MIN_VALUE : String.format("Child max after (%d) should be the minimum value.", childMaxAfter);         
             ++nr;
-            assert(parentMinBefore == Long.MAX_VALUE ||
-                   parentMaxBefore == Long.MIN_VALUE ||
-                   parentMinBefore <= parentMaxBefore);
+            assert (parentMinBefore == Long.MAX_VALUE ||
+                    parentMaxBefore == Long.MIN_VALUE ||
+                    parentMinBefore <= parentMaxBefore)
+                : String.format("Parent min before (%d) should be at most parent max before (%d).", parentMinBefore, parentMaxBefore);
             // parent min after must be at most parent min before (when that was set)
             ++nr;
-            assert(parentMinBefore == Long.MAX_VALUE ||
-                   parentMinAfter <= parentMinBefore);
+            assert (parentMinBefore == Long.MAX_VALUE ||
+                    parentMinAfter <= parentMinBefore)
+                : String.format("Parent min after (%d) should be at most parent min before (%d).", parentMinAfter, parentMinBefore);
             ++nr;
-            assert(parentMinAfter == Long.MAX_VALUE ||
-                   parentMaxAfter == Long.MIN_VALUE ||
-                   parentMinAfter <= parentMaxAfter);
+            assert (parentMinAfter == Long.MAX_VALUE ||
+                    parentMaxAfter == Long.MIN_VALUE ||
+                    parentMinAfter <= parentMaxAfter)
+                : String.format("Parent min after (%d) should be at most parent max after (%d).", parentMinAfter, parentMaxAfter);
             // parent max after must be at least parent max before (when that was set)
             ++nr;
-            assert(parentMaxBefore == Long.MIN_VALUE ||
-                   parentMaxAfter >= parentMaxBefore);
+            assert (parentMaxBefore == Long.MIN_VALUE ||
+                    parentMaxAfter >= parentMaxBefore)
+                : String.format("Parent max after (%d) should be at least parent max before (%d).", parentMaxAfter, parentMaxBefore);
         } catch (AssertionError ex) {
             logger.error(">checkMinMaxBeforeAndAfter()");
             logger.error("assertion # {} failed", nr);
@@ -1181,13 +1190,15 @@ public class PoolDataSourceStatistics {
 
         try {
             ++nr;
-            assert(childCountBefore + parentCountBefore ==
-                   childCountAfter + parentCountAfter);
+            assert (childCountBefore + parentCountBefore ==
+                    childCountAfter + parentCountAfter)
+                : String.format("Child count before (%d) + parent count before (%d) should be equal to the child count after (%d) + parent count after (%d).",
+                                childCountBefore,
+                                parentCountBefore,
+                                childCountAfter,
+                                parentCountAfter);
             ++nr;
-            assert(childCountBefore + parentCountBefore ==
-                   childCountAfter + parentCountAfter);
-            ++nr;
-            assert(childCountAfter == 0L);
+            assert (childCountAfter == 0L) : String.format("Child count after (%d) should be 0.", childCountAfter);
         } catch (AssertionError ex) {
             logger.error(">checkCountBeforeAndAfter()");
             logger.error("assertion # {} failed", nr);
