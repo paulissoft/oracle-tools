@@ -159,6 +159,9 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
             if (state == State.INITIALIZING) {
                 try {
                     log.debug("poolDataSourceConfiguration before: {}", poolDataSourceConfiguration);
+                    if (poolDataSourceConfiguration.getType() == null) {
+                        poolDataSourceConfiguration.setType(this.getClass().getName());
+                    }
                     poolDataSourceConfiguration.determineConnectInfo();
                     setId(poolDataSourceConfiguration.getSchema());
                     updateCombiPoolAdministration();
