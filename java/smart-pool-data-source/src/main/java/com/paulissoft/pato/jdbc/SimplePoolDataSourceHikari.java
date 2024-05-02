@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SimplePoolDataSourceHikari extends HikariDataSource implements SimplePoolDataSource, PoolDataSourcePropertiesGettersHikari {
+public class SimplePoolDataSourceHikari
+    extends HikariDataSource
+    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
     private final StringBuffer id = new StringBuffer();
          
@@ -163,6 +165,17 @@ public class SimplePoolDataSourceHikari extends HikariDataSource implements Simp
         */
     }
 
+    /* Interface PoolDataSourcePropertiesSettersHikari */
+    
+    public void setUrl(String url) {
+        setJdbcUrl(url);
+    }
+
+    public void setType(String type) {
+    }
+
+    /* Interface PoolDataSourcePropertiesGettersHikari */
+    
     public String getUrl() {
         return getJdbcUrl();
     }  

@@ -7,7 +7,9 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
 @Slf4j
-public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements SimplePoolDataSource, PoolDataSourcePropertiesGettersOracle {
+public class SimplePoolDataSourceOracle
+    extends PoolDataSourceImpl
+    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     private static final long serialVersionUID = 3886083682048526889L;
     
@@ -151,6 +153,17 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         log.info("{}connectionValidationTimeout: {}", indentPrefix, getConnectionValidationTimeout());
     }
 
+    /* Interface PoolDataSourcePropertiesSettersOracle */
+
+    public void setUrl(String url) throws SQLException {
+        setURL(url);
+    }
+
+    public void setType(String paramString) {
+    }
+
+    /* Interface PoolDataSourcePropertiesGettersOracle */
+    
     public String getUrl() {
         return getURL();
     }
