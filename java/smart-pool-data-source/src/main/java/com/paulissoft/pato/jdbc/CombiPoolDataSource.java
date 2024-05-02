@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -18,7 +17,7 @@ import oracle.jdbc.OracleConnection;
 
 @Slf4j
 public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P extends PoolDataSourceConfiguration>
-    implements SimplePoolDataSource, Closeable {
+    implements SimplePoolDataSource {
 
     // We need to know the active parents in order to assign a value to an active parent so that a data source can use a common data source.
     // Syntax error on: private static final ConcurrentHashMap<PoolDataSourceConfigurationCommonId, CombiPoolDataSource<T, P>>,

@@ -1,10 +1,11 @@
 package com.paulissoft.pato.jdbc;
 
-import javax.sql.DataSource;
+import java.io.Closeable;
 import java.sql.SQLException;
+import javax.sql.DataSource;
 
 
-public interface SimplePoolDataSource extends DataSource {
+public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public static String exceptionToString(final Exception ex) {
         return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());

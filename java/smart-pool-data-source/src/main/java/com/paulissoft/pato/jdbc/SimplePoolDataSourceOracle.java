@@ -202,6 +202,9 @@ public class SimplePoolDataSourceOracle extends PoolDataSourceImpl implements Si
         return getActiveConnections() + getIdleConnections();
     }
 
+    public void close() {        
+    }
+    
     /*
     @Override
     public boolean equals(Object obj) {
