@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-//import lombok.NonNull;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
@@ -25,13 +25,10 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
 
     private String driverClassName;
 
-    //@NonNull
     private String url;
 
-    //@NonNull
     private String username;
 
-    //@NonNull
     private String password;
 
     private String type;
@@ -50,9 +47,9 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
     private String schema; // needed to build the PoolName
 
     public PoolDataSourceConfiguration(final String driverClassName,
-                                       /*@NonNull*/final String url,
-                                       /*@NonNull*/final String username,
-                                       /*@NonNull*/final String password) {
+                                       @NonNull final String url,
+                                       @NonNull final String username,
+                                       @NonNull final String password) {
         // do not show password
         log.debug("PoolDataSourceConfiguration(driverClassName={}, url={}, username={})",
                   driverClassName,
