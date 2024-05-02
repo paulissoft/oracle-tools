@@ -100,7 +100,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
         }
     }
 
-    public void setType(final String type) {
+    public void setType(@NonNull final String type) {
         log.debug("setType(type={})", type);
         
         try {
