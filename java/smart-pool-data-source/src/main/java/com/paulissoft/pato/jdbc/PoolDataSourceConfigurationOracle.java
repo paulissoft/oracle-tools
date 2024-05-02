@@ -77,10 +77,10 @@ public class PoolDataSourceConfigurationOracle
             : "Type must be assignable from SimplePoolDataSourceOracle";
     }
 
-    protected static PoolDataSourceConfigurationOracle build(String url,
-                                                             String username,
-                                                             String password,
-                                                             String type) {
+    public static PoolDataSourceConfigurationOracle build(String url,
+                                                          String username,
+                                                          String password,
+                                                          String type) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .url(url)

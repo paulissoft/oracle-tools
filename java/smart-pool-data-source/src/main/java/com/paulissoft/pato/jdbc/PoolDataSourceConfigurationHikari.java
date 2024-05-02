@@ -62,11 +62,11 @@ public class PoolDataSourceConfigurationHikari
 
     private long leakDetectionThreshold;
 
-    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
-                                                             String url,
-                                                             String username,
-                                                             String password,
-                                                             String type) {
+    public static PoolDataSourceConfigurationHikari build(String driverClassName,
+                                                          String url,
+                                                          String username,
+                                                          String password,
+                                                          String type) {
         final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari =
             PoolDataSourceConfigurationHikari
             .builder()

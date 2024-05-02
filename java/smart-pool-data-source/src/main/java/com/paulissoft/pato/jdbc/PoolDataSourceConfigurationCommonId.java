@@ -1,9 +1,9 @@
 package com.paulissoft.pato.jdbc;
 
 
-class PoolDataSourceConfigurationCommonId extends PoolDataSourceConfigurationId {
+public class PoolDataSourceConfigurationCommonId extends PoolDataSourceConfigurationId {
 
-    PoolDataSourceConfigurationCommonId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+    public PoolDataSourceConfigurationCommonId(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         final PoolDataSourceConfiguration copy = poolDataSourceConfiguration.toBuilder().build(); // a copy
 
         copy.keepCommonIdConfiguration();
