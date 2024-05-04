@@ -7,9 +7,9 @@
     <version>${revision}</version>
   </parent>
   <groupId>com.paulissoft.pato</groupId>
-  <artifactId>java</artifactId>
+  <artifactId>jdbc</artifactId>
   <packaging>pom</packaging>
-  <description>Java utilities</description>
+  <description>Java JDBC utilities</description>
 
   <properties>
 
@@ -240,7 +240,7 @@
             <id>validate</id>
             <phase>validate</phase>
             <configuration>
-              <configLocation>${maven.multiModuleProjectDirectory}/java/checkstyle.xml</configLocation>
+              <configLocation>${maven.multiModuleProjectDirectory}/jdbc/checkstyle.xml</configLocation>
               <inputEncoding>UTF-8</inputEncoding>
               <failsOnError>true</failsOnError>
               <consoleOutput>true</consoleOutput>
