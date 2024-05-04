@@ -17,6 +17,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"authDataSource1"})
     @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
     public HikariDataSource authDataSource1(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        log.debug("authDataSource1");
         return properties
             .initializeDataSourceBuilder()
             .type(HikariDataSource.class)
@@ -26,6 +27,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
     public HikariDataSource configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+        log.debug("configDataSource1");
         return properties
             .initializeDataSourceBuilder()
             .type(HikariDataSource.class)
@@ -35,6 +37,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"domainDataSource1"})
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
     public HikariDataSource domainDataSource1(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+        log.debug("domainDataSource1");
         return properties
             .initializeDataSourceBuilder()
             .type(HikariDataSource.class)
@@ -44,6 +47,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"ocpiDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
     public HikariDataSource ocpiDataSource1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
+        log.debug("ocpiDataSource1");
         return properties
             .initializeDataSourceBuilder()
             .type(HikariDataSource.class)
@@ -53,6 +57,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"ocppDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
     public HikariDataSource ocppDataSource1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
+        log.debug("ocppDataSource1");
         return properties
             .initializeDataSourceBuilder()
             .type(HikariDataSource.class)
@@ -62,6 +67,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"operatorDataSource1"})
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
     public HikariDataSource operatorDataSource1(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+        log.debug("operatorDataSource1");
         return properties
             .initializeDataSourceBuilder()
             .type(HikariDataSource.class)

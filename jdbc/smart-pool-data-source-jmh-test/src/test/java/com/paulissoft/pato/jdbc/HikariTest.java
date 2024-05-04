@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
-//import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -19,44 +19,30 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-//import org.springframework.test.context.ContextConfiguration;
-//import org.springframework.test.context.TestPropertySource;
-//import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.context.ActiveProfiles;
+//import org.springframework.test.context.ActiveProfiles;
 
-
+// JMH annotations
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 // Spring annotations
-/*
-@ExtendWith(SpringExtension.class)
+@SpringBootTest
+//@ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
-@TestPropertySource("classpath:application-test.properties")
-*/
-@SpringBootTest(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
-@ActiveProfiles("test")
+//@TestPropertySource("classpath:application.properties")
+//@ActiveProfiles("test")
 @RunWith(SpringRunner.class)
 public class HikariTest extends AbstractBenchmark {
 
     public HikariTest() {
     }
-
-    private static HikariDataSource authDataSourceHikari;
-        
-    private static HikariDataSource configDataSourceHikari;
-    
-    private static HikariDataSource domainDataSourceHikari;
-    
-    private static HikariDataSource ocpiDataSourceHikari;
-    
-    private static HikariDataSource ocppDataSourceHikari;
-    
-    private static HikariDataSource operatorDataSourceHikari;
 
     // private static final String[] schemas = new String[] {"boauth", "bocsconf", "bodomain", "boocpi", "boocpp15j", "boopapij"};
 
@@ -93,51 +79,74 @@ public class HikariTest extends AbstractBenchmark {
         }
     }
 
+    @State(Scope.Benchmark)
+    public static class BenchmarkState {
+
+        private HikariDataSource authDataSourceHikari;
+        
+        private HikariDataSource configDataSourceHikari;
+    
+        private HikariDataSource domainDataSourceHikari;
+    
+        private HikariDataSource ocpiDataSourceHikari;
+    
+        private HikariDataSource ocppDataSourceHikari;
+    
+        private HikariDataSource operatorDataSourceHikari;
+
+        @Setup(Level.Trial)
+        public void setUp() {
+        }
+
+        @Autowired
+        void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
+            this.authDataSourceHikari = authDataSourceHikari;
+        }
+        
+        @Autowired
+        void setConfigDataSourceHikari(@Qualifier("configDataSource1") HikariDataSource configDataSourceHikari) {
+            this.configDataSourceHikari = configDataSourceHikari;
+        }
+    
+        @Autowired
+        void setDomainDataSourceHikari(@Qualifier("domainDataSource1") HikariDataSource domainDataSourceHikari) {
+            this.domainDataSourceHikari = domainDataSourceHikari;
+        }
+    
+        @Autowired
+        void setOcpiDataSourceHikari(@Qualifier("ocpiDataSource1") HikariDataSource ocpiDataSourceHikari) {
+            this.ocpiDataSourceHikari = ocpiDataSourceHikari;
+        }
+
+        @Autowired
+        void setOcppDataSourceHikari(@Qualifier("ocppDataSource1") HikariDataSource ocppDataSourceHikari) {
+            this.ocppDataSourceHikari = ocppDataSourceHikari;
+        }
+
+        @Autowired
+        void setOperatorDataSourceHikari(@Qualifier("operatorDataSource1") HikariDataSource operatorDataSourceHikari) {
+            this.operatorDataSourceHikari = operatorDataSourceHikari;
+        }    
+    }
+
     // https://www.baeldung.com/java-generating-random-numbers-in-range
     private static int getRandomNumber(int min, int max) {
         return (int) ((Math.random() * (max - min)) + min);
     }
     
-    @Autowired
-    void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
-        HikariTest.authDataSourceHikari = authDataSourceHikari;
-    }
-
-    @Autowired
-    void setConfigDataSourceHikari(@Qualifier("configDataSource1") HikariDataSource configDataSourceHikari) {
-        HikariTest.configDataSourceHikari = configDataSourceHikari;
-    }
-
-    @Autowired
-    void setDomainDataSourceHikari(@Qualifier("domainDataSource1") HikariDataSource domainDataSourceHikari) {
-        HikariTest.domainDataSourceHikari = domainDataSourceHikari;
-    }
-
-    @Autowired
-    void setOcpiDataSourceHikari(@Qualifier("ocpiDataSource1") HikariDataSource ocpiDataSourceHikari) {
-        HikariTest.ocpiDataSourceHikari = ocpiDataSourceHikari;
-    }
-
-    @Autowired
-    void setOcppDataSourceHikari(@Qualifier("ocppDataSource1") HikariDataSource ocppDataSourceHikari) {
-        HikariTest.ocppDataSourceHikari = ocppDataSourceHikari;
-    }
-
-    @Autowired
-    void setOperatorDataSourceHikari(@Qualifier("operatorDataSource1") HikariDataSource operatorDataSourceHikari) {
-        HikariTest.operatorDataSourceHikari = operatorDataSourceHikari;
-    }
-    
     @Benchmark
     @BenchmarkMode(Mode.SingleShotTime)
-    public void connectAll(Blackhole bh) throws SQLException {
+    public void connectAll(Blackhole bh,
+                           BenchmarkState bs) throws SQLException {
         final HikariDataSource[] dataSources = new HikariDataSource[]
-            { authDataSourceHikari,
-              configDataSourceHikari,
-              domainDataSourceHikari,
-              ocpiDataSourceHikari,
-              ocppDataSourceHikari,
-              operatorDataSourceHikari };
+            { bs.authDataSourceHikari,
+              bs.configDataSourceHikari,
+              bs.domainDataSourceHikari,
+              bs.ocpiDataSourceHikari,
+              bs.ocppDataSourceHikari,
+              bs.operatorDataSourceHikari };
+
+        assert bs.authDataSourceHikari != null;
 
         testList.parallelStream().forEach(idx -> {
                 try (final Connection conn = dataSources[idx].getConnection()) {

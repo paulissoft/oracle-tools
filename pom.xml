@@ -329,7 +329,7 @@
     <module>conf</module>
     <module>apex</module>
     <module>db</module>
-    <module>java</module>
+    <module>jdbc</module>
   </modules>
 
 </project>
