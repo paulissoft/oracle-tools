@@ -34,11 +34,11 @@ public class Application implements ApplicationRunner {
             
                 Arrays.sort(beanNames);
                 for (String beanName : beanNames) {
-                    if (beanName.endsWith("DataSource0") ||
-                        beanName.endsWith("DataSource1") ||
-                        beanName.endsWith("DataSource2") ||
-                        beanName.endsWith("DataSource3") ||
-                        (beanName.endsWith("DataSourceProperties") && !beanName.endsWith(".DataSourceProperties"))) {
+                    if (beanName.endsWith("DataSourceHikari0") ||
+                        beanName.endsWith("DataSourceHikari1") ||
+                        beanName.endsWith("DataSourceHikari2") ||
+                        beanName.endsWith("DataSourceHikari3") ||
+                        (beanName.endsWith("DataSourceProperties") && !beanName.endsWith(".DataSourceHikariProperties"))) {
                         log.debug(beanName);
                     }
                 }

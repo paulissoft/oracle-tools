@@ -26,7 +26,7 @@ public class HikariTest1 {
     public void connectAllSimple(Blackhole bh,
                                  BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
-                try (final Connection conn = bs.dataSources[1][idx].getConnection()) {
+                try (final Connection conn = bs.dataSources[0][1][idx].getConnection()) {
                     bh.consume(conn.getSchema());
                 } catch (SQLException ex1) {
                     throw new RuntimeException(ex1.getMessage());

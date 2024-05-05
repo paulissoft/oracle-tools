@@ -18,11 +18,15 @@ public class BenchmarkState {
 
     private final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
 
-    public final DataSource[][] dataSources = {
-        { null, null, null, null, null, null },
-        { null, null, null, null, null, null },
-        { null, null, null, null, null, null },
-        { null, null, null, null, null, null }
+    public final DataSource[][][] dataSources = {
+        { { null, null, null, null, null, null },
+          { null, null, null, null, null, null },
+          { null, null, null, null, null, null },
+          { null, null, null, null, null, null } },
+        { { null, null, null, null, null, null },
+          { null, null, null, null, null, null },
+          { null, null, null, null, null, null },
+          { null, null, null, null, null, null } }
     };
         
     @Param({"10000"})
@@ -35,14 +39,19 @@ public class BenchmarkState {
         final ApplicationContext context = SpringContext.getApplicationContext();
 
         // get instance of MainSpringClass (Spring Managed class)
-        int t;
-        for (t = 0; t < 4; t++) {
-            dataSources[t][0] = (DataSource) context.getBean("authDataSource" + t);      
-            dataSources[t][1] = (DataSource) context.getBean("configDataSource" + t);
-            dataSources[t][2] = (DataSource) context.getBean("domainDataSource" + t);
-            dataSources[t][3] = (DataSource) context.getBean("ocpiDataSource" + t);
-            dataSources[t][4] = (DataSource) context.getBean("ocppDataSource" + t);
-            dataSources[t][5] = (DataSource) context.getBean("operatorDataSource" + t);
+        int d, t;
+        
+        for (d = 0; d < 2; d++) {
+            for (t = 0; t < 4; t++) {
+                final String suffix = "DataSource" + (d == 0 ? "Hikari" : "Oracle") + t;
+                
+                dataSources[d][t][0] = (DataSource) context.getBean("auth" + suffix);      
+                dataSources[d][t][1] = (DataSource) context.getBean("config" + suffix);
+                dataSources[d][t][2] = (DataSource) context.getBean("domain" + suffix);
+                dataSources[d][t][3] = (DataSource) context.getBean("ocpi" + suffix);
+                dataSources[d][t][4] = (DataSource) context.getBean("ocpp" + suffix);
+                dataSources[d][t][5] = (DataSource) context.getBean("operator" + suffix);
+            }
         }
 
         final int[] logicalConnections = new int[this.logicalConnections.length];
