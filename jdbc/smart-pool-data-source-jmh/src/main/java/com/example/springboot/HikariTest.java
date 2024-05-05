@@ -116,7 +116,7 @@ public class HikariTest extends AbstractBenchmark {
                 }});
     }
 
-    @Benchmark
+    //    @Benchmark
     public void connectAllSimple(Blackhole bh,
                                  BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
@@ -127,7 +127,7 @@ public class HikariTest extends AbstractBenchmark {
                 }});
     }
 
-    @Benchmark
+    //    @Benchmark
     public void connectAllCombi(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
@@ -138,7 +138,7 @@ public class HikariTest extends AbstractBenchmark {
                 }});
     }
     
-    @Benchmark
+    //    @Benchmark
     public void connectAllSmart(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
