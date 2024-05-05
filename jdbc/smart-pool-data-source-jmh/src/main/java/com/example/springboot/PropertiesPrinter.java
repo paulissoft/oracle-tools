@@ -16,9 +16,9 @@ public class PropertiesPrinter {
 
     @EventListener
     public void handleContextRefreshed(ContextRefreshedEvent event) {
-        printAllActiveProperties((ConfigurableEnvironment) event.getApplicationContext().getEnvironment());
+        // printAllActiveProperties((ConfigurableEnvironment) event.getApplicationContext().getEnvironment());
 
-        // printAllApplicationProperties((ConfigurableEnvironment) event.getApplicationContext().getEnvironment());
+        printAllApplicationProperties((ConfigurableEnvironment) event.getApplicationContext().getEnvironment());
     }
 
     private void printAllActiveProperties(ConfigurableEnvironment env) {
@@ -43,7 +43,7 @@ public class PropertiesPrinter {
 
         env.getPropertySources()
             .stream()
-            .filter(ps -> ps instanceof MapPropertySource && ps.getName().contains("application.properties"))
+            .filter(ps -> ps instanceof MapPropertySource && ps.getName().matches("^.*\\bapplication.*\\.properties\\b.*$"))
             .map(ps -> ((MapPropertySource) ps).getSource().keySet())
             .flatMap(Collection::stream)
             .distinct()
