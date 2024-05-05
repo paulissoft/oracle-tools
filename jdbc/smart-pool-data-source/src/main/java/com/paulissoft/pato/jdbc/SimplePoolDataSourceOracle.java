@@ -803,7 +803,6 @@ public class SimplePoolDataSourceOracle
     }
 
     public void setPassword(java.lang.String password) throws java.sql.SQLException {
-        log.trace("setPassword({})", password);
         super.setPassword(password);
     }
 
@@ -883,7 +882,7 @@ public class SimplePoolDataSourceOracle
     }
 
     public void startPool() throws java.sql.SQLException {
-        log.trace("startPool()");
+        log.debug("startPool()");
         super.startPool();
     }
 }
