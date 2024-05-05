@@ -2,25 +2,22 @@
 
 package com.example.springboot;
 
+import java.util.List;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-abstract public class AbstractBenchmark {
+public class BenchmarkTest {
 
     private final static Integer MEASUREMENT_ITERATIONS = 3;
     
     private final static Integer WARMUP_ITERATIONS = 3;
 
-    public AbstractBenchmark() {
-    }
-
-    public void executeJmhRunner() throws RunnerException {
-        final Options opt = new OptionsBuilder()
-            // set the class name regex for benchmarks to search for to the current class 
-            .include("\\." + this.getClass().getSimpleName() + "\\.")
+    public static void executeJmhRunner(final List<String> jmhFilter) throws RunnerException {
+        final ChainedOptionsBuilder chainedOptionsBuilder = new OptionsBuilder()
             .warmupIterations(WARMUP_ITERATIONS)
             .measurementIterations(MEASUREMENT_ITERATIONS)
             // do not use forking or the benchmark methods will not see references stored within its class
@@ -33,8 +30,16 @@ abstract public class AbstractBenchmark {
             .result("/dev/null") // set this to a valid filename if you want reports
             .shouldFailOnError(true)
             .jvmArgs("-server")
-            .jvmArgs("-ea")
-            .build();
+            .jvmArgs("-ea");
+
+        if (jmhFilter != null && jmhFilter.size() > 0) {
+            // set the class name regex for benchmarks to search for to the current class 
+            jmhFilter.forEach(i -> { chainedOptionsBuilder.include("\\." + i + "\\."); });
+        } else {
+            chainedOptionsBuilder.include("\\..*\\.");
+        }
+        
+        final Options opt = chainedOptionsBuilder.build();
 
         new Runner(opt).run();
     }
