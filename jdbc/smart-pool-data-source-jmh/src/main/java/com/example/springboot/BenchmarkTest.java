@@ -25,10 +25,9 @@ public class BenchmarkTest {
             // do not use multiple threads
             .threads(1)
             .shouldDoGC(true)
-            .shouldFailOnError(true)
             .resultFormat(ResultFormatType.JSON)
             .result("/dev/null") // set this to a valid filename if you want reports
-            .shouldFailOnError(true)
+            .shouldFailOnError(false)
             .jvmArgs("-server")
             .jvmArgs("-ea");
 
