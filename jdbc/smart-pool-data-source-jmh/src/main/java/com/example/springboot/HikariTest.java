@@ -37,47 +37,20 @@ public class HikariTest extends AbstractBenchmark {
 
     // private static final String[] schemas = new String[] {"boauth", "bocsconf", "bodomain", "boocpi", "boocpp15j", "boopapij"};
 
-    private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
-        
-    @Param({"10000"})
-    public int divideLogicalConnectionsBy;
-
-    public List<Integer> testList = new Vector(1000, 1000);
-
-    @Setup(Level.Trial)
-    public void setUp() {
-        final int[] logicalConnections = new int[HikariTest.logicalConnections.length];
-        int totalLogicalConnections = 0;
-        int idx;
-            
-        for (idx = 0; idx < logicalConnections.length; idx++) {
-            logicalConnections[idx] = HikariTest.logicalConnections[idx] / divideLogicalConnectionsBy;
-            assert logicalConnections[idx] > 0;
-            totalLogicalConnections += logicalConnections[idx];    
-        }
-
-        while (totalLogicalConnections > 0) {
-            do {
-                idx = getRandomNumber(0, logicalConnections.length);
-            } while (logicalConnections[idx] == 0);
-
-            assert logicalConnections[idx] > 0;
-
-            logicalConnections[idx]--;
-            totalLogicalConnections--;
-
-            testList.add(idx);
-        }
-    }
-
     @State(Scope.Benchmark)
     public static class BenchmarkState {
+
+        private static final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
+        
+        @Param({"10000"})
+        public int divideLogicalConnectionsBy;
+
+        public List<Integer> testList = new Vector(1000, 1000);
 
         @Autowired
         @Qualifier("authDataSource1")
         private static HikariDataSource authDataSourceHikari;
 
-        /*        
         @Autowired
         @Qualifier("configDataSource1")
         private static HikariDataSource configDataSourceHikari;
@@ -97,12 +70,33 @@ public class HikariTest extends AbstractBenchmark {
         @Autowired
         @Qualifier("operatorDataSource1")
         private static HikariDataSource operatorDataSourceHikari;
-        */
         
         @Setup(Level.Trial)
         public void setUp() {
-        }
+            final int[] logicalConnections = new int[BenchmarkState.logicalConnections.length];
+            int totalLogicalConnections = 0;
+            int idx;
+            
+            for (idx = 0; idx < logicalConnections.length; idx++) {
+                logicalConnections[idx] = BenchmarkState.logicalConnections[idx] / divideLogicalConnectionsBy;
+                assert logicalConnections[idx] > 0;
+                totalLogicalConnections += logicalConnections[idx];    
+            }
 
+            while (totalLogicalConnections > 0) {
+                do {
+                    idx = getRandomNumber(0, logicalConnections.length);
+                } while (logicalConnections[idx] == 0);
+
+                assert logicalConnections[idx] > 0;
+
+                logicalConnections[idx]--;
+                totalLogicalConnections--;
+
+                testList.add(idx);
+            }
+        }
+        
         /*
         @Autowired
         void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
@@ -155,7 +149,7 @@ public class HikariTest extends AbstractBenchmark {
 
         assert bs.authDataSourceHikari != null;
 
-        testList.parallelStream().forEach(idx -> {
+        bs.testList.parallelStream().forEach(idx -> {
                 try (final Connection conn = dataSources[idx].getConnection()) {
                     bh.consume(conn.getSchema());
                 } catch (SQLException ex) {

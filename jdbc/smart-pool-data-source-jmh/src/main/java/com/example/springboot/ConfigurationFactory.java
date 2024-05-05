@@ -30,7 +30,6 @@ public class ConfigurationFactory {
         return new DataSourceProperties();
     }
 
-    /*
     @Bean(name = {"ocpiDataSourceProperties"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource")
     public DataSourceProperties ocpiDataSourceProperties() {
@@ -58,5 +57,4 @@ public class ConfigurationFactory {
         log.debug("operatorDataSourceProperties");
         return new DataSourceProperties();
     }
-    */
 }

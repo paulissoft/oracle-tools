@@ -18,7 +18,7 @@ abstract public class AbstractBenchmark {
     }
 
     public void executeJmhRunner() throws RunnerException {
-        Options opt = new OptionsBuilder()
+        final Options opt = new OptionsBuilder()
             // set the class name regex for benchmarks to search for to the current class 
             .include("\\." + this.getClass().getSimpleName() + "\\.")
             .warmupIterations(WARMUP_ITERATIONS)

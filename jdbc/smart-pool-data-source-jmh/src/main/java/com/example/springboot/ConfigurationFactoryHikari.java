@@ -36,7 +36,6 @@ public class ConfigurationFactoryHikari {
             .build();
     }
 
-    /*
     @Bean(name = {"domainDataSource1"})
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
     public HikariDataSource domainDataSource1(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
@@ -76,5 +75,4 @@ public class ConfigurationFactoryHikari {
             .type(HikariDataSource.class)
             .build();
     }
-    */
 }
