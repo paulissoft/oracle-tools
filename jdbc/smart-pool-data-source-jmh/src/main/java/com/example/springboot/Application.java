@@ -29,10 +29,10 @@ public class Application {
             
                 Arrays.sort(beanNames);
                 for (String beanName : beanNames) {
-                    if (beanName.endsWith("DataSource1") ||
+                    if (beanName.endsWith("DataSource0") ||
+                        beanName.endsWith("DataSource1") ||
                         beanName.endsWith("DataSource2") ||
                         beanName.endsWith("DataSource3") ||
-                        beanName.endsWith("DataSource4") ||
                         (beanName.endsWith("DataSourceProperties") && !beanName.endsWith(".DataSourceProperties"))) {
                         log.debug(beanName);
                     }

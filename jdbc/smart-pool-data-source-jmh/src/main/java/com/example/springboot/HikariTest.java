@@ -2,13 +2,12 @@
 
 package com.example.springboot;
 
-import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
-//import org.junit.jupiter.api.extension.ExtendWith;
+import javax.sql.DataSource;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -40,7 +39,12 @@ public class HikariTest extends AbstractBenchmark {
 
         private final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
 
-        public final HikariDataSource[] dataSources = new HikariDataSource[logicalConnections.length];
+        public final DataSource[][] dataSources = {
+            { null, null, null, null, null, null },
+            { null, null, null, null, null, null },
+            { null, null, null, null, null, null },
+            { null, null, null, null, null, null }
+        };
         
         @Param({"10000"})
         public int divideLogicalConnectionsBy;
@@ -52,12 +56,15 @@ public class HikariTest extends AbstractBenchmark {
             final ApplicationContext context = SpringContext.getApplicationContext();
 
             // get instance of MainSpringClass (Spring Managed class)
-            dataSources[0] = (HikariDataSource) context.getBean("authDataSource1");      
-            dataSources[1] = (HikariDataSource) context.getBean("configDataSource1");
-            dataSources[2] = (HikariDataSource) context.getBean("domainDataSource1");
-            dataSources[3] = (HikariDataSource) context.getBean("ocpiDataSource1");
-            dataSources[4] = (HikariDataSource) context.getBean("ocppDataSource1");
-            dataSources[5] = (HikariDataSource) context.getBean("operatorDataSource1");
+            int t;
+            for (t = 0; t < 4; t++) {
+                dataSources[t][0] = (DataSource) context.getBean("authDataSource" + t);      
+                dataSources[t][1] = (DataSource) context.getBean("configDataSource" + t);
+                dataSources[t][2] = (DataSource) context.getBean("domainDataSource" + t);
+                dataSources[t][3] = (DataSource) context.getBean("ocpiDataSource" + t);
+                dataSources[t][4] = (DataSource) context.getBean("ocppDataSource" + t);
+                dataSources[t][5] = (DataSource) context.getBean("operatorDataSource" + t);
+            }
 
             final int[] logicalConnections = new int[this.logicalConnections.length];
             int totalLogicalConnections = 0;
@@ -99,11 +106,43 @@ public class HikariTest extends AbstractBenchmark {
     }
     
     @Benchmark
-    // @BenchmarkMode(Mode.SingleShotTime)
-    public void connectAll(Blackhole bh,
-                           BenchmarkState bs) throws SQLException {
+    public void connectAllBasic(Blackhole bh,
+                                BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
-                try (final Connection conn = bs.dataSources[idx].getConnection()) {
+                try (final Connection conn = bs.dataSources[0][idx].getConnection()) {
+                    bh.consume(conn.getSchema());
+                } catch (SQLException ex1) {
+                    throw new RuntimeException(ex1.getMessage());
+                }});
+    }
+
+    @Benchmark
+    public void connectAllSimple(Blackhole bh,
+                                 BenchmarkState bs) throws SQLException {
+        bs.testList.parallelStream().forEach(idx -> {
+                try (final Connection conn = bs.dataSources[1][idx].getConnection()) {
+                    bh.consume(conn.getSchema());
+                } catch (SQLException ex1) {
+                    throw new RuntimeException(ex1.getMessage());
+                }});
+    }
+
+    @Benchmark
+    public void connectAllCombi(Blackhole bh,
+                                BenchmarkState bs) throws SQLException {
+        bs.testList.parallelStream().forEach(idx -> {
+                try (final Connection conn = bs.dataSources[2][idx].getConnection()) {
+                    bh.consume(conn.getSchema());
+                } catch (SQLException ex1) {
+                    throw new RuntimeException(ex1.getMessage());
+                }});
+    }
+    
+    @Benchmark
+    public void connectAllSmart(Blackhole bh,
+                                BenchmarkState bs) throws SQLException {
+        bs.testList.parallelStream().forEach(idx -> {
+                try (final Connection conn = bs.dataSources[3][idx].getConnection()) {
                     bh.consume(conn.getSchema());
                 } catch (SQLException ex1) {
                     throw new RuntimeException(ex1.getMessage());
