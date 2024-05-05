@@ -108,40 +108,11 @@ public class HikariTest extends AbstractBenchmark {
     @BenchmarkMode(Mode.SingleShotTime)
     public void connectAll(Blackhole bh,
                            BenchmarkState bs) throws SQLException {
-        bs.testList.parallelStream().forEach(idx -> { connect(bh, bs.dataSources, idx); });        
-        // bs.testList.stream().forEach(idx -> { connect(bh, dataSources, idx); });        
-    }
-
-    private void connect(final Blackhole bh, final HikariDataSource[] dataSources, final int idx) {
-        log.debug("connect({}, {})", dataSources, idx);
-
-        assert idx >= 0 && idx < dataSources.length : "Index (" + idx + ") must be between 0 and " + dataSources.length;
-        assert dataSources[idx] != null : "Data source for index (" + idx + ") must not be null";
-
-        Connection conn = null;
-
-        try {
-            log.debug("data source: {}", dataSources[idx]);
-            
-            conn = dataSources[idx].getConnection();
-
-            assert conn != null : "Connection should not be null";
-            assert conn.getSchema() != null : "Connection schema should not be null";
-
-            log.debug("schema: {}", conn.getSchema());
-
-            bh.consume(conn.getSchema());
-        } catch (SQLException ex1) {
-            // System.err.println(ex1.getMessage());
-            throw new RuntimeException(ex1.getMessage());
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (SQLException ex2) {
-                    throw new RuntimeException(ex2.getMessage());
-                }
-            }
-        }
+        bs.testList.parallelStream().forEach(idx -> {
+                try (final Connection conn = bs.dataSources[idx].getConnection()) {
+                    bh.consume(conn.getSchema());
+                } catch (SQLException ex1) {
+                    throw new RuntimeException(ex1.getMessage());
+                }});
     }
 }
