@@ -23,7 +23,7 @@ public class PropertiesPrinter {
 
     private void printAllActiveProperties(ConfigurableEnvironment env) {
 
-        logger.info("************************* ALL PROPERTIES(EVENT) ******************************");
+        logger.debug("************************* ALL PROPERTIES(EVENT) ******************************");
 
         env.getPropertySources()
             .stream()
@@ -32,14 +32,14 @@ public class PropertiesPrinter {
             .flatMap(Collection::stream)
             .distinct()
             .sorted()
-            .forEach(key -> logger.info("{}={}", key, env.getProperty(key)));
+            .forEach(key -> logger.debug("{}={}", key, env.getProperty(key)));
 
-        logger.info("******************************************************************************");
+        logger.debug("******************************************************************************");
     }
 
     private void printAllApplicationProperties(ConfigurableEnvironment env) {
 
-        logger.info("************************* APP PROPERTIES(EVENT) ******************************");
+        logger.debug("************************* APP PROPERTIES(EVENT) ******************************");
 
         env.getPropertySources()
             .stream()
@@ -48,8 +48,8 @@ public class PropertiesPrinter {
             .flatMap(Collection::stream)
             .distinct()
             .sorted()
-            .forEach(key -> logger.info("{}={}", key, env.getProperty(key)));
+            .forEach(key -> logger.debug("{}={}", key, env.getProperty(key)));
 
-        logger.info("******************************************************************************");
+        logger.debug("******************************************************************************");
     }
 }
