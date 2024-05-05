@@ -22,7 +22,7 @@ public class ConfigurationFactory {
         log.debug("authDataSourceProperties");
         return new DataSourceProperties();
     }
-    /*
+    
     @Bean(name = {"configDataSourceProperties"})
     @ConfigurationProperties(prefix = "app.config.datasource")
     public DataSourceProperties configDataSourceProperties() {
@@ -30,6 +30,7 @@ public class ConfigurationFactory {
         return new DataSourceProperties();
     }
 
+    /*
     @Bean(name = {"ocpiDataSourceProperties"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource")
     public DataSourceProperties ocpiDataSourceProperties() {

@@ -19,12 +19,16 @@ public class Application {
     public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
         return args -> {
 
-            System.out.println("Let's inspect the beans provided by Spring Boot:");
+            System.out.println("Let's inspect the application beans provided by Spring Boot:");
 
             String[] beanNames = ctx.getBeanDefinitionNames();
             Arrays.sort(beanNames);
             for (String beanName : beanNames) {
-                if (beanName.endsWith("DataSource1")) {
+                if (beanName.endsWith("DataSource1") ||
+                    beanName.endsWith("DataSource2") ||
+                    beanName.endsWith("DataSource3") ||
+                    beanName.endsWith("DataSource4") ||
+                    (beanName.endsWith("DataSourceProperties") && !beanName.endsWith(".DataSourceProperties"))) {
                     System.out.println(beanName);
                 }
             }
