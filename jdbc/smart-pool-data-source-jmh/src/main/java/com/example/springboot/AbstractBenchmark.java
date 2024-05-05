@@ -10,9 +10,9 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 abstract public class AbstractBenchmark {
 
-    private final static Integer MEASUREMENT_ITERATIONS = 3;
+    private final static Integer MEASUREMENT_ITERATIONS = 1; // 3;
     
-    private final static Integer WARMUP_ITERATIONS = 3;
+    private final static Integer WARMUP_ITERATIONS = 1; // 3;
 
     public AbstractBenchmark() {
     }
@@ -32,7 +32,7 @@ abstract public class AbstractBenchmark {
             .resultFormat(ResultFormatType.JSON)
             .result("/dev/null") // set this to a valid filename if you want reports
             .shouldFailOnError(true)
-            .jvmArgs("-server")
+            .jvmArgs("-server -ea")
             .build();
 
         new Runner(opt).run();

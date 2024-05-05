@@ -79,9 +79,14 @@ public class HikariTest extends AbstractBenchmark {
             
             for (idx = 0; idx < logicalConnections.length; idx++) {
                 logicalConnections[idx] = BenchmarkState.logicalConnections[idx] / divideLogicalConnectionsBy;
+
+                System.out.println("# logical connections for index " + idx + ": " + logicalConnections[idx]);
+                            
                 assert logicalConnections[idx] > 0;
                 totalLogicalConnections += logicalConnections[idx];    
             }
+
+            System.out.println("# logical connections: " + totalLogicalConnections);
 
             while (totalLogicalConnections > 0) {
                 do {
@@ -93,8 +98,12 @@ public class HikariTest extends AbstractBenchmark {
                 logicalConnections[idx]--;
                 totalLogicalConnections--;
 
+                System.out.println("adding index " + idx);
+                
                 testList.add(idx);
             }
+
+            System.out.println("# indexes: " + testList.size());
         }
         
         /*
@@ -140,20 +149,76 @@ public class HikariTest extends AbstractBenchmark {
     public void connectAll(Blackhole bh,
                            BenchmarkState bs) throws SQLException {
         final HikariDataSource[] dataSources = new HikariDataSource[]
-            { bs.authDataSourceHikari/*,
+            { bs.authDataSourceHikari,
               bs.configDataSourceHikari,
               bs.domainDataSourceHikari,
               bs.ocpiDataSourceHikari,
               bs.ocppDataSourceHikari,
-              bs.operatorDataSourceHikari*/ };
+              bs.operatorDataSourceHikari };
 
-        assert bs.authDataSourceHikari != null;
+        assert bs.authDataSourceHikari != null : "Data source bs.authDataSourceHikari should not be null";
+        assert bs.configDataSourceHikari != null : "Data source bs.configDataSourceHikari should not be null";
+        assert bs.domainDataSourceHikari != null : "Data source bs.domainDataSourceHikari should not be null";
+        assert bs.ocpiDataSourceHikari != null : "Data source bs.ocpiDataSourceHikari should not be null";
+        assert bs.ocppDataSourceHikari != null : "Data source bs.ocppDataSourceHikari should not be null";
+        assert bs.operatorDataSourceHikari != null : "Data source bs.operatorDataSourceHikari should not be null";
 
-        bs.testList.parallelStream().forEach(idx -> {
-                try (final Connection conn = dataSources[idx].getConnection()) {
-                    bh.consume(conn.getSchema());
-                } catch (SQLException ex) {
-                    throw new RuntimeException(ex.getMessage());
-                }});        
-    }    
+        // bs.testList.parallelStream().forEach(idx -> { connect(bh, dataSources, idx); });        
+        bs.testList.stream().forEach(idx -> { connect(bh, dataSources, idx); });        
+    }
+
+    private void connect(final Blackhole bh, final HikariDataSource[] dataSources, final int idx) {
+        System.out.println("connect(" + dataSources + ", " + idx + ")");
+        System.out.println("#1");
+
+        assert idx >= 0 && idx < dataSources.length : "Index (" + idx + ") must be between 0 and " + dataSources.length;
+        System.out.println("#2");
+        assert dataSources[idx] != null : "Data source for index (" + idx + ") must not be null";
+        System.out.println("#3");
+
+        Connection conn = null;
+
+        System.out.println("#4");
+
+        try {
+            System.out.println("data source: " + (dataSources[idx] == null ? "null" : dataSources[idx].toString()));
+            
+            conn = dataSources[idx].getConnection();
+
+            System.out.println("#5");
+
+            System.out.println("conn: " + conn);
+
+            System.out.println("#6");
+
+            assert conn != null : "Connection should not be null";
+
+            System.out.println("#7");
+
+            assert conn.getSchema() != null : "Connection schema should not be null";
+
+            System.out.println("#8");
+
+            
+            System.out.println("schema: " + conn.getSchema());
+
+            System.out.println("#9");
+
+            bh.consume(conn.getSchema());
+
+            System.out.println("#10");
+
+        } catch (SQLException ex1) {
+            // System.err.println(ex1.getMessage());
+            throw new RuntimeException(ex1.getMessage());
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException ex2) {
+                    throw new RuntimeException(ex2.getMessage());
+                }
+            }
+        }
+    }
 }

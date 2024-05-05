@@ -22,6 +22,7 @@ public class Application {
             System.out.println("Let's inspect the application beans provided by Spring Boot:");
 
             String[] beanNames = ctx.getBeanDefinitionNames();
+            
             Arrays.sort(beanNames);
             for (String beanName : beanNames) {
                 if (beanName.endsWith("DataSource1") ||
@@ -32,6 +33,8 @@ public class Application {
                     System.out.println(beanName);
                 }
             }
+
+            (new HikariTest()).executeJmhRunner();
         };
     }
 }
