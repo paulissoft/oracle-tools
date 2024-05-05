@@ -19,11 +19,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-//import org.springframework.test.context.ContextConfiguration;
-//import org.springframework.test.context.TestPropertySource;
-//import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.context.ApplicationContext;
 
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-// Spring annotations
 public class HikariTest extends AbstractBenchmark {
 
     public HikariTest() {
@@ -105,7 +99,7 @@ public class HikariTest extends AbstractBenchmark {
     }
     
     @Benchmark
-    @BenchmarkMode(Mode.SingleShotTime)
+    // @BenchmarkMode(Mode.SingleShotTime)
     public void connectAll(Blackhole bh,
                            BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
