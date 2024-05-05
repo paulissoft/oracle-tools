@@ -57,8 +57,6 @@ public class HikariTest extends AbstractBenchmark {
         public void setUp() {
             final ApplicationContext context = SpringContext.getApplicationContext();
 
-            log.info("context: {}", context);
-            
             // get instance of MainSpringClass (Spring Managed class)
             dataSources[0] = (HikariDataSource) context.getBean("authDataSource1");      
             dataSources[1] = (HikariDataSource) context.getBean("configDataSource1");
@@ -67,20 +65,20 @@ public class HikariTest extends AbstractBenchmark {
             dataSources[4] = (HikariDataSource) context.getBean("ocppDataSource1");
             dataSources[5] = (HikariDataSource) context.getBean("operatorDataSource1");
 
-            final int[] logicalConnections = new int[BenchmarkState.logicalConnections.length];
+            final int[] logicalConnections = new int[this.logicalConnections.length];
             int totalLogicalConnections = 0;
             int idx;
             
             for (idx = 0; idx < logicalConnections.length; idx++) {
-                logicalConnections[idx] = BenchmarkState.logicalConnections[idx] / divideLogicalConnectionsBy;
+                logicalConnections[idx] = this.logicalConnections[idx] / divideLogicalConnectionsBy;
 
-                log.info("# logical connections for index {}: {}", idx, logicalConnections[idx]);
+                log.debug("# logical connections for index {}: {}", idx, logicalConnections[idx]);
                             
                 assert logicalConnections[idx] > 0;
                 totalLogicalConnections += logicalConnections[idx];    
             }
 
-            log.info("# logical connections: {}", totalLogicalConnections);
+            log.debug("# logical connections: {}", totalLogicalConnections);
 
             while (totalLogicalConnections > 0) {
                 do {
@@ -92,12 +90,12 @@ public class HikariTest extends AbstractBenchmark {
                 logicalConnections[idx]--;
                 totalLogicalConnections--;
 
-                log.info("adding index ", idx);
+                log.debug("adding index ", idx);
                 
                 testList.add(idx);
             }
 
-            log.info("# indexes: {}", testList.size());
+            log.debug("# indexes: {}", testList.size());
         }
     }
 
@@ -115,7 +113,7 @@ public class HikariTest extends AbstractBenchmark {
     }
 
     private void connect(final Blackhole bh, final HikariDataSource[] dataSources, final int idx) {
-        log.info("connect({}, {})", dataSources, idx);
+        log.debug("connect({}, {})", dataSources, idx);
 
         assert idx >= 0 && idx < dataSources.length : "Index (" + idx + ") must be between 0 and " + dataSources.length;
         assert dataSources[idx] != null : "Data source for index (" + idx + ") must not be null";
@@ -123,14 +121,14 @@ public class HikariTest extends AbstractBenchmark {
         Connection conn = null;
 
         try {
-            log.info("data source: {}", dataSources[idx]);
+            log.debug("data source: {}", dataSources[idx]);
             
             conn = dataSources[idx].getConnection();
 
             assert conn != null : "Connection should not be null";
             assert conn.getSchema() != null : "Connection schema should not be null";
 
-            log.info("schema: {}", conn.getSchema());
+            log.debug("schema: {}", conn.getSchema());
 
             bh.consume(conn.getSchema());
         } catch (SQLException ex1) {
