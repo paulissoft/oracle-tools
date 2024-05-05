@@ -82,22 +82,35 @@ public class HikariTest extends AbstractBenchmark {
     @State(Scope.Benchmark)
     public static class BenchmarkState {
 
-        private HikariDataSource authDataSourceHikari;
+        @Autowired
+        @Qualifier("authDataSource1")
+        private static HikariDataSource authDataSourceHikari;
         
-        private HikariDataSource configDataSourceHikari;
+        @Autowired
+        @Qualifier("configDataSource1")
+        private static HikariDataSource configDataSourceHikari;
     
-        private HikariDataSource domainDataSourceHikari;
+        @Autowired
+        @Qualifier("domainDataSource1")
+        private static HikariDataSource domainDataSourceHikari;
     
-        private HikariDataSource ocpiDataSourceHikari;
+        @Autowired
+        @Qualifier("ocpiDataSource1")
+        private static HikariDataSource ocpiDataSourceHikari;
     
-        private HikariDataSource ocppDataSourceHikari;
+        @Autowired
+        @Qualifier("ocppDataSource1")
+        private static HikariDataSource ocppDataSourceHikari;
     
-        private HikariDataSource operatorDataSourceHikari;
+        @Autowired
+        @Qualifier("operatorDataSource1")
+        private static HikariDataSource operatorDataSourceHikari;
 
         @Setup(Level.Trial)
         public void setUp() {
         }
 
+        /*
         @Autowired
         void setAuthDataSourceHikari(@Qualifier("authDataSource1") HikariDataSource authDataSourceHikari) {
             this.authDataSourceHikari = authDataSourceHikari;
@@ -126,7 +139,8 @@ public class HikariTest extends AbstractBenchmark {
         @Autowired
         void setOperatorDataSourceHikari(@Qualifier("operatorDataSource1") HikariDataSource operatorDataSourceHikari) {
             this.operatorDataSourceHikari = operatorDataSourceHikari;
-        }    
+        }
+        */
     }
 
     // https://www.baeldung.com/java-generating-random-numbers-in-range
