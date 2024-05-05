@@ -106,6 +106,7 @@ public class HikariTest extends AbstractBenchmark {
     }
     
     @Benchmark
+    @BenchmarkMode(Mode.SingleShotTime)
     public void connectAllBasic(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
         bs.testList.parallelStream().forEach(idx -> {
