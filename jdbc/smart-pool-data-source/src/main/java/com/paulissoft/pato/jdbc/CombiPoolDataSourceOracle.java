@@ -134,6 +134,18 @@ public class CombiPoolDataSourceOracle
      * Connection
      */
 
+    @Override
+    protected void tearDown() {
+        // must get this info before it is actually closed since then getPoolDataSource() will return a error
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource(); 
+        
+        // we are in a synchronized context
+        super.tearDown();
+        if (getState() == State.CLOSED) {
+            poolDataSource.close();
+        }
+    }
+
     protected Connection getConnection(@NonNull final SimplePoolDataSourceOracle poolDataSource,
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,

@@ -6,8 +6,11 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 //import org.openjdk.jol.vm.VM;
 
 import oracle.ucp.ConnectionAffinityCallback;
-import oracle.ucp.jdbc.*;
-
+import oracle.ucp.jdbc.UCPConnectionBuilder;
+import oracle.ucp.jdbc.ConnectionInitializationCallback;
+import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
+import oracle.ucp.jdbc.ConnectionLabelingCallback;
+    
 @Slf4j
 public class SimplePoolDataSourceOracle
     extends PoolDataSourceImpl
@@ -217,7 +220,17 @@ public class SimplePoolDataSourceOracle
         return getActiveConnections() + getIdleConnections();
     }
 
-    public void close() {        
+    public void close() {
+        // There is no real close but this one mimics it
+        try {
+            setInitialPoolSize(0);
+            setMinPoolSize(0);
+            setMaxPoolSize(0);
+            // ICT (https://docs.oracle.com/en/database/oracle/oracle-database/21/jjucp/stale-ucp-connections.html)
+            setInactiveConnectionTimeout(1);
+        } catch (SQLException ex) {
+            log.warn(ex.getMessage());
+        }
     }
     
     /*
