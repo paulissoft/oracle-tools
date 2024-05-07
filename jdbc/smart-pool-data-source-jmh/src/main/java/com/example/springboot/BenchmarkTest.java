@@ -2,44 +2,48 @@
 
 package com.example.springboot;
 
-import java.util.List;
-import org.openjdk.jmh.results.format.ResultFormatType;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
+//import org.openjdk.jmh.annotations.Benchmark;
+//import org.openjdk.jmh.annotations.BenchmarkMode;
+//import org.openjdk.jmh.annotations.Mode;
+//import org.openjdk.jmh.annotations.OutputTimeUnit;
+//import org.openjdk.jmh.annotations.Scope;
+//import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class BenchmarkTest {
 
-    private final static Integer MEASUREMENT_ITERATIONS = 3;
-    
-    private final static Integer WARMUP_ITERATIONS = 3;
+    DataSource[] dataSources = null;
 
-    public static void executeJmhRunner(final List<String> jmhFilter) throws RunnerException {
-        final ChainedOptionsBuilder chainedOptionsBuilder = new OptionsBuilder()
-            .warmupIterations(WARMUP_ITERATIONS)
-            .measurementIterations(MEASUREMENT_ITERATIONS)
-            // do not use forking or the benchmark methods will not see references stored within its class
-            .forks(0)
-            // do not use multiple threads
-            .threads(1)
-            .shouldDoGC(true)
-            .resultFormat(ResultFormatType.JSON)
-            .result("/dev/null") // set this to a valid filename if you want reports
-            .shouldFailOnError(false)
-            .jvmArgs("-server")
-            .jvmArgs("-ea");
+    public void tearDown() throws Exception {
+        if (dataSources != null) {
+            int i;
 
-        if (jmhFilter != null && jmhFilter.size() > 0) {
-            // set the class name regex for benchmarks to search for to the current class 
-            jmhFilter.forEach(i -> { chainedOptionsBuilder.include("\\." + i + "\\."); });
-        } else {
-            chainedOptionsBuilder.include("\\..*\\.");
+            for (i = 0; i < dataSources.length; i++) {
+                if (dataSources[i] instanceof AutoCloseable) {
+                    ((AutoCloseable)dataSources[i]).close();
+                }
+            }
         }
-        
-        final Options opt = chainedOptionsBuilder.build();
+    }
 
-        new Runner(opt).run();
+    public void connectAll(Blackhole bh,
+                           BenchmarkState bs,
+                           String dataSourceClassName) throws SQLException {
+        dataSources = bs.getDataSources(dataSourceClassName);
+        
+        bs.testList.parallelStream().forEach(idx -> {
+                try (final Connection conn = dataSources[idx].getConnection()) {
+                    TimeUnit.SECONDS.sleep(1);
+                    bh.consume(conn.getSchema());
+                } catch (SQLException | InterruptedException ex) {
+                    throw new RuntimeException(ex.getMessage());
+                }});
     }
 }

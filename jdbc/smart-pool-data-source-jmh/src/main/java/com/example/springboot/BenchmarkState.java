@@ -10,6 +10,16 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.springframework.context.ApplicationContext;
 
+import com.zaxxer.hikari.HikariDataSource;
+import com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari;
+import com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari;
+import com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari;
+
+import oracle.ucp.jdbc.PoolDataSourceImpl;
+import com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle;
+import com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle;
+import com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -87,6 +97,30 @@ public class BenchmarkState {
         log.debug("# indexes: {}", testList.size());
     }
 
+    public DataSource[] getDataSources(String className) {
+        int d = -1, t = -1;
+
+        if (className.equals(HikariDataSource.class.getName())) {
+            d = 0; t = 0;
+        } else if (className.equals(SimplePoolDataSourceHikari.class.getName())) {
+            d = 0; t = 1;
+        } else if (className.equals(CombiPoolDataSourceHikari.class.getName())) {
+            d = 0; t = 2;
+        } else if (className.equals(SmartPoolDataSourceHikari.class.getName())) {
+            d = 0; t = 3;
+        } else if (className.equals(PoolDataSourceImpl.class.getName())) {
+            d = 1; t = 0;
+        } else if (className.equals(SimplePoolDataSourceOracle.class.getName())) {
+            d = 1; t = 1;
+        } else if (className.equals(CombiPoolDataSourceOracle.class.getName())) {
+            d = 1; t = 2;
+        } else if (className.equals(SmartPoolDataSourceOracle.class.getName())) {
+            d = 1; t = 3;
+        }
+
+        return dataSources[d][t];
+    }
+    
     // https://www.baeldung.com/java-generating-random-numbers-in-range
     private static int getRandomNumber(int min, int max) {
         return (int) ((Math.random() * (max - min)) + min);

@@ -44,7 +44,7 @@ public class Application implements ApplicationRunner {
                 }
             }
 
-            BenchmarkTest.executeJmhRunner(jmhFilter);
+            BenchmarkTestRunner.execute(jmhFilter);
         };
     }
 

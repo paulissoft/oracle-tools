@@ -1,6 +1,5 @@
 package com.example.springboot;
 
-import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -8,6 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+// the four variants
+import com.zaxxer.hikari.HikariDataSource;
 import com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari;
 import com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari;
 import com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari;
