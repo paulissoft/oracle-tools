@@ -17,6 +17,7 @@ public class BenchmarkTestRunner {
     private final static Integer WARMUP_ITERATIONS = 3;
 
     public static void execute(final List<String> jmhFilter) throws RunnerException {
+        final String resultFile = "results.txt"; // or "/dev/null"
         final ChainedOptionsBuilder chainedOptionsBuilder = new OptionsBuilder()
             .warmupIterations(WARMUP_ITERATIONS)
             .measurementIterations(MEASUREMENT_ITERATIONS)
@@ -26,7 +27,7 @@ public class BenchmarkTestRunner {
             .threads(1)
             .shouldDoGC(true)
             .resultFormat(ResultFormatType.JSON)
-            .result("/dev/null") // set this to a valid filename if you want reports
+            .result(resultFile)
             .shouldFailOnError(false)
             .jvmArgs("-server")
             .jvmArgs("-ea");

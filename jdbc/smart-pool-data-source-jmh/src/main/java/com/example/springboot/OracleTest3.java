@@ -2,7 +2,6 @@
 
 package com.example.springboot;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -11,6 +10,7 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import lombok.extern.slf4j.Slf4j;
@@ -20,16 +20,17 @@ import lombok.extern.slf4j.Slf4j;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-public class OracleTest3 {
-   
+public class OracleTest3 extends BenchmarkTest {
+
+    @Override
+    @TearDown
+    public void tearDown() throws Exception {
+        super.tearDown();
+    }    
+    
     @Benchmark
     public void connectAllSmart(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
-        bs.testList.parallelStream().forEach(idx -> {
-                try (final Connection conn = bs.dataSources[1][3][idx].getConnection()) {
-                    bh.consume(conn.getSchema());
-                } catch (SQLException ex1) {
-                    throw new RuntimeException(ex1.getMessage());
-                }});
+        connectAll(bh, bs, com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle.class.getName());
     }
 }
