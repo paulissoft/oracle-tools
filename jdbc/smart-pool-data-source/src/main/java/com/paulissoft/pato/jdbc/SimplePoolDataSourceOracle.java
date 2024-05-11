@@ -13,9 +13,6 @@ import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.ConnectionAffinityCallback;
 import oracle.ucp.ConnectionLabelingCallback;
-//import oracle.ucp.UniversalConnectionPoolException;
-//import oracle.ucp.admin.UniversalConnectionPoolManager;
-//import oracle.ucp.admin.UniversalConnectionPoolManagerImpl;
 import oracle.ucp.jdbc.ConnectionInitializationCallback;
 import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
@@ -231,15 +228,6 @@ public class SimplePoolDataSourceOracle
     }
 
     public void close() {
-        /*
-        try {
-            final UniversalConnectionPoolManager mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
-
-            mgr.destroyConnectionPool(getConnectionPoolName());
-        } catch (UniversalConnectionPoolException ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
-        */
     }
     
     /*

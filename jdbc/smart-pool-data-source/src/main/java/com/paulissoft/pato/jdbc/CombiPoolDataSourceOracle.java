@@ -130,10 +130,6 @@ public class CombiPoolDataSourceOracle
         return super.getPoolDataSource();
     }
 
-    /*
-     * Connection
-     */
-
     @Override
     protected void tearDown() {
         // must get this info before it is actually closed since then getPoolDataSource() will return a error
@@ -146,6 +142,9 @@ public class CombiPoolDataSourceOracle
         }
     }
 
+    /*
+     * Connection
+     */
     protected Connection getConnection(@NonNull final SimplePoolDataSourceOracle poolDataSource,
                                        @NonNull final String usernameSession1,
                                        @NonNull final String passwordSession1,
