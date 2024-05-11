@@ -181,21 +181,28 @@ public class CombiPoolDataSourceOracle
 
             // set pool name
             final String suffix = "-" + getPoolDataSourceConfiguration().getSchema();
+            final String oldConnectionPoolName = poolDataSource.getConnectionPoolName();
 
             // keep poolDataSource in sync with poolDataSourceConfiguration
             if (initializing) {
                 if (isParentPoolDataSource) {
                     poolDataSourceConfiguration.setConnectionPoolName(POOL_NAME_PREFIX + suffix);
                 } else {
-                    poolDataSourceConfiguration.setConnectionPoolName(poolDataSource.getConnectionPoolName() + suffix);
+                    poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName + suffix);
                 }
             } else {
-                poolDataSourceConfiguration.setConnectionPoolName(poolDataSource.getConnectionPoolName().replace(suffix, ""));
+                poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName.replace(suffix, ""));
             }
-            try {
+            
+            try {                
                 poolDataSource.setConnectionPoolName(poolDataSourceConfiguration.getConnectionPoolName());
+                log.debug("Connection pool name updated from '{}' to '{}'",
+                          oldConnectionPoolName,
+                          poolDataSourceConfiguration.getConnectionPoolName());
             } catch (SQLException ex) {
-                log.error("Can not set connection pool name to {}", poolDataSourceConfiguration.getConnectionPoolName());
+                log.error("Can not update connection pool name from '{}' to '{}'",
+                          oldConnectionPoolName,
+                          poolDataSourceConfiguration.getConnectionPoolName());
                 throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
             }
         } finally {
