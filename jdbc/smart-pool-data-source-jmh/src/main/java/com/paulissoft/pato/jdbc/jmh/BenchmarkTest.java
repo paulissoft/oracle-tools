@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 //import org.openjdk.jmh.annotations.Benchmark;
 //import org.openjdk.jmh.annotations.BenchmarkMode;
 //import org.openjdk.jmh.annotations.Mode;
@@ -37,13 +38,29 @@ public class BenchmarkTest {
                            BenchmarkState bs,
                            String dataSourceClassName) throws SQLException {
         dataSources = bs.getDataSources(dataSourceClassName);
-        
-        bs.testList.parallelStream().forEach(idx -> {
-                try (final Connection conn = dataSources[idx].getConnection()) {
-                    TimeUnit.SECONDS.sleep(1);
-                    bh.consume(conn.getSchema());
-                } catch (SQLException | InterruptedException ex) {
-                    throw new RuntimeException(ex.getMessage());
-                }});
+
+        try {
+            bs.testList.parallelStream().forEach(idx -> {
+                    try (final Connection conn = dataSources[idx].getConnection()) {
+                        TimeUnit.SECONDS.sleep(1);
+                        bh.consume(conn.getSchema());
+                    } catch (SQLException | InterruptedException ex) {
+                        throw new RuntimeException(ex.getMessage());
+                    }});
+        } catch (Exception ex) {
+            if (dataSources != null) {
+                int i;
+                
+                for (i = 0; i < dataSources.length; i++) {
+                    try {
+                        final PoolDataSourceImpl pds = (PoolDataSourceImpl) dataSources[i];
+                        
+                        log.warn("Connection pool name of data source # {}: {}", i, pds.getConnectionPoolName());
+                    } catch (Exception ignore) {
+                    }
+                }
+            }
+            throw ex;
+        }
     }
 }
