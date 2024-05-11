@@ -21,6 +21,8 @@
 
   <properties>
     <java.version>11</java.version>
+    <test>OracleTest.</test>
+    <spring-boot.run.arguments>${test}</spring-boot.run.arguments>
     <default.goal>spring-boot:run</default.goal>
   </properties>
 

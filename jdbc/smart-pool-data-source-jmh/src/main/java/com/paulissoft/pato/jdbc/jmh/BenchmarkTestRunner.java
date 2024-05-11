@@ -1,6 +1,6 @@
 //package com.paulissoft.pato.jdbc;
 
-package com.example.springboot;
+package com.paulissoft.pato.jdbc.jmh;
 
 import java.util.List;
 import org.openjdk.jmh.results.format.ResultFormatType;

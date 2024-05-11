@@ -180,14 +180,14 @@ public class CombiPoolDataSourceOracle
                       poolDataSource.getConnectionPoolName());
 
             // set pool name
-            if (initializing && isParentPoolDataSource) {
-                poolDataSource.setConnectionPoolName(POOL_NAME_PREFIX);
-            }
-
             final String suffix = "-" + getPoolDataSourceConfiguration().getSchema();
 
             if (initializing) {
-                poolDataSource.setConnectionPoolName(poolDataSource.getConnectionPoolName() + suffix);
+                if (isParentPoolDataSource) {
+                    poolDataSource.setConnectionPoolName(POOL_NAME_PREFIX + suffix);
+                } else {
+                    poolDataSource.setConnectionPoolName(poolDataSource.getConnectionPoolName() + suffix);
+                }
             } else {
                 poolDataSource.setConnectionPoolName(poolDataSource.getConnectionPoolName().replace(suffix, ""));
             }

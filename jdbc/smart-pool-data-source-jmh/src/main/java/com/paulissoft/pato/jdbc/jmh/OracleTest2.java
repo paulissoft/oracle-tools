@@ -1,6 +1,6 @@
 //package com.paulissoft.pato.jdbc;
 
-package com.example.springboot;
+package com.paulissoft.pato.jdbc.jmh;
 
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-public class HikariTest2 extends BenchmarkTest {
+public class OracleTest2 extends BenchmarkTest {
 
     @Override
     @TearDown
@@ -31,6 +31,6 @@ public class HikariTest2 extends BenchmarkTest {
     @Benchmark
     public void connectAllCombi(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
-        connectAll(bh, bs, com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari.class.getName());
+        connectAll(bh, bs, com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle.class.getName());
     }
 }

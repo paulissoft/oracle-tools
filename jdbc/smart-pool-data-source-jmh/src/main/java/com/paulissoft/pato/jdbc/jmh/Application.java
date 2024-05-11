@@ -1,4 +1,4 @@
-package com.example.springboot;
+package com.paulissoft.pato.jdbc.jmh;
 
 import java.util.Arrays;
 import java.util.List;

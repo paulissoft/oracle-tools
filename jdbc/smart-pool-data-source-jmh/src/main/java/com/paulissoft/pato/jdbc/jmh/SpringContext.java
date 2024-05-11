@@ -1,6 +1,6 @@
 // https://confluence.jaytaala.com/display/TKB/Super+simple+approach+to+accessing+Spring+beans+from+non-Spring+managed+classes+and+POJOs
 
-package com.example.springboot;
+package com.paulissoft.pato.jdbc.jmh;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
