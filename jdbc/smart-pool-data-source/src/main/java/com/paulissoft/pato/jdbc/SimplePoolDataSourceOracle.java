@@ -1,15 +1,25 @@
 package com.paulissoft.pato.jdbc;
 
+import java.sql.Connection;
+import java.util.Properties;
+import java.util.Hashtable;
+import java.io.PrintWriter;
+import javax.naming.Name;
+import javax.naming.Reference;
+import javax.naming.Context;
+// import java.util.logging.Logger;
+    
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
-//import org.openjdk.jol.vm.VM;
-
 import oracle.ucp.ConnectionAffinityCallback;
-import oracle.ucp.jdbc.UCPConnectionBuilder;
+import oracle.ucp.ConnectionLabelingCallback;
+//import oracle.ucp.UniversalConnectionPoolException;
+//import oracle.ucp.admin.UniversalConnectionPoolManager;
+//import oracle.ucp.admin.UniversalConnectionPoolManagerImpl;
 import oracle.ucp.jdbc.ConnectionInitializationCallback;
 import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
-import oracle.ucp.jdbc.ConnectionLabelingCallback;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
+import oracle.ucp.jdbc.UCPConnectionBuilder;
     
 @Slf4j
 public class SimplePoolDataSourceOracle
@@ -21,7 +31,7 @@ public class SimplePoolDataSourceOracle
     private final StringBuffer id = new StringBuffer();
          
     public void setId(final String srcId) {
-        SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode())/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
+        SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
     }
 
     public String getId() {
@@ -221,16 +231,15 @@ public class SimplePoolDataSourceOracle
     }
 
     public void close() {
-        // There is no real close but this one mimics it
+        /*
         try {
-            setInitialPoolSize(0);
-            setMinPoolSize(0);
-            setMaxPoolSize(0);
-            // ICT (https://docs.oracle.com/en/database/oracle/oracle-database/21/jjucp/stale-ucp-connections.html)
-            setInactiveConnectionTimeout(1);
-        } catch (SQLException ex) {
-            log.warn(ex.getMessage());
+            final UniversalConnectionPoolManager mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
+
+            mgr.destroyConnectionPool(getConnectionPoolName());
+        } catch (UniversalConnectionPoolException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
+        */
     }
     
     /*
@@ -256,646 +265,763 @@ public class SimplePoolDataSourceOracle
     }
     */
 
+    /**/
     /* Class PoolDataSourceImpl */
 
+    @Override
     public UCPConnectionBuilder createConnectionBuilder() {
         final UCPConnectionBuilder result = super.createConnectionBuilder();
         log.trace("createConnectionBuilder() = {}", result);
         return result;
     }
 
-    protected void createPoolWithDefaultProperties() throws java.sql.SQLException {
+    @Override
+    protected void createPoolWithDefaultProperties() throws SQLException {
         log.trace("createPoolWithDefaultProperties()");
         super.createPoolWithDefaultProperties();
     }
 
+    @Override
     public int getAbandonedConnectionTimeout() {
         final int result = super.getAbandonedConnectionTimeout();
         log.trace("getAbandonedConnectionTimeout() = {}", result);
         return result;
     }
 
+    @Override
     public int getAvailableConnectionsCount() {
         final int result = super.getAvailableConnectionsCount();
         log.trace("getAvailableConnectionsCount() = {}", result);
         return result;
     }
 
+    @Override
     public int getBorrowedConnectionsCount() {
         final int result = super.getBorrowedConnectionsCount();
         log.trace("getBorrowedConnectionsCount() = {}", result);
         return result;
     }
 
-    public java.sql.Connection getConnection() throws java.sql.SQLException {
-        final java.sql.Connection result = super.getConnection();
+    @Override
+    public Connection getConnection() throws SQLException {
+        final Connection result = super.getConnection();
         log.trace("getConnection() = {}", result);
         return result;
     }
 
-    public java.sql.Connection getConnection(java.util.Properties labels) throws java.sql.SQLException {
-        final java.sql.Connection result = super.getConnection(labels);
+    @Override
+    public Connection getConnection(Properties labels) throws SQLException {
+        final Connection result = super.getConnection(labels);
         log.trace("getConnection(labels) = {}", result);
         return result;
     }
 
-    public java.sql.Connection getConnection(java.lang.String username, java.lang.String password) throws java.sql.SQLException {
-        final java.sql.Connection result = super.getConnection(username, password);
+    @Override
+    public Connection getConnection(String username, String password) throws SQLException {
+        final Connection result = super.getConnection(username, password);
         log.trace("getConnection(username, password) = {}", result);
         return result;
     }
 
-    public java.sql.Connection getConnection(java.lang.String username, java.lang.String password, java.util.Properties labels) throws java.sql.SQLException {
-        final java.sql.Connection result = super.getConnection(username, password, labels);
+    @Override
+    public Connection getConnection(String username, String password, Properties labels) throws SQLException {
+        final Connection result = super.getConnection(username, password, labels);
         log.trace("getConnection(username, password, labels) = {}", result);
         return result;
     }
 
-    public java.lang.String getConnectionFactoryClassName() {
-        final java.lang.String result = super.getConnectionFactoryClassName();
+    @Override
+    public String getConnectionFactoryClassName() {
+        final String result = super.getConnectionFactoryClassName();
         log.trace("getConnectionFactoryClassName() = {}", result);
         return result;
     }
 
-    public java.util.Properties getConnectionFactoryProperties() {
-        final java.util.Properties result = super.getConnectionFactoryProperties();
+    @Override
+    public Properties getConnectionFactoryProperties() {
+        final Properties result = super.getConnectionFactoryProperties();
         log.trace("getConnectionFactoryProperties() = {}", result);
         return result;
     }
 
-    public java.lang.String getConnectionFactoryProperty(java.lang.String propertyName) {
-        final java.lang.String result = super.getConnectionFactoryProperty(propertyName);
+    @Override
+    public String getConnectionFactoryProperty(String propertyName) {
+        final String result = super.getConnectionFactoryProperty(propertyName);
         log.trace("getConnectionFactoryProperty(propertyName) = {}", result);
         return result;
     }
 
+    @Override
     public int getConnectionHarvestMaxCount() {
         final int result = super.getConnectionHarvestMaxCount();
         log.trace("getConnectionHarvestMaxCount() = {}", result);
         return result;
     }
 
+    @Override
     public int getConnectionHarvestTriggerCount() {
         final int result = super.getConnectionHarvestTriggerCount();
         log.trace("getConnectionHarvestTriggerCount() = {}", result);
         return result;
     }
 
+    @Override
     public ConnectionInitializationCallback getConnectionInitializationCallback() {
         final ConnectionInitializationCallback result = super.getConnectionInitializationCallback();
         log.trace("getConnectionInitializationCallback() = {}", result);
         return result;
     }
 
+    @Override
     public int getConnectionLabelingHighCost() {
         final int result = super.getConnectionLabelingHighCost();
         log.trace("getConnectionLabelingHighCost() = {}", result);
         return result;
     }
 
-    public java.lang.String getConnectionPoolName() {
-        final java.lang.String result = super.getConnectionPoolName();
-        log.trace("getConnectionPoolName() = {}", result);
+    @Override
+    public String getConnectionPoolName() {
+        final String result = super.getConnectionPoolName();
+        log.debug("getConnectionPoolName() = {}", result);
         return result;
     }
 
-    public java.util.Properties getConnectionProperties() {
-        final java.util.Properties result = super.getConnectionProperties();
+    @Override
+    public Properties getConnectionProperties() {
+        final Properties result = super.getConnectionProperties();
         log.trace("getConnectionProperties() = {}", result);
         return result;
     }
 
-    public java.lang.String getConnectionProperty(java.lang.String propertyName) {
-        final java.lang.String result = super.getConnectionProperty(propertyName);
+    @Override
+    public String getConnectionProperty(String propertyName) {
+        final String result = super.getConnectionProperty(propertyName);
         log.trace("getConnectionProperty(propertyName) = {}", result);
         return result;
     }
 
+    @Override
     public int getConnectionRepurposeThreshold() {
         final int result = super.getConnectionRepurposeThreshold();
         log.trace("getConnectionRepurposeThreshold() = {}", result);
         return result;
     }
 
+    @Override
     public int getConnectionValidationTimeout() {
         final int result = super.getConnectionValidationTimeout();
         log.trace("getConnectionValidationTimeout() = {}", result);
         return result;
     }
 
+    @Override
     public int getConnectionWaitTimeout() {
         final int result = super.getConnectionWaitTimeout();
         log.trace("getConnectionWaitTimeout() = {}", result);
         return result;
     }
 
-    public java.lang.String getDatabaseName() {
-        final java.lang.String result = super.getDatabaseName();
+    @Override
+    public String getDatabaseName() {
+        final String result = super.getDatabaseName();
         log.trace("getDatabaseName() = {}", result);
         return result;
     }
 
-    public java.lang.String getDataSourceName() {
-        final java.lang.String result = super.getDataSourceName();
+    @Override
+    public String getDataSourceName() {
+        final String result = super.getDataSourceName();
         log.trace("getDataSourceName() = {}", result);
         return result;
     }
 
-    public java.lang.String getDescription() {
-        final java.lang.String result = super.getDescription();
+    @Override
+    public String getDescription() {
+        final String result = super.getDescription();
         log.trace("getDescription() = {}", result);
         return result;
     }
 
+    @Override
     public boolean getFastConnectionFailoverEnabled() {
         final boolean result = super.getFastConnectionFailoverEnabled();
         log.trace("getFastConnectionFailoverEnabled() = {}", result);
         return result;
     }
 
+    @Override
     public int getHighCostConnectionReuseThreshold() {
         final int result = super.getHighCostConnectionReuseThreshold();
         log.trace("getHighCostConnectionReuseThreshold() = {}", result);
         return result;
     }
 
+    @Override
     public int getInactiveConnectionTimeout() {
         final int result = super.getInactiveConnectionTimeout();
         log.trace("getInactiveConnectionTimeout() = {}", result);
         return result;
     }
 
+    @Override
     public int getInitialPoolSize() {
         final int result = super.getInitialPoolSize();
         log.trace("getInitialPoolSize() = {}", result);
         return result;
     }
 
+    @Override
     public int getLoginTimeout() {
         final int result = super.getLoginTimeout();
         log.trace("getLoginTimeout() = {}", result);
         return result;
     }
 
-    public java.io.PrintWriter getLogWriter() throws java.sql.SQLException {
-        final java.io.PrintWriter result = super.getLogWriter();
+    @Override
+    public PrintWriter getLogWriter() throws SQLException {
+        final PrintWriter result = super.getLogWriter();
         log.trace("getLogWriter() = {}", result);
         return result;
     }
 
+    @Override
     public int getMaxConnectionReuseCount() {
         final int result = super.getMaxConnectionReuseCount();
         log.trace("getMaxConnectionReuseCount() = {}", result);
         return result;
     }
 
+    @Override
     public long getMaxConnectionReuseTime() {
         final long result = super.getMaxConnectionReuseTime();
         log.trace("getMaxConnectionReuseTime() = {}", result);
         return result;
     }
 
+    @Override
     public int getMaxConnectionsPerService() {
         final int result = super.getMaxConnectionsPerService();
         log.trace("getMaxConnectionsPerService() = {}", result);
         return result;
     }
 
+    @Override
     public int getMaxConnectionsPerShard() {
         final int result = super.getMaxConnectionsPerShard();
         log.trace("getMaxConnectionsPerShard() = {}", result);
         return result;
     }
 
+    @Override
     public int getMaxIdleTime() {
         final int result = super.getMaxIdleTime();
         log.trace("getMaxIdleTime() = {}", result);
         return result;
     }
 
+    @Override
     public int getMaxPoolSize() {
         final int result = super.getMaxPoolSize();
         log.trace("getMaxPoolSize() = {}", result);
         return result;
     }
 
+    @Override
     public int getMaxStatements() {
         final int result = super.getMaxStatements();
         log.trace("getMaxStatements() = {}", result);
         return result;
     }
 
+    @Override
     public int getMinPoolSize() {
         final int result = super.getMinPoolSize();
         log.trace("getMinPoolSize() = {}", result);
         return result;
     }
 
-    public java.lang.String getNetworkProtocol() {
-        final java.lang.String result = super.getNetworkProtocol();
+    @Override
+    public String getNetworkProtocol() {
+        final String result = super.getNetworkProtocol();
         log.trace("getNetworkProtocol() = {}", result);
         return result;
     }
 
-    public java.lang.Object getObjectInstance(java.lang.Object refObj,
-                                              javax.naming.Name name,
-                                              javax.naming.Context nameCtx,
-                                              java.util.Hashtable<?,?> env) throws java.lang.Exception {
-        final java.lang.Object result = super.getObjectInstance(refObj, name, nameCtx, env);
+    @Override
+    public Object getObjectInstance(Object refObj,
+                                    Name name,
+                                    Context nameCtx,
+                                    Hashtable<?,?> env) throws Exception {
+        final Object result = super.getObjectInstance(refObj, name, nameCtx, env);
         log.trace("getObjectInstance(refObj, name, nameCtx, env) = {}", result);
         return result;
     }
 
+    @Override
     public java.util.logging.Logger getParentLogger() {
         final java.util.logging.Logger result = super.getParentLogger();
         log.trace("getParentLogger() = {}", result);
         return result;
     }
 
-    public java.util.Properties getPdbRoles() {
-        final java.util.Properties result = super.getPdbRoles();
+    @Override
+    public Properties getPdbRoles() {
+        final Properties result = super.getPdbRoles();
         log.trace("getPdbRoles() = {}", result);
         return result;
     }
 
+    @Override
     public int getPortNumber() {
         final int result = super.getPortNumber();
         log.trace("getPortNumber() = {}", result);
         return result;
     }
 
+    @Override
     public int getPropertyCycle() {
         final int result = super.getPropertyCycle();
         log.trace("getPropertyCycle() = {}", result);
         return result;
     }
 
+    @Override
     public int getQueryTimeout() {
         final int result = super.getQueryTimeout();
         log.trace("getQueryTimeout() = {}", result);
         return result;
     }
 
-    public javax.naming.Reference  getReference() {
-        final javax.naming.Reference  result = super.getReference();
+    @Override
+    public Reference getReference() {
+        final Reference result = super.getReference();
         log.trace("getReference() = {}", result);
         return result;
     }
 
-    public java.lang.String getRoleName() {
-        final java.lang.String result = super.getRoleName();
+    @Override
+    public String getRoleName() {
+        final String result = super.getRoleName();
         log.trace("getRoleName() = {}", result);
         return result;
     }
 
+    @Override
     public int getSecondsToTrustIdleConnection() {
         final int result = super.getSecondsToTrustIdleConnection();
         log.trace("getSecondsToTrustIdleConnection() = {}", result);
         return result;
     }
 
-    public java.lang.String getServerName() {
-        final java.lang.String result = super.getServerName();
+    @Override
+    public String getServerName() {
+        final String result = super.getServerName();
         log.trace("getServerName() = {}", result);
         return result;
     }
 
-    public java.lang.String getServiceName() {
-        final java.lang.String result = super.getServiceName();
+    @Override
+    public String getServiceName() {
+        final String result = super.getServiceName();
         log.trace("getServiceName() = {}", result);
         return result;
     }
 
+    @Override
     public boolean getShardingMode() {
         final boolean result = super.getShardingMode();
         log.trace("getShardingMode() = {}", result);
         return result;
     }
 
-    public java.lang.String getSQLForValidateConnection() {
-        final java.lang.String result = super.getSQLForValidateConnection();
+    @Override
+    public String getSQLForValidateConnection() {
+        final String result = super.getSQLForValidateConnection();
         log.trace("getSQLForValidateConnection() = {}", result);
         return result;
     }
 
+    @Override
     protected javax.net.ssl.SSLContext getSSLContext() {
         final javax.net.ssl.SSLContext result = super.getSSLContext();
         log.trace("getSSLContext()");
         return result;
     }
 
+    @Override
     public JDBCConnectionPoolStatistics getStatistics() {
         log.trace("getStatistics()");
         return super.getStatistics();
     }
 
+    @Override
     public int getTimeoutCheckInterval() {
         log.trace("getTimeoutCheckInterval()");
         return super.getTimeoutCheckInterval();
     }
 
+    @Override
     public int getTimeToLiveConnectionTimeout() {
         log.trace("getTimeToLiveConnectionTimeout()");
         return super.getTimeToLiveConnectionTimeout();
     }
 
-    public java.lang.String getURL() {
+    @Override
+    public String getURL() {
         log.trace("getURL()");
         return super.getURL();
     }
 
-    public java.lang.String getUser() {
+    @Override
+    public String getUser() {
         log.trace("getUser()");
         return super.getUser();
     }
 
+    @Override
     public boolean getValidateConnectionOnBorrow() {
         log.trace("getValidateConnectionOnBorrow()");
         return super.getValidateConnectionOnBorrow();
     }
 
+    @Override
     public boolean isReadOnlyInstanceAllowed() {
         final boolean result = super.isReadOnlyInstanceAllowed();
         log.trace("isReadOnlyInstanceAllowed() = {}", result);
         return result;
     }
 
-    public static boolean isSetOnceProperty(java.lang.String key) {
+    public static boolean isSetOnceProperty(String key) {
         return PoolDataSourceImpl.isSetOnceProperty(key);
     }
 
-    public boolean isWrapperFor(java.lang.Class<?> iface) throws java.sql.SQLException {
+    @Override
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
         final boolean result = super.isWrapperFor(iface);
         log.trace("isWrapperFor(iface) = {}", result);
         return result;
     }
 
-    public void reconfigureDataSource(java.util.Properties configuration) throws java.sql.SQLException {
+    @Override
+    public void reconfigureDataSource(Properties configuration) throws SQLException {
         log.trace("reconfigureDataSource(configuration)");
         super.reconfigureDataSource(configuration);
     }
 
-    public void registerConnectionAffinityCallback(ConnectionAffinityCallback cbk) throws java.sql.SQLException {
+    @Override
+    public void registerConnectionAffinityCallback(ConnectionAffinityCallback cbk) throws SQLException {
         log.trace("registerConnectionAffinityCallback(cbk)");
         super.registerConnectionAffinityCallback(cbk);
     }
 
-    public void registerConnectionInitializationCallback(ConnectionInitializationCallback cbk) throws java.sql.SQLException {
+    @Override
+    public void registerConnectionInitializationCallback(ConnectionInitializationCallback cbk) throws SQLException {
         log.trace("registerConnectionInitializationCallback(cbk)");
         super.registerConnectionInitializationCallback(cbk);
     }
 
-    public void registerConnectionLabelingCallback(ConnectionLabelingCallback cbk) throws java.sql.SQLException {
+    @Override
+    public void registerConnectionLabelingCallback(ConnectionLabelingCallback cbk) throws SQLException {
         log.trace("registerConnectionLabelingCallback(cbk)");
         super.registerConnectionLabelingCallback(cbk);
     }
 
-    public void removeConnectionAffinityCallback() throws java.sql.SQLException {
+    @Override
+    public void removeConnectionAffinityCallback() throws SQLException {
         log.trace("removeConnectionAffinityCallback()");
         super.removeConnectionAffinityCallback();
     }
 
-    public void removeConnectionLabelingCallback() throws java.sql.SQLException {
+    @Override
+    public void removeConnectionLabelingCallback() throws SQLException {
         log.trace("removeConnectionLabelingCallback()");
         super.removeConnectionLabelingCallback();
     }
 
-    public void setAbandonedConnectionTimeout(int abandonedConnectionTimeout) throws java.sql.SQLException {
+    @Override
+    public void setAbandonedConnectionTimeout(int abandonedConnectionTimeout) throws SQLException {
         log.trace("setAbandonedConnectionTimeout({})", abandonedConnectionTimeout);
         super.setAbandonedConnectionTimeout(abandonedConnectionTimeout);
     }
 
-    public void setConnectionFactoryClassName(java.lang.String factoryClassName) throws java.sql.SQLException {
+    @Override
+    public void setConnectionFactoryClassName(String factoryClassName) throws SQLException {
         log.trace("setConnectionFactoryClassName({})", factoryClassName);
         super.setConnectionFactoryClassName(factoryClassName);
     }
 
-    public void setConnectionFactoryProperties(java.util.Properties factoryProperties) throws java.sql.SQLException {
+    @Override
+    public void setConnectionFactoryProperties(Properties factoryProperties) throws SQLException {
         log.trace("setConnectionFactoryProperties({})", factoryProperties);
         super.setConnectionFactoryProperties(factoryProperties);
     }
 
-    public void setConnectionFactoryProperty(java.lang.String name, java.lang.String value) throws java.sql.SQLException {
+    @Override
+    public void setConnectionFactoryProperty(String name, String value) throws SQLException {
         log.trace("setConnectionFactoryProperty({}, {})", name, value);
         super.setConnectionFactoryProperty(name, value);
     }
 
-    public void setConnectionHarvestMaxCount(int connectionHarvestMaxCount) throws java.sql.SQLException {
+    @Override
+    public void setConnectionHarvestMaxCount(int connectionHarvestMaxCount) throws SQLException {
         log.trace("setConnectionHarvestMaxCount({})", connectionHarvestMaxCount);
         super.setConnectionHarvestMaxCount(connectionHarvestMaxCount);
     }
 
-    public void setConnectionHarvestTriggerCount(int connectionHarvestTriggerCount) throws java.sql.SQLException {
+    @Override
+    public void setConnectionHarvestTriggerCount(int connectionHarvestTriggerCount) throws SQLException {
         log.trace("setConnectionHarvestTriggerCount({})", connectionHarvestTriggerCount);
         super.setConnectionHarvestTriggerCount(connectionHarvestTriggerCount);
     }
 
-    public void setConnectionLabelingHighCost(int highCost) throws java.sql.SQLException {
+    @Override
+    public void setConnectionLabelingHighCost(int highCost) throws SQLException {
         log.trace("setConnectionLabelingHighCost()", highCost);
         super.setConnectionLabelingHighCost(highCost);
     }
 
-    public void setConnectionPoolName(java.lang.String connectionPoolName) throws java.sql.SQLException {
-        log.trace("setConnectionPoolName({})", connectionPoolName);
+    @Override
+    public void setConnectionPoolName(String connectionPoolName) throws SQLException {
+        log.debug("setConnectionPoolName({})", connectionPoolName);
         super.setConnectionPoolName(connectionPoolName);
     }
 
-    public void setConnectionProperties(java.util.Properties connectionProperties) throws java.sql.SQLException {
+    @Override
+    public void setConnectionProperties(Properties connectionProperties) throws SQLException {
         log.trace("setConnectionProperties({})", connectionProperties);
         super.setConnectionProperties(connectionProperties);
     }
 
-    public void setConnectionProperty(java.lang.String name, java.lang.String value) throws java.sql.SQLException {
+    @Override
+    public void setConnectionProperty(String name, String value) throws SQLException {
         log.trace("setConnectionProperty({}, {})", name, value);
         super.setConnectionProperty(name, value);
     }
 
-    public void setConnectionRepurposeThreshold(int threshold) throws java.sql.SQLException {
+    @Override
+    public void setConnectionRepurposeThreshold(int threshold) throws SQLException {
         log.trace("setConnectionRepurposeThreshold({})", threshold);
         super.setConnectionRepurposeThreshold(threshold);
     }
 
-    public void setConnectionValidationTimeout(int connectionValidationTimeout) throws java.sql.SQLException {
+    @Override
+    public void setConnectionValidationTimeout(int connectionValidationTimeout) throws SQLException {
         log.trace("setConnectionValidationTimeout({})", connectionValidationTimeout);
         super.setConnectionValidationTimeout(connectionValidationTimeout);
     }
 
-    public void setConnectionWaitTimeout(int waitTimeout) throws java.sql.SQLException {
+    @Override
+    public void setConnectionWaitTimeout(int waitTimeout) throws SQLException {
         log.trace("setConnectionWaitTimeout({})", waitTimeout);
         super.setConnectionWaitTimeout(waitTimeout);
     }
 
-    public void setDatabaseName(java.lang.String databaseName) throws java.sql.SQLException {
+    @Override
+    public void setDatabaseName(String databaseName) throws SQLException {
         log.trace("setDatabaseName({})", databaseName);
         super.setDatabaseName(databaseName);
     }
 
-    public void setDataSourceName(java.lang.String dataSourceName) throws java.sql.SQLException {
+    @Override
+    public void setDataSourceName(String dataSourceName) throws SQLException {
         log.trace("setDataSourceName({})", dataSourceName);
         super.setDataSourceName(dataSourceName);
     }
 
-    public void setDescription(java.lang.String dataSourceDescription) throws java.sql.SQLException {
+    @Override
+    public void setDescription(String dataSourceDescription) throws SQLException {
         log.trace("setDescription({})", dataSourceDescription);
         super.setDescription(dataSourceDescription);
     }
 
-    public void setFastConnectionFailoverEnabled(boolean failoverEnabled) throws java.sql.SQLException {
+    @Override
+    public void setFastConnectionFailoverEnabled(boolean failoverEnabled) throws SQLException {
         log.trace("setFastConnectionFailoverEnabled({})", failoverEnabled);
         super.setFastConnectionFailoverEnabled(failoverEnabled);
     }
 
-    public void setHighCostConnectionReuseThreshold(int threshold) throws java.sql.SQLException {
+    @Override
+    public void setHighCostConnectionReuseThreshold(int threshold) throws SQLException {
         log.trace("setHighCostConnectionReuseThreshold({})", threshold);
         super.setHighCostConnectionReuseThreshold(threshold);
     }
 
-    public void setInactiveConnectionTimeout(int inactivityTimeout) throws java.sql.SQLException {
+    @Override
+    public void setInactiveConnectionTimeout(int inactivityTimeout) throws SQLException {
         log.trace("setInactiveConnectionTimeout({})", inactivityTimeout);
         super.setInactiveConnectionTimeout(inactivityTimeout);
     }
 
-    public void setInitialPoolSize(int initialPoolSize) throws java.sql.SQLException {
+    @Override
+    public void setInitialPoolSize(int initialPoolSize) throws SQLException {
         log.trace("setInitialPoolSize({})", initialPoolSize);
         super.setInitialPoolSize(initialPoolSize);
     }
 
-    public void setLoginTimeout(int seconds) throws java.sql.SQLException {
+    @Override
+    public void setLoginTimeout(int seconds) throws SQLException {
         log.trace("setLoginTimeout({})", seconds);
         super.setLoginTimeout(seconds);
     }
 
-    public void setLogWriter(java.io.PrintWriter logWriter) throws java.sql.SQLException {
+    @Override
+    public void setLogWriter(PrintWriter logWriter) throws SQLException {
         log.trace("setLogWriter({})", logWriter);
         super.setLogWriter(logWriter);
     }
 
-    public void setMaxConnectionReuseCount(int maxConnectionReuseCount) throws java.sql.SQLException {
+    @Override
+    public void setMaxConnectionReuseCount(int maxConnectionReuseCount) throws SQLException {
         log.trace("setMaxConnectionReuseCount({})", maxConnectionReuseCount);
         super.setMaxConnectionReuseCount(maxConnectionReuseCount);
     }
 
-    public void setMaxConnectionReuseTime(long maxConnectionReuseTime) throws java.sql.SQLException {
+    @Override
+    public void setMaxConnectionReuseTime(long maxConnectionReuseTime) throws SQLException {
         log.trace("setMaxConnectionReuseTime({})", maxConnectionReuseTime);
         super.setMaxConnectionReuseTime(maxConnectionReuseTime);
     }
 
-    public void setMaxConnectionsPerShard(int maxConnectionsPerShard) throws java.sql.SQLException {
+    @Override
+    public void setMaxConnectionsPerShard(int maxConnectionsPerShard) throws SQLException {
         log.trace("setMaxConnectionsPerShard({})", maxConnectionsPerShard);
         super.setMaxConnectionsPerShard(maxConnectionsPerShard);
     }
 
-    public void setMaxIdleTime(int idleTime) throws java.sql.SQLException {
+    @Override
+    public void setMaxIdleTime(int idleTime) throws SQLException {
         log.trace("setMaxIdleTime({})", idleTime);
         super.setMaxIdleTime(idleTime);
     }
 
-    public void setMaxPoolSize(int maxPoolSize) throws java.sql.SQLException {
+    @Override
+    public void setMaxPoolSize(int maxPoolSize) throws SQLException {
         log.trace("setMaxPoolSize({})", maxPoolSize);
         super.setMaxPoolSize(maxPoolSize);
     }
 
-    public void setMaxStatements(int maxStatements) throws java.sql.SQLException {
+    @Override
+    public void setMaxStatements(int maxStatements) throws SQLException {
         log.trace("setMaxStatements({})", maxStatements);
         super.setMaxStatements(maxStatements);
     }
 
-    public void setMinPoolSize(int minPoolSize) throws java.sql.SQLException {
+    @Override
+    public void setMinPoolSize(int minPoolSize) throws SQLException {
         log.trace("setMinPoolSize({})", minPoolSize);
         super.setMinPoolSize(minPoolSize);
     }
 
-    public void setNetworkProtocol(java.lang.String networkProtocol) throws java.sql.SQLException {
+    @Override
+    public void setNetworkProtocol(String networkProtocol) throws SQLException {
         log.trace("setNetworkProtocol({})", networkProtocol);
         super.setNetworkProtocol(networkProtocol);
     }
 
-    public void setONSConfiguration(java.lang.String onsConfigStr) {
+    @Override
+    public void setONSConfiguration(String onsConfigStr) {
         log.trace("setONSConfiguration({})", onsConfigStr);
         super.setONSConfiguration(onsConfigStr);
     }
 
-    public void setPassword(java.lang.String password) throws java.sql.SQLException {
+    @Override
+    public void setPassword(String password) throws SQLException {
         super.setPassword(password);
     }
 
-    public void setPortNumber(int portNumber) throws java.sql.SQLException {
+    @Override
+    public void setPortNumber(int portNumber) throws SQLException {
         log.trace("setPortNumber({})", portNumber);
         super.setPortNumber(portNumber);
     }
 
-    public void setPropertyCycle(int propertyCycle) throws java.sql.SQLException {
+    @Override
+    public void setPropertyCycle(int propertyCycle) throws SQLException {
         log.trace("setPropertyCycle({})", propertyCycle);
         super.setPropertyCycle(propertyCycle);
     }
 
-    public void setQueryTimeout(int queryTimeout) throws java.sql.SQLException {
+    @Override
+    public void setQueryTimeout(int queryTimeout) throws SQLException {
         log.trace("setQueryTimeout({})", queryTimeout);
         super.setQueryTimeout(queryTimeout);
     }
 
-    public void setReadOnlyInstanceAllowed(boolean readOnlyInstanceAllowed) throws java.sql.SQLException {
+    @Override
+    public void setReadOnlyInstanceAllowed(boolean readOnlyInstanceAllowed) throws SQLException {
         log.trace("setReadOnlyInstanceAllowed({})", readOnlyInstanceAllowed);
         super.setReadOnlyInstanceAllowed(readOnlyInstanceAllowed);
     }
 
-    public void setRoleName(java.lang.String roleName) throws java.sql.SQLException {
+    @Override
+    public void setRoleName(String roleName) throws SQLException {
         log.trace("setRoleName({})", roleName);
         super.setRoleName(roleName);
     }
 
-    public void setSecondsToTrustIdleConnection(int secondsToTrustIdleConnection) throws java.sql.SQLException {
+    @Override
+    public void setSecondsToTrustIdleConnection(int secondsToTrustIdleConnection) throws SQLException {
         log.trace("setSecondsToTrustIdleConnection({})", secondsToTrustIdleConnection);
         super.setSecondsToTrustIdleConnection(secondsToTrustIdleConnection);
     }
 
-    public void setServerName(java.lang.String serverName) throws java.sql.SQLException {
+    @Override
+    public void setServerName(String serverName) throws SQLException {
         log.trace("setServerName({})", serverName);
         super.setServerName(serverName);
     }
 
-    public void setShardingMode(boolean shardingMode) throws java.sql.SQLException {
+    @Override
+    public void setShardingMode(boolean shardingMode) throws SQLException {
         log.trace("setShardingMode({})", shardingMode);
         super.setShardingMode(shardingMode);
     }
 
-    public void setSQLForValidateConnection(java.lang.String SQLString) throws java.sql.SQLException {
+    @Override
+    public void setSQLForValidateConnection(String SQLString) throws SQLException {
         log.trace("setSQLForValidateConnection({})", SQLString);
         super.setSQLForValidateConnection(SQLString);
     }
 
+    @Override
     public void setSSLContext(javax.net.ssl.SSLContext sslContext) {
         log.trace("setSSLContext({})", sslContext);
         super.setSSLContext(sslContext);
     }
 
-    public void setTimeoutCheckInterval(int timeInterval) throws java.sql.SQLException {
+    @Override
+    public void setTimeoutCheckInterval(int timeInterval) throws SQLException {
         log.trace("setTimeoutCheckInterval({})", timeInterval);
         super.setTimeoutCheckInterval(timeInterval);
     }
 
-    public void setTimeToLiveConnectionTimeout(int timeToLiveConnectionTimeout) throws java.sql.SQLException {
+    @Override
+    public void setTimeToLiveConnectionTimeout(int timeToLiveConnectionTimeout) throws SQLException {
         log.trace("setTimeToLiveConnectionTimeout({})", timeToLiveConnectionTimeout);
         super.setTimeToLiveConnectionTimeout(timeToLiveConnectionTimeout);
     }
 
-    public void setURL(java.lang.String url) throws java.sql.SQLException {
+    @Override
+    public void setURL(String url) throws SQLException {
         log.trace("setURL({})", url);
         super.setURL(url);
     }
 
-    public void setUser(java.lang.String username) throws java.sql.SQLException {
+    @Override
+    public void setUser(String username) throws SQLException {
         log.trace("setUser({})", username);
         super.setUser(username);
     }
 
-    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws java.sql.SQLException {
+    @Override
+    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
         log.trace("setValidateConnectionOnBorrow({})", validateConnectionOnBorrow);
         super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
     }
 
-    public void startPool() throws java.sql.SQLException {
-        log.debug("startPool()");
+    @Override
+    public void startPool() throws SQLException {
+        log.debug("startPool({})", getConnectionPoolName());
         super.startPool();
     }
 }
