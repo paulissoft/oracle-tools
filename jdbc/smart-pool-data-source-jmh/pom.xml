@@ -21,6 +21,7 @@
 
   <properties>
     <java.version>11</java.version>
+    <default.goal>spring-boot:run</default.goal>
   </properties>
 
   <dependencyManagement>
