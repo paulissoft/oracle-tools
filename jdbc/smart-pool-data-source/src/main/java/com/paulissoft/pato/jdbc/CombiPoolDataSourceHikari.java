@@ -175,6 +175,10 @@ public class CombiPoolDataSourceHikari
 
     @Override
     protected void tearDown() {
+        if (getState() == State.CLOSED) { // already closed
+            return;
+        }
+        
         // must get this info before it is actually closed since then getPoolDataSource() will return a error
         final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource(); 
         
