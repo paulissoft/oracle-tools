@@ -260,7 +260,7 @@
   <modules>
     <module>smart-pool-data-source</module>
     <module>smart-pool-data-source-jmh</module>
-    <module>smart-pool-data-source-jmh-test</module>
+    <!--module>smart-pool-data-source-jmh-test</module-->
   </modules>
 
   <profiles>
