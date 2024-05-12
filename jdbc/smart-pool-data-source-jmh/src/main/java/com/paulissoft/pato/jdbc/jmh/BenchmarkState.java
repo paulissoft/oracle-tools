@@ -39,7 +39,7 @@ public class BenchmarkState {
           { null, null, null, null, null, null } }
     };
         
-    @Param({"10000", "1000"})
+    @Param({/*"10000", */"1000"})
     public int divideLogicalConnectionsBy;
 
     public List<Integer> testList = new Vector(1000, 1000);

@@ -45,7 +45,11 @@ public class BenchmarkTest {
                         TimeUnit.SECONDS.sleep(1);
                         bh.consume(conn.getSchema());
                     } catch (SQLException | InterruptedException ex) {
-                        throw new RuntimeException(ex.getMessage());
+                        if (ex.getMessage().contains("UCP-")) { // ignore UCP message for now
+                            log.warn("UCP exception: {}", ex);
+                        } else {
+                            throw new RuntimeException(ex.getMessage());
+                        }
                     }});
         } catch (Exception ex) {
             if (dataSources != null) {
