@@ -45,7 +45,6 @@ public class BenchmarkState {
     public List<Integer> testList = new Vector(1000, 1000);
 
     @Setup(Level.Trial)
-    // @Setup(Level.Iteration)
     public void setUp() {
         final ApplicationContext context = SpringContext.getApplicationContext();
 

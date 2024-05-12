@@ -25,13 +25,12 @@ public class BenchmarkTest {
 
     public void tearDown() throws Exception {
         if (dataSources != null) {
-            int i;
-
-            for (i = 0; i < dataSources.length; i++) {
-                if (dataSources[i] instanceof AutoCloseable) {
-                    ((AutoCloseable)dataSources[i]).close();
+            for (DataSource ds : dataSources) {
+                if (ds instanceof AutoCloseable) {
+                    ((AutoCloseable)ds).close();
                 }
             }
+            dataSources = null;
         }
     }
 
