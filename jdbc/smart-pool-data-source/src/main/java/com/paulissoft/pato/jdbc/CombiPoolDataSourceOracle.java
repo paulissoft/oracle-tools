@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -12,7 +13,7 @@ public class CombiPoolDataSourceOracle
     extends CombiPoolDataSource<SimplePoolDataSourceOracle, PoolDataSourceConfigurationOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    static final String POOL_NAME_PREFIX = "OraclePool";
+    static final String POOL_NAME_PREFIX = "OraclePool" + ThreadLocalRandom.current().nextInt(0, 1000); // make it unique for UCP
 
     /*
      * Constructors
