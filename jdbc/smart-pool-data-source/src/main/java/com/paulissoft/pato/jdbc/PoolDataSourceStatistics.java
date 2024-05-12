@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class PoolDataSourceStatistics {
+public class PoolDataSourceStatistics implements AutoCloseable {
 
     // all static stuff
     
@@ -409,7 +409,7 @@ public class PoolDataSourceStatistics {
         return lastUpdateMoment != lastShownMoment;
     }
 
-    void close() {
+    public void close() throws Exception {
         if (level != 4) {
             return;
         }

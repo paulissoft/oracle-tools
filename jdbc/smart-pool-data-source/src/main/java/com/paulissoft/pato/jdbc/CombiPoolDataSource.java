@@ -407,7 +407,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     protected T getPoolDataSource() {
         switch (state) {
         case CLOSED:
-            throw new IllegalStateException("You can not use the pool once it is closed().");
+            throw new IllegalStateException("You can not use the pool once it is closed.");
         default:
             return activeParent != null ? activeParent.poolDataSource : poolDataSource;
         }

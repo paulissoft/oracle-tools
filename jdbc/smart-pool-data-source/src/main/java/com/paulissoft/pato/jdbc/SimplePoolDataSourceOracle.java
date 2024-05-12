@@ -13,6 +13,10 @@ import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.ConnectionAffinityCallback;
 import oracle.ucp.ConnectionLabelingCallback;
+import oracle.ucp.UniversalConnectionPool;
+import oracle.ucp.UniversalConnectionPoolException;
+import oracle.ucp.admin.UniversalConnectionPoolManager;
+import oracle.ucp.admin.UniversalConnectionPoolManagerImpl;
 import oracle.ucp.jdbc.ConnectionInitializationCallback;
 import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
@@ -26,7 +30,17 @@ public class SimplePoolDataSourceOracle
     private static final long serialVersionUID = 3886083682048526889L;
     
     private final StringBuffer id = new StringBuffer();
-         
+
+    protected static final UniversalConnectionPoolManager mgr;
+
+    static {
+        try {
+            mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
+        } catch (UniversalConnectionPoolException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
+    }
+    
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
     }
@@ -228,6 +242,23 @@ public class SimplePoolDataSourceOracle
     }
 
     public void close() {
+        try {
+            final String[] poolNames = mgr.getConnectionPoolNames();
+            int nr = 0;
+            
+            log.debug("this pool name: {}", getConnectionPoolName());            
+            for (String poolName : poolNames) {
+                log.debug("pool name #{}: {}", ++nr, poolName);
+            }
+            
+            // final UniversalConnectionPool ucp = mgr.getConnectionPool(getConnectionPoolName());
+
+            // ucp.stop();
+            
+            // mgr.destroyConnectionPool(getConnectionPoolName());
+        } catch (UniversalConnectionPoolException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
     
     /*

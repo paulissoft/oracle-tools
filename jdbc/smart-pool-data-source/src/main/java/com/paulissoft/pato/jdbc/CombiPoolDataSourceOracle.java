@@ -100,26 +100,36 @@ public class CombiPoolDataSourceOracle
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverride.class) // do not delegate setPassword()
     private PoolDataSourcePropertiesSettersOracle getPoolDataSourceSetter() {
-        switch (getState()) {
-        case INITIALIZING:
-            return getPoolDataSourceConfiguration();
-        case CLOSED:
-            throw new IllegalStateException("You can not use the pool once it is closed().");
-        default:
-            throw new IllegalStateException("The configuration of the pool is sealed once started.");
+        try {
+            switch (getState()) {
+            case INITIALIZING:
+                return getPoolDataSourceConfiguration();
+            case CLOSED:
+                throw new IllegalStateException("You can not use the pool once it is closed.");
+            default:
+                throw new IllegalStateException("The configuration of the pool is sealed once started.");
+            }
+        } catch (IllegalStateException ex) {
+            log.error("Exception in getPoolDataSourceSetter(): {}", ex);
+            throw ex;
         }
     }
 
     // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
     @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverride.class)
     private PoolDataSourcePropertiesGettersOracle getPoolDataSourceGetter() {
-        switch (getState()) {
-        case CLOSED:
-            throw new IllegalStateException("You can not use the pool once it is closed().");
-        case INITIALIZING:
-            return getPoolDataSourceConfiguration();
-        default:
-            return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+        try {
+            switch (getState()) {
+            case CLOSED:
+                throw new IllegalStateException("You can not use the pool once it is closed.");
+            case INITIALIZING:
+                return getPoolDataSourceConfiguration();
+            default:
+                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+            }
+        } catch (IllegalStateException ex) {
+            log.error("Exception in getPoolDataSourceGetter(): {}", ex);
+            throw ex;
         }
     }
     

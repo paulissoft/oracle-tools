@@ -215,6 +215,8 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
                                          () -> getState() != CombiPoolDataSource.State.OPEN,
                                          this::getPoolDataSourceConfiguration);
 
+        log.debug("updatePoolDataSourceStatistics({}) = ({}, {})", activeParent, parentPoolDataSourceStatistics, poolDataSourceStatistics);
+        
         return new PoolDataSourceStatistics[]{ parentPoolDataSourceStatistics, poolDataSourceStatistics };
     }
 
