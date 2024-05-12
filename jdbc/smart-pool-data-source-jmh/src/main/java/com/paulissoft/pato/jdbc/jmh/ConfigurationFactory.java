@@ -1,10 +1,12 @@
 package com.paulissoft.pato.jdbc.jmh;
 
+import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.beans.BeanUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,5 +56,16 @@ public class ConfigurationFactory {
     public DataSourceProperties operatorDataSourceProperties() {
         log.debug("operatorDataSourceProperties");
         return new DataSourceProperties();
+    }
+
+    public static DataSourceProperties copy(final DataSourceProperties properties,
+                                            Class<? extends DataSource> type) {
+        final DataSourceProperties newProperties = new DataSourceProperties();
+        
+        BeanUtils.copyProperties(properties, newProperties);
+
+        newProperties.setType(type);
+
+        return newProperties;
     }
 }
