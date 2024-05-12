@@ -23,3 +23,4 @@ java/smart-pool-data-source/.classpath
 *.pkb
 *.pks
 jdbc/smart-pool-data-source-jmh/results.txt
+jdbc/smart-pool-data-source-jmh-test/results.txt
