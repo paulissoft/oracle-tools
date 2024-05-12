@@ -44,13 +44,10 @@ public class BenchmarkState {
 
     public List<Integer> testList = new Vector(1000, 1000);
 
-    // @Setup(Level.Trial)
-    @Setup(Level.Iteration)
+    @Setup(Level.Trial)
+    // @Setup(Level.Iteration)
     public void setUp() {
         final ApplicationContext context = SpringContext.getApplicationContext();
-
-        // randomize the connection pool name prefix
-        CombiPoolDataSourceOracle.setPoolNamePrefixNr();
 
         // get instance of MainSpringClass (Spring Managed class)
         int d, t;
@@ -66,14 +63,15 @@ public class BenchmarkState {
                 dataSources[d][t][4] = (DataSource) context.getBean("ocpp" + suffix);
                 dataSources[d][t][5] = (DataSource) context.getBean("operator" + suffix);
 
-                if (d == 1 && t == 0) {
+                if (d == 1 && t <= 1) {
+                    final String className = (t == 0 ? PoolDataSourceImpl.class.getName() : SimplePoolDataSourceOracle.class.getName());
                     int s = 0;
                 
                     for (DataSource ds : dataSources[d][t]) {
                         try {
                             final PoolDataSourceImpl pds = (PoolDataSourceImpl) ds;
                             
-                            pds.setConnectionPoolName(CombiPoolDataSourceOracle.getPoolNamePrefix() + "-" + s++);
+                            pds.setConnectionPoolName(className + "-" + s++);
                         } catch (Exception ignore) {
                         }
                     }

@@ -74,7 +74,7 @@ public class SimplePoolDataSourceHikari
             .url(getJdbcUrl())
             .username(getUsername())
             .password(excludeNonIdConfiguration ? null : getPassword())
-            .type(this.getClass().getName()/*SimplePoolDataSourceHikari.class.getName()*/)
+            .type(this.getClass().getName())
             .poolName(excludeNonIdConfiguration ? null : getPoolName())
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())

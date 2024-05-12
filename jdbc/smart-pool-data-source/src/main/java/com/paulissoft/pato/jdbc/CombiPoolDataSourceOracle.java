@@ -176,7 +176,7 @@ public class CombiPoolDataSourceOracle
     }
 
     public String getPoolNamePrefix() {
-        return this.getClass().getName();
+        return this.getClass().getSimpleName();
     }
     
     @Override
@@ -216,10 +216,16 @@ public class CombiPoolDataSourceOracle
                           oldConnectionPoolName,
                           poolDataSourceConfiguration.getConnectionPoolName());
             } catch (SQLException ex) {
-                log.error("Can not update connection pool name from '{}' to '{}'",
-                          oldConnectionPoolName,
-                          poolDataSourceConfiguration.getConnectionPoolName());
-                throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+                // UCP-45: Cannot set the connection pool name. Check the connection pool name to avoid duplicates
+                if (ex.getMessage().contains("UCP-45:")) {
+                    // restore old name
+                    poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName);
+                } else {
+                    log.error("Can not update connection pool name from '{}' to '{}'",
+                              oldConnectionPoolName,
+                              poolDataSourceConfiguration.getConnectionPoolName());
+                    throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+                }
             }
         } finally {
             log.debug("config pool data source; address: {}; name: {}",

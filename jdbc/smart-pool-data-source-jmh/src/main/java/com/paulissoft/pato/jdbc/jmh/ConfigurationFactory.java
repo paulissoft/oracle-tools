@@ -1,7 +1,5 @@
 package com.paulissoft.pato.jdbc.jmh;
 
-//package com.paulissoft.pato.jdbc;
-
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
