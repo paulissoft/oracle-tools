@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.util.concurrent.ThreadLocalRandom;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.NonNull;
@@ -13,10 +12,6 @@ public class CombiPoolDataSourceOracle
     extends CombiPoolDataSource<SimplePoolDataSourceOracle, PoolDataSourceConfigurationOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    static private final String POOL_NAME_PREFIX = "OraclePool";
-
-    static private int poolNamePrefixNr = -1;
-        
     /*
      * Constructors
      */
@@ -180,16 +175,8 @@ public class CombiPoolDataSourceOracle
         return poolDataSource.getConnection(usernameSession1, passwordSession1);
     }
 
-    public static String getPoolNamePrefix() {
-        return POOL_NAME_PREFIX + (poolNamePrefixNr >= 0 ? poolNamePrefixNr : "");
-    }
-
-    public static void setPoolNamePrefixNr(final int nr) {
-        poolNamePrefixNr = nr;
-    }
-
-    public static void setPoolNamePrefixNr() {
-        setPoolNamePrefixNr(ThreadLocalRandom.current().nextInt(0, 1000)); // make it unique for UCP
+    public String getPoolNamePrefix() {
+        return this.getClass().getName();
     }
     
     @Override
@@ -215,7 +202,7 @@ public class CombiPoolDataSourceOracle
             // keep poolDataSource in sync with poolDataSourceConfiguration
             if (initializing) {
                 if (isParentPoolDataSource) {
-                    poolDataSourceConfiguration.setConnectionPoolName(POOL_NAME_PREFIX + suffix);
+                    poolDataSourceConfiguration.setConnectionPoolName(getPoolNamePrefix() + suffix);
                 } else {
                     poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName + suffix);
                 }
