@@ -49,7 +49,9 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle), " +
-                     "connectionPoolName=" + domainDataSourceOracle.getPoolNamePrefix() + "-" +
+                     "connectionPoolName=" + (domainDataSourceOracle.isParentPoolDataSource() ?
+                                              domainDataSourceOracle.getPoolNamePrefix() :
+                                              operatorDataSourceOracle.getPoolNamePrefix()) + "-" +
                      (domainDataSourceOracle.isParentPoolDataSource() ? "bodomain" : "boopapij-bodomain") + ", " +
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
@@ -72,7 +74,9 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle), " +
-                     "connectionPoolName=" + operatorDataSourceOracle.getPoolNamePrefix() + "-" +
+                     "connectionPoolName=" + (operatorDataSourceOracle.isParentPoolDataSource() ?
+                                              operatorDataSourceOracle.getPoolNamePrefix() :
+                                              domainDataSourceOracle.getPoolNamePrefix()) + "-" +
                      (operatorDataSourceOracle.isParentPoolDataSource() ? "boopapij" : "bodomain-boopapij") + ", " +
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
