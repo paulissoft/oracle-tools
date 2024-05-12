@@ -243,7 +243,7 @@ public class SimplePoolDataSourceOracle
 
     public void close() {
         try {
-            log.info("About to close connection pool {}", getConnectionPoolName());
+            log.info("{} - Close initiated...", getConnectionPoolName());
             
             // this pool may or may NOT be in the connection pools (implicitly) managed by mgr
             UniversalConnectionPool ucp;
@@ -256,6 +256,7 @@ public class SimplePoolDataSourceOracle
 
             if (ucp != null) {
                 ucp.stop();
+                log.info("{} - Close completed.", getConnectionPoolName());
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
         } catch (UniversalConnectionPoolException ex) {
