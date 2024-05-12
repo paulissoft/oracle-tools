@@ -416,7 +416,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public void close() throws Exception {
-        logger.debug(">close({})", getDescription());
+        logger.debug(">close()");
 
         try {
             if (isUpdateable.get()) {

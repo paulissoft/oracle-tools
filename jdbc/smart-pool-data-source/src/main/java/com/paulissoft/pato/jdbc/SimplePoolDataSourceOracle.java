@@ -403,7 +403,7 @@ public class SimplePoolDataSourceOracle
     @Override
     public String getConnectionPoolName() {
         final String result = super.getConnectionPoolName();
-        log.debug("getConnectionPoolName() = {}", result);
+        log.trace("getConnectionPoolName() = {}", result);
         return result;
     }
 
@@ -803,7 +803,7 @@ public class SimplePoolDataSourceOracle
 
     @Override
     public void setConnectionPoolName(String connectionPoolName) throws SQLException {
-        log.debug("setConnectionPoolName({})", connectionPoolName);
+        log.trace("setConnectionPoolName({})", connectionPoolName);
         super.setConnectionPoolName(connectionPoolName);
     }
 
@@ -1042,7 +1042,7 @@ public class SimplePoolDataSourceOracle
 
     @Override
     public void startPool() throws SQLException {
-        log.debug("startPool({})", getConnectionPoolName());
+        log.trace("startPool({})", getConnectionPoolName());
         super.startPool();
     }
 }
