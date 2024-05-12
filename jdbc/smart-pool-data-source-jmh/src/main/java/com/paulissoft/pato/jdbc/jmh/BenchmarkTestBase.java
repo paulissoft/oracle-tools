@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class BenchmarkTest {
+public class BenchmarkTestBase {
 
     DataSource[] dataSources = null;
 

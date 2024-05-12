@@ -9,7 +9,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class OracleTest1 extends BenchmarkTest {
+public class OracleTest1 extends BenchmarkTestBase {
 
     @Override
     @TearDown(Level.Trial)

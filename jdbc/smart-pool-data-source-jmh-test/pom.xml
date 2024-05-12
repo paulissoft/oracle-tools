@@ -125,6 +125,11 @@ THE POSSIBILITY OF SUCH DAMAGE.
       <version>${revision}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.paulissoft.pato.jdbc</groupId>
+      <artifactId>smart-pool-data-source-jmh</artifactId>
+      <version>${revision}</version>
+    </dependency>
   </dependencies>
 
   <build>
