@@ -18,6 +18,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -73,6 +74,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     private final AtomicLong lastUpdate = new AtomicLong(0L);
 
     private final AtomicLong lastShown = new AtomicLong(0L);
+
+    private final AtomicBoolean isUpdateable = new AtomicBoolean(true);
     
     // all physical time elapsed stuff
     
@@ -215,8 +218,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         
     boolean isClosed() {
         boolean result = true;
-                     
-        if (isClosedSupplier != null) {
+
+        if (!isUpdateable.get()) {
+            result = false;
+        } else if (isClosedSupplier != null) {
             result = isClosedSupplier.get();
         } else if (children != null) {
             // traverse the children: if one is not closed return false
@@ -379,6 +384,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     private void update(final int activeConnections,
                         final int idleConnections,
                         final int totalConnections) /*throws SQLException*/ {
+        // assert !(level != 4 || isClosed())
         final BigDecimal count = new BigDecimal(getConnectionCount());
 
         // update parent
@@ -410,15 +416,18 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public void close() throws Exception {
-        if (level != 4) {
-            return;
-        }
-
         logger.debug(">close({})", getDescription());
 
-        consolidate();
-
-        logger.debug("<close()");
+        try {
+            if (isUpdateable.get()) {
+                if (level == 4) {
+                    consolidate();
+                }
+                isUpdateable.set(false);
+            }
+        } finally {
+            logger.debug("<close()");
+        } 
     }    
     
     private void consolidate() {

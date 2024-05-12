@@ -127,6 +127,21 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
         log.debug("constructor 6: properties != null (fixed), activeParent != null, OPEN");
     }
 
+    @Override
+    protected void tearDown() {
+        try {
+            // close the statistics BEFORE closing the pool data source otherwise you may not use delegated methods
+            poolDataSourceStatistics.close();
+            if (parentPoolDataSourceStatistics != null) {
+                parentPoolDataSourceStatistics.close();
+            }
+
+            super.tearDown();
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
+    }
+
     /*
      * Connection
      */

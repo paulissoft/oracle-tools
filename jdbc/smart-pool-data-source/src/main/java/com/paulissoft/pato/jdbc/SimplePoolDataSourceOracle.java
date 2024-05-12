@@ -243,19 +243,21 @@ public class SimplePoolDataSourceOracle
 
     public void close() {
         try {
-            final String[] poolNames = mgr.getConnectionPoolNames();
-            int nr = 0;
+            log.info("About to close connection pool {}", getConnectionPoolName());
             
-            log.debug("this pool name: {}", getConnectionPoolName());            
-            for (String poolName : poolNames) {
-                log.debug("pool name #{}: {}", ++nr, poolName);
-            }
-            
-            // final UniversalConnectionPool ucp = mgr.getConnectionPool(getConnectionPoolName());
+            // this pool may or may NOT be in the connection pools (implicitly) managed by mgr
+            UniversalConnectionPool ucp;
 
-            // ucp.stop();
-            
-            // mgr.destroyConnectionPool(getConnectionPoolName());
+            try {
+                ucp = mgr.getConnectionPool(getConnectionPoolName());
+            } catch (Exception ex) {
+                ucp = null;
+            }
+
+            if (ucp != null) {
+                ucp.stop();
+                // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
+            }
         } catch (UniversalConnectionPoolException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
