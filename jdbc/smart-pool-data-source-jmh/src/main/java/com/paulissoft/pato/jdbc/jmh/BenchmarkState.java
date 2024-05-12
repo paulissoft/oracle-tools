@@ -118,6 +118,23 @@ public class BenchmarkState {
             d = 1; t = 3;
         }
 
+        // randomize the connection pool name prefix
+        if (d == 1) {
+            CombiPoolDataSourceOracle.setPoolNamePrefixNr();
+            if (t == 0) {
+                int s = 0;
+                
+                for (DataSource ds : dataSources[d][t]) {
+                    try {
+                        final PoolDataSourceImpl pds = (PoolDataSourceImpl) ds;
+                        
+                        pds.setConnectionPoolName(CombiPoolDataSourceOracle.getPoolNamePrefix() + "-" + s++);
+                    } catch (Exception ignore) {
+                    }
+                }
+            }
+        }
+
         return dataSources[d][t];
     }
     

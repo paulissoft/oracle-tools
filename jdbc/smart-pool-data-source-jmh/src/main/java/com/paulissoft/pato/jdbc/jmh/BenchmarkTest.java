@@ -49,13 +49,13 @@ public class BenchmarkTest {
                     }});
         } catch (Exception ex) {
             if (dataSources != null) {
-                int i;
+                int nr = 0;
                 
-                for (i = 0; i < dataSources.length; i++) {
+                for (DataSource ds : dataSources) {
                     try {
-                        final PoolDataSourceImpl pds = (PoolDataSourceImpl) dataSources[i];
+                        final PoolDataSourceImpl pds = (PoolDataSourceImpl) ds;
                         
-                        log.warn("Connection pool name of data source # {}: {}", i, pds.getConnectionPoolName());
+                        log.warn("Connection pool name of data source # {}: {}", ++nr, pds.getConnectionPoolName());
                     } catch (Exception ignore) {
                     }
                 }

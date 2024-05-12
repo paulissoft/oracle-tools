@@ -4,7 +4,7 @@ package com.paulissoft.pato.jdbc.jmh;
 
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
-import org.openjdk.jmh.annotations.Benchmark;
+//import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -27,8 +27,13 @@ public class OracleTest0 extends BenchmarkTest {
     public void tearDown() throws Exception {
         super.tearDown();
     }    
+
+    /*
+    || GJP 2024-05-12
+    || Disable benchmark since it always raises this exception (UCP-0: Unable to start the Universal Connection Pool).
+    */
     
-    @Benchmark
+    // @Benchmark
     public void connectAllBasic(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
         connectAll(bh, bs, oracle.ucp.jdbc.PoolDataSourceImpl.class.getName());

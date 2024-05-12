@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
 
-    private static final String POOL_NAME_PREFIX = CombiPoolDataSourceHikari.POOL_NAME_PREFIX;
+    private static final String POOL_NAME_PREFIX = CombiPoolDataSourceHikari.getPoolNamePrefix();
          
     // Statistics at level 2
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal

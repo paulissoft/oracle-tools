@@ -13,7 +13,7 @@ public class CombiPoolDataSourceHikari
     extends CombiPoolDataSource<SimplePoolDataSourceHikari, PoolDataSourceConfigurationHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    static final String POOL_NAME_PREFIX = "HikariPool";
+    static private final String POOL_NAME_PREFIX = "HikariPool";
 
     /*
      * Constructors
@@ -269,7 +269,11 @@ public class CombiPoolDataSourceHikari
             log.debug("<updatePool(id={})", getId());
         }
     }
-    
+
+    public static String getPoolNamePrefix() {
+        return POOL_NAME_PREFIX;
+    }
+
     private void updatePoolName(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
                                 @NonNull final HikariConfig poolDataSource,
                                 final boolean initializing,

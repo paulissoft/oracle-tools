@@ -13,8 +13,10 @@ public class CombiPoolDataSourceOracle
     extends CombiPoolDataSource<SimplePoolDataSourceOracle, PoolDataSourceConfigurationOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    static final String POOL_NAME_PREFIX = "OraclePool" + ThreadLocalRandom.current().nextInt(0, 1000); // make it unique for UCP
+    static private final String POOL_NAME_PREFIX = "OraclePool";
 
+    static private int poolNamePrefixNr = -1;
+        
     /*
      * Constructors
      */
@@ -178,6 +180,18 @@ public class CombiPoolDataSourceOracle
         return poolDataSource.getConnection(usernameSession1, passwordSession1);
     }
 
+    public static String getPoolNamePrefix() {
+        return POOL_NAME_PREFIX + (poolNamePrefixNr >= 0 ? poolNamePrefixNr : "");
+    }
+
+    public static void setPoolNamePrefixNr(final int nr) {
+        poolNamePrefixNr = nr;
+    }
+
+    public static void setPoolNamePrefixNr() {
+        setPoolNamePrefixNr(ThreadLocalRandom.current().nextInt(0, 1000)); // make it unique for UCP
+    }
+    
     @Override
     protected void updatePoolName(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfiguration,
                                   @NonNull final SimplePoolDataSourceOracle poolDataSource,

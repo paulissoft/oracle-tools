@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
 
-    private static final String POOL_NAME_PREFIX = CombiPoolDataSourceOracle.POOL_NAME_PREFIX;
+    private static final String POOL_NAME_PREFIX = CombiPoolDataSourceOracle.getPoolNamePrefix();
          
     // Statistics at level 2
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal

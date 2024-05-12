@@ -175,8 +175,8 @@ public class CheckConnectionOracleUnitTest {
             assertEquals(2 * 20, ds.getMaxPoolSize());
             assertEquals(ds.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
                                 
-            assertTrue(ds.getConnectionPoolName().equals(CombiPoolDataSourceOracle.POOL_NAME_PREFIX + "-boopapij-bodomain") ||
-                       ds.getConnectionPoolName().equals(CombiPoolDataSourceOracle.POOL_NAME_PREFIX + "-bodomain-boopapij"));
+            assertTrue(ds.getConnectionPoolName().equals(CombiPoolDataSourceOracle.getPoolNamePrefix() + "-boopapij-bodomain") ||
+                       ds.getConnectionPoolName().equals(CombiPoolDataSourceOracle.getPoolNamePrefix() + "-bodomain-boopapij"));
             assertEquals(ds.getConnectionPoolName(), ds.getPoolDataSource().getConnectionPoolName());
 
             final Connection conn = ds.getConnection();
