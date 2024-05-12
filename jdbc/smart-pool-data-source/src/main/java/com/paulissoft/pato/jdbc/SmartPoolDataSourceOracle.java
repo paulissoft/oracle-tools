@@ -137,6 +137,8 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
             }
 
             super.tearDown();
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }

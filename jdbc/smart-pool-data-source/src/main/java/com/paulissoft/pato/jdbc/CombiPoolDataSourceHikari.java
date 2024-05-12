@@ -160,6 +160,8 @@ public class CombiPoolDataSourceHikari
     public void setUsername(String username) {
         try {
             getPoolDataSourceSetter().setUsername(username);
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
@@ -168,6 +170,8 @@ public class CombiPoolDataSourceHikari
     public void setPassword(String password) {
         try {
             getPoolDataSourceSetter().setPassword(password);        
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
