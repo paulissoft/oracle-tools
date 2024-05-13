@@ -135,7 +135,7 @@ The .../projects/YOUR-PROJECT/db/pom.xml may have as parent:
 
 ```
 <parent>
-  <groupId>com.paulissoft.oracle-tools</groupId>
+  <groupId>com.paulissoft.pato</groupId>
   <artifactId>db</artifactId>
   <version>${revision}</version>
   <relativePath>../../oracle-tools/db</relativePath>
@@ -148,7 +148,7 @@ The .../projects/YOUR-PROJECT/apex/pom.xml may have as parent:
 
 ```
 <parent>
-  <groupId>com.paulissoft.oracle-tools</groupId>
+  <groupId>com.paulissoft.pato</groupId>
   <artifactId>apex</artifactId>
   <version>${revision}</version>
   <relativePath>../../oracle-tools/apex</relativePath>
@@ -167,7 +167,7 @@ This is deprecated since it is too fragile. see also [Remove Maven dependency me
 [//]: # ()
 [//]: # (```)
 [//]: # (  <parent>)
-[//]: # (    <groupId>com.paulissoft.oracle-tools</groupId>)
+[//]: # (    <groupId>com.paulissoft.pato</groupId>)
 [//]: # (    <artifactId>db</artifactId>)
 [//]: # (    <version>YOUR VERSION</version>)
 [//]: # (    <relativePath></relativePath>)
@@ -202,7 +202,7 @@ This is deprecated since it is too fragile. see also [Remove Maven dependency me
 [//]: # ()
 [//]: # (```)
 [//]: # (  <parent>)
-[//]: # (    <groupId>com.paulissoft.oracle-tools</groupId>)
+[//]: # (    <groupId>com.paulissoft.pato</groupId>)
 [//]: # (    <artifactId>apex</artifactId>)
 [//]: # (    <version>YOUR VERSION</version>)
 [//]: # (    <relativePath></relativePath>)

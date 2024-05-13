@@ -99,7 +99,7 @@ Now another project POM in <project>/db, can have as parent one of the PATO POMs
 
 ```
 <parent>
-  <groupId>com.paulissoft.oracle-tools</groupId>
+  <groupId>com.paulissoft.pato</groupId>
   <artifactId>db</artifactId>
   <version>${revision}</version>
   <relativePath>../../oracle-tools/db</relativePath>
