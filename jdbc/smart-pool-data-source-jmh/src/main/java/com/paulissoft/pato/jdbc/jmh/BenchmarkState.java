@@ -2,6 +2,7 @@ package com.paulissoft.pato.jdbc.jmh;
 
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -39,7 +40,7 @@ public class BenchmarkState {
           { null, null, null, null, null, null } }
     };
         
-    @Param({/*"10000", */"1000"})
+    @Param({/*"10000",*/ "500" })
     public int divideLogicalConnectionsBy;
 
     public List<Integer> testList = new Vector(1000, 1000);
@@ -133,6 +134,10 @@ public class BenchmarkState {
         }
 
         return dataSources[d][t];
+    }
+
+    public void doSomeWork() {
+        TimeUnit.MILLISECONDS.sleep(500);
     }
     
     // https://www.baeldung.com/java-generating-random-numbers-in-range

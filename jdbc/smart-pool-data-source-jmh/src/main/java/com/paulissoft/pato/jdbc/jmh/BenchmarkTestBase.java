@@ -18,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 // JMH annotations
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
+//@BenchmarkMode(Mode.Throughput)
+@OutputTimeUnit(TimeUnit.SECONDS)
 public class BenchmarkTestBase {
 
     DataSource[] dataSources = null;
@@ -42,7 +43,7 @@ public class BenchmarkTestBase {
         try {
             bs.testList.parallelStream().forEach(idx -> {
                     try (final Connection conn = dataSources[idx].getConnection()) {
-                        TimeUnit.SECONDS.sleep(1);
+                        bs.doSomeWork();
                         bh.consume(conn.getSchema());
                     } catch (SQLException | InterruptedException ex) {
                         if (ex.getMessage().contains("UCP-")) { // ignore UCP message for now
