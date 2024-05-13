@@ -218,7 +218,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         // level 3        
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
             activeParent == null
-            ? new PoolDataSourceStatistics(() -> this.getPoolName() + ": (all)",
+            ? new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (all)",
                                            poolDataSourceStatisticsTotal,
                                            () -> getState() != CombiPoolDataSource.State.OPEN,
                                            this::getCommonPoolDataSourceConfiguration)
@@ -226,7 +226,7 @@ public class SmartPoolDataSourceHikari extends CombiPoolDataSourceHikari {
         
         // level 4
         final PoolDataSourceStatistics poolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolDataSourceConfiguration().getPoolName() + ": (only " +
+            new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (only " +
                                          this.getPoolDataSourceConfiguration().getSchema() + ")",
                                          parentPoolDataSourceStatistics, // level 3
                                          () -> getState() != CombiPoolDataSource.State.OPEN,

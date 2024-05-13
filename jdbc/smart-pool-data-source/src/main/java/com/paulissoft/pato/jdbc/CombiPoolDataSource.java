@@ -355,11 +355,15 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         }
     }
 
-    protected void updatePoolName(@NonNull final P poolDataSourceConfiguration,
-                                  @NonNull final T poolDataSource,
-                                  final boolean initializing,
-                                  final boolean isParentPoolDataSource) {
-        throw new UnsupportedOperationException("Operation updatePoolName() not implemented.");
+    public abstract String getPoolNamePrefix();
+
+    public abstract String getPoolDescription();
+    
+    protected void updatePoolDescription(@NonNull final P poolDataSourceConfiguration,
+                                         @NonNull final T poolDataSource,
+                                         final boolean initializing,
+                                         final boolean isParentPoolDataSource) {
+        throw new UnsupportedOperationException("Operation updatePoolDescription() not implemented.");
     }
 
     protected void updatePoolSizes(@NonNull final P poolDataSourceConfiguration,
@@ -377,10 +381,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                   initializing,
                   isParentPoolDataSource);
         try {
-            updatePoolName(poolDataSourceConfiguration,
-                           poolDataSource,
-                           initializing,
-                           isParentPoolDataSource);
+            updatePoolDescription(poolDataSourceConfiguration,
+                                  poolDataSource,
+                                  initializing,
+                                  isParentPoolDataSource);
             if (!isParentPoolDataSource) { // do not double the pool size when it is an active parent
                 updatePoolSizes(poolDataSourceConfiguration,
                                 poolDataSource,

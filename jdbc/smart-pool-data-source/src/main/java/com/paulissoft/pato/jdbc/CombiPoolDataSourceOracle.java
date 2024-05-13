@@ -178,65 +178,55 @@ public class CombiPoolDataSourceOracle
     public String getPoolNamePrefix() {
         return this.getClass().getSimpleName();
     }
-    
-    @Override
-    protected void updatePoolName(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfiguration,
-                                  @NonNull final SimplePoolDataSourceOracle poolDataSource,
-                                  final boolean initializing,
-                                  final boolean isParentPoolDataSource) {
-        try {
-            log.debug(">updatePoolName(id={}, isParentPoolDataSource={})", getId(), isParentPoolDataSource);
-            
-            log.debug("config pool data source; address: {}; name: {}",
-                      poolDataSourceConfiguration,
-                      poolDataSourceConfiguration.getConnectionPoolName());
 
-            log.debug("common pool data source; address: {}; name: {}",
-                      poolDataSource,
-                      poolDataSource.getConnectionPoolName());
+    public String getPoolDescription() {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        final String description = poolDataSource.getDescription();
+
+        return poolDataSource.getConnectionPoolName() + description != null ? description : "";
+    }
+
+    @Override
+    protected void updatePoolDescription(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfiguration,
+                                         @NonNull final SimplePoolDataSourceOracle poolDataSource,
+                                         final boolean initializing,
+                                         final boolean isParentPoolDataSource) {
+        try {
+            log.debug(">updatePoolDescription(id={}, isParentPoolDataSource={})", getId(), isParentPoolDataSource);            
+            log.debug("config pool data source; name: {}; address: {}",
+                      poolDataSourceConfiguration.getConnectionPoolName(),
+                      poolDataSourceConfiguration);
+            log.debug("common pool data source; name: {}; address: {}",
+                      poolDataSource.getConnectionPoolName(),
+                      poolDataSource);
 
             // set pool name
             final String suffix = "-" + getPoolDataSourceConfiguration().getSchema();
-            final String oldConnectionPoolName = poolDataSource.getConnectionPoolName();
+
+            if (initializing) {
+                if (poolDataSource.getConnectionPoolName() == null ||
+                    !poolDataSource.getConnectionPoolName().startsWith(getPoolNamePrefix() + "-")) {
+                    poolDataSource.setConnectionPoolName(getPoolNamePrefix() + suffix);
+                    poolDataSource.setDescription("");
+                } else if (!isParentPoolDataSource) {                
+                    poolDataSource.setDescription(poolDataSource.getDescription() + suffix);
+                }
+            } else if (!isParentPoolDataSource) {
+                poolDataSource.setDescription(poolDataSource.getDescription().replace(suffix, ""));
+            }
 
             // keep poolDataSource in sync with poolDataSourceConfiguration
-            if (initializing) {
-                if (isParentPoolDataSource) {
-                    poolDataSourceConfiguration.setConnectionPoolName(getPoolNamePrefix() + suffix);
-                } else {
-                    poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName + suffix);
-                }
-            } else {
-                poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName.replace(suffix, ""));
-            }
-            
-            try {                
-                poolDataSource.setConnectionPoolName(poolDataSourceConfiguration.getConnectionPoolName());
-                log.debug("Connection pool name updated from '{}' to '{}'",
-                          oldConnectionPoolName,
-                          poolDataSourceConfiguration.getConnectionPoolName());
-            } catch (SQLException ex) {
-                // UCP-45: Cannot set the connection pool name. Check the connection pool name to avoid duplicates
-                if (ex.getMessage().contains("UCP-45:")) {
-                    // restore old name
-                    poolDataSourceConfiguration.setConnectionPoolName(oldConnectionPoolName);
-                } else {
-                    log.error("Can not update connection pool name from '{}' to '{}'",
-                              oldConnectionPoolName,
-                              poolDataSourceConfiguration.getConnectionPoolName());
-                    throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-                }
-            }
+            poolDataSourceConfiguration.setConnectionPoolName(poolDataSource.getConnectionPoolName());
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
-            log.debug("config pool data source; address: {}; name: {}",
-                      poolDataSourceConfiguration,
-                      poolDataSourceConfiguration.getConnectionPoolName());
-
-            log.debug("common pool data source; address: {}; name: {}",
-                      poolDataSource,
-                      poolDataSource.getConnectionPoolName());
-
-            log.debug("<updatePoolName(id={})", getId());
+            log.debug("config pool data source; name: {}; address: {}",
+                      poolDataSourceConfiguration.getConnectionPoolName(),
+                      poolDataSourceConfiguration);
+            log.debug("common pool data source; name: {}; address: {}",
+                      poolDataSource.getConnectionPoolName(),
+                      poolDataSource);
+            log.debug("<updatePoolDescription(id={})", getId());
         }
     }
 
@@ -245,18 +235,16 @@ public class CombiPoolDataSourceOracle
                                    @NonNull final SimplePoolDataSourceOracle poolDataSource,
                                    final boolean initializing) {
         try {
-            log.debug(">updatePoolSizes(id={})", getId());
-            
-            log.debug("config pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                      poolDataSourceConfiguration,
+            log.debug(">updatePoolSizes(id={})", getId());            
+            log.debug("config pool data source; name: {}; address: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
                       poolDataSourceConfiguration.getConnectionPoolName(),
+                      poolDataSourceConfiguration,
                       poolDataSourceConfiguration.getInitialPoolSize(),
                       poolDataSourceConfiguration.getMinPoolSize(),
                       poolDataSourceConfiguration.getMaxPoolSize());
-
-            log.debug("common pool data source; address: {}; name: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
-                      poolDataSource,
+            log.debug("common pool data source; name: {}; address: {}; pool sizes before: initial/minimum/maximum: {}/{}/{}",
                       poolDataSource.getConnectionPoolName(),
+                      poolDataSource,
                       poolDataSource.getInitialPoolSize(),
                       poolDataSource.getMinPoolSize(),
                       poolDataSource.getMaxPoolSize());
@@ -301,20 +289,18 @@ public class CombiPoolDataSourceOracle
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
-            log.debug("config pool data source; address: {}; name: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                      poolDataSourceConfiguration,
+            log.debug("config pool data source; name: {}; address: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
                       poolDataSourceConfiguration.getConnectionPoolName(),
+                      poolDataSourceConfiguration,
                       poolDataSourceConfiguration.getInitialPoolSize(),
                       poolDataSourceConfiguration.getMinPoolSize(),
                       poolDataSourceConfiguration.getMaxPoolSize());
-
-            log.debug("common pool data source; address: {}; name: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
-                      poolDataSource,
+            log.debug("common pool data source; name: {}; address: {}; pool sizes after: initial/minimum/maximum: {}/{}/{}",
                       poolDataSource.getConnectionPoolName(),
+                      poolDataSource,
                       poolDataSource.getInitialPoolSize(),
                       poolDataSource.getMinPoolSize(),
                       poolDataSource.getMaxPoolSize());
-
             log.debug("<updatePoolSizes(id={})", getId());
         }
     }
