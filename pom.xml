@@ -87,6 +87,11 @@
       <name>GitHub Packages</name>
       <url>https://maven.pkg.github.com/paulissoft/oracle-tools</url>
     </repository>
+    <snapshotRepository>
+      <id>github-paulissoft</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/paulissoft/oracle-tools</url>
+    </snapshotRepository>
   </distributionManagement>
   
   <pluginRepositories>

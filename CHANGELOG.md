@@ -15,6 +15,10 @@ Types of changes:
 
 ## [Unreleased]
 
+## [3.0.0] - 2024-05-13
+
+### Changed
+
 - [Maven coordinates should no longer use oracle-tools but pato instead.](https://github.com/paulissoft/oracle-tools/issues/157)
 - [It must be possible to install PATO in a database without APEX installed.](https://github.com/paulissoft/oracle-tools/issues/156)
 - [The database directory may also contain a file env.properties to read environment properties from.](https://github.com/paulissoft/oracle-tools/issues/155)

@@ -12,13 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
+          # see <distributionManagement> in pom.xml
+          server-id: github-paulissoft
           java-version: '11'
           distribution: 'temurin'
-      - name: maven-settings-xml-action
-        uses: whelk-io/maven-settings-xml-action@v22
-        with:
-          servers: '[{ "id": "github-paulissoft", "username": "x-access-token", "password": "${{ secrets.GITHUB_TOKEN }}" }]'          
       - name: Publish package in root
         run: mvn --batch-mode -N deploy
-      - name: Publish package in java directory
-        run: mvn -f java/pom.xml --batch-mode deploy
+      - name: Publish package in jdbc directory
+        run: mvn --batch-mode -f jdbc/pom.xml deploy
