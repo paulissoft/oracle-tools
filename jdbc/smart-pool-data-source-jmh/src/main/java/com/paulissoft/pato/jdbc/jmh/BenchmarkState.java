@@ -136,7 +136,7 @@ public class BenchmarkState {
         return dataSources[d][t];
     }
 
-    public void doSomeWork() {
+    public void doSomeWork() throws InterruptedException {
         TimeUnit.MILLISECONDS.sleep(500);
     }
     
