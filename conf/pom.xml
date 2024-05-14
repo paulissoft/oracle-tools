@@ -111,7 +111,7 @@
         <groupId>${ojdbc.groupId}</groupId>
         <artifactId>${ojdbc.artifactId}</artifactId>
         <version>${ojdbc.version}</version>
-        <type>pom</type>
+        <type>${ojdbc.type}</type>
      </dependency>
       <!--dependency>
         <groupId>${ojdbc.groupId}</groupId>
