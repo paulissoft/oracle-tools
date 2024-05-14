@@ -11,16 +11,17 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # see <distributionManagement> in pom.xml: server id is github-paulissoft
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          # see <distributionManagement> in pom.xml
-          server-id: github-paulissoft
-          server-username: GITHUB_ACTOR
-          server-password: GITHUB_TOKEN
           java-version: '11'
           distribution: 'temurin'
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v22
+        with:
+          servers: '[{ "id": "github-paulissoft", "username": "x-access-token", "password": "${{ secrets.GITHUB_TOKEN }}" }]'
       - name: Show contents of settings.xml
         run: mvn help:effective-settings -q -Doutput=/dev/stdout -DshowPasswords=true
       - name: Show environment
