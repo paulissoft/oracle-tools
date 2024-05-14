@@ -23,7 +23,7 @@ jobs:
       - name: Show contents of settings.xml (1)
         run: mvn help:effective-settings -q -Doutput=/dev/stdout
       - name: Environment (1)
-        run: env
+        run: env | sort
       - uses: actions/setup-java@v4
         with:
           # see <distributionManagement> in pom.xml
@@ -35,7 +35,7 @@ jobs:
       - name: Show contents of settings.xml (2)
         run: mvn help:effective-settings -q -Doutput=/dev/stdout
       - name: Environment (2)
-        run: env
+        run: env | sort
       - name: Publish package in root
         if: github.ref == 'refs/heads/master'
         run: mvn --batch-mode -N deploy
