@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - development
 #  release:
 #    types: [created]
 jobs:
@@ -18,23 +17,13 @@ jobs:
         with:
           # see <distributionManagement> in pom.xml
           server-id: github-paulissoft
-          java-version: '11'
-          distribution: 'temurin'
-      - name: Show contents of settings.xml (1)
-        run: mvn help:effective-settings -q -Doutput=/dev/stdout
-      - name: Environment (1)
-        run: env | sort
-      - uses: actions/setup-java@v4
-        with:
-          # see <distributionManagement> in pom.xml
-          server-id: github-paulissoft
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
           java-version: '11'
           distribution: 'temurin'
-      - name: Show contents of settings.xml (2)
-        run: mvn help:effective-settings -q -Doutput=/dev/stdout
-      - name: Environment (2)
+      - name: Show contents of settings.xml
+        run: mvn help:effective-settings -q -Doutput=/dev/stdout -DshowPasswords=true
+      - name: Show environment
         run: env | sort
       - name: Publish package in root
         if: github.ref == 'refs/heads/master'
