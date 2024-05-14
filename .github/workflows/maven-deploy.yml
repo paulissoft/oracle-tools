@@ -16,7 +16,23 @@ jobs:
           server-id: github-paulissoft
           java-version: '11'
           distribution: 'temurin'
-      - name: Publish package in root
-        run: mvn --batch-mode -N deploy
-      - name: Publish package in jdbc directory
-        run: mvn --batch-mode -f jdbc/pom.xml deploy
+      - name: Show contents of settings.xml (1)
+        run: mvn help:effective-settings -DshowPasswords=true -B 
+      - name: Environment (1)
+        run: env
+      - uses: actions/setup-java@v4
+        with:
+          # see <distributionManagement> in pom.xml
+          server-id: github-paulissoft
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Show contents of settings.xml (2)
+        run: mvn help:effective-settings -DshowPasswords=true -B 
+      - name: Environment (2)
+        run: env
+#      - name: Publish package in root
+#        run: mvn --batch-mode -N deploy
+#      - name: Publish package in jdbc directory
+#        run: mvn --batch-mode -f jdbc/pom.xml deploy
