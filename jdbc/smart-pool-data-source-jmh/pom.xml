@@ -15,7 +15,6 @@
   </parent-->
   <groupId>com.paulissoft.pato.jdbc</groupId>
   <artifactId>smart-pool-data-source-jmh</artifactId>
-  <name>spring-boot-complete</name>
   <description>Demo project for Spring Boot</description>
 
   <properties>

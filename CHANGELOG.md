@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [3.1.0] - 2024-05-14
+
+### Added
+
+- [Upgrade Maven dependencies.](https://github.com/paulissoft/oracle-tools/issues/158)
+
 ## [3.0.0] - 2024-05-13
 
 ### Changed
