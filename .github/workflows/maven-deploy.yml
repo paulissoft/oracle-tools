@@ -21,7 +21,7 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
       - name: Show contents of settings.xml (1)
-        run: mvn help:effective-settings -DshowPasswords=true -B 
+        run: mvn help:effective-settings -q -Doutput=/dev/stdout
       - name: Environment (1)
         run: env
       - uses: actions/setup-java@v4
@@ -33,7 +33,7 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
       - name: Show contents of settings.xml (2)
-        run: mvn help:effective-settings -DshowPasswords=true -B 
+        run: mvn help:effective-settings -q -Doutput=/dev/stdout
       - name: Environment (2)
         run: env
       - name: Publish package in root
