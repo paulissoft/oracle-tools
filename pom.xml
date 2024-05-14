@@ -15,8 +15,9 @@
 
     <!--maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version-->
     <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <java.version>11</java.version>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
     <maven.compiler.argument>-Xlint:deprecation</maven.compiler.argument>
     
     <!-- plugins from super pom without version -->
@@ -66,9 +67,9 @@
     <!-- Oracle JDBC stuff -->
     <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
     <ojdbc.groupId>com.oracle.database.jdbc</ojdbc.groupId>
-    <ojdb.java.version>8</ojdb.java.version>
-    <ojdbc.artifactId>ojdbc${ojdb.java.version}-production</ojdbc.artifactId> <!-- compatible with Java 8 -->
-    <ojdbc.version>23.2.0.0</ojdbc.version>
+    <ojdbc.java.version>11</ojdbc.java.version>  <!-- compatible with Java 11 -->
+    <ojdbc.artifactId>ojdbc${ojdbc.java.version}</ojdbc.artifactId>
+    <ojdbc.version>23.3.0.23.09</ojdbc.version>
     <!-- GJP 2023-09-05  Version 3.1.4 is the latest version to work with JDBC thin driver and a TNS NAMES entry. -->
     <!-- For 3.1.5 you get: -->
     <!-- IO Error: The Network Adapter could not establish the connection: Unable to initialize ssl context. Unable to initialize the key store. SSO not found: SSO KeyStore not available -->

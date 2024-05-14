@@ -22,6 +22,15 @@
     <db.password>${env.DB_PASSWORD}</db.password>
   </properties>
 
+  <!-- GJP 2024-05-14 Don't know why but seems necessary -->
+  <dependencies>
+    <dependency>
+      <groupId>${ojdbc.groupId}</groupId>
+      <artifactId>${ojdbc.artifactId}</artifactId>
+      <version>${ojdbc.version}</version>
+    </dependency>
+  </dependencies>
+
   <profiles>
     <profile>
       <id>test-connection</id>
