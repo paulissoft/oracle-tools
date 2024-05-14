@@ -36,9 +36,9 @@
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <HikariCP.version>3.4.2</HikariCP.version>
     <lombok.version>1.18.30</lombok.version>
-    <oracle.ojdbc.artifactId>ojdbc11</oracle.ojdbc.artifactId>
-    <oracle.ucp.artifactId>ucp11</oracle.ucp.artifactId>
-    <oracle.jdbc.version>23.3.0.23.09</oracle.jdbc.version>
+    <oracle.ojdbc.artifactId>${ojdbc.artifactId}</oracle.ojdbc.artifactId>
+    <oracle.ucp.artifactId>ucp${ojdbc.java.version}</oracle.ucp.artifactId>
+    <oracle.jdbc.version>${ojdbc.version}</oracle.jdbc.version>
     <spring.version>5.2.3.RELEASE</spring.version>
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
     <commons-lang3.version>3.9</commons-lang3.version>
@@ -69,12 +69,12 @@
         <scope>provided</scope>
       </dependency>
       <dependency>
-        <groupId>com.oracle.database.jdbc</groupId>
+        <groupId>${ojdbc.groupId}</groupId>
         <artifactId>${oracle.ojdbc.artifactId}</artifactId>
         <version>${oracle.jdbc.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.oracle.database.jdbc</groupId>
+        <groupId>${ojdbc.groupId}</groupId>
         <artifactId>${oracle.ucp.artifactId}</artifactId>
         <version>${oracle.jdbc.version}</version>
       </dependency>
@@ -162,12 +162,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.oracle.database.jdbc</groupId>
+      <groupId>${ojdbc.groupId}</groupId>
       <artifactId>${oracle.ojdbc.artifactId}</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.oracle.database.jdbc</groupId>
+      <groupId>${ojdbc.groupId}</groupId>
       <artifactId>${oracle.ucp.artifactId}</artifactId>
       <scope>provided</scope>
     </dependency>
