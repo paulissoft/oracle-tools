@@ -20,9 +20,6 @@ jobs:
           server-id: github-paulissoft
           java-version: '11'
           distribution: 'temurin'
-      - name: Extract Project version
-        id: project
-        run: echo ::set-output name=version::$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
       - name: Show contents of settings.xml (1)
         run: mvn help:effective-settings -DshowPasswords=true -B 
       - name: Environment (1)
@@ -40,8 +37,8 @@ jobs:
       - name: Environment (2)
         run: env
       - name: Publish package in root
-        if:  ${{ !endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
+        if: github.ref == 'refs/heads/master'
         run: mvn --batch-mode -N deploy
       - name: Publish package in jdbc directory
-        if:  ${{ !endsWith(steps.project.outputs.version, '-SNAPSHOT') }}
+        if: github.ref == 'refs/heads/master'
         run: mvn --batch-mode -f jdbc/pom.xml deploy
