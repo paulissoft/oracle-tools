@@ -89,7 +89,9 @@ public class CheckConfigurationOracleUnitTest {
 
         final SimplePoolDataSourceOracle simplePoolDataSourceOracle = domainDataSourceOracle.getPoolDataSource();
 
-        assertEquals(domainDataSourceOracle.getPoolNamePrefix() + "-bodomain",
+        assertEquals(domainDataSourceOracle.isParentPoolDataSource() ?
+                     domainDataSourceOracle.getPoolNamePrefix() + "-bodomain" :
+                     operatorDataSourceOracle.getPoolNamePrefix() + "-boopapij",
                      simplePoolDataSourceOracle.getConnectionPoolName());
         assertEquals(0, simplePoolDataSourceOracle.getInitialPoolSize());
         assertEquals(2 * 10, simplePoolDataSourceOracle.getMinPoolSize());
