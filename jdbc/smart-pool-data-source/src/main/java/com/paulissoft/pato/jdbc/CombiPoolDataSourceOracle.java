@@ -193,7 +193,7 @@ public class CombiPoolDataSourceOracle
         final String poolName = poolDataSource.getConnectionPoolName();
         final String description = poolDataSource.getDescription();
         
-        return (poolName  != null ? poolName : "") + (description != null ? description : "");
+        return (poolName == null ? "" : poolName + (description != null ? "-" + description : ""));
     }
 
     @Override
