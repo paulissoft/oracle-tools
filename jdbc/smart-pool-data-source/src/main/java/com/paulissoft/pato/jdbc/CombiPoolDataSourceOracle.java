@@ -247,12 +247,8 @@ public class CombiPoolDataSourceOracle
                 }
             }
 
-            if (isParentPoolDataSource) {
-                // keep poolDataSource.getPoolDescription() and poolDataSourceConfiguration.getConnectionPoolName() in sync
-                poolDataSourceConfiguration.setConnectionPoolName(getPoolDescription(poolDataSource));
-            } else {
-                poolDataSourceConfiguration.setConnectionPoolName(getPoolNamePrefix() + "-" + schema); // own prefix
-            }
+            // keep poolDataSource.getPoolDescription() and poolDataSourceConfiguration.getConnectionPoolName() in sync
+            poolDataSourceConfiguration.setConnectionPoolName(getPoolNamePrefix() + "-" + schema); // own prefix
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
