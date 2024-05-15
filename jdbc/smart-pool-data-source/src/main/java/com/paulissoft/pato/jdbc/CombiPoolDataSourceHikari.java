@@ -318,8 +318,12 @@ public class CombiPoolDataSourceHikari
                 poolDataSource.setPoolName(String.join("-", items));
             }
 
-            // keep poolDataSource.getPoolName() and poolDataSourceConfiguration.getPoolName() in sync
-            poolDataSourceConfiguration.setPoolName(poolDataSource.getPoolName());
+            if (isParentPoolDataSource) {
+                // keep poolDataSource.getPoolName() and poolDataSourceConfiguration.getPoolName() in sync
+                poolDataSourceConfiguration.setPoolName(poolDataSource.getPoolName());
+            } else {
+                poolDataSourceConfiguration.setPoolName(getPoolNamePrefix() + "-" + schema); // own prefix
+            }
         } finally {
             log.debug("config pool data source; name: {}; address: {}",
                       poolDataSourceConfiguration.getPoolName(),

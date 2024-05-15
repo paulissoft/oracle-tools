@@ -193,7 +193,9 @@ public class CombiPoolDataSourceOracle
         final String poolName = poolDataSource.getConnectionPoolName();
         final String description = poolDataSource.getDescription();
         
-        return (poolName == null ? "" : poolName + (description != null ? "-" + description : ""));
+        return (poolName == null || poolName.isEmpty() ?
+                "" :
+                poolName + (description == null || description.isEmpty() ? "" : "-" + description));
     }
 
     @Override
@@ -217,7 +219,8 @@ public class CombiPoolDataSourceOracle
 
             final String poolDescription = getPoolDescription(poolDataSource);
             final ArrayList<String> items = new ArrayList(Arrays.asList(poolDescription.split("-"))); // use pool description not just name
-            final String schema = getPoolDataSourceConfiguration().getSchema();
+            // final String schema = getPoolDataSourceConfiguration().getSchema();
+            final String schema = poolDataSourceConfiguration.getSchema();
 
             log.debug("items: {}; schema: {}", items, schema);
                         
@@ -244,8 +247,12 @@ public class CombiPoolDataSourceOracle
                 }
             }
 
-            // keep poolDataSource.getPoolDescription() and poolDataSourceConfiguration.getConnectionPoolName() in sync
-            poolDataSourceConfiguration.setConnectionPoolName(getPoolDescription(poolDataSource));
+            if (isParentPoolDataSource) {
+                // keep poolDataSource.getPoolDescription() and poolDataSourceConfiguration.getConnectionPoolName() in sync
+                poolDataSourceConfiguration.setConnectionPoolName(getPoolDescription(poolDataSource));
+            } else {
+                poolDataSourceConfiguration.setConnectionPoolName(getPoolNamePrefix() + "-" + schema); // own prefix
+            }
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
