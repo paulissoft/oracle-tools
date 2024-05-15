@@ -117,8 +117,6 @@ public interface PoolDataSourcePropertiesGettersOracle extends PoolDataSourcePro
   
           String getServiceName();
   
-          int getSecondsToTrustIdleConnection();
-  
           void reconfigureDataSource(Properties paramProperties) throws SQLException;
   
           int getMaxConnectionsPerService();
