@@ -34,12 +34,13 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     @NonNull
     private final P poolDataSourceConfiguration;
 
+    private final T fastPathPoolDataSource; // not null if and only if pool data source is known at constructor time
+
     /* either poolDataSource or activeParent is null */
-    
-    private final T poolDataSource;
+    private volatile T poolDataSource;
 
     @Getter(AccessLevel.PACKAGE)
-    private final CombiPoolDataSource<T, P> activeParent;
+    private volatile CombiPoolDataSource<T, P> activeParent;
 
     @NonNull
     private final AtomicInteger activeChildren = new AtomicInteger(0); // safe in threads
@@ -63,9 +64,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     protected CombiPoolDataSource(@NonNull final T poolDataSource,
                                   @NonNull final P poolDataSourceConfiguration) {
         log.debug("constructor 1: everything null, INITIALIZING");
-        
+
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
-        this.poolDataSource = poolDataSource;
+        this.fastPathPoolDataSource = null;
+        this.poolDataSource = poolDataSource; // may be temporary
         this.activeParent = null;
         
         setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
@@ -74,7 +76,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                   getId(),
                   getPoolDataSource());
 
-        assert getPoolDataSource() != null : "The pool data source should not be null.";
+        checkInvariants();
     }
 
     /* 2: poolDataSourceConfiguration != null (fixed), OPEN */
@@ -84,7 +86,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
         this.activeParent = determineActiveParent(); // can not use getId() yet
-        this.poolDataSource = this.activeParent == null ? supplierT.get() : null;
+        this.fastPathPoolDataSource = this.poolDataSource = (this.activeParent == null ? supplierT.get() : null);
 
         setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
         setUp();
@@ -95,7 +97,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                   getPoolDataSource());
 
         assert state == State.OPEN : "After setting up the state must be OPEN.";
-        assert getPoolDataSource() != null : "The pool data source should not be null.";
+        checkInvariants();
     }
 
     /* 3: activeParent != null, INITIALIZING */
@@ -104,6 +106,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         log.debug("constructor 3: activeParent != null, INITIALIZING");
 
         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+        this.fastPathPoolDataSource = activeParent.fastPathPoolDataSource;
         this.poolDataSource = null;
         this.activeParent = activeParent;
 
@@ -116,9 +119,15 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
         assert activeParent.activeParent == null : "A parent can not have a parent itself.";
         assert activeParent.state == State.OPEN : "A parent status must be OPEN.";
+        checkInvariants();
+    }
+
+    private void checkInvariants() {
+        assert (poolDataSource != null && activeParent == null) || (poolDataSource == null && activeParent != null && activeParent.poolDataSource != null)
+            : "Either the pool data source must be null and the active parent pool data source not OR the pool data source not null and the active parent null";
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
-    
+
     /*
      * State
      */
@@ -158,6 +167,13 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
             if (state == State.INITIALIZING) {
                 try {
+                    if (fastPathPoolDataSource == null && activeParent == null) {
+                        activeParent = determineActiveParent();
+                        if (activeParent != null) {
+                            poolDataSource = null;
+                        }
+                    }
+                     
                     log.debug("poolDataSourceConfiguration before: {}", poolDataSourceConfiguration);
                     if (poolDataSourceConfiguration.getType() == null) {
                         poolDataSourceConfiguration.setType(this.getClass().getName());
@@ -173,6 +189,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                     throw ex;
                 }
             }
+            checkInvariants();
         } finally {
             log.debug("<setUp(id={}, state={})", getId(), state);
         }
@@ -350,6 +367,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
             case CLOSED:
                 break;
             }
+            checkInvariants();
         } finally {
             log.debug("<tearDown(id={}, state={})", getId(), state);
         }
@@ -413,7 +431,9 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed.");
         default:
-            return activeParent != null ? activeParent.poolDataSource : poolDataSource;
+            final CombiPoolDataSource<T, P> activeParent = this.activeParent; // speed up volatile access 
+
+            return fastPathPoolDataSource != null ? fastPathPoolDataSource : (activeParent != null ? activeParent.poolDataSource : poolDataSource);
         }
     }
 
@@ -616,6 +636,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     }
 
     public int getActiveChildren() {
+        final CombiPoolDataSource<T, P> activeParent = this.activeParent; // speed up volatile access 
+        
         return activeParent != null ? activeParent.activeChildren.get() : activeChildren.get();
     }
 }
