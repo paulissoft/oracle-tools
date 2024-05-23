@@ -22,6 +22,7 @@
     <test>.*Test.</test>
     <spring-boot.run.arguments>${test}</spring-boot.run.arguments>
     <default.goal>spring-boot:run</default.goal>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencyManagement>
