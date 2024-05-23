@@ -36,9 +36,6 @@
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <HikariCP.version>3.4.2</HikariCP.version>
     <lombok.version>1.18.30</lombok.version>
-    <oracle.ojdbc.artifactId>${ojdbc.artifactId}</oracle.ojdbc.artifactId>
-    <oracle.ucp.artifactId>ucp${ojdbc.java.version}</oracle.ucp.artifactId>
-    <oracle.jdbc.version>${ojdbc.version}</oracle.jdbc.version>
     <spring.version>5.2.3.RELEASE</spring.version>
     <spring.boot.version>2.2.3.RELEASE</spring.boot.version>
     <commons-lang3.version>3.9</commons-lang3.version>
@@ -67,16 +64,6 @@
         <artifactId>lombok</artifactId>
         <version>${lombok.version}</version>
         <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>${ojdbc.groupId}</groupId>
-        <artifactId>${oracle.ojdbc.artifactId}</artifactId>
-        <version>${oracle.jdbc.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>${ojdbc.groupId}</groupId>
-        <artifactId>${oracle.ucp.artifactId}</artifactId>
-        <version>${oracle.jdbc.version}</version>
       </dependency>
       <!-- https://mvnrepository.com/artifact/org.springframework/spring-beans -->
       <dependency>
@@ -161,14 +148,12 @@
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- A POM type artifact -->
     <dependency>
       <groupId>${ojdbc.groupId}</groupId>
-      <artifactId>${oracle.ojdbc.artifactId}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>${ojdbc.groupId}</groupId>
-      <artifactId>${oracle.ucp.artifactId}</artifactId>
+      <artifactId>${ojdbc.artifactId}</artifactId>
+      <version>${ojdbc.version}</version>
+      <type>${ojdbc.type}</type>
       <scope>provided</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.springframework/spring-beans -->
@@ -268,18 +253,6 @@
       <id>versions-check</id>
       <properties>
         <default.goal>versions:display-dependency-updates versions:display-parent-updates versions:display-plugin-updates versions:display-property-updates</default.goal>
-      </properties>
-    </profile>
-    <profile>
-      <id>java8</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <oracle.ojdbc.artifactId>ojdbc8</oracle.ojdbc.artifactId>
-        <oracle.ucp.artifactId>ucp</oracle.ucp.artifactId>
-        <oracle.jdbc.version>19.7.0.0</oracle.jdbc.version>
       </properties>
     </profile>
   </profiles>

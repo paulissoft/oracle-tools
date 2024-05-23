@@ -111,23 +111,8 @@
         <groupId>${ojdbc.groupId}</groupId>
         <artifactId>${ojdbc.artifactId}</artifactId>
         <version>${ojdbc.version}</version>
-        <type>pom</type>
+        <type>${ojdbc.type}</type>
      </dependency>
-      <!--dependency>
-        <groupId>${ojdbc.groupId}</groupId>
-        <artifactId>${ojdbc.artifactId}</artifactId>
-        <version>${ojdbc.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.oracle.database.ha</groupId>
-            <artifactId>simplefan</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.oracle.database.ha</groupId>
-            <artifactId>ons</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency-->
     </dependencies>
   </dependencyManagement>
 
@@ -135,7 +120,7 @@
     <dependency>
       <groupId>${ojdbc.groupId}</groupId>
       <artifactId>${ojdbc.artifactId}</artifactId>
-      <type>pom</type>
+      <type>${ojdbc.type}</type>
     </dependency>
   </dependencies>
 

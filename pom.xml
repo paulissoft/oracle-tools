@@ -65,15 +65,31 @@
     <!-- flyway.version>7.4.0</flyway.version--> <!-- does not support Oracle 19.1 -->
     <!--flyway.version>9.22.0</flyway.version--> <!-- latest and greatest at 2023-09-06 -->
 
-    <!--flyway.version>10.13.0</flyway.version--> <!-- latest and greatest at 2024-03-14 -->
-    <flyway.version>10.13.0</flyway.version> <!-- latest and greatest at 2024-05-14 -->
+    <!--flyway.version>10.10.0</flyway.version--> <!-- latest and greatest at 2024-03-14 -->
+    <flyway.version>10.12.0</flyway.version> <!-- latest and greatest at 2024-05-14 -->
 
     <!-- Oracle JDBC stuff -->
     <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
     <ojdbc.groupId>com.oracle.database.jdbc</ojdbc.groupId>
     <ojdbc.java.version>11</ojdbc.java.version>  <!-- compatible with Java 11 -->
-    <ojdbc.artifactId>ojdbc${ojdbc.java.version}</ojdbc.artifactId>
+    <ojdbc.artifactId>ojdbc${ojdbc.java.version}-production</ojdbc.artifactId> <!-- This is not a JAR but POM artifact -->
     <ojdbc.version>23.3.0.23.09</ojdbc.version>
+    <ojdbc.type>pom</ojdbc.type>
+
+    <oraclepki.groupId>com.oracle.database.security</oraclepki.groupId>
+    <oraclepki.artifactId>oraclepki</oraclepki.artifactId>
+    <oraclepki.version>${ojdbc.version}</oraclepki.version> <!-- Oct 02, 2023 -->
+
+    <osdt_core.groupId>${oraclepki.groupId}</osdt_core.groupId>
+    <osdt_core.artifactId>osdt_core</osdt_core.artifactId>
+    <osdt_core.version>21.11.0.0</osdt_core.version> <!-- Aug 11, 2023 -->
+
+    <osdt_cert.groupId>${osdt_core.groupId}</osdt_cert.groupId>
+    <osdt_cert.artifactId>osdt_cert</osdt_cert.artifactId>
+    <osdt_cert.version>${osdt_core.version}</osdt_cert.version> <!-- Aug 11, 2023 -->
+
+    <!-- End of Oracle JDBC stuff -->
+    
     <!-- GJP 2023-09-05  Version 3.1.4 is the latest version to work with JDBC thin driver and a TNS NAMES entry. -->
     <!-- For 3.1.5 you get: -->
     <!-- IO Error: The Network Adapter could not establish the connection: Unable to initialize ssl context. Unable to initialize the key store. SSO not found: SSO KeyStore not available -->

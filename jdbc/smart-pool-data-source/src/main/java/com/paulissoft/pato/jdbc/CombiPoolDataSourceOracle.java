@@ -2,6 +2,8 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -179,11 +181,21 @@ public class CombiPoolDataSourceOracle
         return this.getClass().getSimpleName();
     }
 
+    // IMPORTANT
+    //
+    // Since the connection pool name can notchange once the pool has started,
+    // we change the description if we add/remove schemas.
     public String getPoolDescription() {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        final String description = poolDataSource.getDescription();
+        return getPoolDescription(getPoolDataSource());
+    }
 
-        return poolDataSource.getConnectionPoolName() + description != null ? description : "";
+    private static String getPoolDescription(@NonNull final SimplePoolDataSourceOracle poolDataSource) {
+        final String poolName = poolDataSource.getConnectionPoolName();
+        final String description = poolDataSource.getDescription();
+        
+        return (poolName == null || poolName.isEmpty() ?
+                "" :
+                poolName + (description == null || description.isEmpty() ? "" : "-" + description));
     }
 
     @Override
@@ -200,23 +212,43 @@ public class CombiPoolDataSourceOracle
                       poolDataSource.getConnectionPoolName(),
                       poolDataSource);
 
-            // set pool name
-            final String suffix = "-" + getPoolDataSourceConfiguration().getSchema();
+            // IMPORTANT
+            //
+            // Since the connection pool name can notchange once the pool has started,
+            // we change the description if we add/remove schemas.
 
+            final String poolDescription = getPoolDescription(poolDataSource);
+            final ArrayList<String> items = new ArrayList(Arrays.asList(poolDescription.split("-"))); // use pool description not just name
+            // final String schema = getPoolDataSourceConfiguration().getSchema();
+            final String schema = poolDataSourceConfiguration.getSchema();
+
+            log.debug("items: {}; schema: {}", items, schema);
+                        
             if (initializing) {
-                if (poolDataSource.getConnectionPoolName() == null ||
-                    !poolDataSource.getConnectionPoolName().startsWith(getPoolNamePrefix() + "-")) {
-                    poolDataSource.setConnectionPoolName(getPoolNamePrefix() + suffix);
-                    poolDataSource.setDescription("");
-                } else if (!isParentPoolDataSource) {                
-                    poolDataSource.setDescription(poolDataSource.getDescription() + suffix);
+                if (isParentPoolDataSource) {
+                    items.clear();
+                    items.add(getPoolNamePrefix());
+                    items.add(schema);
+                } else if (!isParentPoolDataSource && !items.contains(schema)) {
+                    items.add(schema);
                 }
-            } else if (!isParentPoolDataSource) {
-                poolDataSource.setDescription(poolDataSource.getDescription().replace(suffix, ""));
+            } else if (!isParentPoolDataSource && items.contains(schema)) {
+                items.remove(schema);
             }
 
-            // keep poolDataSource in sync with poolDataSourceConfiguration
-            poolDataSourceConfiguration.setConnectionPoolName(poolDataSource.getConnectionPoolName());
+            if (items.size() >= 2) {
+                poolDataSource.setConnectionPoolName(items.get(0) + "-" + items.get(1));
+                items.remove(0);
+                items.remove(0);
+                if (items.size() >= 1) {
+                    poolDataSource.setDescription(String.join("-", items));
+                } else {
+                    poolDataSource.setDescription("");
+                }
+            }
+
+            // keep poolDataSource.getPoolDescription() and poolDataSourceConfiguration.getConnectionPoolName() in sync
+            poolDataSourceConfiguration.setConnectionPoolName(getPoolNamePrefix() + "-" + schema); // own prefix
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {

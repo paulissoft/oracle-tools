@@ -3,6 +3,8 @@ package com.paulissoft.pato.jdbc;
 import com.zaxxer.hikari.HikariConfig;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -295,22 +297,29 @@ public class CombiPoolDataSourceHikari
                       poolDataSource.getPoolName(),
                       poolDataSource);
 
-            final String suffix = "-" + getPoolDataSourceConfiguration().getSchema();
+            final ArrayList<String> items = new ArrayList(Arrays.asList(poolDataSource.getPoolName().split("-")));
+            final String schema = getPoolDataSourceConfiguration().getSchema();
 
-            // set pool name
+            log.debug("items: {}; schema: {}", items, schema);
+
             if (initializing) {
-                if (poolDataSource.getPoolName() == null ||
-                    !poolDataSource.getPoolName().startsWith(getPoolNamePrefix() + "-")) {
-                    poolDataSource.setPoolName(getPoolNamePrefix() + suffix);
-                } else if (!isParentPoolDataSource) {
-                    poolDataSource.setPoolName(poolDataSource.getPoolName() + suffix);
+                if (isParentPoolDataSource) {
+                    items.clear();
+                    items.add(getPoolNamePrefix());
+                    items.add(schema);
+                } else if (!isParentPoolDataSource && !items.contains(schema)) {
+                    items.add(schema);
                 }
-            } else if (!isParentPoolDataSource) {
-                poolDataSource.setPoolName(poolDataSource.getPoolName().replace(suffix, ""));
+            } else if (!isParentPoolDataSource && items.contains(schema)) {
+                items.remove(schema);
             }
 
-            // keep poolDataSourceConfiguration in sync
-            poolDataSourceConfiguration.setPoolName(poolDataSource.getPoolName());
+            if (items.size() >= 2) {
+                poolDataSource.setPoolName(String.join("-", items));
+            }
+
+            // keep poolDataSource.getPoolName() and poolDataSourceConfiguration.getPoolName() in sync
+            poolDataSourceConfiguration.setPoolName(getPoolNamePrefix() + "-" + schema); // own prefix
         } finally {
             log.debug("config pool data source; name: {}; address: {}",
                       poolDataSourceConfiguration.getPoolName(),

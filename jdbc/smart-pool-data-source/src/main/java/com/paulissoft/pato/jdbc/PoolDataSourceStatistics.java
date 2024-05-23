@@ -220,7 +220,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         boolean result = true;
 
         if (!isUpdateable.get()) {
-            result = false;
+            result = true;
         } else if (isClosedSupplier != null) {
             result = isClosedSupplier.get();
         } else if (children != null) {
@@ -233,6 +233,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             }
         }
 
+        logger.debug("isClosed(): {}", result);
+        
         return result;
     }
 
@@ -416,7 +418,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public void close() throws Exception {
-        logger.debug(">close()");
+        logger.info("{} - Close initiated...", getDescription());
 
         try {
             if (isUpdateable.get()) {
@@ -426,18 +428,19 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 isUpdateable.set(false);
             }
         } finally {
-            logger.debug("<close()");
+            assert isClosed() : "Statistics should be closed now.";
+            logger.info("{} - Close completed.", getDescription());
         } 
     }    
     
     private void consolidate() {
         /*
-         * Show the statistics when this item is closed AND
+         * Show the statistics when this item is not closed AND
          * a) there are no children (level 4) OR
          * b) there is more than 1 child OR
          * c) the only child has different statistics than its parent (i.e. snapshots different)
          */
-        if (!this.isClosed()) {
+        if (this.isClosed()) {
             return;
         }
 
@@ -445,6 +448,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             children.size() != 1 ||
             !(new Snapshot(this)).equals(new Snapshot(children.iterator().next()))) {
             showStatistics(true);
+        } else {
+            logger.info("Not showing statistics since the only child (level = {}) has the same characteristics as its parent.", level);
         }
 
         if (this.parent == null) {
