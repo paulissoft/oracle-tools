@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [3.1.1] - 2024-05-23
+
+### Fixed
+
+- [Wrong JDBC setup for Flyway in release 3.1.0.](https://github.com/paulissoft/oracle-tools/issues/159)
+
 ## [3.1.0] - 2024-05-14
 
 ### Added
