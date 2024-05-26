@@ -19,9 +19,10 @@
 
   <properties>
     <java.version>11</java.version>
-    <test>.*Test.</test>
-    <spring-boot.run.arguments>${test}</spring-boot.run.arguments>
-    <default.goal>spring-boot:run</default.goal>
+    <!--test>.*Test.</test-->
+    <!--spring-boot.run.arguments>${test}</spring-boot.run.arguments-->
+    <!--default.goal>spring-boot:run</default.goal-->
+    <maven.install.skip>true</maven.install.skip>
     <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
