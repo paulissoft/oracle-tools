@@ -357,6 +357,8 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
 
     public abstract String getPoolNamePrefix();
 
+    public abstract String getPoolDescription();
+    
     protected void updatePoolDescription(@NonNull final P poolDataSourceConfiguration,
                                          @NonNull final T poolDataSource,
                                          final boolean initializing,

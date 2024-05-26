@@ -3,6 +3,7 @@ package com.paulissoft.pato.jdbc.jmh;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.sql.DataSource;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -29,7 +30,7 @@ public class BenchmarkState {
 
     private final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
 
-    public final DataSource[][][] dataSources = {
+    private final DataSource[][][] dataSources = {
         { { null, null, null, null, null, null },
           { null, null, null, null, null, null },
           { null, null, null, null, null, null },
@@ -40,6 +41,28 @@ public class BenchmarkState {
           { null, null, null, null, null, null } }
     };
         
+    private final AtomicLong[] count = {
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L)
+    };
+
+    private final AtomicLong[] ok = {
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L),
+        new AtomicLong(0L)
+    };
+
     @Param({/*"10000",*/ "500" })
     public int divideLogicalConnectionsBy;
 
@@ -112,7 +135,7 @@ public class BenchmarkState {
         log.debug("# indexes: {}", testList.size());
     }
 
-    public DataSource[] getDataSources(String className) {
+    public int getClassIndex(final String className) {
         int d = -1, t = -1;
 
         if (className.equals(HikariDataSource.class.getName())) {
@@ -133,9 +156,50 @@ public class BenchmarkState {
             d = 1; t = 3;
         }
 
-        return dataSources[d][t];
+        return d * 4 + t;
     }
 
+    public int[] getIndices(final int classIndex) {
+        int d, t;
+        
+        switch (classIndex) {
+        case 0: d = 0; t = 0; break;
+        case 1: d = 0; t = 1; break;
+        case 2: d = 0; t = 2; break;
+        case 3: d = 0; t = 3; break;
+        case 4: d = 1; t = 0; break;
+        case 5: d = 1; t = 1; break;
+        case 6: d = 1; t = 2; break;
+        case 7: d = 1; t = 3; break;
+        default: d = -1; t = -1; break;
+        }
+
+        return new int[] { d, t };
+    }
+
+    public DataSource[] getDataSources(final int classIndex) {
+        final int[] indices = getIndices(classIndex);
+
+        return dataSources[indices[0]][indices[1]];
+    }
+
+    public void addOk(final int classIndex) {
+        count[classIndex].incrementAndGet();
+        ok[classIndex].incrementAndGet();
+    }
+
+    public void addNotOk(final int classIndex) {
+        count[classIndex].incrementAndGet();
+    }
+    
+    public long getCount(final int classIndex) {
+        return count[classIndex].get();
+    }
+    
+    public long getOk(final int classIndex) {
+        return ok[classIndex].get();
+    }
+    
     public void doSomeWork() throws InterruptedException {
         TimeUnit.MILLISECONDS.sleep(500);
     }
