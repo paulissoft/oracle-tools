@@ -188,6 +188,19 @@ public class SimplePoolDataSourceOracle
         return getConnectionPoolName();
     }
 
+    // IMPORTANT
+    //
+    // Since the connection pool name can notchange once the pool has started,
+    // we change the description if we add/remove schemas.
+    public String getPoolDescription() {
+        final String poolName = getConnectionPoolName();
+        final String description = getDescription();
+        
+        return (poolName == null || poolName.isEmpty() ?
+                "" :
+                poolName + (description == null || description.isEmpty() ? "" : "-" + description));
+    }
+
     public void setUsername(String username) throws SQLException {
         setUser(username);
     }
@@ -273,7 +286,6 @@ public class SimplePoolDataSourceOracle
     }
     */
 
-    /**/
     /* Class PoolDataSourceImpl */
 
     @Override

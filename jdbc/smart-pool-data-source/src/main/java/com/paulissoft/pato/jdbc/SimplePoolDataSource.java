@@ -34,6 +34,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public String getPoolName();
 
+    public String getPoolDescription();
+
     // signatures used by com.zaxxer.hikari.HikariDataSource
     public void setUsername(String username) throws SQLException;
 

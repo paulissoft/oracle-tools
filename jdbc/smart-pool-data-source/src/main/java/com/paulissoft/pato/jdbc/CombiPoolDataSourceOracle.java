@@ -181,23 +181,6 @@ public class CombiPoolDataSourceOracle
         return this.getClass().getSimpleName();
     }
 
-    // IMPORTANT
-    //
-    // Since the connection pool name can notchange once the pool has started,
-    // we change the description if we add/remove schemas.
-    public String getPoolDescription() {
-        return getPoolDescription(getPoolDataSource());
-    }
-
-    private static String getPoolDescription(@NonNull final SimplePoolDataSourceOracle poolDataSource) {
-        final String poolName = poolDataSource.getConnectionPoolName();
-        final String description = poolDataSource.getDescription();
-        
-        return (poolName == null || poolName.isEmpty() ?
-                "" :
-                poolName + (description == null || description.isEmpty() ? "" : "-" + description));
-    }
-
     @Override
     protected void updatePoolDescription(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfiguration,
                                          @NonNull final SimplePoolDataSourceOracle poolDataSource,
@@ -217,7 +200,7 @@ public class CombiPoolDataSourceOracle
             // Since the connection pool name can notchange once the pool has started,
             // we change the description if we add/remove schemas.
 
-            final String poolDescription = getPoolDescription(poolDataSource);
+            final String poolDescription = getPoolDescription();
             final ArrayList<String> items = new ArrayList(Arrays.asList(poolDescription.split("-"))); // use pool description not just name
             // final String schema = getPoolDataSourceConfiguration().getSchema();
             final String schema = poolDataSourceConfiguration.getSchema();

@@ -183,6 +183,10 @@ public class SimplePoolDataSourceHikari
     // public void setPoolName(String poolName) throws SQLException;
 
     // public String getPoolName();
+
+    public String getPoolDescription() {
+        return getPoolName();
+    }
     
     // public void setUsername(String username) throws SQLException;
 

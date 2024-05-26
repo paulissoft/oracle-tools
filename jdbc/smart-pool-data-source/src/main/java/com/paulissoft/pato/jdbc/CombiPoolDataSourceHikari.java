@@ -278,10 +278,6 @@ public class CombiPoolDataSourceHikari
         return "HikariPool";
     }
 
-    public String getPoolDescription() {
-        return getPoolName();
-    }
-    
     private void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
                                        @NonNull final HikariConfig poolDataSource,
                                        final boolean initializing,
