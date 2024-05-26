@@ -10,7 +10,6 @@ All code Terraform files (`*.tf`) mentioned in those articles are stored in this
 
 The variable Terraform files (`*.auto.tfvars`) should **NOT** be stored in a Git repository. The file `oracle-tools/.gitignore` does already exclude them.
 
-
 ## [Terraform : Oracle Cloud Infrastructure (OCI) Provider](https://oracle-base.com/articles/misc/terraform-oci-provider)
 
 ### Add Public Key to Oracle Cloud Account
@@ -26,4 +25,14 @@ To get the user OCID:
 - Click the "Copy" link next to "OCID".
 
 ## [Terraform : Oracle Cloud Infrastructure (OCI) Compartment](https://oracle-base.com/articles/misc/terraform-oci-compartment)
+
+No changes.
+
+## [Terraform : Oracle Cloud Infrastructure (OCI) Virtual Cloud Network (VCN)](https://oracle-base.com/articles/misc/terraform-oci-vcn)
+
+No changes.
+
+## [Terraform : Oracle Cloud Infrastructure (OCI) Autonomous Database (ADW, ATP, AJD, APX)](https://oracle-base.com/articles/misc/terraform-oci-autonomous-database)
+
+No changes.
 
