@@ -27,5 +27,6 @@ jdbc/smart-pool-data-source-jmh-test/results.txt
 *.auto.tfvars
 *.hcl
 \.terraform/
+\.terraform.*
 terraform.tfstate
 terraform.tfstate.backup
