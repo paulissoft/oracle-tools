@@ -372,3 +372,12 @@ The Smart Pool Data Source library allows you to combine pool data sources in Ja
 Another advantage is that the library shows pool statistics for up to four levels and they are displayed regularly (at least every hour) and when closing. This allows you to easily fine tune the pool sizes.
 
 The last advantage of this library is that it does not destroy the physical pool data source when the logical pool data sources are closed: they are just virtual and use the physical pool data source to do the actual work and it will not be closed by the library.
+
+## Links
+
+### Testing with JMH
+
+- [Continuous Benchmarking with JMH and JUnit](https://www.retit.de/continuous-benchmarking-with-jmh-and-junit-2/)
+- [Java Microbenchmarks with JMH, Part 1](https://blog.avenuecode.com/java-microbenchmarks-with-jmh-part-1)
+- [Java Microbenchmarks with JMH, Part 2](https://blog.avenuecode.com/java-microbenchmarks-with-jmh-part-2)
+- [Java Microbenchmarks with JMH, Part 3](https://blog.avenuecode.com/java-microbenchmarks-with-jmh-part-3)

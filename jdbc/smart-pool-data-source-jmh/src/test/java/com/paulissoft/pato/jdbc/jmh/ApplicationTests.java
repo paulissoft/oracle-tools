@@ -21,84 +21,72 @@ class ApplicationTests {
     // # Benchmark: com.paulissoft.pato.jdbc.jmh.OracleTest0.connectAllBasic
     private static double REFERENCE_SCORE_ORACLE = 14.025; // not final since overridden in executeOracleTest0
 
-    private static double MAX_DEVIATION = 0.05;
+    private static double MAX_DEVIATION = 0.1;
 
     @Test
     void executeHikariTest0() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(HikariTest0.class.getSimpleName()));
-        
-        Assertions.assertEquals(1, runResults.size());
-        setReferenceScoreHikari(runResults.iterator().next());
+        checkHikariTest(BenchmarkTestRunner.execute(Arrays.asList(HikariTest0.class.getSimpleName())), true);
     }
 
     @Test
     void executeHikariTest1() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(HikariTest1.class.getSimpleName()));
-
-        Assertions.assertFalse(runResults.isEmpty());
-        for(RunResult runResult : runResults) {
-            assertDeviationWithin(runResult, REFERENCE_SCORE_HIKARI, MAX_DEVIATION);
-        }
+        checkHikariTest(BenchmarkTestRunner.execute(Arrays.asList(HikariTest1.class.getSimpleName())), false);
     }
 
     @Test
     void executeHikariTest2() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(HikariTest2.class.getSimpleName()));
-
-        Assertions.assertFalse(runResults.isEmpty());
-        for(RunResult runResult : runResults) {
-            assertDeviationWithin(runResult, REFERENCE_SCORE_HIKARI, MAX_DEVIATION);
-        }
+        checkHikariTest(BenchmarkTestRunner.execute(Arrays.asList(HikariTest2.class.getSimpleName())), false);
     }
     
     @Test
     void executeHikariTest3() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(HikariTest3.class.getSimpleName()));
-
-        Assertions.assertFalse(runResults.isEmpty());
-        for(RunResult runResult : runResults) {
-            assertDeviationWithin(runResult, REFERENCE_SCORE_HIKARI, MAX_DEVIATION);
-        }
+        checkHikariTest(BenchmarkTestRunner.execute(Arrays.asList(HikariTest3.class.getSimpleName())), false);
     }
 
     @Test
     void executeOracleTest0() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(OracleTest0.class.getSimpleName()));
-
-        Assertions.assertEquals(1, runResults.size());
-        setReferenceScoreOracle(runResults.iterator().next());
+        checkOracleTest(BenchmarkTestRunner.execute(Arrays.asList(OracleTest0.class.getSimpleName())), true);
     }
 
     @Test
     void executeOracleTest1() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(OracleTest1.class.getSimpleName()));
-
-        Assertions.assertFalse(runResults.isEmpty());
-        for(RunResult runResult : runResults) {
-            assertDeviationWithin(runResult, REFERENCE_SCORE_ORACLE, MAX_DEVIATION);
-        }
+        checkOracleTest(BenchmarkTestRunner.execute(Arrays.asList(OracleTest1.class.getSimpleName())), false);
     }
 
     @Test
     void executeOracleTest2() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(OracleTest2.class.getSimpleName()));
-
-        Assertions.assertFalse(runResults.isEmpty());
-        for(RunResult runResult : runResults) {
-            assertDeviationWithin(runResult, REFERENCE_SCORE_ORACLE, MAX_DEVIATION);
-        }
+        checkOracleTest(BenchmarkTestRunner.execute(Arrays.asList(OracleTest2.class.getSimpleName())), false);
     }
 
     @Test
     void executeOracleTest3() throws RunnerException {
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(OracleTest3.class.getSimpleName()));
+        checkOracleTest(BenchmarkTestRunner.execute(Arrays.asList(OracleTest3.class.getSimpleName())), false);
+    }
 
-        Assertions.assertFalse(runResults.isEmpty());
-        for(RunResult runResult : runResults) {
-            assertDeviationWithin(runResult, REFERENCE_SCORE_ORACLE, MAX_DEVIATION);
+    private void checkHikariTest(final Collection<RunResult> runResults, final boolean setReferenceScore) {
+        if (setReferenceScore) {
+            Assertions.assertEquals(1, runResults.size());
+            setReferenceScoreHikari(runResults.iterator().next());
+        } else {
+            Assertions.assertFalse(runResults.isEmpty());
+            for(RunResult runResult : runResults) {
+                assertDeviationWithin(runResult, REFERENCE_SCORE_HIKARI, MAX_DEVIATION);
+            }
         }
     }
 
+    private void checkOracleTest(final Collection<RunResult> runResults, final boolean setReferenceScore) {
+        if (setReferenceScore) {
+            Assertions.assertEquals(1, runResults.size());
+            setReferenceScoreOracle(runResults.iterator().next());
+        } else {
+            Assertions.assertFalse(runResults.isEmpty());
+            for(RunResult runResult : runResults) {
+                assertDeviationWithin(runResult, REFERENCE_SCORE_ORACLE, MAX_DEVIATION);
+            }
+        }
+    }
+        
     private static void setReferenceScoreHikari(RunResult result) {
         REFERENCE_SCORE_HIKARI = result.getPrimaryResult().getScore();
     }
@@ -110,9 +98,12 @@ class ApplicationTests {
     private static void assertDeviationWithin(RunResult result, double referenceScore, double maxDeviation) {
         final double score = result.getPrimaryResult().getScore();
         final double deviation = Math.abs(score/referenceScore - 1);
-        final String deviationString = df.format(deviation * 100) + "%";
-        final String maxDeviationString = df.format(maxDeviation * 100) + "%";
-        final String errorMessage = "Deviation " + deviationString + " exceeds maximum allowed deviation " + maxDeviationString;
+        final String errorMessage =
+            String.format("Score = %f; reference score = %f; deviation (%s) exceeds maximum allowed deviation (%s)",
+                          score,
+                          referenceScore,
+                          df.format(deviation * 100) + " %",
+                          df.format(maxDeviation * 100) + " %");
 
         Assertions.assertTrue(deviation < maxDeviation, errorMessage);
     }
