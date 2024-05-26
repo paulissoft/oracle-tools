@@ -87,15 +87,15 @@ class ApplicationTests {
         }
     }
         
-    private static void setReferenceScoreHikari(RunResult result) {
+    private static void setReferenceScoreHikari(final RunResult result) {
         REFERENCE_SCORE_HIKARI = result.getPrimaryResult().getScore();
     }
     
-    private static void setReferenceScoreOracle(RunResult result) {
+    private static void setReferenceScoreOracle(final RunResult result) {
         REFERENCE_SCORE_ORACLE = result.getPrimaryResult().getScore();
     }
     
-    private static void assertDeviationWithin(RunResult result, double referenceScore, double maxDeviation) {
+    private static void assertDeviationWithin(final RunResult result, final double referenceScore, final double maxDeviation) {
         final double score = result.getPrimaryResult().getScore();
         final double deviation = Math.abs(score/referenceScore - 1);
         final String errorMessage =
