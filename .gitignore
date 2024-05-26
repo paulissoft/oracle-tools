@@ -24,3 +24,7 @@ java/smart-pool-data-source/.classpath
 *.pks
 jdbc/smart-pool-data-source-jmh/results.txt
 jdbc/smart-pool-data-source-jmh-test/results.txt
+*.auto.tfvars
+*.hcl
+\.terraform/
+terraform.tfstate
