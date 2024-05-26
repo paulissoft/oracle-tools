@@ -1,8 +1,10 @@
 package com.paulissoft.pato.jdbc.jmh;
 
+import java.util.Collection;
 import java.util.List;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.results.RunResult;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
@@ -14,7 +16,7 @@ public class BenchmarkTestRunner {
     
     private final static Integer WARMUP_ITERATIONS = 3;
 
-    public static void execute(final List<String> jmhFilter) throws RunnerException {
+    public static Collection<RunResult> execute(final List<String> jmhFilter) throws RunnerException {
         final String resultFile = "results.txt"; // or "/dev/null"
         final ChainedOptionsBuilder chainedOptionsBuilder = new OptionsBuilder()
             .warmupIterations(WARMUP_ITERATIONS)
@@ -39,6 +41,6 @@ public class BenchmarkTestRunner {
         
         final Options opt = chainedOptionsBuilder.build();
 
-        new Runner(opt).run();
+        return new Runner(opt).run();
     }
 }
