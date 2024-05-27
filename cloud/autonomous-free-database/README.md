@@ -6,9 +6,9 @@ Instructions are based on [Terraform : Linking Oracle Cloud Interface (OCI) Terr
 
 However since the Oracle Cloud UI has changed since the creation of those instructions, I will update the instructions where applicable.
 
-All code Terraform files (`*.tf`) mentioned in those articles are stored in this folder: `oracle-tools/cloud/autonomous-free-database`.
+All code Terraform files (`*.tf`) mentioned in those articles need not be (re-)created since they are already stored in this folder: `oracle-tools/cloud/autonomous-free-database`.
 
-The variable Terraform files (`*.auto.tfvars`) should **NOT** be stored in a Git repository. The file `oracle-tools/.gitignore` does already exclude them.
+However, the variable Terraform files (`*.auto.tfvars`) must be created and should **NOT** be stored in a Git repository. The file `oracle-tools/.gitignore` does already exclude them.
 
 ## [Terraform : Oracle Cloud Infrastructure (OCI) Provider](https://oracle-base.com/articles/misc/terraform-oci-provider)
 
@@ -16,7 +16,7 @@ The variable Terraform files (`*.auto.tfvars`) should **NOT** be stored in a Git
 
 There is a section named "Add Public Key to Oracle Cloud Account" that is not correct anymore: the "Add API Key" button can now be found as follows:
 - Profile > My Profile > API keys
-- Click "Add API key" button, toggle "Paste a public key" and paste the public key including "-----BEGIN PUBLIC KEY-----" and "-----END PUBLIC KEY-----"
+- Click "Add API key" button, toggle "Paste a public key" and paste the public key (including "-----BEGIN PUBLIC KEY-----" and "-----END PUBLIC KEY-----")
 
 ### User OCID
 
@@ -36,3 +36,61 @@ No changes.
 
 No changes.
 
+## [Terraform : Linking Oracle Cloud Interface (OCI) Terraform Modules Together](https://oracle-base.com/articles/misc/terraform-linking-oci-modules-together)
+
+Now continue with the rest of this article; the amendments have already been made.
+
+As soon as you have created the database, it will take some time before the new compartment shows up in the compartment list scope due to synchronization matters. Only when you see the new compartment arrive there, you will be able to see the PATO database you just created.
+
+## Post actions
+
+### Terraform and `.gitignore`
+
+See https://github.com/github/gitignore/blob/main/Terraform.gitignore for an example of files/folders to ignore.
+
+### Using Object Storage for Terraform State Files
+
+We are going to set up Terraform remote state using the Oracle cloud bucket storage which is compatible with AWS S3.
+
+See also [Using Object Storage for State Files](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/terraformUsingObjectStore.htm).
+
+#### Create a custom secret key
+
+See the link above.
+
+#### Create a bucket
+
+I suggest to create one bucket for all Terraform states and let the key be Terraform project specific.
+
+So, here the bucket will be "terraform-states" and the key "autonomous-free-database/terraform.tfstate".
+
+Create a file named `backend.tf` and add it to `.gitignore` since it contains secrets.
+
+```backend.tf
+terraform {
+  backend "s3" {
+    bucket   = "terraform-states"
+    key      = "autonomous-free-database/terraform.tfstate"
+    region   = "<region>"
+    endpoints = { s3 = "https://<namespace>.compat.objectstorage.<region>.oraclecloud.com" }
+    skip_region_validation      = true
+    skip_credentials_validation = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_s3_checksum            = true
+    use_path_style              = true
+  }
+}
+```
+
+Replace `<region>` and `<namespace>`.
+
+Issue the following command to upload the state into the bucket:
+
+```
+$ terraform init
+```
+
+## Conclusion
+
+Using resources from various sites we have been able to create a database fully automated by Terraform and maintainable from various computers thanks to the remote storage used for Terraform state. The variable files and the remote state storage backend file must **NOT** be part of Git for security reasons.
