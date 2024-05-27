@@ -21,19 +21,33 @@
     <db.incr.interface>pkg_ddl_util v4</db.incr.interface>
     <db.full.skip.install.sql>no</db.full.skip.install.sql>
     <!-- see also apex/app/pom.xml: for UI messages -->
-    <apex.application>138</apex.application>
   </properties>
 
-  <modules>
-    <module>cfg</module>
-    <module>data</module>
-    <module>api</module>
-    <module>ddl</module>
-    <module>ext</module>
-    <module>ui</module>
-  </modules>
-
   <profiles>
+    <profile>
+      <id>app-with-apex</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>cfg</module>
+        <module>data</module>
+        <module>api</module>
+        <module>ddl</module>
+        <module>ext</module>
+        <module>ui</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>app-without-apex</id>
+      <modules>
+        <module>cfg</module>
+        <module>data</module>
+        <module>api</module>
+        <module>ddl</module>
+        <module>ext</module>
+      </modules>
+    </profile>
     <profile>
       <!-- when you want to use the admin module -->
       <id>admin</id>
