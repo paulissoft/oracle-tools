@@ -859,9 +859,8 @@ $end
 $end
 
   if ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.on_commit ) -- option 1 from the spec
-$if msg_aq_pkg.c_buffered_messaging $then
-  or ( p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) -- option 2 from the spec
-$end     
+  or ( msg_aq_pkg.c_buffered_messaging and
+       p_delivery_mode = dbms_aq.buffered   and p_visibility = dbms_aq.immediate ) -- option 2 from the spec
   or ( p_delivery_mode = dbms_aq.persistent and p_visibility = dbms_aq.immediate ) -- option 3 from the spec
   then 
     l_enqueue_options.delivery_mode := p_delivery_mode;
@@ -870,14 +869,12 @@ $end
     l_enqueue_options.delivery_mode := dbms_aq.persistent;
     l_enqueue_options.visibility := dbms_aq.on_commit;
 
-$if msg_aq_pkg.c_buffered_messaging $then
-    if p_msg.has_not_null_lob() = 0
+    if msg_aq_pkg.c_buffered_messaging and p_msg.has_not_null_lob() = 0
     then
       -- prefer buffered messages
       l_enqueue_options.delivery_mode := dbms_aq.buffered;
       l_enqueue_options.visibility := dbms_aq.immediate;
     end if;
-$end    
 
     -- give a warning when the input parameters were not default and not a correct combination
 
@@ -1030,26 +1027,23 @@ $end
   l_dequeue_options.msgid := p_msgid;
 
   if ( p_delivery_mode = dbms_aq.persistent             and p_visibility = dbms_aq.on_commit ) -- option 1 from the spec
-$if msg_aq_pkg.c_buffered_messaging $then
-  or ( p_delivery_mode = dbms_aq.buffered               and p_visibility = dbms_aq.immediate ) -- option 2 from the spec
-$end     
+  or ( msg_aq_pkg.c_buffered_messaging and
+       p_delivery_mode = dbms_aq.buffered               and p_visibility = dbms_aq.immediate ) -- option 2 from the spec
   or ( p_delivery_mode = dbms_aq.persistent             and p_visibility = dbms_aq.immediate ) -- option 3 from the spec
-$if msg_aq_pkg.c_buffered_messaging $then
-  or ( p_delivery_mode = dbms_aq.persistent_or_buffered and p_visibility = dbms_aq.immediate ) -- option 4 from the spec
-$end     
+  or ( msg_aq_pkg.c_buffered_messaging and
+       p_delivery_mode = dbms_aq.persistent_or_buffered and p_visibility = dbms_aq.immediate ) -- option 4 from the spec
   then 
     l_dequeue_options.delivery_mode := p_delivery_mode;
     l_dequeue_options.visibility := p_visibility;
   else
     -- Visibility must always be IMMEDIATE when dequeuing messages with delivery mode DBMS_AQ.BUFFERED or DBMS_AQ.PERSISTENT_OR_BUFFERED
     case
-$if msg_aq_pkg.c_buffered_messaging $then
       -- try to preserve at least one of the input settings
-      when p_delivery_mode in (dbms_aq.buffered, dbms_aq.persistent_or_buffered)
+      when msg_aq_pkg.c_buffered_messaging and
+           p_delivery_mode in (dbms_aq.buffered, dbms_aq.persistent_or_buffered)
       then
         l_dequeue_options.delivery_mode := p_delivery_mode;
         l_dequeue_options.visibility := dbms_aq.immediate;
-$end
 
       when p_visibility = dbms_aq.on_commit
       then
@@ -1248,15 +1242,12 @@ $end
   , p_delivery_mode => p_descr.msg_prop.delivery_mode
   , p_visibility =>
       -- to suppress a warning
-$if msg_aq_pkg.c_buffered_messaging $then
       case
-        when p_descr.msg_prop.delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
+        when msg_aq_pkg.c_buffered_messaging and
+             p_descr.msg_prop.delivery_mode in ( dbms_aq.buffered, dbms_aq.persistent_or_buffered )
         then dbms_aq.immediate
         else dbms_aq.on_commit
       end
-$else
-      dbms_aq.on_commit
-$end        
   , p_subscriber => p_descr.consumer_name 
   , p_dequeue_mode => dbms_aq.remove
   , p_navigation => dbms_aq.next_message
@@ -1533,7 +1524,7 @@ $end
       end if;
       
       loop
-        l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.c_time_between_heartbeats, 'SECOND');
+        l_next_heartbeat := l_next_heartbeat + numtodsinterval(msg_constants_pkg.get_time_between_heartbeats, 'SECOND');
         exit when l_next_heartbeat > l_now;
       end loop;
     end if;
@@ -1590,7 +1581,7 @@ $end
 
     l_navigation := dbms_aq.first_message;
     -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-    l_wait := least(msg_constants_pkg.c_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time)));
+    l_wait := least(msg_constants_pkg.get_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time)));
     
     <<listen_then_dequeue_forever_loop>>
     loop        

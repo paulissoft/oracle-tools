@@ -1230,12 +1230,12 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_TEARDOWN');
 $end
-  if msg_constants_pkg.c_default_processing_method like 'plsql://%'
+  if msg_constants_pkg.get_default_processing_method like 'plsql://%'
   then
     msg_aq_pkg.register
     ( p_queue_name => l_request_queue_name
     , p_subscriber => null
-    , p_plsql_callback => replace(msg_constants_pkg.c_default_processing_method, 'plsql://')
+    , p_plsql_callback => replace(msg_constants_pkg.get_default_processing_method, 'plsql://')
     );
   else
     msg_aq_pkg.unregister

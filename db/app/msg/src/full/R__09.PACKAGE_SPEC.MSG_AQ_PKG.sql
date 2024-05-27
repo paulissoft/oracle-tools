@@ -3,9 +3,9 @@ CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS
 c_debugging constant naturaln := 1; -- can be 0, 1, 2, ...
 
 -- You can tweak the constants thru MSG_CONSTANTS_PKG, you are not supposed to do it here.
-c_buffered_messaging constant boolean := msg_constants_pkg.c_buffered_messaging;
-c_multiple_consumers constant boolean := msg_constants_pkg.c_multiple_consumers;
-c_default_subscriber constant varchar2(30 char) := msg_constants_pkg.c_default_subscriber;
+c_buffered_messaging constant boolean := msg_constants_pkg.get_buffered_messaging;
+c_multiple_consumers constant boolean := msg_constants_pkg.get_multiple_consumers;
+c_default_subscriber constant varchar2(30 char) := msg_constants_pkg.get_default_subscriber;
 
 c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';

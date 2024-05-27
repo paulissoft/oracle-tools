@@ -63,8 +63,8 @@ procedure init
 )
 is
 $if oracle_tools.cfg_pkg.c_debugging $then
-  l_dbug_channel_active_tab constant sys.odcivarchar2list := msg_constants_pkg.c_dbug_channel_active_tab;
-  l_dbug_channel_inactive_tab constant sys.odcivarchar2list := msg_constants_pkg.c_dbug_channel_inactive_tab;
+  l_dbug_channel_active_tab constant sys.odcivarchar2list := msg_constants_pkg.get_dbug_channel_active_tab;
+  l_dbug_channel_inactive_tab constant sys.odcivarchar2list := msg_constants_pkg.get_dbug_channel_inactive_tab;
 $end    
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -431,8 +431,8 @@ begin
                              else 'NUMBER'
                            end
         , default_value => case i_par_idx
-                             when 2 then to_char(msg_constants_pkg.c_nr_workers_each_group)
-                             when 3 then to_char(msg_constants_pkg.c_nr_workers_exact)
+                             when 2 then to_char(msg_constants_pkg.get_nr_workers_each_group)
+                             when 3 then to_char(msg_constants_pkg.get_nr_workers_exact)
                              else null
                            end
         );
@@ -607,7 +607,7 @@ $end
 
   p_end_date := greatest
                 ( l_now + numtodsinterval(1, 'SECOND')
-                , nvl(l_job_info_rec.next_run_date, l_now) - numtodsinterval(msg_constants_pkg.c_time_between_runs, 'SECOND')
+                , nvl(l_job_info_rec.next_run_date, l_now) - numtodsinterval(msg_constants_pkg.get_time_between_runs, 'SECOND')
                 );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -749,7 +749,7 @@ $end
           dbms_scheduler.create_schedule
           ( schedule_name => c_schedule_launcher
           , start_date => null
-          , repeat_interval => msg_constants_pkg.c_repeat_interval
+          , repeat_interval => msg_constants_pkg.get_repeat_interval
           , end_date => null
           , comments => 'Launcher job schedule'
           );
@@ -990,8 +990,8 @@ end get_groups_to_process;
 
 function get_nr_workers
 ( p_nr_groups in naturaln -- for instance get_groups_to_process().count
-, p_nr_workers_each_group in positive default msg_constants_pkg.c_nr_workers_each_group
-, p_nr_workers_exact in positive default msg_constants_pkg.c_nr_workers_exact
+, p_nr_workers_each_group in positive default msg_constants_pkg.get_nr_workers_each_group
+, p_nr_workers_exact in positive default msg_constants_pkg.get_nr_workers_exact
 )
 return naturaln
 is
@@ -1032,7 +1032,7 @@ is
   l_shutdown_timeout constant positiven :=
      case
        when lower(p_command) = 'shutdown'
-       then msg_constants_pkg.c_time_between_heartbeats * 2 -- give some leeway
+       then msg_constants_pkg.get_time_between_heartbeats * 2 -- give some leeway
        else 1 -- but not when we want to stop quickly
      end;
   l_command_tab constant sys.odcivarchar2list :=
@@ -1174,7 +1174,7 @@ $end
           exception
             when e_no_groups_to_process
             then
-              if msg_constants_pkg.c_default_processing_method like 'plsql://%'
+              if msg_constants_pkg.get_default_processing_method like 'plsql://%'
               then
                 null; -- use PL/SQL notifications hence this is plausible
               else
@@ -1700,7 +1700,7 @@ is
   l_groups_to_process_tab sys.odcivarchar2list;
   l_end_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.str2timestamp(p_end_date);
   -- for the heartbeat
-  l_silence_threshold oracle_tools.api_time_pkg.seconds_t := msg_constants_pkg.c_time_between_heartbeats * 2;
+  l_silence_threshold oracle_tools.api_time_pkg.seconds_t := msg_constants_pkg.get_time_between_heartbeats * 2;
   l_dbug_channel_tab dbug_channel_tab_t;
   l_session_job_name constant job_name_t := session_job_name();
 
@@ -1719,7 +1719,7 @@ $end
       raise program_error;
     end if;
 
-    if p_silence_threshold >= msg_constants_pkg.c_max_silence_threshold
+    if p_silence_threshold >= msg_constants_pkg.get_max_silence_threshold
     then
       submit_do('restart', p_processing_package);
       raise_application_error
@@ -1732,7 +1732,7 @@ $end
       );
     end if;
     
-    p_silence_threshold := p_silence_threshold + msg_constants_pkg.c_time_between_heartbeats;
+    p_silence_threshold := p_silence_threshold + msg_constants_pkg.get_time_between_heartbeats;
  
     <<worker_loop>>
     for i_idx in p_silent_worker_tab.first .. p_silent_worker_tab.last
@@ -1815,7 +1815,7 @@ $end
       ( p_supervisor_channel => $$PLSQL_UNIT
       , p_silence_threshold => l_silence_threshold
       , p_first_recv_timeout => least
-                                ( msg_constants_pkg.c_time_between_heartbeats
+                                ( msg_constants_pkg.get_time_between_heartbeats
                                 , greatest
                                   ( 1 -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
                                   , trunc(l_ttl - l_elapsed_time)

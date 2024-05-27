@@ -225,7 +225,7 @@ member function default_processing_method
 return varchar2
 is
 begin
-  return msg_constants_pkg.c_default_processing_method;
+  return msg_constants_pkg.get_default_processing_method;
 end default_processing_method;
 
 end;
