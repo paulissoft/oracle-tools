@@ -117,6 +117,10 @@ $end -- $if oracle_tools.cfg_pkg.c_testing $then
   e_invalid_sql_name exception;
   pragma exception_init(e_invalid_sql_name, -44003);
 
+  -- ORA-31600: invalid input value OID for parameter NAME in function SET_TRANSFORM_PARAM
+  e_invalid_transform_param exception;
+  pragma exception_init(e_invalid_transform_param, -31600);
+
 /* VARIABLES */
 
   g_object_exclude_name_expr_tab t_object_exclude_name_expr_tab;  
@@ -1561,7 +1565,14 @@ $end
     , value
     , object_type
     );
-  end;
+  exception
+    when e_invalid_transform_param
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+      dbug.on_error;
+$end
+      null;
+  end dbms_metadata$set_transform_param;
 
   procedure dbms_metadata$set_transform_param
   ( transform_handle   in number
@@ -1587,7 +1598,14 @@ $end
     , value
     , object_type
     );
-  end;
+  exception
+    when e_invalid_transform_param
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+      dbug.on_error;
+$end
+      null;
+  end dbms_metadata$set_transform_param;
 
   procedure dbms_metadata$set_transform_param
   ( transform_handle   in number
@@ -1613,7 +1631,14 @@ $end
     , value
     , object_type
     );
-  end;
+  exception
+    when e_invalid_transform_param
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+      dbug.on_error;
+$end
+      null;
+  end dbms_metadata$set_transform_param;
     
   procedure dbms_metadata$set_filter(handle in number, name in varchar2, value in varchar2)
   is
