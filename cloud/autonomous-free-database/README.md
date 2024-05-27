@@ -93,4 +93,4 @@ $ terraform init
 
 ## Conclusion
 
-Using resources from various sites we have been able to create a database fully automated by Terraform and maintainable from various computers thanks to the remote storage used for Terraform state. The variable files and the remote state storage backend file must **NOT** be part of Git for security reasons.
+Using resources from various sites we have been able to create a free and autonomous database, whose creation is fully automated by Terraform and manageable from various computers thanks to the remote storage used for Terraform state. The variable files and the remote state storage backend file must **NOT** be part of Git for security reasons.
