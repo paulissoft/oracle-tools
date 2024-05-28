@@ -15,6 +15,7 @@ Types of changes:
 
 ## [Unreleased]
 
+- [Provide SQL Developer Code Style Profile.](https://github.com/paulissoft/oracle-tools/issues/163)
 - [DDL generation on 23c gives this error: ORA-31600: invalid input value OID for parameter NAME in function SET_TRANSFORM_PARAM](https://github.com/paulissoft/oracle-tools/issues/162)
 - [The database UI component should be skipped when there is no APEX needed.](https://github.com/paulissoft/oracle-tools/issues/161)
 - [Modifying the MSG_CONSTANTS_PKG blocks due to processes using its constants.](https://github.com/paulissoft/oracle-tools/issues/160)
