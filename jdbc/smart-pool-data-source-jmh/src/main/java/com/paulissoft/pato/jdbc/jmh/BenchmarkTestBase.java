@@ -38,7 +38,7 @@ public class BenchmarkTestBase {
     public void connectAll(Blackhole bh,
                            BenchmarkState bs,
                            String dataSourceClassName) throws SQLException {
-        final int classIndex = bs.getClassIndex(dataSourceClassName);
+        final int classIndex = BenchmarkState.getClassIndex(dataSourceClassName);
 
         dataSources = bs.getDataSources(classIndex);
 
@@ -47,7 +47,7 @@ public class BenchmarkTestBase {
                     try (final Connection conn = dataSources[idx].getConnection()) {
                         bs.doSomeWork();
                         bh.consume(conn.getSchema());
-                        bs.addOk(classIndex);
+                        BenchmarkState.addOk(classIndex);
                     } catch (SQLException | InterruptedException ex) {
                         if (ex.getMessage().contains("UCP-")) { // ignore UCP message for now
                             log.warn("UCP exception: {}", ex);
@@ -56,7 +56,7 @@ public class BenchmarkTestBase {
                         }
                     }});
         } catch (Exception ex) {
-            bs.addNotOk(classIndex);
+            BenchmarkState.addNotOk(classIndex);
             if (dataSources != null) {
                 int nr = 0;
                 
