@@ -11,6 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class OracleTest3 extends BenchmarkTestBase {
 
+    final static private String dataSourceClassName = com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle.class.getName();
+
+    public static String getDataSourceClassName() {
+        return dataSourceClassName;
+    }
+
     @Override
     @TearDown(Level.Trial)
     public void tearDown() throws Exception {
@@ -20,6 +26,6 @@ public class OracleTest3 extends BenchmarkTestBase {
     @Benchmark
     public void connectAllSmart(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
-        connectAll(bh, bs, com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle.class.getName());
+        connectAll(bh, bs, dataSourceClassName);
     }
 }

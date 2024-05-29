@@ -11,6 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class OracleTest0 extends BenchmarkTestBase {
 
+    final static private String dataSourceClassName = oracle.ucp.jdbc.PoolDataSourceImpl.class.getName();
+
+    public static String getDataSourceClassName() {
+        return dataSourceClassName;
+    }
+
     @Override
     @TearDown(Level.Trial)
     public void tearDown() throws Exception {
@@ -20,6 +26,6 @@ public class OracleTest0 extends BenchmarkTestBase {
     @Benchmark
     public void connectAllBasic(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
-        connectAll(bh, bs, oracle.ucp.jdbc.PoolDataSourceImpl.class.getName());
+        connectAll(bh, bs, dataSourceClassName);
     }
 }

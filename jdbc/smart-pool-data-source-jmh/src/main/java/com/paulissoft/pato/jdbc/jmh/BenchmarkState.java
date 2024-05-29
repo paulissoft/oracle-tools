@@ -155,6 +155,8 @@ public class BenchmarkState {
             d = 1; t = 2;
         } else if (className.equals(SmartPoolDataSourceOracle.class.getName())) {
             d = 1; t = 3;
+        } else {
+            throw new RuntimeException("Can not map class '" + className + "' to an index.");
         }
 
         return d * 4 + t;

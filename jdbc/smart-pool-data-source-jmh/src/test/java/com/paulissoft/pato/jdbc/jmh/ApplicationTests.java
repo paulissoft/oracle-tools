@@ -25,53 +25,51 @@ class ApplicationTests {
 
     @Test
     void executeHikariTest0() throws RunnerException {
-        checkHikariTest(HikariTest0.class);
+        checkHikariTest(HikariTest0.getDataSourceClassName(), HikariTest0.class.getSimpleName());
     }
 
     @Test
     void executeHikariTest1() throws RunnerException {
-        checkHikariTest(HikariTest1.class);
+        checkHikariTest(HikariTest1.getDataSourceClassName(), HikariTest1.class.getSimpleName());
     }
 
     @Test
     void executeHikariTest2() throws RunnerException {
-        checkHikariTest(HikariTest2.class);
+        checkHikariTest(HikariTest2.getDataSourceClassName(), HikariTest2.class.getSimpleName());
     }
     
     @Test
     void executeHikariTest3() throws RunnerException {
-        checkHikariTest(HikariTest3.class);
+        checkHikariTest(HikariTest3.getDataSourceClassName(), HikariTest3.class.getSimpleName());
     }
 
     @Test
     void executeOracleTest0() throws RunnerException {
-        checkOracleTest(OracleTest0.class);
+        checkOracleTest(OracleTest0.getDataSourceClassName(), OracleTest0.class.getSimpleName());
     }
 
     @Test
     void executeOracleTest1() throws RunnerException {
-        checkOracleTest(OracleTest1.class);
+        checkOracleTest(OracleTest1.getDataSourceClassName(), OracleTest1.class.getSimpleName());
     }
 
     @Test
     void executeOracleTest2() throws RunnerException {
-        checkOracleTest(OracleTest2.class);
+        checkOracleTest(OracleTest2.getDataSourceClassName(), OracleTest2.class.getSimpleName());
     }
 
     @Test
     void executeOracleTest3() throws RunnerException {
-        checkOracleTest(OracleTest3.class);
+        checkOracleTest(OracleTest3.getDataSourceClassName(), OracleTest3.class.getSimpleName());
     }
 
-    private void checkHikariTest(final Class/*<? extends DataSource>*/ cls) throws RunnerException {
-        final String simpleClassName = cls.getSimpleName();
-        final String className = cls.getName();
-        final int classIndex = BenchmarkState.getClassIndex(className);
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(simpleClassName));
+    private void checkHikariTest(final String dataSourceClassName, final String simpleTestClassName) throws RunnerException {
+        final int classIndex = BenchmarkState.getClassIndex(dataSourceClassName);
+        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(simpleTestClassName));
 
         Assertions.assertEquals(BenchmarkState.getCount(classIndex), BenchmarkState.getOk(classIndex), "all operations should be OK");
                     
-        if (simpleClassName.endsWith("0")) {
+        if (simpleTestClassName.endsWith("0")) {
             Assertions.assertEquals(1, runResults.size());
             setReferenceScoreHikari(runResults.iterator().next());
         } else {
@@ -82,21 +80,19 @@ class ApplicationTests {
         }
     }
 
-    private void checkOracleTest(final Class/*<? extends DataSource>*/ cls) throws RunnerException {
-        final String simpleClassName = cls.getSimpleName();
-        final String className = cls.getName();
-        final int classIndex = BenchmarkState.getClassIndex(className);
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(simpleClassName));
+    private void checkOracleTest(final String dataSourceClassName, final String simpleTestClassName) throws RunnerException {
+        final int classIndex = BenchmarkState.getClassIndex(dataSourceClassName);
+        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(simpleTestClassName));
 
         Assertions.assertEquals(BenchmarkState.getCount(classIndex), BenchmarkState.getOk(classIndex), "all operations should be OK");
         
-        if (simpleClassName.endsWith("0")) {
+        if (simpleTestClassName.endsWith("0")) {
             Assertions.assertEquals(1, runResults.size());
             setReferenceScoreOracle(runResults.iterator().next());
         } else {
             Assertions.assertFalse(runResults.isEmpty());
             for(RunResult runResult : runResults) {
-                assertDeviationWithin(runResult, REFERENCE_SCORE_ORACLE, MAX_DEVIATION * (simpleClassName.endsWith("3") ? 3 : 1));
+                assertDeviationWithin(runResult, REFERENCE_SCORE_ORACLE, MAX_DEVIATION * (simpleTestClassName.endsWith("3") ? 3 : 1));
             }
         }
     }

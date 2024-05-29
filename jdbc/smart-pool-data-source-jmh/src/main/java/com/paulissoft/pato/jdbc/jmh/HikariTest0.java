@@ -11,6 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class HikariTest0 extends BenchmarkTestBase {
 
+    final static private String dataSourceClassName = com.zaxxer.hikari.HikariDataSource.class.getName();
+
+    public static String getDataSourceClassName() {
+        return dataSourceClassName;
+    }
+
     @Override
     @TearDown(Level.Trial)
     public void tearDown() throws Exception {
@@ -20,6 +26,6 @@ public class HikariTest0 extends BenchmarkTestBase {
     @Benchmark
     public void connectAllBasic(Blackhole bh,
                                 BenchmarkState bs) throws SQLException {
-        connectAll(bh, bs, com.zaxxer.hikari.HikariDataSource.class.getName());
+        connectAll(bh, bs, dataSourceClassName);
     }
 }
