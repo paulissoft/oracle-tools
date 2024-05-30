@@ -6,7 +6,7 @@ Instructions are based on [Terraform : Linking Oracle Cloud Interface (OCI) Terr
 
 However since the Oracle Cloud UI has changed since the creation of those instructions, I will update the instructions where applicable.
 
-All code Terraform files (`*.tf`) mentioned in those articles need not be (re-)created since they are already stored in this folder: `oracle-tools/cloud/autonomous-free-database`.
+All code Terraform files (`*.tf`) mentioned in those articles need not be (re-)created since they are already stored in this folder: `oracle-tools/cloud/autonomous-free-database/terraform`.
 
 However, the variable Terraform files (`*.auto.tfvars`) must be created and should **NOT** be stored in a Git repository. The file `oracle-tools/.gitignore` does already exclude them.
 
@@ -62,7 +62,7 @@ See the link above.
 
 I suggest to create one bucket for all Terraform states and let the key be Terraform project specific.
 
-So, here the bucket will be "terraform-states" and the key "autonomous-free-database/terraform.tfstate".
+So, here the bucket will be "terraform-states" and the key "autonomous-free-database/terraform/terraform.tfstate".
 
 Create a file named `backend.tf` and add it to `.gitignore` since it contains secrets.
 
@@ -70,7 +70,7 @@ Create a file named `backend.tf` and add it to `.gitignore` since it contains se
 terraform {
   backend "s3" {
     bucket   = "terraform-states"
-    key      = "autonomous-free-database/terraform.tfstate"
+    key      = "autonomous-free-database/terraform/terraform.tfstate"
     region   = "<region>"
     endpoints = { s3 = "https://<namespace>.compat.objectstorage.<region>.oraclecloud.com" }
     skip_region_validation      = true
