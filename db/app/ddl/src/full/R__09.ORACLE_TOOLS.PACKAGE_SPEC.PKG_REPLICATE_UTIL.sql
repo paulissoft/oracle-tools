@@ -38,7 +38,7 @@ The values for parameter **p_create_or_replace**:
 - CREATE: target must NOT exist
 - REPLACE target must exist
 
-When this action has been executed successfully, the user can create a view based on the synonym/materialized view. And privileges to other users.
+When this action has been executed successfully, a view is (re-)created (suffix _V) based on the synonym/materialized view and the column list.
 
 **/
 

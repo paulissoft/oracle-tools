@@ -19,6 +19,7 @@ is
       then upper(p_create_or_replace)
       else 'CREATE OR REPLACE'
     end;
+  l_view_name all_tables.table_name%type;
 begin
 
   case
@@ -28,7 +29,10 @@ begin
       l_table_owner := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_owner, 'table owner');
       
       execute immediate l_create_or_replace || ' SYNONYM ' || l_table_name || ' FOR ' || l_table_owner || '.' || l_table_name;
-  end case;  
+  end case;
+  
+  l_view_name := oracle_tools.data_api_pkg.dbms_assert$enquote_name(p_table_name || '_V', 'view name');
+  execute immediate l_create_or_replace || ' VIEW ' || l_view_name || ' AS SELECT ' || p_column_list || ' FROM ' || l_table_name;
 end replicate_table;
 
 end pkg_replicate_util;
