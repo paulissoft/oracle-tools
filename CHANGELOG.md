@@ -15,6 +15,8 @@ Types of changes:
 
 ## [Unreleased]
 
+- [It should be possible to replicate a table between schemas, local or remote.](https://github.com/paulissoft/oracle-tools/issues/164)
+
 ## [3.2.0] - 2024-06-03
 
 ### Added
