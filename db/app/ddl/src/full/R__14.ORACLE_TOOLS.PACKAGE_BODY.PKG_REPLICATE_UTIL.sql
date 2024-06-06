@@ -3,10 +3,12 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_REPLICATE_UTIL" IS
 procedure replicate_table
 ( p_table_name in varchar2 -- the table name
 , p_table_owner in varchar2 -- the table owner
-, p_column_list in varchar2 -- the colums separated by a comma
-, p_where_clause in varchar2 default null -- the where clause (without WHERE)
-, p_db_link in varchar2 default null -- database link: the table may reside on a separate database
+, p_column_list in varchar2 -- the columns separated by a comma
 , p_create_or_replace in varchar2 default null -- or CREATE/REPLACE
+, p_db_link in varchar2 default null -- database link: the table may reside on a separate database
+  -- parameters below only relevant when database link is not null
+, p_where_clause in varchar2 default null -- the where clause (without WHERE)
+, p_read_only in boolean default true -- is the target read only?
 )
 is
   l_table_name all_tables.table_name%type;
@@ -28,23 +30,6 @@ begin
       execute immediate l_create_or_replace || ' SYNONYM ' || l_table_name || ' FOR ' || l_table_owner || '.' || l_table_name;
   end case;  
 end replicate_table;
-
-/**
-
-Replicate a table to the schema of the current user.
-
-The table owner must be different (or the database link not empty).
-
-On a local database the target schema (the current logged in user) will (re-create) a synonym on the source table plus the privileges requested. Privileges are granted with the GRANT option so you can create views on the source table.
-
-On a remote database the target schema (the current logged in user) will (re-)create a table based on the source table plus column list and a materialized view on this prebuilt table. Indexes on the source table will be (re-)created too (if the columns match).
-
-The values for parameter **p_create_or_replace**:
-- null: target may or may NOT exist
-- CREATE: target must NOT exist
-- REPLACE target must exist
-
-**/
 
 end pkg_replicate_util;
 /
