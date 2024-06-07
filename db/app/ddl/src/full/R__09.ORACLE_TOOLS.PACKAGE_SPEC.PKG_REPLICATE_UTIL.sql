@@ -31,14 +31,17 @@ The table owner must be different (or the database link not empty).
 
 On a local database the target schema (the current logged in user) will (re-create) a synonym on the source table. The synonym name will be the same as the source table name.
 
-On a remote database the target schema (the current logged in user) will (re-)create a table based on the source table plus column list and a materialized view on this prebuilt table. Indexes on the source table will be (re-)created too (if the columns match). The target table name (and materialized name) will be the same as the source table name.
+On a remote database the target schema (the current logged in user) will (re-)create a table based on the source table and column list:
+- when the target can be modified it will be just that: an identical table but only for the columns specified.
+- when the target can NOT be modified a materialized view will be created based on the prebuilt table.
+Indexes and constraints will be created if applicable.
+
+When this action has been executed successfully, a view is (re-)created (suffix _V) based on the synonym/materialized view and the column list (plus rowid as row_id).
 
 The values for parameter **p_create_or_replace**:
-- null: target may or may NOT exist
-- CREATE: target must NOT exist
-- REPLACE target must exist
-
-When this action has been executed successfully, a view is (re-)created (suffix _V) based on the synonym/materialized view and the column list.
+- null: target object(s) may or may NOT exist
+- CREATE: target object(s) must NOT exist
+- REPLACE target object(s) must exist
 
 **/
 
