@@ -96,7 +96,7 @@ public class OverflowPoolDataSourceOracle
 
     public void setPassword(String password) throws SQLException {
         getPoolDataSource().setPassword(password);
-        getPoolDataSourceOverflow().setPassword(password);
+        getPoolDataSourceOverflow().setPassword(password); // get get() call does not copy the password (getPassword() is deprecated)
     }
 
     @Override
@@ -116,31 +116,11 @@ public class OverflowPoolDataSourceOracle
     }
 
     @Override
-    public final Connection getConnection() throws SQLException {
-        final State state = getState();
+    protected Connection getConnectionOverflow() throws SQLException {
+        final Connection conn = super.getConnectionOverflow();
         
-        switch (state) {
-        case INITIALIZING:
-            open(); // will change state to OPEN
-            assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
-                "did you override setUp() correctly by invoking super.setUp()?";
-            // fall through
-        case OPEN:
-            break;
-        default:
-            throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
-                                                          state.toString()));
-        }
-
-        Connection conn;
-
-        if (getPoolDataSourceOverflow().getMaxPoolSize() > 0 && getPoolDataSource().getIdleConnections() == 0) {
-            conn = getPoolDataSourceOverflow().getConnection();
-            // The setInvalid method of the ValidConnection interface indicates that a connection should be removed from the connection pool when it is closed. 
-            ((ValidConnection) conn).setInvalid();
-        } else {
-            conn = getPoolDataSource().getConnection();
-        }
+        // The setInvalid method of the ValidConnection interface indicates that a connection should be removed from the connection pool when it is closed. 
+        ((ValidConnection) conn).setInvalid();
 
         return conn;
     }
