@@ -65,6 +65,7 @@ public class CheckOverflowHikariUnitTest {
 
     @Test
     void testNoIdleConnections() throws SQLException {
+        // java.sql.SQLTransientConnectionException: HikariPool-bocsconf-overflow - Connection is not available, request timed out after 30010ms.
         final String rex = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
         IllegalStateException thrown;
         
