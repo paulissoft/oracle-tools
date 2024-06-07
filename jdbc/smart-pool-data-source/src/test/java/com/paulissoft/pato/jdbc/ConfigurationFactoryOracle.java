@@ -34,7 +34,7 @@ public class ConfigurationFactoryOracle {
 
     @Bean(name = {"configDataSource3"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public SimplePoolDataSource configDataSource3(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public OverflowPoolDataSourceOracle configDataSource3(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(OverflowPoolDataSourceOracle.class)

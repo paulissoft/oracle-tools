@@ -139,6 +139,8 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         public String getId();
         
         public void setId(final String srcId);
+
+        public int getMaxPoolSize(); // must be combined: normal + overflow
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
@@ -196,5 +198,15 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
+    }
+
+    public final int getMaxPoolSize() {
+        if (poolDataSource.getMaxPoolSize() < 0 && poolDataSourceOverflow.getMaxPoolSize() < 0) {
+            return poolDataSource.getMaxPoolSize();
+        } else {
+            return
+                (poolDataSource.getMaxPoolSize() > 0 ? poolDataSource.getMaxPoolSize() : 0) +
+                (poolDataSourceOverflow.getMaxPoolSize() > 0 ? poolDataSourceOverflow.getMaxPoolSize() : 0);
+        }
     }
 }

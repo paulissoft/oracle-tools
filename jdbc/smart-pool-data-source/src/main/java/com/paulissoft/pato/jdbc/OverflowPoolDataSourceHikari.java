@@ -58,6 +58,8 @@ public class OverflowPoolDataSourceHikari
         // cannot implement setPassword(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
         // overridden method does not throw java.sql.SQLException
         public void setPassword(String password) throws SQLException;
+
+        public int getMaximumPoolSize(); // must be combined: normal + overflow
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -134,6 +136,16 @@ public class OverflowPoolDataSourceHikari
         super.tearDown();
         if (getState() == State.CLOSED) {
             poolDataSource.close();
+        }
+    }
+
+    public final int getMaximumPoolSize() {
+        if (poolDataSource.getMaximumPoolSize() < 0 && poolDataSourceOverflow.getMaximumPoolSize() < 0) {
+            return poolDataSource.getMaximumPoolSize();
+        } else {
+            return
+                (poolDataSource.getMaximumPoolSize() > 0 ? poolDataSource.getMaximumPoolSize() : 0) +
+                (poolDataSourceOverflow.getMaximumPoolSize() > 0 ? poolDataSourceOverflow.getMaximumPoolSize() : 0);
         }
     }
 }
