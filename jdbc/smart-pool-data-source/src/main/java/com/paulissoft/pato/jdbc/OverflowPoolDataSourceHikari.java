@@ -140,12 +140,15 @@ public class OverflowPoolDataSourceHikari
     }
 
     public final int getMaximumPoolSize() {
-        if (poolDataSource.getMaximumPoolSize() < 0 && poolDataSourceOverflow.getMaximumPoolSize() < 0) {
-            return poolDataSource.getMaximumPoolSize();
+        final int maximumPoolSize = getPoolDataSource().getMaximumPoolSize();
+        final int maximumPoolSizeOverflow = getPoolDataSourceOverflow().getMaximumPoolSize();
+        
+        if (maximumPoolSize < 0 && maximumPoolSizeOverflow < 0) {
+            return maximumPoolSize;
         } else {
             return
-                (poolDataSource.getMaximumPoolSize() > 0 ? poolDataSource.getMaximumPoolSize() : 0) +
-                (poolDataSourceOverflow.getMaximumPoolSize() > 0 ? poolDataSourceOverflow.getMaximumPoolSize() : 0);
+                (maximumPoolSize > 0 ? maximumPoolSize : 0) +
+                (maximumPoolSizeOverflow > 0 ? maximumPoolSizeOverflow : 0);
         }
     }
 }
