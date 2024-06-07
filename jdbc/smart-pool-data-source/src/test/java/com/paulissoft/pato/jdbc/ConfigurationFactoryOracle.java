@@ -32,6 +32,15 @@ public class ConfigurationFactoryOracle {
             .build();
     }
 
+    @Bean(name = {"configDataSource3"})
+    @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
+    public SimplePoolDataSource configDataSource3(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceOracle.class)
+            .build();
+    }
+
     @Bean(name = {"ocpiDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
     public CombiPoolDataSourceOracle ocpiDataSource1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
