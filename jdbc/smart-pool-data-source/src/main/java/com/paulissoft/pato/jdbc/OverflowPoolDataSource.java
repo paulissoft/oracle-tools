@@ -117,7 +117,6 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
             case OPEN:
             case INITIALIZING:
             case ERROR:
-                // TBD
                 state = this.state = State.CLOSED;
                 break;
             
@@ -152,7 +151,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected T getPoolDataSourceOverflow() {
+    protected final T getPoolDataSourceOverflow() {
         switch (state) {
         case CLOSED:
             throw new IllegalStateException("You can not use the pool once it is closed.");
@@ -165,7 +164,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      * Connection
      */
     
-    public Connection getConnection() throws SQLException {
+    public final Connection getConnection() throws SQLException {
         switch (state) {
         case INITIALIZING:
             open(); // will change state to OPEN
@@ -181,10 +180,14 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
         final Connection conn =
             poolDataSourceOverflow.getMaxPoolSize() > 0 && poolDataSource.getIdleConnections() == 0 ?
-            poolDataSourceOverflow.getConnection() :
+            getConnectionOverflow() :
             poolDataSource.getConnection();
 
         return conn;
+    }
+
+    protected Connection getConnectionOverflow() throws SQLException {
+        return poolDataSourceOverflow.getConnection();
     }
 
     public String getId() {
