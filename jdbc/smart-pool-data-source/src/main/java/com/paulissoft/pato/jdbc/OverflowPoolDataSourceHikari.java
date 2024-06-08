@@ -11,7 +11,7 @@ public class OverflowPoolDataSourceHikari
     extends OverflowPoolDataSource<SimplePoolDataSourceHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    final static long MIN_CONNECTION_TIMEOUT = 250; // minimum value: time out on getConnection() quickly
+    final static long MIN_CONNECTION_TIMEOUT = 1000 * OverflowPoolDataSource.MIN_CONNECTION_WAIT_TIMEOUT;
     
     /*
      * Constructors
@@ -31,7 +31,7 @@ public class OverflowPoolDataSourceHikari
 
             poolDataSourceOverflow.set(pdsConfig);
             // need to set password explicitly since combination get()/set() does not set the password
-            poolDataSourceOverflow.setPassword(pdsConfig.getPassword());
+            poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
 
             // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
 
@@ -48,6 +48,7 @@ public class OverflowPoolDataSourceHikari
 
             // set pool name
             if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
+                pdsConfig.determineConnectInfo();
                 poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
                 poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
             }

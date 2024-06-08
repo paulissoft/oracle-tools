@@ -32,6 +32,15 @@ public class ConfigurationFactoryHikari {
             .build();
     }
 
+    @Bean(name = {"authDataSource3"})
+    @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+    public OverflowPoolDataSourceHikari authDataSource3(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceHikari.class)
+            .build();
+    }
+
     @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
     public CombiPoolDataSourceHikari configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {

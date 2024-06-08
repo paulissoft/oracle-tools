@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     implements SimplePoolDataSource {
 
+    static final int MIN_CONNECTION_WAIT_TIMEOUT = 1; // 1 second
+
     private final StringBuffer id = new StringBuffer();
 
     private final T poolDataSource;
@@ -85,6 +87,11 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                     updatePool(poolDataSource, poolDataSourceOverflow);
                     
                     state = this.state = State.OPEN;
+
+                    if (poolDataSourceOverflow != null) {
+                        assert poolDataSource.getUsername().equals(poolDataSourceOverflow.getUsername());
+                        assert poolDataSource.getPassword().equals(poolDataSourceOverflow.getPassword());
+                    }
 
                     // now getMaxPoolSize() returns the combined totals
                     
@@ -240,13 +247,17 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
             log.debug(">getConnection({})", useOverflow);
             
             return pds.getConnection();
-        } catch (SQLException ex) {
-            log.debug("pds.getUrl(): {}; pds.getUsername(): {}; pds.getPassword(): {}",
-                      pds.getUrl(),
-                      pds.getUsername(),
-                      pds.getPassword());
-            throw ex;
         } finally {
+            log.debug("# normal connections (active/idle/total): ({}/{}/{})",
+                      poolDataSource.getActiveConnections(),
+                      poolDataSource.getIdleConnections(),
+                      poolDataSource.getTotalConnections());
+            if (poolDataSourceOverflow != null) {
+                log.debug("# overflow connections (active/idle/total): ({}/{}/{})",
+                          poolDataSourceOverflow.getActiveConnections(),
+                          poolDataSourceOverflow.getIdleConnections(),
+                          poolDataSourceOverflow.getTotalConnections());
+            }
             log.debug("<getConnection({})", useOverflow);
         }
     }
@@ -300,22 +311,44 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
     public final int getIdleConnections() {
         T poolDataSourceOverflow; // to speed up access to volatile attribute
-        
+        final int idleConnections = poolDataSource.getIdleConnections();
+
+        log.debug("idleConnections: {}", idleConnections);
+
         if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
-            return poolDataSource.getIdleConnections();
+            return idleConnections;
         }
 
-        return poolDataSource.getIdleConnections() + poolDataSourceOverflow.getIdleConnections();
+        final int idleConnectionsOverflow = poolDataSourceOverflow.getIdleConnections();
+
+        log.debug("idleConnectionsOverflow: {}", idleConnectionsOverflow);
+        
+        if (idleConnections < 0 && idleConnectionsOverflow < 0) {
+            return idleConnections;
+        } else {
+            return Integer.max(idleConnections, 0) + Integer.max(idleConnectionsOverflow, 0);
+        }
     }
 
     public final int getTotalConnections() {
         T poolDataSourceOverflow; // to speed up access to volatile attribute
-        
+        final int totalConnections = poolDataSource.getTotalConnections();
+
+        log.debug("totalConnections: {}", totalConnections);
+
         if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
-            return poolDataSource.getTotalConnections();
+            return totalConnections;
         }
 
-        return poolDataSource.getTotalConnections() + poolDataSourceOverflow.getTotalConnections();
+        final int totalConnectionsOverflow = poolDataSourceOverflow.getTotalConnections();
+
+        log.debug("totalConnectionsOverflow: {}", totalConnectionsOverflow);
+        
+        if (totalConnections < 0 && totalConnectionsOverflow < 0) {
+            return totalConnections;
+        } else {
+            return Integer.max(totalConnections, 0) + Integer.max(totalConnectionsOverflow, 0);
+        }
     }
 
     public final boolean hasOverflow() {
