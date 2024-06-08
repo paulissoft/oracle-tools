@@ -14,6 +14,24 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 public class ConfigurationFactoryOracle {
 
+    @Bean(name = {"authDataSource1"})
+    @ConfigurationProperties(prefix = "app.auth.datasource.oracleucp")
+    public OverflowPoolDataSourceOracle authDataSource1(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceOracle.class)
+            .build();
+    }
+
+    @Bean(name = {"authDataSource3"})
+    @ConfigurationProperties(prefix = "app.auth.datasource.oracleucp")
+    public OverflowPoolDataSourceOracle authDataSource3(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceOracle.class)
+            .build();
+    }
+
     @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
     public CombiPoolDataSourceOracle configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
@@ -63,6 +81,15 @@ public class ConfigurationFactoryOracle {
                                              properties.getType().getClass().getName());
     }
 
+    @Bean(name = {"ocpiDataSource3"})
+    @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
+    public OverflowPoolDataSourceOracle ocpiDataSource3(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceOracle.class)
+            .build();
+    }
+
     @Bean(name = {"ocppDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
     public CombiPoolDataSourceOracle ocppDataSource1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
@@ -83,6 +110,15 @@ public class ConfigurationFactoryOracle {
                                              properties.getUsername(),
                                              properties.getPassword(),
                                              properties.getType().getClass().getName());
+    }
+
+    @Bean(name = {"ocppDataSource3"})
+    @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
+    public OverflowPoolDataSourceOracle ocppDataSource3(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceOracle.class)
+            .build();
     }
 
     @Primary
