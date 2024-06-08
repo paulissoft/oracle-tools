@@ -259,12 +259,23 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     // connection statistics    
     public final int getActiveConnections() {
         T poolDataSourceOverflow; // to speed up access to volatile attribute
-        
+        final int activeConnections = poolDataSource.getActiveConnections();
+
+        log.debug("activeConnections: {}", activeConnections);
+
         if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
-            return poolDataSource.getActiveConnections();
+            return activeConnections;
         }
 
-        return poolDataSource.getActiveConnections() + poolDataSourceOverflow.getActiveConnections();
+        final int activeConnectionsOverflow = poolDataSourceOverflow.getActiveConnections();
+
+        log.debug("activeConnectionsOverflow: {}", activeConnectionsOverflow);
+        
+        if (activeConnections < 0 && activeConnectionsOverflow < 0) {
+            return activeConnections;
+        } else {
+            return Integer.max(activeConnections, 0) + Integer.max(activeConnectionsOverflow, 0);
+        }
     }
 
     public final int getIdleConnections() {

@@ -14,6 +14,24 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 public class ConfigurationFactoryHikari {
 
+    @Bean(name = {"authDataSource1"})
+    @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+    public OverflowPoolDataSourceHikari authDataSource1(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceHikari.class)
+            .build();
+    }
+
+    @Bean(name = {"authDataSource2"})
+    @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
+    public OverflowPoolDataSourceHikari authDataSource2(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(OverflowPoolDataSourceHikari.class)
+            .build();
+    }
+
     @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
     public CombiPoolDataSourceHikari configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {

@@ -28,8 +28,16 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class CheckOverflowHikariUnitTest {
 
     @Autowired
+    @Qualifier("authDataSource1")
+    private OverflowPoolDataSourceHikari dataSourceHikari; // min/max pool size the same (without overflow)
+
+    @Autowired
+    @Qualifier("authDataSource2")
+    private OverflowPoolDataSourceHikari dataSourceHikariWithoutOverflow; // min/max pool size the same (without overflow)
+
+    @Autowired
     @Qualifier("configDataSource3")
-    private OverflowPoolDataSourceHikari configDataSourceHikari;
+    private OverflowPoolDataSourceHikari dataSourceHikariWithOverflow; // min/max pool size NOT the same (with overflow)
 
     //=== Hikari ===
 
@@ -41,7 +49,7 @@ public class CheckOverflowHikariUnitTest {
         
         log.debug("testConnection()");
 
-        final OverflowPoolDataSourceHikari pds = configDataSourceHikari;
+        final OverflowPoolDataSourceHikari pds = dataSourceHikari;
 
         // get some connections
         for (int j = 0; j < 2; j++) {
@@ -67,17 +75,14 @@ public class CheckOverflowHikariUnitTest {
 
     @Test
     void testConnectionsWithoutOverflow() throws SQLException {
-        final String rex = "^HikariPool-bocsconf - Connection is not available, request timed out after \\d+ms.$";
+        final String rex = "^HikariPool-\\s+ - Connection is not available, request timed out after \\d+ms.$";
         SQLTransientConnectionException thrown;
         
         log.debug("testConnectionsWithoutOverflow()");
 
-        final OverflowPoolDataSourceHikari pds = configDataSourceHikari;
+        final OverflowPoolDataSourceHikari pds = dataSourceHikariWithoutOverflow;
 
-        // set max to min to be able to get the SQL error on timeout
-        pds.setMaximumPoolSize(pds.getMinimumIdle());
-        pds.setConnectionTimeout(1000); // just 1 second for a timeout
-
+        assertFalse(pds.hasOverflow());
         assertEquals(pds.getMinimumIdle(), pds.getMaximumPoolSize());
 
         final PoolDataSourceConfigurationHikari pdsConfigBefore =
@@ -118,12 +123,9 @@ public class CheckOverflowHikariUnitTest {
         
         log.debug("testConnectionsWithOverflow()");
 
-        final OverflowPoolDataSourceHikari pds = configDataSourceHikari;
+        final OverflowPoolDataSourceHikari pds = dataSourceHikariWithOverflow;
 
-        // set max to min + 1 to be able to get the SQL error on timeout
-        pds.setMaximumPoolSize(pds.getMinimumIdle() + 2);
-        pds.setConnectionTimeout(1000); // just 1 second for a timeout
-
+        assertTrue(pds.hasOverflow());
         assertNotEquals(pds.getMinimumIdle(), pds.getMaximumPoolSize());
 
         final PoolDataSourceConfigurationHikari pdsConfigBefore =

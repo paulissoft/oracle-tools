@@ -39,7 +39,7 @@ public class OverflowPoolDataSourceHikari
 
             // settings to keep the overflow pool data source as empty as possible
             poolDataSourceOverflow.setMaximumPoolSize(maximumPoolSizeOverflow);
-            poolDataSource.setConnectionTimeout(pdsConfig.getConnectionTimeout() - MIN_CONNECTION_TIMEOUT);
+            poolDataSourceOverflow.setConnectionTimeout(pdsConfig.getConnectionTimeout() - MIN_CONNECTION_TIMEOUT);
             poolDataSourceOverflow.setMinimumIdle(0);
             poolDataSourceOverflow.setIdleTimeout(10000); // minimum
             poolDataSourceOverflow.setMaxLifetime(30000); // minimum
