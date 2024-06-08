@@ -88,11 +88,6 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                     
                     state = this.state = State.OPEN;
 
-                    if (poolDataSourceOverflow != null) {
-                        assert poolDataSource.getUsername().equals(poolDataSourceOverflow.getUsername());
-                        assert poolDataSource.getPassword().equals(poolDataSourceOverflow.getPassword());
-                    }
-
                     // now getMaxPoolSize() returns the combined totals
                     
                     assert pdsConfig.getInitialPoolSize() == getInitialPoolSize() :

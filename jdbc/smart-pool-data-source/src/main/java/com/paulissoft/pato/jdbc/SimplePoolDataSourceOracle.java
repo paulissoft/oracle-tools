@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import java.time.Duration;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
@@ -225,7 +226,9 @@ public class SimplePoolDataSourceOracle
 
     @SuppressWarnings("deprecation")
     public long getConnectionTimeout() { // milliseconds
-        return getConnectionWaitTimeout() * 1000;
+        final long result = getConnectionWaitTimeout() * 1000L;
+        log.debug("getConnectionTimeout() = {}", result);        
+        return result;
     }
 
     public int getActiveConnections() {
@@ -340,17 +343,19 @@ public class SimplePoolDataSourceOracle
         super.setConnectionValidationTimeout(connectionValidationTimeout);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int getConnectionWaitTimeout() {
-        final int result = super.getConnectionWaitTimeout();
+        final int result = (int) getConnectionWaitDuration().getSeconds();
         log.debug("getConnectionWaitTimeout() = {}", result);
         return result;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void setConnectionWaitTimeout(int waitTimeout) throws SQLException {
         log.debug("setConnectionWaitTimeout({})", waitTimeout);
-        super.setConnectionWaitTimeout(waitTimeout);
+        setConnectionWaitDuration(Duration.ofSeconds((long)waitTimeout));
     }
 
     @Override
