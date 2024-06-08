@@ -74,6 +74,8 @@ public class OverflowPoolDataSourceHikari
         public void setPassword(String password) throws SQLException;
 
         public int getMaximumPoolSize(); // must be combined: normal + overflow
+
+        public void setConnectionTimeout(long connectionTimeout);
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -155,5 +157,15 @@ public class OverflowPoolDataSourceHikari
 
     public final int getMaximumPoolSize() {
         return getMaxPoolSize();
+    }
+
+    public void setConnectionTimeout(long connectionTimeout) {
+        final int minConnectionTimeout = 250; // minimum for setConnectionTimeout()
+        
+        if (connectionTimeout < minConnectionTimeout + MIN_CONNECTION_TIMEOUT) {
+            // if we subtract we will get an invalid value (less than minimum)
+            throw new IllegalArgumentException(String.format("The connection timeout (%d) must be at least %d.", connectionTimeout, minConnectionTimeout + MIN_CONNECTION_TIMEOUT));
+        }
+        getPoolDataSource().setConnectionTimeout(connectionTimeout);
     }
 }
