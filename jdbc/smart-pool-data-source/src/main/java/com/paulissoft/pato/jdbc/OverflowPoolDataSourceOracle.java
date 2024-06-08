@@ -44,12 +44,7 @@ public class OverflowPoolDataSourceOracle
                 poolDataSourceOverflow.setConnectionWaitTimeout(pdsConfig.getConnectionWaitTimeout() - MIN_CONNECTION_WAIT_TIMEOUT);
                 poolDataSourceOverflow.setMinPoolSize(0);
                 poolDataSourceOverflow.setInitialPoolSize(0);
-
-                log.debug("poolDataSourceOverflow.getConnectionWaitTimeout(): {}", poolDataSourceOverflow.getConnectionWaitTimeout());
             }        
-
-            log.debug("pdsConfig.getConnectionWaitTimeout(): {}", pdsConfig.getConnectionWaitTimeout());
-            log.debug("poolDataSource.getConnectionWaitTimeout(): {}", poolDataSource.getConnectionWaitTimeout());
 
             // set pool name
             if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
