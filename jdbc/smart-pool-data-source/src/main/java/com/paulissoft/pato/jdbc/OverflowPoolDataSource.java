@@ -198,37 +198,57 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
     
     public final Connection getConnection() throws SQLException {
-        switch (state) {
-        case INITIALIZING:
-            open(); // will change state to OPEN
-            assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
-                "did you override setUp() correctly by invoking super.setUp()?";
-            // fall through
-        case OPEN:
-            break;
-        default:
-            throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
-                                                          state.toString()));
-        }
+        log.debug(">getConnection()");
 
-        Connection conn;
-
-        if (hasOverflow() && poolDataSource.getIdleConnections() == 0) {
-            conn = getConnection(true);
-        } else {
-            try {
-                conn = getConnection(false);
-            } catch (SQLException ex) {
-                // TBD: on timeout and when there is an overflow try getConnection(true)
-                throw ex;
+        try {
+            switch (state) {
+            case INITIALIZING:
+                open(); // will change state to OPEN
+                assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
+                    "did you override setUp() correctly by invoking super.setUp()?";
+                // fall through
+            case OPEN:
+                break;
+            default:
+                throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
+                                                              state.toString()));
             }
-        }
 
-        return conn;
+            Connection conn;
+
+            if (hasOverflow() && poolDataSource.getIdleConnections() == 0) {
+                conn = getConnection(true);
+            } else {
+                try {
+                    conn = getConnection(false);
+                } catch (SQLException ex) {
+                    // TBD: on timeout and when there is an overflow try getConnection(true)
+                    throw ex;
+                }
+            }
+
+            return conn;
+        } finally {
+            log.debug("<getConnection()");
+        }
     }
 
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        return (useOverflow ? poolDataSourceOverflow : poolDataSource).getConnection();
+        T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
+        
+        try {
+            log.debug(">getConnection({})", useOverflow);
+            
+            return pds.getConnection();
+        } catch (SQLException ex) {
+            log.debug("pds.getUrl(): {}; pds.getUsername(): {}; pds.getPassword(): {}",
+                      pds.getUrl(),
+                      pds.getUsername(),
+                      pds.getPassword());
+            throw ex;
+        } finally {
+            log.debug("<getConnection({})", useOverflow);
+        }
     }
 
     public String getId() {

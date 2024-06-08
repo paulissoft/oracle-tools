@@ -27,6 +27,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @TestPropertySource("classpath:application-test.properties")
 public class CheckOverflowHikariUnitTest {
 
+    static final String REX_POOL_CLOSED = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
+    
+    static final String REX_CONNECTION_TIMEOUT = "^HikariPool-\\S+ - Connection is not available, request timed out after \\d+ms.$";
+    
     @Autowired
     @Qualifier("authDataSource1")
     private OverflowPoolDataSourceHikari dataSourceHikari; // min/max pool size the same (without overflow)
@@ -43,7 +47,7 @@ public class CheckOverflowHikariUnitTest {
 
     @Test
     void testConnection() throws SQLException {
-        final String rex = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
+        final String rex = REX_POOL_CLOSED;
         IllegalStateException thrown;
         Connection conn;
         
@@ -75,7 +79,7 @@ public class CheckOverflowHikariUnitTest {
 
     @Test
     void testConnectionsWithoutOverflow() throws SQLException {
-        final String rex = "^HikariPool-\\s+ - Connection is not available, request timed out after \\d+ms.$";
+        final String rex = REX_CONNECTION_TIMEOUT;
         SQLTransientConnectionException thrown;
         
         log.debug("testConnectionsWithoutOverflow()");
@@ -118,7 +122,7 @@ public class CheckOverflowHikariUnitTest {
 
     @Test
     void testConnectionsWithOverflow() throws SQLException {
-        final String rex = "^HikariPool-\\s+ - Connection is not available, request timed out after \\d+ms.$";
+        final String rex = REX_CONNECTION_TIMEOUT;
         SQLTransientConnectionException thrown;
         
         log.debug("testConnectionsWithOverflow()");
@@ -144,6 +148,8 @@ public class CheckOverflowHikariUnitTest {
 
         final PoolDataSourceConfigurationHikari pdsConfigAfter =
             (PoolDataSourceConfigurationHikari) pds.get();
+
+        log.debug("pdsConfigAfter: {}", pdsConfigAfter);
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 

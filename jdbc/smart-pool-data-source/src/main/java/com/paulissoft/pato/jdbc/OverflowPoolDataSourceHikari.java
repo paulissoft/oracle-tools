@@ -30,6 +30,8 @@ public class OverflowPoolDataSourceHikari
             final int maximumPoolSizeOverflow = pdsConfig.getMaximumPoolSize() - pdsConfig.getMinimumIdle();
 
             poolDataSourceOverflow.set(pdsConfig);
+            // need to set password explicitly since combination get()/set() does not set the password
+            poolDataSourceOverflow.setPassword(pdsConfig.getPassword());
 
             // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
 
