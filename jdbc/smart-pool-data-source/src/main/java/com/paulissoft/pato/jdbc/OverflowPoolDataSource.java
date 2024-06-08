@@ -202,7 +202,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
     
     public final Connection getConnection() throws SQLException {
-        log.debug(">getConnection()");
+        log.trace(">getConnection()");
 
         try {
             switch (state) {
@@ -232,30 +232,14 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
             return conn;
         } finally {
-            log.debug("<getConnection()");
+            log.trace("<getConnection()");
         }
     }
 
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
         T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
         
-        try {
-            log.debug(">getConnection({})", useOverflow);
-            
-            return pds.getConnection();
-        } finally {
-            log.debug("# normal connections (active/idle/total): ({}/{}/{})",
-                      poolDataSource.getActiveConnections(),
-                      poolDataSource.getIdleConnections(),
-                      poolDataSource.getTotalConnections());
-            if (poolDataSourceOverflow != null) {
-                log.debug("# overflow connections (active/idle/total): ({}/{}/{})",
-                          poolDataSourceOverflow.getActiveConnections(),
-                          poolDataSourceOverflow.getIdleConnections(),
-                          poolDataSourceOverflow.getTotalConnections());
-            }
-            log.debug("<getConnection({})", useOverflow);
-        }
+        return pds.getConnection();
     }
 
     public final String getId() {
@@ -284,29 +268,19 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     }
 
     public final long getConnectionTimeout() {
-        log.debug(">getConnectionTimeout()");
+        final long connectionTimeout = poolDataSource.getConnectionTimeout();
+        T poolDataSourceOverflow;
 
-        try {
-            final long connectionTimeout = getPoolDataSource().getConnectionTimeout();
-            T poolDataSourceOverflow;
+        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {            
+            return connectionTimeout;
+        }
 
-            log.debug("connectionTimeout: {}", connectionTimeout);
+        final long connectionTimeoutOverflow = poolDataSourceOverflow.getConnectionTimeout();
 
-            if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {            
-                return connectionTimeout;
-            }
-
-            final int connectionTimeoutOverflow = poolDataSourceOverflow.getActiveConnections();
-
-            log.debug("connectionTimeoutOverflow: {}", connectionTimeoutOverflow);
-
-            if (connectionTimeout < 0L && connectionTimeoutOverflow < 0L) {
-                return connectionTimeout;
-            } else {
-                return Long.max(connectionTimeout, 0L) + Long.max(connectionTimeoutOverflow, 0L);
-            }
-        } finally {
-            log.debug("<getConnectionTimeout()");
+        if (connectionTimeout < 0L && connectionTimeoutOverflow < 0L) {
+            return connectionTimeout;
+        } else {
+            return Long.max(connectionTimeout, 0L) + Long.max(connectionTimeoutOverflow, 0L);
         }
     }
     
