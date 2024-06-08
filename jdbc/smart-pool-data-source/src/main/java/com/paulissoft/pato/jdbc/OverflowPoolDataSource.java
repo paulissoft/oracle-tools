@@ -55,11 +55,9 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     }
 
     /*
-     * Open / setUp (javax.annotation.PostConstruct is used by Spring)
+     * Open / setUp
      */
 
-    //@jakarta.annotation.PostConstruct
-    @javax.annotation.PostConstruct
     public final synchronized void open() {
         log.debug("open(id={})", getId());
 
@@ -93,11 +91,9 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     }
 
     /*
-     * Close / tearDown (javax.annotation.PreDestroy is used by Spring)
+     * Close / tearDown
      */
 
-    //@jakarta.annotation.PreDestroy
-    @javax.annotation.PreDestroy
     public final synchronized void close() {
         log.debug("close(id={})", getId());
 
@@ -146,6 +142,12 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         public void setId(final String srcId);
 
         public int getMaxPoolSize(); // must be combined: normal + overflow
+
+        public int getActiveConnections();
+
+        public int getIdleConnections();
+
+        public int getTotalConnections();        
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
@@ -230,7 +232,38 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    public boolean hasOverflow() {
+    // connection statistics    
+    public final int getActiveConnections() {
+        T poolDataSourceOverflow; // to speed up access to volatile attribute
+        
+        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+            return poolDataSource.getActiveConnections();
+        }
+
+        return poolDataSource.getActiveConnections() + poolDataSourceOverflow.getActiveConnections();
+    }
+
+    public final int getIdleConnections() {
+        T poolDataSourceOverflow; // to speed up access to volatile attribute
+        
+        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+            return poolDataSource.getIdleConnections();
+        }
+
+        return poolDataSource.getIdleConnections() + poolDataSourceOverflow.getIdleConnections();
+    }
+
+    public final int getTotalConnections() {
+        T poolDataSourceOverflow; // to speed up access to volatile attribute
+        
+        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+            return poolDataSource.getTotalConnections();
+        }
+
+        return poolDataSource.getTotalConnections() + poolDataSourceOverflow.getTotalConnections();
+    }
+
+    public final boolean hasOverflow() {
         return getMaxPoolSize() > getMinPoolSize();
     }
 }
