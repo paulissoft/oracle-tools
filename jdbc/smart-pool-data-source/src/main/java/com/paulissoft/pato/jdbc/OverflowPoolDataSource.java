@@ -61,11 +61,13 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
 
     public final synchronized void open() {
-        log.debug("open(id={})", getId());
+        log.info("Open initiated");
 
         setUp();
         assert hasOverflow() == (poolDataSourceOverflow != null) : "Only when there is an overflow (max pool size > min pool size)" +
             " the overflow pool data source should NOT be null.";
+
+        log.info("Open completed ({})", getPoolName());
     }
 
     protected void setUp() {
@@ -121,7 +123,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
 
     public final synchronized void close() {
-        log.debug("close(id={})", getId());
+        log.info("Close initiated ({})", getPoolName());
 
         // why did we get here?
         if (log.isTraceEnabled()) {
@@ -129,6 +131,8 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         }
         
         tearDown();
+
+        log.info("Close completed ({})", getPoolName());
     }
 
     // you may override this one
@@ -222,11 +226,11 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
             try {
                 conn = getConnection(false);
-            } catch (SQLException ex) {
+            } catch (SQLException se) {
                 if (hasOverflow()) {
                     conn = getConnection(true);
                 } else {
-                    throw ex;
+                    throw se;
                 }
             }
 
@@ -237,9 +241,15 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
-        
-        return pds.getConnection();
+        log.trace(">getConnection({})", useOverflow);
+
+        final T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
+
+        try {
+            return pds.getConnection();
+        } finally {
+            log.trace("<getConnection({})", useOverflow);
+        }
     }
 
     public final String getId() {
