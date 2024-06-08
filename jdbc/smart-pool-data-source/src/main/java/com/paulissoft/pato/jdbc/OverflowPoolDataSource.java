@@ -14,7 +14,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
     private final T poolDataSource;
 
-    private final T poolDataSourceOverflow;
+    private volatile T poolDataSourceOverflow;
 
     protected enum State {
         INITIALIZING, // next possible states: ERROR, OPEN or CLOSED
@@ -64,6 +64,8 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         log.debug("open(id={})", getId());
 
         setUp();
+        assert hasOverflow() == (poolDataSourceOverflow != null) : "Only when there is an overflow (max pool size > min pool size)" +
+            " the overflow pool data source should NOT be null.";
     }
 
     protected void setUp() {
@@ -75,6 +77,9 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
             if (state == State.INITIALIZING) {
                 try {
+                    if (!hasOverflow()) {
+                        poolDataSourceOverflow = null;
+                    }
                     updatePool(poolDataSource, poolDataSourceOverflow);
                     state = this.state = State.OPEN;
                 } catch (Exception ex) {
@@ -129,7 +134,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected abstract void updatePool(@NonNull final T poolDataSource,
-                                       @NonNull final T poolDataSourceOverflow);
+                                       final T poolDataSourceOverflow);
     
     protected interface ToOverride {
         public Connection getConnection() throws SQLException;
@@ -180,16 +185,24 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                                                           state.toString()));
         }
 
-        final Connection conn =
-            poolDataSourceOverflow.getMaxPoolSize() > 0 && poolDataSource.getIdleConnections() == 0 ?
-            getConnectionOverflow() :
-            poolDataSource.getConnection();
+        Connection conn;
+
+        if (hasOverflow() && poolDataSource.getIdleConnections() == 0) {
+            conn = getConnection(true);
+        } else {
+            try {
+                conn = getConnection(false);
+            } catch (SQLException ex) {
+                // TBD: on timeout and when there is an overflow try getConnection(true)
+                throw ex;
+            }
+        }
 
         return conn;
     }
 
-    protected Connection getConnectionOverflow() throws SQLException {
-        return poolDataSourceOverflow.getConnection();
+    protected Connection getConnection(final boolean useOverflow) throws SQLException {
+        return (useOverflow ? poolDataSourceOverflow : poolDataSource).getConnection();
     }
 
     public String getId() {
@@ -201,12 +214,23 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     }
 
     public final int getMaxPoolSize() {
-        if (poolDataSource.getMaxPoolSize() < 0 && poolDataSourceOverflow.getMaxPoolSize() < 0) {
-            return poolDataSource.getMaxPoolSize();
-        } else {
-            return
-                (poolDataSource.getMaxPoolSize() > 0 ? poolDataSource.getMaxPoolSize() : 0) +
-                (poolDataSourceOverflow.getMaxPoolSize() > 0 ? poolDataSourceOverflow.getMaxPoolSize() : 0);
+        final int maxPoolSize = poolDataSource.getMaxPoolSize();
+        T poolDataSourceOverflow; // to speed up access to volatile attribute
+        
+        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+            return maxPoolSize;
         }
+
+        final int maxPoolSizeOverflow = poolDataSourceOverflow.getMaxPoolSize();
+            
+        if (maxPoolSize < 0 && maxPoolSizeOverflow < 0) {
+            return maxPoolSize;
+        } else {
+            return Integer.max(maxPoolSize, 0) + Integer.max(maxPoolSizeOverflow, 0);
+        }
+    }
+
+    public boolean hasOverflow() {
+        return getMaxPoolSize() > getMinPoolSize();
     }
 }
