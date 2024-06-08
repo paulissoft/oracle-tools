@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.SQLTransientConnectionException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +28,7 @@ public class CheckOverflowOracleUnitTest {
 
     static final String REX_POOL_CLOSED = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
     
-    static final String REX_CONNECTION_TIMEOUT = "^\\S+ - Connection is not available, request timed out after \\d+ms.$";
+    static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
 
     // all data sources must have different pool names otherwise we risk UCP-0 (can not start pool)
     @Autowired
@@ -62,10 +61,10 @@ public class CheckOverflowOracleUnitTest {
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boocpi], password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
-                     "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
-                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
-                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=3, " +
-                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
+                     "initialPoolSize=1, minPoolSize=1, maxPoolSize=1, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "validateConnectionOnBorrow=true, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=1, " +
+                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
 
@@ -105,7 +104,7 @@ public class CheckOverflowOracleUnitTest {
     @Test
     void testConnectionsWithoutOverflow() throws SQLException {
         final String rex = REX_CONNECTION_TIMEOUT;
-        SQLTransientConnectionException thrown;
+        SQLException thrown;
         
         log.debug("testConnectionsWithoutOverflow()");
 
@@ -132,7 +131,7 @@ public class CheckOverflowOracleUnitTest {
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
-        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
+        thrown = assertThrows(SQLException.class, () -> {
                 assertNotNull(pds.getConnection());
             });
 
@@ -147,7 +146,7 @@ public class CheckOverflowOracleUnitTest {
     @Test
     void testConnectionsWithOverflow() throws SQLException {
         final String rex = REX_CONNECTION_TIMEOUT;
-        SQLTransientConnectionException thrown;
+        SQLException thrown;
         
         log.debug("testConnectionsWithOverflow()");
 
@@ -189,7 +188,7 @@ public class CheckOverflowOracleUnitTest {
         }
 
         // now it should fail
-        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
+        thrown = assertThrows(SQLException.class, () -> {
                 assertNotNull(pds.getConnection());
             });
 
