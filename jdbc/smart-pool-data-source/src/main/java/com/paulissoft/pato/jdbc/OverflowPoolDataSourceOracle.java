@@ -48,10 +48,15 @@ public class OverflowPoolDataSourceOracle
                 
                 // set pool name
                 if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-                    poolDataSource.setPoolName(this.getClass().getSimpleName() + pdsConfig.getSchema());
-                    poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + pdsConfig.getSchema());
+                    poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+                    poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
                 }
                 poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
+
+                assert pdsConfig.getInitialPoolSize() == getInitialPoolSize() : "The initial pool size must remain the same.";
+                assert pdsConfig.getMinPoolSize() == getMinPoolSize() : "The min pool size must remain the same.";
+                assert pdsConfig.getMaxPoolSize() == getMaxPoolSize() : "The max pool size must remain the same.";
+                assert pdsConfig.getConnectionWaitTimeout() == getConnectionWaitTimeout() : "The connection wait timeout must remain the same.";
             } catch (SQLException ex) {
                 throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
             }                
