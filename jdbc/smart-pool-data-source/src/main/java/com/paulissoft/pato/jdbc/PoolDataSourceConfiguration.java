@@ -77,6 +77,8 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
     public int getMaxPoolSize() {
         return -1;
     }
+
+    public abstract long getConnectionTimeout(); // in milliseconds
     
     // see https://docs.oracle.com/en/database/oracle/oracle-database/19/jajdb/oracle/jdbc/OracleConnection.html
     // true - do not use openProxySession() but use proxyUsername[schema]

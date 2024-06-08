@@ -50,10 +50,6 @@ public class OverflowPoolDataSourceHikari
                 poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
             }
             poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
-
-            assert pdsConfig.getMinimumIdle() == getMinimumIdle() : "The minimum idle count must remain the same.";
-            assert pdsConfig.getMaximumPoolSize() == getMaximumPoolSize() : "The maximum pool size must remain the same.";
-            assert pdsConfig.getConnectionTimeout() == getConnectionTimeout() : "The connection timeout must remain the same.";
         }        
     }
     

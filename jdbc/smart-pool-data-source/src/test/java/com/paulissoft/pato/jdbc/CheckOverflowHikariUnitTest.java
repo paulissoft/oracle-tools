@@ -1,7 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-// import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -99,6 +99,58 @@ public class CheckOverflowHikariUnitTest {
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
+        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
+                assertNotNull(pds.getConnection());
+            });
+
+        log.debug("message: {}", thrown.getMessage());
+        
+        assertTrue(thrown.getMessage().matches(rex));
+
+        // close pds
+        pds.close();
+    }
+
+    @Test
+    void testConnectionsWithOverflow() throws SQLException {
+        final String rex = "^HikariPool-\\s+ - Connection is not available, request timed out after \\d+ms.$";
+        SQLTransientConnectionException thrown;
+        
+        log.debug("testConnectionsWithOverflow()");
+
+        final OverflowPoolDataSourceHikari pds = configDataSourceHikari;
+
+        // set max to min + 1 to be able to get the SQL error on timeout
+        pds.setMaximumPoolSize(pds.getMinimumIdle() + 2);
+        pds.setConnectionTimeout(1000); // just 1 second for a timeout
+
+        assertNotEquals(pds.getMinimumIdle(), pds.getMaximumPoolSize());
+
+        final PoolDataSourceConfigurationHikari pdsConfigBefore =
+            (PoolDataSourceConfigurationHikari) pds.get();
+
+        // create all connections possible in the normal pool data source
+        for (int j = 0; j < pds.getMinimumIdle(); j++) {
+            assertNotNull(pds.getConnection());
+        }
+
+        assertEquals(pds.getMinimumIdle(), pds.getActiveConnections());
+        assertEquals(0, pds.getIdleConnections());
+        assertEquals(pds.getActiveConnections() +
+                     pds.getIdleConnections(),
+                     pds.getTotalConnections());
+
+        final PoolDataSourceConfigurationHikari pdsConfigAfter =
+            (PoolDataSourceConfigurationHikari) pds.get();
+
+        assertEquals(pdsConfigBefore, pdsConfigAfter);
+
+        // moving to overflow now: get all connections but one
+        for (int j = pds.getMinimumIdle(); j < pds.getMaximumPoolSize() - 1; j++) {
+            assertNotNull(pds.getConnection());
+        }
+
+        // now it should fail
         thrown = assertThrows(SQLTransientConnectionException.class, () -> {
                 assertNotNull(pds.getConnection());
             });

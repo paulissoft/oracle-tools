@@ -154,6 +154,10 @@ public class PoolDataSourceConfigurationOracle
         return connectionPoolName;
     }
 
+    public long getConnectionTimeout() {
+        return 1000 * getConnectionWaitTimeout();
+    }
+    
     // copy parent fields
     @Override
     public void copyFrom(final PoolDataSourceConfiguration poolDataSourceConfiguration) {

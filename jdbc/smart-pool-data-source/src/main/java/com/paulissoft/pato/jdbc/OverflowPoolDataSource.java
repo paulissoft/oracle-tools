@@ -78,8 +78,32 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                     if (!hasOverflow()) {
                         poolDataSourceOverflow = null;
                     }
+
+                    final PoolDataSourceConfiguration pdsConfig = poolDataSource.get();
+
+                    // updatePool must be called before the state is open
                     updatePool(poolDataSource, poolDataSourceOverflow);
+                    
                     state = this.state = State.OPEN;
+
+                    // now getMaxPoolSize() returns the combined totals
+                    
+                    assert pdsConfig.getInitialPoolSize() == getInitialPoolSize() :
+                    String.format("The new initial pool size (%d) must be the same as before (%d).",
+                                  getInitialPoolSize(),
+                                  pdsConfig.getInitialPoolSize());
+                    assert pdsConfig.getMinPoolSize() == getMinPoolSize() :
+                    String.format("The new min pool size (%d) must be the same as before (%d).",
+                                  getMinPoolSize(),
+                                  pdsConfig.getMinPoolSize());
+                    assert pdsConfig.getMaxPoolSize() == getMaxPoolSize() :
+                    String.format("The new max pool size (%d) must be the same as before (%d).",
+                                  getMaxPoolSize(),
+                                  pdsConfig.getMaxPoolSize());
+                    assert pdsConfig.getConnectionTimeout() == getConnectionTimeout() :
+                    String.format("The new connection timeout (%d) must be the same as before (%d).",
+                                  getConnectionTimeout(),
+                                  pdsConfig.getConnectionTimeout());
                 } catch (Exception ex) {
                     state = this.state = State.ERROR;
                     throw ex;
