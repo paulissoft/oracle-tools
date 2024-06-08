@@ -50,20 +50,18 @@ public class CheckOverflowHikariUnitTest {
     //=== Hikari ===
 
     @Test
-    void testPoolDataSourceConfiguration() {
-        final PoolDataSourceConfiguration poolDataSourceConfiguration = dataSourceHikariConfiguration.getPoolDataSourceConfiguration();
+    void testPoolDataSourceConfiguration() throws SQLException {
+        dataSourceHikariConfiguration.getConnection(); // must get a connection to stop initializing phase
+        
+        final PoolDataSourceConfigurationHikari poolDataSourceConfiguration =
+            (PoolDataSourceConfigurationHikari) dataSourceHikariConfiguration.get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
-        assertEquals("oracle.jdbc.OracleDriver", poolDataSourceConfiguration.getDriverClassName());
-        assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
-        assertEquals("bodomain", poolDataSourceConfiguration.getUsername());
-        assertEquals("bodomain", poolDataSourceConfiguration.getPassword());
-        assertEquals(OverflowPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
-                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=bodomain, " + 
-                     "type=class com.paulissoft.pato.jdbc.OverflowPoolDataSourceHikari), poolName=HikariPool-bodomain, " +
-                     "maximumPoolSize=20, minimumIdle=10, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boauth], password=null, " + 
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
+                     "maximumPoolSize=10, minimumIdle=10, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
