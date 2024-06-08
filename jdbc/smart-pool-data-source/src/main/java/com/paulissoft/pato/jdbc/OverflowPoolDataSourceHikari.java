@@ -23,10 +23,11 @@ public class OverflowPoolDataSourceHikari
 
     protected void updatePool(@NonNull final SimplePoolDataSourceHikari poolDataSource,
                               final SimplePoolDataSourceHikari poolDataSourceOverflow) {        
+        final PoolDataSourceConfigurationHikari pdsConfig =
+            (PoolDataSourceConfigurationHikari) poolDataSource.get();
+
         // is there an overflow?
         if (poolDataSourceOverflow != null) {
-            final PoolDataSourceConfigurationHikari pdsConfig =
-                (PoolDataSourceConfigurationHikari) poolDataSource.get();
             final int maximumPoolSizeOverflow = pdsConfig.getMaximumPoolSize() - pdsConfig.getMinimumIdle();
 
             poolDataSourceOverflow.set(pdsConfig);
@@ -45,15 +46,20 @@ public class OverflowPoolDataSourceHikari
             poolDataSourceOverflow.setMinimumIdle(0);
             poolDataSourceOverflow.setIdleTimeout(10000); // minimum
             poolDataSourceOverflow.setMaxLifetime(30000); // minimum
+        }        
 
-            // set pool name
-            if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-                pdsConfig.determineConnectInfo();
-                poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+        // set pool name
+        if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
+            pdsConfig.determineConnectInfo();
+            poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+            if (poolDataSourceOverflow != null) {
                 poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
             }
+        }
+        
+        if (poolDataSourceOverflow != null) {
             poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
-        }        
+        }
     }
     
     protected interface ToOverrideHikari extends ToOverride {
@@ -68,8 +74,6 @@ public class OverflowPoolDataSourceHikari
         public void setPassword(String password) throws SQLException;
 
         public int getMaximumPoolSize(); // must be combined: normal + overflow
-
-        public long getConnectionTimeout(); // idem
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -133,17 +137,6 @@ public class OverflowPoolDataSourceHikari
         }
     }
 
-    public long getConnectionTimeout() {
-        final long connectionTimeout = getPoolDataSource().getConnectionTimeout();
-        SimplePoolDataSourceHikari poolDataSourceOverflow;
-
-        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {            
-            return connectionTimeout;
-        }
-
-        return connectionTimeout + poolDataSourceOverflow.getConnectionTimeout();
-    }
-    
     @Override
     protected void tearDown() {
         if (getState() == State.CLOSED) { // already closed

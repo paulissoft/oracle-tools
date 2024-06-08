@@ -24,15 +24,15 @@ public class OverflowPoolDataSourceOracle
 
     protected void updatePool(@NonNull final SimplePoolDataSourceOracle poolDataSource,
                               final SimplePoolDataSourceOracle poolDataSourceOverflow) {
-        // is there an overflow?
-        if (poolDataSourceOverflow != null) {
-            final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
-            
-            try {
-                // copy the properties
-                final PoolDataSourceConfigurationOracle pdsConfig =
-                    (PoolDataSourceConfigurationOracle) poolDataSource.get();
+        // copy the properties
+        final PoolDataSourceConfigurationOracle pdsConfig =
+            (PoolDataSourceConfigurationOracle) poolDataSource.get();
 
+        try {
+            // is there an overflow?
+            if (poolDataSourceOverflow != null) {
+                final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
+            
                 poolDataSourceOverflow.set(pdsConfig); // only password is not set but there is an overriden method setPassword()
 
                 // settings to let the pool data source fail fast so it can use the overflow
@@ -44,18 +44,27 @@ public class OverflowPoolDataSourceOracle
                 poolDataSourceOverflow.setConnectionWaitTimeout(pdsConfig.getConnectionWaitTimeout() - MIN_CONNECTION_WAIT_TIMEOUT);
                 poolDataSourceOverflow.setMinPoolSize(0);
                 poolDataSourceOverflow.setInitialPoolSize(0);
-                
-                // set pool name
-                if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-                    pdsConfig.determineConnectInfo();
-                    poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+
+                log.debug("poolDataSourceOverflow.getConnectionWaitTimeout(): {}", poolDataSourceOverflow.getConnectionWaitTimeout());
+            }        
+
+            log.debug("pdsConfig.getConnectionWaitTimeout(): {}", pdsConfig.getConnectionWaitTimeout());
+            log.debug("poolDataSource.getConnectionWaitTimeout(): {}", poolDataSource.getConnectionWaitTimeout());
+
+            // set pool name
+            if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
+                pdsConfig.determineConnectInfo();
+                poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+                if (poolDataSourceOverflow != null) {
                     poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
                 }
+            }
+            if (poolDataSourceOverflow != null) {
                 poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
-            } catch (SQLException ex) {
-                throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-            }                
-        }        
+            }
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
     
     protected interface ToOverrideOracle extends ToOverride {
