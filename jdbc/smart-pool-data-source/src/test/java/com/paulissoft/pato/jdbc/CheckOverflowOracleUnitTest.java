@@ -178,7 +178,7 @@ public class CheckOverflowOracleUnitTest {
 
         // reset the max pool size and connection wait timeout for the comparison
         pdsConfigAfter.setMaxPoolSize(pdsConfigBefore.getMaxPoolSize());
-        pdsConfigAfter.setConnectionWaitTimeout(pdsConfigBefore.getConnectionWaitTimeout());
+        pdsConfigAfter.setConnectionWaitDurationInMillis(pdsConfigBefore.getConnectionWaitDurationInMillis());
         
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
