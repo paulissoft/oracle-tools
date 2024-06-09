@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+// import java.time.Duration;
 import java.sql.Connection;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.ValidConnection;
@@ -13,7 +14,7 @@ public class OverflowPoolDataSourceOracle
     extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    final static long MIN_CONNECTION_TIMEOUT = 0;
+    final static long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
     /*
      * Constructor
      */
@@ -68,6 +69,8 @@ public class OverflowPoolDataSourceOracle
         public void setPassword(String password) throws SQLException;
 
         public long getConnectionWaitDurationInMillis(); // may add the overflow
+
+        public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException; // check for minimum
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -134,6 +137,18 @@ public class OverflowPoolDataSourceOracle
         }
     }
 
+    public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        
+        if (connectionWaitDurationInMillis < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
+            // if we subtract we will get an invalid value (less than minimum)
+            throw new IllegalArgumentException(String.format("The connection wait duration in milliseconds (%d) must be at least %d.",
+                                                             connectionWaitDurationInMillis,
+                                                             2 * MIN_CONNECTION_TIMEOUT));
+        }
+        poolDataSource.setConnectionWaitDurationInMillis(connectionWaitDurationInMillis);
+    }
+    
     @Override
     protected void tearDown() {
         if (getState() == State.CLOSED) { // already closed
