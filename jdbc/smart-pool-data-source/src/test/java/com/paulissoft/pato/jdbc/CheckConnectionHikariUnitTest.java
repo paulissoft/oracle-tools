@@ -56,8 +56,10 @@ public class CheckConnectionHikariUnitTest {
 
     @Test
     void testConnection() throws SQLException {
-        final String rex = "^You can only get a connection when the pool state is OPEN or CLOSING but it is CLOSED.$";
-        IllegalStateException thrown;
+        final String rex1 = "^You can only get a connection when the pool state is OPEN or CLOSING but it is CLOSED\\.$";
+        IllegalStateException thrown1;
+        final String rex2 = "^.+\\s+HikariDataSource \\(HikariPool-bocsconf-boocpi-boocpp15j\\) has been closed\\.$";
+        SQLException thrown2;
         Connection conn1, conn2, conn3;
         
         log.debug("testConnection()");
@@ -117,24 +119,27 @@ public class CheckConnectionHikariUnitTest {
         pds3.close();
         assertFalse(pds3.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
-        assertTrue(thrown.getMessage().matches(rex));
+        thrown1 = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+        assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds2
         assertTrue(pds2.isOpen());
         pds2.close();
         assertFalse(pds2.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
-        assertTrue(thrown.getMessage().matches(rex));
+        thrown1 = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
+        assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds1
         assertTrue(pds1.isOpen());
         pds1.close();
-        assertFalse(pds1.isOpen());
+        assertTrue(pds1.getState() == CombiPoolDataSourceHikari.State.CLOSING || pds1.getState() == CombiPoolDataSourceHikari.State.CLOSED);
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
-        assertTrue(thrown.getMessage().matches(rex));
+        thrown2 = assertThrows(SQLException.class, () -> pds1.getConnection());
+
+        log.debug("message: {}", thrown2.getMessage());
+        
+        assertTrue(thrown2.getMessage().matches(rex2));
     }
 
     @Test
