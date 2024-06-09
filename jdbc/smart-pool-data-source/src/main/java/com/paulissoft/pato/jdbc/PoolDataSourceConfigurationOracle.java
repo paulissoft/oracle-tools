@@ -61,7 +61,7 @@ public class PoolDataSourceConfigurationOracle
 
     private int maxStatements;
 
-    private int connectionWaitTimeout;
+    private long connectionWaitDurationInMillis;
 
     private long maxConnectionReuseTime;
 
@@ -105,7 +105,7 @@ public class PoolDataSourceConfigurationOracle
                                                              int inactiveConnectionTimeout,
                                                              int timeoutCheckInterval,
                                                              int maxStatements,
-                                                             int connectionWaitTimeout,
+                                                             long connectionWaitDurationInMillis,
                                                              long maxConnectionReuseTime,
                                                              int secondsToTrustIdleConnection,
                                                              int connectionValidationTimeout) {
@@ -126,7 +126,7 @@ public class PoolDataSourceConfigurationOracle
             .inactiveConnectionTimeout(inactiveConnectionTimeout)
             .timeoutCheckInterval(timeoutCheckInterval)
             .maxStatements(maxStatements)
-            .connectionWaitTimeout(connectionWaitTimeout)
+            .connectionWaitDurationInMillis(connectionWaitDurationInMillis)
             .maxConnectionReuseTime(maxConnectionReuseTime)
             .secondsToTrustIdleConnection(secondsToTrustIdleConnection)
             .connectionValidationTimeout(connectionValidationTimeout)
@@ -155,7 +155,7 @@ public class PoolDataSourceConfigurationOracle
     }
 
     public long getConnectionTimeout() {
-        return 1000 * getConnectionWaitTimeout();
+        return getConnectionWaitDurationInMillis();
     }
     
     // copy parent fields
