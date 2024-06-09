@@ -30,7 +30,7 @@ public class MyOperatorDataSourceOracle extends CombiPoolDataSourceOracle {
                                       int inactiveConnectionTimeout,
                                       int timeoutCheckInterval,
                                       int maxStatements,
-                                      int connectionWaitTimeout,
+                                      long connectionWaitDurationInMillis,
                                       long maxConnectionReuseTime,
                                       int secondsToTrustIdleConnection,
                                       int connectionValidationTimeout)
@@ -50,7 +50,7 @@ public class MyOperatorDataSourceOracle extends CombiPoolDataSourceOracle {
               inactiveConnectionTimeout,
               timeoutCheckInterval,
               maxStatements,
-              connectionWaitTimeout,
+              connectionWaitDurationInMillis,
               maxConnectionReuseTime,
               secondsToTrustIdleConnection,
               connectionValidationTimeout);
