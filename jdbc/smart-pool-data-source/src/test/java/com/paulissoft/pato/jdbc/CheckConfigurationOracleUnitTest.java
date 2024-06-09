@@ -50,8 +50,8 @@ public class CheckConfigurationOracleUnitTest {
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle), connectionPoolName=MyDomainDataSourceOracle-bodomain, " +
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
-                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
-                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=3, " +
+                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
@@ -71,8 +71,8 @@ public class CheckConfigurationOracleUnitTest {
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle), connectionPoolName=MyOperatorDataSourceOracle-boopapij, " +
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
-                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
-                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=3, " +
+                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
@@ -93,12 +93,12 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals(2 * 20, simplePoolDataSourceOracle.getMaxPoolSize());
         assertEquals("oracle.jdbc.pool.OracleDataSource", simplePoolDataSourceOracle.getConnectionFactoryClassName());
         assertEquals(false, simplePoolDataSourceOracle.getValidateConnectionOnBorrow());
-        assertEquals(120, simplePoolDataSourceOracle.getAbandonedConnectionTimeout());
-        assertEquals(120, simplePoolDataSourceOracle.getTimeToLiveConnectionTimeout());
+        assertEquals(0, simplePoolDataSourceOracle.getAbandonedConnectionTimeout());
+        assertEquals(0, simplePoolDataSourceOracle.getTimeToLiveConnectionTimeout());
         assertEquals(0, simplePoolDataSourceOracle.getInactiveConnectionTimeout());
         assertEquals(30, simplePoolDataSourceOracle.getTimeoutCheckInterval());
         assertEquals(10, simplePoolDataSourceOracle.getMaxStatements());
-        assertEquals(3, simplePoolDataSourceOracle.getConnectionWaitTimeout());
+        assertEquals(0, simplePoolDataSourceOracle.getConnectionWaitDurationInMillis());
         assertEquals(0, simplePoolDataSourceOracle.getMaxConnectionReuseTime());
         assertEquals(0, simplePoolDataSourceOracle.getSecondsToTrustIdleConnection());
         assertEquals(15, simplePoolDataSourceOracle.getConnectionValidationTimeout());
