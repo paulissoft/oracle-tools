@@ -207,7 +207,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
     
     public final Connection getConnection() throws SQLException {
-        log.trace(">getConnection()");
+        log.debug(">getConnection()");
 
         try {
             switch (state) {
@@ -237,19 +237,19 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
             return conn;
         } finally {
-            log.trace("<getConnection()");
+            log.debug("<getConnection()");
         }
     }
 
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        log.trace(">getConnection({})", useOverflow);
+        log.debug(">getConnection({})", useOverflow);
 
         final T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
 
         try {
             return pds.getConnection();
         } finally {
-            log.trace("<getConnection({})", useOverflow);
+            log.debug("<getConnection({})", useOverflow);
         }
     }
 
