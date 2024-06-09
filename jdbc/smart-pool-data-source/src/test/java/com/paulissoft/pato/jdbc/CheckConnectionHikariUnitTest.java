@@ -166,10 +166,10 @@ public class CheckConnectionHikariUnitTest {
                 assertEquals("bodomain", ds.getPassword());
                 assertEquals(parent.getPassword(), ds.getPoolDataSource().getPassword());
 
-                assertEquals(2 * 60, ds.getMinimumIdle());
+                assertEquals(2 * 10, ds.getMinimumIdle());
                 assertEquals(ds.getMinimumIdle(), ds.getPoolDataSource().getMinimumIdle());
 
-                assertEquals(2 * 60, ds.getMaximumPoolSize());
+                assertEquals(2 * 20, ds.getMaximumPoolSize());
                 assertEquals(ds.getMaximumPoolSize(), ds.getPoolDataSource().getMaximumPoolSize());
 
                 assertTrue(ds.getPoolName().equals("HikariPool-boopapij-bodomain") ||
