@@ -130,7 +130,7 @@ abc
   end case;
 
   -- always create a view based on the synonym
-  execute_immediate('CREATE OR REPLACE VIEW "' || l_view_name || '" AS SELECT ' || l_column_list || ', rowid as row_id FROM "' || l_synonym_name || '"');
+  execute_immediate('CREATE OR REPLACE VIEW "' || l_view_name || '" AS SELECT rowid as row_id,' || l_column_list || ' FROM "' || l_synonym_name || '"');
 end replicate_table;
 
 end pkg_replicate_util;
