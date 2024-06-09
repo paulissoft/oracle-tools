@@ -11,7 +11,7 @@ public class OverflowPoolDataSourceHikari
     extends OverflowPoolDataSource<SimplePoolDataSourceHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    final static long MIN_CONNECTION_TIMEOUT = 250;
+    final static long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
     
     /*
      * Constructors
