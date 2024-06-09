@@ -64,7 +64,7 @@ public class SimplePoolDataSourceOracle
                 case 11: setInactiveConnectionTimeout(pdsConfig.getInactiveConnectionTimeout()); break;
                 case 12: setTimeoutCheckInterval(pdsConfig.getTimeoutCheckInterval()); break;
                 case 13: setMaxStatements(pdsConfig.getMaxStatements()); break;
-                case 14: setConnectionWaitTimeout(pdsConfig.getConnectionWaitTimeout()); break;
+                case 14: setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis()); break;
                 case 15: setMaxConnectionReuseTime(pdsConfig.getMaxConnectionReuseTime()); break;
                 case 16: setSecondsToTrustIdleConnection(pdsConfig.getSecondsToTrustIdleConnection()); break;
                 case 17: setConnectionValidationTimeout(pdsConfig.getConnectionValidationTimeout()); break;
@@ -102,7 +102,7 @@ public class SimplePoolDataSourceOracle
             .inactiveConnectionTimeout(getInactiveConnectionTimeout())
             .timeoutCheckInterval(getTimeoutCheckInterval())
             .maxStatements(getMaxStatements())
-            .connectionWaitTimeout(getConnectionWaitTimeout())
+            .connectionWaitDurationInMillis(getConnectionWaitDurationInMillis())
             .maxConnectionReuseTime(getMaxConnectionReuseTime())
             .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
             .connectionValidationTimeout(getConnectionValidationTimeout())
@@ -136,7 +136,7 @@ public class SimplePoolDataSourceOracle
         log.info("{}inactiveConnectionTimeout: {}", indentPrefix, pdsConfig.getInactiveConnectionTimeout());
         log.info("{}timeoutCheckInterval: {}", indentPrefix, pdsConfig.getTimeoutCheckInterval());
         log.info("{}maxStatements: {}", indentPrefix, pdsConfig.getMaxStatements());
-        log.info("{}connectionWaitTimeout: {}", indentPrefix, pdsConfig.getConnectionWaitTimeout());
+        log.info("{}connectionWaitDurationInMillis: {}", indentPrefix, pdsConfig.getConnectionWaitDurationInMillis());
         log.info("{}maxConnectionReuseTime: {}", indentPrefix, pdsConfig.getMaxConnectionReuseTime());
         log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, pdsConfig.getSecondsToTrustIdleConnection());
         log.info("{}connectionValidationTimeout: {}", indentPrefix, pdsConfig.getConnectionValidationTimeout());
@@ -160,7 +160,7 @@ public class SimplePoolDataSourceOracle
         log.info("{}inactiveConnectionTimeout: {}", indentPrefix, getInactiveConnectionTimeout());
         log.info("{}timeoutCheckInterval: {}", indentPrefix, getTimeoutCheckInterval());
         log.info("{}maxStatements: {}", indentPrefix, getMaxStatements());
-        log.info("{}connectionWaitTimeout: {}", indentPrefix, getConnectionWaitTimeout());
+        log.info("{}connectionWaitDurationInMillis: {}", indentPrefix, getConnectionWaitDurationInMillis());
         log.info("{}maxConnectionReuseTime: {}", indentPrefix, getMaxConnectionReuseTime());
         log.info("{}secondsToTrustIdleConnection: {}", indentPrefix, getSecondsToTrustIdleConnection());
         log.info("{}connectionValidationTimeout: {}", indentPrefix, getConnectionValidationTimeout());
@@ -224,9 +224,8 @@ public class SimplePoolDataSourceOracle
 
     // public int getMaxPoolSize();
 
-    @SuppressWarnings("deprecation")
     public long getConnectionTimeout() { // milliseconds
-        final long result = getConnectionWaitTimeout() * 1000L;
+        final long result = getConnectionWaitDurationInMillis();
         log.debug("getConnectionTimeout() = {}", result);        
         return result;
     }
@@ -345,16 +344,16 @@ public class SimplePoolDataSourceOracle
 
     @SuppressWarnings("deprecation")
     @Override
-    public int getConnectionWaitTimeout() {
+    public long getConnectionWaitDurationInMillis() {
         final int result = (int) getConnectionWaitDuration().getSeconds();
-        log.debug("getConnectionWaitTimeout() = {}", result);
+        log.debug("getConnectionWaitDurationInMillis() = {}", result);
         return result;
     }
 
     @SuppressWarnings("deprecation")
     @Override
-    public void setConnectionWaitTimeout(int waitTimeout) throws SQLException {
-        log.debug("setConnectionWaitTimeout({})", waitTimeout);
+    public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
+        log.debug("setConnectionWaitDurationInMillis({})", waitTimeout);
         setConnectionWaitDuration(Duration.ofSeconds((long)waitTimeout));
     }
 
