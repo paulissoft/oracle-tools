@@ -29,8 +29,7 @@ public interface PoolDataSourcePropertiesGettersOracle extends PoolDataSourcePro
   
     int getMaxStatements();
   
-    @Deprecated
-    int getConnectionWaitTimeout();
+    long getConnectionWaitDurationInMillis();
 
     long getMaxConnectionReuseTime();
   
