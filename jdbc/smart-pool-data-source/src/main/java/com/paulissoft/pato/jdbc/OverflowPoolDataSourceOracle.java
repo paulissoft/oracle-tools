@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.time.Duration;
 import java.sql.Connection;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.ValidConnection;
@@ -14,7 +13,7 @@ public class OverflowPoolDataSourceOracle
     extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    final static int MIN_CONNECTION_WAIT_TIMEOUT = 2; // OverflowPoolDataSource.MIN_CONNECTION_WAIT_TIMEOUT;
+    final static long MIN_CONNECTION_TIMEOUT = 0;
     /*
      * Constructor
      */
@@ -36,15 +35,15 @@ public class OverflowPoolDataSourceOracle
             
                 poolDataSourceOverflow.set(pdsConfig); // only password is not set but there is an overriden method setPassword()
 
-                // settings to keep the overflow pool data source as empty as possible
-                poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
-                poolDataSourceOverflow.setConnectionWaitTimeout(poolDataSource.getConnectionWaitTimeout() - MIN_CONNECTION_WAIT_TIMEOUT);
-                poolDataSourceOverflow.setMinPoolSize(0);
-                poolDataSourceOverflow.setInitialPoolSize(0);
-                
                 // settings to let the pool data source fail fast so it can use the overflow
                 poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
-                poolDataSource.setConnectionWaitTimeout(MIN_CONNECTION_WAIT_TIMEOUT);
+                poolDataSource.setConnectionWaitDurationInMillis(MIN_CONNECTION_TIMEOUT);
+
+                // settings to keep the overflow pool data source as empty as possible
+                poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
+                poolDataSourceOverflow.setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis() - MIN_CONNECTION_TIMEOUT);
+                poolDataSourceOverflow.setMinPoolSize(0);
+                poolDataSourceOverflow.setInitialPoolSize(0);                
             }        
 
             // set pool name
@@ -68,8 +67,7 @@ public class OverflowPoolDataSourceOracle
         // need to set the password twice since getPassword is deprecated
         public void setPassword(String password) throws SQLException;
 
-        @Deprecated
-        public int getConnectionWaitTimeout();
+        public long getConnectionWaitDurationInMillis(); // may add the overflow
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -113,19 +111,27 @@ public class OverflowPoolDataSourceOracle
         return super.getPoolDataSource();
     }
 
+    // methods defined in interface ToOverrideOracle
+    
     public void setPassword(String password) throws SQLException {
-        getPoolDataSource().setPassword(password);
-
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
         final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
 
+        poolDataSource.setPassword(password);
         if (poolDataSourceOverflow != null) {
             poolDataSourceOverflow.setPassword(password); // get get() call does not copy the password (getPassword() is deprecated)
         }
     }
 
-    @Deprecated
-    public int getConnectionWaitTimeout() {
-        return (int) (getConnectionTimeout() / 1000L);
+    public long getConnectionWaitDurationInMillis() {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
+
+        if (getState() == State.INITIALIZING || poolDataSourceOverflow == null) {
+            return poolDataSource.getConnectionWaitDurationInMillis();
+        } else {
+            return poolDataSource.getConnectionWaitDurationInMillis() + poolDataSourceOverflow.getConnectionWaitDurationInMillis();
+        }
     }
 
     @Override
