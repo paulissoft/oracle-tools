@@ -146,9 +146,9 @@ public class OverflowPoolDataSourceHikari
 
     public int getMaximumPoolSize() {
         final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
-        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
+        SimplePoolDataSourceHikari poolDataSourceOverflow;
 
-        if (getState() == State.INITIALIZING || poolDataSourceOverflow == null) {
+        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
             return poolDataSource.getMaximumPoolSize();
         } else {
             return poolDataSource.getMaximumPoolSize() + poolDataSourceOverflow.getMaximumPoolSize();
@@ -156,7 +156,7 @@ public class OverflowPoolDataSourceHikari
     }
     
     public void setConnectionTimeout(long connectionTimeout) {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
         
         if (connectionTimeout < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
             // if we subtract we will get an invalid value (less than minimum)
