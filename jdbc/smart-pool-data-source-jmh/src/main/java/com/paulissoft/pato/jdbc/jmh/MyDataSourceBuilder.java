@@ -55,17 +55,13 @@ public class MyDataSourceBuilder {
 
         log.debug("parentDataSource: {}; commonId: {}", parentDataSource, commonId);
 
-        if (parentDataSource != null &&
-            parentDataSource instanceof SmartPoolDataSourceHikari &&
-            SmartPoolDataSourceHikari.class.isAssignableFrom(cls)) {
+        if (SmartPoolDataSourceHikari.class.isAssignableFrom(cls)) {
             dataSource = new SmartPoolDataSourceHikari(properties.getDriverClassName(),
                                                        properties.getUrl(),
                                                        properties.getUsername(),
                                                        properties.getPassword(),
                                                        type);
-        } else if (parentDataSource != null &&
-                   parentDataSource instanceof SmartPoolDataSourceOracle &&
-                   SmartPoolDataSourceOracle.class.isAssignableFrom(cls)) {
+        } else if (SmartPoolDataSourceOracle.class.isAssignableFrom(cls)) {
             dataSource = new SmartPoolDataSourceOracle(properties.getUrl(),
                                                        properties.getUsername(),
                                                        properties.getPassword(),
