@@ -14,7 +14,8 @@ public class OverflowPoolDataSourceOracle
     extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    final static long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
+    final static long MIN_CONNECTION_TIMEOUT = 1000; // milliseconds for one pool, so twice this number for two
+    
     /*
      * Constructor
      */
@@ -34,17 +35,19 @@ public class OverflowPoolDataSourceOracle
             if (poolDataSourceOverflow != null) {
                 final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
             
-                poolDataSourceOverflow.set(pdsConfig); // only password is not set but there is an overriden method setPassword()
+                poolDataSourceOverflow.set(pdsConfig); 
+                // need to set password explicitly since combination get()/set() does not set the password
+                poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
 
                 // settings to let the pool data source fail fast so it can use the overflow
                 poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
-                poolDataSource.setConnectionWaitDurationInMillis(MIN_CONNECTION_TIMEOUT);
+                // poolDataSource.setConnectionWaitDurationInMillis(MIN_CONNECTION_TIMEOUT);
 
                 // settings to keep the overflow pool data source as empty as possible
+                // poolDataSourceOverflow.setInitialPoolSize(0);                
+                // poolDataSourceOverflow.setMinPoolSize(0);
                 poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
-                poolDataSourceOverflow.setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis() - MIN_CONNECTION_TIMEOUT);
-                poolDataSourceOverflow.setMinPoolSize(0);
-                poolDataSourceOverflow.setInitialPoolSize(0);                
+                // poolDataSourceOverflow.setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis() - MIN_CONNECTION_TIMEOUT);
             }        
 
             // set pool name
@@ -65,16 +68,13 @@ public class OverflowPoolDataSourceOracle
     }
     
     protected interface ToOverrideOracle extends ToOverride {
-        // need to set the password twice since getPassword is deprecated
-        public void setPassword(String password) throws SQLException;
-
         public long getConnectionWaitDurationInMillis(); // may add the overflow
 
         public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException; // check for minimum
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverrideOracle.class) // do not delegate setPassword()
+    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverrideOracle.class)
     private PoolDataSourcePropertiesSettersOracle getPoolDataSourceSetter() {
         try {
             switch (getState()) {
@@ -116,16 +116,6 @@ public class OverflowPoolDataSourceOracle
 
     // methods defined in interface ToOverrideOracle
     
-    public void setPassword(String password) throws SQLException {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
-
-        poolDataSource.setPassword(password);
-        if (poolDataSourceOverflow != null) {
-            poolDataSourceOverflow.setPassword(password); // get get() call does not copy the password (getPassword() is deprecated)
-        }
-    }
-
     public long getConnectionWaitDurationInMillis() {
         final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
         SimplePoolDataSourceOracle poolDataSourceOverflow;

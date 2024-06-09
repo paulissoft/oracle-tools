@@ -20,6 +20,8 @@ public class SimplePoolDataSourceOracle
 
     protected static final UniversalConnectionPoolManager mgr;
 
+    private final StringBuffer password = new StringBuffer();
+
     static {
         try {
             mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
@@ -210,12 +212,18 @@ public class SimplePoolDataSourceOracle
         return getUser();
     }
 
-    // public void setPassword(String password) throws SQLException;
+    @Override
+    public void setPassword(String password) throws SQLException {
+        this.password.delete(0, this.password.length());
+        this.password.append(password);
+
+        super.setPassword(password);
+    }
     
     @SuppressWarnings("deprecation")
     @Override
     public String getPassword() {
-        return super.getPassword();
+        return password.toString();
     }
 
     // public int getInitialPoolSize();
@@ -244,20 +252,22 @@ public class SimplePoolDataSourceOracle
 
     public void close() {
         try {
-            log.info("{} - Close initiated...", getConnectionPoolName());
+            final String connectionPoolName = getConnectionPoolName();
+            
+            log.info("{} - Close initiated...", connectionPoolName);
             
             // this pool may or may NOT be in the connection pools (implicitly) managed by mgr
             UniversalConnectionPool ucp;
 
             try {
-                ucp = mgr.getConnectionPool(getConnectionPoolName());
+                ucp = mgr.getConnectionPool(connectionPoolName);
             } catch (Exception ex) {
                 ucp = null;
             }
 
             if (ucp != null) {
                 ucp.stop();
-                log.info("{} - Close completed.", getConnectionPoolName());
+                log.info("{} - Close completed.", connectionPoolName);
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
         } catch (UniversalConnectionPoolException ex) {
@@ -265,6 +275,16 @@ public class SimplePoolDataSourceOracle
         }
     }
     
+    @Override
+    public long getConnectionWaitDurationInMillis() {
+        return getConnectionWaitDuration().toMillis();
+    }
+
+    @Override
+    public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
+        setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
+    }
+
     /*
     @Override
     public boolean equals(Object obj) {
@@ -290,6 +310,7 @@ public class SimplePoolDataSourceOracle
 
     /* Class PoolDataSourceImpl */
 
+    /*
     @Override
     public int getAbandonedConnectionTimeout() {
         final int result = super.getAbandonedConnectionTimeout();
@@ -340,21 +361,6 @@ public class SimplePoolDataSourceOracle
     public void setConnectionValidationTimeout(int connectionValidationTimeout) throws SQLException {
         log.debug("setConnectionValidationTimeout({})", connectionValidationTimeout);
         super.setConnectionValidationTimeout(connectionValidationTimeout);
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public long getConnectionWaitDurationInMillis() {
-        final int result = (int) getConnectionWaitDuration().getSeconds();
-        log.debug("getConnectionWaitDurationInMillis() = {}", result);
-        return result;
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
-        log.debug("setConnectionWaitDurationInMillis({})", waitTimeout);
-        setConnectionWaitDuration(Duration.ofSeconds((long)waitTimeout));
     }
 
     @Override
@@ -507,4 +513,5 @@ public class SimplePoolDataSourceOracle
         log.debug("setValidateConnectionOnBorrow({})", validateConnectionOnBorrow);
         super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
     }
+    */
 }

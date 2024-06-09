@@ -259,6 +259,7 @@ public class SimplePoolDataSourceHikari
     }
     */
 
+    /*
     @Override
     public String getDriverClassName() {
         final String result = super.getDriverClassName();
@@ -491,5 +492,6 @@ public class SimplePoolDataSourceHikari
     public void setLeakDetectionThreshold(long leakDetectionThreshold) {
         log.debug("setLeakDetectionThreshold({})", leakDetectionThreshold);
         super.setLeakDetectionThreshold(leakDetectionThreshold);
-    }    
+    }
+    */
 }

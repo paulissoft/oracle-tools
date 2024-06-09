@@ -1,5 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.function.Supplier;
@@ -102,10 +104,12 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                     String.format("The new max pool size (%d) must be the same as before (%d).",
                                   getMaxPoolSize(),
                                   pdsConfig.getMaxPoolSize());
+                    /*
                     assert pdsConfig.getConnectionTimeout() == getConnectionTimeout() :
                     String.format("The new connection timeout (%d) must be the same as before (%d).",
                                   getConnectionTimeout(),
                                   pdsConfig.getConnectionTimeout());
+                    */
                 } catch (Exception ex) {
                     state = this.state = State.ERROR;
                     throw ex;
@@ -207,7 +211,18 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
     
     public final Connection getConnection() throws SQLException {
+        final Instant t1 = Instant.now();
+        
         log.debug(">getConnection()");
+        log.debug("getMinPoolSize(): {}; getMaxPoolSize(): {}; getConnectionTimeout(): {}",
+                  getMinPoolSize(),
+                  getMaxPoolSize(),
+                  getConnectionTimeout());
+        log.debug("getActiveConnections(): {}; getIdleConnections(): {}; getTotalConnections(): {}",
+                  getActiveConnections(),
+                  getIdleConnections(),
+                  getTotalConnections());
+        
 
         try {
             switch (state) {
@@ -237,6 +252,9 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
             return conn;
         } finally {
+            final Instant t2 = Instant.now();
+
+            log.debug("elapsed (ms): {}", Duration.between(t1, t2).toMillis());
             log.debug("<getConnection()");
         }
     }
@@ -248,6 +266,10 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
         try {
             return pds.getConnection();
+        } catch (Exception ex) {
+            log.error("error message: {}", ex.getMessage());
+            log.debug("username: {}; password: {}", pds.getUsername(), pds.getPassword());
+            throw ex;
         } finally {
             log.debug("<getConnection({})", useOverflow);
         }

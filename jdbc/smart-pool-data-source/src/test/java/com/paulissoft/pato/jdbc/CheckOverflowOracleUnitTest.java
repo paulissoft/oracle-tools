@@ -63,7 +63,7 @@ public class CheckOverflowOracleUnitTest {
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
                      "initialPoolSize=1, minPoolSize=1, maxPoolSize=1, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=true, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
-                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitTimeout=1, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=50, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
