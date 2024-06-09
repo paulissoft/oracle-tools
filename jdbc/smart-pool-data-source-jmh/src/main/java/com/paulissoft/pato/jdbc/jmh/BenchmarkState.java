@@ -15,11 +15,13 @@ import org.springframework.context.ApplicationContext;
 import com.zaxxer.hikari.HikariDataSource;
 import com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari;
 import com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari;
+import com.paulissoft.pato.jdbc.OverflowPoolDataSourceHikari;
 import com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari;
 
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle;
 import com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle;
+import com.paulissoft.pato.jdbc.OverflowPoolDataSourceOracle;
 import com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle;
 
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +30,14 @@ import lombok.extern.slf4j.Slf4j;
 @State(Scope.Benchmark)
 public class BenchmarkState {
 
+    private static final int NR_CLASSES = 10;
+    
     private final int[] logicalConnections = new int[] {20076, 10473, 10494, 14757, 19117, 14987};
 
+    // length: # of classes
     private final DataSource[][] dataSources = {
+        { null, null, null, null, null, null },
+        { null, null, null, null, null, null },
         { null, null, null, null, null, null },
         { null, null, null, null, null, null },
         { null, null, null, null, null, null },
@@ -41,7 +48,10 @@ public class BenchmarkState {
         { null, null, null, null, null, null }
     };
         
+    // length: # of classes
     private static final AtomicLong[] count = {
+        new AtomicLong(0L),
+        new AtomicLong(0L),
         new AtomicLong(0L),
         new AtomicLong(0L),
         new AtomicLong(0L),
@@ -52,7 +62,10 @@ public class BenchmarkState {
         new AtomicLong(0L)
     };
 
+    // length: # of classes
     private static final AtomicLong[] ok = {
+        new AtomicLong(0L),
+        new AtomicLong(0L),
         new AtomicLong(0L),
         new AtomicLong(0L),
         new AtomicLong(0L),
@@ -76,9 +89,9 @@ public class BenchmarkState {
         int d, t;
         
         for (d = 0; d < 2; d++) {
-            for (t = 0; t < 4; t++) {
+            for (t = 0; t < (NR_CLASSES / 2); t++) {
                 final String suffix = "DataSource" + (d == 0 ? "Hikari" : "Oracle") + t;
-                final int idx = d * 4 + t;
+                final int idx = d * (NR_CLASSES / 2) + t;
                 
                 dataSources[idx][0] = (DataSource) context.getBean("auth" + suffix);      
                 dataSources[idx][1] = (DataSource) context.getBean("config" + suffix);
@@ -145,16 +158,20 @@ public class BenchmarkState {
             d = 0; t = 1;
         } else if (className.equals(CombiPoolDataSourceHikari.class.getName())) {
             d = 0; t = 2;
-        } else if (className.equals(SmartPoolDataSourceHikari.class.getName())) {
+        } else if (className.equals(OverflowPoolDataSourceHikari.class.getName())) {
             d = 0; t = 3;
+        } else if (className.equals(SmartPoolDataSourceHikari.class.getName())) {
+            d = 0; t = 4;
         } else if (className.equals(PoolDataSourceImpl.class.getName())) {
             d = 1; t = 0;
         } else if (className.equals(SimplePoolDataSourceOracle.class.getName())) {
             d = 1; t = 1;
         } else if (className.equals(CombiPoolDataSourceOracle.class.getName())) {
             d = 1; t = 2;
-        } else if (className.equals(SmartPoolDataSourceOracle.class.getName())) {
+        } else if (className.equals(OverflowPoolDataSourceOracle.class.getName())) {
             d = 1; t = 3;
+        } else if (className.equals(SmartPoolDataSourceOracle.class.getName())) {
+            d = 1; t = 4;
         } else {
             throw new RuntimeException("Can not map class '" + className + "' to an index.");
         }
