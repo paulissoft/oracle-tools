@@ -67,7 +67,7 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals("bodomain", poolDataSourceConfiguration.getPassword());
         assertEquals(CombiPoolDataSourceHikari.class, poolDataSourceConfiguration.getType());
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
-                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=bodomain, " + 
                      "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari), poolName=HikariPool-boopapij, " +
                      "maximumPoolSize=20, minimumIdle=10, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
