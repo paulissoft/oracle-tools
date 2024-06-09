@@ -125,9 +125,9 @@ public class OverflowPoolDataSourceOracle
 
     public long getConnectionWaitDurationInMillis() {
         final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
+        SimplePoolDataSourceOracle poolDataSourceOverflow;
 
-        if (getState() == State.INITIALIZING || poolDataSourceOverflow == null) {
+        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
             return poolDataSource.getConnectionWaitDurationInMillis();
         } else {
             return poolDataSource.getConnectionWaitDurationInMillis() + poolDataSourceOverflow.getConnectionWaitDurationInMillis();
