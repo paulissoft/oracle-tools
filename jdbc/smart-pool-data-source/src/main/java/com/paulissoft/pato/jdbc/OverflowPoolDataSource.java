@@ -121,7 +121,10 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
 
     public final synchronized void close() {
-        log.info("Close initiated ({})", getPoolName());
+        // define it once here otherwise: java.lang.IllegalStateException: You can not use the pool once it is closed.
+        final String poolName = getPoolName();
+        
+        log.info("Close initiated ({})", poolName);
 
         // why did we get here?
         if (log.isTraceEnabled()) {
@@ -130,7 +133,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         
         tearDown();
 
-        log.info("Close completed ({})", getPoolName());
+        log.info("Close completed ({})", poolName);
     }
 
     // you may override this one
