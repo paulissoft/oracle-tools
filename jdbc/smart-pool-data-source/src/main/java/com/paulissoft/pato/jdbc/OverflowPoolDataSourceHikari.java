@@ -11,7 +11,7 @@ public class OverflowPoolDataSourceHikari
     extends OverflowPoolDataSource<SimplePoolDataSourceHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    final static long MIN_CONNECTION_TIMEOUT = 1000 * OverflowPoolDataSource.MIN_CONNECTION_WAIT_TIMEOUT;
+    final static long MIN_CONNECTION_TIMEOUT = 250;
     
     /*
      * Constructors
@@ -73,7 +73,7 @@ public class OverflowPoolDataSourceHikari
         // overridden method does not throw java.sql.SQLException
         public void setPassword(String password) throws SQLException;
 
-        public int getMaximumPoolSize(); // must be combined: normal + overflow
+        public int getMaximumPoolSize(); // may add the overflow
 
         public void setConnectionTimeout(long connectionTimeout);
     }
@@ -119,9 +119,12 @@ public class OverflowPoolDataSourceHikari
         return super.getPoolDataSource();
     }
 
+    // methods defined in interface ToOverrideHikari
     public void setUsername(String username) {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+
         try {
-            getPoolDataSource().setUsername(username);
+            poolDataSource.setUsername(username);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -130,13 +133,38 @@ public class OverflowPoolDataSourceHikari
     }
 
     public void setPassword(String password) {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+
         try {
-            getPoolDataSource().setPassword(password);        
+            poolDataSource.setPassword(password);        
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
+    }
+
+    public int getMaximumPoolSize() {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
+
+        if (getState() == State.INITIALIZING || poolDataSourceOverflow == null) {
+            return poolDataSource.getMaximumPoolSize();
+        } else {
+            return poolDataSource.getMaximumPoolSize() + poolDataSourceOverflow.getMaximumPoolSize();
+        }
+    }
+    
+    public void setConnectionTimeout(long connectionTimeout) {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        
+        if (connectionTimeout < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
+            // if we subtract we will get an invalid value (less than minimum)
+            throw new IllegalArgumentException(String.format("The connection timeout (%d) must be at least %d.",
+                                                             connectionTimeout,
+                                                             2 * MIN_CONNECTION_TIMEOUT));
+        }
+        poolDataSource.setConnectionTimeout(connectionTimeout);
     }
 
     @Override
@@ -153,19 +181,5 @@ public class OverflowPoolDataSourceHikari
         if (getState() == State.CLOSED) {
             poolDataSource.close();
         }
-    }
-
-    public final int getMaximumPoolSize() {
-        return getMaxPoolSize();
-    }
-
-    public void setConnectionTimeout(long connectionTimeout) {
-        final int minConnectionTimeout = 250; // minimum for setConnectionTimeout()
-        
-        if (connectionTimeout < minConnectionTimeout + MIN_CONNECTION_TIMEOUT) {
-            // if we subtract we will get an invalid value (less than minimum)
-            throw new IllegalArgumentException(String.format("The connection timeout (%d) must be at least %d.", connectionTimeout, minConnectionTimeout + MIN_CONNECTION_TIMEOUT));
-        }
-        getPoolDataSource().setConnectionTimeout(connectionTimeout);
     }
 }
