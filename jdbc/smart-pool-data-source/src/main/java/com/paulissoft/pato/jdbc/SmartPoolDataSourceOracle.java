@@ -23,12 +23,12 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
     
     private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
 
-    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics = null;
 
     // Every item must have statistics at level 4
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
-    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow;
+    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow = null;
 
     /*
      * Constructor(s)
@@ -52,6 +52,9 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
         try {
             if (getState() == State.INITIALIZING) {
                 updatePoolDataSourceStatistics();
+
+                assert parentPoolDataSourceStatistics != null;
+                assert poolDataSourceStatistics != null;
             }
             super.setUp();
         } catch (RuntimeException ex) {
@@ -90,23 +93,35 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
     @Override
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
         final Instant tm = Instant.now();
-        Connection conn;
+        Connection conn = null;
 
         try {
             conn = super.getConnection(useOverflow);
         } catch (SQLException ex) {
-            poolDataSourceStatistics.signalSQLException(this, ex);
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.signalSQLException(this, ex);
+            }
             throw ex;
         } catch (Exception ex) {
-            poolDataSourceStatistics.signalException(this, ex);
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.signalException(this, ex);
+            }
             throw ex;
         }
 
+        if (!firstConnection.getAndSet(true)) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            getPoolDataSource().show(get());
+        }
+
         if (statisticsEnabled.get()) {
-            poolDataSourceStatistics.updateStatistics(this,
-                                                      conn,
-                                                      Duration.between(tm, Instant.now()).toMillis(),
-                                                      true);
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(tm, Instant.now()).toMillis(),
+                                                          true);
+            }
         }
 
         return conn;
@@ -129,6 +144,14 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
                                          () -> !isOpen(),
                                          this::get);
         
+        // level 4
+        poolDataSourceStatistics =
+            new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (only " +
+                                         pdsConfig.getSchema() + ")",
+                                         parentPoolDataSourceStatistics, // level 3
+                                         () -> !isOpen(),
+                                         this::get);
+
         // level 4
         poolDataSourceStatisticsOverflow =
             !hasOverflow() ?
