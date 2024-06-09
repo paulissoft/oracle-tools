@@ -10,8 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     implements SimplePoolDataSource {
 
-    static final int MIN_CONNECTION_WAIT_TIMEOUT = 1; // 1 second
-
     private final StringBuffer id = new StringBuffer();
 
     private final T poolDataSource;
