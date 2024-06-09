@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,11 @@ public class CheckOverflowOracleUnitTest {
     @Autowired
     @Qualifier("configDataSource3")
     private OverflowPoolDataSourceOracle dataSourceOracleWithOverflow; // min/max pool size NOT the same (with overflow)
+
+    @BeforeAll
+    static void clear() {
+        PoolDataSourceStatistics.clear();
+    }
 
     //=== Oracle ===
 
