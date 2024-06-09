@@ -38,6 +38,18 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
     public SmartPoolDataSourceHikari() {
     }
 
+    public SmartPoolDataSourceHikari(String driverClassName,
+                                     String url,
+                                     String username,
+                                     String password,
+                                     String type) {
+        set(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                    url,
+                                                    username,
+                                                    password,
+                                                    type != null ? type : CombiPoolDataSourceHikari.class.getName()));
+    }
+
     @Override
     protected void setUp() {
         try {

@@ -58,8 +58,7 @@ public class MyDataSourceBuilder {
         if (parentDataSource != null &&
             parentDataSource instanceof SmartPoolDataSourceHikari &&
             SmartPoolDataSourceHikari.class.isAssignableFrom(cls)) {
-            dataSource = new SmartPoolDataSourceHikari((SmartPoolDataSourceHikari) parentDataSource,
-                                                       properties.getDriverClassName(),
+            dataSource = new SmartPoolDataSourceHikari(properties.getDriverClassName(),
                                                        properties.getUrl(),
                                                        properties.getUsername(),
                                                        properties.getPassword(),
@@ -67,8 +66,7 @@ public class MyDataSourceBuilder {
         } else if (parentDataSource != null &&
                    parentDataSource instanceof SmartPoolDataSourceOracle &&
                    SmartPoolDataSourceOracle.class.isAssignableFrom(cls)) {
-            dataSource = new SmartPoolDataSourceOracle((SmartPoolDataSourceOracle) parentDataSource,
-                                                       properties.getUrl(),
+            dataSource = new SmartPoolDataSourceOracle(properties.getUrl(),
                                                        properties.getUsername(),
                                                        properties.getPassword(),
                                                        type);

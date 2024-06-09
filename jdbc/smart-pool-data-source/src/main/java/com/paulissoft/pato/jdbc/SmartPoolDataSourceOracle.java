@@ -36,6 +36,16 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
     
     public SmartPoolDataSourceOracle() {
     }
+    
+    public SmartPoolDataSourceOracle(String url,
+                                     String username,
+                                     String password,
+                                     String type) {
+        set(PoolDataSourceConfigurationOracle.build(url,
+                                                    username,
+                                                    password,
+                                                    type != null ? type : CombiPoolDataSourceOracle.class.getName()));
+    }
 
     @Override
     protected void setUp() {
