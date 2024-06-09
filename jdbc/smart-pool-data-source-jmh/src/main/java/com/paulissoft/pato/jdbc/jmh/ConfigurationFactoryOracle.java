@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
 import com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle;
 import com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle;
+import com.paulissoft.pato.jdbc.OverflowPoolDataSourceOracle;
 import com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle;
 
 import lombok.extern.slf4j.Slf4j;
