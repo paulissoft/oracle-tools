@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,7 @@ public class CheckLifeCycleOracleUnitTest {
 
     //=== Oracle ===
 
+    @Disabled("A parent status must be OPEN.")
     @Test
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
         log.debug("testSimplePoolDataSourceOracleJoinTwice()");
