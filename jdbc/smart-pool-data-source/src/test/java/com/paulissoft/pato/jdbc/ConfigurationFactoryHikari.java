@@ -43,7 +43,7 @@ public class ConfigurationFactoryHikari {
 
     @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
-    public CombiPoolDataSourceHikari configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public OverflowPoolDataSourceHikari configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceHikari.class)
@@ -52,7 +52,7 @@ public class ConfigurationFactoryHikari {
 
     @Bean(name = {"configDataSource2"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
-    public CombiPoolDataSourceHikari configDataSource2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public OverflowPoolDataSourceHikari configDataSource2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceHikari.class)

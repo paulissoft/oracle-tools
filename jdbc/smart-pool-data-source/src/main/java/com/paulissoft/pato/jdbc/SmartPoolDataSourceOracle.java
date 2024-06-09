@@ -5,12 +5,11 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
+public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
 
     private static final String POOL_NAME_PREFIX = SmartPoolDataSourceOracle.class.getSimpleName();
          
@@ -24,114 +23,42 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
     
     private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
 
-    // Only the parent (getActiveParent() == null) must have statistics at level 3
-    private final PoolDataSourceStatistics parentPoolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics;
 
     // Every item must have statistics at level 4
-    @NonNull
-    private final PoolDataSourceStatistics poolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics poolDataSourceStatistics;
+
+    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow;
 
     /*
-     * Constructors
+     * Constructor(s)
      */
     
     public SmartPoolDataSourceOracle() {
-        final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(null);
-
-        parentPoolDataSourceStatistics = fields[0];
-        poolDataSourceStatistics = fields[1];
-        log.debug("constructor 1: everything null, INITIALIZING");
     }
 
-    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
-        super(poolDataSourceConfigurationOracle);
-        
-        final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics((SmartPoolDataSourceOracle) getActiveParent());
-
-        parentPoolDataSourceStatistics = fields[0];
-        poolDataSourceStatistics = fields[1];
-        log.debug("constructor 2: poolDataSourceConfigurationOracle != null (fixed), OPEN");
-    }
-    
-    public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent) {
-        this(new PoolDataSourceConfigurationOracle(), activeParent);
-        log.debug("constructor 3: activeParent != null, INITIALIZING");
-    }
-
-    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle,
-                                     @NonNull final SmartPoolDataSourceOracle activeParent) {
-        super(poolDataSourceConfigurationOracle, activeParent);
-        
-        final PoolDataSourceStatistics[] fields = updatePoolDataSourceStatistics(activeParent);
-
-        parentPoolDataSourceStatistics = fields[0];
-        poolDataSourceStatistics = fields[1];
-        log.debug("constructor 4: poolDataSourceConfigurationOracle != null (fixed), activeParent != null, INITIALIZING");
+    @Override
+    protected void setUp() {
+        try {
+            if (getState() == State.INITIALIZING) {
+                updatePoolDataSourceStatistics();
+            }
+            super.setUp();
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
     
-    public SmartPoolDataSourceOracle(@NonNull final SmartPoolDataSourceOracle activeParent,
-                                     String url,
-                                     String username,
-                                     String password,
-                                     String type)
-    {
-        this(PoolDataSourceConfigurationOracle.build(url,
-                                                     username,
-                                                     password,
-                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName()),
-             activeParent);
-        log.debug("constructor 5: connection properties != null (fixed), activeParent != null, INITIALIZING");
-    }
-
-    public SmartPoolDataSourceOracle(String url,
-                                     String username,
-                                     String password,
-                                     String type,
-                                     String connectionPoolName,
-                                     int initialPoolSize,
-                                     int minPoolSize,
-                                     int maxPoolSize,
-                                     String connectionFactoryClassName,
-                                     boolean validateConnectionOnBorrow,
-                                     int abandonedConnectionTimeout,
-                                     int timeToLiveConnectionTimeout,
-                                     int inactiveConnectionTimeout,
-                                     int timeoutCheckInterval,
-                                     int maxStatements,
-                                     long connectionWaitDurationInMillis,
-                                     long maxConnectionReuseTime,
-                                     int secondsToTrustIdleConnection,
-                                     int connectionValidationTimeout)
-    {
-        this(PoolDataSourceConfigurationOracle.build(url,
-                                                     username,
-                                                     password,
-                                                     // cannot reference this before supertype constructor has been called,
-                                                     // hence can not use this in constructor above
-                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName(),
-                                                     connectionPoolName,
-                                                     initialPoolSize,
-                                                     minPoolSize,
-                                                     maxPoolSize,
-                                                     connectionFactoryClassName,
-                                                     validateConnectionOnBorrow,
-                                                     abandonedConnectionTimeout,
-                                                     timeToLiveConnectionTimeout,
-                                                     inactiveConnectionTimeout,
-                                                     timeoutCheckInterval,
-                                                     maxStatements,
-                                                     connectionWaitDurationInMillis,
-                                                     maxConnectionReuseTime,
-                                                     secondsToTrustIdleConnection,
-                                                     connectionValidationTimeout));
-        log.debug("constructor 6: properties != null (fixed), activeParent != null, OPEN");
-    }
-
     @Override
     protected void tearDown() {
         try {
             // close the statistics BEFORE closing the pool data source otherwise you may not use delegated methods
             poolDataSourceStatistics.close();
+            if (poolDataSourceStatisticsOverflow != null) {
+                poolDataSourceStatisticsOverflow.close();
+            }
             if (parentPoolDataSourceStatistics != null) {
                 parentPoolDataSourceStatistics.close();
             }
@@ -149,75 +76,56 @@ public class SmartPoolDataSourceOracle extends CombiPoolDataSourceOracle {
      */
     
     @Override
-    protected Connection getConnection1(@NonNull final SimplePoolDataSourceOracle poolDataSource,
-                                        @NonNull final String usernameSession1,
-                                        @NonNull final String passwordSession1) throws SQLException {
-        log.debug("getConnection1(usernameSession1={})", usernameSession1);
+    protected Connection getConnection(final boolean useOverflow) throws SQLException {
+        final Instant tm = Instant.now();
+        Connection conn;
 
-        try {    
-            final Instant t1 = Instant.now();
-            final Connection conn = poolDataSource.getConnection(usernameSession1, passwordSession1);
-            
-            assert !isFixedUsernamePassword() : "For Oracle UCP you should not have a fixed username and password.";
-
-            if (!firstConnection.getAndSet(true)) {
-                // Only show the first time a pool has gotten a connection.
-                // Not earlier because these (fixed) values may change before and after the first connection.
-                show(getPoolDataSourceConfiguration());
-            }
-
-            if (statisticsEnabled.get()) {
-                poolDataSourceStatistics.updateStatistics(this,
-                                                          conn,
-                                                          Duration.between(t1, Instant.now()).toMillis(),
-                                                          true);
-            }
-
-            return conn;
+        try {
+            conn = super.getConnection(useOverflow);
         } catch (SQLException ex) {
             poolDataSourceStatistics.signalSQLException(this, ex);
             throw ex;
         } catch (Exception ex) {
             poolDataSourceStatistics.signalException(this, ex);
             throw ex;
-        } finally {
-            log.debug("<getConnection1()");
         }
-    }
 
-    /*
-     * Config
-     */
-    
-    PoolDataSourceConfiguration getCommonPoolDataSourceConfiguration() {
-        return getPoolDataSource().get();
+        if (statisticsEnabled.get()) {
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm, Instant.now()).toMillis(),
+                                                      true);
+        }
+
+        return conn;
     }
 
     /*
      * Statistics
      */
     
-    private PoolDataSourceStatistics[] updatePoolDataSourceStatistics(final SmartPoolDataSourceOracle activeParent) {
+    private void updatePoolDataSourceStatistics() {
+        final PoolDataSourceConfigurationOracle pdsConfig =
+            (PoolDataSourceConfigurationOracle) getPoolDataSource().get();
+
+        pdsConfig.determineConnectInfo(); // determine schema
+
         // level 3        
-        final PoolDataSourceStatistics parentPoolDataSourceStatistics =
-            activeParent == null
-            ? new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (all)",
-                                           poolDataSourceStatisticsTotal,
-                                           () -> getState() != CombiPoolDataSource.State.OPEN,
-                                           this::getCommonPoolDataSourceConfiguration)
-            : activeParent.parentPoolDataSourceStatistics;
+        parentPoolDataSourceStatistics =
+            new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (all)",
+                                         poolDataSourceStatisticsTotal,
+                                         () -> !isOpen(),
+                                         this::get);
         
         // level 4
-        final PoolDataSourceStatistics poolDataSourceStatistics =
+        poolDataSourceStatisticsOverflow =
+            !hasOverflow() ?
+            null :
             new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (only " +
-                                         this.getPoolDataSourceConfiguration().getSchema() + ")",
+                                         pdsConfig.getSchema() + ")",
                                          parentPoolDataSourceStatistics, // level 3
-                                         () -> getState() != CombiPoolDataSource.State.OPEN,
-                                         this::getPoolDataSourceConfiguration);
-
-        log.debug("updatePoolDataSourceStatistics({}) = ({}, {})", activeParent, parentPoolDataSourceStatistics, poolDataSourceStatistics);
-        
-        return new PoolDataSourceStatistics[]{ parentPoolDataSourceStatistics, poolDataSourceStatistics };
+                                         () -> !isOpen(),
+                                         this::get);
     }
 
     public static boolean isStatisticsEnabled() {

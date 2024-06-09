@@ -34,7 +34,7 @@ public class ConfigurationFactoryOracle {
 
     @Bean(name = {"configDataSource1"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public CombiPoolDataSourceOracle configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public OverflowPoolDataSourceOracle configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
@@ -43,7 +43,7 @@ public class ConfigurationFactoryOracle {
 
     @Bean(name = {"configDataSource2"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public CombiPoolDataSourceOracle configDataSource2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public OverflowPoolDataSourceOracle configDataSource2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
