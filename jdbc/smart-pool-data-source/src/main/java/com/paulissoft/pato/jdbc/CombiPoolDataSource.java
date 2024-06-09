@@ -310,6 +310,10 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
     //@jakarta.annotation.PreDestroy
     @javax.annotation.PreDestroy
     public final synchronized void close() {
+        if (state == State.CLOSED) {
+            return;
+        }
+        
         log.debug("close(id={})", getId());
 
         // why did we get here?

@@ -123,6 +123,10 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
      */
 
     public final synchronized void close() {
+        if (state == State.CLOSED) {
+            return;
+        }
+        
         // define it once here otherwise: java.lang.IllegalStateException: You can not use the pool once it is closed.
         final String poolName = getPoolName();
         

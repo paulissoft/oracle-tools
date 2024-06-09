@@ -418,6 +418,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public void close() throws Exception {
+        if (isClosed()) {
+            return;
+        }
+        
         logger.info("{} - Close initiated...", getDescription());
 
         try {
