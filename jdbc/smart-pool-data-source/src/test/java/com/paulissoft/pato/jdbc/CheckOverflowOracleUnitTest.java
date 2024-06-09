@@ -62,8 +62,8 @@ public class CheckOverflowOracleUnitTest {
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boocpi], password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
                      "initialPoolSize=1, minPoolSize=1, maxPoolSize=1, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
-                     "validateConnectionOnBorrow=true, abandonedConnectionTimeout=120, timeToLiveConnectionTimeout=120, " +
-                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=50, " +
+                     "validateConnectionOnBorrow=true, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
@@ -98,6 +98,9 @@ public class CheckOverflowOracleUnitTest {
         assertFalse(pds.isOpen());
 
         thrown = assertThrows(IllegalStateException.class, () -> pds.getConnection());
+
+        log.debug("message: {}", thrown.getMessage());
+        
         assertTrue(thrown.getMessage().matches(rex));
     }
 
