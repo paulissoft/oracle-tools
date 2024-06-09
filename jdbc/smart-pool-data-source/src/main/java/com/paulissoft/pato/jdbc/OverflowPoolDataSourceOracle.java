@@ -14,7 +14,7 @@ public class OverflowPoolDataSourceOracle
     extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    final static long MIN_CONNECTION_TIMEOUT = 1000; // milliseconds for one pool, so twice this number for two
+    final static long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
     
     /*
      * Constructor
@@ -41,13 +41,13 @@ public class OverflowPoolDataSourceOracle
 
                 // settings to let the pool data source fail fast so it can use the overflow
                 poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
-                // poolDataSource.setConnectionWaitDurationInMillis(MIN_CONNECTION_TIMEOUT);
+                poolDataSource.setConnectionWaitDurationInMillis(MIN_CONNECTION_TIMEOUT);
 
                 // settings to keep the overflow pool data source as empty as possible
-                // poolDataSourceOverflow.setInitialPoolSize(0);                
-                // poolDataSourceOverflow.setMinPoolSize(0);
+                poolDataSourceOverflow.setInitialPoolSize(0);                
+                poolDataSourceOverflow.setMinPoolSize(0);
                 poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
-                // poolDataSourceOverflow.setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis() - MIN_CONNECTION_TIMEOUT);
+                poolDataSourceOverflow.setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis() - MIN_CONNECTION_TIMEOUT);
             }        
 
             // set pool name
