@@ -31,8 +31,7 @@ public interface PoolDataSourcePropertiesSettersOracle extends PoolDataSourcePro
   
     void setMaxStatements(int paramInt) throws SQLException;
   
-    @Deprecated
-    void setConnectionWaitTimeout(int paramInt) throws SQLException;
+    void setConnectionWaitDurationInMillis(long paramInt) throws SQLException;
   
     void setMaxConnectionReuseTime(long paramLong) throws SQLException;
   
