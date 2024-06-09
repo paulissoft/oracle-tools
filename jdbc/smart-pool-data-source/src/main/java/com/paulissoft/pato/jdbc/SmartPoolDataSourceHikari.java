@@ -24,12 +24,12 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
     
     private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
 
-    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics = null;
 
     // Every item must have statistics at level 4
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
-    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow;
+    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow = null;
 
     /*
      * Constructor(s)
@@ -55,6 +55,9 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
         try {
             if (getState() == State.INITIALIZING) {
                 updatePoolDataSourceStatistics();
+
+                assert parentPoolDataSourceStatistics != null;
+                assert poolDataSourceStatistics != null;
             }
             super.setUp();
         } catch (RuntimeException ex) {
@@ -98,10 +101,14 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
         try {
             conn = super.getConnection(useOverflow);
         } catch (SQLException ex) {
-            poolDataSourceStatistics.signalSQLException(this, ex);
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.signalSQLException(this, ex);
+            }
             throw ex;
         } catch (Exception ex) {
-            poolDataSourceStatistics.signalException(this, ex);
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.signalException(this, ex);
+            }
             throw ex;
         }
 
@@ -112,10 +119,12 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
         }
 
         if (statisticsEnabled.get()) {
-            poolDataSourceStatistics.updateStatistics(this,
-                                                      conn,
-                                                      Duration.between(tm, Instant.now()).toMillis(),
-                                                      true);
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(tm, Instant.now()).toMillis(),
+                                                          true);
+            }
         }
 
         return conn;
