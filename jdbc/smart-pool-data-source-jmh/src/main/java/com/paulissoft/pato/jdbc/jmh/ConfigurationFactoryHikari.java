@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import com.zaxxer.hikari.HikariDataSource;
 import com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari;
 import com.paulissoft.pato.jdbc.CombiPoolDataSourceHikari;
+import com.paulissoft.pato.jdbc.OverflowPoolDataSourceHikari;
 import com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari;
 
 import lombok.extern.slf4j.Slf4j;
