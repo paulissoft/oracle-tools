@@ -236,7 +236,9 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                                                                      commonId));
                 }
                 
-                activeParent.activeChildren.incrementAndGet();
+                final int nrActiveChildren = activeParent.activeChildren.incrementAndGet();
+
+                log.debug("(child) # active children for parent {}: {}", activeParent.getId(), nrActiveChildren);
 
                 // set username to the final value so we do not need to check/change it in getConnection()
                 try {
@@ -257,8 +259,6 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 } catch (SQLException ex) {
                     throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
                 }
-                
-                log.debug("(child) # active children for this parent: {}", activeParent.activeChildren.get());
             }
             log.debug("fixed username/password: {}; username: {}; proxy username: {}",
                       poolDataSourceConfiguration.isFixedUsernamePassword(),
@@ -269,8 +269,11 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
             
         case OPEN:
             if (activeParent != null) {
-                if (activeParent.activeChildren.decrementAndGet() == 0) {
-
+                final int nrActiveChildren = activeParent.activeChildren.decrementAndGet();
+                
+                log.debug("(child) # active children for parent {}: {}", activeParent.getId(), nrActiveChildren);
+                
+                if (nrActiveChildren == 0) {
                     if (activeParent.state == State.CLOSING) {
                         log.info("Trying to close the parent again since there are no more active children and the parent state is CLOSING.");
                         activeParent.close(); // try to close() again
@@ -284,7 +287,6 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                     }
                 }
 
-                log.debug("(child) # active children for this parent: {}", activeParent.activeChildren.get());
             }
             log.debug("pool data source username (reset): {}", getPoolDataSource().getUsername());
             // fall thru        
@@ -330,14 +332,20 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
             switch(state) {
             case OPEN:
             case CLOSING:
-                if (activeParent == null && activeChildren.get() != 0) {
-                    // parent having active children can not get CLOSED now but mark it as CLOSING (or keep it like that)
-                    if (state != State.CLOSING) {
-                        log.info("Can not close this parent since there are active children ({}), hence setting its state to CLOSING.",
-                                 activeChildren.get());
-                        state = this.state = State.CLOSING;
+                if (activeParent == null) {
+                    final int nrActiveChildren = activeChildren.get();
+                    
+                    log.debug("(parent) # active children for parent {}: {}", getId(), nrActiveChildren);
+
+                    if (nrActiveChildren != 0) {
+                        // parent having active children can not get CLOSED now but mark it as CLOSING (or keep it like that)
+                        if (state != State.CLOSING) {
+                            log.info("Can not close this parent since there are active children ({}), hence setting its state to CLOSING.",
+                                     nrActiveChildren);
+                            state = this.state = State.CLOSING;
+                        }
+                        break;
                     }
-                    break;
                 }
                 // fall thru
             case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
