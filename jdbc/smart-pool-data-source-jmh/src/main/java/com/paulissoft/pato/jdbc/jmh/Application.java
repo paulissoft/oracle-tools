@@ -22,49 +22,4 @@ public class Application /*implements ApplicationRunner*/ {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
-    
-    /*
-    @Bean
-    public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
-        return args -> {
-
-            if (log.isDebugEnabled()) {
-                log.debug("Let's inspect the application beans provided by Spring Boot:");
-
-                String[] beanNames = ctx.getBeanDefinitionNames();
-            
-                Arrays.sort(beanNames);
-                for (String beanName : beanNames) {
-                    if (beanName.endsWith("DataSourceHikari0") ||
-                        beanName.endsWith("DataSourceHikari1") ||
-                        beanName.endsWith("DataSourceHikari2") ||
-                        beanName.endsWith("DataSourceHikari3") ||
-                        (beanName.endsWith("DataSourceProperties") && !beanName.endsWith(".DataSourceHikariProperties"))) {
-                        log.debug(beanName);
-                    }
-                }
-            }
-
-            BenchmarkTestRunner.execute(jmhFilter);
-        };
-    }
-
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-        System.out.println("# NonOptionArgs: " + args.getNonOptionArgs().size());
-
-        System.out.println("NonOptionArgs:");
-        args.getNonOptionArgs().forEach(System.out::println);
-
-        // -Dspring-boot.run.arguments="abc def"
-        jmhFilter = args.getNonOptionArgs();
-
-        System.out.println("# OptionArgs: " + args.getOptionNames().size());
-        System.out.println("OptionArgs:");
-
-        args.getOptionNames().forEach(optionName -> {
-            System.out.println(optionName + "=" + args.getOptionValues(optionName));
-        });
-    }
-    */
 }
