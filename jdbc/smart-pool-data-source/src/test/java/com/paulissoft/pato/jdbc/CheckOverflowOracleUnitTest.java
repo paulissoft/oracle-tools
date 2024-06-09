@@ -119,9 +119,10 @@ public class CheckOverflowOracleUnitTest {
         // create all connections possible in the normal pool data source
         for (int j = 0; j < pds.getMinPoolSize(); j++) {
             assertNotNull(pds.getConnection());
+            log.debug("[{}] pds.getActiveConnections(): {}", j, pds.getActiveConnections());
         }
 
-        assertTrue(pds.getMinPoolSize() <= pds.getTotalConnections()); // Oracle is not very reliable with active/idle/total connections
+        assertTrue(pds.getMinPoolSize() <= pds.getTotalConnections());
         assertEquals(pds.getActiveConnections() +
                      pds.getIdleConnections(),
                      pds.getTotalConnections());
