@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class OracleTest3 extends BenchmarkTestBase {
 
-    final static private String dataSourceClassName = com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle.class.getName();
+    final static private String dataSourceClassName = com.paulissoft.pato.jdbc.OverflowPoolDataSourceOracle.class.getName();
 
     public static String getDataSourceClassName() {
         return dataSourceClassName;
@@ -24,8 +24,8 @@ public class OracleTest3 extends BenchmarkTestBase {
     }    
     
     @Benchmark
-    public void connectAllSmart(Blackhole bh,
-                                BenchmarkState bs) throws SQLException {
+    public void connectAllOverflow(Blackhole bh,
+                                   BenchmarkState bs) throws SQLException {
         connectAll(bh, bs, dataSourceClassName);
     }
 }
