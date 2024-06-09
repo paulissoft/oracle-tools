@@ -68,10 +68,19 @@ public class ConfigurationFactoryHikari {
             .build();
     }
 
+    @Bean(name = {"configDataSource4"})
+    @ConfigurationProperties(prefix = "app.config.datasource.hikari")
+    public CombiPoolDataSourceHikari configDataSource4(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(CombiPoolDataSourceHikari.class)
+            .build();
+    }
+
     @Bean(name = {"ocpiDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
     public CombiPoolDataSourceHikari ocpiDataSource1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource1") CombiPoolDataSourceHikari configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceHikari configDataSource) {
         return new CombiPoolDataSourceHikari(configDataSource,
                                              properties.getDriverClassName(),
                                              properties.getUrl(),
@@ -83,7 +92,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"ocpiDataSource2"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
     public CombiPoolDataSourceHikari ocpiDataSource2(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource2") CombiPoolDataSourceHikari configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceHikari configDataSource) {
         return new CombiPoolDataSourceHikari(configDataSource,
                                              properties.getDriverClassName(),
                                              properties.getUrl(),
@@ -95,7 +104,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"ocppDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
     public CombiPoolDataSourceHikari ocppDataSource1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource1") CombiPoolDataSourceHikari configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceHikari configDataSource) {
         return new CombiPoolDataSourceHikari(configDataSource,
                                              properties.getDriverClassName(),
                                              properties.getUrl(),
@@ -107,7 +116,7 @@ public class ConfigurationFactoryHikari {
     @Bean(name = {"ocppDataSource2"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
     public CombiPoolDataSourceHikari ocppDataSource2(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource2") CombiPoolDataSourceHikari configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceHikari configDataSource) {
         return new CombiPoolDataSourceHikari(configDataSource,
                                              properties.getDriverClassName(),
                                              properties.getUrl(),

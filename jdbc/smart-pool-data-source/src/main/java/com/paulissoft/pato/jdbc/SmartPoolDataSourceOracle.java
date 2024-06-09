@@ -55,7 +55,9 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
     protected void tearDown() {
         try {
             // close the statistics BEFORE closing the pool data source otherwise you may not use delegated methods
-            poolDataSourceStatistics.close();
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.close();
+            }
             if (poolDataSourceStatisticsOverflow != null) {
                 poolDataSourceStatisticsOverflow.close();
             }

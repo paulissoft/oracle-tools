@@ -29,7 +29,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class CheckConnectionHikariUnitTest {
 
     @Autowired
-    @Qualifier("configDataSource1")
+    @Qualifier("configDataSource4")
     private CombiPoolDataSourceHikari configDataSourceHikari;
 
     @Autowired

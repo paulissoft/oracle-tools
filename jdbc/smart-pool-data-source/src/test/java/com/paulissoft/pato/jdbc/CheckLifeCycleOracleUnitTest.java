@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CheckLifeCycleOracleUnitTest {
 
     @Autowired
-    @Qualifier("configDataSource2")
+    @Qualifier("configDataSource4")
     private CombiPoolDataSourceOracle configDataSourceOracle;
 
     @Autowired

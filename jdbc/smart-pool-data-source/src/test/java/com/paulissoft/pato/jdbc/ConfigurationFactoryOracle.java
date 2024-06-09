@@ -59,10 +59,19 @@ public class ConfigurationFactoryOracle {
             .build();
     }
 
+    @Bean(name = {"configDataSource4"})
+    @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
+    public CombiPoolDataSourceOracle configDataSource4(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+        return properties
+            .initializeDataSourceBuilder()
+            .type(CombiPoolDataSourceOracle.class)
+            .build();
+    }
+
     @Bean(name = {"ocpiDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
     public CombiPoolDataSourceOracle ocpiDataSource1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource1") CombiPoolDataSourceOracle configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceOracle configDataSource) {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
@@ -73,7 +82,7 @@ public class ConfigurationFactoryOracle {
     @Bean(name = {"ocpiDataSource2"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
     public CombiPoolDataSourceOracle ocpiDataSource2(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource2") CombiPoolDataSourceOracle configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceOracle configDataSource) {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
@@ -93,7 +102,7 @@ public class ConfigurationFactoryOracle {
     @Bean(name = {"ocppDataSource1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
     public CombiPoolDataSourceOracle ocppDataSource1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource1") CombiPoolDataSourceOracle configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceOracle configDataSource) {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
@@ -104,7 +113,7 @@ public class ConfigurationFactoryOracle {
     @Bean(name = {"ocppDataSource2"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
     public CombiPoolDataSourceOracle ocppDataSource2(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties,
-                                                     @Qualifier("configDataSource2") CombiPoolDataSourceOracle configDataSource) {
+                                                     @Qualifier("configDataSource4") CombiPoolDataSourceOracle configDataSource) {
         return new CombiPoolDataSourceOracle(configDataSource,
                                              properties.getUrl(),
                                              properties.getUsername(),
