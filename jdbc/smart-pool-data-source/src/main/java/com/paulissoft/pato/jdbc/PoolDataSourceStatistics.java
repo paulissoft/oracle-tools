@@ -140,6 +140,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     private final CopyOnWriteArraySet<PoolDataSourceStatistics> children;
 
+    /*
+     * Constructors
+     */
+    
     public PoolDataSourceStatistics(final Supplier<String> descriptionSupplier) {
         this(descriptionSupplier, null);
     }
