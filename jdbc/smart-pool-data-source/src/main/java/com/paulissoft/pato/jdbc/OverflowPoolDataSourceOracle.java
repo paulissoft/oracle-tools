@@ -101,22 +101,6 @@ public class OverflowPoolDataSourceOracle
     }
     
     @Override
-    protected void tearDown() {
-        if (getState() == State.CLOSED) { // already closed
-            return;
-        }
-        
-        // must get this info before it is actually closed since then getPoolDataSource() will return a error
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource(); 
-        
-        // we are in a synchronized context
-        super.tearDown();
-        if (getState() == State.CLOSED) {
-            poolDataSource.close();
-        }
-    }
-
-    @Override
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
         final Connection conn = super.getConnection(useOverflow);
 

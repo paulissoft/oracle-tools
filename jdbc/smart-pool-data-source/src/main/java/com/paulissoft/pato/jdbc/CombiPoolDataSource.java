@@ -610,7 +610,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 try {
                     connectionsWithWrongUsernameSession2[--nrProxyLogicalConnectionCount].close();
                 } catch (SQLException ex) {
-                    log.error("SQL exception on close(): {}", ex.getMessage());
+                    log.error("SQL exception on close(): {}", ex);
                 }
             }
             log.debug("<getConnection2(id={})", getId());

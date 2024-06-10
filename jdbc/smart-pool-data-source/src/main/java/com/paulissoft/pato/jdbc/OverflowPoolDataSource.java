@@ -155,7 +155,16 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
             case OPEN:
             case INITIALIZING:
             case ERROR:
-                state = this.state = State.CLOSED;
+                try {
+                    poolDataSource.close();
+                    if (poolDataSourceOverflow != null) {
+                        poolDataSourceOverflow.close();
+                    }
+                } catch(Exception ex) {
+                    log.error("Exception on close(): {}", ex);
+                } finally {
+                    state = this.state = State.CLOSED;
+                }
                 break;
             
             case CLOSED:
