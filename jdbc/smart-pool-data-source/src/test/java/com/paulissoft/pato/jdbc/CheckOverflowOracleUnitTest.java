@@ -29,7 +29,7 @@ public class CheckOverflowOracleUnitTest {
 
     static final String REX_POOL_CLOSED = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
     
-    static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
+    static final String REX_CONNECTION_TIMEOUT = OverflowPoolDataSourceOracle.REX_CONNECTION_TIMEOUT;
 
     // all data sources must have different pool names otherwise we risk UCP-0 (can not start pool)
     @Autowired

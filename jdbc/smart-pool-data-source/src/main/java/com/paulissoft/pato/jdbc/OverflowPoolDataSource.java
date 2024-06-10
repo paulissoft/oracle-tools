@@ -301,19 +301,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        log.trace(">getConnection({})", useOverflow);
-
-        final T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
-
-        try {
-            return pds.getConnection();
-        } catch (Exception ex) {
-            throw ex;
-        } finally {
-            log.trace("<getConnection({})", useOverflow);
-        }
-    }
+    protected abstract Connection getConnection(final boolean useOverflow) throws SQLException;
 
     public final String getId() {
         return id.toString();

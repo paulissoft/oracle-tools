@@ -14,7 +14,9 @@ public class OverflowPoolDataSourceOracle
     extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    final static long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
+    static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
+
+    static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
     
     /*
      * Constructor
@@ -99,17 +101,32 @@ public class OverflowPoolDataSourceOracle
         }
         poolDataSource.setConnectionWaitDurationInMillis(connectionWaitDurationInMillis);
     }
-    
-    @Override
+
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        final Connection conn = super.getConnection(useOverflow);
+        log.trace(">getConnection({})", useOverflow);
 
-        if (useOverflow) {
-            // The setInvalid method of the ValidConnection interface
-            // indicates that a connection should be removed from the connection pool when it is closed. 
-            ((ValidConnection) conn).setInvalid();
+        final SimplePoolDataSourceOracle pds = useOverflow ? getPoolDataSourceOverflow() : getPoolDataSource();
+
+        try {
+            final Connection conn = pds.getConnection();
+            
+            if (useOverflow) {
+                // The setInvalid method of the ValidConnection interface
+                // indicates that a connection should be removed from the connection pool when it is closed. 
+                ((ValidConnection) conn).setInvalid();
+            }
+
+            return conn;
+        } catch (SQLException se) {
+            if (!useOverflow && hasOverflow() && se.getMessage().matches(REX_CONNECTION_TIMEOUT)) {
+                return getConnection(!useOverflow);
+            } else {
+                throw se;
+            }
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            log.trace("<getConnection({})", useOverflow);
         }
-
-        return conn;
     }
 }

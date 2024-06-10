@@ -30,7 +30,7 @@ public class CheckOverflowHikariUnitTest {
 
     static final String REX_POOL_CLOSED = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
     
-    static final String REX_CONNECTION_TIMEOUT = "^\\S+ - Connection is not available, request timed out after \\d+ms.$";
+    static final String REX_CONNECTION_TIMEOUT = OverflowPoolDataSourceHikari.REX_CONNECTION_TIMEOUT;
     
     @Autowired
     @Qualifier("authDataSource1")

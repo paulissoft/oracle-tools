@@ -1,8 +1,10 @@
 package com.paulissoft.pato.jdbc;
 
+import java.sql.Connection;
 import java.sql.SQLException;
-import lombok.experimental.Delegate;
+import java.sql.SQLTransientConnectionException;
 import lombok.NonNull;
+import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -11,8 +13,11 @@ public class OverflowPoolDataSourceHikari
     extends OverflowPoolDataSource<SimplePoolDataSourceHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    final static long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
+    static final long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
+
+    static final String REX_CONNECTION_TIMEOUT = "^\\S+ - Connection is not available, request timed out after \\d+ms.$";
     
+
     /*
      * Constructors
      */
@@ -92,6 +97,26 @@ public class OverflowPoolDataSourceHikari
     @Override
     protected SimplePoolDataSourceHikari getPoolDataSource() {
         return super.getPoolDataSource();
+    }
+
+    protected Connection getConnection(final boolean useOverflow) throws SQLException {
+        log.trace(">getConnection({})", useOverflow);
+
+        final SimplePoolDataSourceHikari pds = useOverflow ? getPoolDataSourceOverflow() : getPoolDataSource();
+
+        try {
+            return pds.getConnection();
+        } catch (SQLTransientConnectionException stce) {
+            if (!useOverflow && hasOverflow() && stce.getMessage().matches(REX_CONNECTION_TIMEOUT)) {
+                return getConnection(!useOverflow);
+            } else {
+                throw stce;
+            }
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            log.trace("<getConnection({})", useOverflow);
+        }
     }
 
     // methods defined in interface ToOverrideHikari
