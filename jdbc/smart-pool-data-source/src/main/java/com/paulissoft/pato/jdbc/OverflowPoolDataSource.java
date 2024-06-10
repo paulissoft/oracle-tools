@@ -86,7 +86,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                     final PoolDataSourceConfiguration pdsConfig = poolDataSource.get();
 
                     // updatePool must be called before the state is open
-                    updatePool(poolDataSource, poolDataSourceOverflow);
+                    updatePool(pdsConfig, poolDataSource, poolDataSourceOverflow);
                     
                     state = this.state = State.OPEN;
 
@@ -166,8 +166,48 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected abstract void updatePool(@NonNull final T poolDataSource,
-                                       final T poolDataSourceOverflow);
+    protected abstract long getMinConnectionTimeout();
+    
+    protected void updatePool(@NonNull final PoolDataSourceConfiguration pdsConfig,
+                              @NonNull final T poolDataSource,
+                              final T poolDataSourceOverflow) {
+        try {
+            // is there an overflow?
+            if (poolDataSourceOverflow != null) {
+                final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
+
+                // copy values
+                poolDataSourceOverflow.set(pdsConfig); 
+                // need to set password explicitly since combination get()/set() does not set the password
+                poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
+
+                // settings to let the pool data source fail fast so it can use the overflow
+                poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
+                poolDataSource.setConnectionTimeout(getMinConnectionTimeout());
+
+                // settings to keep the overflow pool data source as empty as possible
+                poolDataSourceOverflow.setInitialPoolSize(0);                
+                poolDataSourceOverflow.setMinPoolSize(0);
+                poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
+                poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+            }        
+
+            // set pool name
+            if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
+                pdsConfig.determineConnectInfo();
+                poolDataSource.setPoolName(getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+                // use a different name to solve UCP-0
+                if (poolDataSourceOverflow != null) {
+                    poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+                }
+            }
+            if (poolDataSourceOverflow != null) {
+                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
+            }
+        } catch (SQLException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
+    }
     
     protected interface ToOverride {
         public Connection getConnection() throws SQLException;

@@ -51,11 +51,19 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     // signatures used by oracle.ucp.jdbc.PoolDataSource
     public int getInitialPoolSize();
 
+    public void setInitialPoolSize(int initialPoolSize) throws SQLException;
+
     public int getMinPoolSize();
+
+    public void setMinPoolSize(int minPoolSize) throws SQLException;
 
     public int getMaxPoolSize();
 
+    public void setMaxPoolSize(int maxPoolSize) throws SQLException;
+
     public long getConnectionTimeout(); // milliseconds
+    
+    public void setConnectionTimeout(long connectionTimeout) throws SQLException; // milliseconds
 
     // connection statistics    
     public int getActiveConnections();

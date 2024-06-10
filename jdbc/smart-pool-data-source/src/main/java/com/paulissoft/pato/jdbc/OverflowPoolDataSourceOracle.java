@@ -4,7 +4,7 @@ package com.paulissoft.pato.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.ValidConnection;
-import lombok.NonNull;
+// import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,49 +24,10 @@ public class OverflowPoolDataSourceOracle
         super(SimplePoolDataSourceOracle::new);
     }
 
-    protected void updatePool(@NonNull final SimplePoolDataSourceOracle poolDataSource,
-                              final SimplePoolDataSourceOracle poolDataSourceOverflow) {
-        // copy the properties
-        final PoolDataSourceConfigurationOracle pdsConfig =
-            (PoolDataSourceConfigurationOracle) poolDataSource.get();
-
-        try {
-            // is there an overflow?
-            if (poolDataSourceOverflow != null) {
-                final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
-            
-                poolDataSourceOverflow.set(pdsConfig); 
-                // need to set password explicitly since combination get()/set() does not set the password
-                poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
-
-                // settings to let the pool data source fail fast so it can use the overflow
-                poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
-                poolDataSource.setConnectionWaitDurationInMillis(MIN_CONNECTION_TIMEOUT);
-
-                // settings to keep the overflow pool data source as empty as possible
-                poolDataSourceOverflow.setInitialPoolSize(0);                
-                poolDataSourceOverflow.setMinPoolSize(0);
-                poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
-                poolDataSourceOverflow.setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis() - MIN_CONNECTION_TIMEOUT);
-            }        
-
-            // set pool name
-            if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-                pdsConfig.determineConnectInfo();
-                poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
-                // use a different name to solve UCP-0
-                if (poolDataSourceOverflow != null) {
-                    poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
-                }
-            }
-            if (poolDataSourceOverflow != null) {
-                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
-            }
-        } catch (SQLException ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
+    protected long getMinConnectionTimeout() {
+        return MIN_CONNECTION_TIMEOUT;
     }
-    
+
     protected interface ToOverrideOracle extends ToOverride {
         public long getConnectionWaitDurationInMillis(); // may add the overflow
 

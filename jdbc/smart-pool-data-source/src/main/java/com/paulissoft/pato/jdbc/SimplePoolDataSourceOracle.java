@@ -226,16 +226,20 @@ public class SimplePoolDataSourceOracle
         return password.toString();
     }
 
+    // Already part of PoolDataSourceImpl:
     // public int getInitialPoolSize();
-
+    // public void setInitialPoolSize(int initialPoolSize);
     // public int getMinPoolSize();
-
+    // public void setMinPoolSize(int minPoolSize);
     // public int getMaxPoolSize();
-
+    // public void setMaxPoolSize(int maxPoolSize);
+    
     public long getConnectionTimeout() { // milliseconds
-        final long result = getConnectionWaitDurationInMillis();
-        log.debug("getConnectionTimeout() = {}", result);        
-        return result;
+        return getConnectionWaitDurationInMillis();
+    }
+
+    public void setConnectionTimeout(long connectionTimeout) throws SQLException { // milliseconds
+        setConnectionWaitDurationInMillis(connectionTimeout);
     }
 
     public int getActiveConnections() {

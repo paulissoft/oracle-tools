@@ -21,45 +21,20 @@ public class OverflowPoolDataSourceHikari
         super(SimplePoolDataSourceHikari::new);
     }
 
-    protected void updatePool(@NonNull final SimplePoolDataSourceHikari poolDataSource,
-                              final SimplePoolDataSourceHikari poolDataSourceOverflow) {        
-        final PoolDataSourceConfigurationHikari pdsConfig =
-            (PoolDataSourceConfigurationHikari) poolDataSource.get();
+    protected long getMinConnectionTimeout() {
+        return MIN_CONNECTION_TIMEOUT;
+    }
 
+    protected void updatePool(@NonNull final PoolDataSourceConfiguration pdsConfig,
+                              @NonNull final SimplePoolDataSourceHikari poolDataSource,
+                              final SimplePoolDataSourceHikari poolDataSourceOverflow) {        
+        super.updatePool(pdsConfig, poolDataSource, poolDataSourceOverflow);
         // is there an overflow?
         if (poolDataSourceOverflow != null) {
-            final int maximumPoolSizeOverflow = pdsConfig.getMaximumPoolSize() - pdsConfig.getMinimumIdle();
-
-            poolDataSourceOverflow.set(pdsConfig);
-            // need to set password explicitly since combination get()/set() does not set the password
-            poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
-
             // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
-
-            // settings to let the pool data source fail fast so it can use the overflow
-            poolDataSource.setMaximumPoolSize(pdsConfig.getMinPoolSize());
-            poolDataSource.setConnectionTimeout(MIN_CONNECTION_TIMEOUT); // minimum value: time out on getConnection() quickly 
-
-            // settings to keep the overflow pool data source as empty as possible
-            poolDataSourceOverflow.setMaximumPoolSize(maximumPoolSizeOverflow);
-            poolDataSourceOverflow.setConnectionTimeout(pdsConfig.getConnectionTimeout() - MIN_CONNECTION_TIMEOUT);
-            poolDataSourceOverflow.setMinimumIdle(0);
             poolDataSourceOverflow.setIdleTimeout(10000); // minimum
             poolDataSourceOverflow.setMaxLifetime(30000); // minimum
         }        
-
-        // set pool name
-        if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-            pdsConfig.determineConnectInfo();
-            poolDataSource.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
-            if (poolDataSourceOverflow != null) {
-                poolDataSourceOverflow.setPoolName(this.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
-            }
-        }
-        
-        if (poolDataSourceOverflow != null) {
-            poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
-        }
     }
     
     protected interface ToOverrideHikari extends ToOverride {

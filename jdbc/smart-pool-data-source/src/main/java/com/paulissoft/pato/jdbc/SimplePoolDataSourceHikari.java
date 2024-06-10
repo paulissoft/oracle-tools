@@ -201,17 +201,31 @@ public class SimplePoolDataSourceHikari
         return getMinPoolSize();
     }
 
+    // HikariCP does NOT know of an initial pool size so just ignore
+    public void setInitialPoolSize(int initialPoolSize) {
+    }
+
     // HikariCP does NOT know of a minimum pool size but minimumIdle seems to be the equivalent
     public int getMinPoolSize() {
         return getMinimumIdle();
+    }
+
+    public void setMinPoolSize(int minPoolSize) {
+        setMinimumIdle(minPoolSize);
     }
 
     public int getMaxPoolSize() {
         return getMaximumPoolSize();
     }
 
-    // public long getConnectionTimeout(); // milliseconds
+    public void setMaxPoolSize(int maxPoolSize) {
+        setMaximumPoolSize(maxPoolSize);
+    }
 
+    // Already part of HikariDataSource:
+    // public long getConnectionTimeout(); // milliseconds
+    // public void setConnectionTimeout(long connectionTimeout); // milliseconds
+    
     public int getActiveConnections() {
         try {
             return getHikariPoolMXBean().getActiveConnections();
