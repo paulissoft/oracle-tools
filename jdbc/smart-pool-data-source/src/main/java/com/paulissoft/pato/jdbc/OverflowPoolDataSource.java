@@ -161,7 +161,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                         poolDataSourceOverflow.close();
                     }
                 } catch(Exception ex) {
-                    log.error("Exception on close(): {}", ex);
+                    log.error("Exception on tearDown(): {}", ex);
                 } finally {
                     state = this.state = State.CLOSED;
                 }

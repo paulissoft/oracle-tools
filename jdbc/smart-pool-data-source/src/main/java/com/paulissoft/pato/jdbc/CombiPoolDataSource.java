@@ -354,9 +354,18 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 // fall thru
             case INITIALIZING: /* can not have active children since an INITIALIZING parent can never be assigned to activeParent */
             case ERROR:
-                updateCombiPoolAdministration();
-                updatePool(poolDataSourceConfiguration, getPoolDataSource(), false, activeParent == null);
-                state = this.state = State.CLOSED;
+                try {
+                    updateCombiPoolAdministration();
+                    updatePool(poolDataSourceConfiguration, getPoolDataSource(), false, activeParent == null);
+                    poolDataSource.close();
+                    if (poolDataSourceOverflow != null) {
+                        poolDataSourceOverflow.close();
+                    }
+                } catch(Exception ex) {
+                    log.error("Exception on tearDown(): {}", ex);
+                } finally {
+                    state = this.state = State.CLOSED;
+                }
                 break;
             
             case CLOSED:

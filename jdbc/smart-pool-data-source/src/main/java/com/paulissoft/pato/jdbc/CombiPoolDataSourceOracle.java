@@ -140,22 +140,6 @@ public class CombiPoolDataSourceOracle
         return super.getPoolDataSource();
     }
 
-    @Override
-    protected void tearDown() {
-        if (getState() == State.CLOSED) { // already closed
-            return;
-        }
-        
-        // must get this info before it is actually closed since then getPoolDataSource() will return a error
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource(); 
-        
-        // we are in a synchronized context
-        super.tearDown();
-        if (getState() == State.CLOSED) {
-            poolDataSource.close();
-        }
-    }
-
     /*
      * Connection
      */
