@@ -357,10 +357,7 @@ public abstract class CombiPoolDataSource<T extends SimplePoolDataSource, P exte
                 try {
                     updateCombiPoolAdministration();
                     updatePool(poolDataSourceConfiguration, getPoolDataSource(), false, activeParent == null);
-                    poolDataSource.close();
-                    if (poolDataSourceOverflow != null) {
-                        poolDataSourceOverflow.close();
-                    }
+                    getPoolDataSource().close();
                 } catch(Exception ex) {
                     log.error("Exception on tearDown(): {}", ex);
                 } finally {
