@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
+public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari implements SmartPoolDataSource {
 
     private static final String POOL_NAME_PREFIX = SmartPoolDataSourceHikari.class.getSimpleName();
          
@@ -135,35 +135,15 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari {
      */
     
     private void updatePoolDataSourceStatistics() {
-        final PoolDataSourceConfigurationHikari pdsConfig =
-            (PoolDataSourceConfigurationHikari) getPoolDataSource().get();
+        final PoolDataSourceStatistics[] fields =
+            SmartPoolDataSource.updatePoolDataSourceStatistics(getPoolDataSource(),
+                                                               hasOverflow() ? getPoolDataSourceOverflow() : null,
+                                                               poolDataSourceStatisticsTotal,
+                                                               () -> !isOpen());
 
-        pdsConfig.determineConnectInfo(); // determine schema
-
-        // level 3        
-        parentPoolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (all)",
-                                         poolDataSourceStatisticsTotal,
-                                         () -> !isOpen(),
-                                         this::get);
-        
-        // level 4
-        poolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (only " +
-                                         pdsConfig.getSchema() + ")",
-                                         parentPoolDataSourceStatistics, // level 3
-                                         () -> !isOpen(),
-                                         this::get);
-
-        // level 4
-        poolDataSourceStatisticsOverflow =
-            !hasOverflow() ?
-            null :
-            new PoolDataSourceStatistics(() -> this.getPoolDescription() + ": (only " +
-                                         pdsConfig.getSchema() + ")",
-                                         parentPoolDataSourceStatistics, // level 3
-                                         () -> !isOpen(),
-                                         this::get);
+        parentPoolDataSourceStatistics = fields[0];
+        poolDataSourceStatistics = fields[1];
+        poolDataSourceStatisticsOverflow = fields[2];
     }
 
     public static boolean isStatisticsEnabled() {

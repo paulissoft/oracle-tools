@@ -1,5 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
+import java.util.function.Supplier;
 import lombok.NonNull;
 
 public interface SmartPoolDataSource {
@@ -8,8 +9,10 @@ public interface SmartPoolDataSource {
      * Statistics
      */
     
-    protected static PoolDataSourceStatistics[] updatePoolDataSourceStatistics(@NonNull final SimplePoolDataSource poolDataSource,
-                                                                               final SimplePoolDataSource poolDataSourceOverflow) {
+    public static PoolDataSourceStatistics[] updatePoolDataSourceStatistics(@NonNull final SimplePoolDataSource poolDataSource,
+                                                                            final SimplePoolDataSource poolDataSourceOverflow,
+                                                                            final PoolDataSourceStatistics poolDataSourceStatisticsTotal,
+                                                                            final Supplier<Boolean> isClosedSupplier) {
         final PoolDataSourceConfiguration pdsConfig = poolDataSource.get();
 
         pdsConfig.determineConnectInfo(); // determine schema
@@ -18,17 +21,17 @@ public interface SmartPoolDataSource {
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> poolDataSource.getPoolDescription() + ": (all)",
                                          poolDataSourceStatisticsTotal,
-                                         () -> !poolDataSource.isOpen(),
+                                         isClosedSupplier,
                                          poolDataSource::get);
         
         // level 4
         final PoolDataSourceStatistics poolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> poolDataSource.getPoolDescription() + ": (only " + pdsConfig.getSchema() + ")",
                                          parentPoolDataSourceStatistics, // level 3
-                                         () -> !poolDataSource.isOpen(),
+                                         isClosedSupplier,
                                          poolDataSource::get);
 
-        PoolDataSourceStatistics poolDataSourceStatistics = null;
+        PoolDataSourceStatistics poolDataSourceStatisticsOverflow = null;
 
         if (poolDataSourceOverflow != null) {
             final PoolDataSourceConfiguration pdsConfigOverflow = poolDataSourceOverflow.get();
@@ -39,10 +42,10 @@ public interface SmartPoolDataSource {
             poolDataSourceStatisticsOverflow =
                 new PoolDataSourceStatistics(() -> poolDataSourceOverflow.getPoolDescription() + ": (only " + pdsConfigOverflow.getSchema() + ")",
                                              parentPoolDataSourceStatistics, // level 3
-                                             () -> !poolDataSourceOverflow.isOpen(),
+                                             isClosedSupplier,
                                              poolDataSourceOverflow::get);
         }
 
-        return PoolDataSourceStatistics[] {parentPoolDataSourceStatistics, poolDataSourceStatistics, poolDataSourceStatisticsOverflow};
+        return new PoolDataSourceStatistics[] {parentPoolDataSourceStatistics, poolDataSourceStatistics, poolDataSourceStatisticsOverflow};
     }
 }
