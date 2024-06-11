@@ -99,26 +99,10 @@ public class OverflowPoolDataSourceHikari
         return super.getPoolDataSource();
     }
 
-    protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        log.trace(">getConnection({})", useOverflow);
-
-        final SimplePoolDataSourceHikari pds = useOverflow ? getPoolDataSourceOverflow() : getPoolDataSource();
-
-        try {
-            return pds.getConnection();
-        } catch (SQLTransientConnectionException stce) {
-            if (!useOverflow && hasOverflow() && stce.getMessage().matches(REX_CONNECTION_TIMEOUT)) {
-                return getConnection(!useOverflow);
-            } else {
-                throw stce;
-            }
-        } catch (Exception ex) {
-            throw ex;
-        } finally {
-            log.trace("<getConnection({})", useOverflow);
-        }
+    protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceHikari pds, final Exception ex) {
+        return (ex instanceof SQLTransientConnectionException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
     }
-
+    
     // methods defined in interface ToOverrideHikari
     public void setUsername(String username) {
         final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();

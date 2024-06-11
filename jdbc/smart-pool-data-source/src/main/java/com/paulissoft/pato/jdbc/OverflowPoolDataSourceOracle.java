@@ -102,31 +102,19 @@ public class OverflowPoolDataSourceOracle
         poolDataSource.setConnectionWaitDurationInMillis(connectionWaitDurationInMillis);
     }
 
+    protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceOracle pds, final Exception ex) {
+        return (ex instanceof SQLException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
+    }
+
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        log.trace(">getConnection({})", useOverflow);
-
-        final SimplePoolDataSourceOracle pds = useOverflow ? getPoolDataSourceOverflow() : getPoolDataSource();
-
-        try {
-            final Connection conn = pds.getConnection();
+        final Connection conn = super.getConnection(useOverflow);
             
-            if (useOverflow) {
-                // The setInvalid method of the ValidConnection interface
-                // indicates that a connection should be removed from the connection pool when it is closed. 
-                ((ValidConnection) conn).setInvalid();
-            }
-
-            return conn;
-        } catch (SQLException se) {
-            if (!useOverflow && hasOverflow() && se.getMessage().matches(REX_CONNECTION_TIMEOUT)) {
-                return getConnection(!useOverflow);
-            } else {
-                throw se;
-            }
-        } catch (Exception ex) {
-            throw ex;
-        } finally {
-            log.trace("<getConnection({})", useOverflow);
+        if (useOverflow) {
+            // The setInvalid method of the ValidConnection interface
+            // indicates that a connection should be removed from the connection pool when it is closed. 
+            ((ValidConnection) conn).setInvalid();
         }
+
+        return conn;
     }
 }
