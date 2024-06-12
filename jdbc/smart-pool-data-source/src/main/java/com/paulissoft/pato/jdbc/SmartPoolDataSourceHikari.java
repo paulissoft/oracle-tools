@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -43,11 +44,11 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari impl
                                      String username,
                                      String password,
                                      String type) {
-        set(PoolDataSourceConfigurationHikari.build(driverClassName,
-                                                    url,
-                                                    username,
-                                                    password,
-                                                    type != null ? type : CombiPoolDataSourceHikari.class.getName()));
+        super(driverClassName,
+              url,
+              username,
+              password,
+              type != null ? type : SmartPoolDataSourceHikari.class.getName());
     }
 
     @Override
