@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class OverflowPoolDataSourceHikari
-    extends OverflowPoolDataSource<SimplePoolDataSourceHikari>
+    extends OverflowPoolDataSource<SimplePoolDataSourceHikari, PoolDataSourceConfigurationHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
     static final long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
@@ -23,7 +23,69 @@ public class OverflowPoolDataSourceHikari
      */
     
     public OverflowPoolDataSourceHikari() {
-        super(SimplePoolDataSourceHikari::new);
+        super(SimplePoolDataSourceHikari::new, new PoolDataSourceConfigurationHikari()); 
+    }
+
+    public OverflowPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
+    }
+
+    public OverflowPoolDataSourceHikari(String driverClassName,
+                                        String url,
+                                        String username,
+                                        String password,
+                                        String type) {
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     type != null ? type : OverflowPoolDataSourceHikari.class.getName()));
+    }
+
+    public OverflowPoolDataSourceHikari(String driverClassName,
+                                        String url,
+                                        String username,
+                                        String password,
+                                        String type,
+                                        String poolName,
+                                        int maximumPoolSize,
+                                        int minimumIdle,
+                                        String dataSourceClassName,
+                                        boolean autoCommit,
+                                        long connectionTimeout,
+                                        long idleTimeout,
+                                        long maxLifetime,
+                                        String connectionTestQuery,
+                                        long initializationFailTimeout,
+                                        boolean isolateInternalQueries,
+                                        boolean allowPoolSuspension,
+                                        boolean readOnly,
+                                        boolean registerMbeans,    
+                                        long validationTimeout,
+                                        long leakDetectionThreshold) {
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     type != null ? type : OverflowPoolDataSourceHikari.class.getName(),
+                                                     poolName,
+                                                     maximumPoolSize,
+                                                     minimumIdle,
+                                                     dataSourceClassName,
+                                                     autoCommit,
+                                                     connectionTimeout,
+                                                     idleTimeout,
+                                                     maxLifetime,
+                                                     connectionTestQuery,
+                                                     initializationFailTimeout,
+                                                     isolateInternalQueries,
+                                                     allowPoolSuspension,
+                                                     readOnly,
+                                                     registerMbeans,    
+                                                     validationTimeout,
+                                                     leakDetectionThreshold));
     }
 
     protected long getMinConnectionTimeout() {
@@ -64,7 +126,7 @@ public class OverflowPoolDataSourceHikari
         try {
             switch (getState()) {
             case INITIALIZING:
-                return getPoolDataSource();
+                return getPoolDataSourceConfiguration();
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
@@ -84,7 +146,7 @@ public class OverflowPoolDataSourceHikari
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+                return getPoolDataSourceConfiguration(); // as soon as the initializing phase is over, the actual pool data source should be used
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceGetter(): {}", ex);
