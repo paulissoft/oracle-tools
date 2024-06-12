@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -41,10 +42,10 @@ public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
                                      String username,
                                      String password,
                                      String type) {
-        set(PoolDataSourceConfigurationOracle.build(url,
-                                                    username,
-                                                    password,
-                                                    type != null ? type : CombiPoolDataSourceOracle.class.getName()));
+        super(url,
+              username,
+              password,
+              type != null ? type : SmartPoolDataSourceOracle.class.getName());
     }
 
     @Override
