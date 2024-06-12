@@ -23,10 +23,11 @@ public class OverflowPoolDataSourceOracle
      */
 
     public OverflowPoolDataSourceOracle() {
-        super(SimplePoolDataSourceOracle::new, new PoolDataSourceConfigurationOracle());
+        super(SimplePoolDataSourceOracle::new, PoolDataSourceConfigurationOracle::new);
     }
 
     public OverflowPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+        // configuration is supposed to be set completely
         super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
     }
 
@@ -35,10 +36,12 @@ public class OverflowPoolDataSourceOracle
                                         String password,
                                         String type)
     {
-        this(PoolDataSourceConfigurationOracle.build(url,
-                                                     username,
-                                                     password,
-                                                     type != null ? type : OverflowPoolDataSourceOracle.class.getName()));
+        this();
+        // configuration is set partially so just use the default constructor
+        set(PoolDataSourceConfigurationOracle.build(url,
+                                                    username,
+                                                    password,
+                                                    type != null ? type : OverflowPoolDataSourceOracle.class.getName()));
     }
 
     public OverflowPoolDataSourceOracle(String url,

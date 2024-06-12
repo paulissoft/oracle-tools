@@ -83,7 +83,7 @@ public class SimplePoolDataSourceOracle
         return get(true);
     }
     
-    public PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration) {
+    private PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)

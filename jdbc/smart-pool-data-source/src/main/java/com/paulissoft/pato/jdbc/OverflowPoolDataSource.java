@@ -38,16 +38,27 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource, P e
      * Constructor
      */
     
-    protected OverflowPoolDataSource(@NonNull final Supplier<T> supplierT, @NonNull final P poolDataSourceConfiguration) {
+    protected OverflowPoolDataSource(@NonNull final Supplier<T> supplierT, @NonNull final Supplier<P> supplierP) {
         this.poolDataSource = supplierT.get();
         this.poolDataSourceOverflow = supplierT.get();
-        this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+        this.poolDataSourceConfiguration = supplierP.get();
         
         setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
 
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
-    
+
+     protected OverflowPoolDataSource(@NonNull final Supplier<T> supplierT, @NonNull final P poolDataSourceConfiguration) {
+         this.poolDataSource = supplierT.get();
+         this.poolDataSourceOverflow = supplierT.get();
+         this.poolDataSourceConfiguration = poolDataSourceConfiguration;
+        
+        setId(this.poolDataSourceConfiguration.getUsername()); // must invoke setId() after this.poolDataSource is set
+        setUp();
+
+        assert state == State.OPEN : "After setting up the state must be OPEN.";
+        assert getPoolDataSource() != null : "The pool data source should not be null.";
+     }
     /*
      * State
      */
@@ -311,8 +322,6 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource, P e
         }
     }
 
-    protected abstract boolean getConnectionFailsDueToNoIdleConnections(final T pds, final Exception ex);
-
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
         log.trace(">getConnection({})", useOverflow);
 
@@ -330,6 +339,8 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource, P e
             log.trace("<getConnection({})", useOverflow);
         }
     }
+
+    protected abstract boolean getConnectionFailsDueToNoIdleConnections(final T pds, final Exception ex);
 
     public final String getId() {
         return id.toString();

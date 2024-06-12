@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.Connection;
+// import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import lombok.NonNull;
@@ -23,10 +23,11 @@ public class OverflowPoolDataSourceHikari
      */
     
     public OverflowPoolDataSourceHikari() {
-        super(SimplePoolDataSourceHikari::new, new PoolDataSourceConfigurationHikari()); 
+        super(SimplePoolDataSourceHikari::new, PoolDataSourceConfigurationHikari::new); 
     }
 
     public OverflowPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+        // configuration is supposed to be set completely
         super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
     }
 
@@ -35,11 +36,13 @@ public class OverflowPoolDataSourceHikari
                                         String username,
                                         String password,
                                         String type) {
-        this(PoolDataSourceConfigurationHikari.build(driverClassName,
-                                                     url,
-                                                     username,
-                                                     password,
-                                                     type != null ? type : OverflowPoolDataSourceHikari.class.getName()));
+        // configuration is set partially so just use the default constructor
+        this();
+        set(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                    url,
+                                                    username,
+                                                    password,
+                                                    type != null ? type : OverflowPoolDataSourceHikari.class.getName()));
     }
 
     public OverflowPoolDataSourceHikari(String driverClassName,
