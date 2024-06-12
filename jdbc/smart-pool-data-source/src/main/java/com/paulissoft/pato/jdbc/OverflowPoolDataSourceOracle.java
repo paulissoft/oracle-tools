@@ -4,14 +4,14 @@ package com.paulissoft.pato.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.ValidConnection;
-// import lombok.NonNull;
+import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
 public class OverflowPoolDataSourceOracle
-    extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
+    extends OverflowPoolDataSource<SimplePoolDataSourceOracle, PoolDataSourceConfigurationOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
@@ -23,7 +23,65 @@ public class OverflowPoolDataSourceOracle
      */
 
     public OverflowPoolDataSourceOracle() {
-        super(SimplePoolDataSourceOracle::new);
+        super(SimplePoolDataSourceOracle::new, new PoolDataSourceConfigurationOracle());
+    }
+
+    public OverflowPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
+    }
+
+    public OverflowPoolDataSourceOracle(String url,
+                                        String username,
+                                        String password,
+                                        String type)
+    {
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     type != null ? type : OverflowPoolDataSourceOracle.class.getName()));
+    }
+
+    public OverflowPoolDataSourceOracle(String url,
+                                        String username,
+                                        String password,
+                                        String type,
+                                        String connectionPoolName,
+                                        int initialPoolSize,
+                                        int minPoolSize,
+                                        int maxPoolSize,
+                                        String connectionFactoryClassName,
+                                        boolean validateConnectionOnBorrow,
+                                        int abandonedConnectionTimeout,
+                                        int timeToLiveConnectionTimeout,
+                                        int inactiveConnectionTimeout,
+                                        int timeoutCheckInterval,
+                                        int maxStatements,
+                                        long connectionWaitDurationInMillis,
+                                        long maxConnectionReuseTime,
+                                        int secondsToTrustIdleConnection,
+                                        int connectionValidationTimeout)
+    {
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     type != null ? type : OverflowPoolDataSourceOracle.class.getName(),
+                                                     connectionPoolName,
+                                                     initialPoolSize,
+                                                     minPoolSize,
+                                                     maxPoolSize,
+                                                     connectionFactoryClassName,
+                                                     validateConnectionOnBorrow,
+                                                     abandonedConnectionTimeout,
+                                                     timeToLiveConnectionTimeout,
+                                                     inactiveConnectionTimeout,
+                                                     timeoutCheckInterval,
+                                                     maxStatements,
+                                                     connectionWaitDurationInMillis,
+                                                     maxConnectionReuseTime,
+                                                     secondsToTrustIdleConnection,
+                                                     connectionValidationTimeout));
     }
 
     protected long getMinConnectionTimeout() {
@@ -42,7 +100,7 @@ public class OverflowPoolDataSourceOracle
         try {
             switch (getState()) {
             case INITIALIZING:
-                return getPoolDataSource();
+                return getPoolDataSourceConfiguration();
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
@@ -62,7 +120,7 @@ public class OverflowPoolDataSourceOracle
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+                return getPoolDataSourceConfiguration(); // as soon as the initializing phase is over, the actual pool data source should be used
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceGetter(): {}", ex);
