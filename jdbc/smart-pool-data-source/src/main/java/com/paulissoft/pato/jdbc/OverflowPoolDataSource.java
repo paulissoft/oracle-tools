@@ -5,11 +5,13 @@ package com.paulissoft.pato.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.function.Supplier;
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
+public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource, P extends PoolDataSourceConfiguration>
     implements SimplePoolDataSource {
 
     private final StringBuffer id = new StringBuffer();
@@ -17,6 +19,10 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     private final T poolDataSource;
 
     private volatile T poolDataSourceOverflow;
+
+    @Getter(AccessLevel.PACKAGE)
+    @NonNull
+    private final P poolDataSourceConfiguration;
 
     protected enum State {
         INITIALIZING, // next possible states: ERROR, OPEN or CLOSED
@@ -31,12 +37,15 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
     /*
      * Constructor
      */
-
-    protected OverflowPoolDataSource(@NonNull final Supplier<T> supplierT) {
+    
+    protected OverflowPoolDataSource(@NonNull final Supplier<T> supplierT, @NonNull final P poolDataSourceConfiguration) {
         this.poolDataSource = supplierT.get();
         this.poolDataSourceOverflow = supplierT.get();
+        this.poolDataSourceConfiguration = poolDataSourceConfiguration;
         
         setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
+
+        assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
     
     /*
@@ -83,7 +92,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                         poolDataSourceOverflow = null;
                     }
 
-                    final PoolDataSourceConfiguration pdsConfig = poolDataSource.get();
+                    final PoolDataSourceConfiguration pdsConfig = poolDataSourceConfiguration;
 
                     // updatePool must be called before the state is open
                     updatePool(pdsConfig, poolDataSource, poolDataSourceOverflow);
@@ -183,12 +192,13 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
         try {
             // is there an overflow?
             if (poolDataSourceOverflow != null) {
-                final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
-
+                assert pdsConfig.getPassword() != null : "Password should have been set.";
+                
                 // copy values
+                poolDataSource.set(pdsConfig); 
                 poolDataSourceOverflow.set(pdsConfig); 
-                // need to set password explicitly since combination get()/set() does not set the password
-                poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
+
+                final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
 
                 // settings to let the pool data source fail fast so it can use the overflow
                 poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
@@ -211,7 +221,7 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
                 }
             }
             if (poolDataSourceOverflow != null) {
-                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + "-overflow");
+                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + " (overflow)");
             }
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
