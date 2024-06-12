@@ -80,18 +80,14 @@ public class SimplePoolDataSourceOracle
     }
    
     public PoolDataSourceConfiguration get() {
-        return get(true);
-    }
-    
-    private PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
             .url(getURL())
             .username(getUsername())
-            .password(excludeNonIdConfiguration ? null : getPassword())
+            .password(null) // do not copy password
             .type(SimplePoolDataSourceOracle.class.getName())
-            .connectionPoolName(excludeNonIdConfiguration ? null : getConnectionPoolName())
+            .connectionPoolName(null) // do not copy pool name
             .initialPoolSize(getInitialPoolSize())
             .minPoolSize(getMinPoolSize())
             .maxPoolSize(getMaxPoolSize())
@@ -209,7 +205,7 @@ public class SimplePoolDataSourceOracle
     public String getUsername() {
         return getUser();
     }
-
+    
     @SuppressWarnings("deprecation")
     @Override
     public String getPassword() {
