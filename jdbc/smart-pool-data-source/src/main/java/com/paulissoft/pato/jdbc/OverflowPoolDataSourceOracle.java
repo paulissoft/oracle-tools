@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class OverflowPoolDataSourceOracle
-    extends OverflowPoolDataSource<SimplePoolDataSourceOracle, PoolDataSourceConfigurationOracle>
+    extends OverflowPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
     static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
@@ -23,7 +23,7 @@ public class OverflowPoolDataSourceOracle
      */
 
     public OverflowPoolDataSourceOracle() {
-        super(SimplePoolDataSourceOracle::new, PoolDataSourceConfigurationOracle::new);
+        super(SimplePoolDataSourceOracle::new);
     }
 
     public OverflowPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
@@ -103,7 +103,7 @@ public class OverflowPoolDataSourceOracle
         try {
             switch (getState()) {
             case INITIALIZING:
-                return getPoolDataSourceConfiguration();
+                return getPoolDataSource();
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
@@ -123,7 +123,7 @@ public class OverflowPoolDataSourceOracle
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                return getPoolDataSourceConfiguration(); // as soon as the initializing phase is over, the actual pool data source should be used
+                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceGetter(): {}", ex);
