@@ -7,6 +7,7 @@ public interface PoolDataSourcePropertiesGetters {
   
     String getUsername();
 
-    @Deprecated
+    // @Deprecated
+    // SimplePoolDataSourceOracle now has a normal getPassword() since that is needed for OverflowPoolDataSourceOracle
     String getPassword();
 }
