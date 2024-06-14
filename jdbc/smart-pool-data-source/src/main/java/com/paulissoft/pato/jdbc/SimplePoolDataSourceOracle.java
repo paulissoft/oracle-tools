@@ -20,6 +20,8 @@ public class SimplePoolDataSourceOracle
 
     protected static final UniversalConnectionPoolManager mgr;
 
+    private final StringBuffer password = new StringBuffer();
+
     static {
         try {
             mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
@@ -205,11 +207,19 @@ public class SimplePoolDataSourceOracle
     public String getUsername() {
         return getUser();
     }
+
+    @Override
+    public void setPassword(String password) throws SQLException {
+        this.password.delete(0, this.password.length());
+        this.password.append(password);
+
+        super.setPassword(password);
+    }
     
     @SuppressWarnings("deprecation")
     @Override
     public String getPassword() {
-        return super.getPassword();
+        return password.toString();
     }
 
     // Already part of PoolDataSourceImpl:
