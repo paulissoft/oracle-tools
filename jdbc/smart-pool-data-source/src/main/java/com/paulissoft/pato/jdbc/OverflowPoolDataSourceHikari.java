@@ -10,12 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class OverflowPoolDataSourceHikari
-    extends OverflowPoolDataSource<SimplePoolDataSourceHikari, PoolDataSourceConfigurationHikari>
+    extends OverflowPoolDataSource<SimplePoolDataSourceHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
     static final long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
 
-    static final String REX_CONNECTION_TIMEOUT = "^\\S+ - Connection is not available, request timed out after \\d+ms.$";
+    static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
     
 
     /*
@@ -23,7 +23,7 @@ public class OverflowPoolDataSourceHikari
      */
     
     public OverflowPoolDataSourceHikari() {
-        super(SimplePoolDataSourceHikari::new, PoolDataSourceConfigurationHikari::new); 
+        super(SimplePoolDataSourceHikari::new); 
     }
 
     public OverflowPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
@@ -129,7 +129,7 @@ public class OverflowPoolDataSourceHikari
         try {
             switch (getState()) {
             case INITIALIZING:
-                return getPoolDataSourceConfiguration();
+                return getPoolDataSource();
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
@@ -149,7 +149,7 @@ public class OverflowPoolDataSourceHikari
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                return getPoolDataSourceConfiguration(); // as soon as the initializing phase is over, the actual pool data source should be used
+                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceGetter(): {}", ex);
