@@ -1,7 +1,8 @@
 package com.paulissoft.pato.jdbc;
 
-import java.time.Duration;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
 import oracle.ucp.UniversalConnectionPoolException;
@@ -16,12 +17,21 @@ public class SimplePoolDataSourceOracle
 
     private static final long serialVersionUID = 3886083682048526889L;
     
+    private static final String POOL_NAME_PREFIX = SimplePoolDataSourceOracle.class.getSimpleName();
+
+    // Statistics at level 2
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
+        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+       
     private final StringBuffer id = new StringBuffer();
 
     protected static final UniversalConnectionPoolManager mgr;
 
     private final StringBuffer password = new StringBuffer();
 
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
+    
     static {
         try {
             mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
@@ -30,6 +40,35 @@ public class SimplePoolDataSourceOracle
         }
     }
     
+    private final PoolDataSourceStatistics poolDataSourceStatistics;
+
+    /*
+     * Constructor(s)
+     */
+    public SimplePoolDataSourceOracle() {
+        this(poolDataSourceStatisticsTotal);
+    }
+
+    public SimplePoolDataSourceOracle(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+        // a call to super() is not necessary
+        // super();
+
+        if (parentPoolDataSourceStatistics == null) {
+            poolDataSourceStatistics = null;
+        } else {
+            final PoolDataSourceConfiguration pdsConfig = get();
+
+            pdsConfig.determineConnectInfo(); // determine schema
+            
+            // level 4
+            poolDataSourceStatistics =
+                new PoolDataSourceStatistics(() -> getPoolDescription() + ": (only " + pdsConfig.getSchema() + ")",
+                                             parentPoolDataSourceStatistics, 
+                                             () -> isClosed.get(),
+                                             this::get);
+        }        
+    }
+
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
     }
@@ -267,6 +306,7 @@ public class SimplePoolDataSourceOracle
 
             if (ucp != null) {
                 ucp.stop();
+                isClosed.set(true);
                 log.info("{} - Close completed.", connectionPoolName);
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
@@ -284,234 +324,4 @@ public class SimplePoolDataSourceOracle
     public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
     }
-
-    /*
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null || !(obj instanceof SimplePoolDataSourceOracle)) {
-            return false;
-        }
-
-        final SimplePoolDataSourceOracle other = (SimplePoolDataSourceOracle) obj;
-        
-        return other.getPoolDataSourceConfiguration().equals(this.getPoolDataSourceConfiguration());
-    }
-
-    @Override
-    public int hashCode() {
-        return this.getPoolDataSourceConfiguration().hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return this.getPoolDataSourceConfiguration().toString();
-    }
-    */
-
-    /* Class PoolDataSourceImpl */
-
-    /*
-    @Override
-    public int getAbandonedConnectionTimeout() {
-        final int result = super.getAbandonedConnectionTimeout();
-        log.debug("getAbandonedConnectionTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setAbandonedConnectionTimeout(int abandonedConnectionTimeout) throws SQLException {
-        log.debug("setAbandonedConnectionTimeout({})", abandonedConnectionTimeout);
-        super.setAbandonedConnectionTimeout(abandonedConnectionTimeout);
-    }
-
-    @Override
-    public String getConnectionFactoryClassName() {
-        final String result = super.getConnectionFactoryClassName();
-        log.debug("getConnectionFactoryClassName() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setConnectionFactoryClassName(String factoryClassName) throws SQLException {
-        log.debug("setConnectionFactoryClassName({})", factoryClassName);
-        super.setConnectionFactoryClassName(factoryClassName);
-    }
-
-    @Override
-    public String getConnectionPoolName() {
-        final String result = super.getConnectionPoolName();
-        log.debug("getConnectionPoolName() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setConnectionPoolName(String connectionPoolName) throws SQLException {
-        log.debug("setConnectionPoolName({})", connectionPoolName);
-        super.setConnectionPoolName(connectionPoolName);
-    }
-
-    @Override
-    public int getConnectionValidationTimeout() {
-        final int result = super.getConnectionValidationTimeout();
-        log.debug("getConnectionValidationTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setConnectionValidationTimeout(int connectionValidationTimeout) throws SQLException {
-        log.debug("setConnectionValidationTimeout({})", connectionValidationTimeout);
-        super.setConnectionValidationTimeout(connectionValidationTimeout);
-    }
-
-    @Override
-    public int getInactiveConnectionTimeout() {
-        final int result = super.getInactiveConnectionTimeout();
-        log.debug("getInactiveConnectionTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setInactiveConnectionTimeout(int inactivityTimeout) throws SQLException {
-        log.debug("setInactiveConnectionTimeout({})", inactivityTimeout);
-        super.setInactiveConnectionTimeout(inactivityTimeout);
-    }
-
-    @Override
-    public int getInitialPoolSize() {
-        final int result = super.getInitialPoolSize();
-        log.debug("getInitialPoolSize() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setInitialPoolSize(int initialPoolSize) throws SQLException {
-        log.debug("setInitialPoolSize({})", initialPoolSize);
-        super.setInitialPoolSize(initialPoolSize);
-    }
-
-    @Override
-    public long getMaxConnectionReuseTime() {
-        final long result = super.getMaxConnectionReuseTime();
-        log.debug("getMaxConnectionReuseTime() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMaxConnectionReuseTime(long maxConnectionReuseTime) throws SQLException {
-        log.debug("setMaxConnectionReuseTime({})", maxConnectionReuseTime);
-        super.setMaxConnectionReuseTime(maxConnectionReuseTime);
-    }
-
-    @Override
-    public int getMaxPoolSize() {
-        final int result = super.getMaxPoolSize();
-        log.debug("getMaxPoolSize() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMaxPoolSize(int maxPoolSize) throws SQLException {
-        log.debug("setMaxPoolSize({})", maxPoolSize);
-        super.setMaxPoolSize(maxPoolSize);
-    }
-
-    @Override
-    public int getMaxStatements() {
-        final int result = super.getMaxStatements();
-        log.debug("getMaxStatements() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMaxStatements(int maxStatements) throws SQLException {
-        log.debug("setMaxStatements({})", maxStatements);
-        super.setMaxStatements(maxStatements);
-    }
-
-    @Override
-    public int getMinPoolSize() {
-        final int result = super.getMinPoolSize();
-        log.debug("getMinPoolSize() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMinPoolSize(int minPoolSize) throws SQLException {
-        log.debug("setMinPoolSize({})", minPoolSize);
-        super.setMinPoolSize(minPoolSize);
-    }
-
-    @Override
-    public int getSecondsToTrustIdleConnection() {
-        final int result = super.getSecondsToTrustIdleConnection();
-        log.debug("getSecondsToTrustIdleConnection() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setSecondsToTrustIdleConnection(int secondsToTrustIdleConnection) throws SQLException {
-        log.debug("setSecondsToTrustIdleConnection({})", secondsToTrustIdleConnection);
-        super.setSecondsToTrustIdleConnection(secondsToTrustIdleConnection);
-    }
-
-    @Override
-    public void setTimeoutCheckInterval(int timeInterval) throws SQLException {
-        log.debug("setTimeoutCheckInterval({})", timeInterval);
-        super.setTimeoutCheckInterval(timeInterval);
-    }
-
-    @Override
-    public int getTimeoutCheckInterval() {
-        log.debug("getTimeoutCheckInterval()");
-        return super.getTimeoutCheckInterval();
-    }
-
-    @Override
-    public int getTimeToLiveConnectionTimeout() {
-        log.debug("getTimeToLiveConnectionTimeout()");
-        return super.getTimeToLiveConnectionTimeout();
-    }
-
-    @Override
-    public void setTimeToLiveConnectionTimeout(int timeToLiveConnectionTimeout) throws SQLException {
-        log.debug("setTimeToLiveConnectionTimeout({})", timeToLiveConnectionTimeout);
-        super.setTimeToLiveConnectionTimeout(timeToLiveConnectionTimeout);
-    }
-
-    @Override
-    public String getURL() {
-        log.debug("getURL()");
-        return super.getURL();
-    }
-
-    @Override
-    public void setURL(String url) throws SQLException {
-        log.debug("setURL({})", url);
-        super.setURL(url);
-    }
-
-    @Override
-    public String getUser() {
-        log.debug("getUser()");
-        return super.getUser();
-    }
-
-    @Override
-    public void setUser(String username) throws SQLException {
-        log.debug("setUser({})", username);
-        super.setUser(username);
-    }
-
-    @Override
-    public boolean getValidateConnectionOnBorrow() {
-        log.debug("getValidateConnectionOnBorrow()");
-        return super.getValidateConnectionOnBorrow();
-    }
-    
-    @Override
-    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
-        log.debug("setValidateConnectionOnBorrow({})", validateConnectionOnBorrow);
-        super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
-    }
-    */
 }
