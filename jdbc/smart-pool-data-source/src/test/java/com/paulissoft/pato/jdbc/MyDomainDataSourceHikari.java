@@ -53,6 +53,7 @@ public class MyDomainDataSourceHikari extends SmartPoolDataSourceHikari {
               registerMbeans,    
               validationTimeout,
               leakDetectionThreshold);
-        log.debug("constructor MyDomainDataSourceHikari(username={})", username);
+        log.debug("constructor MyDomainDataSourceHikari(username={}, maximumPoolSize={})", username, maximumPoolSize);
+        log.debug("getMaximumPoolSize()={})", getMaximumPoolSize());
     }
 }
