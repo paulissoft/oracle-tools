@@ -1,6 +1,11 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -9,13 +14,24 @@ public class SimplePoolDataSourceHikari
     extends HikariDataSource
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
+    // all static related
+
     private static final String POOL_NAME_PREFIX = SimplePoolDataSourceHikari.class.getSimpleName();
 
+    private static final int MIN_MAXIMUM_POOL_SIZE = 1;
+
+    private static final long MIN_VALIDATION_TIMEOUT = 250L;
+    
     // Statistics at level 2
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
+    // for all pool data sources the same
+    private static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
+
+    // all object related
+
     private final StringBuffer id = new StringBuffer();
 
     private final PoolDataSourceStatistics poolDataSourceStatistics;
@@ -73,7 +89,11 @@ public class SimplePoolDataSourceHikari
                 case  2: setUsername(pdsConfig.getUsername()); break;
                 case  3: setPassword(pdsConfig.getPassword()); break;
                 case  4: setPoolName(pdsConfig.getPoolName()); break;
-                case  5: setMaximumPoolSize(pdsConfig.getMaximumPoolSize()); break;
+                case  5:
+                    if (pdsConfig.getMaximumPoolSize() >= MIN_MAXIMUM_POOL_SIZE) {
+                        setMaximumPoolSize(pdsConfig.getMaximumPoolSize());
+                    }
+                    break;
                 case  6: setMinimumIdle(pdsConfig.getMinimumIdle()); break;
                 case  7: setAutoCommit(pdsConfig.isAutoCommit()); break;
                 case  8: setConnectionTimeout(pdsConfig.getConnectionTimeout()); break;
@@ -85,7 +105,11 @@ public class SimplePoolDataSourceHikari
                 case 14: setAllowPoolSuspension(pdsConfig.isAllowPoolSuspension()); break;
                 case 15: setReadOnly(pdsConfig.isReadOnly()); break;
                 case 16: setRegisterMbeans(pdsConfig.isRegisterMbeans()); break;
-                case 17: setValidationTimeout(pdsConfig.getValidationTimeout()); break;
+                case 17:
+                    if (pdsConfig.getValidationTimeout() >= MIN_VALIDATION_TIMEOUT) {
+                        setValidationTimeout(pdsConfig.getValidationTimeout());
+                    }
+                    break;
                 case 18: setLeakDetectionThreshold(pdsConfig.getLeakDetectionThreshold()); break;
                 default:
                     throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
@@ -131,9 +155,9 @@ public class SimplePoolDataSourceHikari
     private void show(final PoolDataSourceConfigurationHikari pdsConfig) {
         final String indentPrefix = PoolDataSourceStatistics.INDENT_PREFIX;
 
-        /* Smart Pool Data Source */
+        /* Pool Data Source */
         
-        log.info("Properties for smart pool connecting to schema {} via {}", pdsConfig.getSchema(), pdsConfig.getUsernameToConnectTo());
+        log.info("Properties for pool connecting to schema {} via {}", pdsConfig.getSchema(), pdsConfig.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
         log.info("{}url: {}", indentPrefix, pdsConfig.getUrl());
@@ -280,5 +304,43 @@ public class SimplePoolDataSourceHikari
         } catch (NullPointerException ex) {
             return -1;
         }
+    }
+
+    @Override
+    public Connection getConnection() throws SQLException {
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && isStatisticsEnabled();
+        final Instant tm = isStatisticsEnabled ? Instant.now() : null;
+        Connection conn = null;
+
+        try {
+            conn = super.getConnection();
+        } catch (SQLException ex) {
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.signalSQLException(this, ex);
+            }
+            throw ex;
+        } catch (Exception ex) {
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.signalException(this, ex);
+            }
+            throw ex;
+        }
+
+        if (isStatisticsEnabled) {
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm, Instant.now()).toMillis(),
+                                                      true);
+        }
+
+        return conn;
+    }
+
+    public static boolean isStatisticsEnabled() {
+        return statisticsEnabled.get();
+    }
+
+    public static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
+        statisticsEnabled.set(isStatisticsEnabled);
     }
 }

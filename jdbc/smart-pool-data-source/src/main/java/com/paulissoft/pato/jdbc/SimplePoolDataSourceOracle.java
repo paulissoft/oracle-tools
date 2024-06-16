@@ -1,7 +1,9 @@
 package com.paulissoft.pato.jdbc;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
@@ -15,6 +17,8 @@ public class SimplePoolDataSourceOracle
     extends PoolDataSourceImpl
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
+    // all static related
+    
     private static final long serialVersionUID = 3886083682048526889L;
     
     private static final String POOL_NAME_PREFIX = SimplePoolDataSourceOracle.class.getSimpleName();
@@ -24,14 +28,11 @@ public class SimplePoolDataSourceOracle
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
-    private final StringBuffer id = new StringBuffer();
+    // for all pool data sources the same
+    private static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
 
     protected static final UniversalConnectionPoolManager mgr;
 
-    private final StringBuffer password = new StringBuffer();
-
-    private final AtomicBoolean isClosed = new AtomicBoolean(false);
-    
     static {
         try {
             mgr = UniversalConnectionPoolManagerImpl.getUniversalConnectionPoolManager();
@@ -39,6 +40,14 @@ public class SimplePoolDataSourceOracle
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
+
+    // all object related
+    
+    private final StringBuffer id = new StringBuffer();
+
+    private final StringBuffer password = new StringBuffer();
+
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
     
     private final PoolDataSourceStatistics poolDataSourceStatistics;
 
@@ -98,7 +107,11 @@ public class SimplePoolDataSourceOracle
                 case  4: setInitialPoolSize(pdsConfig.getInitialPoolSize()); break;
                 case  5: setMinPoolSize(pdsConfig.getMinPoolSize()); break;
                 case  6: setMaxPoolSize(pdsConfig.getMaxPoolSize()); break;
-                case  7: setConnectionFactoryClassName(pdsConfig.getConnectionFactoryClassName()); break;
+                case  7:
+                    if (pdsConfig.getConnectionFactoryClassName() != null) {
+                        setConnectionFactoryClassName(pdsConfig.getConnectionFactoryClassName());
+                    }
+                    break;
                 case  8: setValidateConnectionOnBorrow(pdsConfig.getValidateConnectionOnBorrow()); break;
                 case  9: setAbandonedConnectionTimeout(pdsConfig.getAbandonedConnectionTimeout()); break;
                 case 10: setTimeToLiveConnectionTimeout(pdsConfig.getTimeToLiveConnectionTimeout()); break;
@@ -153,9 +166,9 @@ public class SimplePoolDataSourceOracle
     private void show(final PoolDataSourceConfigurationOracle pdsConfig) {
         final String indentPrefix = PoolDataSourceStatistics.INDENT_PREFIX;
 
-        /* Smart Pool Data Source */
+        /* Pool Data Source */
 
-        log.info("Properties for smart pool connecting to schema {} via {}", pdsConfig.getSchema(), pdsConfig.getUsernameToConnectTo());
+        log.info("Properties for pool connecting to schema {} via {}", pdsConfig.getSchema(), pdsConfig.getUsernameToConnectTo());
 
         /* info from PoolDataSourceConfiguration */
         log.info("{}url: {}", indentPrefix, pdsConfig.getUrl());
@@ -323,5 +336,43 @@ public class SimplePoolDataSourceOracle
     @Override
     public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
+    }
+
+    @Override
+    public Connection getConnection() throws SQLException {
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && isStatisticsEnabled();
+        final Instant tm = isStatisticsEnabled ? Instant.now() : null;
+        Connection conn = null;
+
+        try {
+            conn = super.getConnection();
+        } catch (SQLException ex) {
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.signalSQLException(this, ex);
+            }
+            throw ex;
+        } catch (Exception ex) {
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.signalException(this, ex);
+            }
+            throw ex;
+        }
+
+        if (isStatisticsEnabled) {
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm, Instant.now()).toMillis(),
+                                                      true);
+        }
+
+        return conn;
+    }
+
+    public static boolean isStatisticsEnabled() {
+        return statisticsEnabled.get();
+    }
+
+    public static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
+        statisticsEnabled.set(isStatisticsEnabled);
     }
 }
