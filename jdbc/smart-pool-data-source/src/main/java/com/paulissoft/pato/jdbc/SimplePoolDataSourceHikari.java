@@ -2,7 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-//import org.openjdk.jol.vm.VM;
 
 
 @Slf4j
@@ -10,7 +9,43 @@ public class SimplePoolDataSourceHikari
     extends HikariDataSource
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
+    private static final String POOL_NAME_PREFIX = SimplePoolDataSourceHikari.class.getSimpleName();
+
+    // Statistics at level 2
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
+        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+       
     private final StringBuffer id = new StringBuffer();
+
+    private final PoolDataSourceStatistics poolDataSourceStatistics;
+
+    /*
+     * Constructor(s)
+     */
+    public SimplePoolDataSourceHikari() {
+        this(poolDataSourceStatisticsTotal);
+    }
+
+    public SimplePoolDataSourceHikari(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+        // a call to super() is not necessary
+        // super();
+
+        if (parentPoolDataSourceStatistics == null) {
+            poolDataSourceStatistics = null;
+        } else {
+            final PoolDataSourceConfiguration pdsConfig = get();
+
+            pdsConfig.determineConnectInfo(); // determine schema
+            
+            // level 4
+            poolDataSourceStatistics =
+                new PoolDataSourceStatistics(() -> getPoolDescription() + ": (only " + pdsConfig.getSchema() + ")",
+                                             parentPoolDataSourceStatistics, 
+                                             () -> isClosed(),
+                                             this::get);
+        }        
+    }
          
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode())/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
@@ -246,263 +281,4 @@ public class SimplePoolDataSourceHikari
             return -1;
         }
     }
-
-    /*
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null || !(obj instanceof SimplePoolDataSourceHikari)) {
-            return false;
-        }
-
-        final SimplePoolDataSourceHikari other = (SimplePoolDataSourceHikari) obj;
-        
-        return other.getPoolDataSourceConfiguration().equals(this.getPoolDataSourceConfiguration());
-    }
-
-    @Override
-    public int hashCode() {
-        return this.getPoolDataSourceConfiguration().hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return this.getPoolDataSourceConfiguration().toString();
-    }
-    */
-
-    /*
-    @Override
-    public String getDriverClassName() {
-        final String result = super.getDriverClassName();
-        log.debug("getDriverClassName() = {}", result);
-        return result;
-    }
-    
-    @Override
-    public void setDriverClassName(String driverClassName) {
-        log.debug("setDriverClassName({})", driverClassName);
-        super.setDriverClassName(driverClassName);
-    }    
-    
-    @Override
-    public String getJdbcUrl() {
-        final String result = super.getJdbcUrl();
-        log.debug("getJdbcUrl() = {}", result);
-        return result;
-    }
-  
-    @Override
-    public void setJdbcUrl(String jdbcUrl) {
-        log.debug("setJdbcUrl({})", jdbcUrl);
-        super.setJdbcUrl(jdbcUrl);
-    }    
-  
-    @Override
-    public String getPoolName() {
-        final String result = super.getPoolName();
-        log.debug("getPoolName() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setPoolName(String poolName) {
-        log.debug("setPoolName({})", poolName);
-        super.setPoolName(poolName);
-    }    
-
-    @Override
-    public int getMaximumPoolSize() {
-        final int result = super.getMaximumPoolSize();
-        log.debug("getMaximumPoolSize() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMaximumPoolSize(int maxPoolSize) {
-        log.debug("setMaximumPoolSize({})", maxPoolSize);
-        super.setMaximumPoolSize(maxPoolSize);
-    }    
-
-    @Override
-    public int getMinimumIdle() {
-        final int result = super.getMinimumIdle();
-        log.debug("getMinimumIdle() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMinimumIdle(int minIdle) {
-        log.debug("setMinimumIdle({})", minIdle);
-        super.setMinimumIdle(minIdle);
-    }    
-
-    @Override
-    public String getDataSourceClassName() {
-        final String result = super.getDataSourceClassName();
-        log.debug("getDataSourceClassName() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setDataSourceClassName(String dataSourceClassName) {
-        log.debug("setDataSourceClassName({})", dataSourceClassName);
-        super.setDataSourceClassName(dataSourceClassName);
-    }    
-
-    @Override
-    public boolean isAutoCommit() {
-        final boolean result = super.isAutoCommit();
-        log.debug("isAutoCommit() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setAutoCommit(boolean isAutoCommit) {
-        log.debug("setAutoCommit({})", isAutoCommit);
-        super.setAutoCommit(isAutoCommit);
-    }    
-
-    @Override
-    public long getConnectionTimeout() {
-        final long result = super.getConnectionTimeout();
-        log.debug("getConnectionTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setConnectionTimeout(long connectionTimeoutMs) {
-        log.debug("setConnectionTimeout({})", connectionTimeoutMs);
-        super.setConnectionTimeout(connectionTimeoutMs);
-    }    
-
-    @Override
-    public long getIdleTimeout() {
-        final long result = super.getIdleTimeout();
-        log.debug("getIdleTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setIdleTimeout(long idleTimeoutMs) {
-        log.debug("setIdleTimeout({})", idleTimeoutMs);
-        super.setIdleTimeout(idleTimeoutMs);
-    }    
-
-    @Override
-    public long getMaxLifetime() {
-        final long result = super.getMaxLifetime();
-        log.debug("getMaxLifetime() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setMaxLifetime(long maxLifetimeMs) {
-        log.debug("setMaxLifetime({})", maxLifetimeMs);
-        super.setMaxLifetime(maxLifetimeMs);
-    }    
-
-    @Override
-    public String getConnectionTestQuery() {
-        final String result = super.getConnectionTestQuery();
-        log.debug("getConnectionTestQuery() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setConnectionTestQuery(String connectionTestQuery) {
-        log.debug("setConnectionTestQuery({})", connectionTestQuery);
-        super.setConnectionTestQuery(connectionTestQuery);
-    }    
-
-    @Override
-    public long getInitializationFailTimeout() {
-        final long result = super.getInitializationFailTimeout();
-        log.debug("getInitializationFailTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setInitializationFailTimeout(long initializationFailTimeout) {
-        log.debug("setInitializationFailTimeout({})", initializationFailTimeout);
-        super.setInitializationFailTimeout(initializationFailTimeout);
-    }    
-
-    @Override
-    public boolean isIsolateInternalQueries() {
-        final boolean result = super.isIsolateInternalQueries();
-        log.debug("isIsolateInternalQueries() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setIsolateInternalQueries(boolean isolate) {
-        log.debug("setIsolateInternalQueries({})", isolate);
-        super.setIsolateInternalQueries(isolate);
-    }    
-
-    @Override
-    public boolean isAllowPoolSuspension() {
-        final boolean result = super.isAllowPoolSuspension();
-        log.debug("isAllowPoolSuspension() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setAllowPoolSuspension(boolean isAllowPoolSuspension) {
-        log.debug("setAllowPoolSuspension({})", isAllowPoolSuspension);
-        super.setAllowPoolSuspension(isAllowPoolSuspension);
-    }    
-
-    @Override
-    public boolean isReadOnly() {
-        final boolean result = super.isReadOnly();
-        log.debug("isReadOnly() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setReadOnly(boolean readOnly) {
-        log.debug("setReadOnly({})", readOnly);
-        super.setReadOnly(readOnly);
-    }    
-
-    @Override
-    public boolean isRegisterMbeans() {
-        final boolean result = super.isRegisterMbeans();
-        log.debug("isRegisterMbeans() = {}", result);
-        return result;
-    }
-    
-    @Override
-    public void setRegisterMbeans(boolean register) {
-        log.debug("setRegisterMbeans({})", register);
-        super.setRegisterMbeans(register);
-    }    
-    
-    @Override
-    public long getValidationTimeout() {
-        final long result = super.getValidationTimeout();
-        log.debug("getValidationTimeout() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setValidationTimeout(long validationTimeoutMs) {
-        log.debug("setValidationTimeout({})", validationTimeoutMs);
-        super.setValidationTimeout(validationTimeoutMs);
-    }    
-
-    @Override
-    public long getLeakDetectionThreshold() {
-        final long result = super.getLeakDetectionThreshold();
-        log.debug("getLeakDetectionThreshold() = {}", result);
-        return result;
-    }
-
-    @Override
-    public void setLeakDetectionThreshold(long leakDetectionThreshold) {
-        log.debug("setLeakDetectionThreshold({})", leakDetectionThreshold);
-        super.setLeakDetectionThreshold(leakDetectionThreshold);
-    }
-    */
 }
