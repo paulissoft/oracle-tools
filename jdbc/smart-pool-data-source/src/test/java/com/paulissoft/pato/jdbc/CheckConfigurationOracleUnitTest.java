@@ -1,7 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+//import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -31,24 +31,21 @@ public class CheckConfigurationOracleUnitTest {
     @BeforeAll
     static void clear() {
         PoolDataSourceStatistics.clear();
-        CombiPoolDataSource.clear();
     }
 
     @Test
     void testPoolDataSourceConfigurationDomain() {
-        final PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceOracle.getPoolDataSourceConfiguration();
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceOracle.get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
-        
-        assertNotEquals(domainDataSourceOracle.isParentPoolDataSource(), operatorDataSourceOracle.isParentPoolDataSource());
         assertNull(poolDataSourceConfiguration.getDriverClassName());
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
         assertEquals("bodomain", poolDataSourceConfiguration.getUsername());
         assertEquals("bodomain", poolDataSourceConfiguration.getPassword());
-        assertEquals(CombiPoolDataSourceOracle.class, poolDataSourceConfiguration.getType());
+        assertEquals(SmartPoolDataSourceOracle.class, poolDataSourceConfiguration.getType());
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=bodomain, " + 
-                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle), connectionPoolName=MyDomainDataSourceOracle-bodomain, " +
+                     "type=class com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle), connectionPoolName=MyDomainDataSourceOracle-bodomain, " +
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
@@ -58,7 +55,7 @@ public class CheckConfigurationOracleUnitTest {
     
     @Test
     void testPoolDataSourceConfigurationOperator() {
-        final PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceOracle.getPoolDataSourceConfiguration();
+        final PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceOracle.get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
@@ -66,10 +63,10 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", poolDataSourceConfiguration.getUrl());
         assertEquals("bodomain[boopapij]", poolDataSourceConfiguration.getUsername());
         assertEquals("bodomain", poolDataSourceConfiguration.getPassword());
-        assertEquals(CombiPoolDataSourceOracle.class, poolDataSourceConfiguration.getType());
+        assertEquals(SmartPoolDataSourceOracle.class, poolDataSourceConfiguration.getType());
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=bodomain, " + 
-                     "type=class com.paulissoft.pato.jdbc.CombiPoolDataSourceOracle), connectionPoolName=MyOperatorDataSourceOracle-boopapij, " +
+                     "type=class com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle), connectionPoolName=MyOperatorDataSourceOracle-boopapij, " +
                      "initialPoolSize=0, minPoolSize=10, maxPoolSize=20, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
@@ -79,15 +76,8 @@ public class CheckConfigurationOracleUnitTest {
     
     @Test
     void testPoolDataSource() {
-        // the combined pool data source
-        assertEquals(domainDataSourceOracle.getPoolDataSource(), operatorDataSourceOracle.getPoolDataSource());
-
         final SimplePoolDataSourceOracle simplePoolDataSourceOracle = domainDataSourceOracle.getPoolDataSource();
 
-        assertEquals(domainDataSourceOracle.isParentPoolDataSource() ?
-                     domainDataSourceOracle.getPoolNamePrefix() + "-bodomain" :
-                     operatorDataSourceOracle.getPoolNamePrefix() + "-boopapij",
-                     simplePoolDataSourceOracle.getConnectionPoolName());
         assertEquals(0, simplePoolDataSourceOracle.getInitialPoolSize());
         assertEquals(2 * 10, simplePoolDataSourceOracle.getMinPoolSize());
         assertEquals(2 * 20, simplePoolDataSourceOracle.getMaxPoolSize());

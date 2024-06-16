@@ -1,7 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,15 +29,15 @@ public class CheckConnectionOracleUnitTest {
 
     @Autowired
     @Qualifier("configDataSource4")
-    private CombiPoolDataSourceOracle configDataSourceOracle;
+    private SmartPoolDataSourceOracle configDataSourceOracle;
 
     @Autowired
     @Qualifier("ocpiDataSource1")
-    private CombiPoolDataSourceOracle ocpiDataSourceOracle;
+    private SmartPoolDataSourceOracle ocpiDataSourceOracle;
 
     @Autowired
     @Qualifier("ocppDataSource1")
-    private CombiPoolDataSourceOracle ocppDataSourceOracle;
+    private SmartPoolDataSourceOracle ocppDataSourceOracle;
         
     @Autowired
     private MyDomainDataSourceOracle domainDataSourceOracle;
@@ -49,7 +48,6 @@ public class CheckConnectionOracleUnitTest {
     @BeforeAll
     static void clear() {
         PoolDataSourceStatistics.clear();
-        CombiPoolDataSource.clear();
     }
 
     @Test
@@ -63,18 +61,9 @@ public class CheckConnectionOracleUnitTest {
         
         log.debug("testConnection()");
 
-        final CombiPoolDataSourceOracle pds1 = configDataSourceOracle;
-        final CombiPoolDataSourceOracle pds2 = ocpiDataSourceOracle;
-        final CombiPoolDataSourceOracle pds3 = ocppDataSourceOracle;
-
-        // the first to create will become the parent
-        assertTrue(pds1.isParentPoolDataSource());
-        assertFalse(pds2.isParentPoolDataSource());
-        assertFalse(pds3.isParentPoolDataSource());
-
-        // all share the same common pool data source
-        assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());
-        assertTrue(pds1.getPoolDataSource() == pds3.getPoolDataSource());
+        final SmartPoolDataSourceOracle pds1 = configDataSourceOracle;
+        final SmartPoolDataSourceOracle pds2 = ocpiDataSourceOracle;
+        final SmartPoolDataSourceOracle pds3 = ocppDataSourceOracle;
 
         // get some connections
         for (int j = 0; j < 2; j++) {
@@ -131,66 +120,12 @@ public class CheckConnectionOracleUnitTest {
         // close pds1
         assertTrue(pds1.isOpen());
         pds1.close();
-        assertTrue(pds1.getState() == CombiPoolDataSourceOracle.State.CLOSING || pds1.getState() == CombiPoolDataSourceOracle.State.CLOSED);
+        assertTrue(pds1.getState() == SmartPoolDataSourceOracle.State.CLOSED);
 
         thrown2 = assertThrows(SQLException.class, () -> pds1.getConnection());
 
         log.debug("message: {}", thrown2.getMessage());
         
         assertTrue(thrown2.getMessage().matches(rex2));
-    }
-
-    @Test
-    void testConnectionOracle() throws SQLException {
-        log.debug("testConnectionOracle()");
-
-        assertNotEquals(domainDataSourceOracle, operatorDataSourceOracle);
-
-        assertNotEquals(domainDataSourceOracle.isParentPoolDataSource(), operatorDataSourceOracle.isParentPoolDataSource());
-
-        final CombiPoolDataSourceOracle parent =
-            domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
-
-        final CombiPoolDataSourceOracle child =
-            !domainDataSourceOracle.isParentPoolDataSource() ? domainDataSourceOracle : operatorDataSourceOracle;
-
-        for (int nr = 1; nr <= 2; nr++) {
-            // no try open block in order not to interfere with other tests
-            final CombiPoolDataSourceOracle ds = (nr == 1 ? parent : child);
-
-            log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
-                
-            assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
-                
-            assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getURL());
-                
-            assertEquals(ds == domainDataSourceOracle ? "bodomain" : "bodomain[boopapij]",
-                         ds.getPoolDataSourceConfiguration().getUsername());
-            assertEquals(parent.getUser(), ds.getPoolDataSource().getUser());
-
-            // NoSuchMethod this method is deprecated
-            // assertEquals("bodomain", ds.getPassword());
-            assertEquals("bodomain", ds.getPoolDataSourceConfiguration().getPassword());
-
-            assertEquals(2 * 0, ds.getInitialPoolSize());
-            assertEquals(ds.getInitialPoolSize(), ds.getPoolDataSource().getInitialPoolSize());
-
-            assertEquals(2 * 10, ds.getMinPoolSize());
-            assertEquals(ds.getMinPoolSize(), ds.getPoolDataSource().getMinPoolSize());
-
-            assertEquals(2 * 20, ds.getMaxPoolSize());
-            assertEquals(ds.getMaxPoolSize(), ds.getPoolDataSource().getMaxPoolSize());
-                                
-            assertTrue(ds.getConnectionPoolName().equals(operatorDataSourceOracle.getPoolNamePrefix() + "-boopapij") ||
-                       ds.getConnectionPoolName().equals(domainDataSourceOracle.getPoolNamePrefix() + "-bodomain"));
-            assertEquals(ds.getConnectionPoolName(), ds.getPoolDataSource().getConnectionPoolName());
-
-            final Connection conn = ds.getConnection();
-
-            assertNotNull(conn);
-            assertEquals(ds == domainDataSourceOracle ? "BODOMAIN" : "BOOPAPIJ", conn.getSchema());
-                
-            conn.close();
-        }
     }
 }

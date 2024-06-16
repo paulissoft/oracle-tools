@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 
 @Slf4j
 @ConfigurationProperties(prefix = "app.domain.datasource.oracleucp")
-public class MyDomainDataSourceOracle extends CombiPoolDataSourceOracle {
+public class MyDomainDataSourceOracle extends SmartPoolDataSourceOracle {
 
     @ConstructorBinding
     public MyDomainDataSourceOracle(String url,

@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.SQLTransientConnectionException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,54 +22,55 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
-@EnableConfigurationProperties({MyDomainDataSourceHikari.class, MyOperatorDataSourceHikari.class}) // keep it like that
-@ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
+@EnableConfigurationProperties({MyDomainDataSourceOracle.class, MyOperatorDataSourceOracle.class}) // keep it like that
+@ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryOracle.class})
 @TestPropertySource("classpath:application-test.properties")
-public class CheckOverflowHikariUnitTest {
+public class CheckSmartOracleUnitTest {
 
     static final String REX_POOL_CLOSED = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
     
-    static final String REX_CONNECTION_TIMEOUT = OverflowPoolDataSourceHikari.REX_CONNECTION_TIMEOUT;
-    
+    static final String REX_CONNECTION_TIMEOUT = SmartPoolDataSourceOracle.REX_CONNECTION_TIMEOUT;
+
+    // all data sources must have different pool names otherwise we risk UCP-0 (can not start pool)
+    @Autowired
+    @Qualifier("ocpiDataSource3")
+    private SmartPoolDataSourceOracle dataSourceOracleConfiguration;
+
+    @Autowired
+    @Qualifier("ocppDataSource3")
+    private SmartPoolDataSourceOracle dataSourceOracle;
+
     @Autowired
     @Qualifier("authDataSource1")
-    private OverflowPoolDataSourceHikari dataSourceHikariConfiguration;
-
-    @Autowired
-    @Qualifier("authDataSource2")
-    private OverflowPoolDataSourceHikari dataSourceHikari; // min/max pool size the same (without overflow)
-
-    @Autowired
-    @Qualifier("authDataSource3")
-    private OverflowPoolDataSourceHikari dataSourceHikariWithoutOverflow; // min/max pool size the same (without overflow)
+    private SmartPoolDataSourceOracle dataSourceOracleWithoutOverflow; // min/max pool size the same (without overflow)
 
     @Autowired
     @Qualifier("configDataSource3")
-    private OverflowPoolDataSourceHikari dataSourceHikariWithOverflow; // min/max pool size NOT the same (with overflow)
+    private SmartPoolDataSourceOracle dataSourceOracleWithOverflow; // min/max pool size NOT the same (with overflow)
 
     @BeforeAll
     static void clear() {
         PoolDataSourceStatistics.clear();
     }
 
-    //=== Hikari ===
+    //=== Oracle ===
 
     @Test
     void testPoolDataSourceConfiguration() throws SQLException {
-        dataSourceHikariConfiguration.getConnection(); // must get a connection to stop initializing phase
+        dataSourceOracleConfiguration.getConnection(); // must get a connection to stop initializing phase
         
-        final PoolDataSourceConfigurationHikari poolDataSourceConfiguration =
-            (PoolDataSourceConfigurationHikari) dataSourceHikariConfiguration.get();
+        final PoolDataSourceConfigurationOracle poolDataSourceConfiguration =
+            (PoolDataSourceConfigurationOracle) dataSourceOracleConfiguration.get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
-        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
-                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boauth], password=null, " + 
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
-                     "maximumPoolSize=10, minimumIdle=10, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
-                     "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
-                     "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
-                     "validationTimeout=5000, leakDetectionThreshold=0)",
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boocpi], password=null, " + 
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
+                     "initialPoolSize=1, minPoolSize=1, maxPoolSize=1, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "validateConnectionOnBorrow=true, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
+                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
     }
 
@@ -82,7 +82,7 @@ public class CheckOverflowHikariUnitTest {
         
         log.debug("testConnection()");
 
-        final OverflowPoolDataSourceHikari pds = dataSourceHikari;
+        final SmartPoolDataSourceOracle pds = dataSourceOracle;
 
         // get some connections
         for (int j = 0; j < 2; j++) {
@@ -104,40 +104,44 @@ public class CheckOverflowHikariUnitTest {
         assertFalse(pds.isOpen());
 
         thrown = assertThrows(IllegalStateException.class, () -> pds.getConnection());
+
+        log.debug("message: {}", thrown.getMessage());
+        
         assertTrue(thrown.getMessage().matches(rex));
     }
 
     @Test
     void testConnectionsWithoutOverflow() throws SQLException {
         final String rex = REX_CONNECTION_TIMEOUT;
-        SQLTransientConnectionException thrown;
+        SQLException thrown;
         
         log.debug("testConnectionsWithoutOverflow()");
 
-        final OverflowPoolDataSourceHikari pds = dataSourceHikariWithoutOverflow;
+        final SmartPoolDataSourceOracle pds = dataSourceOracleWithoutOverflow;
 
         assertFalse(pds.hasOverflow());
-        assertEquals(pds.getMinimumIdle(), pds.getMaximumPoolSize());
+        assertEquals(pds.getMinPoolSize(), pds.getMaxPoolSize());
 
-        final PoolDataSourceConfigurationHikari pdsConfigBefore =
-            (PoolDataSourceConfigurationHikari) pds.get();
+        final PoolDataSourceConfigurationOracle pdsConfigBefore =
+            (PoolDataSourceConfigurationOracle) pds.get();
 
         // create all connections possible in the normal pool data source
-        for (int j = 0; j < pds.getMinimumIdle(); j++) {
+        for (int j = 0; j < pds.getMinPoolSize(); j++) {
             assertNotNull(pds.getConnection());
+            log.debug("[{}] pds.getActiveConnections(): {}", j, pds.getActiveConnections());
         }
 
-        assertTrue(pds.getMinimumIdle() <= pds.getTotalConnections()); // Hikari is not very reliable with active/idle/total connections
+        assertTrue(pds.getMinPoolSize() <= pds.getTotalConnections());
         assertEquals(pds.getActiveConnections() +
                      pds.getIdleConnections(),
                      pds.getTotalConnections());
 
-        final PoolDataSourceConfigurationHikari pdsConfigAfter =
-            (PoolDataSourceConfigurationHikari) pds.get();
+        final PoolDataSourceConfigurationOracle pdsConfigAfter =
+            (PoolDataSourceConfigurationOracle) pds.get();
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
-        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
+        thrown = assertThrows(SQLException.class, () -> {
                 assertNotNull(pds.getConnection());
             });
 
@@ -152,49 +156,49 @@ public class CheckOverflowHikariUnitTest {
     @Test
     void testConnectionsWithOverflow() throws SQLException {
         final String rex = REX_CONNECTION_TIMEOUT;
-        SQLTransientConnectionException thrown;
+        SQLException thrown;
         
         log.debug("testConnectionsWithOverflow()");
 
-        final OverflowPoolDataSourceHikari pds = dataSourceHikariWithOverflow;
+        final SmartPoolDataSourceOracle pds = dataSourceOracleWithOverflow;
 
         assertTrue(pds.hasOverflow());
-        assertNotEquals(pds.getMinimumIdle(), pds.getMaximumPoolSize());
+        assertNotEquals(pds.getMinPoolSize(), pds.getMaxPoolSize());
 
-        final PoolDataSourceConfigurationHikari pdsConfigBefore =
-            (PoolDataSourceConfigurationHikari) pds.get();
+        final PoolDataSourceConfigurationOracle pdsConfigBefore =
+            (PoolDataSourceConfigurationOracle) pds.get();
 
         // create all connections possible in the normal pool data source
-        for (int j = 0; j < pds.getMinimumIdle(); j++) {
+        for (int j = 0; j < pds.getMinPoolSize(); j++) {
             assertNotNull(pds.getConnection());
         }
 
-        assertTrue(pds.getMinimumIdle() <= pds.getTotalConnections()); // Hikari is not very reliable with active/idle/total connections
+        assertTrue(pds.getMinPoolSize() <= pds.getTotalConnections()); // Oracle is not very reliable with active/idle/total connections
         assertEquals(pds.getActiveConnections() +
                      pds.getIdleConnections(),
                      pds.getTotalConnections());
 
-        final PoolDataSourceConfigurationHikari pdsConfigAfter =
-            (PoolDataSourceConfigurationHikari) pds.get();
+        final PoolDataSourceConfigurationOracle pdsConfigAfter =
+            (PoolDataSourceConfigurationOracle) pds.get();
 
         log.debug("pdsConfigAfter: {}", pdsConfigAfter);
 
-        // because it is with overflow, the maximum pool size and connection timeout have been changed
+        // because it is with overflow, the max pool size and connection wait timeout have been changed
         assertNotEquals(pdsConfigBefore, pdsConfigAfter);
 
-        // reset the maximum pool size and connection timeout for the comparison
-        pdsConfigAfter.setMaximumPoolSize(pdsConfigBefore.getMaximumPoolSize());
-        pdsConfigAfter.setConnectionTimeout(pdsConfigBefore.getConnectionTimeout());
+        // reset the max pool size and connection wait timeout for the comparison
+        pdsConfigAfter.setMaxPoolSize(pdsConfigBefore.getMaxPoolSize());
+        pdsConfigAfter.setConnectionWaitDurationInMillis(pdsConfigBefore.getConnectionWaitDurationInMillis());
         
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
         // moving to overflow now: get all connections
-        for (int j = pds.getMinimumIdle(); j < pds.getMaximumPoolSize(); j++) {
+        for (int j = pds.getMinPoolSize(); j < pds.getMaxPoolSize(); j++) {
             assertNotNull(pds.getConnection());
         }
 
         // now it should fail
-        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
+        thrown = assertThrows(SQLException.class, () -> {
                 assertNotNull(pds.getConnection());
             });
 

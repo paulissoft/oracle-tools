@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 
 @Slf4j
 @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
-public class MyDomainDataSourceHikari extends CombiPoolDataSourceHikari {
+public class MyDomainDataSourceHikari extends SmartPoolDataSourceHikari {
 
     @ConstructorBinding
     public MyDomainDataSourceHikari(String driverClassName,

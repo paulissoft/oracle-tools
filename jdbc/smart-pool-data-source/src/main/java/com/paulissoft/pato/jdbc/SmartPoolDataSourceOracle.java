@@ -1,143 +1,181 @@
 package com.paulissoft.pato.jdbc;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+// import java.time.Duration;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.Instant;
-// import lombok.NonNull;
+import oracle.ucp.jdbc.ValidConnection;
+import lombok.NonNull;
+import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SmartPoolDataSourceOracle extends OverflowPoolDataSourceOracle {
+public class SmartPoolDataSourceOracle
+    extends SmartPoolDataSource<SimplePoolDataSourceOracle>
+    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    private static final String POOL_NAME_PREFIX = SmartPoolDataSourceOracle.class.getSimpleName();
-         
-    // Statistics at level 2
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-       
-    private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
+    static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
 
-    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics = null;
-
-    // Every item must have statistics at level 4
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
-
-    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow = null;
-
-    /*
-     * Constructor(s)
-     */
+    static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
     
+    /*
+     * Constructor
+     */
+
     public SmartPoolDataSourceOracle() {
+        super(SimplePoolDataSourceOracle::new);
     }
-    
+
+    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+        // configuration is supposed to be set completely
+        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
+    }
+
     public SmartPoolDataSourceOracle(String url,
-                                     String username,
-                                     String password,
-                                     String type) {
-        super(url,
-              username,
-              password,
-              type != null ? type : SmartPoolDataSourceOracle.class.getName());
+                                        String username,
+                                        String password,
+                                        String type)
+    {
+        this();
+        // configuration is set partially so just use the default constructor
+        set(PoolDataSourceConfigurationOracle.build(url,
+                                                    username,
+                                                    password,
+                                                    type != null ? type : SmartPoolDataSourceOracle.class.getName()));
     }
 
-    @Override
-    protected void setUp() {
-        try {
-            if (getState() == State.INITIALIZING) {
-                updatePoolDataSourceStatistics();
+    public SmartPoolDataSourceOracle(String url,
+                                        String username,
+                                        String password,
+                                        String type,
+                                        String connectionPoolName,
+                                        int initialPoolSize,
+                                        int minPoolSize,
+                                        int maxPoolSize,
+                                        String connectionFactoryClassName,
+                                        boolean validateConnectionOnBorrow,
+                                        int abandonedConnectionTimeout,
+                                        int timeToLiveConnectionTimeout,
+                                        int inactiveConnectionTimeout,
+                                        int timeoutCheckInterval,
+                                        int maxStatements,
+                                        long connectionWaitDurationInMillis,
+                                        long maxConnectionReuseTime,
+                                        int secondsToTrustIdleConnection,
+                                        int connectionValidationTimeout)
+    {
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName(),
+                                                     connectionPoolName,
+                                                     initialPoolSize,
+                                                     minPoolSize,
+                                                     maxPoolSize,
+                                                     connectionFactoryClassName,
+                                                     validateConnectionOnBorrow,
+                                                     abandonedConnectionTimeout,
+                                                     timeToLiveConnectionTimeout,
+                                                     inactiveConnectionTimeout,
+                                                     timeoutCheckInterval,
+                                                     maxStatements,
+                                                     connectionWaitDurationInMillis,
+                                                     maxConnectionReuseTime,
+                                                     secondsToTrustIdleConnection,
+                                                     connectionValidationTimeout));
+    }
 
-                assert parentPoolDataSourceStatistics != null;
-                assert poolDataSourceStatistics != null;
+    protected long getMinConnectionTimeout() {
+        return MIN_CONNECTION_TIMEOUT;
+    }
+
+    protected interface ToOverrideOracle extends ToOverride {
+        public long getConnectionWaitDurationInMillis(); // may add the overflow
+
+        public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException; // check for minimum
+    }
+
+    // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
+    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverrideOracle.class)
+    private PoolDataSourcePropertiesSettersOracle getPoolDataSourceSetter() {
+        try {
+            switch (getState()) {
+            case INITIALIZING:
+                return getPoolDataSource();
+            case CLOSED:
+                throw new IllegalStateException("You can not use the pool once it is closed.");
+            default:
+                throw new IllegalStateException("The configuration of the pool is sealed once started.");
             }
-            super.setUp();
-        } catch (RuntimeException ex) {
+        } catch (IllegalStateException ex) {
+            log.error("Exception in getPoolDataSourceSetter(): {}", ex);
             throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
+    }
+
+    // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
+    @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverrideOracle.class)
+    private PoolDataSourcePropertiesGettersOracle getPoolDataSourceGetter() {
+        try {
+            switch (getState()) {
+            case CLOSED:
+                throw new IllegalStateException("You can not use the pool once it is closed.");
+            default:
+                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+            }
+        } catch (IllegalStateException ex) {
+            log.error("Exception in getPoolDataSourceGetter(): {}", ex);
+            throw ex;
         }
     }
     
+    // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
+    @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverrideOracle.class })
     @Override
-    protected void tearDown() {
-        try {
-            // close the statistics BEFORE closing the pool data source otherwise you may not use delegated methods
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.close();
-            }
-            if (poolDataSourceStatisticsOverflow != null) {
-                poolDataSourceStatisticsOverflow.close();
-            }
-            if (parentPoolDataSourceStatistics != null) {
-                parentPoolDataSourceStatistics.close();
-            }
+    protected SimplePoolDataSourceOracle getPoolDataSource() {
+        return super.getPoolDataSource();
+    }
 
-            super.tearDown();
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+    // methods defined in interface ToOverrideOracle
+    
+    public long getConnectionWaitDurationInMillis() {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        SimplePoolDataSourceOracle poolDataSourceOverflow;
+
+        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+            return poolDataSource.getConnectionWaitDurationInMillis();
+        } else {
+            return poolDataSource.getConnectionWaitDurationInMillis() + poolDataSourceOverflow.getConnectionWaitDurationInMillis();
         }
     }
 
-    /*
-     * Connection
-     */
-    
-    @Override
+    public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        
+        if (connectionWaitDurationInMillis < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
+            // if we subtract we will get an invalid value (less than minimum)
+            throw new IllegalArgumentException(String.format("The connection wait duration in milliseconds (%d) must be at least %d.",
+                                                             connectionWaitDurationInMillis,
+                                                             2 * MIN_CONNECTION_TIMEOUT));
+        }
+        poolDataSource.setConnectionWaitDurationInMillis(connectionWaitDurationInMillis);
+    }
+
+    protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceOracle pds, final Exception ex) {
+        return (ex instanceof SQLException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
+    }
+
     protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        final Instant tm = Instant.now();
-        Connection conn = null;
-
-        try {
-            conn = super.getConnection(useOverflow);
-        } catch (SQLException ex) {
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.signalSQLException(this, ex);
-            }
-            throw ex;
-        } catch (Exception ex) {
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.signalException(this, ex);
-            }
-            throw ex;
-        }
-
-        if (!firstConnection.getAndSet(true)) {
-            // Only show the first time a pool has gotten a connection.
-            // Not earlier because these (fixed) values may change before and after the first connection.
-            getPoolDataSource().show(get());
-        }
-
-        if (SimplePoolDataSource.isStatisticsEnabled()) {
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.updateStatistics(this,
-                                                          conn,
-                                                          Duration.between(tm, Instant.now()).toMillis(),
-                                                          true);
-            }
+        final Connection conn = super.getConnection(useOverflow);
+            
+        if (useOverflow) {
+            // The setInvalid method of the ValidConnection interface
+            // indicates that a connection should be removed from the connection pool when it is closed. 
+            ((ValidConnection) conn).setInvalid();
         }
 
         return conn;
-    }
-
-    /*
-     * Statistics
-     */
-    
-    private void updatePoolDataSourceStatistics() {
-        final PoolDataSourceStatistics[] fields =
-            SmartPoolDataSource.updatePoolDataSourceStatistics(getPoolDataSource(),
-                                                               hasOverflow() ? getPoolDataSourceOverflow() : null,
-                                                               poolDataSourceStatisticsTotal,
-                                                               () -> !isOpen());
-
-        parentPoolDataSourceStatistics = fields[0];
-        poolDataSourceStatistics = fields[1];
-        poolDataSourceStatisticsOverflow = fields[2];
     }
 }

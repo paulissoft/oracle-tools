@@ -1,7 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,15 +29,15 @@ public class CheckConnectionHikariUnitTest {
 
     @Autowired
     @Qualifier("configDataSource4")
-    private CombiPoolDataSourceHikari configDataSourceHikari;
+    private SmartPoolDataSourceHikari configDataSourceHikari;
 
     @Autowired
     @Qualifier("ocpiDataSource1")
-    private CombiPoolDataSourceHikari ocpiDataSourceHikari;
+    private SmartPoolDataSourceHikari ocpiDataSourceHikari;
 
     @Autowired
     @Qualifier("ocppDataSource1")
-    private CombiPoolDataSourceHikari ocppDataSourceHikari;
+    private SmartPoolDataSourceHikari ocppDataSourceHikari;
 
     @Autowired
     private MyDomainDataSourceHikari domainDataSourceHikari;
@@ -49,7 +48,6 @@ public class CheckConnectionHikariUnitTest {
     @BeforeAll
     static void clear() {
         PoolDataSourceStatistics.clear();
-        CombiPoolDataSource.clear();
     }
 
     //=== Hikari ===
@@ -64,19 +62,9 @@ public class CheckConnectionHikariUnitTest {
         
         log.debug("testConnection()");
 
-        // these two will be combined
-        final CombiPoolDataSourceHikari pds1 = configDataSourceHikari;
-        final CombiPoolDataSourceHikari pds2 = ocpiDataSourceHikari;
-        final CombiPoolDataSourceHikari pds3 = ocppDataSourceHikari;
-
-        // the first to create will become the parent
-        assertTrue(pds1.isParentPoolDataSource());
-        assertFalse(pds2.isParentPoolDataSource());
-        assertFalse(pds3.isParentPoolDataSource());
-
-        // all share the same common pool data source
-        assertTrue(pds1.getPoolDataSource() == pds2.getPoolDataSource());
-        assertTrue(pds1.getPoolDataSource() == pds3.getPoolDataSource());
+        final SmartPoolDataSourceHikari pds1 = configDataSourceHikari;
+        final SmartPoolDataSourceHikari pds2 = ocpiDataSourceHikari;
+        final SmartPoolDataSourceHikari pds3 = ocppDataSourceHikari;
 
         // get some connections
         for (int j = 0; j < 2; j++) {
@@ -133,61 +121,12 @@ public class CheckConnectionHikariUnitTest {
         // close pds1
         assertTrue(pds1.isOpen());
         pds1.close();
-        assertTrue(pds1.getState() == CombiPoolDataSourceHikari.State.CLOSING || pds1.getState() == CombiPoolDataSourceHikari.State.CLOSED);
+        assertTrue(pds1.getState() == SmartPoolDataSourceHikari.State.CLOSED);
 
         thrown2 = assertThrows(SQLException.class, () -> pds1.getConnection());
 
         log.debug("message: {}", thrown2.getMessage());
         
         assertTrue(thrown2.getMessage().matches(rex2));
-    }
-
-    @Test
-    void testConnectionHikari() throws SQLException {
-        log.debug("testConnectionHikari()");
-
-        assertNotEquals(domainDataSourceHikari, operatorDataSourceHikari);
-
-        assertNotEquals(domainDataSourceHikari.isParentPoolDataSource(), operatorDataSourceHikari.isParentPoolDataSource());
-
-        final CombiPoolDataSourceHikari parent =
-            domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
-
-        final CombiPoolDataSourceHikari child =
-            !domainDataSourceHikari.isParentPoolDataSource() ? domainDataSourceHikari : operatorDataSourceHikari;
-
-        for (int nr = 1; nr <= 2; nr++) {
-            try (final CombiPoolDataSourceHikari ds = (nr == 1 ? parent : child)) {                
-                log.debug("round #{}; ds.getPoolDataSourceConfiguration(): {}", nr, ds.getPoolDataSourceConfiguration());
-                
-                assertEquals(CombiPoolDataSource.State.OPEN, ds.getState());
-                
-                assertEquals("jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1", ds.getUrl());
-                
-                assertEquals(ds == domainDataSourceHikari ? "bodomain" : "bodomain[boopapij]",
-                             ds.getPoolDataSourceConfiguration().getUsername());
-                assertEquals(parent.getUsername(), ds.getPoolDataSource().getUsername());
-                
-                assertEquals("bodomain", ds.getPassword());
-                assertEquals(parent.getPassword(), ds.getPoolDataSource().getPassword());
-
-                assertEquals(2 * 10, ds.getMinimumIdle());
-                assertEquals(ds.getMinimumIdle(), ds.getPoolDataSource().getMinimumIdle());
-
-                assertEquals(2 * 20, ds.getMaximumPoolSize());
-                assertEquals(ds.getMaximumPoolSize(), ds.getPoolDataSource().getMaximumPoolSize());
-
-                assertTrue(ds.getPoolName().equals("HikariPool-boopapij-bodomain") ||
-                           ds.getPoolName().equals("HikariPool-bodomain-boopapij"));
-                assertEquals(ds.getPoolName(), ds.getPoolDataSource().getPoolName());
-
-                final Connection conn = ds.getConnection();
-
-                assertNotNull(conn);
-                assertEquals(ds == domainDataSourceHikari ? "BODOMAIN" : "BOOPAPIJ", conn.getSchema());
-
-                conn.close();
-            }
-        }
     }
 }

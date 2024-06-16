@@ -1,85 +1,190 @@
 package com.paulissoft.pato.jdbc;
 
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.sql.Connection;
+// import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.Instant;
-// import lombok.NonNull;
+import java.sql.SQLTransientConnectionException;
+import lombok.NonNull;
+import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari implements SmartPoolDataSource {
+public class SmartPoolDataSourceHikari
+    extends SmartPoolDataSource<SimplePoolDataSourceHikari>
+    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    private static final String POOL_NAME_PREFIX = SmartPoolDataSourceHikari.class.getSimpleName();
-         
-    // Statistics at level 2
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-       
-    private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
+    static final long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
 
-    private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics = null;
-
-    // Every item must have statistics at level 4
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
-
-    private volatile PoolDataSourceStatistics poolDataSourceStatisticsOverflow = null;
+    static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
+    
 
     /*
-     * Constructor(s)
+     * Constructors
      */
     
     public SmartPoolDataSourceHikari() {
+        super(SimplePoolDataSourceHikari::new); 
+    }
+
+    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+        // configuration is supposed to be set completely
+        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
-                                     String url,
-                                     String username,
-                                     String password,
-                                     String type) {
-        super(driverClassName,
-              url,
-              username,
-              password,
-              type != null ? type : SmartPoolDataSourceHikari.class.getName());
+                                        String url,
+                                        String username,
+                                        String password,
+                                        String type) {
+        // configuration is set partially so just use the default constructor
+        this();
+        set(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                    url,
+                                                    username,
+                                                    password,
+                                                    type != null ? type : SmartPoolDataSourceHikari.class.getName()));
     }
 
-    @Override
-    protected void setUp() {
-        try {
-            if (getState() == State.INITIALIZING) {
-                updatePoolDataSourceStatistics();
+    public SmartPoolDataSourceHikari(String driverClassName,
+                                        String url,
+                                        String username,
+                                        String password,
+                                        String type,
+                                        String poolName,
+                                        int maximumPoolSize,
+                                        int minimumIdle,
+                                        String dataSourceClassName,
+                                        boolean autoCommit,
+                                        long connectionTimeout,
+                                        long idleTimeout,
+                                        long maxLifetime,
+                                        String connectionTestQuery,
+                                        long initializationFailTimeout,
+                                        boolean isolateInternalQueries,
+                                        boolean allowPoolSuspension,
+                                        boolean readOnly,
+                                        boolean registerMbeans,    
+                                        long validationTimeout,
+                                        long leakDetectionThreshold) {
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     // cannot reference this before supertype constructor has been called,
+                                                     // hence can not use this in constructor above
+                                                     type != null ? type : SmartPoolDataSourceHikari.class.getName(),
+                                                     poolName,
+                                                     maximumPoolSize,
+                                                     minimumIdle,
+                                                     dataSourceClassName,
+                                                     autoCommit,
+                                                     connectionTimeout,
+                                                     idleTimeout,
+                                                     maxLifetime,
+                                                     connectionTestQuery,
+                                                     initializationFailTimeout,
+                                                     isolateInternalQueries,
+                                                     allowPoolSuspension,
+                                                     readOnly,
+                                                     registerMbeans,    
+                                                     validationTimeout,
+                                                     leakDetectionThreshold));
+    }
 
-                assert parentPoolDataSourceStatistics != null;
-                assert poolDataSourceStatistics != null;
+    protected long getMinConnectionTimeout() {
+        return MIN_CONNECTION_TIMEOUT;
+    }
+
+    protected void updatePool(@NonNull final SimplePoolDataSourceHikari poolDataSource,
+                              final SimplePoolDataSourceHikari poolDataSourceOverflow) {        
+        super.updatePool(poolDataSource, poolDataSourceOverflow);
+        // is there an overflow?
+        if (poolDataSourceOverflow != null) {
+            // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
+            poolDataSourceOverflow.setIdleTimeout(10000); // minimum
+            poolDataSourceOverflow.setMaxLifetime(30000); // minimum
+        }        
+    }
+    
+    protected interface ToOverrideHikari extends ToOverride {
+        // setUsername(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
+        // cannot implement setUsername(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
+        // overridden method does not throw java.sql.SQLException
+        public void setUsername(String password) throws SQLException;
+
+        // setPassword(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
+        // cannot implement setPassword(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
+        // overridden method does not throw java.sql.SQLException
+        public void setPassword(String password) throws SQLException;
+
+        public int getMaximumPoolSize(); // may add the overflow
+
+        public void setConnectionTimeout(long connectionTimeout);
+    }
+
+    // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
+    @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverrideHikari.class) // do not delegate setPassword()
+    private PoolDataSourcePropertiesSettersHikari getPoolDataSourceSetter() {
+        try {
+            switch (getState()) {
+            case INITIALIZING:
+                return getPoolDataSource();
+            case CLOSED:
+                throw new IllegalStateException("You can not use the pool once it is closed.");
+            default:
+                throw new IllegalStateException("The configuration of the pool is sealed once started.");
             }
-            super.setUp();
+        } catch (IllegalStateException ex) {
+            log.error("Exception in getPoolDataSourceSetter(): {}", ex);
+            throw ex;
+        }
+    }
+        
+    // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
+    @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverrideHikari.class)
+    private PoolDataSourcePropertiesGettersHikari getPoolDataSourceGetter() {
+        try {
+            switch (getState()) {
+            case CLOSED:
+                throw new IllegalStateException("You can not use the pool once it is closed.");
+            default:
+                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+            }
+        } catch (IllegalStateException ex) {
+            log.error("Exception in getPoolDataSourceGetter(): {}", ex);
+            throw ex;
+        }
+    }
+
+    // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
+    @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
+    @Override
+    protected SimplePoolDataSourceHikari getPoolDataSource() {
+        return super.getPoolDataSource();
+    }
+
+    protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceHikari pds, final Exception ex) {
+        return (ex instanceof SQLTransientConnectionException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
+    }
+    
+    // methods defined in interface ToOverrideHikari
+    public void setUsername(String username) {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+
+        try {
+            poolDataSource.setUsername(username);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
-    
-    @Override
-    protected void tearDown() {
-        try {
-            // close the statistics BEFORE closing the pool data source otherwise you may not use delegated methods
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.close();
-            }
-            if (poolDataSourceStatisticsOverflow != null) {
-                poolDataSourceStatisticsOverflow.close();
-            }
-            if (parentPoolDataSourceStatistics != null) {
-                parentPoolDataSourceStatistics.close();
-            }
 
-            super.tearDown();
+    public void setPassword(String password) {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+
+        try {
+            poolDataSource.setPassword(password);        
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -87,60 +192,26 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari impl
         }
     }
 
-    /*
-     * Connection
-     */
+    public int getMaximumPoolSize() {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+        SimplePoolDataSourceHikari poolDataSourceOverflow;
 
-    @Override
-    protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        final Instant tm = Instant.now();
-        Connection conn = null;
-
-        try {
-            conn = super.getConnection(useOverflow);
-        } catch (SQLException ex) {
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.signalSQLException(this, ex);
-            }
-            throw ex;
-        } catch (Exception ex) {
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.signalException(this, ex);
-            }
-            throw ex;
+        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+            return poolDataSource.getMaximumPoolSize();
+        } else {
+            return poolDataSource.getMaximumPoolSize() + poolDataSourceOverflow.getMaximumPoolSize();
         }
-
-        if (!firstConnection.getAndSet(true)) {
-            // Only show the first time a pool has gotten a connection.
-            // Not earlier because these (fixed) values may change before and after the first connection.
-            getPoolDataSource().show(get());
-        }
-
-        if (SimplePoolDataSource.isStatisticsEnabled()) {
-            if (poolDataSourceStatistics != null) {
-                poolDataSourceStatistics.updateStatistics(this,
-                                                          conn,
-                                                          Duration.between(tm, Instant.now()).toMillis(),
-                                                          true);
-            }
-        }
-
-        return conn;
     }
-
-    /*
-     * Statistics
-     */
     
-    private void updatePoolDataSourceStatistics() {
-        final PoolDataSourceStatistics[] fields =
-            SmartPoolDataSource.updatePoolDataSourceStatistics(getPoolDataSource(),
-                                                               hasOverflow() ? getPoolDataSourceOverflow() : null,
-                                                               poolDataSourceStatisticsTotal,
-                                                               () -> !isOpen());
-
-        parentPoolDataSourceStatistics = fields[0];
-        poolDataSourceStatistics = fields[1];
-        poolDataSourceStatisticsOverflow = fields[2];
+    public void setConnectionTimeout(long connectionTimeout) {
+        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
+        
+        if (connectionTimeout < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
+            // if we subtract we will get an invalid value (less than minimum)
+            throw new IllegalArgumentException(String.format("The connection timeout (%d) must be at least %d.",
+                                                             connectionTimeout,
+                                                             2 * MIN_CONNECTION_TIMEOUT));
+        }
+        poolDataSource.setConnectionTimeout(connectionTimeout);
     }
 }

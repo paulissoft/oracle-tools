@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.ConstructorBinding;
@@ -8,11 +7,7 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 
 @Slf4j
 @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-public class MyOperatorDataSourceHikari extends CombiPoolDataSourceHikari {
-
-    public MyOperatorDataSourceHikari(@NonNull final CombiPoolDataSourceHikari activeParent) {
-        super(activeParent);
-    }
+public class MyOperatorDataSourceHikari extends SmartPoolDataSourceHikari {
 
     @ConstructorBinding
     public MyOperatorDataSourceHikari(String driverClassName,

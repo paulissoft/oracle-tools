@@ -2,7 +2,7 @@ package com.paulissoft.pato.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+//import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.sql.SQLException;
@@ -29,7 +29,7 @@ public class CheckLifeCycleOracleUnitTest {
 
     @Autowired
     @Qualifier("configDataSource4")
-    private CombiPoolDataSourceOracle configDataSourceOracle;
+    private SmartPoolDataSourceOracle configDataSourceOracle;
 
     @Autowired
     @Qualifier("ocpiDataSourceProperties")
@@ -42,7 +42,6 @@ public class CheckLifeCycleOracleUnitTest {
     @BeforeAll
     static void clear() {
         PoolDataSourceStatistics.clear();
-        CombiPoolDataSource.clear();
     }
 
     //=== Oracle ===
@@ -52,103 +51,89 @@ public class CheckLifeCycleOracleUnitTest {
     void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
         log.debug("testSimplePoolDataSourceOracleJoinTwice()");
 
-        PoolDataSourceConfigurationOracle pdsConfig;
-
         // do not use a try open block for the parent (configDataSourceOracle)
         // since it will close the pool data source giving problems for other tests
-        final CombiPoolDataSourceOracle pds1 = configDataSourceOracle;        
-        final int nrActiveChildren = pds1.getActiveChildren();
+        final SmartPoolDataSourceOracle pds1 = configDataSourceOracle;
         
+        PoolDataSourceConfigurationOracle pdsConfig = (PoolDataSourceConfigurationOracle) pds1.get();
+
         pds1.open();
         log.debug("pds1.isOpen(): {}; pds1.getState(): {}", pds1.isOpen(), pds1.getState());
         assertTrue(pds1.isOpen());
-        assertTrue(pds1.isParentPoolDataSource());
-        assertEquals(nrActiveChildren, pds1.getActiveChildren());
         
         pdsConfig =
-            pds1
-            .getPoolDataSourceConfiguration()
+            pdsConfig
             .toBuilder() // copy
             .username(ocpiDataSourceProperties.getUsername())
             .password(ocpiDataSourceProperties.getPassword())
             .build();
 
         // scratch variable
-        CombiPoolDataSourceOracle pds = null;
+        SmartPoolDataSourceOracle pds = null;
             
-        try (final CombiPoolDataSourceOracle pds2 = new CombiPoolDataSourceOracle(pdsConfig, pds1)) {
+        try (final SmartPoolDataSourceOracle pds2 = new SmartPoolDataSourceOracle(pdsConfig)) {
             assertFalse(pds2.isOpen());
-            assertFalse(pds2.isParentPoolDataSource());
             pds2.open();
             assertTrue(pds2.isOpen());
-            assertEquals(nrActiveChildren + 1, pds1.getActiveChildren());
-        
+
+            pdsConfig = (PoolDataSourceConfigurationOracle) pds1.get();
+                    
             pdsConfig =
-                pds1
-                .getPoolDataSourceConfiguration()
+                pdsConfig
                 .toBuilder() // copy
                 .username(ocppDataSourceProperties.getUsername())
                 .password(ocppDataSourceProperties.getPassword())
                 .build();
 
-            try (final CombiPoolDataSourceOracle pds3 = new CombiPoolDataSourceOracle(pdsConfig, pds1)) {
+            try (final SmartPoolDataSourceOracle pds3 = new SmartPoolDataSourceOracle(pdsConfig)) {
                 assertFalse(pds3.isOpen());
-                assertFalse(pds3.isParentPoolDataSource());
                 pds3.open();
                 assertTrue(pds3.isOpen());
-                assertEquals(nrActiveChildren + 2, pds1.getActiveChildren());
 
                 checkSimplePoolDataSourceJoin(pds1, pds2, true);
                 checkSimplePoolDataSourceJoin(pds2, pds3, true);
                 checkSimplePoolDataSourceJoin(pds3, pds1, true);
 
+                pdsConfig = (PoolDataSourceConfigurationOracle) pds1.get();
+
                 // change one property and create a smart pool data source: total pool count should increase
                 final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle1 =
-                    pds1
-                    .getPoolDataSourceConfiguration()
+                    pdsConfig
                     .toBuilder()
-                    .validateConnectionOnBorrow(!pds1.getPoolDataSourceConfiguration().getValidateConnectionOnBorrow())
+                    .validateConnectionOnBorrow(!pdsConfig.getValidateConnectionOnBorrow())
                     .build();
 
-                try (final CombiPoolDataSourceOracle pds4 = new CombiPoolDataSourceOracle(poolDataSourceConfigurationOracle1)) {
+                try (final SmartPoolDataSourceOracle pds4 = new SmartPoolDataSourceOracle(poolDataSourceConfigurationOracle1)) {
                     assertTrue(pds4.isOpen());
-                    assertTrue(pds4.isParentPoolDataSource()); // a parent too
-                    assertEquals(nrActiveChildren + 2, pds1.getActiveChildren());
                             
-                    assertNotEquals(pds1.getPoolDataSourceConfiguration().toString(),
-                                    pds4.getPoolDataSourceConfiguration().toString());
+                    assertNotEquals(pds1.get().toString(),
+                                    pds4.get().toString());
 
                     pds = pds4;
                 }
                 assertFalse(pds.isOpen());
-                assertEquals(nrActiveChildren + 2, pds1.getActiveChildren());
 
                 pds = pds3;
             }
             assertFalse(pds.isOpen());
-            assertEquals(nrActiveChildren + 1, pds1.getActiveChildren());
 
             pds = pds2;
         }
         assertFalse(pds.isOpen());
-        assertEquals(nrActiveChildren, pds1.getActiveChildren());
         assertTrue(pds1.isOpen());
     }
 
-    private void checkSimplePoolDataSourceJoin(final CombiPoolDataSourceOracle pds1, final CombiPoolDataSourceOracle pds2, final boolean equal) {
+    private void checkSimplePoolDataSourceJoin(final SmartPoolDataSourceOracle pds1, final SmartPoolDataSourceOracle pds2, final boolean equal) {
         PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
         PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
             
         // check all fields
-        poolDataSourceConfiguration1 = pds1.getPoolDataSourceConfiguration();
-        poolDataSourceConfiguration2 = pds2.getPoolDataSourceConfiguration();
+        poolDataSourceConfiguration1 = pds1.get();
+        poolDataSourceConfiguration2 = pds2.get();
 
         log.debug("poolDataSourceConfiguration1: {}", poolDataSourceConfiguration1);
         log.debug("poolDataSourceConfiguration2: {}", poolDataSourceConfiguration2);
 
         assertNotEquals(poolDataSourceConfiguration1.toString(), poolDataSourceConfiguration2.toString());
-        
-        assertEquals(pds1.isSingleSessionProxyModel(), pds2.isSingleSessionProxyModel());
-        assertEquals(pds1.isFixedUsernamePassword(), pds2.isFixedUsernamePassword());
     }
 }
