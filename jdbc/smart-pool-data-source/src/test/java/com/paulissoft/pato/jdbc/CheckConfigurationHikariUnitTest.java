@@ -34,7 +34,7 @@ public class CheckConfigurationHikariUnitTest {
 
     @Test
     void testPoolDataSourceConfigurationDomain() {
-        final PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceHikari.get();
+        PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceHikari.get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
@@ -53,11 +53,23 @@ public class CheckConfigurationHikariUnitTest {
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
                      poolDataSourceConfiguration.toString());
+
+        // the overflow
+        poolDataSourceConfiguration = domainDataSourceHikari.getPoolDataSourceOverflow().get();
+        
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=null, " + 
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
+                     "maximumPoolSize=7, minimumIdle=0, dataSourceClassName=null, autoCommit=true, connectionTimeout=2750, " + 
+                     "idleTimeout=10000, maxLifetime=30000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
+                     "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
+                     "validationTimeout=5000, leakDetectionThreshold=0)",
+                     poolDataSourceConfiguration.toString());
     }
     
     @Test
     void testPoolDataSourceConfigurationOperator() {
-        final PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceHikari.get();
+        PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceHikari.get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
@@ -73,6 +85,18 @@ public class CheckConfigurationHikariUnitTest {
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
                      "maximumPoolSize=9, minimumIdle=9, dataSourceClassName=null, autoCommit=true, connectionTimeout=250, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
+                     "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
+                     "validationTimeout=5000, leakDetectionThreshold=0)",
+                     poolDataSourceConfiguration.toString());
+
+        // the overflow
+        poolDataSourceConfiguration = operatorDataSourceHikari.getPoolDataSourceOverflow().get();
+        
+        assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
+                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
+                     "maximumPoolSize=7, minimumIdle=0, dataSourceClassName=null, autoCommit=true, connectionTimeout=2750, " + 
+                     "idleTimeout=10000, maxLifetime=30000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
                      poolDataSourceConfiguration.toString());
