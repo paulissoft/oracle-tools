@@ -64,14 +64,18 @@ public class SimplePoolDataSourceHikari
     }
 
     public PoolDataSourceConfiguration get() {
+        return get(true);
+    }
+    
+    public PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
             .url(getJdbcUrl())
             .username(getUsername())
-            .password(null) // do not copy password
+            .password(excludeNonIdConfiguration ? null : getPassword())
             .type(this.getClass().getName())
-            .poolName(null) // do not copy pool name
+            .poolName(excludeNonIdConfiguration ? null : getPoolName())
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())
             .autoCommit(isAutoCommit())
@@ -192,12 +196,12 @@ public class SimplePoolDataSourceHikari
 
     // public String getPassword();
     
-    // HikariCP does NOT know of an initial pool size so just return getMinPoolSize()
+    // HikariCP does NOT know of an initial pool size so just use getMinPoolSize()
     public int getInitialPoolSize() {
         return getMinPoolSize();
     }
 
-    // HikariCP does NOT know of an initial pool size so just return setMinPoolSize()
+    // HikariCP does NOT know of an initial pool size so just use setMinPoolSize()
     public void setInitialPoolSize(int initialPoolSize) {
         setMinPoolSize(initialPoolSize);
     }

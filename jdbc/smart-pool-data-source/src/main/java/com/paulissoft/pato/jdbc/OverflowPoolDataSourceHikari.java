@@ -95,10 +95,9 @@ public class OverflowPoolDataSourceHikari
         return MIN_CONNECTION_TIMEOUT;
     }
 
-    protected void updatePool(@NonNull final PoolDataSourceConfiguration pdsConfig,
-                              @NonNull final SimplePoolDataSourceHikari poolDataSource,
+    protected void updatePool(@NonNull final SimplePoolDataSourceHikari poolDataSource,
                               final SimplePoolDataSourceHikari poolDataSourceOverflow) {        
-        super.updatePool(pdsConfig, poolDataSource, poolDataSourceOverflow);
+        super.updatePool(poolDataSource, poolDataSourceOverflow);
         // is there an overflow?
         if (poolDataSourceOverflow != null) {
             // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
