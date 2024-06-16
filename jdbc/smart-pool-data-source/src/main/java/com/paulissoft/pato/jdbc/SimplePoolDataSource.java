@@ -2,10 +2,22 @@ package com.paulissoft.pato.jdbc;
 
 import java.io.Closeable;
 import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
 
 
 public interface SimplePoolDataSource extends DataSource, Closeable {
+
+    // for all pool data sources the same
+    public static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
+
+    public static boolean isStatisticsEnabled() {
+        return statisticsEnabled.get();
+    }
+
+    public static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
+        statisticsEnabled.set(isStatisticsEnabled);
+    }
 
     public static String exceptionToString(final Exception ex) {
         return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
