@@ -205,8 +205,10 @@ public abstract class OverflowPoolDataSource<T extends SimplePoolDataSource>
 
                 // copy values
                 poolDataSourceOverflow.set(pdsConfig); 
-                // need to set password explicitly since combination get()/set() does not set the password
+                // need to set password explicitly since combination get()/set() does not set it
                 poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
+                // need to set pool name explicitly since combination get()/set() does not set it
+                poolDataSourceOverflow.setPoolName(poolDataSource.getPoolName());
 
                 // settings to let the pool data source fail fast so it can use the overflow
                 poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());

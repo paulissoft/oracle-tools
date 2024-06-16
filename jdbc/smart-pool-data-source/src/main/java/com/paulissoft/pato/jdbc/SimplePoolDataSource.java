@@ -27,8 +27,6 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public PoolDataSourceConfiguration get();
 
-    public PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration);
-
     public void show(final PoolDataSourceConfiguration pdsConfig);
     
     // signatures used by com.zaxxer.hikari.HikariDataSource

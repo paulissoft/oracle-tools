@@ -64,18 +64,14 @@ public class SimplePoolDataSourceHikari
     }
 
     public PoolDataSourceConfiguration get() {
-        return get(true);
-    }
-    
-    public PoolDataSourceConfiguration get(final boolean excludeNonIdConfiguration) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
             .url(getJdbcUrl())
             .username(getUsername())
-            .password(excludeNonIdConfiguration ? null : getPassword())
+            .password(null) // do not copy password
             .type(this.getClass().getName())
-            .poolName(excludeNonIdConfiguration ? null : getPoolName())
+            .poolName(null) // do not copy pool name
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())
             .autoCommit(isAutoCommit())
