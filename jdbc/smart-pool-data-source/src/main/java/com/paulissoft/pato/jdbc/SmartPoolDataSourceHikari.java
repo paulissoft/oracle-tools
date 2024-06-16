@@ -20,9 +20,6 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari impl
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
-    // for all smart pool data sources the same
-    private static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
-    
     private final AtomicBoolean firstConnection = new AtomicBoolean(false);    
 
     private volatile PoolDataSourceStatistics parentPoolDataSourceStatistics = null;
@@ -119,7 +116,7 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari impl
             getPoolDataSource().show(get());
         }
 
-        if (statisticsEnabled.get()) {
+        if (SimplePoolDataSource.isStatisticsEnabled()) {
             if (poolDataSourceStatistics != null) {
                 poolDataSourceStatistics.updateStatistics(this,
                                                           conn,
@@ -145,13 +142,5 @@ public class SmartPoolDataSourceHikari extends OverflowPoolDataSourceHikari impl
         parentPoolDataSourceStatistics = fields[0];
         poolDataSourceStatistics = fields[1];
         poolDataSourceStatisticsOverflow = fields[2];
-    }
-
-    public static boolean isStatisticsEnabled() {
-        return statisticsEnabled.get();
-    }
-
-    public static void setStatisticsEnabled(final boolean statisticsEnabled) {
-        SmartPoolDataSourceHikari.statisticsEnabled.set(statisticsEnabled);
     }
 }
