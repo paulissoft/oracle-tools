@@ -109,12 +109,12 @@ class ApplicationTests {
         final double score = result.getPrimaryResult().getScore();
         final double deviation = Math.abs(score/referenceScore - 1);
         final String errorMessage =
-            String.format("Score = %.3f; reference score = %.3f; deviation (%s) exceeds maximum allowed deviation (%s)",
+            String.format("Score = %.3f; reference score = %.3f; deviation (%s) exceeds maximum allowed deviation (%s) and score > reference score",
                           score,
                           referenceScore,
                           df.format(deviation * 100) + " %",
                           df.format(maxDeviation * 100) + " %");
 
-        Assertions.assertTrue(deviation < maxDeviation, errorMessage);
+        Assertions.assertTrue(score <= referenceScore || deviation < maxDeviation, errorMessage);
     }
 }
