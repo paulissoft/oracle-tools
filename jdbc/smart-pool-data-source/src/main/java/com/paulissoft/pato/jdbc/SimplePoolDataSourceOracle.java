@@ -1,10 +1,10 @@
 package com.paulissoft.pato.jdbc;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
 import oracle.ucp.UniversalConnectionPoolException;
@@ -27,9 +27,6 @@ public class SimplePoolDataSourceOracle
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-       
-    // for all pool data sources the same
-    private static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
 
     protected static final UniversalConnectionPoolManager mgr;
 
@@ -340,7 +337,7 @@ public class SimplePoolDataSourceOracle
 
     @Override
     public Connection getConnection() throws SQLException {
-        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && isStatisticsEnabled();
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final Instant tm = isStatisticsEnabled ? Instant.now() : null;
         Connection conn = null;
 
@@ -366,13 +363,5 @@ public class SimplePoolDataSourceOracle
         }
 
         return conn;
-    }
-
-    public static boolean isStatisticsEnabled() {
-        return statisticsEnabled.get();
-    }
-
-    public static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
-        statisticsEnabled.set(isStatisticsEnabled);
     }
 }
