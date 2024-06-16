@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -27,9 +26,6 @@ public class SimplePoolDataSourceHikari
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
        
-    // for all pool data sources the same
-    private static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
-
     // all object related
 
     private final StringBuffer id = new StringBuffer();
@@ -308,7 +304,7 @@ public class SimplePoolDataSourceHikari
 
     @Override
     public Connection getConnection() throws SQLException {
-        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && isStatisticsEnabled();
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final Instant tm = isStatisticsEnabled ? Instant.now() : null;
         Connection conn = null;
 
@@ -334,13 +330,5 @@ public class SimplePoolDataSourceHikari
         }
 
         return conn;
-    }
-
-    public static boolean isStatisticsEnabled() {
-        return statisticsEnabled.get();
-    }
-
-    public static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
-        statisticsEnabled.set(isStatisticsEnabled);
     }
 }
