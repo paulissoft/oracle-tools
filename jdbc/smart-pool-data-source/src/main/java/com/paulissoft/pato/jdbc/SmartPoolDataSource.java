@@ -27,7 +27,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
 
     /*
-     * Constructor
+     * Constructor(s)
      */
 
     protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT) {
@@ -46,8 +46,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         
         setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
         setUp();
+        state = State.OPEN;
 
-        assert state == State.OPEN : "After setting up the state must be OPEN.";
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
     /*
