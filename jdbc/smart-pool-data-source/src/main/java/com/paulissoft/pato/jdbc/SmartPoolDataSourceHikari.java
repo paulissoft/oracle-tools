@@ -32,10 +32,10 @@ public class SmartPoolDataSourceHikari
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
-                                        String url,
-                                        String username,
-                                        String password,
-                                        String type) {
+                                     String url,
+                                     String username,
+                                     String password,
+                                     String type) {
         // configuration is set partially so just use the default constructor
         this();
         set(PoolDataSourceConfigurationHikari.build(driverClassName,
@@ -46,26 +46,26 @@ public class SmartPoolDataSourceHikari
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
-                                        String url,
-                                        String username,
-                                        String password,
-                                        String type,
-                                        String poolName,
-                                        int maximumPoolSize,
-                                        int minimumIdle,
-                                        String dataSourceClassName,
-                                        boolean autoCommit,
-                                        long connectionTimeout,
-                                        long idleTimeout,
-                                        long maxLifetime,
-                                        String connectionTestQuery,
-                                        long initializationFailTimeout,
-                                        boolean isolateInternalQueries,
-                                        boolean allowPoolSuspension,
-                                        boolean readOnly,
-                                        boolean registerMbeans,    
-                                        long validationTimeout,
-                                        long leakDetectionThreshold) {
+                                     String url,
+                                     String username,
+                                     String password,
+                                     String type,
+                                     String poolName,
+                                     int maximumPoolSize,
+                                     int minimumIdle,
+                                     String dataSourceClassName,
+                                     boolean autoCommit,
+                                     long connectionTimeout,
+                                     long idleTimeout,
+                                     long maxLifetime,
+                                     String connectionTestQuery,
+                                     long initializationFailTimeout,
+                                     boolean isolateInternalQueries,
+                                     boolean allowPoolSuspension,
+                                     boolean readOnly,
+                                     boolean registerMbeans,    
+                                     long validationTimeout,
+                                     long leakDetectionThreshold) {
         this(PoolDataSourceConfigurationHikari.build(driverClassName,
                                                      url,
                                                      username,
@@ -190,6 +190,32 @@ public class SmartPoolDataSourceHikari
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
+    }
+
+    public PoolDataSourceConfiguration get() {
+        return PoolDataSourceConfigurationHikari
+            .builder()
+            .driverClassName(getDriverClassName())
+            .url(getJdbcUrl())
+            .username(getUsername())
+            .password(null) // do not copy password
+            .type(this.getClass().getName())
+            .poolName(null) // do not copy pool name
+            .maximumPoolSize(getMaximumPoolSize())
+            .minimumIdle(getMinimumIdle())
+            .autoCommit(isAutoCommit())
+            .connectionTimeout(getConnectionTimeout())
+            .idleTimeout(getIdleTimeout())
+            .maxLifetime(getMaxLifetime())
+            .connectionTestQuery(getConnectionTestQuery())
+            .initializationFailTimeout(getInitializationFailTimeout())
+            .isolateInternalQueries(isIsolateInternalQueries())
+            .allowPoolSuspension(isAllowPoolSuspension())
+            .readOnly(isReadOnly())
+            .registerMbeans(isRegisterMbeans())
+            .validationTimeout(getValidationTimeout())
+            .leakDetectionThreshold(getLeakDetectionThreshold())
+            .build();
     }
 
     public int getMaximumPoolSize() {

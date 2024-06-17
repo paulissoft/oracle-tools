@@ -247,15 +247,17 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         
         public void setId(final String srcId);
 
-        public int getMaxPoolSize(); // must be combined: normal + overflow
+        public PoolDataSourceConfiguration get(); // must be combined: normal + overflow
+        
+        public int getMaxPoolSize(); // idem
 
         public long getConnectionTimeout(); // idem
         
-        public int getActiveConnections();
+        public int getActiveConnections(); // idem
 
-        public int getIdleConnections();
+        public int getIdleConnections(); // idem
 
-        public int getTotalConnections();        
+        public int getTotalConnections(); // idem
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })

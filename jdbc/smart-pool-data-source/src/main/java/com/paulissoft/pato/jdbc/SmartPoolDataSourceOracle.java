@@ -95,6 +95,10 @@ public class SmartPoolDataSourceOracle
         public long getConnectionWaitDurationInMillis(); // may add the overflow
 
         public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException; // check for minimum
+
+        public int getBorrowedConnectionsCount();
+        
+        public int getAvailableConnectionsCount();
     }
 
     // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
@@ -140,6 +144,32 @@ public class SmartPoolDataSourceOracle
 
     // methods defined in interface ToOverrideOracle
     
+    public PoolDataSourceConfiguration get() {
+        return PoolDataSourceConfigurationOracle
+            .builder()
+            .driverClassName(null)
+            .url(getURL())
+            .username(getUsername())
+            .password(null) // do not copy password
+            .type(SimplePoolDataSourceOracle.class.getName())
+            .connectionPoolName(null) // do not copy pool name
+            .initialPoolSize(getInitialPoolSize())
+            .minPoolSize(getMinPoolSize())
+            .maxPoolSize(getMaxPoolSize())
+            .connectionFactoryClassName(getConnectionFactoryClassName())
+            .validateConnectionOnBorrow(getValidateConnectionOnBorrow())
+            .abandonedConnectionTimeout(getAbandonedConnectionTimeout())
+            .timeToLiveConnectionTimeout(getTimeToLiveConnectionTimeout())
+            .inactiveConnectionTimeout(getInactiveConnectionTimeout())
+            .timeoutCheckInterval(getTimeoutCheckInterval())
+            .maxStatements(getMaxStatements())
+            .connectionWaitDurationInMillis(getConnectionWaitDurationInMillis())
+            .maxConnectionReuseTime(getMaxConnectionReuseTime())
+            .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
+            .connectionValidationTimeout(getConnectionValidationTimeout())
+            .build();
+    }
+
     public long getConnectionWaitDurationInMillis() {
         final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
         SimplePoolDataSourceOracle poolDataSourceOverflow;
@@ -161,6 +191,28 @@ public class SmartPoolDataSourceOracle
                                                              2 * MIN_CONNECTION_TIMEOUT));
         }
         poolDataSource.setConnectionWaitDurationInMillis(connectionWaitDurationInMillis);
+    }
+
+    public int getBorrowedConnectionsCount() {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        SimplePoolDataSourceOracle poolDataSourceOverflow;
+
+        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+            return poolDataSource.getBorrowedConnectionsCount();
+        } else {
+            return poolDataSource.getBorrowedConnectionsCount() + poolDataSourceOverflow.getBorrowedConnectionsCount();
+        }
+    }
+        
+    public int getAvailableConnectionsCount() {
+        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
+        SimplePoolDataSourceOracle poolDataSourceOverflow;
+
+        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+            return poolDataSource.getAvailableConnectionsCount();
+        } else {
+            return poolDataSource.getAvailableConnectionsCount() + poolDataSourceOverflow.getAvailableConnectionsCount();
+        }
     }
 
     protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceOracle pds, final Exception ex) {
