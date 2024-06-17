@@ -35,7 +35,7 @@ public class CheckConfigurationOracleUnitTest {
 
     @Test
     void testPoolDataSourceConfigurationDomain() {
-        PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceOracle.get();
+        PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceOracle.getPoolDataSource().get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         assertNull(poolDataSourceConfiguration.getDriverClassName());
@@ -65,11 +65,23 @@ public class CheckConfigurationOracleUnitTest {
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
                      poolDataSourceConfiguration.toString());
+
+        // overall
+        poolDataSourceConfiguration = operatorDataSourceOracle.get();
+
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
+                     "type=class com.paulissoft.pato.jdbc.MyOperatorDataSourceOracle), connectionPoolName=null, " +
+                     "initialPoolSize=0, minPoolSize=9, maxPoolSize=16, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
+                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
+                     poolDataSourceConfiguration.toString());
     }
     
     @Test
     void testPoolDataSourceConfigurationOperator() {
-        PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceOracle.get();
+        PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceOracle.getPoolDataSource().get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
         
@@ -96,6 +108,18 @@ public class CheckConfigurationOracleUnitTest {
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
                      "initialPoolSize=0, minPoolSize=0, maxPoolSize=7, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
+                     "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
+                     "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
+                     poolDataSourceConfiguration.toString());
+
+        // overall
+        poolDataSourceConfiguration = operatorDataSourceOracle.get();
+
+        assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
+                     "type=class com.paulissoft.pato.jdbc.MyOperatorDataSourceOracle), connectionPoolName=null, " +
+                     "initialPoolSize=0, minPoolSize=9, maxPoolSize=16, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",

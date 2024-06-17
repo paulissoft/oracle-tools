@@ -137,7 +137,7 @@ public class SimplePoolDataSourceOracle
             .url(getURL())
             .username(getUsername())
             .password(null) // do not copy password
-            .type(SimplePoolDataSourceOracle.class.getName())
+            .type(this.getClass().getName())
             .connectionPoolName(null) // do not copy pool name
             .initialPoolSize(getInitialPoolSize())
             .minPoolSize(getMinPoolSize())
