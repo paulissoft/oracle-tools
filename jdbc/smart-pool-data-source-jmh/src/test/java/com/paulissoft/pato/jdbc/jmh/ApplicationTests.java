@@ -39,11 +39,6 @@ class ApplicationTests {
     }
     
     @Test
-    void executeHikariTest3() throws RunnerException {
-        checkHikariTest(HikariTest3.getDataSourceClassName(), HikariTest3.class.getSimpleName());
-    }
-
-    @Test
     void executeOracleTest0() throws RunnerException {
         checkOracleTest(OracleTest0.getDataSourceClassName(), OracleTest0.class.getSimpleName());
     }
@@ -56,11 +51,6 @@ class ApplicationTests {
     @Test
     void executeOracleTest2() throws RunnerException {
         checkOracleTest(OracleTest2.getDataSourceClassName(), OracleTest2.class.getSimpleName());
-    }
-
-    @Test
-    void executeOracleTest3() throws RunnerException {
-        checkOracleTest(OracleTest3.getDataSourceClassName(), OracleTest3.class.getSimpleName());
     }
 
     private void checkHikariTest(final String dataSourceClassName, final String simpleTestClassName) throws RunnerException {
