@@ -66,8 +66,8 @@ public class CheckSmartOracleUnitTest {
         
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boocpi], password=null, " + 
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
-                     "initialPoolSize=1, minPoolSize=1, maxPoolSize=1, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "type=class com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle), connectionPoolName=null, " +
+                     "initialPoolSize=1, minPoolSize=1, maxPoolSize=4, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=true, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=120, connectionValidationTimeout=15)",
@@ -123,7 +123,7 @@ public class CheckSmartOracleUnitTest {
         assertEquals(pds.getMinPoolSize(), pds.getMaxPoolSize());
 
         final PoolDataSourceConfigurationOracle pdsConfigBefore =
-            (PoolDataSourceConfigurationOracle) pds.get();
+            (PoolDataSourceConfigurationOracle) pds.getPoolDataSource().get();
 
         // create all connections possible in the normal pool data source
         for (int j = 0; j < pds.getMinPoolSize(); j++) {
@@ -137,7 +137,7 @@ public class CheckSmartOracleUnitTest {
                      pds.getTotalConnections());
 
         final PoolDataSourceConfigurationOracle pdsConfigAfter =
-            (PoolDataSourceConfigurationOracle) pds.get();
+            (PoolDataSourceConfigurationOracle) pds.getPoolDataSource().get();
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
@@ -166,7 +166,7 @@ public class CheckSmartOracleUnitTest {
         assertNotEquals(pds.getMinPoolSize(), pds.getMaxPoolSize());
 
         final PoolDataSourceConfigurationOracle pdsConfigBefore =
-            (PoolDataSourceConfigurationOracle) pds.get();
+            (PoolDataSourceConfigurationOracle) pds.getPoolDataSource().get();
 
         // create all connections possible in the normal pool data source
         for (int j = 0; j < pds.getMinPoolSize(); j++) {
@@ -179,7 +179,7 @@ public class CheckSmartOracleUnitTest {
                      pds.getTotalConnections());
 
         final PoolDataSourceConfigurationOracle pdsConfigAfter =
-            (PoolDataSourceConfigurationOracle) pds.get();
+            (PoolDataSourceConfigurationOracle) pds.getPoolDataSource().get();
 
         log.debug("pdsConfigAfter: {}", pdsConfigAfter);
 
