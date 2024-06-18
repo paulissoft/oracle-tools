@@ -33,19 +33,19 @@ public class CheckSmartOracleUnitTest {
 
     // all data sources must have different pool names otherwise we risk UCP-0 (can not start pool)
     @Autowired
-    @Qualifier("ocpiDataSource3")
+    @Qualifier("ocpiDataSourceOracle3")
     private SmartPoolDataSourceOracle dataSourceOracleConfiguration;
 
     @Autowired
-    @Qualifier("ocppDataSource3")
+    @Qualifier("ocppDataSourceOracle3")
     private SmartPoolDataSourceOracle dataSourceOracle;
 
     @Autowired
-    @Qualifier("authDataSource1")
+    @Qualifier("authDataSourceOracle1")
     private SmartPoolDataSourceOracle dataSourceOracleWithoutOverflow; // min/max pool size the same (without overflow)
 
     @Autowired
-    @Qualifier("configDataSource3")
+    @Qualifier("configDataSourceOracle3")
     private SmartPoolDataSourceOracle dataSourceOracleWithOverflow; // min/max pool size NOT the same (with overflow)
 
     @BeforeAll

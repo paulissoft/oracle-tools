@@ -29,15 +29,15 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class CheckConnectionOracleUnitTest {
 
     @Autowired
-    @Qualifier("configDataSource4")
+    @Qualifier("configDataSourceOracle4")
     private SmartPoolDataSourceOracle configDataSourceOracle;
 
     @Autowired
-    @Qualifier("ocpiDataSource1")
+    @Qualifier("ocpiDataSourceOracle1")
     private SmartPoolDataSourceOracle ocpiDataSourceOracle;
 
     @Autowired
-    @Qualifier("ocppDataSource1")
+    @Qualifier("ocppDataSourceOracle1")
     private SmartPoolDataSourceOracle ocppDataSourceOracle;
         
     @Autowired

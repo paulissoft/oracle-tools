@@ -14,108 +14,118 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 public class ConfigurationFactoryOracle {
 
-    @Bean(name = {"authDataSource1"})
+    @Bean(name = {"authDataSourceOracle1"})
     @ConfigurationProperties(prefix = "app.auth.datasource.oracleucp")
-    public SmartPoolDataSourceOracle authDataSource1(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle authDataSourceOracle1(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
 
-    @Bean(name = {"authDataSource3"})
+    /*
+    @Bean(name = {"authDataSourceOracle3"})
     @ConfigurationProperties(prefix = "app.auth.datasource.oracleucp")
-    public SmartPoolDataSourceOracle authDataSource3(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle authDataSourceOracle3(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
+    */
 
-    @Bean(name = {"configDataSource1"})
+    /*
+    @Bean(name = {"configDataSourceOracle1"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public SmartPoolDataSourceOracle configDataSource1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle configDataSourceOracle1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
+    */
 
-    @Bean(name = {"configDataSource2"})
+    /*
+    @Bean(name = {"configDataSourceOracle2"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public SmartPoolDataSourceOracle configDataSource2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle configDataSourceOracle2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
+    */
 
-    @Bean(name = {"configDataSource3"})
+    @Bean(name = {"configDataSourceOracle3"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public SmartPoolDataSourceOracle configDataSource3(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle configDataSourceOracle3(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
-
-    @Bean(name = {"configDataSource4"})
+    
+    @Bean(name = {"configDataSourceOracle4"})
     @ConfigurationProperties(prefix = "app.config.datasource.oracleucp")
-    public SmartPoolDataSourceOracle configDataSource4(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle configDataSourceOracle4(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
 
-    @Bean(name = {"ocpiDataSource1"})
+    @Bean(name = {"ocpiDataSourceOracle1"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
-    public SmartPoolDataSourceOracle ocpiDataSource1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle ocpiDataSourceOracle1(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
 
-    @Bean(name = {"ocpiDataSource2"})
+    /*
+    @Bean(name = {"ocpiDataSourceOracle2"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
-    public SmartPoolDataSourceOracle ocpiDataSource2(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle ocpiDataSourceOracle2(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
+    */
 
-    @Bean(name = {"ocpiDataSource3"})
+    @Bean(name = {"ocpiDataSourceOracle3"})
     @ConfigurationProperties(prefix = "app.ocpi.datasource.oracleucp")
-    public SmartPoolDataSourceOracle ocpiDataSource3(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle ocpiDataSourceOracle3(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
 
-    @Bean(name = {"ocppDataSource1"})
+    @Bean(name = {"ocppDataSourceOracle1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
-    public SmartPoolDataSourceOracle ocppDataSource1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle ocppDataSourceOracle1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
 
-    @Bean(name = {"ocppDataSource2"})
+    /*
+    @Bean(name = {"ocppDataSourceOracle2"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
-    public SmartPoolDataSourceOracle ocppDataSource2(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle ocppDataSourceOracle2(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)
             .build();
     }
+    */
 
-    @Bean(name = {"ocppDataSource3"})
+    @Bean(name = {"ocppDataSourceOracle3"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.oracleucp")
-    public SmartPoolDataSourceOracle ocppDataSource3(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle ocppDataSourceOracle3(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
             .type(SmartPoolDataSourceOracle.class)

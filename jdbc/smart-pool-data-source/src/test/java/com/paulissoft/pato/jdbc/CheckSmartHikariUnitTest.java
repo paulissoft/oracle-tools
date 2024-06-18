@@ -33,19 +33,19 @@ public class CheckSmartHikariUnitTest {
     static final String REX_CONNECTION_TIMEOUT = SmartPoolDataSourceHikari.REX_CONNECTION_TIMEOUT;
     
     @Autowired
-    @Qualifier("authDataSource1")
+    @Qualifier("authDataSourceHikari1")
     private SmartPoolDataSourceHikari dataSourceHikariConfiguration;
 
     @Autowired
-    @Qualifier("authDataSource2")
+    @Qualifier("authDataSourceHikari2")
     private SmartPoolDataSourceHikari dataSourceHikari; // min/max pool size the same (without overflow)
 
     @Autowired
-    @Qualifier("authDataSource3")
+    @Qualifier("authDataSourceHikari3")
     private SmartPoolDataSourceHikari dataSourceHikariWithoutOverflow; // min/max pool size the same (without overflow)
 
     @Autowired
-    @Qualifier("configDataSource3")
+    @Qualifier("configDataSourceHikari3")
     private SmartPoolDataSourceHikari dataSourceHikariWithOverflow; // min/max pool size NOT the same (with overflow)
 
     @BeforeAll

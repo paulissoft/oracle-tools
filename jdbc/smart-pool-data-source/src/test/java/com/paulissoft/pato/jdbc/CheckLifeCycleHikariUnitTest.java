@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CheckLifeCycleHikariUnitTest {
 
     @Autowired
-    @Qualifier("configDataSource4")
+    @Qualifier("configDataSourceHikari4")
     private SmartPoolDataSourceHikari configDataSourceHikari;
 
     @Autowired
