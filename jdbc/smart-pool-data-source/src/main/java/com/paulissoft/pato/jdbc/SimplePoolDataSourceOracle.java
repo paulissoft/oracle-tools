@@ -21,13 +21,6 @@ public class SimplePoolDataSourceOracle
     
     private static final long serialVersionUID = 3886083682048526889L;
     
-    private static final String POOL_NAME_PREFIX = SimplePoolDataSourceOracle.class.getSimpleName();
-
-    // Statistics at level 2
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-
     protected static final UniversalConnectionPoolManager mgr;
 
     static {
@@ -46,19 +39,10 @@ public class SimplePoolDataSourceOracle
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     
-    private final PoolDataSourceStatistics poolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
-    /*
-     * Constructor(s)
-     */
-    public SimplePoolDataSourceOracle() {
-        this(poolDataSourceStatisticsTotal);
-    }
-
-    public SimplePoolDataSourceOracle(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
-        // a call to super() is not necessary
-        // super();
-
+    // can only be set after constructor
+    protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
         if (parentPoolDataSourceStatistics == null) {
             poolDataSourceStatistics = null;
         } else {
@@ -337,6 +321,7 @@ public class SimplePoolDataSourceOracle
 
     @Override
     public Connection getConnection() throws SQLException {
+        final PoolDataSourceStatistics poolDataSourceStatistics = this.poolDataSourceStatistics; // cache the volatile member
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final Instant tm = isStatisticsEnabled ? Instant.now() : null;
         Connection conn = null;

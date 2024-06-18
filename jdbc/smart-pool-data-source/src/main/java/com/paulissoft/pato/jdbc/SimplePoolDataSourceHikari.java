@@ -15,34 +15,18 @@ public class SimplePoolDataSourceHikari
 
     // all static related
 
-    private static final String POOL_NAME_PREFIX = SimplePoolDataSourceHikari.class.getSimpleName();
-
     private static final int MIN_MAXIMUM_POOL_SIZE = 1;
 
     private static final long MIN_VALIDATION_TIMEOUT = 250L;
     
-    // Statistics at level 2
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-       
     // all object related
 
     private final StringBuffer id = new StringBuffer();
 
-    private final PoolDataSourceStatistics poolDataSourceStatistics;
+    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
-    /*
-     * Constructor(s)
-     */
-    public SimplePoolDataSourceHikari() {
-        this(poolDataSourceStatisticsTotal);
-    }
-
-    public SimplePoolDataSourceHikari(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
-        // a call to super() is not necessary
-        // super();
-
+    // can only be set after constructor
+    protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
         if (parentPoolDataSourceStatistics == null) {
             poolDataSourceStatistics = null;
         } else {
@@ -56,7 +40,7 @@ public class SimplePoolDataSourceHikari
                                              parentPoolDataSourceStatistics, 
                                              () -> isClosed(),
                                              this::get);
-        }        
+        }
     }
          
     public void setId(final String srcId) {
@@ -304,6 +288,7 @@ public class SimplePoolDataSourceHikari
 
     @Override
     public Connection getConnection() throws SQLException {
+        final PoolDataSourceStatistics poolDataSourceStatistics = this.poolDataSourceStatistics; // cache the volatile member
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final Instant tm = isStatisticsEnabled ? Instant.now() : null;
         Connection conn = null;

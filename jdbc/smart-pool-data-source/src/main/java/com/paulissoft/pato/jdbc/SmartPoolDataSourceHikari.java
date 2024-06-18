@@ -17,18 +17,36 @@ public class SmartPoolDataSourceHikari
 
     static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
     
+    private static final String POOL_NAME_PREFIX = SmartPoolDataSourceHikari.class.getSimpleName();
+
+    // Statistics at level 2
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
+        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     /*
      * Constructors
      */
     
     public SmartPoolDataSourceHikari() {
-        super(SimplePoolDataSourceHikari::new); 
+        this(null);
     }
 
-    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+    public SmartPoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
         // configuration is supposed to be set completely
         super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
+
+        final PoolDataSourceStatistics parentPoolDataSourceStatistics =
+            new PoolDataSourceStatistics(() -> getPoolDescription() + ": (all)",
+                                         poolDataSourceStatisticsTotal,
+                                         () -> !isOpen(),
+                                         () -> get());
+        
+        getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+
+        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
+
+        poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,

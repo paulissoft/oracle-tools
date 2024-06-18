@@ -26,30 +26,33 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     @NonNull
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
 
+    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
+
     /*
      * Constructor(s)
      */
 
     protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT) {
+        this(supplierT, null);
+    }
+
+    protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT, final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         this.poolDataSource = supplierT.get();
         this.poolDataSourceOverflow = supplierT.get();
+
+        if (poolDataSourceConfiguration == null) {
+            setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
+        } else {
+            set(poolDataSourceConfiguration);
         
-        setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
+            setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
+            setUp();
+            state = State.OPEN;
+        }
 
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
-
-    protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT, @NonNull final PoolDataSourceConfiguration poolDataSourceConfiguration) {
-        this.poolDataSource = supplierT.get();
-        this.poolDataSourceOverflow = supplierT.get();
-        set(poolDataSourceConfiguration);
-        
-        setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
-        setUp();
-        state = State.OPEN;
-
-        assert getPoolDataSource() != null : "The pool data source should not be null.";
-    }
+    
     /*
      * State
      */
@@ -134,7 +137,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             log.debug("<setUp(id={}, state={})", getId(), state);
         }
     }
-
+         
     /*
      * Close / tearDown
      */

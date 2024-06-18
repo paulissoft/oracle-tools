@@ -4,7 +4,7 @@ package com.paulissoft.pato.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.ValidConnection;
-import lombok.NonNull;
+// import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,23 +18,42 @@ public class SmartPoolDataSourceOracle
 
     static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
     
+    private static final String POOL_NAME_PREFIX = SmartPoolDataSourceOracle.class.getSimpleName();
+
+    // Statistics at level 2
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
+        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+
     /*
      * Constructor
      */
 
     public SmartPoolDataSourceOracle() {
-        super(SimplePoolDataSourceOracle::new);
+        this(null);
     }
 
-    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+    public SmartPoolDataSourceOracle(final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
         // configuration is supposed to be set completely
         super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
-    }
+
+        final PoolDataSourceStatistics parentPoolDataSourceStatistics =
+            new PoolDataSourceStatistics(() -> getPoolDescription() + ": (all)",
+                                         poolDataSourceStatisticsTotal,
+                                         () -> !isOpen(),
+                                         () -> get());
+        
+        getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics); 
+
+        final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
+
+        poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+   }
 
     public SmartPoolDataSourceOracle(String url,
-                                        String username,
-                                        String password,
-                                        String type)
+                                     String username,
+                                     String password,
+                                     String type)
     {
         this();
         // configuration is set partially so just use the default constructor
@@ -45,24 +64,24 @@ public class SmartPoolDataSourceOracle
     }
 
     public SmartPoolDataSourceOracle(String url,
-                                        String username,
-                                        String password,
-                                        String type,
-                                        String connectionPoolName,
-                                        int initialPoolSize,
-                                        int minPoolSize,
-                                        int maxPoolSize,
-                                        String connectionFactoryClassName,
-                                        boolean validateConnectionOnBorrow,
-                                        int abandonedConnectionTimeout,
-                                        int timeToLiveConnectionTimeout,
-                                        int inactiveConnectionTimeout,
-                                        int timeoutCheckInterval,
-                                        int maxStatements,
-                                        long connectionWaitDurationInMillis,
-                                        long maxConnectionReuseTime,
-                                        int secondsToTrustIdleConnection,
-                                        int connectionValidationTimeout)
+                                     String username,
+                                     String password,
+                                     String type,
+                                     String connectionPoolName,
+                                     int initialPoolSize,
+                                     int minPoolSize,
+                                     int maxPoolSize,
+                                     String connectionFactoryClassName,
+                                     boolean validateConnectionOnBorrow,
+                                     int abandonedConnectionTimeout,
+                                     int timeToLiveConnectionTimeout,
+                                     int inactiveConnectionTimeout,
+                                     int timeoutCheckInterval,
+                                     int maxStatements,
+                                     long connectionWaitDurationInMillis,
+                                     long maxConnectionReuseTime,
+                                     int secondsToTrustIdleConnection,
+                                     int connectionValidationTimeout)
     {
         this(PoolDataSourceConfigurationOracle.build(url,
                                                      username,
