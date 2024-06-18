@@ -52,11 +52,8 @@ public class CheckConnectionOracleUnitTest {
 
     @Test
     void testConnection() throws SQLException {
-        final String rex1 = "^You can only get a connection when the pool state is OPEN or CLOSING but it is CLOSED.$";
+        final String rex1 = "^You can only get a connection when the pool state is OPEN but it is CLOSED.$";
         IllegalStateException thrown1;
-        // final String rex2 = "^UCP-45060: Invalid life cycle state\\. Check the status of the Universal Connection Pool$";
-        final String rex2 = "^UCP-29: Failed to get a connection$";
-        SQLException thrown2;
         Connection conn1, conn2, conn3;
         
         log.debug("testConnection()");
@@ -107,6 +104,7 @@ public class CheckConnectionOracleUnitTest {
         assertFalse(pds3.isOpen());
 
         thrown1 = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+        log.debug("message: {}", thrown1.getMessage());        
         assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds2
@@ -115,6 +113,7 @@ public class CheckConnectionOracleUnitTest {
         assertFalse(pds2.isOpen());
 
         thrown1 = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
+        log.debug("message: {}", thrown1.getMessage());        
         assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds1
@@ -122,10 +121,8 @@ public class CheckConnectionOracleUnitTest {
         pds1.close();
         assertTrue(pds1.getState() == SmartPoolDataSourceOracle.State.CLOSED);
 
-        thrown2 = assertThrows(SQLException.class, () -> pds1.getConnection());
-
-        log.debug("message: {}", thrown2.getMessage());
-        
-        assertTrue(thrown2.getMessage().matches(rex2));
+        thrown1 = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
+        log.debug("message: {}", thrown1.getMessage());        
+        assertTrue(thrown1.getMessage().matches(rex1));
     }
 }

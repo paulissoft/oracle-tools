@@ -54,10 +54,8 @@ public class CheckConnectionHikariUnitTest {
 
     @Test
     void testConnection() throws SQLException {
-        final String rex1 = "^You can only get a connection when the pool state is OPEN or CLOSING but it is CLOSED\\.$";
+        final String rex1 = "^You can only get a connection when the pool state is OPEN but it is CLOSED\\.$";
         IllegalStateException thrown1;
-        final String rex2 = "^.+\\s+HikariDataSource \\(HikariPool-bocsconf-boocpi-boocpp15j\\) has been closed\\.$";
-        SQLException thrown2;
         Connection conn1, conn2, conn3;
         
         log.debug("testConnection()");
@@ -108,6 +106,7 @@ public class CheckConnectionHikariUnitTest {
         assertFalse(pds3.isOpen());
 
         thrown1 = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+        log.debug("message: {}", thrown1.getMessage());       
         assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds2
@@ -116,6 +115,7 @@ public class CheckConnectionHikariUnitTest {
         assertFalse(pds2.isOpen());
 
         thrown1 = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
+        log.debug("message: {}", thrown1.getMessage());       
         assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds1
@@ -123,10 +123,8 @@ public class CheckConnectionHikariUnitTest {
         pds1.close();
         assertTrue(pds1.getState() == SmartPoolDataSourceHikari.State.CLOSED);
 
-        thrown2 = assertThrows(SQLException.class, () -> pds1.getConnection());
-
-        log.debug("message: {}", thrown2.getMessage());
-        
-        assertTrue(thrown2.getMessage().matches(rex2));
+        thrown1 = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
+        log.debug("message: {}", thrown1.getMessage());        
+        assertTrue(thrown1.getMessage().matches(rex1));
     }
 }

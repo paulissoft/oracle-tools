@@ -66,8 +66,8 @@ public class CheckSmartHikariUnitTest {
         
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bc_proxy[boauth], password=null, " + 
-                     "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
-                     "maximumPoolSize=10, minimumIdle=10, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
+                     "type=class com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari), poolName=null, " +
+                     "maximumPoolSize=9, minimumIdle=9, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
@@ -162,7 +162,7 @@ public class CheckSmartHikariUnitTest {
         assertNotEquals(pds.getMinimumIdle(), pds.getMaximumPoolSize());
 
         final PoolDataSourceConfigurationHikari pdsConfigBefore =
-            (PoolDataSourceConfigurationHikari) pds.get();
+            (PoolDataSourceConfigurationHikari) pds.getPoolDataSource().get();
 
         // create all connections possible in the normal pool data source
         for (int j = 0; j < pds.getMinimumIdle(); j++) {
@@ -175,7 +175,7 @@ public class CheckSmartHikariUnitTest {
                      pds.getTotalConnections());
 
         final PoolDataSourceConfigurationHikari pdsConfigAfter =
-            (PoolDataSourceConfigurationHikari) pds.get();
+            (PoolDataSourceConfigurationHikari) pds.getPoolDataSource().get();
 
         log.debug("pdsConfigAfter: {}", pdsConfigAfter);
 
