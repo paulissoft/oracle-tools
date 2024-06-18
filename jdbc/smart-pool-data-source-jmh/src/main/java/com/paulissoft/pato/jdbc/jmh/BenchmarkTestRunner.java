@@ -34,7 +34,7 @@ public class BenchmarkTestRunner {
 
         if (jmhFilter != null && jmhFilter.size() > 0) {
             // set the class name regex for benchmarks to search for to the current class 
-            jmhFilter.forEach(i -> { chainedOptionsBuilder.include("\\." + i + "\\."); });
+            jmhFilter.forEach(i -> { chainedOptionsBuilder.include("\\." + i + "\\.").result(i + "-" + resultFile); });
         } else {
             chainedOptionsBuilder.include("\\..*\\.");
         }
