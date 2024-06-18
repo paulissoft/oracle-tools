@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -195,7 +196,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             break;
         }
 
-        assert (this.level == 4) == (this.children == null) : "Level is 4 if and only ifthere are no children." ;
+        assert (this.level == 4) == (this.children == null) : "Level is 4 if and only if there are no children." ;
 
         if (this.parent != null) {
             this.parent.children.add(this);
@@ -1087,36 +1088,54 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         }
     }
 
+    @NonNull
+    public final Snapshot getSnapshot() {
+        return new Snapshot(this);
+    }
+
+    public final Snapshot getSnapshot(final int level) {
+        assert level >= 1 && level <= 4 : "Level must be between 1 and 4.";
+
+        PoolDataSourceStatistics instance = this;
+
+        while (instance != null && instance.level > level) {
+            instance = instance.parent;
+        }
+
+        return instance != null && instance.level == level ? new Snapshot(instance) : null;
+    }
+
+    // a data class
     public final class Snapshot {
-        private long physicalConnectionCount;
+        public final long physicalConnectionCount;
         
-        private long physicalTimeElapsed;
+        public final long physicalTimeElapsed;
 
-        private long physicalTimeElapsedMin;
+        public final long physicalTimeElapsedMin;
 
-        private long physicalTimeElapsedMax;
+        public final long physicalTimeElapsedMax;
 
-        private long logicalConnectionCount;
+        public final long logicalConnectionCount;
 
-        private long logicalTimeElapsed;
+        public final long logicalTimeElapsed;
 
-        private long logicalTimeElapsedMin;
+        public final long logicalTimeElapsedMin;
 
-        private long logicalTimeElapsedMax;
+        public final long logicalTimeElapsedMax;
 
-        private long connectionCount;
+        public final long connectionCount;
 
-        private long activeConnectionsMin;
+        public final long activeConnectionsMin;
         
-        private long activeConnectionsMax;
+        public final long activeConnectionsMax;
 
-        private long idleConnectionsMin;
+        public final long idleConnectionsMin;
         
-        private long idleConnectionsMax;
+        public final long idleConnectionsMax;
 
-        private long totalConnectionsMin;
+        public final long totalConnectionsMin;
         
-        private long totalConnectionsMax;
+        public final long totalConnectionsMax;
 
         Snapshot(final PoolDataSourceStatistics poolDataSourceStatistics) {
             physicalConnectionCount = poolDataSourceStatistics.getPhysicalConnectionCount();
