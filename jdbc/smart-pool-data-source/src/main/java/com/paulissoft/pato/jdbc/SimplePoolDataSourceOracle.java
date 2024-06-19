@@ -1,10 +1,10 @@
 package com.paulissoft.pato.jdbc;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
 import oracle.ucp.UniversalConnectionPoolException;
@@ -321,30 +321,28 @@ public class SimplePoolDataSourceOracle
 
     @Override
     public Connection getConnection() throws SQLException {
-        final PoolDataSourceStatistics poolDataSourceStatistics = this.poolDataSourceStatistics; // cache the volatile member
-        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
-        final Instant tm = isStatisticsEnabled ? Instant.now() : null;
+        final PoolDataSourceStatistics poolDataSourceStatistics = this.poolDataSourceStatistics;
         Connection conn = null;
 
-        try {
-            conn = super.getConnection();
-        } catch (SQLException ex) {
-            if (isStatisticsEnabled) {
-                poolDataSourceStatistics.signalSQLException(this, ex);
-            }
-            throw ex;
-        } catch (Exception ex) {
-            if (isStatisticsEnabled) {
+        if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+            final Instant tm = Instant.now();
+            
+            try {
+                conn = super.getConnection();
+            } catch (SQLException se) {
+                poolDataSourceStatistics.signalSQLException(this, se);
+                throw se;
+            } catch (Exception ex) {
                 poolDataSourceStatistics.signalException(this, ex);
+                throw ex;
             }
-            throw ex;
-        }
 
-        if (isStatisticsEnabled) {
             poolDataSourceStatistics.updateStatistics(this,
                                                       conn,
                                                       Duration.between(tm, Instant.now()).toMillis(),
                                                       true);
+        } else {
+            conn = super.getConnection();
         }
 
         return conn;
