@@ -194,6 +194,64 @@ begin
   );
 end run_processing_method;  
 
+procedure ensure_queue_gets_dequeued
+( p_msg in msg_typ
+, p_queue_name in user_queues.name%type
+)
+is
+  l_recipients all_queue_tables.recipients%type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE.ENSURE_QUEUE_GETS_DEQUEUED');
+  dbug.print
+  ( dbug."info"
+  , 'p_msg.default_processing_method(): %s; l_queue_name: %s'
+  , p_msg.default_processing_method()
+  , p_queue_name
+  );
+$end
+
+  if p_msg.default_processing_method() like "plsql://" || '%'
+  then
+    select  qt.recipients
+    into    l_recipients
+    from    all_queues q
+            inner join all_queue_tables qt
+            on qt.owner = q.owner and qt.queue_table = q.queue_table
+    where   q.owner = trim('"' from c_schema)
+    and     q.queue_table = trim('"' from c_queue_table)
+    and     q.name = trim('"' from p_queue_name);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'l_recipients: %s', l_recipients);
+$end
+
+    -- add default subscriber for a multiple consumer queue table
+    if l_recipients <> 'SINGLE'
+    then
+      add_subscriber_at
+      ( p_queue_name => p_queue_name
+      , p_subscriber => c_default_subscriber
+      );
+    end if;
+    
+    register_at
+    ( p_queue_name => p_queue_name
+    , p_subscriber => case when l_recipients <> 'SINGLE' then c_default_subscriber end
+    , p_plsql_callback => replace(p_msg.default_processing_method(), "plsql://")
+    );
+  elsif p_msg.default_processing_method() like "package://" || '%'
+  then
+    run_processing_method
+    ( p_msg.default_processing_method()
+    , 'restart'
+    );
+  end if;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+end ensure_queue_gets_dequeued;
+
 -- public routines
 
 function get_queue_name
@@ -785,62 +843,8 @@ is
   l_dequeue_enabled user_queues.dequeue_enabled%type;
   l_enqueue_options dbms_aq.enqueue_options_t;
   l_message_properties dbms_aq.message_properties_t;
+  
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
-  l_recipients all_queue_tables.recipients%type;
-
-  procedure ensure_queue_gets_dequeued
-  is
-  begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE.ENSURE_QUEUE_GETS_DEQUEUED');
-    dbug.print
-    ( dbug."info"
-    , 'p_msg.default_processing_method(): %s; l_queue_name: %s'
-    , p_msg.default_processing_method()
-    , l_queue_name
-    );
-$end
-
-    if p_msg.default_processing_method() like "plsql://" || '%'
-    then
-      select  qt.recipients
-      into    l_recipients
-      from    all_queues q
-              inner join all_queue_tables qt
-              on qt.owner = q.owner and qt.queue_table = q.queue_table
-      where   q.owner = trim('"' from c_schema)
-      and     q.queue_table = trim('"' from c_queue_table)
-      and     q.name = trim('"' from l_queue_name);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'l_recipients: %s', l_recipients);
-$end
-
-      -- add default subscriber for a multiple consumer queue table
-      if l_recipients <> 'SINGLE'
-      then
-        add_subscriber_at
-        ( p_queue_name => l_queue_name
-        , p_subscriber => c_default_subscriber
-        );
-      end if;
-      
-      register_at
-      ( p_queue_name => l_queue_name
-      , p_subscriber => case when l_recipients <> 'SINGLE' then c_default_subscriber end
-      , p_plsql_callback => replace(p_msg.default_processing_method(), "plsql://")
-      );
-    elsif p_msg.default_processing_method() like "package://" || '%'
-    then
-      run_processing_method
-      ( p_msg.default_processing_method()
-      , 'restart'
-      );
-    end if;
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave;
-$end
-  end ensure_queue_gets_dequeued;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE');
@@ -940,7 +944,7 @@ $end
           raise;
         end if;
         -- now ensure that the message is dequeued by either registering a callback or starting a job
-        ensure_queue_gets_dequeued;
+        ensure_queue_gets_dequeued(p_msg, l_queue_name);
   
       when e_enqueue_disabled
       then
@@ -971,6 +975,117 @@ exception
 $end
 end enqueue;
 
+procedure enqueue_array
+( p_msg_tab in msg_tab_typ -- the messages
+, p_array_size in binary_integer default null
+, p_correlation_tab in sys.odcivarchar2list default null
+, p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
+, p_msgid_tab out nocopy dbms_aq.msgid_array_t
+)
+is
+  l_queue_name constant user_queues.name%type := get_queue_name(p_msg_tab(p_msg_tab.first));
+  l_enqueue_enabled user_queues.enqueue_enabled%type;
+  l_dequeue_enabled user_queues.dequeue_enabled%type;
+  l_enqueue_options dbms_aq.enqueue_options_t;
+  l_message_properties dbms_aq.message_properties_t;
+  l_message_properties_tab dbms_aq.message_properties_array_t := dbms_aq.message_properties_array_t();
+  l_dummy pls_integer;
+  
+  c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE_ARRAY');
+  dbug.print
+  ( dbug."input"  
+  , 'queue name: %s; p_array_size: %s; p_force: %s'
+  , l_queue_name
+  , p_array_size
+  , dbug.cast_to_varchar2(p_force)
+  );
+$end
+
+  l_enqueue_options.delivery_mode := dbms_aq.persistent;
+  l_enqueue_options.visibility := dbms_aq.on_commit;
+
+  l_message_properties.delay := dbms_aq.no_delay;
+  l_message_properties.expiration := dbms_aq.never;
+    
+  for i_idx in 1 .. p_msg_tab.count
+  loop
+    l_message_properties.correlation :=
+      case
+        when p_correlation_tab is not null
+         and i_idx <= p_correlation_tab.count
+        then p_correlation_tab(i_idx)
+      end;
+      
+    l_message_properties_tab.extend(1);
+    l_message_properties_tab(i_idx) := l_message_properties;
+  end loop;
+
+  <<try_loop>>
+  for i_try in 1 .. c_max_tries
+  loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'i_try: %s', i_try);
+$end    
+    begin
+      l_dummy :=
+        dbms_aq.enqueue_array
+        ( queue_name => l_queue_name
+        , enqueue_options => l_enqueue_options
+        , array_size => nvl(p_array_size, p_msg_tab.count)
+        , message_properties_array => l_message_properties_tab
+        , payload_array => p_msg_tab
+        , msgid_array => p_msgid_tab
+        );
+      exit try_loop; -- enqueue succeeded
+    exception
+      when e_queue_does_not_exist or e_fq_queue_does_not_exist
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        if i_try != c_max_tries
+        then
+          create_queue_at
+          ( p_queue_name => l_queue_name
+          , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
+          );
+        else
+          raise;
+        end if;
+        -- now ensure that the message is dequeued by either registering a callback or starting a job
+        ensure_queue_gets_dequeued(p_msg_tab(p_msg_tab.first), l_queue_name);
+  
+      when e_enqueue_disabled
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        if i_try != c_max_tries
+        then
+          start_queue_at
+          ( p_queue_name => l_queue_name
+          );
+        else
+          raise;
+        end if;
+      when others
+      then raise;
+    end;
+  end loop try_loop;  
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end enqueue_array;
+
 procedure dequeue
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
 , p_delivery_mode in binary_integer
@@ -989,6 +1104,7 @@ procedure dequeue
 is
   l_queue_name constant user_queues.name%type := nvl(simple_queue_name(p_queue_name), get_queue_name(p_msg));
   l_dequeue_options dbms_aq.dequeue_options_t;
+  
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1131,6 +1247,106 @@ exception
     raise;
 $end
 end dequeue;
+
+procedure dequeue_array
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_subscriber in varchar2
+, p_array_size in binary_integer
+, p_dequeue_mode in binary_integer
+, p_navigation in binary_integer
+, p_wait in binary_integer
+, p_correlation in varchar2
+, p_deq_condition in varchar2
+, p_force in boolean
+, p_msgid_tab out nocopy dbms_aq.msgid_array_t
+, p_message_properties_tab out nocopy dbms_aq.message_properties_array_t
+, p_msg_tab out nocopy msg_tab_typ
+)
+is
+  l_queue_name constant user_queues.name%type := simple_queue_name(p_queue_name);
+  l_dequeue_options dbms_aq.dequeue_options_t;
+  l_dummy pls_integer;
+  
+  c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_ARRAY');
+  dbug.print
+  ( dbug."input"
+  , 'queue name: %s; p_subscriber: %s; p_dequeue_mode: %s'
+  , l_queue_name
+  , p_subscriber
+  , dequeue_mode_descr(p_dequeue_mode)
+  );
+  dbug.print
+  ( dbug."input"
+  , 'p_navigation: %s; p_wait: %s; p_correlation: %s; p_deq_condition: %s; p_force: %s'
+  , navigation_descr(p_navigation)
+  , p_wait
+  , p_correlation
+  , p_deq_condition
+  , dbug.cast_to_varchar2(p_force)
+  );
+$end
+
+  l_dequeue_options.consumer_name := p_subscriber;
+  l_dequeue_options.dequeue_mode := p_dequeue_mode;
+  l_dequeue_options.navigation := p_navigation;
+  l_dequeue_options.wait := p_wait;
+  l_dequeue_options.correlation := p_correlation;
+  l_dequeue_options.deq_condition := p_deq_condition;
+  
+  l_dequeue_options.delivery_mode := dbms_aq.persistent;
+  l_dequeue_options.visibility := dbms_aq.persistent;
+
+  <<try_loop>>
+  for i_try in 1 .. c_max_tries
+  loop
+    begin
+      l_dummy :=
+        dbms_aq.dequeue_array
+        ( queue_name => l_queue_name
+        , dequeue_options => l_dequeue_options
+        , array_size => p_array_size
+        , message_properties_array => p_message_properties_tab
+        , payload_array => p_msg_tab
+        , msgid_array => p_msgid_tab
+        );
+      exit try_loop; -- enqueue succeeded
+    exception
+      when e_queue_does_not_exist or e_fq_queue_does_not_exist
+      then
+        if i_try != c_max_tries
+        then
+          create_queue_at
+          ( p_queue_name => l_queue_name
+          , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
+          );
+        else
+          raise;
+        end if;
+      when e_dequeue_disabled
+      then
+        if i_try != c_max_tries
+        then
+          start_queue_at
+          ( p_queue_name => l_queue_name
+          );
+        else
+          raise;
+        end if;
+    end;
+  end loop try_loop;  
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave;
+    raise;
+$end
+end dequeue_array;
 
 procedure dequeue_and_process
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).

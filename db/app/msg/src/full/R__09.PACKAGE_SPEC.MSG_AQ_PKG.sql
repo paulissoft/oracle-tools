@@ -180,6 +180,23 @@ Otherwise, when there is NOT an empty lob, the second combination.
 
 **/
 
+procedure enqueue_array
+( p_msg_tab in msg_tab_typ -- the messages
+, p_array_size in binary_integer default null -- defaults to p_msg_tab.count
+, p_correlation_tab in sys.odcivarchar2list default null
+, p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
+, p_msgid_tab out nocopy dbms_aq.msgid_array_t
+);
+/**
+
+Array enqueue the messages to the queue get_queue_name(p_msg).
+
+Array enqueuing is not supported for buffered messages, hence delivery mode will be equal to dbms_aq.persistent.
+
+Visibility will be dbms_aq.on_commit.
+
+**/
+
 procedure dequeue
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
 , p_delivery_mode in binary_integer -- dbms_aq.persistent or dbms_aq.buffered
@@ -209,6 +226,30 @@ When the input is not one of these combinations:
 * if p_delivery_mode equals dbms_aq.buffered or dbms_aq.persistent_or_buffered, the visibility will become dbms_aq.immediate
 * if p_visibility equals dbms_aq.on_commit, the delivery mode will become dbms_aq.persistent
 * otherwise delivery mode will become dbms_aq.persistent and visibility will be dbms_aq.on_commit
+
+**/
+
+procedure dequeue_array
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_subscriber in varchar2
+, p_array_size in binary_integer default 100
+, p_dequeue_mode in binary_integer default dbms_aq.remove
+, p_navigation in binary_integer default dbms_aq.next_message
+, p_wait in binary_integer default dbms_aq.forever
+, p_correlation in varchar2 default null
+, p_deq_condition in varchar2 default null
+, p_force in boolean default false -- When true, queue tables, queues will be created/added if necessary
+, p_msgid_tab out nocopy dbms_aq.msgid_array_t
+, p_message_properties_tab out nocopy dbms_aq.message_properties_array_t
+, p_msg_tab out nocopy msg_tab_typ
+);
+/**
+
+Array dequeue these messages (of base type msg_typ) from the queue. The caller must process it (use <message>.process(0)).
+
+Array dequeuing is not supported for buffered messages, hence delivery mode will be equal to dbms_aq.persistent.
+
+Visibility will be dbms_aq.on_commit.
 
 **/
 
