@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -25,19 +26,19 @@ public class SimplePoolDataSourceHikari
 
     private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
+    private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
+
     // can only be set after constructor
     protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
         if (parentPoolDataSourceStatistics == null) {
             poolDataSourceStatistics = null;
         } else {
-            final PoolDataSourceConfiguration pdsConfig = get();
-
             // level 4
             poolDataSourceStatistics =
-                new PoolDataSourceStatistics(() -> getPoolDescription() + ": (only " + pdsConfig.getSchema() + ")",
+                new PoolDataSourceStatistics(null,
                                              parentPoolDataSourceStatistics, 
                                              () -> isClosed(),
-                                             this::get);
+                                             this::getWithPoolName);
         }
     }
          
@@ -100,7 +101,15 @@ public class SimplePoolDataSourceHikari
         log.debug("<set()");
     }
 
+    public PoolDataSourceConfiguration getWithPoolName() {
+        return get(true);
+    }
+
     public PoolDataSourceConfiguration get() {
+        return get(false);
+    }
+
+    private PoolDataSourceConfiguration get(final boolean withPoolName) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(getDriverClassName())
@@ -108,7 +117,7 @@ public class SimplePoolDataSourceHikari
             .username(getUsername())
             .password(null) // do not copy password
             .type(this.getClass().getName())
-            .poolName(null) // do not copy pool name
+            .poolName(withPoolName ? getPoolName() : null)
             .maximumPoolSize(getMaximumPoolSize())
             .minimumIdle(getMinimumIdle())
             .autoCommit(isAutoCommit())
@@ -308,6 +317,12 @@ public class SimplePoolDataSourceHikari
                                                       true);
         } else {
             conn = super.getConnection();
+        }
+
+        if (!hasShownConfig.getAndSet(true)) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            show(get());
         }
 
         return conn;
