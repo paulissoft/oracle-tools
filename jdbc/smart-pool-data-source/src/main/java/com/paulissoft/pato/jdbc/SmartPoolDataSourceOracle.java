@@ -41,7 +41,7 @@ public class SmartPoolDataSourceOracle
             new PoolDataSourceStatistics(() -> getPoolDescription() + ": (all)",
                                          poolDataSourceStatisticsTotal,
                                          () -> !isOpen(),
-                                         () -> get());
+                                         this::getWithPoolName);
         
         getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics); 
 
@@ -234,7 +234,7 @@ public class SmartPoolDataSourceOracle
         }
     }
 
-    protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceOracle pds, final Exception ex) {
+    protected boolean getConnectionFailsDueToNoIdleConnections(final Exception ex) {
         return (ex instanceof SQLException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
     }
 
