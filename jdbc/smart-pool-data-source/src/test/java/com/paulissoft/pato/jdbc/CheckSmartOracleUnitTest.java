@@ -168,6 +168,8 @@ public class CheckSmartOracleUnitTest {
         final PoolDataSourceConfigurationOracle pdsConfigBefore =
             (PoolDataSourceConfigurationOracle) pds.getPoolDataSource().get();
 
+        pds.getConnection().close(); // warm up: the first connection is via the overflow
+
         // create all connections possible in the normal pool data source
         for (int j = 0; j < pds.getMinPoolSize(); j++) {
             assertNotNull(pds.getConnection());

@@ -164,6 +164,8 @@ public class CheckSmartHikariUnitTest {
         final PoolDataSourceConfigurationHikari pdsConfigBefore =
             (PoolDataSourceConfigurationHikari) pds.getPoolDataSource().get();
 
+        pds.getConnection().close(); // warm up: the first connection is via the overflow
+        
         // create all connections possible in the normal pool data source
         for (int j = 0; j < pds.getMinimumIdle(); j++) {
             assertNotNull(pds.getConnection());
