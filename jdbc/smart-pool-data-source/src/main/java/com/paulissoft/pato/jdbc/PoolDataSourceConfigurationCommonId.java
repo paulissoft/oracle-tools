@@ -9,7 +9,6 @@ public class PoolDataSourceConfigurationCommonId extends PoolDataSourceConfigura
         copy.keepCommonIdConfiguration();
         if (copy.isFixedUsernamePassword()) {
             // username like bc_proxy[bodomain] to bc_proxy
-            copy.determineConnectInfo();
             if (copy.getProxyUsername() != null) {
                 copy.setUsername(copy.getProxyUsername());
             }

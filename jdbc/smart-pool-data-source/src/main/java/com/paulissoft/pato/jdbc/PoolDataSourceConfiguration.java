@@ -36,12 +36,12 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
     // username like:
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
-    @Getter
+    // user defined getter below
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String proxyUsername;
 
-    @Getter
+    // user defined getter below
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String schema; // needed to build the PoolName
@@ -114,6 +114,18 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
         }
     }
 
+    public String getProxyUsername() {
+        determineConnectInfo(); // this sets proxyUsername when username is known
+        
+        return proxyUsername;
+    }
+    
+    public String getSchema() {
+        determineConnectInfo(); // this sets schema when username is known
+        
+        return schema;
+    }
+
     // copy parent fields
     public void copyFrom(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         this.driverClassName = poolDataSourceConfiguration.driverClassName;
@@ -146,7 +158,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
         determineConnectInfo();
     }
     
-    void determineConnectInfo() {
+    private void determineConnectInfo() {
         if (username == null) {
             proxyUsername = schema = null;
         } else if (schema == null) { /* determine only when necessary */

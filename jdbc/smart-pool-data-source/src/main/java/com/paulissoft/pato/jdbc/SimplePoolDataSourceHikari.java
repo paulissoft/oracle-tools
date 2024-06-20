@@ -32,8 +32,6 @@ public class SimplePoolDataSourceHikari
         } else {
             final PoolDataSourceConfiguration pdsConfig = get();
 
-            pdsConfig.determineConnectInfo(); // determine schema
-            
             // level 4
             poolDataSourceStatistics =
                 new PoolDataSourceStatistics(() -> getPoolDescription() + ": (only " + pdsConfig.getSchema() + ")",

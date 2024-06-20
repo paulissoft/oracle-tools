@@ -226,7 +226,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
             // set pool name
             if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-                pdsConfig.determineConnectInfo();
                 poolDataSource.setPoolName(getClass().getSimpleName() + "-" + pdsConfig.getSchema());
                 // use a different name to solve UCP-0
                 if (poolDataSourceOverflow != null) {
