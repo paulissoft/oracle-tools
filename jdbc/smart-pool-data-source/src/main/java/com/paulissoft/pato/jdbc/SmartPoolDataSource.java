@@ -286,9 +286,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
      */
     
     public final Connection getConnection() throws SQLException {
-        // final Instant t1 = Instant.now();
-        
-        log.trace(">getConnection()");        
+        log.trace(">getConnection()");
+
+        boolean useOverflow = false;
 
         try {
             switch (state) {
@@ -296,6 +296,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 open(); // will change state to OPEN
                 assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
                     "did you override setUp() correctly by invoking super.setUp()?";
+                // For the first connection use the overflow so both pools are initialized after the first two connections.
+                if (hasOverflow()) {
+                    useOverflow = true; 
+                }
                 // fall through
             case OPEN:
                 break;
@@ -307,20 +311,18 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             Connection conn;
 
             try {
-                conn = getConnection(false);
-            } catch (SQLException se) {
-                if (hasOverflow()) {
-                    conn = getConnection(true);
+                conn = getConnection(useOverflow);
+            } catch (Exception ex) {
+                // switch pools (just once) when the connection fails due to no idle connections 
+                if ((useOverflow || hasOverflow()) && getConnectionFailsDueToNoIdleConnections(ex)) { 
+                    conn = getConnection(!useOverflow);
                 } else {
-                    throw se;
+                    throw ex;
                 }
             }
 
             return conn;
         } finally {
-            // final Instant t2 = Instant.now();
-
-            // log.debug("elapsed (ms): {}", Duration.between(t1, t2).toMillis());
             log.trace("<getConnection()");
         }
     }
@@ -332,18 +334,12 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
         try {
             return pds.getConnection();
-        } catch (Exception ex) {
-            if (!useOverflow && hasOverflow() && getConnectionFailsDueToNoIdleConnections(pds, ex)) {
-                return getConnection(!useOverflow);
-            } else {
-                throw ex;
-            }
         } finally {
             log.trace("<getConnection({})", useOverflow);
         }
     }
 
-    protected abstract boolean getConnectionFailsDueToNoIdleConnections(final T pds, final Exception ex);
+    protected abstract boolean getConnectionFailsDueToNoIdleConnections(final Exception ex);
 
     public final String getId() {
         return id.toString();
