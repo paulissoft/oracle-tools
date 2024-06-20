@@ -46,7 +46,9 @@ public class SmartPoolDataSourceHikari
 
         final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
 
-        poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+        if (poolDataSourceOverflow != null) {
+            poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+        }
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
@@ -177,7 +179,7 @@ public class SmartPoolDataSourceHikari
     // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
     @Override
-    protected SimplePoolDataSourceHikari getPoolDataSource() {
+    protected final SimplePoolDataSourceHikari getPoolDataSource() {
         return super.getPoolDataSource();
     }
 
