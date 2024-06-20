@@ -40,7 +40,7 @@ public class SmartPoolDataSourceHikari
             new PoolDataSourceStatistics(() -> getPoolDescription() + ": (all)",
                                          poolDataSourceStatisticsTotal,
                                          () -> !isOpen(),
-                                         () -> get());
+                                         this::getWithPoolName);
         
         getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
 
@@ -181,7 +181,7 @@ public class SmartPoolDataSourceHikari
         return super.getPoolDataSource();
     }
 
-    protected boolean getConnectionFailsDueToNoIdleConnections(final SimplePoolDataSourceHikari pds, final Exception ex) {
+    protected boolean getConnectionFailsDueToNoIdleConnections(final Exception ex) {
         return (ex instanceof SQLTransientConnectionException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
     }
     
