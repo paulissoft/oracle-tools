@@ -47,7 +47,9 @@ public class SmartPoolDataSourceOracle
 
         final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
 
-        poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+        if (poolDataSourceOverflow != null) {
+            poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+        }
    }
 
     public SmartPoolDataSourceOracle(String url,
@@ -157,7 +159,7 @@ public class SmartPoolDataSourceOracle
     // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
     @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverrideOracle.class })
     @Override
-    protected SimplePoolDataSourceOracle getPoolDataSource() {
+    protected final SimplePoolDataSourceOracle getPoolDataSource() {
         return super.getPoolDataSource();
     }
 
