@@ -37,11 +37,13 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
     // * bc_proxy[bodomain] => proxyUsername = bc_proxy, schema = bodomain
     // * bodomain => proxyUsername = null, schema = bodomain
     // user defined getter below
+    @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String proxyUsername;
 
     // user defined getter below
+    @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     @ToString.Exclude
     private String schema; // needed to build the PoolName
