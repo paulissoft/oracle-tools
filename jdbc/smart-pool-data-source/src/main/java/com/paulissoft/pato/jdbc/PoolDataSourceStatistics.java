@@ -204,7 +204,13 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     private String getDescription() {
-        return descriptionSupplier != null ? descriptionSupplier.get() : null;
+        if (descriptionSupplier != null) {
+            return descriptionSupplier.get();
+        } else {
+            final PoolDataSourceConfiguration pds = getPoolDataSourceConfiguration();
+
+            return pds != null ? pds.getPoolName() + ": (only " + pds.getSchema() + ")" : null;
+        }
     }
         
     boolean isClosed() {
