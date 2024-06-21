@@ -590,7 +590,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     private void showStatistics(final boolean showTotals) {
-        showStatistics(-1L,showTotals);
+        showStatistics(-1L, showTotals);
     }
     
     private void showStatistics(final long timeElapsed,
