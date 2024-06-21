@@ -226,10 +226,6 @@ public class SimplePoolDataSourceHikari
 
     // public String getPoolName();
 
-    public String getPoolDescription() {
-        return getPoolName();
-    }
-    
     // public void setUsername(String username) throws SQLException;
 
     // public String getUsername();
@@ -326,5 +322,18 @@ public class SimplePoolDataSourceHikari
         }
 
         return conn;
+    }
+
+    @Override
+    public void close() {        
+        super.close();
+
+        try {
+            if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+                poolDataSourceStatistics.close();
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
 }
