@@ -19,13 +19,6 @@ public class SmartPoolDataSourceHikari
 
     static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
     
-    private static final String POOL_NAME_PREFIX = SmartPoolDataSourceHikari.class.getSimpleName();
-
-    // Statistics at level 2
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-
     @Getter(AccessLevel.PROTECTED)
     protected final PoolDataSourceStatistics poolDataSourceStatistics;
 
@@ -46,7 +39,7 @@ public class SmartPoolDataSourceHikari
 
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> getPoolName() + ": (all)",
-                                         poolDataSourceStatisticsTotal,
+                                         PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal,
                                          () -> !isOpen(),
                                          this::getWithPoolName);
         
