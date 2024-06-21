@@ -600,8 +600,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         }
         
         final Consumer<String> method = showTotals ? logger::info : logger::debug;
-        final boolean showPoolSizes = level <= 3;
-        final boolean showErrors = showTotals && level <= 3;
+        final boolean showPoolSizes = level <= 4;
+        final boolean showErrors = showTotals && level <= 4;
         final String prefix = INDENT_PREFIX;
         final String poolDescription = getDescription();
         final PoolDataSourceConfiguration pds = showPoolSizes ? getPoolDataSourceConfiguration() : null;

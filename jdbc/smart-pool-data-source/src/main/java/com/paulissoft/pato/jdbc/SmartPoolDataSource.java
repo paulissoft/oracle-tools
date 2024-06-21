@@ -145,6 +145,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected void setUp() {
+        // minimize accessing volatile variables by shadowing them
+        final State state = this.state;
+        
         if (state != State.INITIALIZING) {
             return;
         }
@@ -168,6 +171,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
      */
 
     public final synchronized void close() {
+        // minimize accessing volatile variables by shadowing them
+        final State state = this.state;
+        
         if (state == State.CLOSED) {
             return;
         }
