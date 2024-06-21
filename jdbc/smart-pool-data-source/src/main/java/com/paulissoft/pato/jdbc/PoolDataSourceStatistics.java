@@ -314,15 +314,16 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         final int totalConnections) /*throws SQLException*/ {
         // assert !(level != 4 || isClosed())
         final BigDecimal count = new BigDecimal(getConnectionCount());
+        // update parent when connection statistics are not gathered for this level
+        final PoolDataSourceStatistics pdss = MAX_LEVEL_CONNECTION_STATISTICS == 3 ? parent : this;
+        
+        updateIterativeMean(count, activeConnections, pdss.activeConnectionsAvg);
+        updateIterativeMean(count, idleConnections, pdss.idleConnectionsAvg);
+        updateIterativeMean(count, totalConnections, pdss.totalConnectionsAvg);
 
-        // update parent
-        updateIterativeMean(count, activeConnections, parent.activeConnectionsAvg);
-        updateIterativeMean(count, idleConnections, parent.idleConnectionsAvg);
-        updateIterativeMean(count, totalConnections, parent.totalConnectionsAvg);
-
-        updateMinMax(activeConnections, parent.activeConnectionsMin, parent.activeConnectionsMax);
-        updateMinMax(idleConnections, parent.idleConnectionsMin, parent.idleConnectionsMax);
-        updateMinMax(totalConnections, parent.totalConnectionsMin, parent.totalConnectionsMax);
+        updateMinMax(activeConnections, pdss.activeConnectionsMin, pdss.activeConnectionsMax);
+        updateMinMax(idleConnections, pdss.idleConnectionsMin, pdss.idleConnectionsMax);
+        updateMinMax(totalConnections, pdss.totalConnectionsMin, pdss.totalConnectionsMax);
 
         lastUpdate.set(now());
 
