@@ -245,7 +245,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         return pdsSupplier != null ? pdsSupplier.get() : null;
     }        
 
-    private long now() {
+    private static long now() {
         final LocalDateTime localDateTime = LocalDateTime.now();
         final ZonedDateTime zdt = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
 
@@ -314,9 +314,19 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         final int totalConnections) /*throws SQLException*/ {
         // assert !(level != 4 || isClosed())
         final BigDecimal count = new BigDecimal(getConnectionCount());
-        // update parent when connection statistics are not gathered for this level
-        final PoolDataSourceStatistics pdss = MAX_LEVEL_CONNECTION_STATISTICS == 3 ? parent : this;
         
+        // update parent when connection statistics are not gathered for this level
+        if (MAX_LEVEL_CONNECTION_STATISTICS == 4) {
+            update(activeConnections, idleConnections, totalConnections, this, count);
+        }
+        update(activeConnections, idleConnections, totalConnections, parent, count);
+    }
+
+    private static void update(final int activeConnections,
+                               final int idleConnections,
+                               final int totalConnections,
+                               final PoolDataSourceStatistics pdss,
+                               final BigDecimal count) /*throws SQLException*/ {
         updateIterativeMean(count, activeConnections, pdss.activeConnectionsAvg);
         updateIterativeMean(count, idleConnections, pdss.idleConnectionsAvg);
         updateIterativeMean(count, totalConnections, pdss.totalConnectionsAvg);
@@ -325,14 +335,14 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         updateMinMax(idleConnections, pdss.idleConnectionsMin, pdss.idleConnectionsMax);
         updateMinMax(totalConnections, pdss.totalConnectionsMin, pdss.totalConnectionsMax);
 
-        lastUpdate.set(now());
+        pdss.lastUpdate.set(now());
 
         // Show statistics if necessary
-        if (mustShowTotals()) {
-            showStatistics(true);
+        if (pdss.mustShowTotals()) {
+            pdss.showStatistics(true);
         }
     }
-
+    
     private boolean mustShowTotals() {
         // Show statistics if the last update moment is not equal to the last shown moment
         // When checkStatistics is true (i.e. debug enabled) the moment is minute else hour
@@ -375,10 +385,12 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             return;
         }
 
-        if (level == 2 || level == 3) {
-            // do not show statistics at this level
-        } else {
+        if (children == null ||
+            children.size() != 1 ||
+            !(new Snapshot(this)).equals(new Snapshot(children.iterator().next()))) {
             showStatistics(true);
+        } else {
+            logger.info("Not showing statistics since the only child (level = {}) has the same characteristics as its parent.", level);
         }
 
         if (this.parent == null) {
