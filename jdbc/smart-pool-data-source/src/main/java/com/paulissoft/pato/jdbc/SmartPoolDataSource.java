@@ -59,6 +59,25 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
     
+    protected static PoolDataSourceStatistics determinePoolDataSourceStatistics(final SimplePoolDataSource pds,
+                                                                                final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+        log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
+
+        try {
+            if (parentPoolDataSourceStatistics == null) {
+                return null;
+            } else {
+                // level 4
+                return new PoolDataSourceStatistics(null,
+                                                    parentPoolDataSourceStatistics, 
+                                                    pds::isClosed,
+                                                    pds::getWithPoolName);
+            }
+        } finally {
+            log.debug("<determinePoolDataSourceStatistics");
+        }
+    }
+         
     /*
      * State
      */
