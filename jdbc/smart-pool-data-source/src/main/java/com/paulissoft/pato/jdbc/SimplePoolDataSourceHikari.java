@@ -1,8 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Connection;
-import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -20,24 +18,6 @@ public class SimplePoolDataSourceHikari
 
     private final StringBuffer id = new StringBuffer();
 
-    protected PoolDataSourceStatistics determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
-        log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
-
-        try {
-            if (parentPoolDataSourceStatistics == null) {
-                return null;
-            } else {
-                // level 4
-                return new PoolDataSourceStatistics(null,
-                                                    parentPoolDataSourceStatistics, 
-                                                    () -> isClosed(),
-                                                    this::getWithPoolName);
-            }
-        } finally {
-            log.debug("<determinePoolDataSourceStatistics");
-        }
-    }
-         
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode())/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
     }
