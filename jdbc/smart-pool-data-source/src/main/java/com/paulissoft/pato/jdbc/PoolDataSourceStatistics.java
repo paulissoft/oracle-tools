@@ -44,6 +44,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     private static final int DISPLAY_SCALE = 0;
 
+    private static final int MAX_LEVEL_CONNECTION_STATISTICS = 4; // was 3
+
     static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
@@ -100,7 +102,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     private final AtomicBigDecimal logicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
-    // all connection related stuff (level 3 and less)
+    // all connection related stuff (level <= MAX_LEVEL_CONNECTION_STATISTICS)
 
     private final AtomicLong activeConnectionsMin;
         
@@ -171,6 +173,14 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         switch(this.level) {
         case 4:
             this.children = null;
+            break;
+            
+        default:
+            this.children = new CopyOnWriteArraySet<PoolDataSourceStatistics>();
+            break;
+        }
+
+        if (this.level > MAX_LEVEL_CONNECTION_STATISTICS) {
             this.activeConnectionsMin = null;
             this.activeConnectionsMax = null;
             this.activeConnectionsAvg = null;
@@ -180,10 +190,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             this.totalConnectionsMin = null;
             this.totalConnectionsMax = null;
             this.totalConnectionsAvg = null;
-            break;
-            
-        default:
-            this.children = new CopyOnWriteArraySet<PoolDataSourceStatistics>();
+        } else {
             this.activeConnectionsMin = new AtomicLong(Long.MAX_VALUE);
             this.activeConnectionsMax = new AtomicLong(Long.MIN_VALUE);
             this.activeConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
@@ -193,7 +200,6 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             this.totalConnectionsMin = new AtomicLong(Long.MAX_VALUE);
             this.totalConnectionsMax = new AtomicLong(Long.MIN_VALUE);
             this.totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
-            break;
         }
 
         assert (this.level == 4) == (this.children == null) : "Level is 4 if and only if there are no children." ;
@@ -393,7 +399,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
         // update the parent before the child since updateMean1 is used,
         // i.e. those must be done before updateMean2
-        if (this.level <= 3) {
+        if (this.level <= MAX_LEVEL_CONNECTION_STATISTICS) {
             updateMean1(this.getConnectionCount(), this.activeConnectionsAvg.get(),
                         this.parent.getConnectionCount(), this.parent.activeConnectionsAvg);
             updateMean1(this.getConnectionCount(), this.idleConnectionsAvg.get(),
@@ -461,7 +467,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         logicalTimeElapsedMax.set(Long.MIN_VALUE);
         logicalTimeElapsedAvg.set(BigDecimal.ZERO);
 
-        if (level <= 3) {
+        if (level <= MAX_LEVEL_CONNECTION_STATISTICS) {
             activeConnectionsMin.set(Long.MAX_VALUE);
             activeConnectionsMax.set(Long.MIN_VALUE);
             activeConnectionsAvg.set(BigDecimal.ZERO);
@@ -600,8 +606,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         }
         
         final Consumer<String> method = showTotals ? logger::info : logger::debug;
-        final boolean showPoolSizes = level <= 4;
-        final boolean showErrors = showTotals && level <= 4;
+        final boolean showPoolSizes = level <= MAX_LEVEL_CONNECTION_STATISTICS;
+        final boolean showErrors = showTotals && level <= MAX_LEVEL_CONNECTION_STATISTICS;
         final String prefix = INDENT_PREFIX;
         final String poolDescription = getDescription();
         final PoolDataSourceConfiguration pds = showPoolSizes ? getPoolDataSourceConfiguration() : null;
