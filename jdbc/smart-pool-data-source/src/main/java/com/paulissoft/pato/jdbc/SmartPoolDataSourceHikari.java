@@ -37,7 +37,7 @@ public class SmartPoolDataSourceHikari
         super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
 
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> getPoolDescription() + ": (all)",
+            new PoolDataSourceStatistics(() -> getPoolName() + ": (all)",
                                          poolDataSourceStatisticsTotal,
                                          () -> !isOpen(),
                                          this::getWithPoolName);
