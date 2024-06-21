@@ -610,6 +610,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         }
     }
 
+    public void showStatistics() {
+        showStatistics(true);
+    }
+    
     private void showStatistics(final boolean showTotals) {
         showStatistics(-1L, showTotals);
     }

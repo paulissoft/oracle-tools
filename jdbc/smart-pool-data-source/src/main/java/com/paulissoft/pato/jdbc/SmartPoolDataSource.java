@@ -391,8 +391,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                                             final PoolDataSourceStatistics poolDataSourceStatistics,
                                             final AtomicBoolean hasShownConfig) throws SQLException {
         Connection conn = null;
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
 
-        if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+        if (isStatisticsEnabled) {
             final Instant tm = Instant.now();
             
             try {
@@ -417,6 +418,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             // Only show the first time a pool has gotten a connection.
             // Not earlier because these (fixed) values may change before and after the first connection.
             pds.show(pds.get());
+
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.showStatistics();
+            }
         }
 
         return conn;
