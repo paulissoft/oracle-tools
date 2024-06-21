@@ -182,6 +182,7 @@ Otherwise, when there is NOT an empty lob, the second combination.
 
 procedure enqueue_array
 ( p_msg_tab in msg_tab_typ -- the messages
+, p_visibility in binary_integer default dbms_aq.on_commit -- dbms_aq.on_commit or dbms_aq.immediate
 , p_array_size in binary_integer default null -- defaults to p_msg_tab.count
 , p_correlation_tab in sys.odcivarchar2list default null
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
@@ -231,6 +232,7 @@ When the input is not one of these combinations:
 
 procedure dequeue_array
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_visibility in binary_integer -- dbms_aq.on_commit or dbms_aq.immediate
 , p_subscriber in varchar2
 , p_array_size in binary_integer default 100
 , p_dequeue_mode in binary_integer default dbms_aq.remove
