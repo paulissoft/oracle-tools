@@ -38,7 +38,7 @@ public class SmartPoolDataSourceOracle
         super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
 
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> getPoolDescription() + ": (all)",
+            new PoolDataSourceStatistics(() -> getPoolName() + ": (all)",
                                          poolDataSourceStatisticsTotal,
                                          () -> !isOpen(),
                                          this::getWithPoolName);
