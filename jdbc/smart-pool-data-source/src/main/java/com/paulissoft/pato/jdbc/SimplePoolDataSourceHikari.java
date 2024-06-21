@@ -6,7 +6,6 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -24,27 +23,24 @@ public class SimplePoolDataSourceHikari
 
     private final StringBuffer id = new StringBuffer();
 
-    @Getter
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
-
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
-    // can only be set after constructor
-    protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+    protected PoolDataSourceStatistics determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
         log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
-        
-        if (parentPoolDataSourceStatistics == null) {
-            poolDataSourceStatistics = null;
-        } else {
-            // level 4
-            poolDataSourceStatistics =
-                new PoolDataSourceStatistics(null,
-                                             parentPoolDataSourceStatistics, 
-                                             () -> isClosed(),
-                                             this::getWithPoolName);
-        }
 
-        log.debug("<determinePoolDataSourceStatistics");
+        try {
+            if (parentPoolDataSourceStatistics == null) {
+                return null;
+            } else {
+                // level 4
+                return new PoolDataSourceStatistics(null,
+                                                    parentPoolDataSourceStatistics, 
+                                                    () -> isClosed(),
+                                                    this::getWithPoolName);
+            }
+        } finally {
+            log.debug("<determinePoolDataSourceStatistics");
+        }
     }
          
     public void setId(final String srcId) {
@@ -294,16 +290,14 @@ public class SimplePoolDataSourceHikari
         }
     }
 
-    @Override
-    public Connection getConnection() throws SQLException {
-        final PoolDataSourceStatistics poolDataSourceStatistics = this.poolDataSourceStatistics;
+    public Connection getConnection(final PoolDataSourceStatistics poolDataSourceStatistics) throws SQLException {
         Connection conn = null;
 
         if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
             final Instant tm = Instant.now();
             
             try {
-                conn = super.getConnection();
+                conn = getConnection();
             } catch (SQLException se) {
                 poolDataSourceStatistics.signalSQLException(this, se);
                 throw se;
@@ -317,7 +311,7 @@ public class SimplePoolDataSourceHikari
                                                       Duration.between(tm, Instant.now()).toMillis(),
                                                       true);
         } else {
-            conn = super.getConnection();
+            conn = getConnection();
         }
 
         if (!hasShownConfig.getAndSet(true)) {
@@ -327,21 +321,5 @@ public class SimplePoolDataSourceHikari
         }
 
         return conn;
-    }
-
-    @Override
-    public void close() {        
-        super.close();
-
-        try {
-            if (poolDataSourceStatistics != null) {
-                log.info("About to close pool statistics.");
-                poolDataSourceStatistics.close();
-            } else {
-                log.info("There are no pool statistics.");
-            }
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
     }
 }

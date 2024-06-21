@@ -3,6 +3,8 @@ package com.paulissoft.pato.jdbc;
 // import java.time.Duration;
 import java.sql.Connection;
 import java.sql.SQLException;
+import lombok.AccessLevel;
+import lombok.Getter;
 import oracle.ucp.jdbc.ValidConnection;
 // import lombok.NonNull;
 import lombok.experimental.Delegate;
@@ -25,6 +27,12 @@ public class SmartPoolDataSourceOracle
         = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                        PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
+    @Getter(AccessLevel.PROTECTED)
+    protected final PoolDataSourceStatistics poolDataSourceStatistics;
+
+    @Getter(AccessLevel.PROTECTED)
+    protected final PoolDataSourceStatistics poolDataSourceStatisticsOverflow;
+    
     /*
      * Constructor
      */
@@ -43,14 +51,14 @@ public class SmartPoolDataSourceOracle
                                          () -> !isOpen(),
                                          this::getWithPoolName);
         
-        getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics); 
-
-        assert getPoolDataSource().getPoolDataSourceStatistics() != null : "Pool statistics must be activated.";
+        poolDataSourceStatistics = getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics); 
 
         final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
 
         if (poolDataSourceOverflow != null) {
-            poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+            poolDataSourceStatisticsOverflow = poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+        } else {
+            poolDataSourceStatisticsOverflow = null;
         }
    }
 

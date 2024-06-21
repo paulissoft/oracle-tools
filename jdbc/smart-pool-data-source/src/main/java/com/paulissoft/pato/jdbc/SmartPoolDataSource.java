@@ -14,9 +14,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     private final T poolDataSource;
 
-    final Supplier<T> supplierT; // neede to set poolDataSourceOverflow later on
+    final Supplier<T> supplierT; // needed to set poolDataSourceOverflow later on
         
-    private volatile T poolDataSourceOverflow;
+    private volatile T poolDataSourceOverflow; // can only be set in open()
 
     protected enum State {
         INITIALIZING, // next possible states: ERROR, OPEN or CLOSED
@@ -27,8 +27,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     @NonNull
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
-
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
     /*
      * Constructor(s)
@@ -166,7 +164,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     // you may override this one
     // already called in an synchronized context
-    protected void tearDown(){
+    protected void tearDown() {
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
 
@@ -178,6 +176,19 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             case INITIALIZING:
             case ERROR:
                 try {
+                    if (getPoolDataSourceStatistics() != null) {
+                        log.info("About to close pool statistics.");
+                        getPoolDataSourceStatistics().close();
+                    } else {
+                        log.info("There are no pool statistics.");
+                    }
+                    if (getPoolDataSourceStatisticsOverflow() != null) {
+                        log.info("About to close overflow pool statistics.");
+                        getPoolDataSourceStatisticsOverflow().close();
+                    } else {
+                        log.info("There are no overflow pool statistics.");
+                    }
+
                     poolDataSource.close();
                     if (poolDataSourceOverflow != null) {
                         poolDataSourceOverflow.close();
@@ -196,6 +207,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             log.debug("<tearDown(id={}, state={})", getId(), state);
         }
     }
+
+    protected abstract PoolDataSourceStatistics getPoolDataSourceStatistics();
+
+    protected abstract PoolDataSourceStatistics getPoolDataSourceStatisticsOverflow();
 
     protected abstract long getMinConnectionTimeout();
     
@@ -333,9 +348,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         log.trace(">getConnection({})", useOverflow);
 
         final T pds = useOverflow ? getPoolDataSourceOverflow() : getPoolDataSource();
+        final PoolDataSourceStatistics pdsStatistics = useOverflow ? getPoolDataSourceStatisticsOverflow() : getPoolDataSourceStatistics();
 
         try {
-            return pds.getConnection();
+            return pds.getConnection(pdsStatistics);
         } finally {
             log.trace("<getConnection({})", useOverflow);
         }

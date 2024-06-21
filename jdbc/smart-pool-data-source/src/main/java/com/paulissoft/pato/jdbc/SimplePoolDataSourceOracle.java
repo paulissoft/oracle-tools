@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
 import oracle.ucp.UniversalConnectionPoolException;
@@ -40,27 +39,25 @@ public class SimplePoolDataSourceOracle
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-    @Getter
-    private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
-
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
     // can only be set after constructor
-    protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+    protected PoolDataSourceStatistics determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
         log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
-        
-        if (parentPoolDataSourceStatistics == null) {
-            poolDataSourceStatistics = null;
-        } else {
-            // level 4
-            poolDataSourceStatistics =
-                new PoolDataSourceStatistics(null,
-                                             parentPoolDataSourceStatistics, 
-                                             () -> isClosed.get(),
-                                             this::getWithPoolName);
-        }
 
-        log.debug("<determinePoolDataSourceStatistics");
+        try {
+            if (parentPoolDataSourceStatistics == null) {
+                return null;
+            } else {
+                // level 4
+                return new PoolDataSourceStatistics(null,
+                                                    parentPoolDataSourceStatistics, 
+                                                    () -> isClosed.get(),
+                                                    this::getWithPoolName);
+            }
+        } finally {
+            log.debug("<determinePoolDataSourceStatistics");
+        }
     }
 
     public void setId(final String srcId) {
@@ -303,16 +300,7 @@ public class SimplePoolDataSourceOracle
                 log.info("{} - Close completed.", connectionPoolName);
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
-            
-            if (poolDataSourceStatistics != null) {
-                log.info("About to close pool statistics.");
-                poolDataSourceStatistics.close();
-            } else {
-                log.info("There are no pool statistics.");
-            }
         } catch (UniversalConnectionPoolException ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
@@ -327,16 +315,14 @@ public class SimplePoolDataSourceOracle
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
     }
 
-    @Override
-    public Connection getConnection() throws SQLException {
-        final PoolDataSourceStatistics poolDataSourceStatistics = this.poolDataSourceStatistics;
+    public Connection getConnection(final PoolDataSourceStatistics poolDataSourceStatistics) throws SQLException {
         Connection conn = null;
 
         if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
             final Instant tm = Instant.now();
             
             try {
-                conn = super.getConnection();
+                conn = getConnection();
             } catch (SQLException se) {
                 poolDataSourceStatistics.signalSQLException(this, se);
                 throw se;
@@ -350,7 +336,7 @@ public class SimplePoolDataSourceOracle
                                                       Duration.between(tm, Instant.now()).toMillis(),
                                                       true);
         } else {
-            conn = super.getConnection();
+            conn = getConnection();
         }
 
         if (!hasShownConfig.getAndSet(true)) {
