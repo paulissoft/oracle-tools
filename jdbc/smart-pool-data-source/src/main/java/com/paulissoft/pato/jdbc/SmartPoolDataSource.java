@@ -67,7 +67,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             if (parentPoolDataSourceStatistics == null) {
                 return null;
             } else {
-                // level 4
                 return new PoolDataSourceStatistics(null,
                                                     parentPoolDataSourceStatistics, 
                                                     pds::isClosed,
