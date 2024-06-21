@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
 import oracle.ucp.UniversalConnectionPoolException;
@@ -38,13 +39,16 @@ public class SimplePoolDataSourceOracle
     private final StringBuffer password = new StringBuffer();
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
-    
+
+    @Getter
     private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
     // can only be set after constructor
     protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+        log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
+        
         if (parentPoolDataSourceStatistics == null) {
             poolDataSourceStatistics = null;
         } else {
@@ -54,7 +58,9 @@ public class SimplePoolDataSourceOracle
                                              parentPoolDataSourceStatistics, 
                                              () -> isClosed.get(),
                                              this::getWithPoolName);
-        }        
+        }
+
+        log.debug("<determinePoolDataSourceStatistics");
     }
 
     public void setId(final String srcId) {
@@ -297,8 +303,12 @@ public class SimplePoolDataSourceOracle
                 log.info("{} - Close completed.", connectionPoolName);
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
-            if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+            
+            if (poolDataSourceStatistics != null) {
+                log.info("About to close pool statistics.");
                 poolDataSourceStatistics.close();
+            } else {
+                log.info("There are no pool statistics.");
             }
         } catch (UniversalConnectionPoolException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));

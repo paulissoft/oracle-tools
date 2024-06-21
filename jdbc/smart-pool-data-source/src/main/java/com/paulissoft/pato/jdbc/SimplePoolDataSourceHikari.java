@@ -6,8 +6,8 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-
 
 @Slf4j
 public class SimplePoolDataSourceHikari
@@ -24,12 +24,15 @@ public class SimplePoolDataSourceHikari
 
     private final StringBuffer id = new StringBuffer();
 
+    @Getter
     private volatile PoolDataSourceStatistics poolDataSourceStatistics = null;
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
     // can only be set after constructor
     protected synchronized void determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
+        log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
+        
         if (parentPoolDataSourceStatistics == null) {
             poolDataSourceStatistics = null;
         } else {
@@ -40,6 +43,8 @@ public class SimplePoolDataSourceHikari
                                              () -> isClosed(),
                                              this::getWithPoolName);
         }
+
+        log.debug("<determinePoolDataSourceStatistics");
     }
          
     public void setId(final String srcId) {
@@ -329,8 +334,11 @@ public class SimplePoolDataSourceHikari
         super.close();
 
         try {
-            if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+            if (poolDataSourceStatistics != null) {
+                log.info("About to close pool statistics.");
                 poolDataSourceStatistics.close();
+            } else {
+                log.info("There are no pool statistics.");
             }
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));

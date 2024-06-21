@@ -44,6 +44,8 @@ public class SmartPoolDataSourceHikari
         
         getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
 
+        assert getPoolDataSource().getPoolDataSourceStatistics() != null : "Pool statistics must be activated.";
+
         final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
 
         if (poolDataSourceOverflow != null) {

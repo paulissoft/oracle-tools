@@ -45,6 +45,8 @@ public class SmartPoolDataSourceOracle
         
         getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics); 
 
+        assert getPoolDataSource().getPoolDataSourceStatistics() != null : "Pool statistics must be activated.";
+
         final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
 
         if (poolDataSourceOverflow != null) {
