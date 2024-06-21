@@ -363,9 +363,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    private Connection getConnection(final T pds,
-                                     final PoolDataSourceStatistics poolDataSourceStatistics,
-                                     final AtomicBoolean hasShownConfig) throws SQLException {
+    private static Connection getConnection(final SimplePoolDataSource pds,
+                                            final PoolDataSourceStatistics poolDataSourceStatistics,
+                                            final AtomicBoolean hasShownConfig) throws SQLException {
         Connection conn = null;
 
         if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
