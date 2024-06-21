@@ -3,7 +3,6 @@ package com.paulissoft.pato.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
@@ -39,9 +38,6 @@ public class SimplePoolDataSourceOracle
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-    private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
-
-    // can only be set after constructor
     protected PoolDataSourceStatistics determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
         log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
 
@@ -313,38 +309,5 @@ public class SimplePoolDataSourceOracle
     @Override
     public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
-    }
-
-    public Connection getConnection(final PoolDataSourceStatistics poolDataSourceStatistics) throws SQLException {
-        Connection conn = null;
-
-        if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
-            final Instant tm = Instant.now();
-            
-            try {
-                conn = getConnection();
-            } catch (SQLException se) {
-                poolDataSourceStatistics.signalSQLException(this, se);
-                throw se;
-            } catch (Exception ex) {
-                poolDataSourceStatistics.signalException(this, ex);
-                throw ex;
-            }
-
-            poolDataSourceStatistics.updateStatistics(this,
-                                                      conn,
-                                                      Duration.between(tm, Instant.now()).toMillis(),
-                                                      true);
-        } else {
-            conn = getConnection();
-        }
-
-        if (!hasShownConfig.getAndSet(true)) {
-            // Only show the first time a pool has gotten a connection.
-            // Not earlier because these (fixed) values may change before and after the first connection.
-            show(get());
-        }
-
-        return conn;
     }
 }

@@ -2,6 +2,9 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     @NonNull
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
+
+    // for both the pool data source and its overflow
+    private final AtomicBoolean[] hasShownConfig = new AtomicBoolean[] { new AtomicBoolean(false), new AtomicBoolean(false) };
 
     /*
      * Constructor(s)
@@ -351,10 +357,45 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         final PoolDataSourceStatistics pdsStatistics = useOverflow ? getPoolDataSourceStatisticsOverflow() : getPoolDataSourceStatistics();
 
         try {
-            return pds.getConnection(pdsStatistics);
+            return getConnection(pds, pdsStatistics, hasShownConfig[useOverflow ? 1 : 0]);
         } finally {
             log.trace("<getConnection({})", useOverflow);
         }
+    }
+
+    private Connection getConnection(final T pds,
+                                     final PoolDataSourceStatistics poolDataSourceStatistics,
+                                     final AtomicBoolean hasShownConfig) throws SQLException {
+        Connection conn = null;
+
+        if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+            final Instant tm = Instant.now();
+            
+            try {
+                conn = pds.getConnection();
+            } catch (SQLException se) {
+                poolDataSourceStatistics.signalSQLException(pds, se);
+                throw se;
+            } catch (Exception ex) {
+                poolDataSourceStatistics.signalException(pds, ex);
+                throw ex;
+            }
+
+            poolDataSourceStatistics.updateStatistics(pds,
+                                                      conn,
+                                                      Duration.between(tm, Instant.now()).toMillis(),
+                                                      true);
+        } else {
+            conn = pds.getConnection();
+        }
+
+        if (!hasShownConfig.getAndSet(true)) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            pds.show(pds.get());
+        }
+
+        return conn;
     }
 
     protected abstract boolean getConnectionFailsDueToNoIdleConnections(final Exception ex);

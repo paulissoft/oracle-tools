@@ -1,7 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import java.io.Closeable;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
@@ -84,6 +83,4 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public int getIdleConnections();
 
     public int getTotalConnections();
-
-    public Connection getConnection(final PoolDataSourceStatistics poolDataSourceStatistics) throws SQLException;
 }
