@@ -164,7 +164,7 @@ public class SimplePoolDataSourceOracle
 
         /* Common Simple Pool Data Source */
 
-        log.info("Properties for common simple pool: {}", getConnectionPoolName());
+        log.info("Properties for {}: {}", getClass().getSimpleName(), getConnectionPoolName());
 
         /* info from PoolDataSourceConfiguration */
         log.info("{}url: {}", indentPrefix, getURL());

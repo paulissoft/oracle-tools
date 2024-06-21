@@ -147,7 +147,7 @@ public class SimplePoolDataSourceHikari
 
         /* Common Simple Pool Data Source */
         
-        log.info("Properties for common simple pool: {}", getPoolName());
+        log.info("Properties for {}: {}", getClass().getSimpleName(), getPoolName());
         
         /* info from PoolDataSourceConfiguration */
         log.info("{}driverClassName: {}", indentPrefix, getDriverClassName());
