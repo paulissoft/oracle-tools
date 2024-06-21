@@ -977,6 +977,7 @@ end enqueue;
 
 procedure enqueue_array
 ( p_msg_tab in msg_tab_typ -- the messages
+, p_visibility in binary_integer default dbms_aq.on_commit -- dbms_aq.on_commit or dbms_aq.immediate
 , p_array_size in binary_integer default null
 , p_correlation_tab in sys.odcivarchar2list default null
 , p_force in boolean default true -- When true, queue tables, queues, subscribers and notifications will be created/added if necessary
@@ -997,15 +998,22 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE_ARRAY');
   dbug.print
   ( dbug."input"  
-  , 'queue name: %s; p_array_size: %s; p_force: %s'
+  , 'queue name: %s; p_visibility: %s; p_array_size: %s; p_force: %s'
   , l_queue_name
+  , visibility_descr(p_visibility)
   , p_array_size
   , dbug.cast_to_varchar2(p_force)
   );
 $end
 
+  -- check
+  case p_visibility
+    when dbms_aq.on_commit then null;
+    when dbms_aq.immediate then null;
+  end case;
+
   l_enqueue_options.delivery_mode := dbms_aq.persistent;
-  l_enqueue_options.visibility := dbms_aq.on_commit;
+  l_enqueue_options.visibility := p_visibility;
 
   l_message_properties.delay := dbms_aq.no_delay;
   l_message_properties.expiration := dbms_aq.never;
@@ -1250,6 +1258,7 @@ end dequeue;
 
 procedure dequeue_array
 ( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_visibility in binary_integer
 , p_subscriber in varchar2
 , p_array_size in binary_integer
 , p_dequeue_mode in binary_integer
@@ -1273,8 +1282,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_ARRAY');
   dbug.print
   ( dbug."input"
-  , 'queue name: %s; p_subscriber: %s; p_dequeue_mode: %s'
+  , 'queue name: %s; p_visibility: %s; p_subscriber: %s; p_dequeue_mode: %s'
   , l_queue_name
+  , visibility_descr(p_visibility)
   , p_subscriber
   , dequeue_mode_descr(p_dequeue_mode)
   );
@@ -1289,6 +1299,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
+  -- check
+  case p_visibility
+    when dbms_aq.on_commit then null;
+    when dbms_aq.immediate then null;
+  end case;
+
   l_dequeue_options.consumer_name := p_subscriber;
   l_dequeue_options.dequeue_mode := p_dequeue_mode;
   l_dequeue_options.navigation := p_navigation;
@@ -1297,7 +1313,7 @@ $end
   l_dequeue_options.deq_condition := p_deq_condition;
   
   l_dequeue_options.delivery_mode := dbms_aq.persistent;
-  l_dequeue_options.visibility := dbms_aq.persistent;
+  l_dequeue_options.visibility := p_visibility;
 
   <<try_loop>>
   for i_try in 1 .. c_max_tries
