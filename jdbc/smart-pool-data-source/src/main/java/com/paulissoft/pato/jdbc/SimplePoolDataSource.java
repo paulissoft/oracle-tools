@@ -48,8 +48,6 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public String getPoolName();
 
-    public String getPoolDescription();
-
     public String getUrl();
     
     // signatures used by com.zaxxer.hikari.HikariDataSource
