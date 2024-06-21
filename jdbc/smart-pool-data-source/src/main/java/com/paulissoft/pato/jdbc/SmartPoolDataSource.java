@@ -14,6 +14,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     private final T poolDataSource;
 
+    final Supplier<T> supplierT; // neede to set poolDataSourceOverflow later on
+        
     private volatile T poolDataSourceOverflow;
 
     protected enum State {
@@ -37,14 +39,14 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT, final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+        this.supplierT = supplierT;
         this.poolDataSource = supplierT.get();
-        this.poolDataSourceOverflow = supplierT.get();
+        this.poolDataSourceOverflow = null;
 
         if (poolDataSourceConfiguration == null) {
             setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
         } else {
-            set(poolDataSourceConfiguration);
-        
+            set(poolDataSourceConfiguration);        
             setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
             setUp();
             state = State.OPEN;
@@ -127,8 +129,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         try {
             log.debug(">setUp(id={}, state={})", getId(), state);
 
-            if (!hasOverflow()) {
-                poolDataSourceOverflow = null;
+            if (hasOverflow()) {
+                poolDataSourceOverflow = supplierT.get();
             }
 
             // updatePool must be called before the state is open
@@ -227,13 +229,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             // set pool name
             if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
                 poolDataSource.setPoolName(poolDataSource.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
-                // use a different name to solve UCP-0
-                if (poolDataSourceOverflow != null) {
-                    poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
-                }
             }
+            // use a different name for the overflow to solve UCP-0
             if (poolDataSourceOverflow != null) {
-                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + " (overflow)");
+                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + " (dynamic)");
             }
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
@@ -288,7 +287,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     public final Connection getConnection() throws SQLException {
         log.trace(">getConnection()");
 
-        boolean useOverflow = false;
+        final boolean useOverflow = false;
 
         try {
             switch (state) {
@@ -297,9 +296,12 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
                     "did you override setUp() correctly by invoking super.setUp()?";
                 // For the first connection use the overflow so both pools are initialized after the first two connections.
+                // GJP 2024-06-21 Not now
+                /*
                 if (hasOverflow()) {
                     useOverflow = true; 
                 }
+                */
                 // fall through
             case OPEN:
                 break;
@@ -436,6 +438,11 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     public final boolean hasOverflow() {
-        return getMaxPoolSize() > getMinPoolSize();
+        switch (state) {
+        case INITIALIZING:
+            return poolDataSource.getMaxPoolSize() > poolDataSource.getMinPoolSize();
+        default:
+            return poolDataSourceOverflow != null;
+        }
     }
 }
