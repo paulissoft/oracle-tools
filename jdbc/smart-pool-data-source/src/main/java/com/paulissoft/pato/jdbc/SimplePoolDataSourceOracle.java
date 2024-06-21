@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,24 +36,6 @@ public class SimplePoolDataSourceOracle
     private final StringBuffer password = new StringBuffer();
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
-
-    protected PoolDataSourceStatistics determinePoolDataSourceStatistics(final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
-        log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
-
-        try {
-            if (parentPoolDataSourceStatistics == null) {
-                return null;
-            } else {
-                // level 4
-                return new PoolDataSourceStatistics(null,
-                                                    parentPoolDataSourceStatistics, 
-                                                    () -> isClosed.get(),
-                                                    this::getWithPoolName);
-            }
-        } finally {
-            log.debug("<determinePoolDataSourceStatistics");
-        }
-    }
 
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
@@ -143,6 +124,10 @@ public class SimplePoolDataSourceOracle
             .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
             .connectionValidationTimeout(getConnectionValidationTimeout())
             .build();
+    }
+
+    public boolean isClosed() {
+        return isClosed.get();
     }
     
     public void show(final PoolDataSourceConfiguration pdsConfig) {
