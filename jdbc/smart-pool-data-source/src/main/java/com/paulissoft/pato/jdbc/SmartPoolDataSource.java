@@ -113,7 +113,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 state = this.state = State.OPEN;
                 
                 assert hasOverflow() == (poolDataSourceOverflow != null) : "Only when there is an overflow (max pool size > min pool size)" +
-                    " the overflow pool data source should NOT be null.";
+                    " the dynamic pool data source should NOT be null.";
 
                 // now getMaxPoolSize() returns the combined totals
                     
@@ -213,10 +213,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                         log.info("There are no pool statistics.");
                     }
                     if (getPoolDataSourceStatisticsOverflow() != null) {
-                        log.info("About to close overflow pool statistics.");
+                        log.info("About to close dynamic pool statistics.");
                         getPoolDataSourceStatisticsOverflow().close();
                     } else {
-                        log.info("There are no overflow pool statistics.");
+                        log.info("There are no dynamic pool statistics.");
                     }
 
                     poolDataSource.close();
@@ -264,7 +264,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
                 poolDataSource.setConnectionTimeout(getMinConnectionTimeout());
 
-                // settings to keep the overflow pool data source as empty as possible
+                // settings to keep the dynamic/overflow pool data source as empty as possible
                 poolDataSourceOverflow.setInitialPoolSize(0);                
                 poolDataSourceOverflow.setMinPoolSize(0);
                 poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
