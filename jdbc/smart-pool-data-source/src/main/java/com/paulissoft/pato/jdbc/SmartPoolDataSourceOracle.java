@@ -20,13 +20,6 @@ public class SmartPoolDataSourceOracle
 
     static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
     
-    private static final String POOL_NAME_PREFIX = SmartPoolDataSourceOracle.class.getSimpleName();
-
-    // Statistics at level 2
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal
-        = new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                       PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
-
     @Getter(AccessLevel.PROTECTED)
     protected final PoolDataSourceStatistics poolDataSourceStatistics;
 
@@ -47,7 +40,7 @@ public class SmartPoolDataSourceOracle
 
         final PoolDataSourceStatistics parentPoolDataSourceStatistics =
             new PoolDataSourceStatistics(() -> getPoolName() + ": (all)",
-                                         poolDataSourceStatisticsTotal,
+                                         PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal,
                                          () -> !isOpen(),
                                          this::getWithPoolName);
         
