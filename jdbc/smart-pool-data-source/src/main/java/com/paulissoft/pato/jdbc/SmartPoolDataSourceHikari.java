@@ -50,12 +50,12 @@ public class SmartPoolDataSourceHikari
                                          () -> !isOpen(),
                                          this::getWithPoolName);
         
-        poolDataSourceStatistics = getPoolDataSource().determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+        poolDataSourceStatistics = determinePoolDataSourceStatistics(getPoolDataSource(), parentPoolDataSourceStatistics);
 
         final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
 
         if (poolDataSourceOverflow != null) {
-            poolDataSourceStatisticsOverflow = poolDataSourceOverflow.determinePoolDataSourceStatistics(parentPoolDataSourceStatistics);
+            poolDataSourceStatisticsOverflow = determinePoolDataSourceStatistics(poolDataSourceOverflow, parentPoolDataSourceStatistics);
         } else {
             poolDataSourceStatisticsOverflow = null;
         }
