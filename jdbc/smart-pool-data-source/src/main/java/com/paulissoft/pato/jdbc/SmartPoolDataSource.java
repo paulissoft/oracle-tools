@@ -17,8 +17,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     private final T poolDataSource;
 
-    final Supplier<T> supplierT; // needed to set poolDataSourceOverflow later on
-        
     private volatile T poolDataSourceOverflow; // can only be set in open()
 
     protected enum State {
@@ -43,9 +41,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT, final PoolDataSourceConfiguration poolDataSourceConfiguration) {
-        this.supplierT = supplierT;
         this.poolDataSource = supplierT.get();
-        this.poolDataSourceOverflow = null;
+        this.poolDataSourceOverflow = supplierT.get();
 
         if (poolDataSourceConfiguration == null) {
             setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
@@ -154,8 +151,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         try {
             log.debug(">setUp(id={}, state={})", getId(), state);
 
-            if (hasOverflow()) {
-                poolDataSourceOverflow = supplierT.get();
+            if (!hasOverflow()) {
+                poolDataSourceOverflow = null;
             }
 
             // updatePool must be called before the state is open
@@ -212,15 +209,15 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     } else {
                         log.info("There are no pool statistics.");
                     }
-                    if (getPoolDataSourceStatisticsOverflow() != null) {
-                        log.info("About to close dynamic pool statistics.");
-                        getPoolDataSourceStatisticsOverflow().close();
-                    } else {
-                        log.info("There are no dynamic pool statistics.");
-                    }
-
                     poolDataSource.close();
+
                     if (poolDataSourceOverflow != null) {
+                        if (getPoolDataSourceStatisticsOverflow() != null) {
+                            log.info("About to close dynamic pool statistics.");
+                            getPoolDataSourceStatisticsOverflow().close();
+                        } else {
+                            log.info("There are no dynamic pool statistics.");
+                        }
                         poolDataSourceOverflow.close();
                     }
                 } catch(Exception ex) {

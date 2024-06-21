@@ -50,6 +50,7 @@ public class SmartPoolDataSourceHikari
         if (poolDataSourceOverflow != null) {
             poolDataSourceStatisticsOverflow = determinePoolDataSourceStatistics(poolDataSourceOverflow, parentPoolDataSourceStatistics);
         } else {
+            // when parent has state OPEN this can be true
             poolDataSourceStatisticsOverflow = null;
         }
     }
