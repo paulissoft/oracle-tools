@@ -375,12 +375,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             return;
         }
 
-        if (children == null ||
-            children.size() != 1 ||
-            !(new Snapshot(this)).equals(new Snapshot(children.iterator().next()))) {
-            showStatistics(true);
+        if (level == 2 || level == 3) {
+            // do not show statistics at this level
         } else {
-            logger.info("Not showing statistics since the only child (level = {}) has the same characteristics as its parent.", level);
+            showStatistics(true);
         }
 
         if (this.parent == null) {
