@@ -226,19 +226,6 @@ public class SimplePoolDataSourceOracle
         return getConnectionPoolName();
     }
 
-    // IMPORTANT
-    //
-    // Since the connection pool name can notchange once the pool has started,
-    // we change the description if we add/remove schemas.
-    public String getPoolDescription() {
-        final String poolName = getConnectionPoolName();
-        final String description = getDescription();
-        
-        return (poolName == null || poolName.isEmpty() ?
-                "" :
-                poolName + (description == null || description.isEmpty() ? "" : "-" + description));
-    }
-
     public void setUsername(String username) throws SQLException {
         setUser(username);
     }
@@ -310,7 +297,12 @@ public class SimplePoolDataSourceOracle
                 log.info("{} - Close completed.", connectionPoolName);
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
+            if (poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled()) {
+                poolDataSourceStatistics.close();
+            }
         } catch (UniversalConnectionPoolException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
