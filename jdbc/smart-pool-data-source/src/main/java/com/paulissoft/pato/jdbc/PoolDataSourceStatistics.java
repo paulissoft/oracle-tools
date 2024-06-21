@@ -44,7 +44,11 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     private static final int DISPLAY_SCALE = 0;
 
-    private static final int MAX_LEVEL_CONNECTION_STATISTICS = 4; // was 3
+    private static final int MIN_LEVEL = 1;
+
+    private static final int MAX_LEVEL = 3;
+    
+    private static final int MAX_LEVEL_CONNECTION_STATISTICS = MAX_LEVEL; // was MAX_LEVEL - 1
 
     static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 
@@ -160,18 +164,18 @@ public class PoolDataSourceStatistics implements AutoCloseable {
  
             this.physicalConnections = ConcurrentHashMap.newKeySet();
             
-            this.level = 1;
+            this.level = MIN_LEVEL;
         } else {
             this.physicalConnections = null;
             
             this.level = 1 + this.parent.level;
         }
 
-        assert this.level >= 1 && this.level <= 4 : "Level must be between 1 and 4.";
-        assert (this.level == 1) == (this.parent == null) : "Level is 1 if and only if parent is null.";
+        assert this.level >= MIN_LEVEL && this.level <= MAX_LEVEL : String.format("Level must be between %d and %d.", MIN_LEVEL, MAX_LEVEL);
+        assert (this.level == MIN_LEVEL) == (this.parent == null) : String.format("Level is %d if and only if parent is null.", MIN_LEVEL);
 
         switch(this.level) {
-        case 4:
+        case MAX_LEVEL:
             this.children = null;
             break;
             
@@ -202,7 +206,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             this.totalConnectionsAvg = new AtomicBigDecimal(BigDecimal.ZERO);
         }
 
-        assert (this.level == 4) == (this.children == null) : "Level is 4 if and only if there are no children." ;
+        assert (this.level == MAX_LEVEL) == (this.children == null) : String.format("Level is %d if and only if there are no children.", MAX_LEVEL);
 
         if (this.parent != null) {
             this.parent.children.add(this);
@@ -280,7 +284,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 final int activeConnections,
                 final int idleConnections,
                 final int totalConnections) throws SQLException {
-        if (level != 4 || isClosed()) {
+        if (level != MAX_LEVEL || isClosed()) {
             return;
         }
 
@@ -312,11 +316,11 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     private void update(final int activeConnections,
                         final int idleConnections,
                         final int totalConnections) /*throws SQLException*/ {
-        // assert !(level != 4 || isClosed())
+        // assert !(level != MAX_LEVEL || isClosed())
         final BigDecimal count = new BigDecimal(getConnectionCount());
         
         // update parent when connection statistics are not gathered for this level
-        if (MAX_LEVEL_CONNECTION_STATISTICS == 4) {
+        if (MAX_LEVEL_CONNECTION_STATISTICS == MAX_LEVEL) {
             update(activeConnections, idleConnections, totalConnections, this, count);
         }
         update(activeConnections, idleConnections, totalConnections, parent, count);
@@ -363,7 +367,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
         try {
             if (isUpdateable.get()) {
-                if (level == 4) {
+                if (level == MAX_LEVEL) {
                     consolidate();
                 }
                 isUpdateable.set(false);
@@ -377,8 +381,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     private void consolidate() {
         /*
          * Show the statistics when this item is not closed AND
-         * a) there are no children (level 4) OR
-         * b) there is more than 1 child OR
+         * a) there are no children (level MAX_LEVEL) OR
+         * b) there is more than one child OR
          * c) the only child has different statistics than its parent (i.e. snapshots different)
          */
         if (this.isClosed()) {
@@ -1117,7 +1121,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public final Snapshot getSnapshot(final int level) {
-        assert level >= 1 && level <= 4 : "Level must be between 1 and 4.";
+        assert level >= MIN_LEVEL && level <= MAX_LEVEL : String.format("Level must be between %d and %d.", MIN_LEVEL, MAX_LEVEL);
 
         PoolDataSourceStatistics instance = this;
 
