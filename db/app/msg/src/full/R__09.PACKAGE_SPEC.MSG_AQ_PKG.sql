@@ -194,8 +194,6 @@ Array enqueue the messages to the queue get_queue_name(p_msg).
 
 Array enqueuing is not supported for buffered messages, hence delivery mode will be equal to dbms_aq.persistent.
 
-Visibility will be dbms_aq.on_commit.
-
 **/
 
 procedure dequeue
@@ -250,8 +248,6 @@ procedure dequeue_array
 Array dequeue these messages (of base type msg_typ) from the queue. The caller must process it (use <message>.process(0)).
 
 Array dequeuing is not supported for buffered messages, hence delivery mode will be equal to dbms_aq.persistent.
-
-Visibility will be dbms_aq.on_commit.
 
 **/
 
