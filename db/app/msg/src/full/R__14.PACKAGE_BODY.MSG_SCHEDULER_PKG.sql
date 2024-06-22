@@ -1005,7 +1005,9 @@ begin
       then 0
       when p_nr_workers_each_group is not null and p_nr_workers_exact is not null
       then 0
-      else nvl(p_nr_workers_exact, p_nr_workers_each_group * p_nr_groups)
+      when p_nr_workers_exact is not null
+      then ceil(p_nr_workers_exact / p_nr_groups) * p_nr_groups -- example: p_nr_groups = 3, p_nr_workers_exact in (1, 2, 3) => 3
+      else p_nr_workers_each_group * p_nr_groups
     end;
 end get_nr_workers;
 
