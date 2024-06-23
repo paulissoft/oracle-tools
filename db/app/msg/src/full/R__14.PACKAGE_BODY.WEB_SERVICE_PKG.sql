@@ -1075,6 +1075,10 @@ $end
 
   for i_idx in 1..p_count
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'i_idx: %s', i_idx);
+$end
+
     l_correlation_tab.extend(1);
     l_correlation_tab(l_correlation_tab.last) := web_service_request_typ.generate_unique_id();
 
@@ -1104,9 +1108,22 @@ $end
     msg_aq_pkg.start_queue(p_queue_name => 'WEB_SERVICE_REQUEST', p_enqueue => true, p_dequeue => true);
   end if;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'l_correlation_tab.first: %s; l_correlation_tab.last: %s'
+  , l_correlation_tab.first
+  , l_correlation_tab.last
+  );
+$end
+
   -- now the dequeue in reversed order (l_correlation_tab.count > 0 since p_count > 0)
   for i_idx in reverse l_correlation_tab.first .. l_correlation_tab.last
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'dequeueing l_correlation_tab(%s): %s', i_idx, l_correlation_tab(i_idx));
+$end
+
     l_msgid := null;
     msg_aq_pkg.dequeue
     ( p_queue_name => web_service_response_typ.default_group()
