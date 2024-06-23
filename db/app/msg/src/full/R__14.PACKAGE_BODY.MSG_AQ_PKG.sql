@@ -235,6 +235,7 @@ procedure ensure_queue_gets_dequeued
 is
   l_subscriber user_subscr_registrations.subscription_name%type := null;
   l_recipients all_queue_tables.recipients%type := null;
+  l_processing_method_to_restart_tab dbms_sql.varchar2_table;
   
   function get_subscriber
   return l_subscriber%type
@@ -264,7 +265,7 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE.ENSURE_QUEUE_GETS_DEQUEUED');
   dbug.print
-  ( dbug."info"
+  ( dbug."input"
   , 'p_default_processing_method: %s; l_queue_name: %s'
   , p_default_processing_method
   , p_queue_name
@@ -273,11 +274,19 @@ $end
 
   if g_previous_processing_method_tab.exists(p_queue_name) -- already calculated but check if it has changed
   then
-    case
-      when g_previous_processing_method_tab(p_queue_name) = p_default_processing_method
-      then null; -- OK, no change
-
-      when g_previous_processing_method_tab(p_queue_name) like "plsql://" || '%'
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'previous processing method: %s'
+    , g_previous_processing_method_tab(p_queue_name)
+    );
+$end
+    if (g_previous_processing_method_tab(p_queue_name) is null and p_default_processing_method is null)
+    or (g_previous_processing_method_tab(p_queue_name) = p_default_processing_method)
+    then
+      null; -- OK, no change
+    else
+      if g_previous_processing_method_tab(p_queue_name) like "plsql://" || '%'
       then
         -- must unregister this old processing method first
         PRAGMA INLINE (get_subscriber, 'YES');
@@ -295,23 +304,26 @@ $end
           ( p_queue_name => p_queue_name
           , p_subscriber => l_subscriber
           );
-        end if;
-    
-        g_previous_processing_method_tab.delete(p_queue_name);
-        
-      when g_previous_processing_method_tab(p_queue_name) like "package://" || '%'
+        end if;    
+      elsif g_previous_processing_method_tab(p_queue_name) like "package://" || '%'
       then
-        /* NOTE:
-        -- no need to restart/stop g_previous_processing_method_tab(p_queue_name)
-        -- since the code below will take care of that,
-        -- either indirectly via register_at or directly via run_processing_method
-        */
-        g_previous_processing_method_tab.delete(p_queue_name);
-    end case;
+        l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.count+1) :=
+          g_previous_processing_method_tab(p_queue_name);
+      end if;
+      
+      g_previous_processing_method_tab.delete(p_queue_name);
+    end if;
   end if;
 
   if not(g_previous_processing_method_tab.exists(p_queue_name))
   then
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'setting previous processing method to: %s'
+    , p_default_processing_method
+    );
+$end
     g_previous_processing_method_tab(p_queue_name) := p_default_processing_method;
 
     if p_default_processing_method like "plsql://" || '%'
@@ -335,13 +347,24 @@ $end
       );
     elsif p_default_processing_method like "package://" || '%'
     then
-      run_processing_method
-      ( p_default_processing_method
-      , 'restart'
-      );
+      if l_processing_method_to_restart_tab.count = 0 or
+         l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.last) != p_default_processing_method
+      then
+        l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.count+1) :=
+          p_default_processing_method;
+      end if;
     end if;
   end if;
-  
+
+  while l_processing_method_to_restart_tab.count != 0
+  loop
+    run_processing_method
+    ( l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.last)
+    , 'restart'
+    );
+    l_processing_method_to_restart_tab.delete(l_processing_method_to_restart_tab.last);
+  end loop;
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
