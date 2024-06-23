@@ -1054,6 +1054,12 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_BULK');
+  dbug.print
+  ( dbug."input"
+  , 'p_count: %s; p_stop_dequeue_before_enqueue: %s'
+  , p_count
+  , dbug.cast_to_varchar2(p_stop_dequeue_before_enqueue)
+  );
 $end
 
   -- stop queue for dequeue only
@@ -1572,7 +1578,8 @@ $end
   , p_subscriber => null
   , p_plsql_callback => '%'
   );
-  ut_rest_web_service_get_bulk(100, false);
+--  ut_rest_web_service_get_bulk(100, false);
+  ut_rest_web_service_get_bulk(1, false);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
