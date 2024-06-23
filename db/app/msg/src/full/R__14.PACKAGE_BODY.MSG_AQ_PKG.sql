@@ -9,6 +9,10 @@ c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 "plsql://" constant varchar2(10) := 'plsql://';
 "package://" constant varchar2(10) := 'package://';
 
+type t_processing_method_tab is table of user_subscr_registrations.location_name%type index by user_queues.name%type;
+
+g_previous_processing_method_tab t_processing_method_tab;
+
 function simple_queue_name
 ( p_queue_name in varchar2
 )
@@ -145,6 +149,20 @@ begin
   commit;
 end add_subscriber_at;  
 
+procedure remove_subscriber_at
+( p_queue_name in varchar2
+, p_subscriber in varchar2
+)
+is
+  pragma autonomous_transaction;
+begin
+  remove_subscriber
+  ( p_queue_name => p_queue_name
+  , p_subscriber => p_subscriber
+  );
+  commit;
+end remove_subscriber_at;  
+
 procedure register_at
 ( p_queue_name in varchar2
 , p_subscriber in varchar2
@@ -160,6 +178,22 @@ begin
   );
   commit;
 end register_at;  
+
+procedure unregister_at
+( p_queue_name in varchar2
+, p_subscriber in varchar2
+, p_plsql_callback in varchar2 -- schema.procedure
+)
+is
+  pragma autonomous_transaction;
+begin
+  unregister
+  ( p_queue_name => p_queue_name
+  , p_subscriber => p_subscriber
+  , p_plsql_callback => p_plsql_callback
+  );
+  commit;
+end unregister_at;  
 
 procedure execute_immediate
 ( p_statement in varchar2
@@ -195,58 +229,119 @@ begin
 end run_processing_method;  
 
 procedure ensure_queue_gets_dequeued
-( p_msg in msg_typ
+( p_default_processing_method in varchar2
 , p_queue_name in user_queues.name%type
 )
 is
-  l_recipients all_queue_tables.recipients%type;
+  l_subscriber user_subscr_registrations.subscription_name%type := null;
+  l_recipients all_queue_tables.recipients%type := null;
+  
+  function get_subscriber
+  return l_subscriber%type
+  is
+  begin
+    if l_recipients is null -- cache result
+    then
+      select  qt.recipients
+      into    l_recipients
+      from    all_queues q
+              inner join all_queue_tables qt
+              on qt.owner = q.owner and qt.queue_table = q.queue_table
+      where   q.owner = trim('"' from c_schema)
+      and     q.queue_table = trim('"' from c_queue_table)
+      and     q.name = trim('"' from p_queue_name);
+
+      l_subscriber := case when l_recipients <> 'SINGLE' then c_default_subscriber else null end;
+      
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_subscriber: %s', l_subscriber);
+$end
+    end if;
+    
+    return l_subscriber;
+  end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.ENQUEUE.ENSURE_QUEUE_GETS_DEQUEUED');
   dbug.print
   ( dbug."info"
-  , 'p_msg.default_processing_method(): %s; l_queue_name: %s'
-  , p_msg.default_processing_method()
+  , 'p_default_processing_method: %s; l_queue_name: %s'
+  , p_default_processing_method
   , p_queue_name
   );
 $end
 
-  if p_msg.default_processing_method() like "plsql://" || '%'
+  if g_previous_processing_method_tab.exists(p_queue_name) -- already calculated but check if it has changed
   then
-    select  qt.recipients
-    into    l_recipients
-    from    all_queues q
-            inner join all_queue_tables qt
-            on qt.owner = q.owner and qt.queue_table = q.queue_table
-    where   q.owner = trim('"' from c_schema)
-    and     q.queue_table = trim('"' from c_queue_table)
-    and     q.name = trim('"' from p_queue_name);
+    case
+      when g_previous_processing_method_tab(p_queue_name) = p_default_processing_method
+      then null; -- OK, no change
 
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'l_recipients: %s', l_recipients);
-$end
+      when g_previous_processing_method_tab(p_queue_name) like "plsql://" || '%'
+      then
+        -- must unregister this old processing method first
+        PRAGMA INLINE (get_subscriber, 'YES');
+        l_subscriber := get_subscriber;
 
-    -- add default subscriber for a multiple consumer queue table
-    if l_recipients <> 'SINGLE'
+        unregister_at
+        ( p_queue_name => p_queue_name
+        , p_subscriber => l_subscriber
+        , p_plsql_callback => replace(g_previous_processing_method_tab(p_queue_name), "plsql://")
+        );
+
+        if l_subscriber is not null
+        then
+          remove_subscriber_at
+          ( p_queue_name => p_queue_name
+          , p_subscriber => l_subscriber
+          );
+        end if;
+    
+        g_previous_processing_method_tab.delete(p_queue_name);
+        
+      when g_previous_processing_method_tab(p_queue_name) like "package://" || '%'
+      then
+        /* NOTE:
+        -- no need to restart/stop g_previous_processing_method_tab(p_queue_name)
+        -- since the code below will take care of that,
+        -- either indirectly via register_at or directly via run_processing_method
+        */
+        g_previous_processing_method_tab.delete(p_queue_name);
+    end case;
+  end if;
+
+  if not(g_previous_processing_method_tab.exists(p_queue_name))
+  then
+    g_previous_processing_method_tab(p_queue_name) := p_default_processing_method;
+
+    if p_default_processing_method like "plsql://" || '%'
     then
-      add_subscriber_at
+      PRAGMA INLINE (get_subscriber, 'YES');
+      l_subscriber := get_subscriber;
+      
+      -- add default subscriber for a multiple consumer queue table
+      if l_subscriber is not null
+      then
+        add_subscriber_at
+        ( p_queue_name => p_queue_name
+        , p_subscriber => l_subscriber
+        );
+      end if;
+      
+      register_at
       ( p_queue_name => p_queue_name
-      , p_subscriber => c_default_subscriber
+      , p_subscriber => l_subscriber
+      , p_plsql_callback => replace(p_default_processing_method, "plsql://")
+      );
+    elsif p_default_processing_method like "package://" || '%'
+    then
+      run_processing_method
+      ( p_default_processing_method
+      , 'restart'
       );
     end if;
-    
-    register_at
-    ( p_queue_name => p_queue_name
-    , p_subscriber => case when l_recipients <> 'SINGLE' then c_default_subscriber end
-    , p_plsql_callback => replace(p_msg.default_processing_method(), "plsql://")
-    );
-  elsif p_msg.default_processing_method() like "package://" || '%'
-  then
-    run_processing_method
-    ( p_msg.default_processing_method()
-    , 'restart'
-    );
   end if;
+  
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
@@ -943,8 +1038,6 @@ $end
         else
           raise;
         end if;
-        -- now ensure that the message is dequeued by either registering a callback or starting a job
-        ensure_queue_gets_dequeued(p_msg, l_queue_name);
   
       when e_enqueue_disabled
       then
@@ -963,6 +1056,12 @@ $end
       then raise;
     end;
   end loop try_loop;  
+
+  /*
+  -- Always ensure that a message can get dequeued (not counting for queue stopped).
+  -- This caters for the event that a default processing method has changed along the way.
+  */
+  ensure_queue_gets_dequeued(p_msg.default_processing_method(), l_queue_name);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
@@ -1063,8 +1162,6 @@ $end
         else
           raise;
         end if;
-        -- now ensure that the message is dequeued by either registering a callback or starting a job
-        ensure_queue_gets_dequeued(p_msg_tab(p_msg_tab.first), l_queue_name);
   
       when e_enqueue_disabled
       then
@@ -1083,6 +1180,15 @@ $end
       then raise;
     end;
   end loop try_loop;  
+
+  /*
+  -- Always ensure that a message can get dequeued (not counting for queue stopped).
+  -- This caters for the event that a default processing method has changed along the way.
+  */
+  if p_msg_tab.first is not null
+  then
+    ensure_queue_gets_dequeued(p_msg_tab(p_msg_tab.first).default_processing_method(), l_queue_name);
+  end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
