@@ -235,7 +235,6 @@ procedure ensure_queue_gets_dequeued
 is
   l_subscriber user_subscr_registrations.subscription_name%type := null;
   l_recipients all_queue_tables.recipients%type := null;
-  l_processing_method_to_restart_tab dbms_sql.varchar2_table;
   
   function get_subscriber
   return l_subscriber%type
@@ -307,8 +306,24 @@ $end
         end if;    
       elsif g_previous_processing_method_tab(p_queue_name) like "package://" || '%'
       then
-        l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.count+1) :=
-          g_previous_processing_method_tab(p_queue_name);
+        if g_previous_processing_method_tab(p_queue_name) =
+           case
+             when p_default_processing_method like "plsql://" || '%'
+             then "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG'
+             when p_default_processing_method like "package://" || '%'
+             then p_default_processing_method
+           end
+        then
+          -- the previous processing method will be restarted
+          -- in register_at or run_processing_method (see note 1 and 2 below)
+          null;
+        else
+          -- restart the previous processing method since the number of groups (queues) may have changed
+          run_processing_method
+          ( g_previous_processing_method_tab(p_queue_name) 
+          , 'restart'
+          );
+        end if;
       end if;
       
       g_previous_processing_method_tab.delete(p_queue_name);
@@ -339,7 +354,8 @@ $end
         , p_subscriber => l_subscriber
         );
       end if;
-      
+
+      -- note 1: may issue run_processing_method("package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG', ...)
       register_at
       ( p_queue_name => p_queue_name
       , p_subscriber => l_subscriber
@@ -347,23 +363,13 @@ $end
       );
     elsif p_default_processing_method like "package://" || '%'
     then
-      if l_processing_method_to_restart_tab.count = 0 or
-         l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.last) != p_default_processing_method
-      then
-        l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.count+1) :=
-          p_default_processing_method;
-      end if;
+      -- note 2
+      run_processing_method
+      ( p_default_processing_method
+      , 'restart'
+      );
     end if;
   end if;
-
-  while l_processing_method_to_restart_tab.count != 0
-  loop
-    run_processing_method
-    ( l_processing_method_to_restart_tab(l_processing_method_to_restart_tab.last)
-    , 'restart'
-    );
-    l_processing_method_to_restart_tab.delete(l_processing_method_to_restart_tab.last);
-  end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;

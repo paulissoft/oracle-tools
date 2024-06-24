@@ -4,7 +4,7 @@ c_timestamp_format constant varchar2(30) := 'YYYYMMDDHH24MISSXFF';
 
 $if msg_aq_pkg.c_testing $then
 
-c_wait_timeout constant positiven := 30;
+c_wait_timeout constant positiven := 120;
 
 $end -- $if msg_aq_pkg.c_testing $then
 
@@ -1579,7 +1579,7 @@ $end
   , p_plsql_callback => '%'
   );
 --  ut_rest_web_service_get_bulk(100, false);
-  ut_rest_web_service_get_bulk(1, false);
+  ut_rest_web_service_get_bulk(10, false);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
