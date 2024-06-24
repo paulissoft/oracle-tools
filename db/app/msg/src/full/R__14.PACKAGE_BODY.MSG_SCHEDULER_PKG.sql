@@ -1052,7 +1052,7 @@ is
       when 'stop'
       then sys.odcivarchar2list('shutdown', p_command, 'check-jobs-not-running')
       when 'restart'
-      then sys.odcivarchar2list('stop', 'check-jobs-not-running', 'start')
+      then sys.odcivarchar2list('shutdown', 'stop', 'check-jobs-not-running', 'start')
       else sys.odcivarchar2list(p_command)
     end;    
   l_processing_package all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
