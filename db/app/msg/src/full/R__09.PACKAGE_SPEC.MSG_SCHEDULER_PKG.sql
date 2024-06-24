@@ -30,7 +30,7 @@ c_one_parameter_not_null_msg constant varchar2(2000 char) := 'Exactly one of the
 c_no_groups_to_process simple_integer := c_job_already_running - 5;
 e_no_groups_to_process exception;
 pragma exception_init(e_no_groups_to_process, -20205);
-c_no_groups_to_process_msg constant varchar2(2000 char) := 'Could not find groups to process.';
+c_no_groups_to_process_msg constant varchar2(2000 char) := 'Could not find groups to process for package %s.';
 
 c_session_not_running_job simple_integer := c_job_already_running - 6;
 e_session_not_running_job exception;

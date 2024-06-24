@@ -1562,7 +1562,7 @@ $end
     then
       raise_application_error
       ( c_no_groups_to_process
-      , c_no_groups_to_process_msg
+      , utl_lms.format_message(c_no_groups_to_process_msg, l_processing_package)
       );
     end if;
 
