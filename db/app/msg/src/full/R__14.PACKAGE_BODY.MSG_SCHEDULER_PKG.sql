@@ -1286,7 +1286,7 @@ begin
   end if;
 
   cleanup;
-  return;
+  return; -- essential for a pipelined function
 exception
   when no_data_needed or no_data_found
   then
