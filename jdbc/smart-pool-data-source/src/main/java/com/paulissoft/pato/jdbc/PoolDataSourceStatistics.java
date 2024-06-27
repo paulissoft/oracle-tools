@@ -88,7 +88,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     private final Set<Connection> physicalConnections;
 
-    private final AtomicLong physicalConnectionCount = new AtomicLong();
+    private final AtomicLong physicalConnectionCount = new AtomicLong(0L);
 
     private final AtomicLong physicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
@@ -98,7 +98,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     // all logical time elapsed stuff
     
-    private final AtomicLong logicalConnectionCount = new AtomicLong();
+    private final AtomicLong logicalConnectionCount = new AtomicLong(0L);
 
     private final AtomicLong logicalTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
     
@@ -656,70 +656,75 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
                 val1 = getPhysicalConnectionCount();
                 val2 = getLogicalConnectionCount();
-            
-                if ((val1 >= 0L && val2 >= 0L) &&
-                    (val1 >= 0L || val2 > 0L)) {
-                    method.accept(String.format("%sphysical/logical connections opened: %d/%d",
-                                                prefix, val1, val2));
-                }
 
-                val1 = getPhysicalTimeElapsedMin();
-                val2 = getPhysicalTimeElapsedAvg();
-                val3 = getPhysicalTimeElapsedMax();
+                if (val1 == 0L && val2 == 0L) {
+                    // don't use method here 
+                    logger.info("No connections created for {}", poolDescription);
+                } else {
+                    if ((val1 >= 0L && val2 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L)) {
+                        method.accept(String.format("%sphysical/logical connections opened: %d/%d",
+                                                    prefix, val1, val2));
+                    }
 
-                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept(String.format("%smin/avg/max physical connection time (ms): %d/%d/%d",
-                                                prefix, val1, val2, val3));
-                }
-            
-                val1 = getLogicalTimeElapsedMin();
-                val2 = getLogicalTimeElapsedAvg();
-                val3 = getLogicalTimeElapsedMax();
-
-                if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                    (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                    method.accept(String.format("%smin/avg/max logical connection time (ms): %d/%d/%d",
-                                                prefix, val1, val2, val3));
-                }
-            
-                if (showPoolSizes && pds != null) {
-                    method.accept(String.format("%sinitial/min/max pool size: %d/%d/%d",
-                                                prefix,
-                                                pds.getInitialPoolSize(),
-                                                pds.getMinPoolSize(),
-                                                pds.getMaxPoolSize()));
-                }
-
-                if (showTotals) {
-                    val1 = getActiveConnectionsMin();
-                    val2 = getActiveConnectionsAvg();
-                    val3 = getActiveConnectionsMax();
+                    val1 = getPhysicalTimeElapsedMin();
+                    val2 = getPhysicalTimeElapsedAvg();
+                    val3 = getPhysicalTimeElapsedMax();
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
+                        method.accept(String.format("%smin/avg/max physical connection time (ms): %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
+            
+                    val1 = getLogicalTimeElapsedMin();
+                    val2 = getLogicalTimeElapsedAvg();
+                    val3 = getLogicalTimeElapsedMax();
+
+                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        method.accept(String.format("%smin/avg/max logical connection time (ms): %d/%d/%d",
+                                                    prefix, val1, val2, val3));
+                    }
+            
+                    if (showPoolSizes && pds != null) {
+                        method.accept(String.format("%sinitial/min/max pool size: %d/%d/%d",
+                                                    prefix,
+                                                    pds.getInitialPoolSize(),
+                                                    pds.getMinPoolSize(),
+                                                    pds.getMaxPoolSize()));
+                    }
+
+                    if (showTotals) {
+                        val1 = getActiveConnectionsMin();
+                        val2 = getActiveConnectionsAvg();
+                        val3 = getActiveConnectionsMax();
+
+                        if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                            (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                            method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
+                                                        prefix, val1, val2, val3));
+                        }
                     
-                    val1 = getIdleConnectionsMin();
-                    val2 = getIdleConnectionsAvg();
-                    val3 = getIdleConnectionsMax();
+                        val1 = getIdleConnectionsMin();
+                        val2 = getIdleConnectionsAvg();
+                        val3 = getIdleConnectionsMax();
 
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%smin/avg/max idle connections: %d/%d/%d",
-                                                    prefix, val1, val2, val3));
-                    }
+                        if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                            (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                            method.accept(String.format("%smin/avg/max idle connections: %d/%d/%d",
+                                                        prefix, val1, val2, val3));
+                        }
 
-                    val1 = getTotalConnectionsMin();
-                    val2 = getTotalConnectionsAvg();
-                    val3 = getTotalConnectionsMax();
+                        val1 = getTotalConnectionsMin();
+                        val2 = getTotalConnectionsAvg();
+                        val3 = getTotalConnectionsMax();
 
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%smin/avg/max total connections: %d/%d/%d",
-                                                    prefix, val1, val2, val3));
+                        if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                            (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                            method.accept(String.format("%smin/avg/max total connections: %d/%d/%d",
+                                                        prefix, val1, val2, val3));
+                        }
                     }
                 }
             }
@@ -727,6 +732,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             // show errors
             if (showErrors) {
                 final Map<Properties, Long> errors = getErrors();
+
+                // don't use method here 
 
                 if (errors.isEmpty()) {
                     logger.info("No connection exceptions signalled for {}", poolDescription);

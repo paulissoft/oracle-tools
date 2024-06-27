@@ -239,6 +239,15 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     protected abstract PoolDataSourceStatistics getPoolDataSourceStatisticsOverflow();
 
+    public void showStatistics() {
+        if (getPoolDataSourceStatistics() != null) {
+            getPoolDataSourceStatistics().showStatistics();
+        }
+        if (poolDataSourceOverflow != null && getPoolDataSourceStatisticsOverflow() != null) {
+            getPoolDataSourceStatisticsOverflow().showStatistics();
+        }
+    }
+
     protected abstract long getMinConnectionTimeout();
     
     protected void updatePool(@NonNull final T poolDataSource,
