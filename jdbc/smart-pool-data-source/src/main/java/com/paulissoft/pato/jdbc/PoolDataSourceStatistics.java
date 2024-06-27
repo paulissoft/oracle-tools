@@ -54,7 +54,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
-    private static final boolean checkStatistics = logger.isDebugEnabled();
+    // GJP 2024-06-27 Disabled now since the application should show it (Spring Scheduler for instance)
+    private static final boolean debugStatistics = false; // logger.isDebugEnabled();
 
     private static boolean failOnInvalidStatistics = false;
 
@@ -342,21 +343,27 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         pdss.lastUpdate.set(now());
 
         // Show statistics if necessary
+        // GJP 2024-06-27 Disabled now since the application should show it (Spring Scheduler for instance)
+        /*
         if (pdss.mustShowTotals()) {
             pdss.showStatistics(true);
         }
+        */
     }
-    
+
+    // GJP 2024-06-27 Disabled now since the application should show it (Spring Scheduler for instance)
+    /*
     private boolean mustShowTotals() {
         // Show statistics if the last update moment is not equal to the last shown moment
-        // When checkStatistics is true (i.e. debug enabled) the moment is minute else hour
+        // When debugStatistics is true (i.e. debug enabled) the moment is minute else hour
         final LocalDateTime lastUpdate = long2LocalDateTime(this.lastUpdate.get());
         final LocalDateTime lastShown = long2LocalDateTime(this.lastShown.get());
-        final int lastUpdateMoment = lastUpdate != null ? ( checkStatistics ? lastUpdate.getMinute() : lastUpdate.getHour() ) : -1;
-        final int lastShownMoment = lastShown != null ? (checkStatistics ? lastShown.getMinute() : lastShown.getHour()) : -1;
+        final int lastUpdateMoment = lastUpdate != null ? (debugStatistics ? lastUpdate.getMinute() : lastUpdate.getHour()) : -1;
+        final int lastShownMoment = lastShown != null ? (debugStatistics ? lastShown.getMinute() : lastShown.getHour()) : -1;
         
         return lastUpdateMoment != lastShownMoment;
     }
+    */
 
     public void close() throws Exception {
         if (isClosed()) {
@@ -407,7 +414,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             childSnapshotAfter = null,
             parentSnapshotAfter = null;
 
-        if (checkStatistics) {
+        if (debugStatistics) {
             childSnapshotBefore = new Snapshot(this);
             parentSnapshotBefore = new Snapshot(this.parent);
         }
@@ -455,7 +462,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
         this.reset();
 
-        if (checkStatistics) {
+        if (debugStatistics) {
             childSnapshotAfter = new Snapshot(this);
             parentSnapshotAfter = new Snapshot(this.parent);
 
