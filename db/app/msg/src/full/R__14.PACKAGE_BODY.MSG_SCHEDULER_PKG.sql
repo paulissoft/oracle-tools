@@ -415,8 +415,12 @@ begin
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
   else
-    execute immediate p_command;
+    execute immediate 'call ' || p_command;
   end if;
+exception
+  when others
+  then
+    raise_application_error(-20000, 'command: ' || p_command, true);
 end;
 
 function cast_to_varchar2(p_val in boolean)
