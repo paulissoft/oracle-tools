@@ -1398,20 +1398,20 @@ $end
             <<job_loop>>
             for i_job_idx in l_job_names.first .. l_job_names.last
             loop
-$if oracle_tools.cfg_pkg.c_debugging $then
-              dbug.print
-              ( dbug."info"
-              , 'trying to drop job %s'
-              , l_job_names(i_job_idx)
-              );
-$end
-
               begin
                 PRAGMA INLINE (drop_job, 'YES');
                 drop_job(l_job_names(i_job_idx));
               exception
                 when others
                 then
+$if oracle_tools.cfg_pkg.c_debugging $then
+                  dbug.on_error;
+                  dbug.print
+                  ( dbug."warning"
+                  , 'trying to drop job %s'
+                  , l_job_names(i_job_idx)
+                  );
+$end
                   null;
               end;
             end loop job_loop;
@@ -1486,7 +1486,6 @@ $end
         loop
           PRAGMA INLINE (get_jobs, 'YES');
           exit sleep_loop when get_jobs(p_job_name_expr => l_job_name || '%', p_state => 'RUNNING').count = 0;
-
           dbms_session.sleep(1);
         end loop;
 
@@ -1504,21 +1503,22 @@ $end
           <<job_loop>>
           for i_job_idx in l_job_names.first .. l_job_names.last
           loop
-$if oracle_tools.cfg_pkg.c_debugging $then
-            dbug.print
-            ( dbug."info"
-            , 'trying to stop job %s'
-            , l_job_names(i_job_idx)
-            );
-$end
-
             -- stop
             begin                  
               PRAGMA INLINE (stop_job, 'YES');
               stop_job(l_job_names(i_job_idx));
             exception
               when others
-              then null;
+              then
+$if oracle_tools.cfg_pkg.c_debugging $then
+                dbug.on_error;
+                dbug.print
+                ( dbug."warning"
+                , 'trying to stop job %s'
+                , l_job_names(i_job_idx)
+                );
+$end
+                null;
             end;
             
             -- disable
@@ -1527,7 +1527,16 @@ $end
               change_job(p_job_name => l_job_names(i_job_idx), p_enabled => false);
             exception
               when others
-              then null;
+              then
+$if oracle_tools.cfg_pkg.c_debugging $then
+                dbug.on_error;
+                dbug.print
+                ( dbug."warning"
+                , 'trying to disable job %s'
+                , l_job_names(i_job_idx)
+                );
+$end
+                null;
             end;
           end loop job_loop;
         end if;
@@ -1900,6 +1909,14 @@ $end
       exception
         when others
         then
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.on_error;
+          dbug.print
+          ( dbug."warning"
+          , 'trying to stop job %s'
+          , l_job_name_tab(i_job_idx)
+          );
+$end
           null;
       end;
     end loop job_loop;
