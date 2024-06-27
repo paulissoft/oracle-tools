@@ -5,6 +5,7 @@ CREATE OR REPLACE PACKAGE BODY "MSG_SCHEDULER_PKG" AS
 subtype job_name_t is user_scheduler_jobs.job_name%type;
 subtype dbug_channel_tab_t is msg_pkg.boolean_lookup_tab_t;
 subtype job_info_rec_t is user_scheduler_jobs%rowtype;
+subtype command_t is varchar2(4000 byte);
 
 -- CONSTANTs
 
@@ -55,6 +56,11 @@ pragma exception_init(e_invalid_schedule, -27481);
 -- ORA-27468: "MSG_AQ_PKG$PROCESSING" is locked by another process
 e_procobj_locked exception;
 pragma exception_init(e_procobj_locked, -27468);
+
+-- VARIABLES
+
+g_dry_run boolean := false;
+g_commands sys.odcivarchar2list;
 
 -- ROUTINEs
 
@@ -399,6 +405,27 @@ end session_job_name;
 
 /*1*/
 
+procedure process_command
+( p_command in command_t
+)
+is
+begin
+  if g_dry_run
+  then
+    g_commands.extend(1);
+    g_commands(g_commands.last) := p_command;
+  else
+    execute immediate p_command;
+  end if;
+end;
+
+function cast_to_varchar2(p_val in boolean)
+return varchar2
+is
+begin
+  return case p_val when true then 'true' when false then 'false' else 'null' end;
+end;  
+
 -- invoked by:
 -- * create_program
 procedure dbms_scheduler$create_program
@@ -411,13 +438,16 @@ procedure dbms_scheduler$create_program
 )
 is
 begin
-  dbms_scheduler.create_program
-  ( program_name => program_name
-  , program_type => program_type
-  , program_action => program_action
-  , number_of_arguments => number_of_arguments
-  , enabled => enabled
-  , comments => comments
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.create_program(program_name => '%s', program_type => '%s', program_action => '%s', number_of_arguments => %d, enabled => %s, comments => '%s')]'
+    , program_name
+    , program_type
+    , program_action
+    , number_of_arguments
+    , cast_to_varchar2(enabled)
+    , comments
+    )
   );
 end;
 
@@ -428,8 +458,11 @@ procedure dbms_scheduler$drop_program
 )
 is
 begin
-  dbms_scheduler.drop_program
-  ( program_name => program_name
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.drop_program(program_name => '%s')]'
+    , program_name
+    )
   );
 end;
 
@@ -444,12 +477,15 @@ procedure dbms_scheduler$define_program_argument
 )
 is
 begin
-  dbms_scheduler.define_program_argument
-  ( program_name => program_name
-  , argument_name => argument_name
-  , argument_position => argument_position
-  , argument_type => argument_type
-  , default_value => default_value
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.define_program_argument(program_name => '%s', argument_name => '%s', argument_position => %d, argument_type => '%s', default_value => '%s')]'
+    , program_name
+    , argument_name
+    , argument_position
+    , argument_type
+    , default_value
+    )
   );
 end;
 
@@ -460,7 +496,12 @@ procedure dbms_scheduler$disable
 )
 is
 begin
-  dbms_scheduler.disable(name => name);
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.disable(name => '%s')]'
+    , name
+    )
+  );
 end;
 
 -- invoked by:
@@ -471,7 +512,12 @@ procedure dbms_scheduler$enable
 )
 is
 begin
-  dbms_scheduler.enable(name => name);
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.enable(name => '%s')]'
+    , name
+    )
+  );
 end;
 
 -- invoked by:
@@ -479,24 +525,27 @@ end;
 procedure dbms_scheduler$create_job
 ( job_name in varchar2
 , program_name in varchar2
-, start_date in timestamp with time zone
+, start_date in oracle_tools.api_time_pkg.timestamp_t
 , repeat_interval in varchar2
-, end_date in timestamp with time zone
+, end_date in oracle_tools.api_time_pkg.timestamp_t
 , enabled in boolean
 , auto_drop in boolean
 , comments in varchar2
 )
 is
 begin
-  dbms_scheduler.create_job
-  ( job_name => job_name
-  , program_name => program_name
-  , start_date => start_date
-  , repeat_interval => repeat_interval
-  , end_date => end_date
-  , enabled => enabled
-  , auto_drop => auto_drop
-  , comments => comments
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.create_job(job_name => '%s', program_name => '%s', start_date => oracle_tools.api_time_pkg.str2timestamp('%s'), repeat_interval => '%s', end_date => oracle_tools.api_time_pkg.str2timestamp('%s'), enabled => %s, auto_drop => %s, comments => '%s')]'
+    , job_name
+    , program_name
+    , oracle_tools.api_time_pkg.timestamp2str(start_date)
+    , repeat_interval
+    , oracle_tools.api_time_pkg.timestamp2str(end_date)
+    , cast_to_varchar2(enabled)
+    , cast_to_varchar2(auto_drop)
+    , comments
+    )
   );
 end;
    
@@ -512,13 +561,16 @@ procedure dbms_scheduler$create_job
 )
 is
 begin
-  dbms_scheduler.create_job
-  ( job_name => job_name
-  , program_name => program_name
-  , schedule_name => schedule_name
-  , enabled => enabled
-  , auto_drop => auto_drop
-  , comments => comments
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.create_job(job_name => '%s', program_name => '%s', schedule_name => '%s', enabled => %s, auto_drop => %s, comments => '%s')]'
+    , job_name
+    , program_name
+    , schedule_name
+    , cast_to_varchar2(enabled)
+    , cast_to_varchar2(auto_drop)
+    , comments
+    )
   );
 end;
 
@@ -533,10 +585,13 @@ procedure dbms_scheduler$set_job_argument_value
 )
 is
 begin
-  dbms_scheduler.set_job_argument_value
-  ( job_name => job_name
-  , argument_name => argument_name
-  , argument_value => argument_value
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.set_job_argument_value(job_name => '%s', argument_name => '%s', argument_value => '%s')]'
+    , job_name
+    , argument_name
+    , argument_value
+    )
   );
 end;  
 
@@ -544,19 +599,22 @@ end;
 -- * create_job
 procedure dbms_scheduler$create_schedule
 ( schedule_name in varchar2
-, start_date in timestamp with time zone
+, start_date in oracle_tools.api_time_pkg.timestamp_t
 , repeat_interval in varchar2
-, end_date in timestamp with time zone
+, end_date in oracle_tools.api_time_pkg.timestamp_t
 , comments in varchar2
 )
 is
 begin
-  dbms_scheduler.create_schedule
-  ( schedule_name => schedule_name
-  , start_date => start_date
-  , repeat_interval => repeat_interval
-  , end_date => end_date
-  , comments => comments
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.create_schedule(schedule_name => '%s', start_date => oracle_tools.api_time_pkg.str2timestamp('%s'), repeat_interval => '%s', end_date => oracle_tools.api_time_pkg.str2timestamp('%s'), comments => '%s')]'
+    , schedule_name
+    , oracle_tools.api_time_pkg.timestamp2str(start_date)
+    , repeat_interval
+    , oracle_tools.api_time_pkg.timestamp2str(end_date)
+    , comments
+    )
   );
 end;
 
@@ -567,8 +625,11 @@ procedure dbms_scheduler$drop_schedule
 )
 is
 begin
-  dbms_scheduler.drop_schedule
-  ( schedule_name => schedule_name
+  process_command
+  ( utl_lms.format_message
+    ( q'[dbms_scheduler.drop_schedule(schedule_name => '%s')]'
+    , schedule_name
+    )
   );
 end;
 
@@ -1190,6 +1251,47 @@ begin
 end get_nr_workers;
 
 -- PUBLIC
+
+function do
+( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+)
+return sys.odcivarchar2list
+pipelined
+is
+  procedure cleanup
+  is
+  begin
+    g_dry_run := false;
+  end cleanup;
+begin
+  g_dry_run := true;
+  g_commands := sys.odcivarchar2list();
+
+  do
+  ( p_command => p_command
+  , p_processing_package => p_processing_package
+  );
+
+  if g_commands is not null and g_commands.count > 0
+  then
+    for i_idx in g_commands.first .. g_commands.last
+    loop
+      pipe row (g_commands(i_idx));
+    end loop;
+  end if;
+
+  cleanup;
+  return;
+exception
+  when no_data_needed or no_data_found
+  then
+    cleanup;
+  when others
+  then
+    cleanup;
+    raise;
+end do;
 
 procedure do
 ( p_command in varchar2
