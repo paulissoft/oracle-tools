@@ -397,6 +397,183 @@ begin
   return l_job_name;
 end session_job_name;
 
+/*1*/
+
+-- invoked by:
+-- * create_program
+procedure dbms_scheduler$create_program
+( program_name in varchar2
+, program_type in varchar2
+, program_action in varchar2
+, number_of_arguments in pls_integer
+, enabled in boolean
+, comments in varchar2
+)
+is
+begin
+  dbms_scheduler.create_program
+  ( program_name => program_name
+  , program_type => program_type
+  , program_action => program_action
+  , number_of_arguments => number_of_arguments
+  , enabled => enabled
+  , comments => comments
+  );
+end;
+
+-- invoked by:
+-- * do
+procedure dbms_scheduler$drop_program
+( program_name in varchar2
+)
+is
+begin
+  dbms_scheduler.drop_program
+  ( program_name => program_name
+  );
+end;
+
+-- invoked by:
+-- * create_program
+procedure dbms_scheduler$define_program_argument
+( program_name in varchar2
+, argument_name in varchar2
+, argument_position in pls_integer
+, argument_type in varchar2
+, default_value in varchar2
+)
+is
+begin
+  dbms_scheduler.define_program_argument
+  ( program_name => program_name
+  , argument_name => argument_name
+  , argument_position => argument_position
+  , argument_type => argument_type
+  , default_value => default_value
+  );
+end;
+
+-- invoked by:
+-- * change_job
+procedure dbms_scheduler$disable
+( name in varchar2
+)
+is
+begin
+  dbms_scheduler.disable(name => name);
+end;
+
+-- invoked by:
+-- * create_program
+-- * change_job
+procedure dbms_scheduler$enable
+( name in varchar2
+)
+is
+begin
+  dbms_scheduler.enable(name => name);
+end;
+
+-- invoked by:
+-- * create_job
+procedure dbms_scheduler$create_job
+( job_name in varchar2
+, program_name in varchar2
+, start_date in timestamp with time zone
+, repeat_interval in varchar2
+, end_date in timestamp with time zone
+, enabled in boolean
+, auto_drop in boolean
+, comments in varchar2
+)
+is
+begin
+  dbms_scheduler.create_job
+  ( job_name => job_name
+  , program_name => program_name
+  , start_date => start_date
+  , repeat_interval => repeat_interval
+  , end_date => end_date
+  , enabled => enabled
+  , auto_drop => auto_drop
+  , comments => comments
+  );
+end;
+   
+-- invoked by:
+-- * create_job
+procedure dbms_scheduler$create_job
+( job_name in varchar2
+, program_name in varchar2
+, schedule_name in varchar2
+, enabled in boolean
+, auto_drop in boolean
+, comments in varchar2
+)
+is
+begin
+  dbms_scheduler.create_job
+  ( job_name => job_name
+  , program_name => program_name
+  , schedule_name => schedule_name
+  , enabled => enabled
+  , auto_drop => auto_drop
+  , comments => comments
+  );
+end;
+
+-- invoked by:
+-- * submit_processing
+-- * submit_do
+-- * submit_processing_launcher
+procedure dbms_scheduler$set_job_argument_value
+( job_name in varchar2
+, argument_name in varchar2
+, argument_value in varchar2
+)
+is
+begin
+  dbms_scheduler.set_job_argument_value
+  ( job_name => job_name
+  , argument_name => argument_name
+  , argument_value => argument_value
+  );
+end;  
+
+-- invoked by:
+-- * create_job
+procedure dbms_scheduler$create_schedule
+( schedule_name in varchar2
+, start_date in timestamp with time zone
+, repeat_interval in varchar2
+, end_date in timestamp with time zone
+, comments in varchar2
+)
+is
+begin
+  dbms_scheduler.create_schedule
+  ( schedule_name => schedule_name
+  , start_date => start_date
+  , repeat_interval => repeat_interval
+  , end_date => end_date
+  , comments => comments
+  );
+end;
+
+-- invoked by:
+-- * do
+procedure dbms_scheduler$drop_schedule
+( schedule_name in varchar2
+)
+is
+begin
+  dbms_scheduler.drop_schedule
+  ( schedule_name => schedule_name
+  );
+end;
+
+/*2*/
+
 procedure create_program
 ( p_program_name in varchar2
 )
@@ -406,7 +583,7 @@ begin
   case 
     when l_program_name = c_program_launcher
     then
-      dbms_scheduler.create_program
+      dbms_scheduler$create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
       , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
@@ -417,7 +594,7 @@ begin
 
       for i_par_idx in 1..3
       loop
-        dbms_scheduler.define_program_argument
+        dbms_scheduler$define_program_argument
         ( program_name => l_program_name
         , argument_name => case i_par_idx
                              when 1 then 'P_PROCESSING_PACKAGE'
@@ -440,7 +617,7 @@ begin
 
     when l_program_name in ( c_program_supervisor, c_program_worker )
     then
-      dbms_scheduler.create_program
+      dbms_scheduler$create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
       , program_action => $$PLSQL_UNIT || '.' || 'PROCESSING' -- they share the same stored procedure
@@ -451,7 +628,7 @@ begin
   
       for i_par_idx in 1..5
       loop
-        dbms_scheduler.define_program_argument
+        dbms_scheduler$define_program_argument
         ( program_name => l_program_name
         , argument_name => case i_par_idx
                              when 1 then 'P_PROCESSING_PACKAGE'
@@ -475,7 +652,7 @@ begin
       
     when l_program_name = c_program_do
     then
-      dbms_scheduler.create_program
+      dbms_scheduler$create_program
       ( program_name => l_program_name
       , program_type => 'STORED_PROCEDURE'
       , program_action => $$PLSQL_UNIT || '.' || p_program_name -- program name is the same as module name
@@ -486,7 +663,7 @@ begin
 
       for i_par_idx in 1..2
       loop
-        dbms_scheduler.define_program_argument
+        dbms_scheduler$define_program_argument
         ( program_name => l_program_name
         , argument_name => case i_par_idx
                              when 1 then 'P_COMMAND'
@@ -499,7 +676,7 @@ begin
       end loop;
   end case;
       
-  dbms_scheduler.enable(name => l_program_name);
+  dbms_scheduler$enable(name => l_program_name);
 end create_program;
 
 procedure get_job_info
@@ -581,6 +758,7 @@ $end
 
     if l_job_info_rec.repeat_interval is not null
     then
+      -- next_run_date is an out parameter, hence no dbms_scheduler$evaluate_calendar_string
       dbms_scheduler.evaluate_calendar_string
       ( calendar_string => l_job_info_rec.repeat_interval
       , start_date => l_job_info_rec.start_date -- date at which the schedule became active
@@ -643,13 +821,13 @@ $end
     then null;
     
     when p_enabled
-    then dbms_scheduler.enable(p_job_name);
+    then dbms_scheduler$enable(p_job_name);
     
     when not(p_enabled) and l_job_info_rec.enabled = 'FALSE'
     then null;
     
     when not(p_enabled)
-    then dbms_scheduler.disable(p_job_name);
+    then dbms_scheduler$disable(p_job_name);
   end case;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -717,7 +895,7 @@ $end
     case 
       when l_program_name in ( c_program_supervisor, c_program_worker )
       then
-        dbms_scheduler.create_job
+        dbms_scheduler$create_job
         ( job_name => p_job_name
         , program_name => l_program_name
         , start_date => null
@@ -730,7 +908,7 @@ $end
         
       when l_program_name = c_program_do
       then
-        dbms_scheduler.create_job
+        dbms_scheduler$create_job
         ( job_name => p_job_name
         , program_name => l_program_name
         , start_date => null
@@ -746,7 +924,7 @@ $end
         -- a repeating job
         if not(does_schedule_exist(c_schedule_launcher))
         then
-          dbms_scheduler.create_schedule
+          dbms_scheduler$create_schedule
           ( schedule_name => c_schedule_launcher
           , start_date => null
           , repeat_interval => msg_constants_pkg.get_repeat_interval
@@ -755,7 +933,7 @@ $end
           );
         end if;
 
-        dbms_scheduler.create_job
+        dbms_scheduler$create_job
         ( job_name => p_job_name
         , program_name => l_program_name
         , schedule_name => c_schedule_launcher
@@ -847,7 +1025,7 @@ $end
             a.argument_position
   )
   loop
-    dbms_scheduler.set_job_argument_value
+    dbms_scheduler$set_job_argument_value
     ( job_name => l_job_name
     , argument_name => r.argument_name
     , argument_value => 
@@ -1091,7 +1269,7 @@ $end
       when 'drop-programs'
       then
         begin
-          dbms_scheduler.drop_program(program_name => p_program_name);
+          dbms_scheduler$drop_program(program_name => p_program_name);
         exception
           when e_procobj_does_not_exist
           then null;
@@ -1302,7 +1480,7 @@ $end
           for i_schedule_idx in l_schedule_tab.first .. l_schedule_tab.last
           loop
             begin
-              dbms_scheduler.drop_schedule(l_schedule_tab(i_schedule_idx));
+              dbms_scheduler$drop_schedule(l_schedule_tab(i_schedule_idx));
             exception
               when e_procobj_does_not_exist
               then null;
@@ -1362,7 +1540,7 @@ $end
             a.argument_position 
   )
   loop
-    dbms_scheduler.set_job_argument_value
+    dbms_scheduler$set_job_argument_value
     ( job_name => l_job_name_do
     , argument_name => r.argument_name
     , argument_value => 
@@ -1427,7 +1605,7 @@ $end
             a.argument_position 
   )
   loop
-    dbms_scheduler.set_job_argument_value
+    dbms_scheduler$set_job_argument_value
     ( job_name => l_job_name_launcher
     , argument_name => r.argument_name
     , argument_value => 
