@@ -44,8 +44,8 @@ c_use_current_session constant boolean := null; -- i.e. do not use dbms_schedule
 
 -- VARIABLES
 
-g_dry_run$ boolean := null; -- only set it in the private do()
-g_use_current_session$ boolean := null;
+g_dry_run$ boolean := c_dry_run; -- only set it in the function do()
+g_use_current_session$ boolean := c_use_current_session; -- idem
 
 g_commands sys.odcivarchar2list := sys.odcivarchar2list();
 g_procobj_argument_tab procobj_argument_tab_t;
@@ -554,7 +554,6 @@ end session_job_name;
 
 procedure process_command
 ( p_command in command_t
-, p_dry_run in boolean default g_dry_run$
 )
 is
 begin
@@ -562,7 +561,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'process_command(p_command => %s)', dyn_sql_parm(p_command));
 $end
 
-  if p_dry_run
+  if g_dry_run$
   then
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
@@ -844,6 +843,10 @@ begin
     then
       l_command := g_commands(g_commands.last);
       g_commands(g_commands.last) := '-- ' || l_command;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'call: %s', l_command);
+$end
 
       -- g_procobj_argument_tab(job_name)(argument_name) := argument_value;
       case job_name
@@ -1496,18 +1499,143 @@ begin
     end;
 end get_nr_workers;
 
--- private variant 1
+procedure do
+( p_commands in varchar2 -- a list
+, p_processing_package in varchar2
+)
+is
+  l_commands dbms_sql.varchar2a;
+begin
+  oracle_tools.pkg_str_util.split
+  ( p_str => p_commands
+  , p_delimiter => ','
+  , p_str_tab => l_commands
+  );
+  for i_idx in l_commands.first .. l_commands.last
+  loop
+    do
+    ( p_command => l_commands(i_idx)
+    , p_processing_package => p_processing_package 
+    );
+  end loop;
+end;
+
+-- PUBLIC
+
+function do
+( p_commands in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+, p_use_current_session in natural
+)
+return sys.odcivarchar2list
+pipelined
+is
+  c_dry_run_old constant boolean := g_dry_run$;
+  c_use_current_session_old constant boolean := g_use_current_session$;
+  
+  procedure cleanup
+  is
+  begin
+    -- restore
+    g_dry_run$ := c_dry_run_old;
+    g_use_current_session$ := c_use_current_session_old;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'g_dry_run$: %s; g_use_current_session$: %s'
+    , dbug.cast_to_varchar2(g_dry_run$)
+    , dbug.cast_to_varchar2(g_use_current_session$)
+    );
+$end
+  end cleanup;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_commands: %s; p_processing_package: %s; p_use_current_session: %s'
+  , p_commands
+  , p_processing_package
+  , p_use_current_session
+  );
+$end
+
+  g_dry_run$ := true;
+  g_use_current_session$ := (p_use_current_session != 0);
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'g_dry_run$: %s; g_use_current_session$: %s'
+  , dbug.cast_to_varchar2(g_dry_run$)
+  , dbug.cast_to_varchar2(g_use_current_session$)
+  );
+$end
+
+  if g_dry_run$ is null and g_use_current_session$ is null
+  then
+    g_commands.delete;
+    g_procobj_argument_tab.delete;
+  end if;
+
+  do
+  ( p_commands => p_commands
+  , p_processing_package => p_processing_package
+  );
+
+  if g_commands is not null and g_commands.count > 0
+  then
+    for i_idx in g_commands.first .. g_commands.last
+    loop
+      pipe row (g_commands(i_idx));
+    end loop;
+  end if;
+
+  cleanup;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+
+  return; -- essential for a pipelined function
+exception
+  when others
+  then
+    declare
+      l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab := oracle_tools.api_call_stack_pkg.get_error_stack;
+    begin
+      if g_commands is not null and g_commands.count > 0
+      then
+        for i_idx in g_commands.first .. g_commands.last
+        loop
+          pipe row (g_commands(i_idx));
+        end loop;
+      end if;
+
+      if l_error_stack_tab.count > 0
+      then
+        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
+        loop
+          pipe row ('-- ' || l_error_stack_tab(i_idx).error_msg);
+        end loop;
+      end if;
+    end;
+    
+    cleanup;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+
+    return;
+end do;
+
 procedure do
 ( p_command in varchar2
 , p_processing_package in varchar2
-, p_dry_run in boolean
-, p_use_current_session in boolean
 )
 is
   pragma autonomous_transaction;
-
-  c_dry_run_old constant boolean := g_dry_run$;
-  c_use_current_session_old constant boolean := g_use_current_session$;
 
   l_program_tab constant sys.odcivarchar2list :=
     sys.odcivarchar2list
@@ -1792,48 +1920,18 @@ $end
         );
     end case;
   end do_program_command;
-  
-  procedure cleanup
-  is
-  begin
-    -- restore
-    g_dry_run$ := c_dry_run_old;
-    g_use_current_session$ := c_use_current_session_old;
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print
-    ( dbug."info"
-    , 'g_dry_run$: %s; g_use_current_session$: %s'
-    , dbug.cast_to_varchar2(g_dry_run$)
-    , dbug.cast_to_varchar2(g_use_current_session$)
-    );
-$end
-  end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (2)');
   dbug.print
   ( dbug."input"
-  , 'p_command: %s; p_processing_package: %s; p_dry_run: %s; p_use_current_session: %s'
+  , 'p_command: %s; p_processing_package: %s'
   , p_command
   , p_processing_package
-  , dbug.cast_to_varchar2(p_dry_run)
-  , dbug.cast_to_varchar2(p_use_current_session)
   );
 $end
 
-  g_dry_run$ := p_dry_run;
-  g_use_current_session$ := p_use_current_session;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , 'g_dry_run$: %s; g_use_current_session$: %s'
-  , dbug.cast_to_varchar2(g_dry_run$)
-  , dbug.cast_to_varchar2(g_use_current_session$)
-  );
-$end
-
-  if p_dry_run
+  if g_dry_run$
   then
     g_commands.extend(1);
     g_commands(g_commands.last) := '-- ' || p_command;
@@ -1877,7 +1975,7 @@ $end
           for i_schedule_idx in l_schedule_tab.first .. l_schedule_tab.last
           loop
             begin
-              if p_dry_run
+              if g_dry_run$
               then
                 g_commands.extend(1);
                 g_commands(g_commands.last) :=
@@ -1897,7 +1995,7 @@ $end
           <<program_loop>>
           for i_program_idx in l_program_tab.first .. l_program_tab.last
           loop
-            if p_dry_run
+            if g_dry_run$
             then
               g_commands.extend(1);
               g_commands(g_commands.last) :=
@@ -1911,123 +2009,14 @@ $end
 
   commit;
 
-  cleanup;
-
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
-$end
 exception
   when others
   then
-    cleanup;
-$if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
-$end
     raise;
-end do;
-
--- private variant 2
-procedure do
-( p_commands in varchar2 -- a list
-, p_processing_package in varchar2
-, p_dry_run in boolean
-, p_use_current_session in boolean
-)
-is
-  l_commands dbms_sql.varchar2a;
-begin
-  oracle_tools.pkg_str_util.split
-  ( p_str => p_commands
-  , p_delimiter => ','
-  , p_str_tab => l_commands
-  );
-  for i_idx in l_commands.first .. l_commands.last
-  loop
-    do
-    ( p_command => l_commands(i_idx)
-    , p_processing_package => p_processing_package 
-    , p_dry_run => p_dry_run
-    , p_use_current_session => p_use_current_session
-    );
-  end loop;
-end;
-
--- PUBLIC
-
-function do
-( p_commands in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
-, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
-, p_use_current_session in natural
-)
-return sys.odcivarchar2list
-pipelined
-is
-begin
-  if g_dry_run$ is null and g_use_current_session$ is null
-  then
-    g_commands.delete;
-    g_procobj_argument_tab.delete;
-  end if;
-
-  do
-  ( p_commands => p_commands
-  , p_processing_package => p_processing_package
-  , p_dry_run => true
-  , p_use_current_session => (p_use_current_session != 0) -- will be null when p_use_current_session is null
-  );
-
-  if g_commands is not null and g_commands.count > 0
-  then
-    for i_idx in g_commands.first .. g_commands.last
-    loop
-      pipe row (g_commands(i_idx));
-    end loop;
-  end if;
-
-  return; -- essential for a pipelined function
-exception
-  when others
-  then
-    declare
-      l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab := oracle_tools.api_call_stack_pkg.get_error_stack;
-    begin
-      if g_commands is not null and g_commands.count > 0
-      then
-        for i_idx in g_commands.first .. g_commands.last
-        loop
-          pipe row (g_commands(i_idx));
-        end loop;
-      end if;
-
-      if l_error_stack_tab.count > 0
-      then
-        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
-        loop
-          pipe row ('-- ' || l_error_stack_tab(i_idx).error_msg);
-        end loop;
-      end if;
-    end;
-    return;
-end do;
-
-procedure do
-( p_command in varchar2
-, p_processing_package in varchar2
-)
-is
-begin
-  if g_dry_run$ is null and g_use_current_session$ is null
-  then
-    g_commands.delete;
-    g_procobj_argument_tab.delete;
-  end if;
-  
-  do
-  ( p_command => p_command
-  , p_processing_package => p_processing_package
-  , p_dry_run => nvl(g_dry_run$, c_dry_run)
-  , p_use_current_session => nvl(g_use_current_session$, c_use_current_session)
-  );
+$end
 end do;
 
 procedure submit_do
