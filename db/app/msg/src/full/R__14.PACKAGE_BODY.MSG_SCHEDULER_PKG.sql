@@ -855,17 +855,16 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'call: %s', l_command);
 $end
 
-      -- g_procobj_argument_tab(job_name)(argument_name) := argument_value;
-      case 
-        when job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+      -- only run procedures that create jobs
+      case job_name
+        when 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
         then
           MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
           , P_NR_WORKERS_EACH_GROUP => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EACH_GROUP')
           , P_NR_WORKERS_EXACT => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EXACT')
           );
-        when job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR' or
-             job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
+        when 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
         then
           MSG_SCHEDULER_PKG.PROCESSING
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
@@ -874,6 +873,8 @@ $end
           , P_WORKER_NR => g_procobj_argument_tab(job_name)('P_WORKER_NR')
           , P_END_DATE => g_procobj_argument_tab(job_name)('P_END_DATE')
           );
+        else -- job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%': we are not going to start them
+          null;
       end case;
     end if;
   end if;
