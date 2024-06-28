@@ -1908,7 +1908,7 @@ begin
   , p_processing_package => p_processing_package
   , p_dry_run => true
   , p_check_procobj_exists => (p_check_procobj_exists != 0)
-  , p_use_current_session => case when p_use_current_session is null then null when p_use_current_session = 0 then false else true end
+  , p_use_current_session => (p_use_current_session != 0) -- will be null when p_use_current_session is null
   );
 
   if g_commands is not null and g_commands.count > 0
