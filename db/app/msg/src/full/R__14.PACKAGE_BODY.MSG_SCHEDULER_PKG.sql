@@ -311,6 +311,13 @@ begin
   return l_expr;
 end to_like_expr;
 
+function check_procobj_exists
+return boolean
+is
+begin
+  return case when g_dry_run$ = false then true else false end;
+end;
+
 function get_jobs
 ( p_job_name_expr in varchar2
 , p_state in user_scheduler_jobs.state%type default null
@@ -320,15 +327,20 @@ is
   l_job_names sys.odcivarchar2list;
   l_job_name_expr constant job_name_t := to_like_expr(p_job_name_expr);
 begin
-  select  j.job_name
-  bulk collect
-  into    l_job_names
-  from    user_scheduler_jobs j
-  where   j.job_name like l_job_name_expr escape '\'
-  and     ( p_state is null or j.state = p_state )
-  order by
-          job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
-  ;
+  if not check_procobj_exists
+  then
+    l_job_names := sys.odcivarchar2list(); -- no jobs
+  else
+    select  j.job_name
+    bulk collect
+    into    l_job_names
+    from    user_scheduler_jobs j
+    where   j.job_name like l_job_name_expr escape '\'
+    and     ( p_state is null or j.state = p_state )
+    order by
+            job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
+    ;
+  end if;
 
   return l_job_names;
 end get_jobs;
@@ -369,13 +381,6 @@ begin
 end show_jobs;
 
 $end
-
-function check_procobj_exists
-return boolean
-is
-begin
-  return case when g_dry_run$ = false then true else false end;
-end;
 
 function does_job_exist
 ( p_job_name in job_name_t
@@ -519,6 +524,8 @@ return job_name_t
 is
   l_job_name job_name_t;
 begin
+  -- oracle_tools.api_call_stack_pkg.show_stack('session_job_name');
+  
   if not check_procobj_exists
   then
     l_job_name := null; -- don't know
@@ -849,15 +856,16 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
       -- g_procobj_argument_tab(job_name)(argument_name) := argument_value;
-      case job_name
-        when 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+      case 
+        when job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
         then
           MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
           , P_NR_WORKERS_EACH_GROUP => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EACH_GROUP')
           , P_NR_WORKERS_EXACT => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EXACT')
           );
-        when 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+        when job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR' or
+             job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
         then
           MSG_SCHEDULER_PKG.PROCESSING
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
@@ -1009,6 +1017,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_job_info_rec.run_count
   );
 $end
+exception
+  when no_data_found
+  then null;  
 end get_job_info;  
 
 procedure get_next_end_date
@@ -1352,10 +1363,7 @@ $end
   end loop;
 
   -- GO
-  if true or does_job_exist(l_job_name) -- ignore this in dry run mode
-  then
-    change_job(p_job_name => l_job_name, p_enabled => true);
-  end if;
+  change_job(p_job_name => l_job_name, p_enabled => true);
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -2064,10 +2072,7 @@ $end
     );
   end loop;
 
-  if true or does_job_exist(l_job_name_do)
-  then
-    change_job(p_job_name => l_job_name_do, p_enabled => true);
-  end if;
+  change_job(p_job_name => l_job_name_do, p_enabled => true);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -2135,10 +2140,7 @@ $end
   end loop;
 
   -- GO
-  if true or does_job_exist(l_job_name_launcher)
-  then
-    change_job(p_job_name => l_job_name_launcher, p_enabled => true);
-  end if;
+  change_job(p_job_name => l_job_name_launcher, p_enabled => true);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -2204,7 +2206,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
         dbug.print
         ( dbug."warning"
         , utl_lms.format_message
-          ( 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.'
+          ( c_session_not_running_job_msg
           , to_char(c_session_id)
           )
         );
@@ -2415,7 +2417,6 @@ procedure processing
 )
 is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
-  l_job_name constant job_name_t := session_job_name();
   l_groups_to_process_tab sys.odcivarchar2list;
   l_end_date constant oracle_tools.api_time_pkg.timestamp_t := oracle_tools.api_time_pkg.str2timestamp(p_end_date);
   -- for the heartbeat
@@ -2665,7 +2666,7 @@ $end
     );
   end if;
 
-  if l_job_name is null
+  if not g_dry_run$ and l_session_job_name is null
   then
     raise_application_error
     ( c_session_not_running_job
