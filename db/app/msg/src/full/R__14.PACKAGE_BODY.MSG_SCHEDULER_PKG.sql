@@ -2065,48 +2065,53 @@ is
     -- If not, just create a job name launcher to be used by the worker jobs.
     
     l_job_name_launcher := l_session_job_name;
-    
-    if l_job_name_launcher is null
+
+    if g_dry_run$
     then
+      l_end_date := systimestamp() + interval '1' minute;
+    else
+      if l_job_name_launcher is null
+      then
 $if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."warning"
-      , utl_lms.format_message
-        ( 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.'
-        , to_char(c_session_id)
-        )
-      );
+        dbug.print
+        ( dbug."warning"
+        , utl_lms.format_message
+          ( 'This session (SID=%s) does not appear to be a running job (for this user), see also column SESSION_ID from view USER_SCHEDULER_RUNNING_JOBS.'
+          , to_char(c_session_id)
+          )
+        );
 $end
         
-      l_job_name_launcher := 
-        join_job_name
-        ( p_processing_package => l_processing_package
-        , p_program_name => c_program_launcher
-        );
-
-      -- This session is not a running job: maybe the job does not exist yet so create/enable it to get a next_run_date
-      if does_job_exist(l_job_name_launcher)
-      then
-        change_job(p_job_name => l_job_name_launcher, p_enabled => true);
-      else
-        submit_processing_launcher
-        ( p_processing_package => p_processing_package
-        , p_nr_workers_each_group => p_nr_workers_each_group
-        , p_nr_workers_exact => p_nr_workers_exact
-        );
-      end if;
-
-    elsif l_job_name_launcher <>
+        l_job_name_launcher := 
           join_job_name
           ( p_processing_package => l_processing_package
           , p_program_name => c_program_launcher
-          )
-    then
-      raise value_error;
-    end if;
+          );
 
-    -- the job exists and is enabled or even running so the next call will return the next end date
-    get_next_end_date(l_job_name_launcher, l_end_date);
+        -- This session is not a running job: maybe the job does not exist yet so create/enable it to get a next_run_date
+        if does_job_exist(l_job_name_launcher)
+        then
+          change_job(p_job_name => l_job_name_launcher, p_enabled => true);
+        else
+          submit_processing_launcher
+          ( p_processing_package => p_processing_package
+          , p_nr_workers_each_group => p_nr_workers_each_group
+          , p_nr_workers_exact => p_nr_workers_exact
+          );
+        end if;
+
+      elsif l_job_name_launcher <>
+            join_job_name
+            ( p_processing_package => l_processing_package
+            , p_program_name => c_program_launcher
+            )
+      then
+        raise value_error;
+      end if;
+
+      -- the job exists and is enabled or even running so the next call will return the next end date
+      get_next_end_date(l_job_name_launcher, l_end_date);
+    end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'system date: %s', to_char(systimestamp, "yyyy-mm-dd hh24:mi:ss"));
