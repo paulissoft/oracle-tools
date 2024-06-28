@@ -33,11 +33,14 @@ c_attribute_tab constant sys.odcivarchar2list :=
 
 c_dry_run constant boolean := false;
 c_check_procobj_exists constant boolean := true;
+c_use_current_session constant boolean := null; -- i.e. do not use dbms_scheduler.run_job but enable a job instead
 
 -- VARIABLES
 
 g_dry_run$ boolean := c_dry_run; -- only set it in the private do()
 g_check_procobj_exists$ boolean := c_check_procobj_exists; -- only set it in the private do()
+g_use_current_session$ boolean := c_use_current_session;
+
 g_commands sys.odcivarchar2list;
 
 -- EXCEPTIONs
@@ -730,6 +733,24 @@ begin
   );
 end;
 
+procedure dbms_scheduler$run_job
+( job_name in varchar2
+, use_current_session in boolean default g_use_current_session$
+)
+is
+begin
+  if use_current_session is null
+  then dbms_scheduler$enable(job_name);
+  else process_command
+       ( utl_lms.format_message
+         ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => %s)]'
+         , dyn_sql_parm(job_name)
+         , dyn_sql_parm(use_current_session)
+         )
+       );
+  end if;
+end;
+
 /*2*/
 
 procedure create_program
@@ -979,7 +1000,7 @@ $end
     then null;
     
     when p_enabled
-    then dbms_scheduler$enable(p_job_name);
+    then dbms_scheduler$run_job(p_job_name);
     
     when not(p_enabled) and l_job_info_rec.enabled = 'FALSE'
     then null;
@@ -1353,6 +1374,7 @@ procedure do
 , p_processing_package in varchar2
 , p_dry_run in boolean
 , p_check_procobj_exists in boolean
+, p_use_current_session in boolean
 )
 is
   pragma autonomous_transaction;
@@ -1608,24 +1630,28 @@ $end
   procedure cleanup
   is
   begin
+    -- reset to their initial values
     g_dry_run$ := c_dry_run;
     g_check_procobj_exists$ := c_check_procobj_exists;
+    g_use_current_session$ := c_use_current_session;
   end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
   dbug.print
   ( dbug."input"
-  , 'p_command: %s; p_processing_package: %s; p_dry_run: %s; p_check_procobj_exists: %s'
+  , 'p_command: %s; p_processing_package: %s; p_dry_run: %s; p_check_procobj_exists: %s; p_use_current_session: %s'
   , p_command
   , p_processing_package
   , dbug.cast_to_varchar2(p_dry_run)
   , dbug.cast_to_varchar2(p_check_procobj_exists)
+  , dbug.cast_to_varchar2(p_use_current_session)
   );
 $end
 
   g_dry_run$ := p_dry_run;
   g_check_procobj_exists$ := p_check_procobj_exists;
+  g_use_current_session$ := p_use_current_session;
 
   -- check for processing packages having both routine GET_GROUPS_TO_PROCESS and PROCESSING
   select  p.package_name
@@ -1717,6 +1743,7 @@ begin
   , p_processing_package => p_processing_package
   , p_dry_run => true
   , p_check_procobj_exists => (p_check_procobj_exists != 0)
+  , p_use_current_session => true
   );
 
   if g_commands is not null and g_commands.count > 0
@@ -1739,8 +1766,9 @@ begin
   do
   ( p_command => p_command
   , p_processing_package => p_processing_package
-  , p_dry_run => false
-  , p_check_procobj_exists => true
+  , p_dry_run => c_dry_run
+  , p_check_procobj_exists => c_check_procobj_exists
+  , p_use_current_session => c_use_current_session
   );
 end do;
 
