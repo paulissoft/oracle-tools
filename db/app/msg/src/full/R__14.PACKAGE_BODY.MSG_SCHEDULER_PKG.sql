@@ -31,6 +31,15 @@ c_attribute_tab constant sys.odcivarchar2list :=
   , 'repeat_interval'
   );
 
+c_dry_run constant boolean := false;
+c_check_procobj_exists constant boolean := true;
+
+-- VARIABLES
+
+g_dry_run$ boolean := c_dry_run; -- only set it in the private do()
+g_check_procobj_exists$ boolean := c_check_procobj_exists; -- only set it in the private do()
+g_commands sys.odcivarchar2list;
+
 -- EXCEPTIONs
 
 -- ORA-27476: "MSG_AQ_PKG$PROCESSING_LAUNCHER#1" does not exist
@@ -56,11 +65,6 @@ pragma exception_init(e_invalid_schedule, -27481);
 -- ORA-27468: "MSG_AQ_PKG$PROCESSING" is locked by another process
 e_procobj_locked exception;
 pragma exception_init(e_procobj_locked, -27468);
-
--- VARIABLES
-
-g_dry_run boolean := false;
-g_commands sys.odcivarchar2list;
 
 -- ROUTINEs
 
@@ -97,6 +101,41 @@ $end
 
   msg_pkg.init;
 end init;
+
+function dyn_sql_parm(p_val in varchar2)
+return varchar2
+is
+begin
+  return case when p_val is null then 'null' else '''' || replace(p_val, '''', '''''') || '''' end;
+end;
+
+function dyn_sql_parm(p_val in pls_integer)
+return varchar2
+is
+begin
+  return case when p_val is null then 'null' else to_char(p_val) end;
+end;
+
+function dyn_sql_parm(p_val in boolean)
+return varchar2
+is
+begin
+  return case p_val when true then 'true' when false then 'false' else 'null' end;
+end;  
+
+function dyn_sql_parm(p_val in oracle_tools.api_time_pkg.timestamp_t)
+return varchar2
+is
+begin
+  return case
+           when p_val is null
+           then 'null'
+           else utl_lms.format_message
+                ( q'[oracle_tools.api_time_pkg.str2timestamp('%s')]'
+                , oracle_tools.api_time_pkg.timestamp2str(p_val)
+                )
+         end;
+end;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
 
@@ -242,11 +281,11 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
   dbug.print
   ( dbug."info"
-  , q'[split_job_name(p_job_name => '%s', p_processing_package => '%s', p_program_name => '%s', p_worker_nr => %s)]'
-  , p_job_name
-  , p_processing_package
-  , p_program_name
-  , p_worker_nr
+  , q'[split_job_name(p_job_name => %s, p_processing_package => %s, p_program_name => %s, p_worker_nr => %s)]'
+  , dyn_sql_parm(p_job_name)
+  , dyn_sql_parm(p_processing_package)
+  , dyn_sql_parm(p_program_name)
+  , dyn_sql_parm(p_worker_nr)
   );
 $end  
 
@@ -323,94 +362,125 @@ $end
 
 function does_job_exist
 ( p_job_name in job_name_t
+, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
-  PRAGMA INLINE (get_jobs, 'YES');
-  l_job_names constant sys.odcivarchar2list := get_jobs(p_job_name);
+  l_job_names sys.odcivarchar2list;
 begin
-  return l_job_names.count = 1;
+  if p_check_procobj_exists
+  then
+    PRAGMA INLINE (get_jobs, 'YES');
+    l_job_names := get_jobs(p_job_name);
+    return l_job_names.count = 1;
+  else
+    return false;
+  end if;
 end does_job_exist;
 
 function is_job_running
 ( p_job_name in job_name_t
+, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
 begin
   PRAGMA INLINE (get_jobs, 'YES');
-  return get_jobs(p_job_name, 'RUNNING').count = 1;
+  return case when p_check_procobj_exists then get_jobs(p_job_name, 'RUNNING').count = 1 else false end;
 end is_job_running;
 
 function does_program_exist
 ( p_program_name in varchar2
+, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
   l_found pls_integer;
 begin
-  select  1
-  into    l_found
-  from    user_scheduler_programs p
-  where   p.program_name = p_program_name;
-
-  return true;
-exception
-  when no_data_found
+  if not p_check_procobj_exists
   then
     return false;
+  else
+    begin
+      select  1
+      into    l_found
+      from    user_scheduler_programs p
+      where   p.program_name = p_program_name;
+    exception
+      when no_data_found
+      then
+        return false;
+    end;
+
+    return true;
+  end if;
 end does_program_exist;
 
 function does_schedule_exist
 ( p_schedule_name in varchar2
+, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
   l_found pls_integer;
 begin
-  select  1
-  into    l_found
-  from    user_scheduler_schedules p
-  where   p.schedule_name = p_schedule_name;
-
-  return true;
-exception
-  when no_data_found
+  if not p_check_procobj_exists
   then
     return false;
+  else
+    begin
+      select  1
+      into    l_found
+      from    user_scheduler_schedules p
+      where   p.schedule_name = p_schedule_name;
+    exception
+      when no_data_found
+      then
+        return false;
+    end;
+
+    return true;
+  end if;    
 end does_schedule_exist;
 
 function session_job_name
 ( p_session_id in varchar2 default c_session_id
+, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return job_name_t
 is
   l_job_name job_name_t;
 begin
-  -- Is this session running as a job?
-  -- If not, just create a job name launcher to be used by the worker jobs.
-  begin
-    select  j.job_name
-    into    l_job_name
-    from    user_scheduler_running_jobs j
-    where   j.session_id = p_session_id;
-  exception
-    when no_data_found
-    then
-      l_job_name := null;
-  end;
+  if not p_check_procobj_exists
+  then
+    return null;
+  else
+    -- Is this session running as a job?
+    -- If not, just create a job name launcher to be used by the worker jobs.
+    begin
+      select  j.job_name
+      into    l_job_name
+      from    user_scheduler_running_jobs j
+      where   j.session_id = p_session_id;
+    exception
+      when no_data_found
+      then
+        l_job_name := null;
+    end;
 
-  return l_job_name;
+    return l_job_name;
+  end if;
 end session_job_name;
 
 /*1*/
 
 procedure process_command
 ( p_command in command_t
+, p_dry_run in boolean default g_dry_run$
 )
 is
 begin
-  if g_dry_run
+  if p_dry_run
   then
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
@@ -422,13 +492,6 @@ exception
   then
     raise_application_error(-20000, 'command: ' || p_command, true);
 end;
-
-function cast_to_varchar2(p_val in boolean)
-return varchar2
-is
-begin
-  return case p_val when true then 'true' when false then 'false' else 'null' end;
-end;  
 
 -- invoked by:
 -- * create_program
@@ -444,13 +507,13 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_program(program_name => '%s', program_type => '%s', program_action => '%s', number_of_arguments => %d, enabled => %s, comments => '%s')]'
-    , program_name
-    , program_type
-    , program_action
-    , number_of_arguments
-    , cast_to_varchar2(enabled)
-    , comments
+    ( q'[dbms_scheduler.create_program(program_name => %s, program_type => %s, program_action => %s, number_of_arguments => %s, enabled => %s, comments => %s)]'
+    , dyn_sql_parm(program_name)
+    , dyn_sql_parm(program_type)
+    , dyn_sql_parm(program_action)
+    , dyn_sql_parm(number_of_arguments)
+    , dyn_sql_parm(enabled)
+    , dyn_sql_parm(comments)
     )
   );
 end;
@@ -464,8 +527,8 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.drop_program(program_name => '%s')]'
-    , program_name
+    ( q'[dbms_scheduler.drop_program(program_name => %s)]'
+    , dyn_sql_parm(program_name)
     )
   );
 end;
@@ -483,12 +546,12 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.define_program_argument(program_name => '%s', argument_name => '%s', argument_position => %d, argument_type => '%s', default_value => '%s')]'
-    , program_name
-    , argument_name
-    , argument_position
-    , argument_type
-    , default_value
+    ( q'[dbms_scheduler.define_program_argument(program_name => %s, argument_name => %s, argument_position => %s, argument_type => %s, default_value => %s)]'
+    , dyn_sql_parm(program_name)
+    , dyn_sql_parm(argument_name)
+    , dyn_sql_parm(argument_position)
+    , dyn_sql_parm(argument_type)
+    , dyn_sql_parm(default_value)
     )
   );
 end;
@@ -502,8 +565,8 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.disable(name => '%s')]'
-    , name
+    ( q'[dbms_scheduler.disable(name => %s)]'
+    , dyn_sql_parm(name)
     )
   );
 end;
@@ -518,8 +581,8 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.enable(name => '%s')]'
-    , name
+    ( q'[dbms_scheduler.enable(name => %s)]'
+    , dyn_sql_parm(name)
     )
   );
 end;
@@ -540,15 +603,15 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_job(job_name => '%s', program_name => '%s', start_date => oracle_tools.api_time_pkg.str2timestamp('%s'), repeat_interval => '%s', end_date => oracle_tools.api_time_pkg.str2timestamp('%s'), enabled => %s, auto_drop => %s, comments => '%s')]'
-    , job_name
-    , program_name
-    , oracle_tools.api_time_pkg.timestamp2str(start_date)
-    , repeat_interval
-    , oracle_tools.api_time_pkg.timestamp2str(end_date)
-    , cast_to_varchar2(enabled)
-    , cast_to_varchar2(auto_drop)
-    , comments
+    ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, enabled => %s, auto_drop => %s, comments => %s)]'
+    , dyn_sql_parm(job_name)
+    , dyn_sql_parm(program_name)
+    , dyn_sql_parm(start_date)
+    , dyn_sql_parm(repeat_interval)
+    , dyn_sql_parm(end_date)
+    , dyn_sql_parm(enabled)
+    , dyn_sql_parm(auto_drop)
+    , dyn_sql_parm(comments)
     )
   );
 end;
@@ -567,13 +630,13 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_job(job_name => '%s', program_name => '%s', schedule_name => '%s', enabled => %s, auto_drop => %s, comments => '%s')]'
-    , job_name
-    , program_name
-    , schedule_name
-    , cast_to_varchar2(enabled)
-    , cast_to_varchar2(auto_drop)
-    , comments
+    ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, schedule_name => %s, enabled => %s, auto_drop => %s, comments => %s)]'
+    , dyn_sql_parm(job_name)
+    , dyn_sql_parm(program_name)
+    , dyn_sql_parm(schedule_name)
+    , dyn_sql_parm(enabled)
+    , dyn_sql_parm(auto_drop)
+    , dyn_sql_parm(comments)
     )
   );
 end;
@@ -591,10 +654,10 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.set_job_argument_value(job_name => '%s', argument_name => '%s', argument_value => '%s')]'
-    , job_name
-    , argument_name
-    , argument_value
+    ( q'[dbms_scheduler.set_job_argument_value(job_name => %s, argument_name => %s, argument_value => %s)]'
+    , dyn_sql_parm(job_name)
+    , dyn_sql_parm(argument_name)
+    , dyn_sql_parm(argument_value)
     )
   );
 end;  
@@ -612,12 +675,12 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_schedule(schedule_name => '%s', start_date => oracle_tools.api_time_pkg.str2timestamp('%s'), repeat_interval => '%s', end_date => oracle_tools.api_time_pkg.str2timestamp('%s'), comments => '%s')]'
-    , schedule_name
-    , oracle_tools.api_time_pkg.timestamp2str(start_date)
-    , repeat_interval
-    , oracle_tools.api_time_pkg.timestamp2str(end_date)
-    , comments
+    ( q'[dbms_scheduler.create_schedule(schedule_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, comments => %s)]'
+    , dyn_sql_parm(schedule_name)
+    , dyn_sql_parm(start_date)
+    , dyn_sql_parm(repeat_interval)
+    , dyn_sql_parm(end_date)
+    , dyn_sql_parm(comments)
     )
   );
 end;
@@ -631,8 +694,38 @@ is
 begin
   process_command
   ( utl_lms.format_message
-    ( q'[dbms_scheduler.drop_schedule(schedule_name => '%s')]'
-    , schedule_name
+    ( q'[dbms_scheduler.drop_schedule(schedule_name => %s)]'
+    , dyn_sql_parm(schedule_name)
+    )
+  );
+end;
+
+procedure admin_scheduler_pkg$stop_job
+( p_job_name in varchar2
+, p_force in boolean
+)
+is
+begin
+  process_command
+  ( utl_lms.format_message
+    ( q'[admin_scheduler_pkg.stop_job(p_job_name => %s, p_force => %s)]'
+    , dyn_sql_parm(p_job_name)
+    , dyn_sql_parm(p_force)
+    )
+  );
+end;
+
+procedure admin_scheduler_pkg$drop_job
+( p_job_name in varchar2
+, p_force in boolean
+)
+is
+begin
+  process_command
+  ( utl_lms.format_message
+    ( q'[admin_scheduler_pkg.drop_job(p_job_name => %s, p_force => %s)]'
+    , dyn_sql_parm(p_job_name)
+    , dyn_sql_parm(p_force)
     )
   );
 end;
@@ -1157,7 +1250,7 @@ $end
     PRAGMA INLINE (is_job_running, 'YES');
     exit when not(is_job_running(p_job_name));
 
-    admin_scheduler_pkg.stop_job(p_job_name => p_job_name, p_force => case i_step when 1 then false else true end);
+    admin_scheduler_pkg$stop_job(p_job_name => p_job_name, p_force => case i_step when 1 then false else true end);
   end loop;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1182,7 +1275,7 @@ $end
 
   PRAGMA INLINE (stop_job, 'YES');
   stop_job(p_job_name);
-  admin_scheduler_pkg.drop_job(p_job_name => p_job_name, p_force => false);
+  admin_scheduler_pkg$drop_job(p_job_name => p_job_name, p_force => false);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1254,52 +1347,12 @@ begin
     end;
 end get_nr_workers;
 
--- PUBLIC
-
-function do
-( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
-, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
-)
-return sys.odcivarchar2list
-pipelined
-is
-  procedure cleanup
-  is
-  begin
-    g_dry_run := false;
-  end cleanup;
-begin
-  g_dry_run := true;
-  g_commands := sys.odcivarchar2list();
-
-  do
-  ( p_command => p_command
-  , p_processing_package => p_processing_package
-  );
-
-  if g_commands is not null and g_commands.count > 0
-  then
-    for i_idx in g_commands.first .. g_commands.last
-    loop
-      pipe row (g_commands(i_idx));
-    end loop;
-  end if;
-
-  cleanup;
-  return; -- essential for a pipelined function
-exception
-  when no_data_needed or no_data_found
-  then
-    cleanup;
-  when others
-  then
-    cleanup;
-    raise;
-end do;
-
+-- private variant
 procedure do
 ( p_command in varchar2
 , p_processing_package in varchar2
+, p_dry_run in boolean
+, p_check_procobj_exists in boolean
 )
 is
   pragma autonomous_transaction;
@@ -1551,11 +1604,28 @@ $end
         );
     end case;
   end do_program_command;
+  
+  procedure cleanup
+  is
+  begin
+    g_dry_run$ := c_dry_run;
+    g_check_procobj_exists$ := c_check_procobj_exists;
+  end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
-  dbug.print(dbug."input", 'p_command: %s; p_processing_package: %s', p_command, p_processing_package);
+  dbug.print
+  ( dbug."input"
+  , 'p_command: %s; p_processing_package: %s; p_dry_run: %s; p_check_procobj_exists: %s'
+  , p_command
+  , p_processing_package
+  , dbug.cast_to_varchar2(p_dry_run)
+  , dbug.cast_to_varchar2(p_check_procobj_exists)
+  );
 $end
+
+  g_dry_run$ := p_dry_run;
+  g_check_procobj_exists$ := p_check_procobj_exists;
 
   -- check for processing packages having both routine GET_GROUPS_TO_PROCESS and PROCESSING
   select  p.package_name
@@ -1614,14 +1684,64 @@ $end
 
   commit;
 
+  cleanup;
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+$end
 exception
   when others
   then
+    cleanup;
+$if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
-    raise;
 $end
+    raise;
+end do;
+
+-- PUBLIC
+
+function do
+( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+, p_check_procobj_exists in naturaln
+)
+return sys.odcivarchar2list
+pipelined
+is
+begin
+  g_commands := sys.odcivarchar2list();
+
+  do
+  ( p_command => p_command
+  , p_processing_package => p_processing_package
+  , p_dry_run => true
+  , p_check_procobj_exists => (p_check_procobj_exists != 0)
+  );
+
+  if g_commands is not null and g_commands.count > 0
+  then
+    for i_idx in g_commands.first .. g_commands.last
+    loop
+      pipe row (g_commands(i_idx));
+    end loop;
+  end if;
+
+  return; -- essential for a pipelined function
+end do;
+
+procedure do
+( p_command in varchar2
+, p_processing_package in varchar2
+)
+is
+begin
+  do
+  ( p_command => p_command
+  , p_processing_package => p_processing_package
+  , p_dry_run => false
+  , p_check_procobj_exists => true
+  );
 end do;
 
 procedure submit_do

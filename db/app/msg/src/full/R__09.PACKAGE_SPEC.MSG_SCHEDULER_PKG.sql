@@ -60,6 +60,7 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 function do
 ( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+, p_check_procobj_exists in naturaln default 1
 )
 return sys.odcivarchar2list
 pipelined;
