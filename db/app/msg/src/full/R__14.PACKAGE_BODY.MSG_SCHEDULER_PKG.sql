@@ -381,50 +381,75 @@ $end
 
 function does_job_exist
 ( p_job_name in job_name_t
-, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
   l_job_names sys.odcivarchar2list;
+  l_result boolean;
 begin
-  if not p_check_procobj_exists
+  if not g_check_procobj_exists$
   then
-    return null; -- don't know
+    l_result := null; -- don't know
   else
     PRAGMA INLINE (get_jobs, 'YES');
     l_job_names := get_jobs(p_job_name);
-    return l_job_names.count = 1;
+    l_result := l_job_names.count = 1;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , q'[does_job_exist(p_job_name => %s, g_check_procobj_exists$ => %s) = %s]'
+  , dyn_sql_parm(p_job_name)
+  , dyn_sql_parm(g_check_procobj_exists$)
+  , dyn_sql_parm(l_result)
+  );
+$end
+
+  return l_result;
 end does_job_exist;
 
 function is_job_running
 ( p_job_name in job_name_t
-, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
+  l_result boolean;
 begin
-  if not p_check_procobj_exists
+  if not g_check_procobj_exists$
   then
-    return null; -- don't know
+    l_result := null; -- don't know
   else
     PRAGMA INLINE (get_jobs, 'YES');
-    return get_jobs(p_job_name, 'RUNNING').count = 1;
+    l_result := get_jobs(p_job_name, 'RUNNING').count = 1;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , q'[is_job_running(p_job_name => %s, g_check_procobj_exists$ => %s) = %s]'
+  , dyn_sql_parm(p_job_name)
+  , dyn_sql_parm(g_check_procobj_exists$)
+  , dyn_sql_parm(l_result)
+  );
+$end
+
+  return l_result;
 end is_job_running;
 
 function does_program_exist
 ( p_program_name in varchar2
-, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
+  l_result boolean;
   l_found pls_integer;
 begin
-  if not p_check_procobj_exists
+  if not g_check_procobj_exists$
   then
-    return null; -- don't know
+    l_result := null; -- don't know
   else
+    l_result := true;
     begin
       select  1
       into    l_found
@@ -433,25 +458,37 @@ begin
     exception
       when no_data_found
       then
-        return false;
+        l_result := false;
     end;
-
-    return true;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , q'[does_program_exist(p_program_name => %s, g_check_procobj_exists$ => %s) = %s]'
+  , dyn_sql_parm(p_program_name)
+  , dyn_sql_parm(g_check_procobj_exists$)
+  , dyn_sql_parm(l_result)
+  );
+$end
+
+  return l_result;
 end does_program_exist;
 
 function does_schedule_exist
 ( p_schedule_name in varchar2
-, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return boolean
 is
+  l_result boolean;
   l_found pls_integer;
 begin
-  if not p_check_procobj_exists
+  if not g_check_procobj_exists$
   then
-    return null; -- don't know
+    l_result := null; -- don't know
   else
+    l_result := true;
+    
     begin
       select  1
       into    l_found
@@ -460,22 +497,31 @@ begin
     exception
       when no_data_found
       then
-        return false;
+        l_result := false;
     end;
-
-    return true;
   end if;    
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , q'[does_schedule_exist(p_schedule_name => %s, g_check_procobj_exists$ => %s) = %s]'
+  , dyn_sql_parm(p_schedule_name)
+  , dyn_sql_parm(g_check_procobj_exists$)
+  , dyn_sql_parm(l_result)
+  );
+$end
+
+  return l_result;
 end does_schedule_exist;
 
 function session_job_name
 ( p_session_id in varchar2 default c_session_id
-, p_check_procobj_exists boolean default g_check_procobj_exists$
 )
 return job_name_t
 is
   l_job_name job_name_t;
 begin
-  if not p_check_procobj_exists
+  if not g_check_procobj_exists$
   then
     l_job_name := null; -- don't know
   else
@@ -496,9 +542,9 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , 'session_job_name(p_session_id => %s, p_check_procobj_exists => %s) = %s'
+  , 'session_job_name(p_session_id => %s, g_check_procobj_exists$ => %s) = %s'
   , dyn_sql_parm(p_session_id)
-  , dyn_sql_parm(p_check_procobj_exists)
+  , dyn_sql_parm(g_check_procobj_exists$)
   , dyn_sql_parm(l_job_name)
   );
 $end
@@ -809,6 +855,15 @@ begin
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
           , P_NR_WORKERS_EACH_GROUP => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EACH_GROUP')
           , P_NR_WORKERS_EXACT => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EXACT')
+          );
+        when 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+        then
+          MSG_SCHEDULER_PKG.PROCESSING
+          ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
+          , P_GROUPS_TO_PROCESS_LIST => g_procobj_argument_tab(job_name)('P_GROUPS_TO_PROCESS_LIST')
+          , P_NR_WORKERS => g_procobj_argument_tab(job_name)('P_NR_WORKERS')
+          , P_WORKER_NR => g_procobj_argument_tab(job_name)('P_WORKER_NR')
+          , P_END_DATE => g_procobj_argument_tab(job_name)('P_END_DATE')
           );
       end case;
     end if;
@@ -1296,7 +1351,10 @@ $end
   end loop;
 
   -- GO
-  change_job(p_job_name => l_job_name, p_enabled => true);
+  if does_job_exist(l_job_name) -- ignore this in dry run mode
+  then
+    change_job(p_job_name => l_job_name, p_enabled => true);
+  end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1708,8 +1766,9 @@ $end
             end;
             
             -- disable
-            begin                  
+            begin
               PRAGMA INLINE (change_job, 'YES');
+              -- job exists since l_job_names only contains existing jobs
               change_job(p_job_name => l_job_names(i_job_idx), p_enabled => false);
             exception
               when others
@@ -1920,6 +1979,29 @@ begin
   end if;
 
   return; -- essential for a pipelined function
+exception
+  when others
+  then
+    declare
+      l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab := oracle_tools.api_call_stack_pkg.get_error_stack;
+    begin
+      if g_commands is not null and g_commands.count > 0
+      then
+        for i_idx in g_commands.first .. g_commands.last
+        loop
+          pipe row (g_commands(i_idx));
+        end loop;
+      end if;
+
+      if l_error_stack_tab.count > 0
+      then
+        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
+        loop
+          pipe row ('-- ' || l_error_stack_tab(i_idx).error_msg);
+        end loop;
+      end if;
+    end;
+    return;
 end do;
 
 procedure do
@@ -1988,7 +2070,10 @@ $end
     );
   end loop;
 
-  change_job(p_job_name => l_job_name_do, p_enabled => true);
+  if does_job_exist(l_job_name_do)
+  then
+    change_job(p_job_name => l_job_name_do, p_enabled => true);
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -2056,7 +2141,10 @@ $end
   end loop;
 
   -- GO
-  change_job(p_job_name => l_job_name_launcher, p_enabled => true);
+  if does_job_exist(l_job_name_launcher)
+  then
+    change_job(p_job_name => l_job_name_launcher, p_enabled => true);
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
