@@ -488,12 +488,14 @@ begin
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
   else
-    execute immediate 'call ' || p_command;
+    begin
+      execute immediate 'call ' || p_command;
+    exception
+      when others
+      then
+        raise_application_error(-20000, p_command, true);
+    end;
   end if;
-exception
-  when others
-  then
-    raise_application_error(-20000, 'command: ' || p_command, true);
 end;
 
 -- invoked by:
@@ -738,16 +740,25 @@ procedure dbms_scheduler$run_job
 , use_current_session in boolean default g_use_current_session$
 )
 is
+  l_command command_t;
 begin
   if use_current_session is null
   then dbms_scheduler$enable(job_name);
-  else process_command
-       ( utl_lms.format_message
-         ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => %s)]'
-         , dyn_sql_parm(job_name)
-         , dyn_sql_parm(use_current_session)
-         )
-       );
+  else
+    process_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => %s)]'
+      , dyn_sql_parm(job_name)
+      , dyn_sql_parm(use_current_session)
+      )
+    );
+    -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
+    if use_current_session and g_dry_run$ and g_check_procobj_exists$
+    then
+      l_command := g_commands(g_commands.last);
+      g_commands(g_commands.last) := '-- ' || l_command;
+      process_command(l_command, false);
+    end if;
   end if;
 end;
 
@@ -1286,6 +1297,7 @@ end stop_job;
 
 procedure drop_job
 ( p_job_name in job_name_t
+, p_force in boolean
 )
 is
 begin
@@ -1296,7 +1308,7 @@ $end
 
   PRAGMA INLINE (stop_job, 'YES');
   stop_job(p_job_name);
-  admin_scheduler_pkg$drop_job(p_job_name => p_job_name, p_force => false);
+  admin_scheduler_pkg$drop_job(p_job_name => p_job_name, p_force => p_force);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -1368,7 +1380,7 @@ begin
     end;
 end get_nr_workers;
 
--- private variant
+-- private variant 1
 procedure do
 ( p_command in varchar2
 , p_processing_package in varchar2
@@ -1450,10 +1462,22 @@ $end
       when 'drop-programs'
       then
         begin
-          dbms_scheduler$drop_program(program_name => p_program_name);
+          if does_program_exist(p_program_name)
+          then
+            dbms_scheduler$drop_program(program_name => p_program_name);
+          end if;
         exception
-          when e_procobj_does_not_exist
-          then null;
+          when others
+          then
+$if oracle_tools.cfg_pkg.c_debugging $then
+            dbug.on_error;
+            dbug.print
+            ( dbug."warning"
+            , 'trying to drop program %s'
+            , p_program_name
+            );
+$end
+            raise;
         end;
       
       when 'drop-jobs'
@@ -1475,7 +1499,7 @@ $end
             loop
               begin
                 PRAGMA INLINE (drop_job, 'YES');
-                drop_job(l_job_names(i_job_idx));
+                drop_job(l_job_names(i_job_idx), i_force != 0);
               exception
                 when others
                 then
@@ -1487,7 +1511,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
                   , l_job_names(i_job_idx)
                   );
 $end
-                  null;
+                  if i_force != 0
+                  then
+                    raise;
+                  end if;
               end;
             end loop job_loop;
           end if;
@@ -1593,7 +1620,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
                 , l_job_names(i_job_idx)
                 );
 $end
-                null;
+                raise; -- never ignore
             end;
             
             -- disable
@@ -1611,7 +1638,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
                 , l_job_names(i_job_idx)
                 );
 $end
-                null;
+                raise; -- never ignore
             end;
           end loop job_loop;
         end if;
@@ -1653,6 +1680,12 @@ $end
   g_check_procobj_exists$ := p_check_procobj_exists;
   g_use_current_session$ := p_use_current_session;
 
+  if p_dry_run
+  then
+    g_commands.extend(1);
+    g_commands(g_commands.last) := '-- ' || p_command;
+  end if;
+
   -- check for processing packages having both routine GET_GROUPS_TO_PROCESS and PROCESSING
   select  p.package_name
   bulk collect
@@ -1691,10 +1724,16 @@ $end
           for i_schedule_idx in l_schedule_tab.first .. l_schedule_tab.last
           loop
             begin
-              dbms_scheduler$drop_schedule(l_schedule_tab(i_schedule_idx));
-            exception
-              when e_procobj_does_not_exist
-              then null;
+              if p_dry_run
+              then
+                g_commands.extend(1);
+                g_commands(g_commands.last) :=
+                  utl_lms.format_message('-- command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx));
+              end if;
+              if does_schedule_exist(l_schedule_tab(i_schedule_idx))
+              then
+                dbms_scheduler$drop_schedule(l_schedule_tab(i_schedule_idx));
+              end if;
             end;
           end loop schedule_loop;
 
@@ -1702,6 +1741,12 @@ $end
           <<program_loop>>
           for i_program_idx in l_program_tab.first .. l_program_tab.last
           loop
+            if p_dry_run
+            then
+              g_commands.extend(1);
+              g_commands(g_commands.last) :=
+                utl_lms.format_message('-- command: %s; program: %s', l_command_tab(i_command_idx), l_program_tab(i_program_idx));
+            end if;
             do_program_command(l_command_tab(i_command_idx), l_program_tab(i_program_idx));
           end loop program_loop;
       end case;
@@ -1725,10 +1770,38 @@ $end
     raise;
 end do;
 
+-- private variant 2
+procedure do
+( p_commands in varchar2 -- a list
+, p_processing_package in varchar2
+, p_dry_run in boolean
+, p_check_procobj_exists in boolean
+, p_use_current_session in boolean
+)
+is
+  l_commands dbms_sql.varchar2a;
+begin
+  oracle_tools.pkg_str_util.split
+  ( p_str => p_commands
+  , p_delimiter => ','
+  , p_str_tab => l_commands
+  );
+  for i_idx in l_commands.first .. l_commands.last
+  loop
+    do
+    ( p_command => l_commands(i_idx)
+    , p_processing_package => p_processing_package 
+    , p_dry_run => p_dry_run
+    , p_check_procobj_exists => p_check_procobj_exists
+    , p_use_current_session => p_use_current_session
+    );
+  end loop;
+end;
+
 -- PUBLIC
 
 function do
-( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+( p_commands in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 , p_check_procobj_exists in naturaln
 , p_use_current_session in natural
@@ -1740,7 +1813,7 @@ begin
   g_commands := sys.odcivarchar2list();
 
   do
-  ( p_command => p_command
+  ( p_commands => p_commands
   , p_processing_package => p_processing_package
   , p_dry_run => true
   , p_check_procobj_exists => (p_check_procobj_exists != 0)
