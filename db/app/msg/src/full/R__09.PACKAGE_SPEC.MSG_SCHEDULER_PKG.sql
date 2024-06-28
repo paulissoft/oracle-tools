@@ -61,6 +61,7 @@ function do
 ( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 , p_check_procobj_exists in naturaln default 1
+, p_use_current_session in natural default 1 -- for running a job: null means just dbms_schedule.enable() a job, otherwise dbms_schedule.run_job()
 )
 return sys.odcivarchar2list
 pipelined;

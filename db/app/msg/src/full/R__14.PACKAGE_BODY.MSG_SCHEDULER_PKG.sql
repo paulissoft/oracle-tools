@@ -1731,6 +1731,7 @@ function do
 ( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 , p_check_procobj_exists in naturaln
+, p_use_current_session in natural
 )
 return sys.odcivarchar2list
 pipelined
@@ -1743,7 +1744,7 @@ begin
   , p_processing_package => p_processing_package
   , p_dry_run => true
   , p_check_procobj_exists => (p_check_procobj_exists != 0)
-  , p_use_current_session => true
+  , p_use_current_session => case when p_use_current_session is null then null when p_use_current_session = 0 then false else true end
   );
 
   if g_commands is not null and g_commands.count > 0
