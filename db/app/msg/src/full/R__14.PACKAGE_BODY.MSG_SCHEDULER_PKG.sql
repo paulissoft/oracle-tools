@@ -1635,7 +1635,22 @@ $end
               then
                 null; -- use PL/SQL notifications hence this is plausible
               else
-                raise;
+                declare
+                  l_nr_queues pls_integer;
+                begin
+                  select  count(*)
+                  into    l_nr_queues
+                  from    user_queue_tables t
+                          inner join user_queues q
+                          on q.queue_table = t.queue_table
+                  where   t.queue_table = trim('"' from msg_aq_pkg.c_queue_table);
+
+                  if l_nr_queues > 0
+                  then
+                    -- this is strange so reraise
+                    raise;
+                  end if;
+                end;
               end if;
           end;
         end if;
@@ -2291,6 +2306,12 @@ $end
 exception
   when others
   then
+    if g_dry_run$
+    then
+      g_commands.extend(1);
+      g_commands(g_commands.last) := '-- ' || substr(sqlerrm, 1, 2000);
+    end if;  
+    
 $if oracle_tools.cfg_pkg.c_debugging $then  
     dbug.leave_on_error;
 $end
