@@ -7,6 +7,14 @@ subtype dbug_channel_tab_t is msg_pkg.boolean_lookup_tab_t;
 subtype job_info_rec_t is user_scheduler_jobs%rowtype;
 subtype command_t is varchar2(4000 byte);
 
+subtype value_t is user_scheduler_program_args.default_value%type;
+subtype argument_t is user_scheduler_program_args.argument_name%type;
+subtype procobj_t is user_scheduler_program_args.program_name%type;
+
+-- default program arguments or job call arguments will be stored so function() can invoke these functions
+type argument_tab_t is table of value_t index by argument_t;
+type procobj_argument_tab_t is table of argument_tab_t index by procobj_t;
+
 -- CONSTANTs
 
 "yyyymmddhh24miss" constant varchar2(16) := 'yyyymmddhh24miss';
@@ -37,11 +45,12 @@ c_use_current_session constant boolean := null; -- i.e. do not use dbms_schedule
 
 -- VARIABLES
 
-g_dry_run$ boolean := c_dry_run; -- only set it in the private do()
-g_check_procobj_exists$ boolean := c_check_procobj_exists; -- only set it in the private do()
-g_use_current_session$ boolean := c_use_current_session;
+g_dry_run$ boolean := null; -- only set it in the private do()
+g_check_procobj_exists$ boolean := null; -- only set it in the private do()
+g_use_current_session$ boolean := null;
 
-g_commands sys.odcivarchar2list;
+g_commands sys.odcivarchar2list := sys.odcivarchar2list();
+g_procobj_argument_tab procobj_argument_tab_t;
 
 -- EXCEPTIONs
 
@@ -456,7 +465,7 @@ is
 begin
   if not p_check_procobj_exists
   then
-    return null;
+    l_job_name := null;
   else
     -- Is this session running as a job?
     -- If not, just create a job name launcher to be used by the worker jobs.
@@ -470,9 +479,19 @@ begin
       then
         l_job_name := null;
     end;
-
-    return l_job_name;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'session_job_name(p_session_id => %s, p_check_procobj_exists => %s) = %s'
+  , dyn_sql_parm(p_session_id)
+  , dyn_sql_parm(p_check_procobj_exists)
+  , dyn_sql_parm(l_job_name)
+  );
+$end
+
+  return l_job_name;
 end session_job_name;
 
 /*1*/
@@ -483,6 +502,10 @@ procedure process_command
 )
 is
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'process_command(p_command => %s)', dyn_sql_parm(p_command));
+$end
+
   if p_dry_run
   then
     g_commands.extend(1);
@@ -549,6 +572,10 @@ procedure dbms_scheduler$define_program_argument
 )
 is
 begin
+  if g_use_current_session$ and g_dry_run$ and g_check_procobj_exists$
+  then
+    g_procobj_argument_tab(program_name)(argument_name) := default_value;
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.define_program_argument(program_name => %s, argument_name => %s, argument_position => %s, argument_type => %s, default_value => %s)]'
@@ -657,6 +684,10 @@ procedure dbms_scheduler$set_job_argument_value
 )
 is
 begin
+  if g_use_current_session$ and g_dry_run$ and g_check_procobj_exists$
+  then
+    g_procobj_argument_tab(job_name)(argument_name) := argument_value;
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.set_job_argument_value(job_name => %s, argument_name => %s, argument_value => %s)]'
@@ -757,10 +788,20 @@ begin
     then
       l_command := g_commands(g_commands.last);
       g_commands(g_commands.last) := '-- ' || l_command;
-      process_command(l_command, false);
+
+      -- g_procobj_argument_tab(job_name)(argument_name) := argument_value;
+      case job_name
+        when 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+        then
+          MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
+          ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
+          , P_NR_WORKERS_EACH_GROUP => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EACH_GROUP')
+          , P_NR_WORKERS_EXACT => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EXACT')
+          );
+      end case;
     end if;
   end if;
-end;
+end dbms_scheduler$run_job;
 
 /*2*/
 
@@ -1391,6 +1432,10 @@ procedure do
 is
   pragma autonomous_transaction;
 
+  c_dry_run_old constant boolean := g_dry_run$;
+  c_check_procobj_exists_old constant boolean := g_check_procobj_exists$;
+  c_use_current_session_old constant boolean := g_use_current_session$;
+
   l_program_tab constant sys.odcivarchar2list :=
     sys.odcivarchar2list
     ( c_program_launcher
@@ -1657,10 +1702,10 @@ $end
   procedure cleanup
   is
   begin
-    -- reset to their initial values
-    g_dry_run$ := c_dry_run;
-    g_check_procobj_exists$ := c_check_procobj_exists;
-    g_use_current_session$ := c_use_current_session;
+    -- restore
+    g_dry_run$ := c_dry_run_old;
+    g_check_procobj_exists$ := c_check_procobj_exists_old;
+    g_use_current_session$ := c_use_current_session_old;
   end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1810,7 +1855,11 @@ return sys.odcivarchar2list
 pipelined
 is
 begin
-  g_commands := sys.odcivarchar2list();
+  if g_dry_run$ is null and g_check_procobj_exists$ is null and g_use_current_session$ is null
+  then
+    g_commands.delete;
+    g_procobj_argument_tab.delete;
+  end if;
 
   do
   ( p_commands => p_commands
@@ -1837,12 +1886,18 @@ procedure do
 )
 is
 begin
+  if g_dry_run$ is null and g_check_procobj_exists$ is null and g_use_current_session$ is null
+  then
+    g_commands.delete;
+    g_procobj_argument_tab.delete;
+  end if;
+  
   do
   ( p_command => p_command
   , p_processing_package => p_processing_package
-  , p_dry_run => c_dry_run
-  , p_check_procobj_exists => c_check_procobj_exists
-  , p_use_current_session => c_use_current_session
+  , p_dry_run => nvl(g_dry_run$, c_dry_run)
+  , p_check_procobj_exists => nvl(g_check_procobj_exists$, c_check_procobj_exists)
+  , p_use_current_session => nvl(g_use_current_session$, c_use_current_session)
   );
 end do;
 
