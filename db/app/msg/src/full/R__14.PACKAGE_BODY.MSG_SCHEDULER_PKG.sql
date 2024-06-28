@@ -856,16 +856,19 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
       -- only run procedures that create jobs
-      case job_name
-        when 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+      case 
+        when job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
         then
           MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
           , P_NR_WORKERS_EACH_GROUP => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EACH_GROUP')
           , P_NR_WORKERS_EXACT => g_procobj_argument_tab(job_name)('P_NR_WORKERS_EXACT')
           );
-        when 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+        when job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+          or job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
         then
+          null;
+          /*
           MSG_SCHEDULER_PKG.PROCESSING
           ( P_PROCESSING_PACKAGE => g_procobj_argument_tab(job_name)('P_PROCESSING_PACKAGE')
           , P_GROUPS_TO_PROCESS_LIST => g_procobj_argument_tab(job_name)('P_GROUPS_TO_PROCESS_LIST')
@@ -873,8 +876,7 @@ $end
           , P_WORKER_NR => g_procobj_argument_tab(job_name)('P_WORKER_NR')
           , P_END_DATE => g_procobj_argument_tab(job_name)('P_END_DATE')
           );
-        else -- job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%': we are not going to start them
-          null;
+          */
       end case;
     end if;
   end if;
@@ -2199,7 +2201,7 @@ $end
 
     if g_dry_run$
     then
-      l_end_date := systimestamp() + interval '1' minute;
+      l_end_date := systimestamp() + interval '1' hour;
     else
       if l_job_name_launcher is null
       then
