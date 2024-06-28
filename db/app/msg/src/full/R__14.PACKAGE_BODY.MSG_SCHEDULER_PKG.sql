@@ -46,6 +46,13 @@ c_use_current_session constant boolean := null; -- i.e. do not use dbms_schedule
 -- VARIABLES
 
 g_dry_run$ boolean := null; -- only set it in the private do()
+
+-- g_check_procobj_exists$ (indirectly) used in:
+-- * does_job_exist
+-- * is_job_running
+-- * does_program_exist
+-- * does_schedule_exist
+-- * session_job_name
 g_check_procobj_exists$ boolean := null; -- only set it in the private do()
 g_use_current_session$ boolean := null;
 
@@ -380,13 +387,13 @@ return boolean
 is
   l_job_names sys.odcivarchar2list;
 begin
-  if p_check_procobj_exists
+  if not p_check_procobj_exists
   then
+    return null; -- don't know
+  else
     PRAGMA INLINE (get_jobs, 'YES');
     l_job_names := get_jobs(p_job_name);
     return l_job_names.count = 1;
-  else
-    return false;
   end if;
 end does_job_exist;
 
@@ -397,8 +404,13 @@ function is_job_running
 return boolean
 is
 begin
-  PRAGMA INLINE (get_jobs, 'YES');
-  return case when p_check_procobj_exists then get_jobs(p_job_name, 'RUNNING').count = 1 else false end;
+  if not p_check_procobj_exists
+  then
+    return null; -- don't know
+  else
+    PRAGMA INLINE (get_jobs, 'YES');
+    return get_jobs(p_job_name, 'RUNNING').count = 1;
+  end if;
 end is_job_running;
 
 function does_program_exist
@@ -411,7 +423,7 @@ is
 begin
   if not p_check_procobj_exists
   then
-    return false;
+    return null; -- don't know
   else
     begin
       select  1
@@ -438,7 +450,7 @@ is
 begin
   if not p_check_procobj_exists
   then
-    return false;
+    return null; -- don't know
   else
     begin
       select  1
@@ -465,7 +477,7 @@ is
 begin
   if not p_check_procobj_exists
   then
-    l_job_name := null;
+    l_job_name := null; -- don't know
   else
     -- Is this session running as a job?
     -- If not, just create a job name launcher to be used by the worker jobs.
@@ -1117,9 +1129,13 @@ $end
   then  
     change_job(p_job_name => p_job_name, p_enabled => false);
   else
+    -- does_job_exist() returns false or null
     PRAGMA INLINE (does_program_exist, 'YES');
-    if not(does_program_exist(l_program_name))
+    if does_program_exist(l_program_name)
     then
+      null;
+    else
+      -- does_program_exist() returns false or null
       create_program(l_program_name);
     end if;
 
@@ -1153,8 +1169,11 @@ $end
       when l_program_name = c_program_launcher
       then
         -- a repeating job
-        if not(does_schedule_exist(c_schedule_launcher))
+        if does_schedule_exist(c_schedule_launcher)
         then
+          null;
+        else
+          -- does_schedule_exist() returns false or null
           dbms_scheduler$create_schedule
           ( schedule_name => c_schedule_launcher
           , start_date => null
@@ -1507,8 +1526,13 @@ $end
       when 'drop-programs'
       then
         begin
-          if does_program_exist(p_program_name)
+          -- do not use does_program_exist() since does_program_exist may return null
+          if not(does_program_exist(p_program_name))
           then
+            -- does_program_exist() returns false
+            null;
+          else
+            -- does_program_exist() returns true or null
             dbms_scheduler$drop_program(program_name => p_program_name);
           end if;
         exception
@@ -1775,8 +1799,11 @@ $end
                 g_commands(g_commands.last) :=
                   utl_lms.format_message('-- command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx));
               end if;
-              if does_schedule_exist(l_schedule_tab(i_schedule_idx))
+              if not(does_schedule_exist(l_schedule_tab(i_schedule_idx)))
               then
+                null;
+              else
+                -- does_schedule_exist() returns true or null
                 dbms_scheduler$drop_schedule(l_schedule_tab(i_schedule_idx));
               end if;
             end;
@@ -2322,16 +2349,17 @@ $end
     <<worker_loop>>
     for i_idx in p_silent_worker_tab.first .. p_silent_worker_tab.last
     loop
-      if not
-         ( is_job_running
-           ( join_job_name
-             ( p_processing_package
-             , case when p_silent_worker_tab(i_idx) > 0 then c_program_worker else c_program_supervisor end
-             , p_silent_worker_tab(i_idx)
-             )
+      -- do not use not(is_job_running()) since is_job_running may return null
+      if is_job_running
+         ( join_job_name
+           ( p_processing_package
+           , case when p_silent_worker_tab(i_idx) > 0 then c_program_worker else c_program_supervisor end
+           , p_silent_worker_tab(i_idx)
            )
          )
       then
+        null;
+      else
         submit_processing
         ( p_processing_package => p_processing_package
         , p_groups_to_process_list => p_groups_to_process_list
