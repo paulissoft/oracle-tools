@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ADMIN_SCHEDULER_PKG" AUTHID DEFINER AS 
+CREATE OR REPLACE PACKAGE "ADMIN_SCHEDULER_PKG" AUTHID CURRENT_USER AS 
 
 /**
 This package contains various DBMS_SCHEDULER stop and drop routines that:
@@ -22,6 +22,12 @@ and     r.job_name = p_job_name
 
 See also [Killing Oracle Sessions (ALTER SYSTEM KILL / DISCONNECT SESSION)](https://oracle-base.com/articles/misc/killing-oracle-sessions).
 **/
+
+function get_session_id
+( p_owner in varchar2
+, p_job_name in varchar2
+)
+return all_scheduler_running_jobs.session_id%type;
 
 procedure stop_job 
 ( p_job_name in varchar2
