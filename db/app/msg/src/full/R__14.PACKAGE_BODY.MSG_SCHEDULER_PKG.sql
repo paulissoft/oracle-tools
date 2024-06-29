@@ -105,6 +105,7 @@ c_dry_run constant boolean := false;
 -- VARIABLES
 
 g_dry_run$ boolean := c_dry_run; -- only set it in the function do()
+g_show_comments$ boolean := null;
 
 g_commands sys.odcivarchar2list := sys.odcivarchar2list();
 
@@ -643,8 +644,11 @@ begin
     raise program_error;
   end if;
 
-  g_commands.extend(1);
-  g_commands(g_commands.last) := '-- ' || p_comment;
+  if g_show_comments$
+  then
+    g_commands.extend(1);
+    g_commands(g_commands.last) := '-- ' || p_comment;
+  end if;  
 end;  
 
 procedure process_command
@@ -1703,6 +1707,7 @@ return sys.odcivarchar2list
 pipelined
 is
   c_dry_run_old constant boolean := g_dry_run$;
+  c_show_comments_old constant boolean := g_show_comments$;
 
   l_read_initial_state constant boolean :=
     case
@@ -1861,6 +1866,7 @@ is
   begin
     -- restore
     g_dry_run$ := c_dry_run_old;
+    g_show_comments$ := c_show_comments_old;
     g_commands.delete;
     g_schedules.delete;
     g_programs.delete;
@@ -1881,14 +1887,31 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   g_dry_run$ := true;
-  
   g_commands.delete;
   g_schedules.delete;
   g_programs.delete;
   g_jobs.delete;
 
+  -- always add one comment: this call
+  g_show_comments$ := true;
+  add_comment
+  ( utl_lms.format_message
+    ( 'do(p_commands => %s, p_processing_package => %s, p_read_initial_state => %s, p_show_initial_state => %s, p_show_comments => %s)'
+    , dyn_sql_parm(p_commands)
+    , dyn_sql_parm(p_processing_package)
+    , dyn_sql_parm(l_read_initial_state)
+    , dyn_sql_parm(l_show_initial_state)
+    , dyn_sql_parm(l_show_comments)
+    )
+  );  
+  g_show_comments$ := l_show_comments;
+  
   if l_read_initial_state
   then
+    if l_show_initial_state
+    then
+      add_comment('show-initial-state');
+    end if;
     read_initial_state;
     if not l_show_initial_state
     then
