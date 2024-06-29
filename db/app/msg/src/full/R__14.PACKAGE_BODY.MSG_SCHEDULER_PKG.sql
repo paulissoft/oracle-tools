@@ -631,6 +631,22 @@ end session_job_name;
 
 /*1*/
 
+procedure add_comment
+( p_comment in varchar2
+)
+is
+begin
+  if g_dry_run$
+  then
+    null;
+  else
+    raise program_error;
+  end if;
+
+  g_commands.extend(1);
+  g_commands(g_commands.last) := '-- ' || p_comment;
+end;  
+
 procedure process_command
 ( p_command in command_t
 )
@@ -993,7 +1009,6 @@ procedure enable_job
 ( p_job_name in varchar2
 )
 is
-  l_command command_t;
 begin
   dbms_scheduler$enable(name => p_job_name);
   -- From Oracle docs:
@@ -1008,19 +1023,13 @@ begin
     if not(g_jobs(p_job_name).enabled)
     then
       g_jobs(p_job_name).enabled := true;
-      process_command
+      add_comment
       ( utl_lms.format_message
         ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true)]'
         , dyn_sql_parm(p_job_name)
         )
       );
       -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
-      l_command := g_commands(g_commands.last);
-      g_commands(g_commands.last) := '-- ' || l_command;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'call: %s', l_command);
-$end
 
       -- only run procedures that create jobs
       case 
@@ -1731,6 +1740,7 @@ is
   procedure read_initial_state
   is
   begin
+    <<schedule_loop>>
     for r in ( select  s.schedule_name
                ,       s.start_date
                ,       s.repeat_interval
@@ -1747,8 +1757,9 @@ is
       , end_date => r.end_date
       , comments => r.comments
       );
-    end loop;
+    end loop schedule_loop;
 
+    <<program_loop>>
     for p in ( select  p.program_name
                ,       p.program_type
                ,       p.program_action
@@ -1778,9 +1789,72 @@ is
       , enabled => case upper(p.enabled) when 'TRUE' then true else false end
       , comments => p.comments
       );
-      
-    end loop;  
-  end;
+
+      <<program_argument_loop>>
+      for pa in ( select  pa.program_name
+                  ,       pa.argument_name
+                  ,       pa.argument_position
+                  ,       pa.argument_type
+                  ,       pa.default_value
+                  from    user_scheduler_program_args pa
+                  where   pa.program_name = p.program_name
+                )
+      loop
+        dbms_scheduler$define_program_argument
+        ( program_name => pa.program_name
+        , argument_name => pa.argument_name
+        , argument_position => pa.argument_position
+        , argument_type => pa.argument_type
+        , default_value => pa.default_value
+        );
+      end loop program_argument_loop;
+
+      <<job_loop>>
+      for j in ( select  j.job_name
+                 ,       j.program_name
+                 ,       j.start_date
+                 ,       j.repeat_interval
+                 ,       j.end_date
+                 ,       j.enabled
+                 ,       j.auto_drop
+                 ,       j.comments
+                 -- extra
+                 ,       j.schedule_name
+                 ,       j.state
+                 from    user_scheduler_jobs j
+                 where   j.program_name = p.program_name
+               )
+      loop   
+        dbms_scheduler$create_job
+        ( job_name => j.job_name
+        , program_name => j.program_name
+        , start_date => j.start_date
+        , repeat_interval => j.repeat_interval
+        , end_date => j.end_date
+        , enabled => case upper(j.enabled) when 'TRUE' then true else false end
+        , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
+        , comments => j.comments
+        );
+        g_jobs(j.job_name).schedule_name := j.schedule_name;
+        g_jobs(j.job_name).state := j.state;
+
+        <<job_argument_loop>>
+        for ja in ( select  ja.job_name
+                    ,       ja.argument_name
+                    ,       ja.value as argument_value
+                    from    user_scheduler_job_args ja
+                    where   ja.job_name = j.job_name
+                  )
+        loop
+          dbms_scheduler$set_job_argument_value
+          ( job_name => ja.job_name
+          , argument_name => ja.argument_name
+          , argument_value => ja.argument_value
+          );
+        end loop job_argument_loop;
+      end loop job_loop;
+    end loop program_loop;  
+  end read_initial_state;
 
   procedure cleanup
   is
@@ -1813,6 +1887,15 @@ $end
   g_programs.delete;
   g_jobs.delete;
 
+  if l_read_initial_state
+  then
+    read_initial_state;
+    if not l_show_initial_state
+    then
+      g_commands.delete;
+    end if;
+  end if;
+
   do
   ( p_commands => p_commands
   , p_processing_package => p_processing_package
@@ -1839,19 +1922,19 @@ exception
     declare
       l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab := oracle_tools.api_call_stack_pkg.get_error_stack;
     begin
+      if l_error_stack_tab.count > 0
+      then
+        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
+        loop
+          add_comment(l_error_stack_tab(i_idx).error_msg);
+        end loop;
+      end if;
+      
       if g_commands is not null and g_commands.count > 0
       then
         for i_idx in g_commands.first .. g_commands.last
         loop
           pipe row (g_commands(i_idx));
-        end loop;
-      end if;
-
-      if l_error_stack_tab.count > 0
-      then
-        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
-        loop
-          pipe row ('-- ' || l_error_stack_tab(i_idx).error_msg);
         end loop;
       end if;
     end;
@@ -2168,8 +2251,7 @@ $end
 
   if g_dry_run$
   then
-    g_commands.extend(1);
-    g_commands(g_commands.last) := '-- ' || p_command;
+    add_comment(p_command);
   end if;
 
   -- check for processing packages having both routine GET_GROUPS_TO_PROCESS and PROCESSING
@@ -2212,9 +2294,7 @@ $end
             begin
               if g_dry_run$
               then
-                g_commands.extend(1);
-                g_commands(g_commands.last) :=
-                  utl_lms.format_message('-- command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx));
+                add_comment(utl_lms.format_message('command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx)));
               end if;
               if not(does_schedule_exist(l_schedule_tab(i_schedule_idx)))
               then
@@ -2232,9 +2312,7 @@ $end
           loop
             if g_dry_run$
             then
-              g_commands.extend(1);
-              g_commands(g_commands.last) :=
-                utl_lms.format_message('-- command: %s; program: %s', l_command_tab(i_command_idx), l_program_tab(i_program_idx));
+              add_comment(utl_lms.format_message('command: %s; program: %s', l_command_tab(i_command_idx), l_program_tab(i_program_idx)));
             end if;
             do_program_command(l_command_tab(i_command_idx), l_program_tab(i_program_idx));
           end loop program_loop;
@@ -2623,8 +2701,7 @@ exception
   then
     if g_dry_run$
     then
-      g_commands.extend(1);
-      g_commands(g_commands.last) := '-- ' || substr(sqlerrm, 1, 2000);
+      add_comment(substr(sqlerrm, 1, 2000));
     end if;  
     
 $if oracle_tools.cfg_pkg.c_debugging $then  
