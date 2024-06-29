@@ -60,7 +60,9 @@ and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOT
 function do
 ( p_commands in varchar2 -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
-, p_use_current_session in natural default 1 -- for running a job: null means just dbms_schedule.enable() a job, otherwise dbms_schedule.run_job()
+, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
+, p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios
+, p_show_comments in natural default null -- show comments with each command in p_commands and the program
 )
 return sys.odcivarchar2list
 pipelined;
