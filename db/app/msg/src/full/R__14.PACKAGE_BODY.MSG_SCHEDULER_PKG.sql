@@ -1033,7 +1033,7 @@ begin
       then
         add_comment
         ( utl_lms.format_message
-          ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true)]'
+          ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- start]'
           , dyn_sql_parm(p_job_name)
           )
         );
@@ -1055,6 +1055,13 @@ begin
           then
             null;
         end case;
+        
+        add_comment
+        ( utl_lms.format_message
+          ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- end]'
+          , dyn_sql_parm(p_job_name)
+          )
+        );
       end if;
     end if;
   end if;
