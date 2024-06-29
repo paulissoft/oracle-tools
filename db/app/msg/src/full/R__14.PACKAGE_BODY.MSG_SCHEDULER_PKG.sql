@@ -1011,6 +1011,7 @@ end;
 
 procedure enable_job
 ( p_job_name in varchar2
+, p_run_job in boolean default true -- run job in this session in order to determine jobs created by this job
 )
 is
 begin
@@ -1027,30 +1028,34 @@ begin
     if not(g_jobs(p_job_name).enabled)
     then
       g_jobs(p_job_name).enabled := true;
-      add_comment
-      ( utl_lms.format_message
-        ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true)]'
-        , dyn_sql_parm(p_job_name)
-        )
-      );
-      -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
 
-      -- only run procedures that create jobs
-      case 
-        when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
-         and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
-         and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
-        then
-          MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
-          ( P_PROCESSING_PACKAGE => g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
-          , P_NR_WORKERS_EACH_GROUP => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
-          , P_NR_WORKERS_EXACT => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
-          );
-        when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
-          or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
-        then
-          null;
-      end case;
+      if p_run_job
+      then
+        add_comment
+        ( utl_lms.format_message
+          ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true)]'
+          , dyn_sql_parm(p_job_name)
+          )
+        );
+        -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
+
+        -- only run procedures that create jobs
+        case 
+          when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+           and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
+           and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
+          then
+            MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
+            ( P_PROCESSING_PACKAGE => g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
+            , P_NR_WORKERS_EACH_GROUP => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
+            , P_NR_WORKERS_EXACT => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
+            );
+          when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+            or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
+          then
+            null;
+        end case;
+      end if;
     end if;
   end if;
 end enable_job;
@@ -1791,7 +1796,7 @@ is
       , program_type => p.program_type
       , program_action => p.program_action
       , number_of_arguments => p.number_of_arguments
-      , enabled => case upper(p.enabled) when 'TRUE' then true else false end
+      , enabled => false -- programs are created initially disabled so arguments can be added
       , comments => p.comments
       );
 
@@ -1813,6 +1818,11 @@ is
         , default_value => pa.default_value
         );
       end loop program_argument_loop;
+
+      if upper(p.enabled) = 'TRUE'
+      then
+        enable_program(p.program_name);
+      end if;
 
       <<job_loop>>
       for j in ( select  j.job_name
@@ -1836,7 +1846,7 @@ is
         , start_date => j.start_date
         , repeat_interval => j.repeat_interval
         , end_date => j.end_date
-        , enabled => case upper(j.enabled) when 'TRUE' then true else false end
+        , enabled => false -- jobs are created initially disabled so arguments can be added
         , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
         , comments => j.comments
         );
@@ -1857,6 +1867,11 @@ is
           , argument_value => ja.argument_value
           );
         end loop job_argument_loop;
+        
+        if upper(j.enabled) = 'TRUE'
+        then
+          enable_job(j.job_name, false);
+        end if;
       end loop job_loop;
     end loop program_loop;  
   end read_initial_state;
