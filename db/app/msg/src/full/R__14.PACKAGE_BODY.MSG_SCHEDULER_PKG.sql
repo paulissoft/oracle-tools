@@ -67,8 +67,9 @@ type job_rec_t is record
 , repeat_interval user_scheduler_jobs.repeat_interval%type
 , end_date user_scheduler_jobs.end_date%type
 , enabled boolean -- user_scheduler_jobs.enabled%type
-, auto_drop user_scheduler_jobs.auto_drop%type
+, auto_drop boolean -- user_scheduler_jobs.auto_drop%type
 , comments user_scheduler_jobs.comments%type
+, state user_scheduler_jobs.state%type default 'DISABLED' -- not filled by create_job
 , job_arguments job_argument_tab_t
 );
 
@@ -372,13 +373,6 @@ begin
   return l_expr;
 end to_like_expr;
 
-function check_procobj_exists
-return boolean
-is
-begin
-  return case when g_dry_run$ = false then true else false end;
-end;
-
 function get_jobs
 ( p_job_name_expr in varchar2
 , p_state in user_scheduler_jobs.state%type default null
@@ -387,10 +381,33 @@ return sys.odcivarchar2list
 is
   l_job_names sys.odcivarchar2list;
   l_job_name_expr constant job_name_t := to_like_expr(p_job_name_expr);
+  l_job_name job_name_t;
 begin
-  if not check_procobj_exists
+  if g_dry_run$
   then
     l_job_names := sys.odcivarchar2list(); -- no jobs
+    l_job_name := g_jobs.first;
+    while l_job_name is not null
+    loop
+      if l_job_name like l_job_name_expr escape '\'
+         and
+         ( p_state is null or g_jobs(l_job_name).state = p_state )
+      then
+        l_job_names.extend(1);
+        l_job_names(l_job_names.last) := l_job_name;
+      end if;
+      l_job_name := g_jobs.next(l_job_name);
+    end loop;
+
+    -- order them
+    select  j.column_value as job_name
+    bulk collect
+    into    l_job_names
+    from    table(l_job_names) j
+    order by
+            job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
+    ;
+
   else
     select  j.job_name
     bulk collect
@@ -451,9 +468,9 @@ is
   l_job_names sys.odcivarchar2list;
   l_result boolean;
 begin
-  if not check_procobj_exists
+  if g_dry_run$
   then
-    l_result := null; -- don't know
+    l_result := g_jobs.exists(p_job_name);
   else
     PRAGMA INLINE (get_jobs, 'YES');
     l_job_names := get_jobs(p_job_name);
@@ -463,9 +480,8 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , q'[does_job_exist(p_job_name => %s, check_procobj_exists => %s) = %s]'
+  , q'[does_job_exist(p_job_name => %s) = %s]'
   , dyn_sql_parm(p_job_name)
-  , dyn_sql_parm(check_procobj_exists)
   , dyn_sql_parm(l_result)
   );
 $end
@@ -480,9 +496,9 @@ return boolean
 is
   l_result boolean;
 begin
-  if not check_procobj_exists
+  if g_dry_run$
   then
-    l_result := null; -- don't know
+    l_result := g_jobs.exists(p_job_name) and g_jobs(p_job_name).state = 'RUNNING';
   else
     PRAGMA INLINE (get_jobs, 'YES');
     l_result := get_jobs(p_job_name, 'RUNNING').count = 1;
@@ -491,9 +507,8 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , q'[is_job_running(p_job_name => %s, check_procobj_exists => %s) = %s]'
+  , q'[is_job_running(p_job_name => %s) = %s]'
   , dyn_sql_parm(p_job_name)
-  , dyn_sql_parm(check_procobj_exists)
   , dyn_sql_parm(l_result)
   );
 $end
@@ -509,16 +524,16 @@ is
   l_result boolean;
   l_found pls_integer;
 begin
-  if not check_procobj_exists
+  if g_dry_run$
   then
-    l_result := null; -- don't know
+    l_result := g_programs.exists(p_program_name);
   else
-    l_result := true;
     begin
       select  1
       into    l_found
       from    user_scheduler_programs p
       where   p.program_name = p_program_name;
+      l_result := true;
     exception
       when no_data_found
       then
@@ -529,9 +544,8 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , q'[does_program_exist(p_program_name => %s, check_procobj_exists => %s) = %s]'
+  , q'[does_program_exist(p_program_name => %s) = %s]'
   , dyn_sql_parm(p_program_name)
-  , dyn_sql_parm(check_procobj_exists)
   , dyn_sql_parm(l_result)
   );
 $end
@@ -547,17 +561,16 @@ is
   l_result boolean;
   l_found pls_integer;
 begin
-  if not check_procobj_exists
+  if g_dry_run$
   then
-    l_result := null; -- don't know
-  else
-    l_result := true;
-    
+    l_result := g_schedules.exists(p_schedule_name);
+  else    
     begin
       select  1
       into    l_found
       from    user_scheduler_schedules p
       where   p.schedule_name = p_schedule_name;
+      l_result := true;
     exception
       when no_data_found
       then
@@ -568,9 +581,8 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , q'[does_schedule_exist(p_schedule_name => %s, check_procobj_exists => %s) = %s]'
+  , q'[does_schedule_exist(p_schedule_name => %s) = %s]'
   , dyn_sql_parm(p_schedule_name)
-  , dyn_sql_parm(check_procobj_exists)
   , dyn_sql_parm(l_result)
   );
 $end
@@ -587,7 +599,7 @@ is
 begin
   -- oracle_tools.api_call_stack_pkg.show_stack('session_job_name');
   
-  if not check_procobj_exists
+  if g_dry_run$
   then
     l_job_name := null; -- don't know
   else
@@ -608,9 +620,8 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , 'session_job_name(p_session_id => %s, check_procobj_exists => %s) = %s'
+  , 'session_job_name(p_session_id => %s) = %s'
   , dyn_sql_parm(p_session_id)
-  , dyn_sql_parm(check_procobj_exists)
   , dyn_sql_parm(l_job_name)
   );
 $end
@@ -655,7 +666,17 @@ procedure dbms_scheduler$create_program
 , comments in varchar2
 )
 is
+  l_program_rec program_rec_t;
 begin
+  if g_dry_run$
+  then
+    l_program_rec.program_type := program_type;
+    l_program_rec.program_action := program_action;
+    l_program_rec.number_of_arguments := number_of_arguments;
+    l_program_rec.enabled := enabled;
+    l_program_rec.comments := comments;
+    g_programs(program_name) := l_program_rec;
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.create_program(program_name => %s, program_type => %s, program_action => %s, number_of_arguments => %s, enabled => %s, comments => %s)]'
@@ -676,6 +697,10 @@ procedure dbms_scheduler$drop_program
 )
 is
 begin
+  if g_dry_run$
+  then
+    g_programs.delete(program_name);
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.drop_program(program_name => %s)]'
@@ -694,12 +719,14 @@ procedure dbms_scheduler$define_program_argument
 , default_value in varchar2
 )
 is
+  l_program_argument program_argument_rec_t;
 begin
   if g_dry_run$
   then
-    g_programs(program_name).program_arguments(argument_name).argument_position := argument_position;
-    g_programs(program_name).program_arguments(argument_name).argument_type := argument_type;
-    g_programs(program_name).program_arguments(argument_name).default_value := default_value;
+    l_program_argument.argument_position := argument_position;
+    l_program_argument.argument_type := argument_type;
+    l_program_argument.default_value := default_value;
+    g_programs(program_name).program_arguments(argument_name) := l_program_argument;
   end if;
   process_command
   ( utl_lms.format_message
@@ -728,6 +755,22 @@ begin
   );
 end;
 
+procedure disable_job
+( p_job_name in varchar2
+)
+is
+begin
+  dbms_scheduler$disable(p_job_name);
+  if g_dry_run$
+  then
+    if not g_jobs.exists(p_job_name)
+    then
+      raise program_error;
+    end if;
+    g_jobs(p_job_name).enabled := false;
+  end if;
+end;  
+  
 -- invoked by:
 -- * create_program
 -- * change_job
@@ -757,7 +800,19 @@ procedure dbms_scheduler$create_job
 , comments in varchar2
 )
 is
+  l_job_rec job_rec_t;
 begin
+  if g_dry_run$
+  then
+    l_job_rec.program_name := program_name;
+    l_job_rec.start_date := start_date;
+    l_job_rec.repeat_interval := repeat_interval;
+    l_job_rec.end_date := end_date;
+    l_job_rec.enabled := enabled;
+    l_job_rec.auto_drop := auto_drop;
+    l_job_rec.comments := comments;
+    g_jobs(job_name) := l_job_rec;
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, enabled => %s, auto_drop => %s, comments => %s)]'
@@ -784,7 +839,17 @@ procedure dbms_scheduler$create_job
 , comments in varchar2
 )
 is
+  l_job_rec job_rec_t;
 begin
+  if g_dry_run$
+  then
+    l_job_rec.program_name := program_name;
+    l_job_rec.schedule_name := schedule_name;
+    l_job_rec.enabled := enabled;
+    l_job_rec.auto_drop := auto_drop;
+    l_job_rec.comments := comments;
+    g_jobs(job_name) := l_job_rec;
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, schedule_name => %s, enabled => %s, auto_drop => %s, comments => %s)]'
@@ -833,7 +898,16 @@ procedure dbms_scheduler$create_schedule
 , comments in varchar2
 )
 is
+  l_schedule_rec schedule_rec_t;
 begin
+  if g_dry_run$
+  then
+    l_schedule_rec.start_date := start_date;
+    l_schedule_rec.repeat_interval := repeat_interval;
+    l_schedule_rec.end_date := end_date;
+    l_schedule_rec.comments := comments;
+    g_schedules(schedule_name) := l_schedule_rec;
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.create_schedule(schedule_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, comments => %s)]'
@@ -853,6 +927,10 @@ procedure dbms_scheduler$drop_schedule
 )
 is
 begin
+  if g_dry_run$
+  then
+    g_schedules.delete(schedule_name);
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[dbms_scheduler.drop_schedule(schedule_name => %s)]'
@@ -882,6 +960,10 @@ procedure admin_scheduler_pkg$drop_job
 )
 is
 begin
+  if g_dry_run$ and p_force
+  then
+    g_jobs.delete(p_job_name);
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[admin_scheduler_pkg.drop_job(p_job_name => %s, p_force => %s)]'
@@ -897,6 +979,14 @@ procedure enable_program
 is
 begin
   dbms_scheduler$enable(name => p_program_name);
+  if g_dry_run$ 
+  then
+    if not g_programs.exists(p_program_name)
+    then
+      raise program_error;
+    end if;
+    g_programs(p_program_name).enabled := true;
+  end if;
 end;  
 
 procedure enable_job
@@ -908,40 +998,47 @@ begin
   dbms_scheduler$enable(name => p_job_name);
   -- From Oracle docs:
   -- If a job was disabled and you enable it, the Scheduler begins to automatically run the job according to its schedule. 
-  if g_dry_run$ and not(g_jobs(p_job_name).enabled)
+  if g_dry_run$
   then
-    g_jobs(p_job_name).enabled := true;
-    
-    process_command
-    ( utl_lms.format_message
-      ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true)]'
-      , dyn_sql_parm(p_job_name)
-      )
-    );
-    -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
-    l_command := g_commands(g_commands.last);
-    g_commands(g_commands.last) := '-- ' || l_command;
+    if not g_jobs.exists(p_job_name)
+    then
+      raise program_error;
+    end if;
+
+    if not(g_jobs(p_job_name).enabled)
+    then
+      g_jobs(p_job_name).enabled := true;
+      process_command
+      ( utl_lms.format_message
+        ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true)]'
+        , dyn_sql_parm(p_job_name)
+        )
+      );
+      -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
+      l_command := g_commands(g_commands.last);
+      g_commands(g_commands.last) := '-- ' || l_command;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'call: %s', l_command);
+      dbug.print(dbug."info", 'call: %s', l_command);
 $end
 
-    -- only run procedures that create jobs
-    case 
-      when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
-       and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
-       and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
-      then
-        MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
-        ( P_PROCESSING_PACKAGE => g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
-        , P_NR_WORKERS_EACH_GROUP => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
-        , P_NR_WORKERS_EXACT => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
-        );
-      when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
-        or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
-      then
-        null;
-    end case;
+      -- only run procedures that create jobs
+      case 
+        when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+         and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
+         and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
+        then
+          MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
+          ( P_PROCESSING_PACKAGE => g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
+          , P_NR_WORKERS_EACH_GROUP => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
+          , P_NR_WORKERS_EXACT => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
+          );
+        when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+          or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
+        then
+          null;
+      end case;
+    end if;
   end if;
 end enable_job;
 
@@ -1200,7 +1297,7 @@ $end
     then null;
     
     when not(p_enabled)
-    then dbms_scheduler$disable(p_job_name);
+    then disable_job(p_job_name => p_job_name);
   end case;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1597,7 +1694,94 @@ return sys.odcivarchar2list
 pipelined
 is
   c_dry_run_old constant boolean := g_dry_run$;
-  
+
+  l_read_initial_state constant boolean :=
+    case
+      when p_read_initial_state is null and p_show_initial_state is null
+      then true
+      when p_read_initial_state is null and p_show_initial_state != 0
+      then true
+      when p_read_initial_state is null
+      then false
+      when p_read_initial_state = 0
+      then false
+      else true
+    end;
+  l_show_initial_state constant boolean :=
+    case
+      when p_show_initial_state is null and l_read_initial_state
+      then true
+      when p_show_initial_state is null
+      then false
+      when p_show_initial_state = 0
+      then false
+      else true
+    end;
+  l_show_comments constant boolean :=
+    case
+      when p_show_comments is null and p_read_initial_state is null and p_show_initial_state is null
+      then false
+      when p_show_comments is null
+      then true
+      when p_show_comments = 0
+      then false
+      else true
+    end;
+
+  procedure read_initial_state
+  is
+  begin
+    for r in ( select  s.schedule_name
+               ,       s.start_date
+               ,       s.repeat_interval
+               ,       s.end_date
+               ,       s.comments
+               from    user_scheduler_schedules s
+               where   s.schedule_name = c_schedule_launcher
+             )
+    loop
+      dbms_scheduler$create_schedule
+      ( schedule_name => r.schedule_name
+      , start_date => r.start_date
+      , repeat_interval => r.repeat_interval
+      , end_date => r.end_date
+      , comments => r.comments
+      );
+    end loop;
+
+    for p in ( select  p.program_name
+               ,       p.program_type
+               ,       p.program_action
+               ,       p.number_of_arguments
+               ,       p.enabled
+               ,       p.comments
+               from    user_scheduler_programs p
+               where   p.program_name in (c_program_launcher, c_program_supervisor, c_program_worker, c_program_do)
+               order by
+                       case p.program_name
+                         when c_program_launcher
+                         then 1
+                         when c_program_supervisor
+                         then 2
+                         when c_program_worker
+                         then 3
+                         when c_program_do
+                         then 4
+                       end
+             )
+    loop
+      dbms_scheduler$create_program
+      ( program_name => p.program_name
+      , program_type => p.program_type
+      , program_action => p.program_action
+      , number_of_arguments => p.number_of_arguments
+      , enabled => case upper(p.enabled) when 'TRUE' then true else false end
+      , comments => p.comments
+      );
+      
+    end loop;  
+  end;
+
   procedure cleanup
   is
   begin
