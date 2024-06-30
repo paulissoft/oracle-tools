@@ -747,6 +747,15 @@ begin
     l_program_argument.argument_position := argument_position;
     l_program_argument.argument_type := argument_type;
     l_program_argument.default_value := default_value;
+    -- no reason to do the same action twice    
+    if g_programs(program_name).program_arguments.exists(argument_name) and
+       g_programs(program_name).program_arguments(argument_name).argument_position = l_program_argument.argument_position and
+       g_programs(program_name).program_arguments(argument_name).argument_type = l_program_argument.argument_type and
+       ( g_programs(program_name).program_arguments(argument_name).default_value = l_program_argument.default_value or
+         g_programs(program_name).program_arguments(argument_name).default_value is null and l_program_argument.default_value is null )
+    then
+      return;
+    end if;
     g_programs(program_name).program_arguments(argument_name) := l_program_argument;
   end if;
   process_command
@@ -897,6 +906,13 @@ is
 begin
   if g_dry_run$
   then
+    -- no reason to do the same action twice
+    if g_jobs(job_name).job_arguments.exists(argument_name) and
+       ( g_jobs(job_name).job_arguments(argument_name).argument_value = argument_value or
+         g_jobs(job_name).job_arguments(argument_name).argument_value is null and argument_value is null )
+    then
+      return;
+    end if;
     g_jobs(job_name).job_arguments(argument_name).argument_value := argument_value;
   end if;
   process_command
@@ -1884,19 +1900,17 @@ is
 
   l_read_initial_state constant boolean :=
     case
-      when p_read_initial_state is null and p_show_initial_state is null
-      then true
-      when p_read_initial_state is null and p_show_initial_state != 0
+      when p_read_initial_state is null and p_commands is null
       then true
       when p_read_initial_state is null
-      then false
+      then true
       when p_read_initial_state = 0
       then false
       else true
     end;
   l_show_initial_state constant boolean :=
     case
-      when p_show_initial_state is null and l_read_initial_state
+      when p_show_initial_state is null and l_read_initial_state and p_commands is null
       then true
       when p_show_initial_state is null
       then false
@@ -1906,7 +1920,7 @@ is
     end;
   l_show_comments constant boolean :=
     case
-      when p_show_comments is null and p_read_initial_state is null and p_show_initial_state is null
+      when p_show_comments is null and l_read_initial_state and l_show_initial_state and p_commands is null
       then false
       when p_show_comments is null
       then true
@@ -2094,6 +2108,8 @@ $end
         g_jobs(j.job_name).state := j.state;
 
 $if false $then
+        -- GJP 2024-06-30 Do not read job arguments
+$else        
         <<job_argument_loop>>
         for ja in ( select  ja.job_name
                     ,       ja.argument_name
@@ -2172,8 +2188,10 @@ $end
     , dyn_sql_parm(case when l_show_comments then 1 else 0 end)
     )
   );  
+  pipe row (g_commands(g_commands.first));
+  g_commands.delete;
   g_show_comments$ := l_show_comments;
-  
+
   if l_read_initial_state
   then
     if l_show_initial_state
