@@ -1012,7 +1012,7 @@ end;
 
 procedure enable_job
 ( p_job_name in varchar2
-, p_run_job in boolean default true -- run job in this session in order to determine jobs created by this job
+, p_run_job in boolean default false -- run job in this session in order to determine jobs created by this job
 )
 is
 begin
@@ -2093,6 +2093,8 @@ $end
         end if;
         g_jobs(j.job_name).state := j.state;
 
+        -- GJP 2024-06-30 Do not read job arguments
+        /*
         <<job_argument_loop>>
         for ja in ( select  ja.job_name
                     ,       ja.argument_name
@@ -2114,6 +2116,7 @@ $end
           , argument_value => ja.argument_value
           );
         end loop job_argument_loop;
+        */
         
         if upper(j.enabled) = 'TRUE'
         then
@@ -2931,6 +2934,7 @@ $end
       -- This session is not a running job: maybe the job does not exist yet so create/enable it to get a next_run_date
       if does_job_exist(l_job_name_launcher)
       then
+        /*
         -- needed in dry run mode
         set_processing_launcher_job_arguments
         ( p_job_name => l_job_name_launcher
@@ -2938,6 +2942,7 @@ $end
         , p_nr_workers_each_group => p_nr_workers_each_group
         , p_nr_workers_exact => p_nr_workers_exact
         );
+        */
         change_job(p_job_name => l_job_name_launcher, p_enabled => true);
       else
         submit_processing_launcher
