@@ -2093,8 +2093,8 @@ $end
         end if;
         g_jobs(j.job_name).state := j.state;
 
+$if false $then
         -- GJP 2024-06-30 Do not read job arguments
-        /*
         <<job_argument_loop>>
         for ja in ( select  ja.job_name
                     ,       ja.argument_name
@@ -2116,7 +2116,7 @@ $end
           , argument_value => ja.argument_value
           );
         end loop job_argument_loop;
-        */
+$end
         
         if upper(j.enabled) = 'TRUE'
         then
