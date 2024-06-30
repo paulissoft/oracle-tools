@@ -4,7 +4,7 @@ CREATE OR REPLACE PACKAGE BODY "MSG_SCHEDULER_PKG" AS
 
 subtype job_name_t is user_scheduler_jobs.job_name%type;
 subtype dbug_channel_tab_t is msg_pkg.boolean_lookup_tab_t;
-subtype job_info_rec_t is user_scheduler_jobs%rowtype;
+--subtype job_info_rec_t is user_scheduler_jobs%rowtype;
 subtype command_t is varchar2(4000 byte);
 
 /*
@@ -106,6 +106,7 @@ c_dry_run constant boolean := false;
 
 g_dry_run$ boolean := c_dry_run; -- only set it in the function do()
 g_show_comments$ boolean := null;
+g_processing_package$ all_objects.object_name%type := null;
 
 g_commands sys.odcivarchar2list := sys.odcivarchar2list();
 
@@ -182,7 +183,7 @@ begin
   return case when p_val is null then 'null' else '''' || replace(p_val, '''', '''''') || '''' end;
 end;
 
-function dyn_sql_parm(p_val in pls_integer)
+function dyn_sql_parm(p_val in number)
 return varchar2
 is
 begin
@@ -1045,11 +1046,33 @@ begin
            and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
            and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
           then
-            MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER
-            ( P_PROCESSING_PACKAGE => g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
-            , P_NR_WORKERS_EACH_GROUP => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
-            , P_NR_WORKERS_EXACT => g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
-            );
+            declare
+              l_processing_package constant all_objects.object_name%type :=
+                case
+                  when g_jobs(p_job_name).job_arguments.exists('P_PROCESSING_PACKAGE')
+                  then g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
+                  else nvl(g_programs(g_jobs(p_job_name).program_name).program_arguments('P_PROCESSING_PACKAGE').default_value, g_processing_package$)
+                end;
+              l_nr_workers_each_group constant pls_integer :=
+                case
+                  when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EACH_GROUP')
+                  then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
+                  else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EACH_GROUP').default_value
+                end;
+              l_nr_workers_exact constant pls_integer :=
+                case
+                  when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EXACT')
+                  then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
+                  else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EXACT').default_value
+                end;
+            begin
+              msg_scheduler_pkg.processing_launcher -- program_action
+              ( p_processing_package => l_processing_package
+              , p_nr_workers_each_group => l_nr_workers_each_group
+              , p_nr_workers_exact => l_nr_workers_exact
+              );
+            end;
+            
           when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
             or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
           then
@@ -1180,7 +1203,22 @@ procedure get_job_info
 )
 is
 begin
-  select  j.*
+  select  j.job_name 
+  ,       j.program_name
+  ,       j.schedule_owner
+  ,       j.schedule_name
+  ,       j.repeat_interval
+  ,       j.enabled
+  ,       j.state
+  ,       j.start_date
+  ,       j.end_date
+  ,       j.last_start_date
+  ,       j.last_run_duration
+  ,       j.next_run_date
+  ,       j.run_count
+  ,       j.failure_count
+  ,       j.retry_count
+  ,       null as procedure_call
   into    p_job_info_rec
   from    user_scheduler_jobs j
   where   j.job_name = p_job_name;
@@ -1449,6 +1487,55 @@ exception
 $end
 end create_job;
 
+procedure set_processing_job_arguments
+( p_job_name in job_name_t
+, p_processing_package in varchar2
+, p_groups_to_process_list in varchar2
+, p_nr_workers in positiven
+, p_worker_nr in positive
+, p_end_date in user_scheduler_jobs.end_date%type
+)
+is
+begin
+  -- Set the actual arguments for the next run (but only when it is not equal to the current one).  
+  for r in
+  ( select  pa.argument_name
+    ,       case pa.argument_name
+              when 'P_PROCESSING_PACKAGE'
+              then p_processing_package
+              when 'P_GROUPS_TO_PROCESS_LIST'
+              then p_groups_to_process_list
+              when 'P_NR_WORKERS'
+              then to_char(p_nr_workers)
+              when 'P_WORKER_NR'
+              then to_char(p_worker_nr)
+              when 'P_END_DATE'
+              then oracle_tools.api_time_pkg.timestamp2str(p_end_date)
+              else to_char(1/0) -- trick in order not to forget something
+            end as argument_value
+    ,       pa.argument_position
+    from    user_scheduler_jobs j
+            inner join user_scheduler_program_args pa
+            on pa.program_name = j.program_name
+    where   j.job_name = p_job_name
+    minus
+    select  ja.argument_name
+    ,       ja.value as argument_value
+    ,       ja.argument_position
+    from    user_scheduler_job_args ja
+    where   ja.job_name = p_job_name
+    order by
+            argument_position
+  )
+  loop
+    dbms_scheduler$set_job_argument_value
+    ( job_name => p_job_name
+    , argument_name => r.argument_name
+    , argument_value => r.argument_value
+    );
+  end loop;
+end set_processing_job_arguments;
+
 procedure submit_processing
 ( p_processing_package in varchar2
 , p_groups_to_process_list in varchar2
@@ -1508,38 +1595,16 @@ $end
   end if;
 
   create_job(p_job_name => l_job_name);
-    
-  -- Set the actual arguments for the next run.  
-  for r in
-  ( select  a.argument_name
-    from    user_scheduler_jobs j
-            inner join user_scheduler_program_args a
-            on a.program_name = j.program_name
-    where   j.job_name = l_job_name
-    order by
-            a.argument_position
-  )
-  loop
-    dbms_scheduler$set_job_argument_value
-    ( job_name => l_job_name
-    , argument_name => r.argument_name
-    , argument_value => 
-        case r.argument_name
-          when 'P_PROCESSING_PACKAGE'
-          then p_processing_package
-          when 'P_GROUPS_TO_PROCESS_LIST'
-          then p_groups_to_process_list
-          when 'P_NR_WORKERS'
-          then to_char(p_nr_workers)
-          when 'P_WORKER_NR'
-          then to_char(p_worker_nr)
-          when 'P_END_DATE'
-          then oracle_tools.api_time_pkg.timestamp2str(p_end_date)
-          else to_char(1/0) -- trick in order not to forget something
-        end
-    );
-  end loop;
 
+  set_processing_job_arguments
+  ( p_job_name => l_job_name
+  , p_processing_package => p_processing_package
+  , p_groups_to_process_list => p_groups_to_process_list
+  , p_nr_workers => p_nr_workers
+  , p_worker_nr => p_worker_nr
+  , p_end_date => p_end_date
+  );
+  
   -- GO
   change_job(p_job_name => l_job_name, p_enabled => true);
   
@@ -1708,6 +1773,79 @@ end;
 
 -- PUBLIC
 
+function show_job_info
+( p_processing_package in varchar2 default '%'
+)
+return job_info_tab_t
+pipelined
+is
+begin
+  for rj in
+  ( select  j.job_name 
+    ,       j.program_name
+    ,       j.schedule_owner
+    ,       j.schedule_name
+    ,       j.repeat_interval
+    ,       j.enabled
+    ,       j.state
+    ,       j.start_date
+    ,       j.end_date
+    ,       j.last_start_date
+    ,       j.last_run_duration
+    ,       j.next_run_date
+    ,       j.run_count
+    ,       j.failure_count
+    ,       j.retry_count
+    ,       p.program_action || '(' as procedure_call
+    from    user_scheduler_jobs j
+            inner join user_scheduler_programs p
+            on p.program_name = j.program_name
+    where   j.program_name in (c_program_launcher, c_program_do, c_program_supervisor, c_program_worker)
+    order by
+            case j.program_name 
+              when c_program_launcher
+              then 1
+              when c_program_do
+              then 2
+              when c_program_supervisor
+              then 3
+              when c_program_worker
+              then 4
+            end
+    ,       j.job_name         
+  )
+  loop
+    for ra in
+    ( select  ja.argument_name
+      ,       ja.value as argument_value
+      ,       ja.argument_position
+      ,       ja.argument_type
+      from    user_scheduler_job_args ja
+      where   ja.job_name = rj.job_name
+      order by
+              ja.argument_position
+    )
+    loop
+      rj.procedure_call :=
+        rj.procedure_call ||
+        case when ra.argument_position != 1 then ', ' end ||
+        utl_lms.format_message
+        ( '%s => %s'
+        , ra.argument_name
+        , case ra.argument_type
+            when 'NUMBER'
+            then dyn_sql_parm(to_number(ra.argument_value))
+            else dyn_sql_parm(ra.argument_value)
+          end
+        );
+    end loop;
+    rj.procedure_call :=
+      rj.procedure_call || ')';
+    pipe row (rj);
+  end loop;
+  return;
+end;
+
 function do
 ( p_commands in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
@@ -1721,7 +1859,7 @@ is
   c_dry_run_old constant boolean := g_dry_run$;
   c_show_comments_old constant boolean := g_show_comments$;
 
-  l_processing_package constant varchar2(100 byte) := 'MSG_AQ_PKG'; -- shortcut, TODO: see procedure do()
+  l_processing_package constant all_objects.object_name%type := 'MSG_AQ_PKG'; -- shortcut, TODO: see procedure do()
 
   l_read_initial_state constant boolean :=
     case
@@ -2334,6 +2472,12 @@ $end
         );
     end case;
   end do_program_command;
+
+  procedure cleanup
+  is
+  begin
+    g_processing_package$ := null;
+  end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (2)');
@@ -2373,6 +2517,7 @@ $end
   for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
   loop
     l_processing_package := l_processing_package_tab(i_package_idx);
+    g_processing_package$ := l_processing_package;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
@@ -2416,17 +2561,61 @@ $end
     end loop command_loop;
   end loop processing_package_loop;
 
+  cleanup;
   commit;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+$end
 exception
   when others
   then
+    cleanup;
+$if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
+$end    
     raise;
-$end
 end do;
+
+procedure set_do_job_arguments
+( p_job_name in job_name_t
+, p_command in varchar2
+, p_processing_package in varchar2
+)
+is
+begin
+  -- Set the actual arguments for the next run.  
+  for r in
+  ( select  pa.argument_name
+    ,       case pa.argument_name
+              when 'P_COMMAND'
+              then p_command
+              when 'P_PROCESSING_PACKAGE'
+              then p_processing_package
+              else to_char(1/0) -- trick in order not to forget something
+            end as argument_value
+    ,       pa.argument_position 
+    from    user_scheduler_jobs j
+            inner join user_scheduler_program_args pa
+            on pa.program_name = j.program_name
+    where   job_name = p_job_name
+    minus
+    select  ja.argument_name
+    ,       ja.value as argument_value
+    ,       ja.argument_position
+    from    user_scheduler_job_args ja
+    where   ja.job_name = p_job_name
+    order by
+            argument_position 
+  )
+  loop
+    dbms_scheduler$set_job_argument_value
+    ( job_name => p_job_name
+    , argument_name => r.argument_name
+    , argument_value => r.argument_value
+    );
+  end loop;
+end set_do_job_arguments;
 
 procedure submit_do
 ( p_command in varchar2
@@ -2448,30 +2637,11 @@ $end
 
   create_job(l_job_name_do);
 
-  -- Set the actual arguments for the next run.  
-  for r in
-  ( select  a.argument_name
-    from    user_scheduler_jobs j
-            inner join user_scheduler_program_args a
-            on a.program_name = j.program_name
-    where   job_name = l_job_name_do
-    order by
-            a.argument_position 
-  )
-  loop
-    dbms_scheduler$set_job_argument_value
-    ( job_name => l_job_name_do
-    , argument_name => r.argument_name
-    , argument_value => 
-        case r.argument_name
-          when 'P_COMMAND'
-          then p_command
-          when 'P_PROCESSING_PACKAGE'
-          then p_processing_package
-          else to_char(1/0) -- trick in order not to forget something
-        end
-    );
-  end loop;
+  set_do_job_arguments
+  ( p_job_name => l_job_name_do
+  , p_command => p_command
+  , p_processing_package => p_processing_package
+  );
 
   change_job(p_job_name => l_job_name_do, p_enabled => true);
 
@@ -2484,6 +2654,49 @@ exception
     raise;
 $end
 end submit_do;
+
+procedure set_processing_launcher_job_arguments
+( p_job_name in job_name_t
+, p_processing_package in varchar2
+, p_nr_workers_each_group in positive
+, p_nr_workers_exact in positive
+)
+is
+begin
+  -- Set the actual arguments for the next run.  
+  for r in
+  ( select  pa.argument_name
+    ,       case pa.argument_name
+              when 'P_PROCESSING_PACKAGE'
+              then p_processing_package
+              when 'P_NR_WORKERS_EACH_GROUP'
+              then to_char(p_nr_workers_each_group)
+              when 'P_NR_WORKERS_EXACT'
+              then to_char(p_nr_workers_exact)
+              else to_char(1/0) -- trick to not forget something
+            end as argument_value
+    ,       pa.argument_position
+    from    user_scheduler_jobs j
+            inner join user_scheduler_program_args pa
+            on pa.program_name = j.program_name
+    where   job_name = p_job_name
+    minus
+    select  ja.argument_name
+    ,       ja.value as argument_value
+    ,       ja.argument_position
+    from    user_scheduler_job_args ja
+    where   ja.job_name = p_job_name
+    order by
+            argument_position
+  )
+  loop
+    dbms_scheduler$set_job_argument_value
+    ( job_name => p_job_name
+    , argument_name => r.argument_name
+    , argument_value => r.argument_value
+    );
+  end loop;
+end set_processing_launcher_job_arguments;
 
 procedure submit_processing_launcher
 ( p_processing_package in varchar2
@@ -2513,32 +2726,12 @@ $end
 
   create_job(p_job_name => l_job_name_launcher);
 
-  -- Set the actual arguments for the next run.  
-  for r in
-  ( select  a.argument_name
-    from    user_scheduler_jobs j
-            inner join user_scheduler_program_args a
-            on a.program_name = j.program_name
-    where   job_name = l_job_name_launcher
-    order by
-            a.argument_position 
-  )
-  loop
-    dbms_scheduler$set_job_argument_value
-    ( job_name => l_job_name_launcher
-    , argument_name => r.argument_name
-    , argument_value => 
-        case r.argument_name
-          when 'P_PROCESSING_PACKAGE'
-          then p_processing_package
-          when 'P_NR_WORKERS_EACH_GROUP'
-          then to_char(p_nr_workers_each_group)
-          when 'P_NR_WORKERS_EXACT'
-          then to_char(p_nr_workers_exact)
-          else to_char(1/0) -- trick to not forget something
-        end
-    );
-  end loop;
+  set_processing_launcher_job_arguments
+  ( p_job_name => l_job_name_launcher
+  , p_processing_package => p_processing_package
+  , p_nr_workers_each_group => p_nr_workers_each_group
+  , p_nr_workers_exact => p_nr_workers_exact
+  );
 
   -- GO
   change_job(p_job_name => l_job_name_launcher, p_enabled => true);
