@@ -1472,7 +1472,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING');
   dbug.print
   ( dbug."input"
-  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_worker: %s; p_worker_nr: %s; p_end_date: %s'
+  , 'p_processing_package: %s; p_groups_to_process_list: %s; p_nr_workers: %s; p_worker_nr: %s; p_end_date: %s'
   , p_processing_package
   , p_groups_to_process_list
   , p_nr_workers
@@ -1757,25 +1757,6 @@ is
   procedure read_initial_state
   is
   begin
-    <<schedule_loop>>
-    for r in ( select  s.schedule_name
-               ,       s.start_date
-               ,       s.repeat_interval
-               ,       s.end_date
-               ,       s.comments
-               from    user_scheduler_schedules s
-               where   s.schedule_name = c_schedule_launcher
-             )
-    loop
-      dbms_scheduler$create_schedule
-      ( schedule_name => r.schedule_name
-      , start_date => r.start_date
-      , repeat_interval => r.repeat_interval
-      , end_date => r.end_date
-      , comments => r.comments
-      );
-    end loop schedule_loop;
-
     <<program_loop>>
     for p in ( select  p.program_name
                ,       p.program_type
@@ -1789,11 +1770,11 @@ is
                        case p.program_name
                          when c_program_launcher
                          then 1
-                         when c_program_supervisor
-                         then 2
-                         when c_program_worker
-                         then 3
                          when c_program_do
+                         then 2
+                         when c_program_supervisor
+                         then 3
+                         when c_program_worker
                          then 4
                        end
              )
@@ -1815,6 +1796,8 @@ is
                   ,       pa.default_value
                   from    user_scheduler_program_args pa
                   where   pa.program_name = p.program_name
+                  order by
+                          pa.argument_position
                 )
       loop
         dbms_scheduler$define_program_argument
@@ -1845,19 +1828,54 @@ is
                  ,       j.state
                  from    user_scheduler_jobs j
                  where   j.program_name = p.program_name
+                 order by
+                         j.job_name 
                )
-      loop   
-        dbms_scheduler$create_job
-        ( job_name => j.job_name
-        , program_name => j.program_name
-        , start_date => j.start_date
-        , repeat_interval => j.repeat_interval
-        , end_date => j.end_date
-        , enabled => false -- jobs are created initially disabled so arguments can be added
-        , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
-        , comments => j.comments
-        );
-        g_jobs(j.job_name).schedule_name := j.schedule_name;
+      loop
+        if j.schedule_name is not null and not g_schedules.exists(j.schedule_name)
+        then
+          <<schedule_loop>>
+          for r in ( select  s.schedule_name
+                     ,       s.start_date
+                     ,       s.repeat_interval
+                     ,       s.end_date
+                     ,       s.comments
+                     from    user_scheduler_schedules s
+                     where   s.schedule_name = j.schedule_name
+                   )
+          loop
+            dbms_scheduler$create_schedule
+            ( schedule_name => r.schedule_name
+            , start_date => r.start_date
+            , repeat_interval => r.repeat_interval
+            , end_date => r.end_date
+            , comments => r.comments
+            );
+          end loop schedule_loop;
+        end if;
+
+        if j.schedule_name is not null
+        then
+          dbms_scheduler$create_job
+          ( job_name => j.job_name
+          , program_name => j.program_name
+          , schedule_name => j.schedule_name
+          , enabled => false -- jobs are created initially disabled so arguments can be added
+          , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
+          , comments => j.comments
+          );
+        else
+          dbms_scheduler$create_job
+          ( job_name => j.job_name
+          , program_name => j.program_name
+          , start_date => j.start_date
+          , repeat_interval => j.repeat_interval
+          , end_date => j.end_date
+          , enabled => false -- jobs are created initially disabled so arguments can be added
+          , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
+          , comments => j.comments
+          );
+        end if;
         g_jobs(j.job_name).state := j.state;
 
         <<job_argument_loop>>
@@ -1866,6 +1884,8 @@ is
                     ,       ja.value as argument_value
                     from    user_scheduler_job_args ja
                     where   ja.job_name = j.job_name
+                    order by
+                            ja.argument_position
                   )
         loop
           dbms_scheduler$set_job_argument_value
@@ -1921,9 +1941,9 @@ $end
     ( 'do(p_commands => %s, p_processing_package => %s, p_read_initial_state => %s, p_show_initial_state => %s, p_show_comments => %s)'
     , dyn_sql_parm(p_commands)
     , dyn_sql_parm(p_processing_package)
-    , dyn_sql_parm(l_read_initial_state)
-    , dyn_sql_parm(l_show_initial_state)
-    , dyn_sql_parm(l_show_comments)
+    , dyn_sql_parm(case when l_read_initial_state then 1 else 0 end)
+    , dyn_sql_parm(case when l_show_initial_state then 1 else 0 end)
+    , dyn_sql_parm(case when l_show_comments then 1 else 0 end)
     )
   );  
   g_show_comments$ := l_show_comments;
@@ -2519,9 +2539,15 @@ is
   l_dbug_channel_tab dbug_channel_tab_t;
   l_session_job_name constant job_name_t := session_job_name();
 
+  l_program_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_LAUNCHER';
+
   procedure check_input_and_state
   is
   begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter(l_program_name || '.' || 'CHECK_INPUT_AND_STATE');
+$end
+  
     case
       when ( p_nr_workers_each_group is not null and p_nr_workers_exact is null ) or
            ( p_nr_workers_each_group is null and p_nr_workers_exact is not null )
@@ -2627,6 +2653,9 @@ $end
       , p_sep => ','
       , p_ignore_null => 1
       );
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
   end check_input_and_state;
 
   procedure define_jobs
@@ -2639,6 +2668,10 @@ $end
       , p_nr_workers_exact => p_nr_workers_exact
       );
   begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter(l_program_name || '.' || 'DEFINE_JOBS');
+    dbug.print(dbug."info", 'l_nr_workers: %s', l_nr_workers);
+$end
     -- Create the job name list of supervisor and workers
     for i_worker_nr in 0 .. l_nr_workers
     loop
@@ -2648,6 +2681,9 @@ $end
         , p_program_name => case when i_worker_nr = 0 then c_program_supervisor else c_program_worker end
         , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
         );
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_job_name_tab(%s): %s', i_worker_nr, l_job_name_tab(i_worker_nr));
+$end
     end loop;
     
     -- Shutdown supervisor and workers, if any
@@ -2682,17 +2718,26 @@ $end
           null;
       end;
     end loop job_loop;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
   end define_jobs;
 
   procedure start_jobs
   is
   begin    
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter(l_program_name || '.' || 'START_JOB');
+$end
     if l_job_name_tab.count > 1 -- exclude supervisor
     then
       -- submit also the supervisor (index 0 but must have p_worker_nr null)
       <<worker_loop>>
       for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
       loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print(dbug."info", 'i_worker_nr: %s', i_worker_nr);
+$end
         submit_processing
         ( p_processing_package => p_processing_package
         , p_groups_to_process_list => l_groups_to_process_list
@@ -2702,6 +2747,9 @@ $end
         );
       end loop worker_loop;
     end if;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
   end start_jobs;
 
   procedure cleanup
@@ -2719,7 +2767,7 @@ begin
   end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_LAUNCHER');
+  dbug.enter(l_program_name);
   dbug.print
   ( dbug."input"
   , utl_lms.format_message
