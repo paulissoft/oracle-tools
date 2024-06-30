@@ -57,6 +57,34 @@ Package to (re)start, stop or drop the process that will process the groups for 
 and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOTIFICATION_PRC".
 **/
 
+type job_info_rec_t is record
+( job_name user_scheduler_jobs.job_name%type
+, program_name user_scheduler_jobs.program_name%type
+, schedule_owner user_scheduler_jobs.schedule_owner%type
+, schedule_name user_scheduler_jobs.schedule_name%type
+, repeat_interval user_scheduler_jobs.repeat_interval%type
+, enabled user_scheduler_jobs.enabled%type
+, state user_scheduler_jobs.state%type
+, start_date user_scheduler_jobs.start_date%type
+, end_date user_scheduler_jobs.end_date%type
+, last_start_date user_scheduler_jobs.last_start_date%type
+, last_run_duration user_scheduler_jobs.last_run_duration%type
+, next_run_date user_scheduler_jobs.next_run_date%type
+, run_count user_scheduler_jobs.run_count%type
+, failure_count user_scheduler_jobs.failure_count%type
+, retry_count user_scheduler_jobs.retry_count%type
+-- procedure call is constructed from user_scheduler_programs.program_action and the job arguments
+, procedure_call varchar2(4000 byte)
+);
+
+type job_info_tab_t is table of job_info_rec_t;
+
+function show_job_info
+( p_processing_package in varchar2 default '%'
+)
+return job_info_tab_t
+pipelined;
+
 function do
 ( p_commands in varchar2 -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
