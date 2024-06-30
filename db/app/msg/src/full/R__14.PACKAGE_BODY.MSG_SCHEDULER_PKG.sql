@@ -1721,6 +1721,8 @@ is
   c_dry_run_old constant boolean := g_dry_run$;
   c_show_comments_old constant boolean := g_show_comments$;
 
+  l_processing_package constant varchar2(100 byte) := 'MSG_AQ_PKG'; -- shortcut, TODO: see procedure do()
+
   l_read_initial_state constant boolean :=
     case
       when p_read_initial_state is null and p_show_initial_state is null
@@ -1756,7 +1758,35 @@ is
 
   procedure read_initial_state
   is
+    l_job_name_tab sys.odcivarchar2list :=
+      sys.odcivarchar2list
+      ( join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_do
+        )
+      , join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_launcher
+        )
+      , -- supervisor
+        join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_supervisor
+        , p_worker_nr => null
+        )
+      );
   begin
+    for i_worker_nr in 1 .. get_groups_to_process(l_processing_package).count
+    loop
+      l_job_name_tab.extend(1);
+      l_job_name_tab(l_job_name_tab.last) :=
+        join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_worker
+        , p_worker_nr => i_worker_nr
+        );
+    end loop;
+
     <<program_loop>>
     for p in ( select  p.program_name
                ,       p.program_type
@@ -1828,6 +1858,7 @@ is
                  ,       j.state
                  from    user_scheduler_jobs j
                  where   j.program_name = p.program_name
+                 and     j.job_name in ( select t.column_value from table(l_job_name_tab) t )
                  order by
                          j.job_name 
                )
@@ -2572,50 +2603,50 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'g_dry_run$: %s', g_dry_run$);
 $end
 
+    if l_job_name_launcher is null
+    then
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print
+      ( dbug."warning"
+      , utl_lms.format_message
+        ( c_session_not_running_job_msg
+        , to_char(c_session_id)
+        )
+      );
+$end
+      
+      l_job_name_launcher := 
+        join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_launcher
+        );
+
+      -- This session is not a running job: maybe the job does not exist yet so create/enable it to get a next_run_date
+      if does_job_exist(l_job_name_launcher)
+      then
+        change_job(p_job_name => l_job_name_launcher, p_enabled => true);
+      else
+        submit_processing_launcher
+        ( p_processing_package => p_processing_package
+        , p_nr_workers_each_group => p_nr_workers_each_group
+        , p_nr_workers_exact => p_nr_workers_exact
+        );
+      end if;
+
+    elsif l_job_name_launcher <>
+          join_job_name
+          ( p_processing_package => l_processing_package
+          , p_program_name => c_program_launcher
+          )
+    then
+      raise value_error;
+    end if;
+
+    -- the job exists and is enabled or even running so the next call will return the next end date
     if g_dry_run$
     then
       l_end_date := systimestamp() + interval '1' hour;
     else
-      if l_job_name_launcher is null
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print
-        ( dbug."warning"
-        , utl_lms.format_message
-          ( c_session_not_running_job_msg
-          , to_char(c_session_id)
-          )
-        );
-$end
-        
-        l_job_name_launcher := 
-          join_job_name
-          ( p_processing_package => l_processing_package
-          , p_program_name => c_program_launcher
-          );
-
-        -- This session is not a running job: maybe the job does not exist yet so create/enable it to get a next_run_date
-        if does_job_exist(l_job_name_launcher)
-        then
-          change_job(p_job_name => l_job_name_launcher, p_enabled => true);
-        else
-          submit_processing_launcher
-          ( p_processing_package => p_processing_package
-          , p_nr_workers_each_group => p_nr_workers_each_group
-          , p_nr_workers_exact => p_nr_workers_exact
-          );
-        end if;
-
-      elsif l_job_name_launcher <>
-            join_job_name
-            ( p_processing_package => l_processing_package
-            , p_program_name => c_program_launcher
-            )
-      then
-        raise value_error;
-      end if;
-
-      -- the job exists and is enabled or even running so the next call will return the next end date
       get_next_end_date(l_job_name_launcher, l_end_date);
     end if;
 
