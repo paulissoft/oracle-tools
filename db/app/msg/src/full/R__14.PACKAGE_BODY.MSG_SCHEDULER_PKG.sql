@@ -790,6 +790,14 @@ procedure disable_job
 )
 is
 begin
+  -- no reason to do the same action twice    
+  if g_dry_run$ and
+     g_jobs.exists(p_job_name) and
+     not(g_jobs(p_job_name).enabled)
+  then
+    return;
+  end if;
+  
   dbms_scheduler$disable(p_job_name);
   if g_dry_run$
   then
@@ -1015,6 +1023,14 @@ procedure enable_program
 )
 is
 begin
+  -- no reason to do the same action twice    
+  if g_dry_run$ and
+     g_programs.exists(p_program_name) and
+     g_programs(p_program_name).enabled
+  then
+    return;
+  end if;
+    
   dbms_scheduler$enable(name => p_program_name);
   if g_dry_run$ 
   then
@@ -1032,6 +1048,14 @@ procedure enable_job
 )
 is
 begin
+  -- no reason to do the same action twice    
+  if g_dry_run$ and
+     g_jobs.exists(p_job_name) and
+     g_jobs(p_job_name).enabled
+  then
+    return;
+  end if;
+  
   dbms_scheduler$enable(name => p_job_name);
   -- From Oracle docs:
   -- If a job was disabled and you enable it, the Scheduler begins to automatically run the job according to its schedule. 
