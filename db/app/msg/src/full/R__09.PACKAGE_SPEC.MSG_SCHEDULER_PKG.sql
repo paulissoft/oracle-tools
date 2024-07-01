@@ -73,15 +73,19 @@ type job_info_rec_t is record
 , run_count user_scheduler_jobs.run_count%type
 , failure_count user_scheduler_jobs.failure_count%type
 , retry_count user_scheduler_jobs.retry_count%type
+-- procedure call is constructed from user_scheduler_programs.program_action and the job arguments
+, procedure_call varchar2(1000 byte)
 -- running job info (user_scheduler_running_jobs)
 , log_id user_scheduler_running_jobs.log_id%type
 , session_id user_scheduler_running_jobs.session_id%type
 , elapsed_time user_scheduler_running_jobs.elapsed_time%type
--- job run details (user_scheduler_job_run_details)
+-- (last) job run details (user_scheduler_job_run_details)
 , req_start_date user_scheduler_job_run_details.req_start_date%type
 , actual_start_date user_scheduler_job_run_details.actual_start_date%type
--- procedure call is constructed from user_scheduler_programs.program_action and the job arguments
-, procedure_call varchar2(4000 byte)
+, additional_info user_scheduler_job_run_details.additional_info%type
+, output user_scheduler_job_run_details.output%type
+, error# user_scheduler_job_run_details.error#%type
+, errors user_scheduler_job_run_details.errors%type
 );
 
 type job_info_tab_t is table of job_info_rec_t;

@@ -304,29 +304,9 @@ $end
           , p_subscriber => l_subscriber
           );
         end if;    
-      elsif g_previous_processing_method_tab(p_queue_name) like "package://" || '%'
-      then
-        if g_previous_processing_method_tab(p_queue_name) =
-           case
-             when p_default_processing_method like "plsql://" || '%'
-             then "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG'
-             when p_default_processing_method like "package://" || '%'
-             then p_default_processing_method
-           end
-        then
-          -- the previous processing method will be restarted
-          -- in register_at or run_processing_method (see note 1 and 2 below)
-          null;
-        else
-          -- restart the previous processing method since the number of groups (queues) may have changed
-          run_processing_method
-          ( g_previous_processing_method_tab(p_queue_name) 
-          , 'restart'
-          );
-        end if;
       end if;
       
-      g_previous_processing_method_tab.delete(p_queue_name);
+      g_previous_processing_method_tab.delete(p_queue_name); -- NOTE: delete it to signal we need to restart
     end if;
   end if;
 
@@ -355,20 +335,18 @@ $end
         );
       end if;
 
-      -- note 1: may issue run_processing_method("package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG', ...)
       register_at
       ( p_queue_name => p_queue_name
       , p_subscriber => l_subscriber
       , p_plsql_callback => replace(p_default_processing_method, "plsql://")
       );
-    elsif p_default_processing_method like "package://" || '%'
-    then
-      -- note 2
-      run_processing_method
-      ( p_default_processing_method
-      , 'restart'
-      );
     end if;
+
+    -- restart the jobs (if necessary), see NOTE above
+    run_processing_method
+    ( p_default_processing_method
+    , 'restart'
+    );
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -783,13 +761,6 @@ procedure register
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
-  -- Since we add a callback for a queue the number of queues to listen to may change.
-  -- If so, the MSG_SCHEDULER_PKG has to restart.
-  l_groups_to_process_before sys.odcivarchar2list;
-  l_groups_to_process_after sys.odcivarchar2list;
-  -- see MSG_CONSTANTS_PKG
-  l_processing_method constant varchar2(100) := "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG';
-  l_count pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.REGISTER');
@@ -807,8 +778,6 @@ $end
     raise value_error;
   end if;
 
-  l_groups_to_process_before := get_groups_to_process(l_processing_method);
-
   dbms_aq.register
   ( reg_list => sys.aq$_reg_info_list
                 ( sys.aq$_reg_info
@@ -820,37 +789,6 @@ $end
                 )
   , reg_count => 1
   );
-
-  l_groups_to_process_after := get_groups_to_process(l_processing_method);
-
-  select  count(*)
-  into    l_count
-  from    ( select  b.column_value
-            from    table(l_groups_to_process_before) b
-            intersect
-            select  a.column_value
-            from    table(l_groups_to_process_after) a
-          );
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , 'l_groups_to_process_before.count: %s; l_groups_to_process_after.count: %s; l_count: %s'
-  , l_groups_to_process_before.count
-  , l_groups_to_process_after.count
-  , l_count);
-$end
-
-  if l_groups_to_process_before.count = l_groups_to_process_after.count and
-     l_count = l_groups_to_process_before.count
-  then
-    null; -- no changes
-  else
-    run_processing_method
-    ( l_processing_method
-    , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
-    );
-  end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -870,13 +808,6 @@ is
       when p_subscriber is not null
       then ':' || msg_pkg.get_object_name(p_object_name => p_subscriber, p_what => 'subscriber', p_fq => 0)
     end;
-  -- Since we remove a callback for a queue the number of queues to listen to may change.
-  -- If so, the MSG_SCHEDULER_PKG has to restart.
-  l_groups_to_process_before sys.odcivarchar2list;
-  l_groups_to_process_after sys.odcivarchar2list;
-  -- see MSG_CONSTANTS_PKG
-  l_processing_method constant varchar2(100) := "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG';
-  l_count pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UNREGISTER');
@@ -894,8 +825,6 @@ $end
     raise value_error;
   end if;
 
-  l_groups_to_process_before := get_groups_to_process(l_processing_method);
-      
   for rsr in
   ( select  sr.subscription_name
     ,       sr.location_name
@@ -916,37 +845,6 @@ $end
     , reg_count => 1
     );
   end loop;
-
-  l_groups_to_process_after := get_groups_to_process(l_processing_method);
-
-  select  count(*)
-  into    l_count
-  from    ( select  b.column_value
-            from    table(l_groups_to_process_before) b
-            intersect
-            select  a.column_value
-            from    table(l_groups_to_process_after) a
-          );
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print
-  ( dbug."info"
-  , 'l_groups_to_process_before.count: %s; l_groups_to_process_after.count: %s; l_count: %s'
-  , l_groups_to_process_before.count
-  , l_groups_to_process_after.count
-  , l_count);
-$end
-
-  if l_groups_to_process_before.count = l_groups_to_process_after.count and
-     l_count = l_groups_to_process_before.count
-  then
-    null; -- no changes
-  else
-    run_processing_method
-    ( l_processing_method
-    , case when l_groups_to_process_after.count = 0 then 'stop' else 'restart' end
-    );
-  end if;  
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;

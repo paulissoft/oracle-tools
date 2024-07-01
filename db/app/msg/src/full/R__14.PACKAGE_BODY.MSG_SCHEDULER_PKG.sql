@@ -1286,12 +1286,16 @@ begin
     ,       j.run_count
     ,       j.failure_count
     ,       j.retry_count
+    ,       null as procedure_call
     ,       null as log_id
     ,       null as session_id
-    ,       null as elapsed_time
+    ,       null as elapsed_time    
     ,       null as req_start_date
     ,       null as actual_start_date
-    ,       null as procedure_call
+    ,       null as additional_info
+    ,       null as output
+    ,       null as error#
+    ,       null as errors 
     into    p_job_info_rec
     from    user_scheduler_jobs j
     where   j.job_name = p_job_name;
@@ -1925,19 +1929,24 @@ begin
     ,       j.run_count
     ,       j.failure_count
     ,       j.retry_count
-    ,       rj.log_id
+    ,       p.program_action || '(' as procedure_call
+    ,       nvl(rj.log_id, jrd.log_id) as log_id
     ,       rj.session_id
     ,       rj.elapsed_time
     ,       jrd.req_start_date
     ,       jrd.actual_start_date
-    ,       p.program_action || '(' as procedure_call
+    ,       jrd.additional_info
+    ,       jrd.output
+    ,       jrd.error#
+    ,       jrd.errors
     from    user_scheduler_jobs j
             inner join user_scheduler_programs p
             on p.program_name = j.program_name
             left outer join user_scheduler_running_jobs rj
             on rj.job_name = j.job_name
             left outer join user_scheduler_job_run_details jrd
-            on jrd.log_id = rj.log_id
+            on ( rj.log_id is not null and jrd.log_id = rj.log_id ) or
+               ( rj.log_id is null and jrd.log_id = (select max(jrd_max.log_id) from user_scheduler_job_run_details jrd_max where jrd_max.job_name = j.job_name) )
     where   j.program_name in (c_program_launcher, c_program_do, c_program_supervisor, c_program_worker)
     order by
             case j.program_name 
@@ -1981,7 +1990,7 @@ begin
       rj.procedure_call || ')';
     pipe row (rj);
   end loop;
-  return;
+  return; -- essential for a pipelined function
 end show_job_info;
 
 procedure do
@@ -1991,24 +2000,13 @@ procedure do
 is
   pragma autonomous_transaction;
 
-  l_program_tab constant sys.odcivarchar2list :=
-    sys.odcivarchar2list
-    ( c_program_launcher
-    , c_program_do
-    , c_program_supervisor
-    , c_program_worker
-    );
-  l_schedule_tab constant sys.odcivarchar2list :=
-    sys.odcivarchar2list
-    ( c_schedule_launcher
-    );
   l_shutdown_timeout constant positiven :=
      case
        when lower(p_command) = 'shutdown'
        then msg_constants_pkg.get_time_between_heartbeats * 2 -- give some leeway
        else 1 -- but not when we want to stop quickly
      end;
-  l_command_tab constant sys.odcivarchar2list :=
+  l_sub_command_tab constant sys.odcivarchar2list :=
     case lower(p_command)
       -- create / drop scheduler objects
       when 'create'
@@ -2017,28 +2015,45 @@ is
       then sys.odcivarchar2list('stop', 'check-jobs-not-running', 'drop-jobs', 'drop-programs', 'drop-schedules')
       -- start / stop
       when 'start'
-      then sys.odcivarchar2list('check-jobs-not-running', p_command)
+      then sys.odcivarchar2list('check-jobs-not-running', lower(p_command))
       when 'shutdown' -- try to stop gracefully
-      then sys.odcivarchar2list(p_command, 'check-jobs-not-running')
+      then sys.odcivarchar2list(lower(p_command), 'check-jobs-not-running')
       when 'stop'
-      then sys.odcivarchar2list('shutdown', p_command, 'check-jobs-not-running')
+      then sys.odcivarchar2list('shutdown', lower(p_command), 'check-jobs-not-running')
       when 'restart'
-      then sys.odcivarchar2list('shutdown', 'stop', 'check-jobs-not-running', 'start')
-      else sys.odcivarchar2list(p_command)
+      then sys.odcivarchar2list('check-restart-necessary', 'shutdown', 'stop', 'check-jobs-not-running', 'start')
+      else sys.odcivarchar2list(lower(p_command))
     end;    
+  l_program_tab constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( null -- for sub commands not needing a program name
+    , c_program_launcher
+    , c_program_do
+    , c_program_supervisor
+    , c_program_worker
+    );
+  l_schedule_tab constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( c_schedule_launcher
+    );
   l_processing_package all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
   l_processing_package_tab sys.odcivarchar2list;
+  l_stop_after_this_sub_command boolean;
 
   procedure do_program_command
-  ( p_command in varchar2
+  ( p_sub_command in varchar2
   , p_program_name in varchar2
+  , p_stop_after_this_sub_command out nocopy boolean
   )
   is
     l_job_name job_name_t;
     l_job_names sys.odcivarchar2list;
     l_nr_groups natural;
     l_nr_workers natural;
+    l_count natural;
   begin
+    p_stop_after_this_sub_command := false;
+    
     l_job_name :=
       join_job_name
       ( p_processing_package => l_processing_package 
@@ -2048,12 +2063,62 @@ is
       );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'command: %s; program name: %s; job name: %s', p_command, p_program_name, l_job_name);
+    dbug.print(dbug."info", 'sub command: %s; program name: %s; job name: %s', p_sub_command, p_program_name, l_job_name);
 $end
 
-    case p_command
+    case p_sub_command
+      -- P_PROGRAM_NAME IS NULL
+      when 'check-restart-necessary'
+      then
+        -- this when clause uses p_program_name null
+        if p_program_name is not null then raise program_error; end if;
+        
+        if not g_dry_run$ -- no recursion
+        then
+          -- an optimalisation so hopefully we need not to restart
+
+          -- this query should give us the dbms_scheduler commands to execute given an initial state 
+          select  count(*)
+          into    l_count
+          from    table
+                  ( msg_scheduler_pkg.show_do
+                    ( p_commands => 'restart'
+                    , p_processing_package => l_processing_package
+                    , p_read_initial_state => 1
+                    , p_show_initial_state => 0
+                    , p_show_comments => 0
+                    )
+                  ) t
+          where   substr(t.column_value, 1, 2) != '--'; -- strip comment lines
+
+          -- when there are no dbms_scheduler commands to execute we can stop
+          p_stop_after_this_sub_command := l_count = 0;
+        end if;
+
+      when 'drop-schedules'
+      then
+        -- this when clause uses p_program_name null
+        if p_program_name is not null then raise program_error; end if;
+        
+        <<schedule_loop>>
+        for i_schedule_idx in l_schedule_tab.first .. l_schedule_tab.last
+        loop
+          begin
+            if not(does_schedule_exist(l_schedule_tab(i_schedule_idx)))
+            then
+              null;
+            else
+              -- does_schedule_exist() returns true or null
+              dbms_scheduler$drop_schedule(l_schedule_tab(i_schedule_idx));
+            end if;
+          end;
+        end loop schedule_loop;
+
+      -- P_PROGRAM_NAME IS NOT NULL
       when 'create-jobs'
       then
+        if p_program_name is null then raise program_error; end if;
+        
         if p_program_name <> c_program_worker
         then
           create_job(l_job_name);
@@ -2061,6 +2126,9 @@ $end
         
       when 'drop-programs'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         begin
           -- do not use does_program_exist() since does_program_exist may return null
           if not(does_program_exist(p_program_name))
@@ -2087,6 +2155,9 @@ $end
       
       when 'drop-jobs'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         <<force_loop>>
         for i_force in 0..1 -- 0: force false
         loop
@@ -2129,6 +2200,9 @@ $end
       
       when 'check-jobs-running'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         PRAGMA INLINE (get_jobs, 'YES');
         l_job_names := get_jobs(l_job_name || '%', 'RUNNING');
 
@@ -2145,6 +2219,9 @@ $end
         
       when 'check-jobs-not-running'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         PRAGMA INLINE (get_jobs, 'YES');
         l_job_names := get_jobs(l_job_name || '%', 'RUNNING');
         if l_job_names.count > 0
@@ -2161,6 +2238,9 @@ $end
         
       when 'start'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         if p_program_name = c_program_launcher
         then
           begin
@@ -2195,6 +2275,9 @@ $end
 
       when 'shutdown'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         l_nr_groups := get_groups_to_process(l_processing_package).count;
         l_nr_workers := get_nr_workers(p_nr_groups => l_nr_groups);
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -2215,6 +2298,9 @@ $end
 
       when 'stop'
       then
+        -- this when clause uses p_program_name not null
+        if p_program_name is null then raise program_error; end if;
+        
         PRAGMA INLINE (get_jobs, 'YES');
         l_job_names := get_jobs(p_job_name_expr => l_job_name || '%');
 
@@ -2273,7 +2359,7 @@ $end
         ( c_unexpected_command
         , utl_lms.format_message
           ( c_unexpected_command_msg
-          , p_command
+          , p_sub_command
           )
         );
     end case;
@@ -2310,42 +2396,40 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
 $end
 
-    <<command_loop>>
-    for i_command_idx in l_command_tab.first .. l_command_tab.last
+    <<sub_command_loop>>
+    for i_sub_command_idx in l_sub_command_tab.first .. l_sub_command_tab.last
     loop
-      case l_command_tab(i_command_idx)
-        when 'drop-schedules'
+      <<program_loop>>
+      for i_program_idx in l_program_tab.first .. l_program_tab.last
+      loop
+        if l_sub_command_tab(i_sub_command_idx) in ('check-restart-necessary', 'drop-schedules')
         then
-          <<schedule_loop>>
-          for i_schedule_idx in l_schedule_tab.first .. l_schedule_tab.last
-          loop
-            begin
-              if g_dry_run$
-              then
-                add_comment(utl_lms.format_message('sub-command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx)));
-              end if;
-              if not(does_schedule_exist(l_schedule_tab(i_schedule_idx)))
-              then
-                null;
-              else
-                -- does_schedule_exist() returns true or null
-                dbms_scheduler$drop_schedule(l_schedule_tab(i_schedule_idx));
-              end if;
-            end;
-          end loop schedule_loop;
-
+          -- these need no program name
+          if l_program_tab(i_program_idx) is not null then continue; end if;
         else
-          <<program_loop>>
-          for i_program_idx in l_program_tab.first .. l_program_tab.last
-          loop
-            if g_dry_run$
-            then
-              add_comment(utl_lms.format_message('sub-command: %s; program: %s', l_command_tab(i_command_idx), l_program_tab(i_program_idx)));
-            end if;
-            do_program_command(l_command_tab(i_command_idx), l_program_tab(i_program_idx));
-          end loop program_loop;
-      end case;
-    end loop command_loop;
+          -- these need a program name
+          if l_program_tab(i_program_idx) is null then continue; end if;
+        end if;
+
+        if g_dry_run$
+        then
+          if l_program_tab(i_program_idx) is null
+          then
+            add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
+          else
+            add_comment(utl_lms.format_message('sub-command: %s; program: %s', l_sub_command_tab(i_sub_command_idx), l_program_tab(i_program_idx)));
+          end if;
+        end if;
+
+        do_program_command
+        ( p_program_name => l_program_tab(i_program_idx)
+        , p_sub_command => l_sub_command_tab(i_sub_command_idx)
+        , p_stop_after_this_sub_command => l_stop_after_this_sub_command
+        );
+        
+        exit program_loop when l_stop_after_this_sub_command;
+      end loop program_loop;
+    end loop sub_command_loop;
   end loop processing_package_loop;
 
   cleanup;
@@ -2700,6 +2784,11 @@ $end
 
   return; -- essential for a pipelined function
 exception
+  when no_data_needed
+  then
+    cleanup;
+    return;
+  
   when others
   then
     declare
