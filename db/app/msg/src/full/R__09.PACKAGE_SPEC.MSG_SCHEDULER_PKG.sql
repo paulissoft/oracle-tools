@@ -136,7 +136,7 @@ p_command = check-jobs-not-running/ check-jobs-not-running:
 **/
 
 function show_do
-( p_commands in varchar2 -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+( p_commands in varchar2 default null -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
 , p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
 , p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios

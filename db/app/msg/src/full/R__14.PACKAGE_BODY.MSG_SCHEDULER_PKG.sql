@@ -152,6 +152,10 @@ pragma exception_init(e_not_a_valid_function_or_procedure_name, -06576);
 e_parse_error exception;
 pragma exception_init(e_parse_error, -6550);
 
+-- ORA-27456: not all arguments of program "BC_SC_API"."PROCESSING_LAUNCHER" have been defined
+e_not_all_program_arguments_defined exception;
+pragma exception_init(e_not_all_program_arguments_defined, -27456);
+
 -- ROUTINEs
 
 procedure init
@@ -684,7 +688,7 @@ $end
     execute immediate l_command;
   end if;
 exception
-  when e_parse_error or e_not_a_valid_function_or_procedure_name
+  when e_parse_error or e_not_a_valid_function_or_procedure_name or e_not_all_program_arguments_defined
   then
     raise_application_error
     ( c_invalid_procedure_call
@@ -2019,6 +2023,8 @@ procedure do
 is
   pragma autonomous_transaction;
 
+  l_module_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO';
+
   l_shutdown_timeout constant positiven :=
      case
        when lower(p_command) = 'shutdown'
@@ -2058,6 +2064,7 @@ is
   l_processing_package all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
   l_processing_package_tab sys.odcivarchar2list;
   l_stop_after_this_sub_command boolean;
+  l_skip boolean;
 
   procedure do_program_command
   ( p_sub_command in varchar2
@@ -2071,6 +2078,11 @@ is
     l_nr_workers natural;
     l_count natural;
   begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter(l_module_name || '.' || 'DO_PROGRAM_COMMAND');
+    dbug.print(dbug."input", 'p_sub_command: %s; p_program_name: %s', p_sub_command, p_program_name);
+$end
+  
     p_stop_after_this_sub_command := false;
     
     l_job_name :=
@@ -2082,7 +2094,7 @@ is
       );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'sub command: %s; program name: %s; job name: %s', p_sub_command, p_program_name, l_job_name);
+    dbug.print(dbug."info", 'l_job_name: %s', l_job_name);
 $end
 
     case p_sub_command
@@ -2382,6 +2394,15 @@ $end
           )
         );
     end case;
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."output", 'p_stop_after_this_sub_command: %s', p_stop_after_this_sub_command);
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end do_program_command;
 
   procedure cleanup
@@ -2391,7 +2412,7 @@ $end
   end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
+  dbug.enter(l_module_name);
   dbug.print
   ( dbug."input"
   , 'p_command: %s; p_processing_package: %s'
@@ -2421,32 +2442,49 @@ $end
       <<program_loop>>
       for i_program_idx in l_program_tab.first .. l_program_tab.last
       loop
-        if l_sub_command_tab(i_sub_command_idx) in ('check-restart-necessary', 'drop-schedules')
-        then
-          -- these need no program name
-          if l_program_tab(i_program_idx) is not null then continue; end if;
-        else
-          -- these need a program name
-          if l_program_tab(i_program_idx) is null then continue; end if;
-        end if;
+        l_skip :=
+          case
+            -- these need no program name
+            when l_sub_command_tab(i_sub_command_idx) in ('check-restart-necessary', 'drop-schedules')
+            then l_program_tab(i_program_idx) is not null
+            -- these need a program name
+            else l_program_tab(i_program_idx) is null
+          end;
 
-        if g_dry_run$
-        then
-          if l_program_tab(i_program_idx) is null
-          then
-            add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
-          else
-            add_comment(utl_lms.format_message('sub-command: %s; program: %s', l_sub_command_tab(i_sub_command_idx), l_program_tab(i_program_idx)));
-          end if;
-        end if;
-
-        do_program_command
-        ( p_program_name => l_program_tab(i_program_idx)
-        , p_sub_command => l_sub_command_tab(i_sub_command_idx)
-        , p_stop_after_this_sub_command => l_stop_after_this_sub_command
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.print
+        ( dbug."info"
+        , 'l_sub_command_tab(%s): %s; l_program_tab(%s): %s; l_skip: %s'
+        , i_sub_command_idx
+        , l_sub_command_tab(i_sub_command_idx)
+        , i_program_idx
+        , l_program_tab(i_program_idx)
+        , dbug.cast_to_varchar2(l_skip)
         );
-        
-        exit program_loop when l_stop_after_this_sub_command;
+$end
+        if not l_skip
+        then
+          if g_dry_run$
+          then
+            if l_program_tab(i_program_idx) is null
+            then
+              add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
+            else
+              add_comment(utl_lms.format_message('sub-command: %s; program: %s', l_sub_command_tab(i_sub_command_idx), l_program_tab(i_program_idx)));
+            end if;
+          end if;
+
+          do_program_command
+          ( p_program_name => l_program_tab(i_program_idx)
+          , p_sub_command => l_sub_command_tab(i_sub_command_idx)
+          , p_stop_after_this_sub_command => l_stop_after_this_sub_command
+          );
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print(dbug."info", 'l_stop_after_this_sub_command: %s', l_stop_after_this_sub_command);
+$end
+          exit program_loop when l_stop_after_this_sub_command;
+        end if;
       end loop program_loop;
     end loop sub_command_loop;
   end loop processing_package_loop;
