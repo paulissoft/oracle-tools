@@ -85,16 +85,6 @@ function show_job_info
 return job_info_tab_t
 pipelined;
 
-function do
-( p_commands in varchar2 -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
-, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
-, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
-, p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios
-, p_show_comments in natural default null -- show comments with each command in p_commands and the program
-)
-return sys.odcivarchar2list
-pipelined;
-
 procedure do
 ( p_command in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
@@ -128,6 +118,16 @@ p_command = check-jobs-not-running/ check-jobs-not-running:
 - Check that there are (no) running jobs that have been started by this package. If so, an error is raised.
 
 **/
+
+function show_do
+( p_commands in varchar2 -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
+, p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios
+, p_show_comments in natural default null -- show comments with each command in p_commands and the program
+)
+return sys.odcivarchar2list
+pipelined;
 
 procedure submit_do
 ( p_command in varchar2 -- same as for do() above
