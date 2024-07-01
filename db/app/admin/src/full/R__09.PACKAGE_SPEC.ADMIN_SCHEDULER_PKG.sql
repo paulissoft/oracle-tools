@@ -23,6 +23,12 @@ and     r.job_name = p_job_name
 See also [Killing Oracle Sessions (ALTER SYSTEM KILL / DISCONNECT SESSION)](https://oracle-base.com/articles/misc/killing-oracle-sessions).
 **/
 
+-- sys_context('USERENV', 'SESSION_USER') in ( p_owner, $$PLSQL_UNIT_OWNER ) or sys_context('USERENV', 'ISDBA') = 'TRUE'
+c_current_user_has_no_privileges constant pls_integer := -20300;
+e_current_user_has_no_privileges exception;
+
+pragma exception_init(e_current_user_has_no_privileges, -20300);
+
 function get_session_id
 ( p_owner in varchar2
 , p_job_name in varchar2

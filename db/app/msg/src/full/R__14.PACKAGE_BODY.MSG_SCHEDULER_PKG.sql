@@ -1785,16 +1785,7 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
-$end
 exception
-  when e_job_unknown
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave;
-$end
-    null;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
   when others
   then
     dbug.leave_on_error;
@@ -1884,6 +1875,7 @@ procedure do
 , p_processing_package in varchar2
 )
 is
+  l_module_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO';
   l_commands dbms_sql.varchar2a;
 begin
   oracle_tools.pkg_str_util.split
@@ -1895,7 +1887,8 @@ begin
   loop
     add_comment
     ( utl_lms.format_message
-      ( 'do(p_command => %s, p_processing_package => %s)'
+      ( '%s(p_command => %s, p_processing_package => %s)'
+      , l_module_name
       , dyn_sql_parm(l_commands(i_idx))
       , dyn_sql_parm(p_processing_package)
       )
@@ -2113,6 +2106,8 @@ $end
                 PRAGMA INLINE (drop_job, 'YES');
                 drop_job(l_job_names(i_job_idx), i_force != 0);
               exception
+                when e_job_unknown
+                then null;
                 when others
                 then
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -2649,7 +2644,8 @@ $end
   g_show_comments$ := true;
   add_comment
   ( utl_lms.format_message
-    ( 'show_do(p_commands => %s, p_processing_package => %s, p_read_initial_state => %s, p_show_initial_state => %s, p_show_comments => %s)'
+    ( '%s(p_commands => %s, p_processing_package => %s, p_read_initial_state => %s, p_show_initial_state => %s, p_show_comments => %s)'
+    , l_module_name
     , dyn_sql_parm(p_commands)
     , dyn_sql_parm(p_processing_package)
     , dyn_sql_parm(case when l_read_initial_state then 1 else 0 end)
@@ -2980,13 +2976,13 @@ is
   l_dbug_channel_tab dbug_channel_tab_t;
   l_session_job_name constant job_name_t := session_job_name();
 
-  l_program_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_LAUNCHER';
+  l_module_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING_LAUNCHER';
 
   procedure check_input_and_state
   is
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter(l_program_name || '.' || 'CHECK_INPUT_AND_STATE');
+    dbug.enter(l_module_name || '.' || 'CHECK_INPUT_AND_STATE');
 $end
   
     case
@@ -3114,7 +3110,7 @@ $end
       );
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter(l_program_name || '.' || 'DEFINE_JOBS');
+    dbug.enter(l_module_name || '.' || 'DEFINE_JOBS');
     dbug.print(dbug."info", 'l_nr_workers: %s', l_nr_workers);
 $end
     -- Create the job name list of supervisor and workers
@@ -3172,7 +3168,7 @@ $end
   is
   begin    
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter(l_program_name || '.' || 'START_JOB');
+    dbug.enter(l_module_name || '.' || 'START_JOB');
 $end
     if l_job_name_tab.count > 1 -- exclude supervisor
     then
@@ -3212,7 +3208,7 @@ begin
   end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter(l_program_name);
+  dbug.enter(l_module_name);
   dbug.print
   ( dbug."input"
   , utl_lms.format_message
