@@ -140,6 +140,10 @@ pragma exception_init(e_invalid_schedule, -27481);
 e_procobj_locked exception;
 pragma exception_init(e_procobj_locked, -27468);
 
+-- ORA-27366: job "BC_SC_API"."MSG_AQ_PKG$PROCESSING_WORKER#1" is not running
+e_job_is_not_running exception;
+pragma exception_init(e_job_is_not_running, -27366);
+
 -- ROUTINEs
 
 procedure init
@@ -666,13 +670,7 @@ $end
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
   else
-    begin
-      execute immediate 'call ' || p_command;
-    exception
-      when others
-      then
-        raise_application_error(-20000, p_command, true);
-    end;
+    execute immediate 'call ' || p_command;
   end if;
 end;
 
@@ -1247,17 +1245,22 @@ begin
   ,       j.program_name
   ,       j.schedule_owner
   ,       j.schedule_name
+  ,       j.start_date
   ,       j.repeat_interval
+  ,       j.end_date
   ,       j.enabled
   ,       j.state
-  ,       j.start_date
-  ,       j.end_date
   ,       j.last_start_date
   ,       j.last_run_duration
   ,       j.next_run_date
   ,       j.run_count
   ,       j.failure_count
   ,       j.retry_count
+  ,       null as log_id
+  ,       null as session_id
+  ,       null as elapsed_time
+  ,       null as req_start_date
+  ,       null as actual_start_date
   ,       null as procedure_call
   into    p_job_info_rec
   from    user_scheduler_jobs j
@@ -1305,57 +1308,67 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  get_job_info
-  ( p_job_name => p_job_name_launcher 
-  , p_job_info_rec => l_job_info_rec
-  );
-
-  -- the next run date for a scheduled job is supposed to be okay (at least when it is in the future)
-  if l_job_info_rec.next_run_date > l_now
+  if g_dry_run$
   then
-    null; -- OK
+    dbms_scheduler.evaluate_calendar_string
+    ( calendar_string => msg_constants_pkg.get_repeat_interval
+    , start_date => null
+    , return_date_after => null
+    , next_run_date => l_job_info_rec.next_run_date
+    );
   else
-    -- to start with
-    l_job_info_rec.next_run_date := l_now;
-    
-    if l_job_info_rec.repeat_interval is null and
-       l_job_info_rec.schedule_owner is not null and
-       l_job_info_rec.schedule_name is not null
-    then
-      select  s.repeat_interval
-      into    l_job_info_rec.repeat_interval
-      from    all_scheduler_schedules s
-      where   s.owner = l_job_info_rec.schedule_owner
-      and     s.schedule_name = l_job_info_rec.schedule_name;
-    end if;
+    get_job_info
+    ( p_job_name => p_job_name_launcher 
+    , p_job_info_rec => l_job_info_rec
+    );
 
-    if l_job_info_rec.repeat_interval is not null
+    -- the next run date for a scheduled job is supposed to be okay (at least when it is in the future)
+    if l_job_info_rec.next_run_date > l_now
     then
-      -- next_run_date is an out parameter, hence no dbms_scheduler$evaluate_calendar_string
-      dbms_scheduler.evaluate_calendar_string
-      ( calendar_string => l_job_info_rec.repeat_interval
-      , start_date => l_job_info_rec.start_date -- date at which the schedule became active
-      , return_date_after => l_job_info_rec.next_run_date
-      , next_run_date => l_job_info_rec.next_run_date
-      );
+      null; -- OK
     else
-      -- Final resort: check last two log entries for the interval between runs.      
-      -- Add interval between last two start dates, i.e. the interval between runs.
-      select  max(d.req_start_date) - min(d.req_start_date)
-      into    l_interval
-      from    ( select  d.req_start_date
-                from    user_scheduler_job_run_details d
-                where   d.job_name = p_job_name_launcher
-                order by
-                        log_date desc
-              ) d
-      where   rownum <= 2 -- get the last two entries and the time between them is the interval to add
-      ;
+      -- to start with
+      l_job_info_rec.next_run_date := l_now;
+      
+      if l_job_info_rec.repeat_interval is null and
+         l_job_info_rec.schedule_owner is not null and
+         l_job_info_rec.schedule_name is not null
+      then
+        select  s.repeat_interval
+        into    l_job_info_rec.repeat_interval
+        from    all_scheduler_schedules s
+        where   s.owner = l_job_info_rec.schedule_owner
+        and     s.schedule_name = l_job_info_rec.schedule_name;
+      end if;
 
-      l_job_info_rec.next_run_date := l_job_info_rec.next_run_date + l_interval;
+      if l_job_info_rec.repeat_interval is not null
+      then
+        -- next_run_date is an out parameter, hence no dbms_scheduler$evaluate_calendar_string
+        dbms_scheduler.evaluate_calendar_string
+        ( calendar_string => l_job_info_rec.repeat_interval
+        , start_date => l_job_info_rec.start_date -- date at which the schedule became active
+        , return_date_after => l_job_info_rec.next_run_date
+        , next_run_date => l_job_info_rec.next_run_date
+        );
+      else
+        -- Final resort: check last two log entries for the interval between runs.      
+        -- Add interval between last two start dates, i.e. the interval between runs.
+        select  max(d.req_start_date) - min(d.req_start_date)
+        into    l_interval
+        from    ( select  d.req_start_date
+                  from    user_scheduler_job_run_details d
+                  where   d.job_name = p_job_name_launcher
+                  order by
+                          log_date desc
+                ) d
+        where   rownum <= 2 -- get the last two entries and the time between them is the interval to add
+        ;
+
+        l_job_info_rec.next_run_date := l_job_info_rec.next_run_date + l_interval;
+      end if;
     end if;
   end if;
-
+  
   p_end_date := greatest
                 ( l_now + numtodsinterval(1, 'SECOND')
                 , nvl(l_job_info_rec.next_run_date, l_now) - numtodsinterval(msg_constants_pkg.get_time_between_runs, 'SECOND')
@@ -1877,21 +1890,30 @@ begin
     ,       j.program_name
     ,       j.schedule_owner
     ,       j.schedule_name
+    ,       j.start_date
     ,       j.repeat_interval
+    ,       j.end_date
     ,       j.enabled
     ,       j.state
-    ,       j.start_date
-    ,       j.end_date
     ,       j.last_start_date
     ,       j.last_run_duration
     ,       j.next_run_date
     ,       j.run_count
     ,       j.failure_count
     ,       j.retry_count
+    ,       rj.log_id
+    ,       rj.session_id
+    ,       rj.elapsed_time
+    ,       jrd.req_start_date
+    ,       jrd.actual_start_date
     ,       p.program_action || '(' as procedure_call
     from    user_scheduler_jobs j
             inner join user_scheduler_programs p
             on p.program_name = j.program_name
+            left outer join user_scheduler_running_jobs rj
+            on rj.job_name = j.job_name
+            left outer join user_scheduler_job_run_details jrd
+            on jrd.log_id = rj.log_id
     where   j.program_name in (c_program_launcher, c_program_do, c_program_supervisor, c_program_worker)
     order by
             case j.program_name 
@@ -2184,6 +2206,8 @@ $end
               PRAGMA INLINE (stop_job, 'YES');
               stop_job(l_job_names(i_job_idx));
             exception
+              when e_job_is_not_running
+              then null;
               when others
               then
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -3032,12 +3056,7 @@ $end
     end if;
 
     -- the job exists and is enabled or even running so the next call will return the next end date
-    if g_dry_run$
-    then
-      l_end_date := systimestamp() + interval '1' hour;
-    else
-      get_next_end_date(l_job_name_launcher, l_end_date);
-    end if;
+    get_next_end_date(l_job_name_launcher, l_end_date);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'system date: %s', to_char(systimestamp, "yyyy-mm-dd hh24:mi:ss"));
