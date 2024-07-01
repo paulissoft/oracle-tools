@@ -52,6 +52,11 @@ e_end_date_not_in_the_future exception;
 pragma exception_init(e_end_date_not_in_the_future, -20209);
 c_end_date_not_in_the_future_msg constant varchar2(2000 char) := 'The end date ("%s") should be in the future (current system timestamp = "%s")';
 
+c_invalid_procedure_call simple_integer := c_job_already_running - 10;
+e_invalid_procedure_call exception;
+pragma exception_init(e_invalid_procedure_call, -20210);
+c_invalid_procedure_call_msg constant varchar2(2000 char) := 'Invalid procedure call: "%s"';
+
 /**
 Package to (re)start, stop or drop the process that will process the groups for which the default processing method is "package://<schema>.MSG_SCHEDULER_PKG"
 and whose queue is NOT registered as a PL/SQL callback "plsql://<schema>.MSG_NOTIFICATION_PRC".

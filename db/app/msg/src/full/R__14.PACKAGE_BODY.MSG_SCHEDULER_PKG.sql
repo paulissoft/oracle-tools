@@ -144,6 +144,14 @@ pragma exception_init(e_procobj_locked, -27468);
 e_job_is_not_running exception;
 pragma exception_init(e_job_is_not_running, -27366);
 
+-- ORA-06576: not a valid function or procedure name
+e_not_a_valid_function_or_procedure_name exception;
+pragma exception_init(e_not_a_valid_function_or_procedure_name, -06576);
+
+-- ORA-06550: line 1, column 56:
+e_parse_error exception;
+pragma exception_init(e_parse_error, -6550);
+
 -- ROUTINEs
 
 procedure init
@@ -660,6 +668,9 @@ procedure process_command
 ( p_command in command_t
 )
 is
+  l_command constant command_t := 'begin
+  ' || p_command || ';
+end;';
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'process_command(p_command => %s)', dyn_sql_parm(p_command));
@@ -670,9 +681,17 @@ $end
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
   else
-    execute immediate 'call ' || p_command;
+    execute immediate l_command;
   end if;
-end;
+exception
+  when e_parse_error or e_not_a_valid_function_or_procedure_name
+  then
+    raise_application_error
+    ( c_invalid_procedure_call
+    , utl_lms.format_message(c_invalid_procedure_call_msg, l_command)
+    , true
+    );
+end process_command;
 
 -- invoked by:
 -- * create_program
