@@ -62,11 +62,11 @@ type job_info_rec_t is record
 , program_name user_scheduler_jobs.program_name%type
 , schedule_owner user_scheduler_jobs.schedule_owner%type
 , schedule_name user_scheduler_jobs.schedule_name%type
+, start_date user_scheduler_jobs.start_date%type
 , repeat_interval user_scheduler_jobs.repeat_interval%type
+, end_date user_scheduler_jobs.end_date%type
 , enabled user_scheduler_jobs.enabled%type
 , state user_scheduler_jobs.state%type
-, start_date user_scheduler_jobs.start_date%type
-, end_date user_scheduler_jobs.end_date%type
 , last_start_date user_scheduler_jobs.last_start_date%type
 , last_run_duration user_scheduler_jobs.last_run_duration%type
 , next_run_date user_scheduler_jobs.next_run_date%type
