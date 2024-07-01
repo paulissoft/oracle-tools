@@ -739,6 +739,15 @@ procedure dbms_scheduler$define_program_argument
 )
 is
   l_program_argument program_argument_rec_t;
+  l_command constant command_t :=
+    utl_lms.format_message
+    ( q'[dbms_scheduler.define_program_argument(program_name => %s, argument_name => %s, argument_position => %s, argument_type => %s, default_value => %s)]'
+    , dyn_sql_parm(program_name)
+    , dyn_sql_parm(argument_name)
+    , dyn_sql_parm(argument_position)
+    , dyn_sql_parm(argument_type)
+    , dyn_sql_parm(default_value)
+    );
 begin
   if g_dry_run$
   then
@@ -752,76 +761,112 @@ begin
        ( g_programs(program_name).program_arguments(argument_name).default_value = l_program_argument.default_value or
          g_programs(program_name).program_arguments(argument_name).default_value is null and l_program_argument.default_value is null )
     then
+      add_comment('no reason to do the same action twice: ' || l_command);
       return;
     end if;
     g_programs(program_name).program_arguments(argument_name) := l_program_argument;
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.define_program_argument(program_name => %s, argument_name => %s, argument_position => %s, argument_type => %s, default_value => %s)]'
-    , dyn_sql_parm(program_name)
-    , dyn_sql_parm(argument_name)
-    , dyn_sql_parm(argument_position)
-    , dyn_sql_parm(argument_type)
-    , dyn_sql_parm(default_value)
-    )
-  );
+  process_command(l_command);
 end;
 
 -- invoked by:
 -- * change_job
 procedure dbms_scheduler$disable
 ( name in varchar2
+, p_procobj_type in varchar2
 )
 is
-begin
-  process_command
-  ( utl_lms.format_message
+  l_command constant command_t :=
+    utl_lms.format_message
     ( q'[dbms_scheduler.disable(name => %s)]'
     , dyn_sql_parm(name)
-    )
+    );
+begin
+  -- no reason to do the same action twice    
+  if g_dry_run$
+  then
+    if ( p_procobj_type = 'JOB' and g_jobs.exists(name) and not(g_jobs(name).enabled) )
+    then
+      add_comment('no reason to do the same action twice: '|| l_command);
+      return;
+    end if;
+  end if;
+  
+  process_command
+  ( l_command
   );
-end;
+
+  if g_dry_run$
+  then
+    if p_procobj_type = 'JOB'
+    then
+      if not g_jobs.exists(name)
+      then
+        raise program_error;
+      end if;
+      g_jobs(name).enabled := false;
+    end if;
+  end if;
+end dbms_scheduler$disable;
 
 procedure disable_job
 ( p_job_name in varchar2
 )
 is
 begin
-  -- no reason to do the same action twice    
-  if g_dry_run$ and
-     g_jobs.exists(p_job_name) and
-     not(g_jobs(p_job_name).enabled)
-  then
-    return;
-  end if;
-  
-  dbms_scheduler$disable(p_job_name);
-  if g_dry_run$
-  then
-    if not g_jobs.exists(p_job_name)
-    then
-      raise program_error;
-    end if;
-    g_jobs(p_job_name).enabled := false;
-  end if;
-end;  
+  dbms_scheduler$disable(p_job_name, p_procobj_type => 'JOB');
+end disable_job;
   
 -- invoked by:
 -- * create_program
 -- * change_job
 procedure dbms_scheduler$enable
 ( name in varchar2
+, p_procobj_type in varchar2
 )
 is
-begin
-  process_command
-  ( utl_lms.format_message
+  l_command constant command_t :=
+    utl_lms.format_message
     ( q'[dbms_scheduler.enable(name => %s)]'
     , dyn_sql_parm(name)
-    )
-  );
-end;
+    );
+begin
+  if g_dry_run$
+  then
+    -- no reason to do the same action twice    
+    if ( p_procobj_type = 'PROGRAM' and g_programs.exists(name) and g_programs(name).enabled ) or
+       ( p_procobj_type = 'JOB'     and g_jobs.exists(name)         and g_jobs(name).enabled )
+    then
+      add_comment('no reason to do the same action twice: ' || l_command);
+      return;
+    end if;
+  end if;
+
+  process_command(l_command);
+
+  if g_dry_run$ 
+  then
+    if p_procobj_type = 'PROGRAM'
+    then
+      if not g_programs.exists(name)
+      then
+        raise program_error;
+      end if;
+      g_programs(name).enabled := true;
+    elsif p_procobj_type = 'JOB'
+    then
+      if not g_jobs.exists(name)
+      then
+        raise program_error;
+      end if;
+      if not(g_jobs(name).enabled)
+      then
+        g_jobs(name).enabled := true;
+        g_jobs(name).state := 'RUNNING';
+      end if;
+    end if;
+  end if;
+end dbms_scheduler$enable;
 
 -- invoked by:
 -- * create_job
@@ -909,6 +954,13 @@ procedure dbms_scheduler$set_job_argument_value
 , argument_value in varchar2
 )
 is
+  l_command constant command_t :=
+    utl_lms.format_message
+    ( q'[dbms_scheduler.set_job_argument_value(job_name => %s, argument_name => %s, argument_value => %s)]'
+    , dyn_sql_parm(job_name)
+    , dyn_sql_parm(argument_name)
+    , dyn_sql_parm(argument_value)
+    );
 begin
   if g_dry_run$
   then
@@ -917,19 +969,15 @@ begin
        ( g_jobs(job_name).job_arguments(argument_name).argument_value = argument_value or
          g_jobs(job_name).job_arguments(argument_name).argument_value is null and argument_value is null )
     then
+      add_comment('no reason to do the same action twice: ' || l_command);
       return;
     end if;
     g_jobs(job_name).job_arguments(argument_name).argument_value := argument_value;
   end if;
   process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.set_job_argument_value(job_name => %s, argument_name => %s, argument_value => %s)]'
-    , dyn_sql_parm(job_name)
-    , dyn_sql_parm(argument_name)
-    , dyn_sql_parm(argument_value)
-    )
+  ( l_command
   );
-end;  
+end dbms_scheduler$set_job_argument_value;  
 
 -- invoked by:
 -- * create_job
@@ -988,6 +1036,11 @@ procedure admin_scheduler_pkg$stop_job
 )
 is
 begin
+  if g_dry_run$ and p_force
+  then
+    g_jobs(p_job_name).enabled := false;
+    g_jobs(p_job_name).state := 'STOPPED';
+  end if;
   process_command
   ( utl_lms.format_message
     ( q'[admin_scheduler_pkg.stop_job(p_job_name => %s, p_force => %s)]'
@@ -1021,23 +1074,7 @@ procedure enable_program
 )
 is
 begin
-  -- no reason to do the same action twice    
-  if g_dry_run$ and
-     g_programs.exists(p_program_name) and
-     g_programs(p_program_name).enabled
-  then
-    return;
-  end if;
-    
-  dbms_scheduler$enable(name => p_program_name);
-  if g_dry_run$ 
-  then
-    if not g_programs.exists(p_program_name)
-    then
-      raise program_error;
-    end if;
-    g_programs(p_program_name).enabled := true;
-  end if;
+  dbms_scheduler$enable(name => p_program_name, p_procobj_type => 'PROGRAM');
 end;  
 
 procedure enable_job
@@ -1045,86 +1082,66 @@ procedure enable_job
 , p_run_job in boolean default false -- run job in this session in order to determine jobs created by this job
 )
 is
+  l_enabled_old constant boolean := case when g_jobs.exists(p_job_name) then g_jobs(p_job_name).enabled end;
 begin
-  -- no reason to do the same action twice    
-  if g_dry_run$ and
-     g_jobs.exists(p_job_name) and
-     g_jobs(p_job_name).enabled
-  then
-    return;
-  end if;
-  
-  dbms_scheduler$enable(name => p_job_name);
+  dbms_scheduler$enable(name => p_job_name, p_procobj_type => 'JOB');
   -- From Oracle docs:
   -- If a job was disabled and you enable it, the Scheduler begins to automatically run the job according to its schedule. 
-  if g_dry_run$
+  if g_dry_run$ and p_run_job and not l_enabled_old
   then
-    if not g_jobs.exists(p_job_name)
-    then
-      raise program_error;
-    end if;
+    add_comment
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- start]'
+      , dyn_sql_parm(p_job_name)
+      )
+    );
+    -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
 
-    if not(g_jobs(p_job_name).enabled)
-    then
-      g_jobs(p_job_name).enabled := true;
-
-      if p_run_job
+    -- only run procedures that create jobs
+    case 
+      when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
+       and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
+       and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
       then
-        add_comment
-        ( utl_lms.format_message
-          ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- start]'
-          , dyn_sql_parm(p_job_name)
-          )
-        );
-        -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
-
-        -- only run procedures that create jobs
-        case 
-          when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
-           and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
-           and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
-          then
-            declare
-              l_processing_package constant all_objects.object_name%type :=
-                case
-                  when g_jobs(p_job_name).job_arguments.exists('P_PROCESSING_PACKAGE')
-                  then g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
-                  else nvl(g_programs(g_jobs(p_job_name).program_name).program_arguments('P_PROCESSING_PACKAGE').default_value, g_processing_package$)
-                end;
-              l_nr_workers_each_group constant pls_integer :=
-                case
-                  when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EACH_GROUP')
-                  then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
-                  else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EACH_GROUP').default_value
-                end;
-              l_nr_workers_exact constant pls_integer :=
-                case
-                  when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EXACT')
-                  then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
-                  else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EXACT').default_value
-                end;
-            begin
-              msg_scheduler_pkg.processing_launcher -- program_action
-              ( p_processing_package => l_processing_package
-              , p_nr_workers_each_group => l_nr_workers_each_group
-              , p_nr_workers_exact => l_nr_workers_exact
-              );
+        declare
+          l_processing_package constant all_objects.object_name%type :=
+            case
+              when g_jobs(p_job_name).job_arguments.exists('P_PROCESSING_PACKAGE')
+              then g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
+              else nvl(g_programs(g_jobs(p_job_name).program_name).program_arguments('P_PROCESSING_PACKAGE').default_value, g_processing_package$)
             end;
-            
-          when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
-            or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
-          then
-            null;
-        end case;
+          l_nr_workers_each_group constant pls_integer :=
+            case
+              when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EACH_GROUP')
+              then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
+              else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EACH_GROUP').default_value
+            end;
+          l_nr_workers_exact constant pls_integer :=
+            case
+              when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EXACT')
+              then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
+              else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EXACT').default_value
+            end;
+        begin
+          msg_scheduler_pkg.processing_launcher -- program_action
+          ( p_processing_package => l_processing_package
+          , p_nr_workers_each_group => l_nr_workers_each_group
+          , p_nr_workers_exact => l_nr_workers_exact
+          );
+        end;
         
-        add_comment
-        ( utl_lms.format_message
-          ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- end]'
-          , dyn_sql_parm(p_job_name)
-          )
-        );
-      end if;
-    end if;
+      when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
+        or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
+      then
+        null;
+    end case;
+    
+    add_comment
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- end]'
+      , dyn_sql_parm(p_job_name)
+      )
+    );
   end if;
 end enable_job;
 
