@@ -15,7 +15,19 @@ Types of changes:
 
 ## [Unreleased]
 
+## [3.3.0] - 2024-07-01
+
+### Added
+
 - [It should be possible to replicate a table between schemas, local or remote.](https://github.com/paulissoft/oracle-tools/issues/164)
+
+### Changed
+
+- [Stability enhancements for database components ADMIN and MSG.](https://github.com/paulissoft/oracle-tools/issues/166)
+
+### Fixed
+
+- [The smart pool data source may use two pool data sources, one fixed and one dynamic.](https://github.com/paulissoft/oracle-tools/issues/165)
 
 ## [3.2.0] - 2024-06-03
 
