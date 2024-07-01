@@ -1258,30 +1258,44 @@ procedure get_job_info
 )
 is
 begin
-  select  j.job_name 
-  ,       j.program_name
-  ,       j.schedule_owner
-  ,       j.schedule_name
-  ,       j.start_date
-  ,       j.repeat_interval
-  ,       j.end_date
-  ,       j.enabled
-  ,       j.state
-  ,       j.last_start_date
-  ,       j.last_run_duration
-  ,       j.next_run_date
-  ,       j.run_count
-  ,       j.failure_count
-  ,       j.retry_count
-  ,       null as log_id
-  ,       null as session_id
-  ,       null as elapsed_time
-  ,       null as req_start_date
-  ,       null as actual_start_date
-  ,       null as procedure_call
-  into    p_job_info_rec
-  from    user_scheduler_jobs j
-  where   j.job_name = p_job_name;
+  if g_dry_run$
+  then
+    p_job_info_rec.job_name := p_job_name;
+    p_job_info_rec.schedule_name := g_jobs(p_job_name).schedule_name;
+    p_job_info_rec.start_date := g_jobs(p_job_name).start_date;
+    p_job_info_rec.repeat_interval := g_jobs(p_job_name).repeat_interval;
+    p_job_info_rec.end_date := g_jobs(p_job_name).end_date;
+    p_job_info_rec.enabled := case when g_jobs(p_job_name).enabled then 'TRUE' else 'FALSE' end;
+    p_job_info_rec.state := g_jobs(p_job_name).state;
+    -- fields used but not provided by g_jobs
+    p_job_info_rec.next_run_date := null;
+    p_job_info_rec.schedule_owner := null;
+  else
+    select  j.job_name 
+    ,       j.program_name
+    ,       j.schedule_owner
+    ,       j.schedule_name
+    ,       j.start_date
+    ,       j.repeat_interval
+    ,       j.end_date
+    ,       j.enabled
+    ,       j.state
+    ,       j.last_start_date
+    ,       j.last_run_duration
+    ,       j.next_run_date
+    ,       j.run_count
+    ,       j.failure_count
+    ,       j.retry_count
+    ,       null as log_id
+    ,       null as session_id
+    ,       null as elapsed_time
+    ,       null as req_start_date
+    ,       null as actual_start_date
+    ,       null as procedure_call
+    into    p_job_info_rec
+    from    user_scheduler_jobs j
+    where   j.job_name = p_job_name;
+  end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
@@ -2471,11 +2485,6 @@ $end
                        end
              )
     loop
-      if g_programs.exists(p.program_name)
-      then
-        raise program_error;
-      end if;
-        
       dbms_scheduler$create_program
       ( program_name => p.program_name
       , program_type => p.program_type
@@ -2497,11 +2506,6 @@ $end
                           pa.argument_position
                 )
       loop
-        if g_programs(pa.program_name).program_arguments.exists(pa.argument_name)
-        then
-          raise program_error;
-        end if;
-        
         dbms_scheduler$define_program_argument
         ( program_name => pa.program_name
         , argument_name => pa.argument_name
@@ -2547,11 +2551,6 @@ $end
                      where   s.schedule_name = j.schedule_name
                    )
           loop
-            if g_schedules.exists(r.schedule_name)
-            then
-              raise program_error;
-            end if;
-            
             dbms_scheduler$create_schedule
             ( schedule_name => r.schedule_name
             , start_date => r.start_date
@@ -2562,11 +2561,6 @@ $end
           end loop schedule_loop;
         end if;
 
-        if g_jobs.exists(j.job_name)
-        then
-          raise program_error;
-        end if;
-        
         if j.schedule_name is not null
         then
           dbms_scheduler$create_job
@@ -2601,11 +2595,6 @@ $end
                             ja.argument_name -- like in set_*_job_arguments
                   )
         loop
-          if g_jobs(ja.job_name).job_arguments.exists(ja.argument_name)
-          then
-            raise program_error;
-          end if;
-          
           dbms_scheduler$set_job_argument_value
           ( job_name => ja.job_name
           , argument_name => ja.argument_name
