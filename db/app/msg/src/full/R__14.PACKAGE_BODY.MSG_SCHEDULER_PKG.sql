@@ -1809,6 +1809,32 @@ begin
     end;
 end get_nr_workers;
 
+procedure get_processing_package_tab
+( p_processing_package in all_objects.object_name%type
+, p_processing_package_tab out nocopy sys.odcivarchar2list
+)
+is
+begin
+  -- check for processing packages having both routine GET_GROUPS_TO_PROCESS and PROCESSING
+  select  p.package_name
+  bulk collect
+  into    p_processing_package_tab
+  from    user_arguments p
+  where   p.object_name = 'GET_GROUPS_TO_PROCESS'
+  and     ( p_processing_package is null or p.package_name like p_processing_package escape '\' )
+  intersect
+  select  p.package_name
+  from    user_arguments p
+  where   p.object_name = 'PROCESSING'
+  and     ( p_processing_package is null or p.package_name like p_processing_package escape '\' )
+  ;
+
+  if p_processing_package_tab.count = 0
+  then
+    raise no_data_found;
+  end if;
+end get_processing_package_tab;
+
 procedure do
 ( p_commands in varchar2 -- a list
 , p_processing_package in varchar2
@@ -1823,6 +1849,13 @@ begin
   );
   for i_idx in l_commands.first .. l_commands.last
   loop
+    add_comment
+    ( utl_lms.format_message
+      ( 'do(p_command => %s, p_processing_package => %s)'
+      , dyn_sql_parm(l_commands(i_idx))
+      , dyn_sql_parm(p_processing_package)
+      )
+    );  
     do
     ( p_command => l_commands(i_idx)
     , p_processing_package => p_processing_package 
@@ -1903,383 +1936,7 @@ begin
     pipe row (rj);
   end loop;
   return;
-end;
-
-function do
-( p_commands in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
-, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
-, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
-, p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios
-, p_show_comments in natural default null -- show comments with each command in p_commands and the program
-)
-return sys.odcivarchar2list
-pipelined
-is
-  l_module_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (1)';
-  
-  c_dry_run_old constant boolean := g_dry_run$;
-  c_show_comments_old constant boolean := g_show_comments$;
-
-  l_processing_package constant all_objects.object_name%type := 'MSG_AQ_PKG'; -- shortcut, TODO: see procedure do()
-
-  l_read_initial_state constant boolean :=
-    case
-      when p_read_initial_state is null and p_commands is null
-      then true
-      when p_read_initial_state is null
-      then true
-      when p_read_initial_state = 0
-      then false
-      else true
-    end;
-  l_show_initial_state constant boolean :=
-    case
-      when p_show_initial_state is null and l_read_initial_state and p_commands is null
-      then true
-      when p_show_initial_state is null
-      then false
-      when p_show_initial_state = 0
-      then false
-      else true
-    end;
-  l_show_comments constant boolean :=
-    case
-      when p_show_comments is null and l_read_initial_state and l_show_initial_state and p_commands is null
-      then false
-      when p_show_comments is null
-      then true
-      when p_show_comments = 0
-      then false
-      else true
-    end;
-
-  procedure read_initial_state
-  is
-    l_job_name_tab sys.odcivarchar2list;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter(l_module_name || '.READ_INITIAL_STATE');
-$end
-
-    l_job_name_tab :=
-      sys.odcivarchar2list
-      ( join_job_name
-        ( p_processing_package => l_processing_package
-        , p_program_name => c_program_do
-        )
-      , join_job_name
-        ( p_processing_package => l_processing_package
-        , p_program_name => c_program_launcher
-        )
-      , -- supervisor
-        join_job_name
-        ( p_processing_package => l_processing_package
-        , p_program_name => c_program_supervisor
-        , p_worker_nr => null
-        )
-      );
-    for i_worker_nr in 1 .. get_groups_to_process(l_processing_package).count
-    loop
-      l_job_name_tab.extend(1);
-      l_job_name_tab(l_job_name_tab.last) :=
-        join_job_name
-        ( p_processing_package => l_processing_package
-        , p_program_name => c_program_worker
-        , p_worker_nr => i_worker_nr
-        );
-    end loop;
-
-    <<program_loop>>
-    for p in ( select  p.program_name
-               ,       p.program_type
-               ,       p.program_action
-               ,       p.number_of_arguments
-               ,       p.enabled
-               ,       p.comments
-               from    user_scheduler_programs p
-               where   p.program_name in (c_program_launcher, c_program_supervisor, c_program_worker, c_program_do)
-               order by
-                       case p.program_name
-                         when c_program_launcher
-                         then 1
-                         when c_program_do
-                         then 2
-                         when c_program_supervisor
-                         then 3
-                         when c_program_worker
-                         then 4
-                       end
-             )
-    loop
-      if g_programs.exists(p.program_name)
-      then
-        raise program_error;
-      end if;
-        
-      dbms_scheduler$create_program
-      ( program_name => p.program_name
-      , program_type => p.program_type
-      , program_action => p.program_action
-      , number_of_arguments => p.number_of_arguments
-      , enabled => false -- programs are created initially disabled so arguments can be added
-      , comments => p.comments
-      );
-
-      <<program_argument_loop>>
-      for pa in ( select  pa.program_name
-                  ,       pa.argument_name
-                  ,       pa.argument_position
-                  ,       pa.argument_type
-                  ,       pa.default_value
-                  from    user_scheduler_program_args pa
-                  where   pa.program_name = p.program_name
-                  order by
-                          pa.argument_position
-                )
-      loop
-        if g_programs(pa.program_name).program_arguments.exists(pa.argument_name)
-        then
-          raise program_error;
-        end if;
-        
-        dbms_scheduler$define_program_argument
-        ( program_name => pa.program_name
-        , argument_name => pa.argument_name
-        , argument_position => pa.argument_position
-        , argument_type => pa.argument_type
-        , default_value => pa.default_value
-        );
-      end loop program_argument_loop;
-
-      if upper(p.enabled) = 'TRUE'
-      then
-        enable_program(p.program_name);
-      end if;
-
-      <<job_loop>>
-      for j in ( select  j.job_name
-                 ,       j.program_name
-                 ,       j.start_date
-                 ,       j.repeat_interval
-                 ,       j.end_date
-                 ,       j.enabled
-                 ,       j.auto_drop
-                 ,       j.comments
-                 -- extra
-                 ,       j.schedule_name
-                 ,       j.state
-                 from    user_scheduler_jobs j
-                 where   j.program_name = p.program_name
-                 and     j.job_name in ( select t.column_value from table(l_job_name_tab) t )
-                 order by
-                         j.job_name 
-               )
-      loop
-        if j.schedule_name is not null and not g_schedules.exists(j.schedule_name)
-        then
-          <<schedule_loop>>
-          for r in ( select  s.schedule_name
-                     ,       s.start_date
-                     ,       s.repeat_interval
-                     ,       s.end_date
-                     ,       s.comments
-                     from    user_scheduler_schedules s
-                     where   s.schedule_name = j.schedule_name
-                   )
-          loop
-            if g_schedules.exists(r.schedule_name)
-            then
-              raise program_error;
-            end if;
-            
-            dbms_scheduler$create_schedule
-            ( schedule_name => r.schedule_name
-            , start_date => r.start_date
-            , repeat_interval => r.repeat_interval
-            , end_date => r.end_date
-            , comments => r.comments
-            );
-          end loop schedule_loop;
-        end if;
-
-        if g_jobs.exists(j.job_name)
-        then
-          raise program_error;
-        end if;
-        
-        if j.schedule_name is not null
-        then
-          dbms_scheduler$create_job
-          ( job_name => j.job_name
-          , program_name => j.program_name
-          , schedule_name => j.schedule_name
-          , enabled => false -- jobs are created initially disabled so arguments can be added
-          , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
-          , comments => j.comments
-          );
-        else
-          dbms_scheduler$create_job
-          ( job_name => j.job_name
-          , program_name => j.program_name
-          , start_date => j.start_date
-          , repeat_interval => j.repeat_interval
-          , end_date => j.end_date
-          , enabled => false -- jobs are created initially disabled so arguments can be added
-          , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
-          , comments => j.comments
-          );
-        end if;
-        g_jobs(j.job_name).state := j.state;
-
-$if false $then
-        -- GJP 2024-06-30 Do not read job arguments
-$else        
-        <<job_argument_loop>>
-        for ja in ( select  ja.job_name
-                    ,       ja.argument_name
-                    ,       ja.value as argument_value
-                    from    user_scheduler_job_args ja
-                    where   ja.job_name = j.job_name
-                    order by
-                            ja.argument_name -- like in set_*_job_arguments
-                  )
-        loop
-          if g_jobs(ja.job_name).job_arguments.exists(ja.argument_name)
-          then
-            raise program_error;
-          end if;
-          
-          dbms_scheduler$set_job_argument_value
-          ( job_name => ja.job_name
-          , argument_name => ja.argument_name
-          , argument_value => ja.argument_value
-          );
-        end loop job_argument_loop;
-$end
-        
-        if upper(j.enabled) = 'TRUE'
-        then
-          enable_job(j.job_name, false);
-        end if;
-      end loop job_loop;
-    end loop program_loop;
-    
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave;
-$end
-  end read_initial_state;
-
-  procedure cleanup
-  is
-  begin
-    -- restore
-    g_dry_run$ := c_dry_run_old;
-    g_show_comments$ := c_show_comments_old;
-    g_commands.delete;
-    g_schedules.delete;
-    g_programs.delete;
-    g_jobs.delete;
-  end cleanup;
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter(l_module_name);
-  dbug.print
-  ( dbug."input"
-  , 'p_commands: %s; p_processing_package: %s; p_read_initial_state: %s; p_show_initial_state: %s; p_show_comments: %s'
-  , p_commands
-  , p_processing_package
-  , p_read_initial_state
-  , p_show_initial_state
-  , p_show_comments
-  );
-$end
-
-  g_dry_run$ := true;
-  g_commands.delete;
-  g_schedules.delete;
-  g_programs.delete;
-  g_jobs.delete;
-
-  -- always add one comment: this call
-  g_show_comments$ := true;
-  add_comment
-  ( utl_lms.format_message
-    ( 'do(p_commands => %s, p_processing_package => %s, p_read_initial_state => %s, p_show_initial_state => %s, p_show_comments => %s)'
-    , dyn_sql_parm(p_commands)
-    , dyn_sql_parm(p_processing_package)
-    , dyn_sql_parm(case when l_read_initial_state then 1 else 0 end)
-    , dyn_sql_parm(case when l_show_initial_state then 1 else 0 end)
-    , dyn_sql_parm(case when l_show_comments then 1 else 0 end)
-    )
-  );  
-  pipe row (g_commands(g_commands.first));
-  g_commands.delete;
-  g_show_comments$ := l_show_comments;
-
-  if l_read_initial_state
-  then
-    if l_show_initial_state
-    then
-      add_comment('show-initial-state');
-    end if;
-    read_initial_state;
-    if not l_show_initial_state
-    then
-      g_commands.delete;
-    end if;
-  end if;
-
-  do
-  ( p_commands => p_commands
-  , p_processing_package => p_processing_package
-  );
-
-  if g_commands is not null and g_commands.count > 0
-  then
-    for i_idx in g_commands.first .. g_commands.last
-    loop
-      pipe row (g_commands(i_idx));
-    end loop;
-  end if;
-
-  cleanup;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-$end
-
-  return; -- essential for a pipelined function
-exception
-  when others
-  then
-    declare
-      l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab := oracle_tools.api_call_stack_pkg.get_error_stack;
-    begin
-      if l_error_stack_tab.count > 0
-      then
-        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
-        loop
-          add_comment(l_error_stack_tab(i_idx).error_msg);
-        end loop;
-      end if;
-      
-      if g_commands is not null and g_commands.count > 0
-      then
-        for i_idx in g_commands.first .. g_commands.last
-        loop
-          pipe row (g_commands(i_idx));
-        end loop;
-      end if;
-    end;
-    
-    cleanup;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave_on_error;
-$end
-
-    return;
-end do;
+end show_job_info;
 
 procedure do
 ( p_command in varchar2
@@ -2579,7 +2236,7 @@ $end
   end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO (2)');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DO');
   dbug.print
   ( dbug."input"
   , 'p_command: %s; p_processing_package: %s'
@@ -2588,29 +2245,10 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if g_dry_run$
-  then
-    add_comment(p_command);
-  end if;
-
-  -- check for processing packages having both routine GET_GROUPS_TO_PROCESS and PROCESSING
-  select  p.package_name
-  bulk collect
-  into    l_processing_package_tab
-  from    user_arguments p
-  where   p.object_name = 'GET_GROUPS_TO_PROCESS'
-  and     ( l_processing_package is null or p.package_name like l_processing_package escape '\' )
-  intersect
-  select  p.package_name
-  from    user_arguments p
-  where   p.object_name = 'PROCESSING'
-  and     ( l_processing_package is null or p.package_name like l_processing_package escape '\' )
-  ;
-
-  if l_processing_package_tab.count = 0
-  then
-    raise no_data_found;
-  end if;
+  get_processing_package_tab
+  ( p_processing_package
+  , l_processing_package_tab
+  );
 
   <<processing_package_loop>>
   for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
@@ -2634,7 +2272,7 @@ $end
             begin
               if g_dry_run$
               then
-                add_comment(utl_lms.format_message('command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx)));
+                add_comment(utl_lms.format_message('sub-command: %s; schedule: %s', l_command_tab(i_command_idx), l_schedule_tab(i_schedule_idx)));
               end if;
               if not(does_schedule_exist(l_schedule_tab(i_schedule_idx)))
               then
@@ -2652,7 +2290,7 @@ $end
           loop
             if g_dry_run$
             then
-              add_comment(utl_lms.format_message('command: %s; program: %s', l_command_tab(i_command_idx), l_program_tab(i_program_idx)));
+              add_comment(utl_lms.format_message('sub-command: %s; program: %s', l_command_tab(i_command_idx), l_program_tab(i_program_idx)));
             end if;
             do_program_command(l_command_tab(i_command_idx), l_program_tab(i_program_idx));
           end loop program_loop;
@@ -2675,6 +2313,397 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end    
     raise;
 end do;
+
+function show_do
+( p_commands in varchar2 -- create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
+, p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
+, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
+, p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios
+, p_show_comments in natural default null -- show comments with each command in p_commands and the program
+)
+return sys.odcivarchar2list
+pipelined
+is
+  l_module_name constant varchar2(100 byte) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SHOW_DO';
+
+  c_dry_run_old constant boolean := g_dry_run$;
+  c_show_comments_old constant boolean := g_show_comments$;
+
+  l_processing_package constant all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
+  l_processing_package_tab sys.odcivarchar2list;
+
+  l_read_initial_state constant boolean :=
+    case
+      when p_read_initial_state is null
+      then true
+      when p_read_initial_state = 0
+      then false
+      else true
+    end;
+  l_show_initial_state constant boolean :=
+    case
+      when p_show_initial_state is null and l_read_initial_state and p_commands is null
+      then true
+      when p_show_initial_state is null
+      then false
+      when p_show_initial_state = 0
+      then false
+      else true
+    end;
+  l_show_comments constant boolean :=
+    case
+      when p_show_comments is null and l_read_initial_state and l_show_initial_state and p_commands is null
+      then false
+      when p_show_comments is null
+      then true
+      when p_show_comments = 0
+      then false
+      else true
+    end;
+
+  procedure read_initial_state
+  is
+    l_processing_package all_objects.object_name%type;
+    l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
+  begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.enter(l_module_name || '.READ_INITIAL_STATE');
+$end
+
+    <<processing_package_loop>>
+    for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
+    loop
+      l_processing_package := l_processing_package_tab(i_package_idx);
+      
+      l_job_name_tab.extend(1);
+      l_job_name_tab(l_job_name_tab.last) :=
+        join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_do
+        );
+        
+      l_job_name_tab.extend(1);
+      l_job_name_tab(l_job_name_tab.last) :=
+        join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_launcher
+        );
+        
+      l_job_name_tab.extend(1);
+      l_job_name_tab(l_job_name_tab.last) :=
+        join_job_name
+        ( p_processing_package => l_processing_package
+        , p_program_name => c_program_supervisor
+        , p_worker_nr => null
+        );
+      for i_worker_nr in 1 .. get_groups_to_process(l_processing_package).count
+      loop
+        l_job_name_tab.extend(1);
+        l_job_name_tab(l_job_name_tab.last) :=
+          join_job_name
+          ( p_processing_package => l_processing_package
+          , p_program_name => c_program_worker
+          , p_worker_nr => i_worker_nr
+          );
+      end loop;
+    end loop;
+
+    <<program_loop>>
+    for p in ( select  p.program_name
+               ,       p.program_type
+               ,       p.program_action
+               ,       p.number_of_arguments
+               ,       p.enabled
+               ,       p.comments
+               from    user_scheduler_programs p
+               where   p.program_name in (c_program_launcher, c_program_supervisor, c_program_worker, c_program_do)
+               order by
+                       case p.program_name
+                         when c_program_launcher
+                         then 1
+                         when c_program_do
+                         then 2
+                         when c_program_supervisor
+                         then 3
+                         when c_program_worker
+                         then 4
+                       end
+             )
+    loop
+      if g_programs.exists(p.program_name)
+      then
+        raise program_error;
+      end if;
+        
+      dbms_scheduler$create_program
+      ( program_name => p.program_name
+      , program_type => p.program_type
+      , program_action => p.program_action
+      , number_of_arguments => p.number_of_arguments
+      , enabled => false -- programs are created initially disabled so arguments can be added
+      , comments => p.comments
+      );
+
+      <<program_argument_loop>>
+      for pa in ( select  pa.program_name
+                  ,       pa.argument_name
+                  ,       pa.argument_position
+                  ,       pa.argument_type
+                  ,       pa.default_value
+                  from    user_scheduler_program_args pa
+                  where   pa.program_name = p.program_name
+                  order by
+                          pa.argument_position
+                )
+      loop
+        if g_programs(pa.program_name).program_arguments.exists(pa.argument_name)
+        then
+          raise program_error;
+        end if;
+        
+        dbms_scheduler$define_program_argument
+        ( program_name => pa.program_name
+        , argument_name => pa.argument_name
+        , argument_position => pa.argument_position
+        , argument_type => pa.argument_type
+        , default_value => pa.default_value
+        );
+      end loop program_argument_loop;
+
+      if upper(p.enabled) = 'TRUE'
+      then
+        enable_program(p.program_name);
+      end if;
+
+      <<job_loop>>
+      for j in ( select  j.job_name
+                 ,       j.program_name
+                 ,       j.start_date
+                 ,       j.repeat_interval
+                 ,       j.end_date
+                 ,       j.enabled
+                 ,       j.auto_drop
+                 ,       j.comments
+                 -- extra
+                 ,       j.schedule_name
+                 ,       j.state
+                 from    user_scheduler_jobs j
+                 where   j.program_name = p.program_name
+                 and     j.job_name in ( select t.column_value from table(l_job_name_tab) t )
+                 order by
+                         j.job_name 
+               )
+      loop
+        if j.schedule_name is not null and not g_schedules.exists(j.schedule_name)
+        then
+          <<schedule_loop>>
+          for r in ( select  s.schedule_name
+                     ,       s.start_date
+                     ,       s.repeat_interval
+                     ,       s.end_date
+                     ,       s.comments
+                     from    user_scheduler_schedules s
+                     where   s.schedule_name = j.schedule_name
+                   )
+          loop
+            if g_schedules.exists(r.schedule_name)
+            then
+              raise program_error;
+            end if;
+            
+            dbms_scheduler$create_schedule
+            ( schedule_name => r.schedule_name
+            , start_date => r.start_date
+            , repeat_interval => r.repeat_interval
+            , end_date => r.end_date
+            , comments => r.comments
+            );
+          end loop schedule_loop;
+        end if;
+
+        if g_jobs.exists(j.job_name)
+        then
+          raise program_error;
+        end if;
+        
+        if j.schedule_name is not null
+        then
+          dbms_scheduler$create_job
+          ( job_name => j.job_name
+          , program_name => j.program_name
+          , schedule_name => j.schedule_name
+          , enabled => false -- jobs are created initially disabled so arguments can be added
+          , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
+          , comments => j.comments
+          );
+        else
+          dbms_scheduler$create_job
+          ( job_name => j.job_name
+          , program_name => j.program_name
+          , start_date => j.start_date
+          , repeat_interval => j.repeat_interval
+          , end_date => j.end_date
+          , enabled => false -- jobs are created initially disabled so arguments can be added
+          , auto_drop => case upper(j.auto_drop) when 'TRUE' then true else false end
+          , comments => j.comments
+          );
+        end if;
+        g_jobs(j.job_name).state := j.state;
+
+        <<job_argument_loop>>
+        for ja in ( select  ja.job_name
+                    ,       ja.argument_name
+                    ,       ja.value as argument_value
+                    from    user_scheduler_job_args ja
+                    where   ja.job_name = j.job_name
+                    order by
+                            ja.argument_name -- like in set_*_job_arguments
+                  )
+        loop
+          if g_jobs(ja.job_name).job_arguments.exists(ja.argument_name)
+          then
+            raise program_error;
+          end if;
+          
+          dbms_scheduler$set_job_argument_value
+          ( job_name => ja.job_name
+          , argument_name => ja.argument_name
+          , argument_value => ja.argument_value
+          );
+        end loop job_argument_loop;
+        
+        if upper(j.enabled) = 'TRUE'
+        then
+          enable_job(j.job_name, false);
+        end if;
+      end loop job_loop;
+    end loop program_loop;
+    
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
+  end read_initial_state;
+
+  procedure cleanup
+  is
+  begin
+    -- restore
+    g_dry_run$ := c_dry_run_old;
+    g_show_comments$ := c_show_comments_old;
+    g_commands.delete;
+    g_schedules.delete;
+    g_programs.delete;
+    g_jobs.delete;
+  end cleanup;
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter(l_module_name);
+  dbug.print
+  ( dbug."input"
+  , 'p_commands: %s; p_processing_package: %s; p_read_initial_state: %s; p_show_initial_state: %s; p_show_comments: %s'
+  , p_commands
+  , p_processing_package
+  , p_read_initial_state
+  , p_show_initial_state
+  , p_show_comments
+  );
+$end
+
+  g_dry_run$ := true;
+  g_commands.delete;
+  g_schedules.delete;
+  g_programs.delete;
+  g_jobs.delete;
+
+  -- always add one comment: this call
+  g_show_comments$ := true;
+  add_comment
+  ( utl_lms.format_message
+    ( 'show_do(p_commands => %s, p_processing_package => %s, p_read_initial_state => %s, p_show_initial_state => %s, p_show_comments => %s)'
+    , dyn_sql_parm(p_commands)
+    , dyn_sql_parm(p_processing_package)
+    , dyn_sql_parm(case when l_read_initial_state then 1 else 0 end)
+    , dyn_sql_parm(case when l_show_initial_state then 1 else 0 end)
+    , dyn_sql_parm(case when l_show_comments then 1 else 0 end)
+    )
+  );  
+  pipe row (g_commands(g_commands.first));
+  g_commands.delete;
+  g_show_comments$ := l_show_comments;
+
+  get_processing_package_tab
+  ( l_processing_package
+  , l_processing_package_tab
+  );
+
+  if l_read_initial_state
+  then
+    if l_show_initial_state
+    then
+      add_comment('sub-command: show-initial-state');
+    end if;
+    read_initial_state;
+    if not l_show_initial_state
+    then
+      g_commands.delete;
+    end if;
+  end if;
+
+  <<processing_package_loop>>
+  for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
+  loop
+    do
+    ( p_commands => p_commands
+    , p_processing_package => l_processing_package_tab(i_package_idx)
+    );
+  end loop;
+
+  if g_commands is not null and g_commands.count > 0
+  then
+    for i_idx in g_commands.first .. g_commands.last
+    loop
+      pipe row (g_commands(i_idx));
+    end loop;
+  end if;
+
+  cleanup;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+
+  return; -- essential for a pipelined function
+exception
+  when others
+  then
+    declare
+      l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab := oracle_tools.api_call_stack_pkg.get_error_stack;
+    begin
+      if l_error_stack_tab.count > 0
+      then
+        for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
+        loop
+          add_comment(l_error_stack_tab(i_idx).error_msg);
+        end loop;
+      end if;
+      
+      if g_commands is not null and g_commands.count > 0
+      then
+        for i_idx in g_commands.first .. g_commands.last
+        loop
+          pipe row (g_commands(i_idx));
+        end loop;
+      end if;
+    end;
+    
+    cleanup;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+
+    return;
+end show_do;
 
 procedure set_do_job_arguments
 ( p_job_name in job_name_t
