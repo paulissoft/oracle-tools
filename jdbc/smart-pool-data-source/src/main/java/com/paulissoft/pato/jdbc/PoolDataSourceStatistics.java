@@ -34,11 +34,11 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     static final String INDENT_PREFIX = "* ";
 
-    public static final String EXCEPTION_CLASS_NAME = "class";
+    public static final String EXCEPTION_CLASS_NAME = "class"; // should never be null
 
-    public static final String EXCEPTION_SQL_ERROR_CODE = "SQL error code";
+    public static final String EXCEPTION_SQL_ERROR_CODE = "SQL error code"; // should never be null
 
-    public static final String EXCEPTION_SQL_STATE = "SQL state";
+    public static final String EXCEPTION_SQL_STATE = "SQL state"; // may be null
 
     private static final int ROUND_SCALE = 32;
 
@@ -279,7 +279,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             }
         } catch (Exception ex) {
             // errors while updating / showing statistics must be ignored
-            logger.error("updateStatistics() error: {}", ex);
+            logger.error("Exception in updateStatistics():", ex);
         }
     }
 
@@ -519,24 +519,31 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                              pds.getUsername(),
                              nrOccurrences,
                              ex.getErrorCode(),
-                             ex.getSQLState(),
+                             ex.getSQLState(), // may be null
                              SimplePoolDataSource.exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error("signalSQLException() error: {}", e);
+            logger.error("Exception in signalSQLException():", e);
         }
     }
 
-    long signalSQLException(final SQLException ex) {
-        if (isClosed()) {
+    private long signalSQLException(final SQLException ex) {
+        if (ex == null || isClosed()) {
             return -1L;
         }
         
         final Properties attrs = new Properties();
+        final String className = ex.getClass().getName();
+        final String SQLErrorCode = String.valueOf(ex.getErrorCode());
+        final String SQLState = ex.getSQLState();
 
-        attrs.setProperty(EXCEPTION_CLASS_NAME, ex.getClass().getName());
-        attrs.setProperty(EXCEPTION_SQL_ERROR_CODE, String.valueOf(ex.getErrorCode()));
-        attrs.setProperty(EXCEPTION_SQL_STATE, ex.getSQLState());
+        attrs.setProperty(EXCEPTION_CLASS_NAME, className);
+        if (SQLErrorCode != null) { // should not be necessary
+            attrs.setProperty(EXCEPTION_SQL_ERROR_CODE, SQLErrorCode);
+        }
+        if (SQLState != null) {
+            attrs.setProperty(EXCEPTION_SQL_STATE, SQLState);
+        }
             
         return this.errors.computeIfAbsent(attrs, msg -> new AtomicLong(0)).incrementAndGet();
     }
@@ -553,12 +560,12 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                              SimplePoolDataSource.exceptionToString(ex));
             }
         } catch (Exception e) {
-            logger.error("signalException() error: {}", e);
+            logger.error("Exception in signalException():", e);
         }
     }
 
-    long signalException(final Exception ex) {
-        if (isClosed()) {
+    private long signalException(final Exception ex) {
+        if (ex == null || isClosed()) {
             return -1L;
         }
         
@@ -627,7 +634,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             showStatistics(true);
         } catch (Exception ex) {
             // errors while updating / showing statistics must be ignored
-            logger.error("showStatistics() error: {}", ex);
+            logger.error("Exception in showStatistics():", ex);
         }
     }
     
@@ -765,7 +772,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                                 final String SQLErrorCode = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_ERROR_CODE);
                                 final String SQLState = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_STATE);
 
-                                if (SQLErrorCode == null || SQLState == null) {
+                                if (SQLErrorCode == null && SQLState == null) {
                                     logger.warn("{}{} occurrences for (class={})",
                                                 prefix,
                                                 e.getValue(),

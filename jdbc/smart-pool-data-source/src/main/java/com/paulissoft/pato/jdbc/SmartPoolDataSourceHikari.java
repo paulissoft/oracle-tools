@@ -159,7 +159,7 @@ public class SmartPoolDataSourceHikari
                 throw new IllegalStateException("The configuration of the pool is sealed once started.");
             }
         } catch (IllegalStateException ex) {
-            log.error("Exception in getPoolDataSourceSetter(): {}", ex);
+            log.error("Exception in getPoolDataSourceSetter():", ex);
             throw ex;
         }
     }
@@ -175,7 +175,7 @@ public class SmartPoolDataSourceHikari
                 return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
             }
         } catch (IllegalStateException ex) {
-            log.error("Exception in getPoolDataSourceGetter(): {}", ex);
+            log.error("Exception in getPoolDataSourceGetter():", ex);
             throw ex;
         }
     }

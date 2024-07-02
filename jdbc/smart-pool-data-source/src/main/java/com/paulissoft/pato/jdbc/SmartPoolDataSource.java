@@ -221,7 +221,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                         poolDataSourceOverflow.close();
                     }
                 } catch(Exception ex) {
-                    log.error("Exception on tearDown(): {}", ex);
+                    log.error("Exception in tearDown():", ex);
                 } finally {
                     state = this.state = State.CLOSED;
                 }

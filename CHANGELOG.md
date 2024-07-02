@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [3.3.2] - 2024-07-03
+
+### Fixed
+
+- [The smart pool data source statistics class raises a null pointer exception due to not checking the SQL state of an exception.](https://github.com/paulissoft/oracle-tools/issues/168)
+
 ## [3.3.1] - 2024-07-02
 
 ### Fixed
