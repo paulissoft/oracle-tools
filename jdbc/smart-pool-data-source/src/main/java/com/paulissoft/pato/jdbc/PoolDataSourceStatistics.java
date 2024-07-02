@@ -520,7 +520,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                              nrOccurrences,
                              ex.getErrorCode(),
                              ex.getSQLState(), // may be null
-                             SimplePoolDataSource.exceptionToString(ex));
+                             ex.getMessage());
             }
         } catch (Exception e) {
             logger.error("Exception in signalSQLException():", e);
@@ -557,7 +557,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 logger.error("While connecting to {} this was occurrence # {} for this exception: ({})",
                              pds.getUsername(),
                              nrOccurrences,
-                             SimplePoolDataSource.exceptionToString(ex));
+                             ex.getMessage());
             }
         } catch (Exception e) {
             logger.error("Exception in signalException():", e);
