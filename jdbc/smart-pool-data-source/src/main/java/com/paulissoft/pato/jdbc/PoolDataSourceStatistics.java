@@ -50,14 +50,15 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     private static final int MAX_LEVEL_CONNECTION_STATISTICS = MAX_LEVEL; // was MAX_LEVEL - 1
 
-    static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
+    public static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 
     private static final Logger logger = LoggerFactory.getLogger(PoolDataSourceStatistics.class);
 
     // GJP 2024-06-27 Disabled now since the application should show it (Spring Scheduler for instance)
-    private static final boolean debugStatistics = false; // logger.isDebugEnabled();
+    // GJP 2024-07-02 Enable again since Spring Schedule poses problems for Motown
+    private static final boolean debugStatistics = logger.isDebugEnabled();
 
-    private static boolean failOnInvalidStatistics = false;
+    private static final AtomicBoolean failOnInvalidStatistics = new AtomicBoolean(false);
 
     static {
         logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
@@ -77,11 +78,11 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     private final Supplier<PoolDataSourceConfiguration> pdsSupplier;
 
-    private final AtomicLong firstUpdate = new AtomicLong(0L);
+    private final AtomicLong firstUpdate = new AtomicLong(0L); // LocalDateTime in milliseconds
 
-    private final AtomicLong lastUpdate = new AtomicLong(0L);
+    private final AtomicLong lastUpdate = new AtomicLong(0L); // LocalDateTime in milliseconds
 
-    private final AtomicLong lastShown = new AtomicLong(0L);
+    private final AtomicLong lastShown = new AtomicLong(0L); // LocalDateTime in millseconds
 
     private final AtomicBoolean isUpdateable = new AtomicBoolean(true);
     
@@ -274,17 +275,17 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             if (showStatistics) {
                 showStatistics(timeElapsed, false);
             }
-        } catch (Exception e) {
+        } catch (Exception ex) {
             // errors while updating / showing statistics must be ignored
-            logger.error(SimplePoolDataSource.exceptionToString(e));
+            logger.error("updateStatistics() error: {}", ex);
         }
     }
 
-    void update(final Connection conn,
-                final long timeElapsed,
-                final int activeConnections,
-                final int idleConnections,
-                final int totalConnections) throws SQLException {
+    private void update(final Connection conn,
+                        final long timeElapsed,
+                        final int activeConnections,
+                        final int idleConnections,
+                        final int totalConnections) throws SQLException {
         if (level != MAX_LEVEL || isClosed()) {
             return;
         }
@@ -344,15 +345,14 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
         // Show statistics if necessary
         // GJP 2024-06-27 Disabled now since the application should show it (Spring Scheduler for instance)
-        /*
+        // GJP 2024-07-02 Enable again since Spring Schedule poses problems for Motown
         if (pdss.mustShowTotals()) {
             pdss.showStatistics(true);
         }
-        */
     }
 
     // GJP 2024-06-27 Disabled now since the application should show it (Spring Scheduler for instance)
-    /*
+    // GJP 2024-07-02 Enable again since Spring Schedule poses problems for Motown
     private boolean mustShowTotals() {
         // Show statistics if the last update moment is not equal to the last shown moment
         // When debugStatistics is true (i.e. debug enabled) the moment is minute else hour
@@ -363,7 +363,6 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         
         return lastUpdateMoment != lastShownMoment;
     }
-    */
 
     public void close() throws Exception {
         if (isClosed()) {
@@ -520,7 +519,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                          ex.getSQLState(),
                          SimplePoolDataSource.exceptionToString(ex));
         } catch (Exception e) {
-            logger.error(SimplePoolDataSource.exceptionToString(e));
+            logger.error("signalSQLException() error: {}", e);
         }
     }
 
@@ -548,7 +547,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                          nrOccurrences,
                          SimplePoolDataSource.exceptionToString(ex));
         } catch (Exception e) {
-            logger.error(SimplePoolDataSource.exceptionToString(e));
+            logger.error("signalException() error: {}", e);
         }
     }
 
@@ -618,7 +617,12 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public void showStatistics() {
-        showStatistics(true);
+        try {
+            showStatistics(true);
+        } catch (Exception ex) {
+            // errors while updating / showing statistics must be ignored
+            logger.error("showStatistics() error: {}", ex);
+        }
     }
     
     private void showStatistics(final boolean showTotals) {
@@ -778,93 +782,93 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     // getter(s)
 
-    public long getConnectionCount() {
+    protected long getConnectionCount() {
         return getPhysicalConnectionCount() + getLogicalConnectionCount();
     }
             
     // all physical time elapsed stuff
 
-    public long getPhysicalConnectionCount() {
+    protected long getPhysicalConnectionCount() {
         return physicalConnectionCount.get();
     }
             
-    public long getPhysicalTimeElapsedMin() {
+    protected long getPhysicalTimeElapsedMin() {
         return physicalTimeElapsedMin.get();
     }
 
-    public long getPhysicalTimeElapsedMax() {
+    protected long getPhysicalTimeElapsedMax() {
         return physicalTimeElapsedMax.get();
     }
 
-    public long getPhysicalTimeElapsedAvg() {
+    protected long getPhysicalTimeElapsedAvg() {
         return physicalTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
-    public long getPhysicalTimeElapsed() {
+    protected long getPhysicalTimeElapsed() {
         return (new BigDecimal(physicalConnectionCount.get())).multiply(physicalTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
     // all logical time elapsed stuff
     
-    public long getLogicalConnectionCount() {
+    protected long getLogicalConnectionCount() {
         return logicalConnectionCount.get();
     }
 
-    public long getLogicalTimeElapsedMin() {
+    protected long getLogicalTimeElapsedMin() {
         return logicalTimeElapsedMin.get();
     }
 
-    public long getLogicalTimeElapsedMax() {
+    protected long getLogicalTimeElapsedMax() {
         return logicalTimeElapsedMax.get();
     }
 
-    public long getLogicalTimeElapsedAvg() {
+    protected long getLogicalTimeElapsedAvg() {
         return logicalTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
-    public long getLogicalTimeElapsed() {
+    protected long getLogicalTimeElapsed() {
         return (new BigDecimal(logicalConnectionCount.get())).multiply(logicalTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
     // all connection related stuff
 
-    public long getActiveConnectionsMin() {
+    protected long getActiveConnectionsMin() {
         return activeConnectionsMin != null ? activeConnectionsMin.get() : Long.MAX_VALUE;
     }
 
-    public long getActiveConnectionsMax() {
+    protected long getActiveConnectionsMax() {
         return activeConnectionsMax != null ? activeConnectionsMax.get() : Long.MIN_VALUE;
     }
 
-    public long getActiveConnectionsAvg() {
+    protected long getActiveConnectionsAvg() {
         return activeConnectionsAvg != null ? activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
 
-    public long getIdleConnectionsMin() {
+    protected long getIdleConnectionsMin() {
         return idleConnectionsMin != null ? idleConnectionsMin.get() : Long.MAX_VALUE;
     }
 
-    public long getIdleConnectionsMax() {
+    protected long getIdleConnectionsMax() {
         return idleConnectionsMax != null ? idleConnectionsMax.get() : Long.MIN_VALUE;
     }
         
-    public long getIdleConnectionsAvg() {
+    protected long getIdleConnectionsAvg() {
         return idleConnectionsAvg != null ? idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
         
-    public long getTotalConnectionsMin() {
+    protected long getTotalConnectionsMin() {
         return totalConnectionsMin != null ? totalConnectionsMin.get() : Long.MAX_VALUE;
     }
 
-    public long getTotalConnectionsMax() {
+    protected long getTotalConnectionsMax() {
         return totalConnectionsMax != null ? totalConnectionsMax.get() : Long.MIN_VALUE;
     }
 
-    public long getTotalConnectionsAvg() {
+    protected long getTotalConnectionsAvg() {
         return totalConnectionsAvg != null ? totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
 
-    public Map<Properties, Long> getErrors() {
+    protected Map<Properties, Long> getErrors() {
         final Map<Properties, Long> result = new HashMap<>();
             
         errors.forEach((k, v) -> result.put(k, Long.valueOf(v.get())));
@@ -873,7 +877,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     public static void setFailOnInvalidStatistics(final boolean failOnInvalidStatistics) {
-        PoolDataSourceStatistics.failOnInvalidStatistics = failOnInvalidStatistics;
+        PoolDataSourceStatistics.failOnInvalidStatistics.set(failOnInvalidStatistics);
     }
 
     static void checkBeforeAndAfter(final Snapshot childSnapshotBefore,
@@ -988,7 +992,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                          diffThreshold);
             logger.error("<checkTotalBeforeAndAfter()");
 
-            if (failOnInvalidStatistics) {
+            if (failOnInvalidStatistics.get()) {
                 throw ex;
             }
         }
@@ -1050,7 +1054,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                          parentMaxAfter);
             logger.error("<checkMinMaxBeforeAndAfter()");
 
-            if (failOnInvalidStatistics) {
+            if (failOnInvalidStatistics.get()) {
                 throw ex;
             }
         }
@@ -1084,7 +1088,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                          parentCountAfter);
             logger.error("<checkCountBeforeAndAfter()");
 
-            if (failOnInvalidStatistics) {
+            if (failOnInvalidStatistics.get()) {
                 throw ex;
             }
         }
