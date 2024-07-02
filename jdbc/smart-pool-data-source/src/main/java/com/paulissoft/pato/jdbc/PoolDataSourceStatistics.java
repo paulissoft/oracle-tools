@@ -515,7 +515,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 final long nrOccurrences = signalSQLException(ex);
                 
                 // show the message
-                logger.error("While connecting to {} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
+                logger.error("While connecting to {} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, message={})",
                              pds.getUsername(),
                              nrOccurrences,
                              ex.getErrorCode(),
@@ -554,7 +554,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 final long nrOccurrences = signalException(ex);
 
                 // show the message
-                logger.error("While connecting to {} this was occurrence # {} for this exception: ({})",
+                logger.error("While connecting to {} this was occurrence # {} for this exception: {}",
                              pds.getUsername(),
                              nrOccurrences,
                              ex.getMessage());
