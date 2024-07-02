@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [3.3.1] - 2024-07-02
+
+### Fixed
+
+- [The JDBC class PoolDataSourceStatistics must be made more error proof.]()
+
 ## [3.3.0] - 2024-07-01
 
 ### Added

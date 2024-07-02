@@ -230,6 +230,26 @@ This will do the processing of all messages till the end is reached or an except
 
 **/
 
+$if msg_aq_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(MSG)
+--%suite
+
+--%beforeeach
+--%rollback(manual)
+procedure ut_setup;
+
+--%aftereach
+--%rollback(manual)
+procedure ut_teardown;
+
+--%test
+procedure ut_show_do;
+
+$end -- $if msg_aq_pkg.c_testing $then
+
 end msg_scheduler_pkg;
 /
 

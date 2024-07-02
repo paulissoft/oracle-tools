@@ -267,13 +267,15 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                                  final long timeElapsed,
                                  final boolean showStatistics) {
         try {
-            update(conn,
-                   timeElapsed,
-                   pds.getActiveConnections(),
-                   pds.getIdleConnections(),
-                   pds.getTotalConnections());
-            if (showStatistics) {
-                showStatistics(timeElapsed, false);
+            if (pds != null && conn != null) {
+                update(conn,
+                       timeElapsed,
+                       pds.getActiveConnections(),
+                       pds.getIdleConnections(),
+                       pds.getTotalConnections());
+                if (showStatistics) {
+                    showStatistics(timeElapsed, false);
+                }
             }
         } catch (Exception ex) {
             // errors while updating / showing statistics must be ignored
@@ -509,15 +511,17 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     void signalSQLException(final SimplePoolDataSource pds, final SQLException ex) {        
         try {
-            final long nrOccurrences = signalSQLException(ex);
-
-            // show the message
-            logger.error("While connecting to {} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
-                         pds.getUsername(),
-                         nrOccurrences,
-                         ex.getErrorCode(),
-                         ex.getSQLState(),
-                         SimplePoolDataSource.exceptionToString(ex));
+            if (pds != null && ex != null) {
+                final long nrOccurrences = signalSQLException(ex);
+                
+                // show the message
+                logger.error("While connecting to {} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, {})",
+                             pds.getUsername(),
+                             nrOccurrences,
+                             ex.getErrorCode(),
+                             ex.getSQLState(),
+                             SimplePoolDataSource.exceptionToString(ex));
+            }
         } catch (Exception e) {
             logger.error("signalSQLException() error: {}", e);
         }
@@ -539,13 +543,15 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         
     void signalException(final SimplePoolDataSource pds, final Exception ex) {        
         try {
-            final long nrOccurrences = signalException(ex);
+            if (pds != null && ex != null) {
+                final long nrOccurrences = signalException(ex);
 
-            // show the message
-            logger.error("While connecting to {} this was occurrence # {} for this exception: ({})",
-                         pds.getUsername(),
-                         nrOccurrences,
-                         SimplePoolDataSource.exceptionToString(ex));
+                // show the message
+                logger.error("While connecting to {} this was occurrence # {} for this exception: ({})",
+                             pds.getUsername(),
+                             nrOccurrences,
+                             SimplePoolDataSource.exceptionToString(ex));
+            }
         } catch (Exception e) {
             logger.error("signalException() error: {}", e);
         }

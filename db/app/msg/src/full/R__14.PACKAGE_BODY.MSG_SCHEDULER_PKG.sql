@@ -144,18 +144,6 @@ pragma exception_init(e_procobj_locked, -27468);
 e_job_is_not_running exception;
 pragma exception_init(e_job_is_not_running, -27366);
 
--- ORA-06576: not a valid function or procedure name
-e_not_a_valid_function_or_procedure_name exception;
-pragma exception_init(e_not_a_valid_function_or_procedure_name, -06576);
-
--- ORA-06550: line 1, column 56:
-e_parse_error exception;
-pragma exception_init(e_parse_error, -6550);
-
--- ORA-27456: not all arguments of program "BC_SC_API"."PROCESSING_LAUNCHER" have been defined
-e_not_all_program_arguments_defined exception;
-pragma exception_init(e_not_all_program_arguments_defined, -27456);
-
 -- ROUTINEs
 
 procedure init
@@ -668,16 +656,13 @@ begin
   end if;  
 end;  
 
-procedure process_command
+procedure add_command
 ( p_command in command_t
 )
 is
-  l_command constant command_t := 'begin
-  ' || p_command || ';
-end;';
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'process_command(p_command => %s)', dyn_sql_parm(p_command));
+  dbug.print(dbug."info", 'add_command(p_command => %s)', dyn_sql_parm(p_command));
 $end
 
   if g_dry_run$
@@ -685,17 +670,9 @@ $end
     g_commands.extend(1);
     g_commands(g_commands.last) := p_command;
   else
-    execute immediate l_command;
+    raise program_error;
   end if;
-exception
-  when e_parse_error or e_not_a_valid_function_or_procedure_name or e_not_all_program_arguments_defined
-  then
-    raise_application_error
-    ( c_invalid_procedure_call
-    , utl_lms.format_message(c_invalid_procedure_call_msg, l_command)
-    , true
-    );
-end process_command;
+end add_command;
 
 -- invoked by:
 -- * create_program
@@ -717,20 +694,29 @@ begin
     l_program_rec.number_of_arguments := number_of_arguments;
     l_program_rec.enabled := enabled;
     l_program_rec.comments := comments;
-    g_programs(program_name) := l_program_rec;
+    g_programs(program_name) := l_program_rec;  
+    add_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.create_program(program_name => %s, program_type => %s, program_action => %s, number_of_arguments => %s, enabled => %s, comments => %s)]'
+      , dyn_sql_parm(program_name)
+      , dyn_sql_parm(program_type)
+      , dyn_sql_parm(program_action)
+      , dyn_sql_parm(number_of_arguments)
+      , dyn_sql_parm(enabled)
+      , dyn_sql_parm(comments)
+      )
+    );
+  else
+    dbms_scheduler.create_program
+    ( program_name => program_name
+    , program_type => program_type
+    , program_action => program_action
+    , number_of_arguments => number_of_arguments
+    , enabled => enabled
+    , comments => comments
+    );
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_program(program_name => %s, program_type => %s, program_action => %s, number_of_arguments => %s, enabled => %s, comments => %s)]'
-    , dyn_sql_parm(program_name)
-    , dyn_sql_parm(program_type)
-    , dyn_sql_parm(program_action)
-    , dyn_sql_parm(number_of_arguments)
-    , dyn_sql_parm(enabled)
-    , dyn_sql_parm(comments)
-    )
-  );
-end;
+end dbms_scheduler$create_program;
 
 -- invoked by:
 -- * do
@@ -742,14 +728,16 @@ begin
   if g_dry_run$
   then
     g_programs.delete(program_name);
+    add_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.drop_program(program_name => %s)]'
+      , dyn_sql_parm(program_name)
+      )
+    );
+  else
+    dbms_scheduler.drop_program(program_name => program_name);
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.drop_program(program_name => %s)]'
-    , dyn_sql_parm(program_name)
-    )
-  );
-end;
+end dbms_scheduler$drop_program;
 
 -- invoked by:
 -- * create_program
@@ -762,18 +750,19 @@ procedure dbms_scheduler$define_program_argument
 )
 is
   l_program_argument program_argument_rec_t;
-  l_command constant command_t :=
-    utl_lms.format_message
-    ( q'[dbms_scheduler.define_program_argument(program_name => %s, argument_name => %s, argument_position => %s, argument_type => %s, default_value => %s)]'
-    , dyn_sql_parm(program_name)
-    , dyn_sql_parm(argument_name)
-    , dyn_sql_parm(argument_position)
-    , dyn_sql_parm(argument_type)
-    , dyn_sql_parm(default_value)
-    );
+  l_command command_t;
 begin
   if g_dry_run$
   then
+    l_command :=
+      utl_lms.format_message
+      ( q'[dbms_scheduler.define_program_argument(program_name => %s, argument_name => %s, argument_position => %s, argument_type => %s, default_value => %s)]'
+      , dyn_sql_parm(program_name)
+      , dyn_sql_parm(argument_name)
+      , dyn_sql_parm(argument_position)
+      , dyn_sql_parm(argument_type)
+      , dyn_sql_parm(default_value)
+      );
     l_program_argument.argument_position := argument_position;
     l_program_argument.argument_type := argument_type;
     l_program_argument.default_value := default_value;
@@ -788,9 +777,17 @@ begin
       return;
     end if;
     g_programs(program_name).program_arguments(argument_name) := l_program_argument;
+    add_command(l_command);
+  else
+    dbms_scheduler.define_program_argument
+    ( program_name => program_name
+    , argument_name => argument_name
+    , argument_position => argument_position
+    , argument_type => argument_type
+    , default_value => default_value
+    );
   end if;
-  process_command(l_command);
-end;
+end dbms_scheduler$define_program_argument;
 
 -- invoked by:
 -- * change_job
@@ -799,36 +796,29 @@ procedure dbms_scheduler$disable
 , p_procobj_type in varchar2
 )
 is
-  l_command constant command_t :=
-    utl_lms.format_message
-    ( q'[dbms_scheduler.disable(name => %s)]'
-    , dyn_sql_parm(name)
-    );
+  l_command command_t;
 begin
   -- no reason to do the same action twice    
   if g_dry_run$
   then
-    if ( p_procobj_type = 'JOB' and g_jobs.exists(name) and not(g_jobs(name).enabled) )
+    l_command :=
+      utl_lms.format_message
+      ( q'[dbms_scheduler.disable(name => %s)]'
+      , dyn_sql_parm(name)
+      );
+    if p_procobj_type = 'JOB' and g_jobs.exists(name) and not(g_jobs(name).enabled)
     then
       add_comment('no reason to do the same action twice: '|| l_command);
       return;
-    end if;
-  end if;
-  
-  process_command
-  ( l_command
-  );
-
-  if g_dry_run$
-  then
-    if p_procobj_type = 'JOB'
+    elsif not g_jobs.exists(name)
     then
-      if not g_jobs.exists(name)
-      then
-        raise program_error;
-      end if;
+      raise program_error;
+    else
       g_jobs(name).enabled := false;
     end if;
+    add_command(l_command);
+  else
+    dbms_scheduler.disable(name => name);
   end if;
 end dbms_scheduler$disable;
 
@@ -848,28 +838,22 @@ procedure dbms_scheduler$enable
 , p_procobj_type in varchar2
 )
 is
-  l_command constant command_t :=
-    utl_lms.format_message
-    ( q'[dbms_scheduler.enable(name => %s)]'
-    , dyn_sql_parm(name)
-    );
+  l_command command_t;
 begin
   if g_dry_run$
   then
+    l_command :=
+      utl_lms.format_message
+      ( q'[dbms_scheduler.enable(name => %s)]'
+      , dyn_sql_parm(name)
+      );
     -- no reason to do the same action twice    
     if ( p_procobj_type = 'PROGRAM' and g_programs.exists(name) and g_programs(name).enabled ) or
-       ( p_procobj_type = 'JOB'     and g_jobs.exists(name)         and g_jobs(name).enabled )
+       ( p_procobj_type = 'JOB'     and g_jobs.exists(name)     and g_jobs(name).enabled )
     then
       add_comment('no reason to do the same action twice: ' || l_command);
       return;
-    end if;
-  end if;
-
-  process_command(l_command);
-
-  if g_dry_run$ 
-  then
-    if p_procobj_type = 'PROGRAM'
+    elsif p_procobj_type = 'PROGRAM'
     then
       if not g_programs.exists(name)
       then
@@ -882,12 +866,12 @@ begin
       then
         raise program_error;
       end if;
-      if not(g_jobs(name).enabled)
-      then
-        g_jobs(name).enabled := true;
-        g_jobs(name).state := 'RUNNING';
-      end if;
+      g_jobs(name).enabled := true;
+      g_jobs(name).state := 'RUNNING';
     end if;
+    add_command(l_command);
+  else
+    dbms_scheduler.enable(name => name);
   end if;
 end dbms_scheduler$enable;
 
@@ -916,21 +900,32 @@ begin
     l_job_rec.auto_drop := auto_drop;
     l_job_rec.comments := comments;
     g_jobs(job_name) := l_job_rec;
+    add_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, enabled => %s, auto_drop => %s, comments => %s)]'
+      , dyn_sql_parm(job_name)
+      , dyn_sql_parm(program_name)
+      , dyn_sql_parm(start_date)
+      , dyn_sql_parm(repeat_interval)
+      , dyn_sql_parm(end_date)
+      , dyn_sql_parm(enabled)
+      , dyn_sql_parm(auto_drop)
+      , dyn_sql_parm(comments)
+      )
+    );
+  else
+    dbms_scheduler.create_job
+    ( job_name => job_name
+    , program_name => program_name
+    , start_date => start_date
+    , repeat_interval => repeat_interval
+    , end_date => end_date
+    , enabled => enabled
+    , auto_drop => auto_drop
+    , comments => comments
+    );
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, enabled => %s, auto_drop => %s, comments => %s)]'
-    , dyn_sql_parm(job_name)
-    , dyn_sql_parm(program_name)
-    , dyn_sql_parm(start_date)
-    , dyn_sql_parm(repeat_interval)
-    , dyn_sql_parm(end_date)
-    , dyn_sql_parm(enabled)
-    , dyn_sql_parm(auto_drop)
-    , dyn_sql_parm(comments)
-    )
-  );
-end;
+end dbms_scheduler$create_job;
    
 -- invoked by:
 -- * create_job
@@ -953,19 +948,28 @@ begin
     l_job_rec.auto_drop := auto_drop;
     l_job_rec.comments := comments;
     g_jobs(job_name) := l_job_rec;
+    add_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, schedule_name => %s, enabled => %s, auto_drop => %s, comments => %s)]'
+      , dyn_sql_parm(job_name)
+      , dyn_sql_parm(program_name)
+      , dyn_sql_parm(schedule_name)
+      , dyn_sql_parm(enabled)
+      , dyn_sql_parm(auto_drop)
+      , dyn_sql_parm(comments)
+      )
+    );
+  else
+    dbms_scheduler.create_job
+    ( job_name => job_name
+    , program_name => program_name
+    , schedule_name => schedule_name
+    , enabled => enabled
+    , auto_drop => auto_drop
+    , comments => comments
+    );
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_job(job_name => %s, program_name => %s, schedule_name => %s, enabled => %s, auto_drop => %s, comments => %s)]'
-    , dyn_sql_parm(job_name)
-    , dyn_sql_parm(program_name)
-    , dyn_sql_parm(schedule_name)
-    , dyn_sql_parm(enabled)
-    , dyn_sql_parm(auto_drop)
-    , dyn_sql_parm(comments)
-    )
-  );
-end;
+end dbms_scheduler$create_job;
 
 -- invoked by:
 -- * submit_processing
@@ -977,16 +981,17 @@ procedure dbms_scheduler$set_job_argument_value
 , argument_value in varchar2
 )
 is
-  l_command constant command_t :=
-    utl_lms.format_message
-    ( q'[dbms_scheduler.set_job_argument_value(job_name => %s, argument_name => %s, argument_value => %s)]'
-    , dyn_sql_parm(job_name)
-    , dyn_sql_parm(argument_name)
-    , dyn_sql_parm(argument_value)
-    );
+  l_command command_t;
 begin
   if g_dry_run$
   then
+    l_command := 
+      utl_lms.format_message
+      ( q'[dbms_scheduler.set_job_argument_value(job_name => %s, argument_name => %s, argument_value => %s)]'
+      , dyn_sql_parm(job_name)
+      , dyn_sql_parm(argument_name)
+      , dyn_sql_parm(argument_value)
+      );
     -- no reason to do the same action twice
     if g_jobs(job_name).job_arguments.exists(argument_name) and
        ( g_jobs(job_name).job_arguments(argument_name).argument_value = argument_value or
@@ -996,10 +1001,14 @@ begin
       return;
     end if;
     g_jobs(job_name).job_arguments(argument_name).argument_value := argument_value;
+    add_command(l_command);
+  else
+    dbms_scheduler.set_job_argument_value
+    ( job_name => job_name
+    , argument_name => argument_name
+    , argument_value => argument_value
+    );
   end if;
-  process_command
-  ( l_command
-  );
 end dbms_scheduler$set_job_argument_value;  
 
 -- invoked by:
@@ -1021,18 +1030,26 @@ begin
     l_schedule_rec.end_date := end_date;
     l_schedule_rec.comments := comments;
     g_schedules(schedule_name) := l_schedule_rec;
+    add_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.create_schedule(schedule_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, comments => %s)]'
+      , dyn_sql_parm(schedule_name)
+      , dyn_sql_parm(start_date)
+      , dyn_sql_parm(repeat_interval)
+      , dyn_sql_parm(end_date)
+      , dyn_sql_parm(comments)
+      )
+    );
+  else
+    dbms_scheduler.create_schedule
+    ( schedule_name => schedule_name
+    , start_date => start_date
+    , repeat_interval => repeat_interval
+    , end_date => end_date
+    , comments => comments
+    );
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.create_schedule(schedule_name => %s, start_date => %s, repeat_interval => %s, end_date => %s, comments => %s)]'
-    , dyn_sql_parm(schedule_name)
-    , dyn_sql_parm(start_date)
-    , dyn_sql_parm(repeat_interval)
-    , dyn_sql_parm(end_date)
-    , dyn_sql_parm(comments)
-    )
-  );
-end;
+end dbms_scheduler$create_schedule;
 
 -- invoked by:
 -- * do
@@ -1044,14 +1061,16 @@ begin
   if g_dry_run$
   then
     g_schedules.delete(schedule_name);
+    add_command
+    ( utl_lms.format_message
+      ( q'[dbms_scheduler.drop_schedule(schedule_name => %s)]'
+      , dyn_sql_parm(schedule_name)
+      )
+    );
+  else
+    dbms_scheduler.drop_schedule(schedule_name => schedule_name);
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[dbms_scheduler.drop_schedule(schedule_name => %s)]'
-    , dyn_sql_parm(schedule_name)
-    )
-  );
-end;
+end dbms_scheduler$drop_schedule;
 
 procedure admin_scheduler_pkg$stop_job
 ( p_job_name in varchar2
@@ -1063,15 +1082,20 @@ begin
   then
     g_jobs(p_job_name).enabled := false;
     g_jobs(p_job_name).state := 'STOPPED';
+    add_command
+    ( utl_lms.format_message
+      ( q'[admin_scheduler_pkg.stop_job(p_job_name => %s, p_force => %s)]'
+      , dyn_sql_parm(p_job_name)
+      , dyn_sql_parm(p_force)
+      )
+    );
+  else
+    admin_scheduler_pkg.stop_job
+    ( p_job_name => p_job_name
+    , p_force => p_force
+    );
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[admin_scheduler_pkg.stop_job(p_job_name => %s, p_force => %s)]'
-    , dyn_sql_parm(p_job_name)
-    , dyn_sql_parm(p_force)
-    )
-  );
-end;
+end admin_scheduler_pkg$stop_job;
 
 procedure admin_scheduler_pkg$drop_job
 ( p_job_name in varchar2
@@ -1082,15 +1106,20 @@ begin
   if g_dry_run$ and p_force
   then
     g_jobs.delete(p_job_name);
+    add_command
+    ( utl_lms.format_message
+      ( q'[admin_scheduler_pkg.drop_job(p_job_name => %s, p_force => %s)]'
+      , dyn_sql_parm(p_job_name)
+      , dyn_sql_parm(p_force)
+      )
+    );
+  else
+    admin_scheduler_pkg.drop_job
+    ( p_job_name => p_job_name
+    , p_force => p_force
+    );
   end if;
-  process_command
-  ( utl_lms.format_message
-    ( q'[admin_scheduler_pkg.drop_job(p_job_name => %s, p_force => %s)]'
-    , dyn_sql_parm(p_job_name)
-    , dyn_sql_parm(p_force)
-    )
-  );
-end;
+end admin_scheduler_pkg$drop_job;
 
 procedure enable_program
 ( p_program_name in varchar2
@@ -1098,7 +1127,7 @@ procedure enable_program
 is
 begin
   dbms_scheduler$enable(name => p_program_name, p_procobj_type => 'PROGRAM');
-end;  
+end enable_program;  
 
 procedure enable_job
 ( p_job_name in varchar2
@@ -2051,8 +2080,7 @@ is
     end;    
   l_program_tab constant sys.odcivarchar2list :=
     sys.odcivarchar2list
-    ( null -- for sub commands not needing a program name
-    , c_program_launcher
+    ( c_program_launcher
     , c_program_do
     , c_program_supervisor
     , c_program_worker
@@ -2061,41 +2089,39 @@ is
     sys.odcivarchar2list
     ( c_schedule_launcher
     );
-  l_processing_package all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
+  l_processing_package_expr constant all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
   l_processing_package_tab sys.odcivarchar2list;
-  l_stop_after_this_sub_command boolean;
-  l_skip boolean;
 
-  procedure do_program_command
+  procedure do_sub_command
   ( p_sub_command in varchar2
-  , p_program_name in varchar2
-  , p_stop_after_this_sub_command out nocopy boolean
+  , p_processing_package in varchar2
+  , p_program_name in varchar2 default null
   )
   is
-    l_job_name job_name_t;
-    l_job_names sys.odcivarchar2list;
-    l_nr_groups natural;
-    l_nr_workers natural;
-    l_count natural;
+    l_job_name job_name_t := null;
+    l_job_names sys.odcivarchar2list := null;
+    l_nr_groups natural := null;
+    l_nr_workers natural := null;
+    l_found pls_integer := null;
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter(l_module_name || '.' || 'DO_PROGRAM_COMMAND');
-    dbug.print(dbug."input", 'p_sub_command: %s; p_program_name: %s', p_sub_command, p_program_name);
+    dbug.enter(l_module_name || '.' || 'DO_SUB_COMMAND');
+    dbug.print(dbug."input", 'p_sub_command: %s; p_processing_packag: %s; p_program_name: %s', p_sub_command, p_processing_package, p_program_name);
 $end
-  
-    p_stop_after_this_sub_command := false;
-    
-    l_job_name :=
-      join_job_name
-      ( p_processing_package => l_processing_package 
-      , p_program_name => p_program_name
-      , p_worker_nr => null
-      , p_check => false
-      );
 
+    if p_program_name is not null
+    then
+      l_job_name :=
+        join_job_name
+        ( p_processing_package => p_processing_package 
+        , p_program_name => p_program_name
+        , p_worker_nr => null
+        , p_check => false
+        );
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'l_job_name: %s', l_job_name);
+      dbug.print(dbug."info", 'l_job_name: %s', l_job_name);
 $end
+    end if;
 
     case p_sub_command
       -- P_PROGRAM_NAME IS NULL
@@ -2109,21 +2135,19 @@ $end
           -- an optimalisation so hopefully we need not to restart
 
           -- this query should give us the dbms_scheduler commands to execute given an initial state 
-          select  count(*)
-          into    l_count
+          select  1
+          into    l_found
           from    table
                   ( msg_scheduler_pkg.show_do
                     ( p_commands => 'restart'
-                    , p_processing_package => l_processing_package
+                    , p_processing_package => p_processing_package
                     , p_read_initial_state => 1
                     , p_show_initial_state => 0
                     , p_show_comments => 0
                     )
                   ) t
-          where   substr(t.column_value, 1, 2) != '--'; -- strip comment lines
-
-          -- when there are no dbms_scheduler commands to execute we can stop
-          p_stop_after_this_sub_command := l_count = 0;
+          where   substr(t.column_value, 1, 2) != '--' -- strip comment lines
+          and     rownum = 1; -- will cause NO_DATA_FOUND
         end if;
 
       when 'drop-schedules'
@@ -2276,7 +2300,7 @@ $end
         then
           begin
             -- this will create the job too if necessary
-            processing_launcher(p_processing_package => l_processing_package);
+            processing_launcher(p_processing_package => p_processing_package);
           exception
             when e_no_groups_to_process
             then
@@ -2309,7 +2333,7 @@ $end
         -- this when clause uses p_program_name not null
         if p_program_name is null then raise program_error; end if;
         
-        l_nr_groups := get_groups_to_process(l_processing_package).count;
+        l_nr_groups := get_groups_to_process(p_processing_package).count;
         l_nr_workers := get_nr_workers(p_nr_groups => l_nr_groups);
 $if oracle_tools.cfg_pkg.c_debugging $then
         dbug.print(dbug."info", 'nr groups: %s; nr workers: %s', l_nr_groups, l_nr_workers);
@@ -2395,7 +2419,6 @@ $end
         );
     end case;
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."output", 'p_stop_after_this_sub_command: %s', p_stop_after_this_sub_command);
     dbug.leave;
   exception
     when others
@@ -2403,7 +2426,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.leave_on_error;
       raise;
 $end
-  end do_program_command;
+  end do_sub_command;
 
   procedure cleanup
   is
@@ -2422,15 +2445,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   get_processing_package_tab
-  ( p_processing_package
+  ( l_processing_package_expr
   , l_processing_package_tab
   );
 
   <<processing_package_loop>>
   for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
   loop
-    l_processing_package := l_processing_package_tab(i_package_idx);
-    g_processing_package$ := l_processing_package;
+    g_processing_package$ := l_processing_package_tab(i_package_idx);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
@@ -2439,53 +2461,43 @@ $end
     <<sub_command_loop>>
     for i_sub_command_idx in l_sub_command_tab.first .. l_sub_command_tab.last
     loop
-      <<program_loop>>
-      for i_program_idx in l_program_tab.first .. l_program_tab.last
-      loop
-        l_skip :=
-          case
-            -- these need no program name
-            when l_sub_command_tab(i_sub_command_idx) in ('check-restart-necessary', 'drop-schedules')
-            then l_program_tab(i_program_idx) is not null
-            -- these need a program name
-            else l_program_tab(i_program_idx) is null
-          end;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.print
-        ( dbug."info"
-        , 'l_sub_command_tab(%s): %s; l_program_tab(%s): %s; l_skip: %s'
-        , i_sub_command_idx
-        , l_sub_command_tab(i_sub_command_idx)
-        , i_program_idx
-        , l_program_tab(i_program_idx)
-        , dbug.cast_to_varchar2(l_skip)
-        );
-$end
-        if not l_skip
+      case l_sub_command_tab(i_sub_command_idx)
+        when 'check-restart-necessary'
         then
           if g_dry_run$
           then
-            if l_program_tab(i_program_idx) is null
+            add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
+          end if;
+          begin
+            do_sub_command(p_sub_command => l_sub_command_tab(i_sub_command_idx), p_processing_package => g_processing_package$);
+          exception
+            when no_data_found
+            then exit sub_command_loop;
+          end;
+          
+        when 'drop-schedules'
+        then
+          if g_dry_run$
+          then
+            add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
+          end if;
+          do_sub_command(p_sub_command => l_sub_command_tab(i_sub_command_idx), p_processing_package => g_processing_package$);
+          
+        else
+          <<program_loop>>
+          for i_program_idx in l_program_tab.first .. l_program_tab.last
+          loop
+            if g_dry_run$
             then
-              add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
-            else
               add_comment(utl_lms.format_message('sub-command: %s; program: %s', l_sub_command_tab(i_sub_command_idx), l_program_tab(i_program_idx)));
             end if;
-          end if;
-
-          do_program_command
-          ( p_program_name => l_program_tab(i_program_idx)
-          , p_sub_command => l_sub_command_tab(i_sub_command_idx)
-          , p_stop_after_this_sub_command => l_stop_after_this_sub_command
-          );
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-          dbug.print(dbug."info", 'l_stop_after_this_sub_command: %s', l_stop_after_this_sub_command);
-$end
-          exit program_loop when l_stop_after_this_sub_command;
-        end if;
-      end loop program_loop;
+            do_sub_command
+            ( p_sub_command => l_sub_command_tab(i_sub_command_idx)
+            , p_processing_package => g_processing_package$
+            , p_program_name => l_program_tab(i_program_idx)
+            );
+          end loop program_loop;
+      end case;    
     end loop sub_command_loop;
   end loop processing_package_loop;
 
@@ -2520,7 +2532,7 @@ is
   c_dry_run_old constant boolean := g_dry_run$;
   c_show_comments_old constant boolean := g_show_comments$;
 
-  l_processing_package constant all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
+  l_processing_package_expr constant all_objects.object_name%type := trim('"' from to_like_expr(upper(p_processing_package)));
   l_processing_package_tab sys.odcivarchar2list;
 
   l_read_initial_state constant boolean :=
@@ -2799,7 +2811,7 @@ $end
   g_show_comments$ := l_show_comments;
 
   get_processing_package_tab
-  ( l_processing_package
+  ( l_processing_package_expr
   , l_processing_package_tab
   );
 
@@ -3686,6 +3698,100 @@ $end
     cleanup;
     raise;
 end processing;
+
+$if msg_aq_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(MSG)
+--%suite
+
+--%beforeeach
+--%rollback(manual)
+procedure ut_setup
+is
+begin
+  null;
+end ut_setup;
+
+--%aftereach
+--%rollback(manual)
+procedure ut_teardown
+is
+begin
+  null;
+end ut_teardown;
+
+--%test
+procedure ut_show_do
+is
+begin
+  -- test MSG_CONSTANTS_PKG functions too since it influences this package
+
+  -- so there will be (at least) one worker job
+  ut.expect(msg_constants_pkg.get_default_processing_method).to_equal('package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG');
+
+  ut.expect(msg_constants_pkg.get_repeat_interval).to_equal('FREQ=HOURLY; BYMINUTE=0; BYSECOND=0');
+
+  ut.expect(get_nr_workers(get_groups_to_process('MSG_AQ_PKG').count)).to_be_greater_than(0);
+
+  for r in
+  ( select  rownum as line_nr
+    ,       column_value as line
+    from    table(msg_scheduler_pkg.show_do(p_commands=>'create,start',p_read_initial_state=>0,p_show_comments=>0))
+  )
+  loop
+    case r.line_nr
+      when  1 then ut.expect(r.line).to_equal(q'[-- BC_SC_API.MSG_SCHEDULER_PKG.SHOW_DO(p_commands => 'create,start', p_processing_package => '%', p_read_initial_state => 0, p_show_initial_state => 0, p_show_comments => 0)]');      
+      when  2 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_program(program_name => 'PROCESSING_LAUNCHER', program_type => 'STORED_PROCEDURE', program_action => 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER', number_of_arguments => 3, enabled => false, comments => 'Main program for processing messages by spawning worker jobs.')]');
+      when  3 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_LAUNCHER', argument_name => 'P_PROCESSING_PACKAGE', argument_position => 1, argument_type => 'VARCHAR2', default_value => null)]');
+      when  4 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_LAUNCHER', argument_name => 'P_NR_WORKERS_EACH_GROUP', argument_position => 2, argument_type => 'NUMBER', default_value => %)]');
+      when  5 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_LAUNCHER', argument_name => 'P_NR_WORKERS_EXACT', argument_position => 3, argument_type => 'NUMBER', default_value => %)]');      
+      when  6 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'PROCESSING_LAUNCHER')]');      
+      when  7 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_schedule(schedule_name => 'SCHEDULE_LAUNCHER', start_date => null, repeat_interval => 'FREQ=HOURLY; BYMINUTE=0; BYSECOND=0', end_date => null, comments => 'Launcher job schedule')]');
+      when  8 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_job(job_name => 'MSG_AQ_PKG$PROCESSING_LAUNCHER', program_name => 'PROCESSING_LAUNCHER', schedule_name => 'SCHEDULE_LAUNCHER', enabled => false, auto_drop => false, comments => 'Repeating job for processing messages.')]');
+      when  9 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_program(program_name => 'DO', program_type => 'STORED_PROCEDURE', program_action => 'MSG_SCHEDULER_PKG.DO', number_of_arguments => 2, enabled => false, comments => 'Main program for executing commands.')]');
+      when 10 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'DO', argument_name => 'P_COMMAND', argument_position => 1, argument_type => 'VARCHAR2', default_value => null)]');
+      when 11 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'DO', argument_name => 'P_PROCESSING_PACKAGE', argument_position => 2, argument_type => 'VARCHAR2', default_value => null)]');
+      when 12 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'DO')]');
+      when 13 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_job(job_name => 'MSG_AQ_PKG$DO', program_name => 'DO', start_date => null, repeat_interval => null, end_date => null, enabled => false, auto_drop => false, comments => 'A job for executing commands.')]');
+      when 14 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_program(program_name => 'PROCESSING_SUPERVISOR', program_type => 'STORED_PROCEDURE', program_action => 'MSG_SCHEDULER_PKG.PROCESSING', number_of_arguments => 5, enabled => false, comments => 'Supervisor program for processing messages.')]');
+      when 15 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_SUPERVISOR', argument_name => 'P_PROCESSING_PACKAGE', argument_position => 1, argument_type => 'VARCHAR2', default_value => null)]');
+      when 16 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_SUPERVISOR', argument_name => 'P_GROUPS_TO_PROCESS_LIST', argument_position => 2, argument_type => 'VARCHAR2', default_value => null)]');
+      when 17 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_SUPERVISOR', argument_name => 'P_NR_WORKERS', argument_position => 3, argument_type => 'NUMBER', default_value => null)]');
+      when 18 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_SUPERVISOR', argument_name => 'P_WORKER_NR', argument_position => 4, argument_type => 'NUMBER', default_value => null)]');
+      when 19 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_SUPERVISOR', argument_name => 'P_END_DATE', argument_position => 5, argument_type => 'VARCHAR2', default_value => null)]');
+      when 20 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'PROCESSING_SUPERVISOR')]');
+      when 21 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_job(job_name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR', program_name => 'PROCESSING_SUPERVISOR', start_date => null, repeat_interval => null, end_date => null, enabled => false, auto_drop => false, comments => 'Supervisor job for processing messages.')]');
+      when 22 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'MSG_AQ_PKG$PROCESSING_LAUNCHER')]');
+      when 23 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR', argument_name => 'P_END_DATE', argument_value => '____-__-__T__:__:__.______Z+__:__')]');
+      when 24 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR', argument_name => 'P_GROUPS_TO_PROCESS_LIST', argument_value => %)]');
+      when 25 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR', argument_name => 'P_NR_WORKERS', argument_value => %)]');
+      when 26 then ut.expect(r.line).to_equal(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR', argument_name => 'P_PROCESSING_PACKAGE', argument_value => 'MSG_AQ_PKG')]');
+      when 27 then ut.expect(r.line).to_equal(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR', argument_name => 'P_WORKER_NR', argument_value => null)]');
+      when 28 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'MSG_AQ_PKG$PROCESSING_SUPERVISOR')]');
+
+      when 29 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_program(program_name => 'PROCESSING_WORKER', program_type => 'STORED_PROCEDURE', program_action => 'MSG_SCHEDULER_PKG.PROCESSING', number_of_arguments => 5, enabled => false, comments => 'Worker program for processing messages.')]');
+      when 30 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_WORKER', argument_name => 'P_PROCESSING_PACKAGE', argument_position => 1, argument_type => 'VARCHAR2', default_value => null)]');
+      when 31 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_WORKER', argument_name => 'P_GROUPS_TO_PROCESS_LIST', argument_position => 2, argument_type => 'VARCHAR2', default_value => null)]');
+      when 32 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_WORKER', argument_name => 'P_NR_WORKERS', argument_position => 3, argument_type => 'NUMBER', default_value => null)]');
+      when 33 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_WORKER', argument_name => 'P_WORKER_NR', argument_position => 4, argument_type => 'NUMBER', default_value => null)]');
+      when 34 then ut.expect(r.line).to_equal(q'[dbms_scheduler.define_program_argument(program_name => 'PROCESSING_WORKER', argument_name => 'P_END_DATE', argument_position => 5, argument_type => 'VARCHAR2', default_value => null)]');
+      when 35 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'PROCESSING_WORKER')]');
+      
+      when 36 then ut.expect(r.line).to_equal(q'[dbms_scheduler.create_job(job_name => 'MSG_AQ_PKG$PROCESSING_WORKER#1', program_name => 'PROCESSING_WORKER', start_date => null, repeat_interval => null, end_date => null, enabled => false, auto_drop => false, comments => 'Worker job for processing messages.')]');
+      when 37 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_WORKER#1', argument_name => 'P_END_DATE', argument_value => '____-__-__T__:__:__.______Z+__:__')]');
+      when 38 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_WORKER#1', argument_name => 'P_GROUPS_TO_PROCESS_LIST', argument_value => %)]');
+      when 39 then ut.expect(r.line).to_be_like(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_WORKER#1', argument_name => 'P_NR_WORKERS', argument_value => %)]');
+      when 40 then ut.expect(r.line).to_equal(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_WORKER#1', argument_name => 'P_PROCESSING_PACKAGE', argument_value => 'MSG_AQ_PKG')]');
+      when 41 then ut.expect(r.line).to_equal(q'[dbms_scheduler.set_job_argument_value(job_name => 'MSG_AQ_PKG$PROCESSING_WORKER#1', argument_name => 'P_WORKER_NR', argument_value => '1')]');
+      when 42 then ut.expect(r.line).to_equal(q'[dbms_scheduler.enable(name => 'MSG_AQ_PKG$PROCESSING_WORKER#1')]');
+      else null; -- when there more workers: ignore them
+    end case;
+  end loop;
+end ut_show_do;
+
+$end -- $if msg_aq_pkg.c_testing $then
 
 end msg_scheduler_pkg;
 /
