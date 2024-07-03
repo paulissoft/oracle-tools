@@ -513,16 +513,18 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         try {
             if (pds != null && ex != null) {
                 final long nrOccurrences = signalSQLException(ex);
-                
-                // show the message
-                logger.error("getConnection() raised occurrence # {} for this SQL exception: class={}, error code={}, SQL state={}. " +
-                             "Pool: {}, error message: {}",
-                             nrOccurrences,
-                             ex.getClass().getSimpleName(),
-                             ex.getErrorCode(),
-                             ex.getSQLState(), // may be null
-                             pds.getPoolName(),
-                             ex.getMessage());
+
+                if (nrOccurrences > 0L) {
+                    // show the message
+                    logger.error("getConnection() raised occurrence # {} for this SQL exception: class={}, error code={}, SQL state={}. " +
+                                 "Pool: {}, error message: {}",
+                                 nrOccurrences,
+                                 ex.getClass().getSimpleName(),
+                                 ex.getErrorCode(),
+                                 ex.getSQLState(), // may be null
+                                 pds.getPoolName(),
+                                 ex.getMessage());
+                }
             }
         } catch (Exception e) {
             logger.error("Exception in signalSQLException():", e);
@@ -555,12 +557,14 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             if (pds != null && ex != null) {
                 final long nrOccurrences = signalException(ex);
 
-                // show the message
-                logger.error("getConnection() raised occurrence # {} for this exception: class={}. Pool: {}, error message: {}",
-                             nrOccurrences,
-                             ex.getClass().getSimpleName(),
-                             pds.getPoolName(),
-                             ex.getMessage());
+                if (nrOccurrences > 0L) {
+                    // show the message
+                    logger.error("getConnection() raised occurrence # {} for this exception: class={}. Pool: {}, error message: {}",
+                                 nrOccurrences,
+                                 ex.getClass().getSimpleName(),
+                                 pds.getPoolName(),
+                                 ex.getMessage());
+                }
             }
         } catch (Exception e) {
             logger.error("Exception in signalException():", e);
