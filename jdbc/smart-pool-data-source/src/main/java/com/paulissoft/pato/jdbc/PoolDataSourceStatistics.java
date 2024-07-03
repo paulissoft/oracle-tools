@@ -515,11 +515,13 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 final long nrOccurrences = signalSQLException(ex);
                 
                 // show the message
-                logger.error("While connecting to {} this was occurrence # {} for this SQL exception: (error code={}, SQL state={}, message={})",
-                             pds.getUsername(),
+                logger.error("getConnection() raised occurrence # {} for this SQL exception: class={}, error code={}, SQL state={}." +
+                             "Pool: {}, error message: {}",
                              nrOccurrences,
+                             ex.getClass().getSimpleName(),
                              ex.getErrorCode(),
                              ex.getSQLState(), // may be null
+                             pds.getPoolName(),
                              ex.getMessage());
             }
         } catch (Exception e) {
@@ -554,9 +556,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 final long nrOccurrences = signalException(ex);
 
                 // show the message
-                logger.error("While connecting to {} this was occurrence # {} for this exception: {}",
-                             pds.getUsername(),
+                logger.error("getConnection() raised occurrence # {} for this exception: class={}. Pool: {}, error message: {}",
                              nrOccurrences,
+                             ex.getClass().getSimpleName(),
+                             pds.getPoolName(),
                              ex.getMessage());
             }
         } catch (Exception e) {
@@ -773,12 +776,12 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                                 final String SQLState = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_STATE);
 
                                 if (SQLErrorCode == null && SQLState == null) {
-                                    logger.warn("{}{} occurrences for (class={})",
+                                    logger.warn("{}getConnection() raised {} occurrences for this exception: class={}",
                                                 prefix,
                                                 e.getValue(),
                                                 className);
                                 } else {
-                                    logger.warn("{}{} occurrences for (class={}, error code={}, SQL state={})",
+                                    logger.warn("{}getConnection() raised {} occurrences for this SQL exception: class={}, error code={}, SQL state={}",
                                                 prefix,
                                                 e.getValue(),
                                                 className,
