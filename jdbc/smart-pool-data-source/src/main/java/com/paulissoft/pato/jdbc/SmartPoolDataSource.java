@@ -338,7 +338,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     public final Connection getConnection() throws SQLException {
         log.trace(">getConnection()");
 
-        final boolean useOverflow = false;
+        boolean useOverflow = false;
 
         try {
             switch (state) {
@@ -347,7 +347,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
                     "did you override setUp() correctly by invoking super.setUp()?";
                 // For the first connection use the overflow so both pools are initialized after the first two connections.
-                // GJP 2024-06-21 Not now
+                // GJP 2024-06-21 Not now since Oracle raises UCP-0
                 /*
                 if (hasOverflow()) {
                     useOverflow = true; 
@@ -363,11 +363,17 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
             Connection conn;
 
+            // Try to avoid connection timeout errors.
+            // When the pool data source is full with idle connections, use immediately the dynamic pool (and try the fixed one later on).
+            if (hasOverflow() && poolDataSource.getIdleConnections() == 0 && poolDataSource.getTotalConnections() == poolDataSource.getMaxPoolSize()) {
+                useOverflow = true;
+            }
+            
             try {
                 conn = getConnection(useOverflow);
             } catch (Exception ex) {
                 // switch pools (just once) when the connection fails due to no idle connections 
-                if ((useOverflow || hasOverflow()) && getConnectionFailsDueToNoIdleConnections(ex)) { 
+                if ((useOverflow || hasOverflow()) && getConnectionFailsDueToNoIdleConnections(ex)) {
                     conn = getConnection(!useOverflow);
                 } else {
                     throw ex;
