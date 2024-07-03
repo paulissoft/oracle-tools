@@ -515,7 +515,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 final long nrOccurrences = signalSQLException(ex);
                 
                 // show the message
-                logger.error("getConnection() raised occurrence # {} for this SQL exception: class={}, error code={}, SQL state={}." +
+                logger.error("getConnection() raised occurrence # {} for this SQL exception: class={}, error code={}, SQL state={}. " +
                              "Pool: {}, error message: {}",
                              nrOccurrences,
                              ex.getClass().getSimpleName(),
