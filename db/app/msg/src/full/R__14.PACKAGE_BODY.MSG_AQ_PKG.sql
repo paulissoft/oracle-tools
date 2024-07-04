@@ -392,6 +392,10 @@ $end
     determine_previous_processing_method_tab;
   end if;
 
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'g_previous_processing_method_tab.count: %s', g_previous_processing_method_tab.count);
+$end    
+
   if g_previous_processing_method_tab.exists(p_queue_name) -- already calculated but check if it has changed
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
