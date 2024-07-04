@@ -106,7 +106,6 @@ c_dry_run constant boolean := false;
 
 g_dry_run$ boolean := c_dry_run; -- only set it in the function do()
 g_show_comments$ boolean := null;
-g_processing_package$ all_objects.object_name%type := null;
 
 g_commands sys.odcivarchar2list := sys.odcivarchar2list();
 
@@ -1131,70 +1130,10 @@ end enable_program;
 
 procedure enable_job
 ( p_job_name in varchar2
-, p_run_job in boolean default false -- run job in this session in order to determine jobs created by this job
 )
 is
-  l_enabled_old constant boolean := case when g_jobs.exists(p_job_name) then g_jobs(p_job_name).enabled end;
 begin
   dbms_scheduler$enable(name => p_job_name, p_procobj_type => 'JOB');
-  -- From Oracle docs:
-  -- If a job was disabled and you enable it, the Scheduler begins to automatically run the job according to its schedule. 
-  if g_dry_run$ and p_run_job and not l_enabled_old
-  then
-    add_comment
-    ( utl_lms.format_message
-      ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- start]'
-      , dyn_sql_parm(p_job_name)
-      )
-    );
-    -- execute the command to get more commands now when USE CURRENT SESSION, DRY RUN and CHECK PROCOBJ EXISTS are true
-
-    -- only run procedures that create jobs
-    case 
-      when p_job_name = 'MSG_AQ_PKG$PROCESSING_LAUNCHER'
-       and g_programs(g_jobs(p_job_name).program_name).program_type = 'STORED_PROCEDURE'
-       and g_programs(g_jobs(p_job_name).program_name).program_action = 'MSG_SCHEDULER_PKG.PROCESSING_LAUNCHER'
-      then
-        declare
-          l_processing_package constant all_objects.object_name%type :=
-            case
-              when g_jobs(p_job_name).job_arguments.exists('P_PROCESSING_PACKAGE')
-              then g_jobs(p_job_name).job_arguments('P_PROCESSING_PACKAGE').argument_value
-              else nvl(g_programs(g_jobs(p_job_name).program_name).program_arguments('P_PROCESSING_PACKAGE').default_value, g_processing_package$)
-            end;
-          l_nr_workers_each_group constant pls_integer :=
-            case
-              when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EACH_GROUP')
-              then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EACH_GROUP').argument_value
-              else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EACH_GROUP').default_value
-            end;
-          l_nr_workers_exact constant pls_integer :=
-            case
-              when g_jobs(p_job_name).job_arguments.exists('P_NR_WORKERS_EXACT')
-              then g_jobs(p_job_name).job_arguments('P_NR_WORKERS_EXACT').argument_value
-              else g_programs(g_jobs(p_job_name).program_name).program_arguments('P_NR_WORKERS_EXACT').default_value
-            end;
-        begin
-          msg_scheduler_pkg.processing_launcher -- program_action
-          ( p_processing_package => l_processing_package
-          , p_nr_workers_each_group => l_nr_workers_each_group
-          , p_nr_workers_exact => l_nr_workers_exact
-          );
-        end;
-        
-      when p_job_name = 'MSG_AQ_PKG$PROCESSING_SUPERVISOR'
-        or p_job_name like 'MSG_AQ_PKG$PROCESSING_WORKER#%'
-      then
-        null;
-    end case;
-    
-    add_comment
-    ( utl_lms.format_message
-      ( q'[dbms_scheduler.run_job(job_name => %s, use_current_session => true) -- end]'
-      , dyn_sql_parm(p_job_name)
-      )
-    );
-  end if;
 end enable_job;
 
 /*2*/
@@ -2106,7 +2045,7 @@ is
   begin
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.enter(l_module_name || '.' || 'DO_SUB_COMMAND');
-    dbug.print(dbug."input", 'p_sub_command: %s; p_processing_packag: %s; p_program_name: %s', p_sub_command, p_processing_package, p_program_name);
+    dbug.print(dbug."input", 'p_sub_command: %s; p_processing_package: %s; p_program_name: %s', p_sub_command, p_processing_package, p_program_name);
 $end
 
     if p_program_name is not null
@@ -2427,12 +2366,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
       raise;
 $end
   end do_sub_command;
-
-  procedure cleanup
-  is
-  begin
-    g_processing_package$ := null;
-  end;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter(l_module_name);
@@ -2452,8 +2385,6 @@ $end
   <<processing_package_loop>>
   for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
   loop
-    g_processing_package$ := l_processing_package_tab(i_package_idx);
-
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
 $end
@@ -2469,7 +2400,10 @@ $end
             add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
           end if;
           begin
-            do_sub_command(p_sub_command => l_sub_command_tab(i_sub_command_idx), p_processing_package => g_processing_package$);
+            do_sub_command
+            ( p_sub_command => l_sub_command_tab(i_sub_command_idx)
+            , p_processing_package => l_processing_package_tab(i_package_idx)
+            );
           exception
             when no_data_found
             then exit sub_command_loop;
@@ -2481,7 +2415,10 @@ $end
           then
             add_comment(utl_lms.format_message('sub-command: %s', l_sub_command_tab(i_sub_command_idx)));
           end if;
-          do_sub_command(p_sub_command => l_sub_command_tab(i_sub_command_idx), p_processing_package => g_processing_package$);
+          do_sub_command
+          ( p_sub_command => l_sub_command_tab(i_sub_command_idx)
+          , p_processing_package => l_processing_package_tab(i_package_idx)
+          );
           
         else
           <<program_loop>>
@@ -2493,7 +2430,7 @@ $end
             end if;
             do_sub_command
             ( p_sub_command => l_sub_command_tab(i_sub_command_idx)
-            , p_processing_package => g_processing_package$
+            , p_processing_package => l_processing_package_tab(i_package_idx)
             , p_program_name => l_program_tab(i_program_idx)
             );
           end loop program_loop;
@@ -2501,7 +2438,6 @@ $end
     end loop sub_command_loop;
   end loop processing_package_loop;
 
-  cleanup;
   commit;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -2510,7 +2446,6 @@ $end
 exception
   when others
   then
-    cleanup;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
 $end    
@@ -2752,7 +2687,7 @@ $end
         
         if upper(j.enabled) = 'TRUE'
         then
-          enable_job(j.job_name, false);
+          enable_job(j.job_name);
         end if;
       end loop job_loop;
     end loop program_loop;
