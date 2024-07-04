@@ -15,7 +15,7 @@ Types of changes:
 
 ## [Unreleased]
 
-## [3.3.2] - 2024-07-03
+## [3.3.2] - 2024-07-04
 
 ### Fixed
 
@@ -25,7 +25,7 @@ Types of changes:
 
 ### Fixed
 
-- [The JDBC class PoolDataSourceStatistics must be made more error proof.]()
+- [The JDBC class PoolDataSourceStatistics must be made more error proof.](https://github.com/paulissoft/oracle-tools/issues/167)
 
 ## [3.3.0] - 2024-07-01
 
