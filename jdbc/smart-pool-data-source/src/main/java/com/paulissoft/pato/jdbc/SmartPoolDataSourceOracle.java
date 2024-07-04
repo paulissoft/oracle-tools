@@ -244,8 +244,11 @@ public class SmartPoolDataSourceOracle
         return (ex instanceof SQLException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
     }
 
-    protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        final Connection conn = super.getConnection(useOverflow);
+    @Override
+    protected Connection getConnection(final boolean useOverflow,
+                                       final SimplePoolDataSourceOracle poolDataSource,
+                                       final SimplePoolDataSourceOracle poolDataSourceOverflow) throws SQLException {
+        final Connection conn = super.getConnection(useOverflow, poolDataSource, poolDataSourceOverflow);
             
         if (useOverflow) {
             // The setInvalid method of the ValidConnection interface

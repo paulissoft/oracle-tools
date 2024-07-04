@@ -361,20 +361,27 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                                                               state.toString()));
             }
 
+            // minimize accessing volatile variables by shadowing them
+            final T poolDataSourceOverflow = this.poolDataSourceOverflow;
+            
             Connection conn;
 
             // Try to avoid connection timeout errors.
-            // When the pool data source is full with idle connections, use immediately the dynamic pool (and try the fixed one later on).
-            if (hasOverflow() && poolDataSource.getIdleConnections() == 0 && poolDataSource.getTotalConnections() == poolDataSource.getMaxPoolSize()) {
+            // When the fixed pool data source is full with idle connections,
+            // use immediately the dynamic pool (and try the fixed one later on).
+            if (poolDataSourceOverflow != null &&
+                poolDataSource.getIdleConnections() == 0 &&
+                poolDataSource.getTotalConnections() == poolDataSource.getMaxPoolSize()) {
                 useOverflow = true;
             }
             
             try {
-                conn = getConnection(useOverflow);
+                conn = getConnection(useOverflow, poolDataSource, poolDataSourceOverflow);
             } catch (Exception ex) {
                 // switch pools (just once) when the connection fails due to no idle connections 
-                if ((useOverflow || hasOverflow()) && getConnectionFailsDueToNoIdleConnections(ex)) {
-                    conn = getConnection(!useOverflow);
+                if ((useOverflow || poolDataSourceOverflow != null) &&
+                    getConnectionFailsDueToNoIdleConnections(ex)) {
+                    conn = getConnection(!useOverflow, poolDataSource, poolDataSourceOverflow);
                 } else {
                     throw ex;
                 }
@@ -386,16 +393,18 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected Connection getConnection(final boolean useOverflow) throws SQLException {
-        log.trace(">getConnection({})", useOverflow);
+    protected Connection getConnection(final boolean useOverflow,
+                                       final T poolDataSource,
+                                       final T poolDataSourceOverflow) throws SQLException {
+        log.trace(">getConnection({}, ...)", useOverflow);
 
-        final T pds = useOverflow ? getPoolDataSourceOverflow() : getPoolDataSource();
+        final T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
         final PoolDataSourceStatistics pdsStatistics = useOverflow ? getPoolDataSourceStatisticsOverflow() : getPoolDataSourceStatistics();
 
         try {
             return getConnection(pds, pdsStatistics, hasShownConfig[useOverflow ? 1 : 0]);
         } finally {
-            log.trace("<getConnection({})", useOverflow);
+            log.trace("<getConnection({}, ...)", useOverflow);
         }
     }
 
