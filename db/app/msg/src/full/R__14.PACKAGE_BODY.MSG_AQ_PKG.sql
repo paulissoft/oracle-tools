@@ -273,12 +273,13 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  -- Determine the previous processing method (if not yet known):
+  -- Determine the previous processing method (if not yet known) that:
   -- a) will be the location name in the user_subscr_registrations
-  --    for the fully qualified queue table (with an optional subscriber)
-  -- b) the default processing method (i.e. msg_constants_pkg.get_default_processing_method) when
-  --    the queue is in the job argument value for argument P_GROUPS_TO_PROCESS_LIST and job MSG_AQ_PKG$PROCESSING_SUPERVISOR and
-  --    the default processing method equals 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG' 
+  --    for the fully qualified queue table (with an optional subscriber) and
+  --    when the location name starts with 'plsql://'
+  -- b) will be the default processing method (i.e. msg_constants_pkg.get_default_processing_method)
+  --    when the queue is in the job argument value (for argument P_GROUPS_TO_PROCESS_LIST and job MSG_AQ_PKG$PROCESSING_SUPERVISOR) and
+  --    when the default processing method equals 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG' 
   if not g_previous_processing_method_tab.exists(p_queue_name)
   then
     declare
