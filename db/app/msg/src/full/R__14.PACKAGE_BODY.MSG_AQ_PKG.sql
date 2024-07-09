@@ -237,121 +237,7 @@ is
 
   l_subscriber user_subscr_registrations.subscription_name%type := null;
   l_recipients all_queue_tables.recipients%type := null;
-
-  procedure determine_previous_processing_method_tab
-  is
-    l_default_processing_method constant user_subscr_registrations.location_name%type :=
-      msg_constants_pkg.get_default_processing_method;
-    l_a_dummy varchar2(32767 byte);
-    l_queue_name user_queues.name%type;
-    l_c_dummy varchar2(32767 byte);
-    l_dblink_dummy varchar2(32767 byte);
-    l_nextpos_dummy binary_integer;
-    l_queue_name_tab dbms_sql.varchar2a;
-    
-    procedure add_default_processing_method
-    ( p_default_processing_method in user_subscr_registrations.location_name%type
-    , p_queue_name in user_queues.name%type
-    )
-    is
-    begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.enter(l_module_name || '.DETERMINE_PREVIOUS_PROCESSING_METHOD_TAB.ADD_DEFAULT_PROCESSING_METHOD');
-      dbug.print
-      ( dbug."input"
-      , 'p_default_processing_method: %s; p_queue_name: %s'
-      , p_default_processing_method
-      , p_queue_name
-      );
-$end
-
-      -- do not overwrite
-      if not g_previous_processing_method_tab.exists(p_queue_name)
-      then
-        g_previous_processing_method_tab(p_queue_name) := p_default_processing_method;
-      end if;
       
-$if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print
-      ( dbug."info"
-      , 'g_previous_processing_method_tab(%s): %s'
-      , p_queue_name
-      , g_previous_processing_method_tab(p_queue_name)
-      );
-      dbug.leave;
-$end    
-    end add_default_processing_method;
-  begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.enter(l_module_name || '.DETERMINE_PREVIOUS_PROCESSING_METHOD_TAB');
-$end
-
-    -- This query contains all queues there are
-    for r in
-    (  select  subscription_name -- e.g. "BC_API"."WEB_SERVICE_REQUEST" or "BC_API"."WEB_SERVICE_REQUEST":<subscriber>
-       ,       location_name
-       ,       'SUBSCRIPTION' as variant
-       from    user_subscr_registrations
-       where   location_name like "plsql://" || '%'
-       union all
-       select  value -- e.g. WEB_SERVICE_REQUEST or WEB_SERVICE_REQUEST,<another queue>
-       ,       l_default_processing_method
-       ,       'LIST' as variant
-       from    user_scheduler_job_args
-       where   job_name like $$PLSQL_UNIT || '$PROCESSING_SUPERVISOR' -- e.g. MSG_AQ_PKG$PROCESSING_SUPERVISOR
-       and     argument_name = 'P_GROUPS_TO_PROCESS_LIST'
-       and     value is not null
-       and     l_default_processing_method = "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG' -- see definition in MSG_CONSTANTS_PKG
-       union all
-       select  default_value -- e.g. WEB_SERVICE_REQUEST or WEB_SERVICE_REQUEST,<another queue>
-       ,       l_default_processing_method
-       ,       'LIST' as variant
-       from    user_scheduler_program_args
-       where   program_name like '%SUPERVISOR' -- e.g. PROCESSING_SUPERVISOR
-       and     argument_name = 'P_GROUPS_TO_PROCESS_LIST'
-       and     default_value is not null
-       and     l_default_processing_method = "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG'
-    )
-    loop
-      case r.variant
-        when 'SUBSCRIPTION'
-        then
-          dbms_utility.name_tokenize
-          ( name => r.subscription_name
-          , a => l_a_dummy
-          , b => l_queue_name
-          , c => l_c_dummy
-          , dblink => l_dblink_dummy
-          , nextpos => l_nextpos_dummy
-          );
-          add_default_processing_method
-          ( p_default_processing_method => r.location_name
-          , p_queue_name => l_queue_name
-          );
-        when 'LIST'
-        then
-          oracle_tools.pkg_str_util.split
-          ( p_str => r.subscription_name
-          , p_delimiter => ','
-          , p_str_tab => l_queue_name_tab
-          );
-          if l_queue_name_tab.count > 0
-          then
-            for i_idx in l_queue_name_tab.first .. l_queue_name_tab.last
-            loop
-              add_default_processing_method
-              ( p_default_processing_method => r.location_name
-              , p_queue_name => l_queue_name_tab(i_idx)
-              );
-            end loop;
-          end if;
-      end case;
-    end loop;
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.leave;
-$end    
-  end determine_previous_processing_method_tab;
-  
   function get_subscriber
   return l_subscriber%type
   is
@@ -387,9 +273,42 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  if g_previous_processing_method_tab.count = 0
+  -- Determine the previous processing method (if not yet known):
+  -- a) will be the location name in the user_subscr_registrations
+  --    for the fully qualified queue table (with an optional subscriber)
+  -- b) the default processing method (i.e. msg_constants_pkg.get_default_processing_method) when
+  --    the queue is in the job argument value for argument P_GROUPS_TO_PROCESS_LIST and job MSG_AQ_PKG$PROCESSING_SUPERVISOR and
+  --    the default processing method equals 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG' 
+  if not g_previous_processing_method_tab.exists(p_queue_name)
   then
-    determine_previous_processing_method_tab;
+    declare
+      l_fq_queue_name constant user_subscr_registrations.subscription_name%type :=
+        msg_pkg.get_object_name(p_object_name => p_queue_name, p_what => 'queue', p_schema_name => c_schema);
+      l_default_processing_method constant user_subscr_registrations.location_name%type :=
+        msg_constants_pkg.get_default_processing_method;
+      l_location_name user_subscr_registrations.location_name%type;
+    begin
+      select  location_name
+      into    l_location_name
+      from    user_subscr_registrations sr
+      where   sr.location_name like "plsql://" || '%'
+      and     ( sr.subscription_name = l_fq_queue_name or
+                sr.subscription_name like l_fq_queue_name || ':%' -- with a subscriber
+              )
+      union all
+      select  l_default_processing_method as location_name
+      from    user_scheduler_job_args sja
+      where   sja.job_name like $$PLSQL_UNIT || '$PROCESSING_SUPERVISOR' -- e.g. MSG_AQ_PKG$PROCESSING_SUPERVISOR
+      and     sja.argument_name = 'P_GROUPS_TO_PROCESS_LIST'
+      and     sja.value is not null -- value is a comma separated list of queue names
+      and     instr(','||p_queue_name||',', ','||sja.value||',') > 0
+      and     l_default_processing_method = "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG' -- see definition in MSG_CONSTANTS_PKG
+      ;
+      g_previous_processing_method_tab(p_queue_name) := l_location_name;
+    exception
+      when no_data_found or too_many_rows
+      then null;
+    end; 
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
