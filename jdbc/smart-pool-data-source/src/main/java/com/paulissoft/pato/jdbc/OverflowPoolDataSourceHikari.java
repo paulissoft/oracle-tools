@@ -63,7 +63,7 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 	}
     }
 
-    protected void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
+    private void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
             final ArrayList<String> items = new ArrayList(Arrays.asList(delegate.getPoolName().split("-")));
             final String schema = delegate.get().getSchema();
 
@@ -85,7 +85,7 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
             poolDataSourceConfiguration.setPoolName(delegate.getPoolNamePrefix() + "-" + schema); // own prefix
     }
 
-    protected void updatePoolSizes(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
+    private void updatePoolSizes(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
 	int thisSize, pdsSize;
 
 	pdsSize = poolDataSourceConfiguration.getMinimumIdle();
@@ -111,7 +111,7 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 	}
     }
 
-    protected void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
+    private void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
 	updatePoolDescription(poolDataSourceConfiguration, isFirstPoolDataSource);
 	updatePoolSizes(poolDataSourceConfiguration, isFirstPoolDataSource);
     }
