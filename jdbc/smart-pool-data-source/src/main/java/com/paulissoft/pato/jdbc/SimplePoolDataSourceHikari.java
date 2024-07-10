@@ -44,7 +44,8 @@ public class SimplePoolDataSourceHikari
     public Connection getConnection() throws SQLException {
         Connection conn = null;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
-
+	final boolean isInitializing = !hasShownConfig.getAndSet(true);
+	
         if (isStatisticsEnabled) {
             final Instant tm = Instant.now();
             
@@ -66,7 +67,7 @@ public class SimplePoolDataSourceHikari
             conn = super.getConnection();
         }
 
-        if (!hasShownConfig.getAndSet(true)) {
+        if (isInitializing) {
             // Only show the first time a pool has gotten a connection.
             // Not earlier because these (fixed) values may change before and after the first connection.
             show(get());
@@ -336,5 +337,9 @@ public class SimplePoolDataSourceHikari
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
+    }
+
+    protected final boolean isInitializing() {
+	return !hasShownConfig.get();
     }
 }
