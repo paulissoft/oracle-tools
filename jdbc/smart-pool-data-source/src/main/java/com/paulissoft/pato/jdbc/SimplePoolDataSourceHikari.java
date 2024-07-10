@@ -19,8 +19,10 @@ public class SimplePoolDataSourceHikari
 
     private static final long MIN_VALIDATION_TIMEOUT = 250L;
 
+    private static final String POOL_NAME_PREFIX = "HikariPool";
+
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-        new PoolDataSourceStatistics(() -> "HikariPool: (all)",
+        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     // all object related
@@ -78,6 +80,10 @@ public class SimplePoolDataSourceHikari
         }
 
         return conn;
+    }
+
+    public String getPoolNamePrefix() {
+        return POOL_NAME_PREFIX;
     }
 
     public void setId(final String srcId) {
