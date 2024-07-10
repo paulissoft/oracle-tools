@@ -3,8 +3,6 @@ package com.paulissoft.pato.jdbc;
 // import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
-import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +17,6 @@ public class SmartPoolDataSourceHikari
 
     static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
     
-    @Getter(AccessLevel.PROTECTED)
-    protected final PoolDataSourceStatistics poolDataSourceStatistics;
-
-    @Getter(AccessLevel.PROTECTED)
-    protected final PoolDataSourceStatistics poolDataSourceStatisticsOverflow;
-
     /*
      * Constructors
      */
@@ -36,23 +28,6 @@ public class SmartPoolDataSourceHikari
     public SmartPoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
         // configuration is supposed to be set completely
         super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
-
-        final PoolDataSourceStatistics parentPoolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> getPoolName() + ": (all)",
-                                         PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal,
-                                         () -> !isOpen(),
-                                         this::getWithPoolName);
-        
-        poolDataSourceStatistics = determinePoolDataSourceStatistics(getPoolDataSource(), parentPoolDataSourceStatistics);
-
-        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
-
-        if (poolDataSourceOverflow != null) {
-            poolDataSourceStatisticsOverflow = determinePoolDataSourceStatistics(poolDataSourceOverflow, parentPoolDataSourceStatistics);
-        } else {
-            // when parent has state OPEN this can be true
-            poolDataSourceStatisticsOverflow = null;
-        }
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,

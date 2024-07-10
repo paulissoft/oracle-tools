@@ -3,8 +3,6 @@ package com.paulissoft.pato.jdbc;
 // import java.time.Duration;
 import java.sql.Connection;
 import java.sql.SQLException;
-import lombok.AccessLevel;
-import lombok.Getter;
 import oracle.ucp.jdbc.ValidConnection;
 // import lombok.NonNull;
 import lombok.experimental.Delegate;
@@ -20,12 +18,6 @@ public class SmartPoolDataSourceOracle
 
     static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
     
-    @Getter(AccessLevel.PROTECTED)
-    protected final PoolDataSourceStatistics poolDataSourceStatistics;
-
-    @Getter(AccessLevel.PROTECTED)
-    protected final PoolDataSourceStatistics poolDataSourceStatisticsOverflow;
-    
     /*
      * Constructor
      */
@@ -37,24 +29,7 @@ public class SmartPoolDataSourceOracle
     public SmartPoolDataSourceOracle(final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
         // configuration is supposed to be set completely
         super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
-
-        final PoolDataSourceStatistics parentPoolDataSourceStatistics =
-            new PoolDataSourceStatistics(() -> getPoolName() + ": (all)",
-                                         PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal,
-                                         () -> !isOpen(),
-                                         this::getWithPoolName);
-        
-        poolDataSourceStatistics = determinePoolDataSourceStatistics(getPoolDataSource(), parentPoolDataSourceStatistics); 
-
-        final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
-
-        if (poolDataSourceOverflow != null) {
-            poolDataSourceStatisticsOverflow = determinePoolDataSourceStatistics(poolDataSourceOverflow, parentPoolDataSourceStatistics);
-        } else {
-            // when parent has state OPEN this can be true
-            poolDataSourceStatisticsOverflow = null;
-        }
-   }
+    }
 
     public SmartPoolDataSourceOracle(String url,
                                      String username,

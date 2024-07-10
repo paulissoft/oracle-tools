@@ -2,9 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +25,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     @NonNull
     private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
-
-    // for both the pool data source and its overflow
-    private final AtomicBoolean[] hasShownConfig = new AtomicBoolean[] { new AtomicBoolean(false), new AtomicBoolean(false) };
 
     /*
      * Constructor(s)
@@ -56,24 +50,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
     
-    protected static PoolDataSourceStatistics determinePoolDataSourceStatistics(final SimplePoolDataSource pds,
-                                                                                final PoolDataSourceStatistics parentPoolDataSourceStatistics) {
-        log.debug(">determinePoolDataSourceStatistics(parentPoolDataSourceStatistics == null: {})", parentPoolDataSourceStatistics == null);
-
-        try {
-            if (parentPoolDataSourceStatistics == null) {
-                return null;
-            } else {
-                return new PoolDataSourceStatistics(null,
-                                                    parentPoolDataSourceStatistics, 
-                                                    pds::isClosed,
-                                                    pds::getWithPoolName);
-            }
-        } finally {
-            log.debug("<determinePoolDataSourceStatistics");
-        }
-    }
-         
     /*
      * State
      */
@@ -203,21 +179,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             case INITIALIZING:
             case ERROR:
                 try {
-                    if (getPoolDataSourceStatistics() != null) {
-                        log.info("About to close pool statistics.");
-                        getPoolDataSourceStatistics().close();
-                    } else {
-                        log.info("There are no pool statistics.");
-                    }
                     poolDataSource.close();
 
                     if (poolDataSourceOverflow != null) {
-                        if (getPoolDataSourceStatisticsOverflow() != null) {
-                            log.info("About to close dynamic pool statistics.");
-                            getPoolDataSourceStatisticsOverflow().close();
-                        } else {
-                            log.info("There are no dynamic pool statistics.");
-                        }
                         poolDataSourceOverflow.close();
                     }
                 } catch(Exception ex) {
@@ -232,19 +196,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             }
         } finally {
             log.debug("<tearDown(id={}, state={})", getId(), state);
-        }
-    }
-
-    protected abstract PoolDataSourceStatistics getPoolDataSourceStatistics();
-
-    protected abstract PoolDataSourceStatistics getPoolDataSourceStatisticsOverflow();
-
-    public void showStatistics() {
-        if (getPoolDataSourceStatistics() != null) {
-            getPoolDataSourceStatistics().showStatistics();
-        }
-        if (poolDataSourceOverflow != null && getPoolDataSourceStatisticsOverflow() != null) {
-            getPoolDataSourceStatisticsOverflow().showStatistics();
         }
     }
 
@@ -399,53 +350,12 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         log.trace(">getConnection({}, ...)", useOverflow);
 
         final T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
-        final PoolDataSourceStatistics pdsStatistics = useOverflow ? getPoolDataSourceStatisticsOverflow() : getPoolDataSourceStatistics();
 
         try {
-            return getConnection(pds, pdsStatistics, hasShownConfig[useOverflow ? 1 : 0]);
+            return pds.getConnection();
         } finally {
             log.trace("<getConnection({}, ...)", useOverflow);
         }
-    }
-
-    private static Connection getConnection(final SimplePoolDataSource pds,
-                                            final PoolDataSourceStatistics poolDataSourceStatistics,
-                                            final AtomicBoolean hasShownConfig) throws SQLException {
-        Connection conn = null;
-        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
-
-        if (isStatisticsEnabled) {
-            final Instant tm = Instant.now();
-            
-            try {
-                conn = pds.getConnection();
-            } catch (SQLException se) {
-                poolDataSourceStatistics.signalSQLException(pds, se);
-                throw se;
-            } catch (Exception ex) {
-                poolDataSourceStatistics.signalException(pds, ex);
-                throw ex;
-            }
-
-            poolDataSourceStatistics.updateStatistics(pds,
-                                                      conn,
-                                                      Duration.between(tm, Instant.now()).toMillis(),
-                                                      true);
-        } else {
-            conn = pds.getConnection();
-        }
-
-        if (!hasShownConfig.getAndSet(true)) {
-            // Only show the first time a pool has gotten a connection.
-            // Not earlier because these (fixed) values may change before and after the first connection.
-            pds.show(pds.get());
-
-            if (isStatisticsEnabled) {
-                poolDataSourceStatistics.showStatistics();
-            }
-        }
-
-        return conn;
     }
 
     protected abstract boolean getConnectionFailsDueToNoIdleConnections(final Exception ex);

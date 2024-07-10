@@ -1,6 +1,11 @@
 package com.paulissoft.pato.jdbc;
 
 import com.zaxxer.hikari.HikariDataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -13,10 +18,66 @@ public class SimplePoolDataSourceHikari
     private static final int MIN_MAXIMUM_POOL_SIZE = 1;
 
     private static final long MIN_VALIDATION_TIMEOUT = 250L;
-    
+
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+        new PoolDataSourceStatistics(() -> "SimplePoolDataSourceHikari: (all)",
+                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+
     // all object related
 
     private final StringBuffer id = new StringBuffer();
+
+    protected final PoolDataSourceStatistics poolDataSourceStatistics;
+
+    private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
+
+    // constructor
+    public SimplePoolDataSourceHikari() {
+        poolDataSourceStatistics = 
+            new PoolDataSourceStatistics(null, // description will be the pool name
+                                         poolDataSourceStatisticsTotal, 
+                                         this::isClosed,
+                                         this::getWithPoolName);
+    }
+    
+    @Override
+    public Connection getConnection() throws SQLException {
+        Connection conn = null;
+        final boolean isStatisticsEnabled = SimplePoolDataSource.isStatisticsEnabled();
+
+        if (isStatisticsEnabled) {
+            final Instant tm = Instant.now();
+            
+            try {
+                conn = super.getConnection();
+            } catch (SQLException se) {
+                poolDataSourceStatistics.signalSQLException(this, se);
+                throw se;
+            } catch (Exception ex) {
+                poolDataSourceStatistics.signalException(this, ex);
+                throw ex;
+            }
+
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm, Instant.now()).toMillis(),
+                                                      true);
+        } else {
+            conn = super.getConnection();
+        }
+
+        if (!hasShownConfig.getAndSet(true)) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            show(get());
+
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.showStatistics();
+            }
+        }
+
+        return conn;
+    }
 
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode())/*(long) System.identityHashCode(this)/*VM.current().addressOf(this)*/, srcId);
@@ -263,5 +324,10 @@ public class SimplePoolDataSourceHikari
         } catch (NullPointerException ex) {
             return -1;
         }
+    }
+
+    public void close() throws Exception {
+        super.close();
+        poolDataSourceStatistics.close();
     }
 }
