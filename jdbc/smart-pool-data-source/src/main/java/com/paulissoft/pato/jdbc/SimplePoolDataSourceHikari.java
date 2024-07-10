@@ -20,14 +20,14 @@ public class SimplePoolDataSourceHikari
     private static final long MIN_VALIDATION_TIMEOUT = 250L;
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-        new PoolDataSourceStatistics(() -> "SimplePoolDataSourceHikari: (all)",
+        new PoolDataSourceStatistics(() -> "HikariPool: (all)",
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     // all object related
 
     private final StringBuffer id = new StringBuffer();
 
-    protected final PoolDataSourceStatistics poolDataSourceStatistics;
+    private final PoolDataSourceStatistics poolDataSourceStatistics;
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
@@ -43,7 +43,7 @@ public class SimplePoolDataSourceHikari
     @Override
     public Connection getConnection() throws SQLException {
         Connection conn = null;
-        final boolean isStatisticsEnabled = SimplePoolDataSource.isStatisticsEnabled();
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
 
         if (isStatisticsEnabled) {
             final Instant tm = Instant.now();
@@ -326,8 +326,15 @@ public class SimplePoolDataSourceHikari
         }
     }
 
-    public void close() throws Exception {
-        super.close();
-        poolDataSourceStatistics.close();
+    @Override
+    public void close() {
+        try {
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.close();
+            }
+            super.close();
+        } catch (Exception ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        }
     }
 }

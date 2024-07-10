@@ -1,7 +1,9 @@
 package com.paulissoft.pato.jdbc;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import oracle.ucp.UniversalConnectionPool;
@@ -19,7 +21,11 @@ public class SimplePoolDataSourceOracle
     
     private static final long serialVersionUID = 3886083682048526889L;
     
-    protected static final UniversalConnectionPoolManager mgr;
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+        new PoolDataSourceStatistics(() -> "OraclePool: (all)",
+                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+
+    private static final UniversalConnectionPoolManager mgr;
 
     static {
         try {
@@ -36,6 +42,58 @@ public class SimplePoolDataSourceOracle
     private final StringBuffer password = new StringBuffer();
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+    private final PoolDataSourceStatistics poolDataSourceStatistics;
+
+    private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
+
+    // constructor
+    public SimplePoolDataSourceOracle() {
+        poolDataSourceStatistics = 
+            new PoolDataSourceStatistics(null, // description will be the pool name
+                                         poolDataSourceStatisticsTotal, 
+                                         this::isClosed,
+                                         this::getWithPoolName);
+    }
+    
+    @Override
+    public Connection getConnection() throws SQLException {
+        Connection conn = null;
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
+
+        if (isStatisticsEnabled) {
+            final Instant tm = Instant.now();
+            
+            try {
+                conn = super.getConnection();
+            } catch (SQLException se) {
+                poolDataSourceStatistics.signalSQLException(this, se);
+                throw se;
+            } catch (Exception ex) {
+                poolDataSourceStatistics.signalException(this, ex);
+                throw ex;
+            }
+
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm, Instant.now()).toMillis(),
+                                                      true);
+        } else {
+            conn = super.getConnection();
+        }
+
+        if (!hasShownConfig.getAndSet(true)) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            show(get());
+
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.showStatistics();
+            }
+        }
+
+        return conn;
+    }
 
     public void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
@@ -262,6 +320,10 @@ public class SimplePoolDataSourceOracle
 
     public void close() {
         try {
+            if (poolDataSourceStatistics != null) {
+                poolDataSourceStatistics.close();
+            }
+                            
             final String connectionPoolName = getConnectionPoolName();
             
             log.info("{} - Close initiated...", connectionPoolName);
@@ -282,6 +344,8 @@ public class SimplePoolDataSourceOracle
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
         } catch (UniversalConnectionPoolException ex) {
+            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
+        } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
