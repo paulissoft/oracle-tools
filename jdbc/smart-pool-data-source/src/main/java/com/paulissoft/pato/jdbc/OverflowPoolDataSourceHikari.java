@@ -1,16 +1,13 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.time.Duration;
-import java.time.Instant;
-//import javafx.util.Pair;
+//import java.sql.Connection;
+//import java.sql.SQLException;
+//import java.time.Duration;
+//import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+//import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 import lombok.NonNull;
@@ -19,13 +16,13 @@ import lombok.NonNull;
 public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 
     private class CommonIdRefCountPair {
-	public final PoolDataSourceConfigurationCommonId commonId;
+        public final String commonId;
 
-	public final AtomicInteger refCount = new AtomicInteger(1);
+        public int refCount = 1;
 
-	public CommonIdRefCountPair(final PoolDataSourceConfigurationCommonId commonId) {
-	    this.commonId = commonId;
-	}
+        public CommonIdRefCountPair(final String commonId) {
+            this.commonId = commonId;
+        }
     }
 
     // all static related
@@ -36,32 +33,36 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 
     // all object related
     
-    @Delegate(types=SimplePoolDataSourceHikari.class)
+    @Delegate(types=SimplePoolDataSourceHikari.class, excludes=AutoCloseable.class)
     private final SimplePoolDataSourceHikari delegate;
 
     // constructor
     public OverflowPoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-	final PoolDataSourceConfigurationCommonId commonId =
-	    new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikari);
-	SimplePoolDataSourceHikari pds = null;
+        final String commonId = (new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikari)).toString();
+        SimplePoolDataSourceHikari pds = null;
 
-	synchronized (lookupSimplePoolDataSourceHikari) {
-	    for (var entry: lookupSimplePoolDataSourceHikari.entrySet()) {
-		if (entry.getValue().commonId.equals(commonId) && entry.getKey().isInitializing()) {
-		    pds = entry.getKey();
-		    break;
-		}
-	    }
-	    if (pds == null) {
-		delegate = new SimplePoolDataSourceHikari();	    
-		delegate.set(poolDataSourceConfigurationHikari);
-		lookupSimplePoolDataSourceHikari.put(delegate, new CommonIdRefCountPair(commonId));
-		updatePool(poolDataSourceConfigurationHikari, true);
-	    } else {
-		delegate = pds;
-		updatePool(poolDataSourceConfigurationHikari, false);
-	    }
-	}
+        synchronized (lookupSimplePoolDataSourceHikari) {
+            for (var entry: lookupSimplePoolDataSourceHikari.entrySet()) {
+                final SimplePoolDataSourceHikari key = entry.getKey();
+                final CommonIdRefCountPair value = entry.getValue();
+                
+                if (value.commonId.equals(commonId) && key.isInitializing()) {
+                    pds = key;
+                    value.refCount++;
+                    break;
+                }
+            }
+            
+            if (pds == null) {
+                delegate = new SimplePoolDataSourceHikari();        
+                delegate.set(poolDataSourceConfigurationHikari);
+                lookupSimplePoolDataSourceHikari.put(delegate, new CommonIdRefCountPair(commonId));
+                updatePool(poolDataSourceConfigurationHikari, true);
+            } else {
+                delegate = pds;
+                updatePool(poolDataSourceConfigurationHikari, false);
+            }
+        }
     }
 
     private void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
@@ -70,14 +71,14 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 
             log.debug("items: {}; schema: {}", items, schema);
 
-	    if (isFirstPoolDataSource) {
-		items.clear();
-		items.add(delegate.getPoolNamePrefix());
-		items.add(schema);
-	    } else if (!items.contains(schema)) {
-		items.add(schema);
-	    }
-	    
+            if (isFirstPoolDataSource) {
+                items.clear();
+                items.add(delegate.getPoolNamePrefix());
+                items.add(schema);
+            } else if (!items.contains(schema)) {
+                items.add(schema);
+            }
+            
             if (items.size() >= 2) {
                 delegate.setPoolName(String.join("-", items));
             }
@@ -87,33 +88,49 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
     }
 
     private void updatePoolSizes(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
-	int thisSize, pdsSize;
+        int thisSize, pdsSize;
 
-	pdsSize = poolDataSourceConfiguration.getMinimumIdle();
-	thisSize = Integer.max(delegate.getMinimumIdle(), 0);
+        pdsSize = poolDataSourceConfiguration.getMinimumIdle();
+        thisSize = Integer.max(delegate.getMinimumIdle(), 0);
 
-	log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
-		  thisSize,
-		  pdsSize);
+        log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
+                  thisSize,
+                  pdsSize);
 
-	if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize) {                
-	    delegate.setMinimumIdle(pdsSize + thisSize);
-	}
+        if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize) {                
+            delegate.setMinimumIdle(pdsSize + thisSize);
+        }
                 
-	pdsSize = poolDataSourceConfiguration.getMaximumPoolSize();
-	thisSize = Integer.max(delegate.getMaximumPoolSize(), 0);
+        pdsSize = poolDataSourceConfiguration.getMaximumPoolSize();
+        thisSize = Integer.max(delegate.getMaximumPoolSize(), 0);
 
-	log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
-		  thisSize,
-		  pdsSize);
+        log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
+                  thisSize,
+                  pdsSize);
 
-	if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize && pdsSize + thisSize > 0) {
-	    delegate.setMaximumPoolSize(pdsSize + thisSize);
-	}
+        if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize && pdsSize + thisSize > 0) {
+            delegate.setMaximumPoolSize(pdsSize + thisSize);
+        }
     }
 
     private void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
-	updatePoolDescription(poolDataSourceConfiguration, isFirstPoolDataSource);
-	updatePoolSizes(poolDataSourceConfiguration, isFirstPoolDataSource);
+        updatePoolDescription(poolDataSourceConfiguration, isFirstPoolDataSource);
+        updatePoolSizes(poolDataSourceConfiguration, isFirstPoolDataSource);
+    }
+
+    @Override
+    public void close() {       
+        synchronized (lookupSimplePoolDataSourceHikari) {
+            final SimplePoolDataSourceHikari key = delegate;
+            final CommonIdRefCountPair value = lookupSimplePoolDataSourceHikari.get(key);
+
+            if (value != null) {
+                value.refCount--;
+                if (value.refCount <= 0) {
+                    delegate.close();
+                    lookupSimplePoolDataSourceHikari.remove(key);
+                }
+            }
+        }
     }
 }

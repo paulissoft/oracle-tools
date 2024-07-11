@@ -833,26 +833,26 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                                                     prefix, val1, val2, val3));
                     }
             
-		    val1 = getProxyTimeElapsedMin();
-		    val2 = getProxyTimeElapsedAvg();
-		    val3 = getProxyTimeElapsedMax();
+                    val1 = getProxyTimeElapsedMin();
+                    val2 = getProxyTimeElapsedAvg();
+                    val3 = getProxyTimeElapsedMax();
 
-		    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-			(val1 >= 0L || val2 > 0L || val3 > 0L)) {
-			method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
-						    prefix, val1, val2, val3));
-		    }
+                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
+                                                    prefix, val1, val2, val3));
+                    }
 
-		    val1 = getProxyOpenSessionCount();
-		    val2 = getProxyCloseSessionCount();
-		    val3 = getProxyLogicalConnectionCount();
+                    val1 = getProxyOpenSessionCount();
+                    val2 = getProxyCloseSessionCount();
+                    val3 = getProxyLogicalConnectionCount();
                 
-		    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-			(val1 >= 0L || val2 > 0L || val3 > 0L)) {
-			method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
-						    "logical connections rejected while searching for optimal proxy session: %d",
-						    prefix, val1, val2, val3));
-		    }
+                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
+                                                    "logical connections rejected while searching for optimal proxy session: %d",
+                                                    prefix, val1, val2, val3));
+                    }
             
                     if (showPoolSizes && pds != null) {
                         method.accept(String.format("%sinitial/min/max pool size: %d/%d/%d",
@@ -1402,7 +1402,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             logicalTimeElapsed = poolDataSourceStatistics.getLogicalTimeElapsed();
             connectionCount = poolDataSourceStatistics.getConnectionCount();
             proxyTimeElapsed = poolDataSourceStatistics.getProxyTimeElapsed();
-	    physicalTimeElapsedMin = poolDataSourceStatistics.getPhysicalTimeElapsedMin();
+            physicalTimeElapsedMin = poolDataSourceStatistics.getPhysicalTimeElapsedMin();
             physicalTimeElapsedMax = poolDataSourceStatistics.getPhysicalTimeElapsedMax();
             logicalTimeElapsedMin = poolDataSourceStatistics.getLogicalTimeElapsedMin();
             logicalTimeElapsedMax = poolDataSourceStatistics.getLogicalTimeElapsedMax();
