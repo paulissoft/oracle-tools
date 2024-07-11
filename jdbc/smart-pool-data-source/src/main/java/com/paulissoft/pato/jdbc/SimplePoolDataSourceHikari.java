@@ -35,13 +35,18 @@ public class SimplePoolDataSourceHikari
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
-    // constructor
+    // constructors
     public SimplePoolDataSourceHikari() {
         poolDataSourceStatistics = 
             new PoolDataSourceStatistics(null, // description will be the pool name
                                          poolDataSourceStatisticsTotal, 
                                          this::isClosed,
                                          this::getWithPoolName);
+    }
+
+    public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+	this();
+	set(poolDataSourceConfigurationHikari);
     }
     
     @Override

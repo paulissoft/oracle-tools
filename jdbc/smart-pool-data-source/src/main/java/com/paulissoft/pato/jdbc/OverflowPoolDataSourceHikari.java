@@ -73,8 +73,7 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 	    }
 
             if (pds == null) {
-                poolDataSource = new SimplePoolDataSourceHikari();
-                poolDataSource.set(poolDataSourceConfigurationHikariCopy);
+                poolDataSource = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikariCopy);
                 lookupSimplePoolDataSourceHikari.put(poolDataSource, new CommonIdRefCountPair(commonId));
             } else {
                 poolDataSource = pds;
