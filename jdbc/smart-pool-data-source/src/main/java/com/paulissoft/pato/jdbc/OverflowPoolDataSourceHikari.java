@@ -65,6 +65,12 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
                 .connectionTimeout(poolDataSourceConfigurationHikari.getConnectionTimeout() - getMinConnectionTimeout())
                 .build();
 
+	    final String proxyUsername = poolDataSourceConfigurationHikari.getProxyUsername();
+	    final String schema = poolDataSourceConfigurationHikari.getSchema();
+
+	    if (proxyUsername != null) {
+                poolDataSourceConfigurationHikariCopy.setUsername(proxyUsername);
+	    }
 
             if (pds == null) {
                 delegate = new SimplePoolDataSourceHikari();
@@ -73,13 +79,14 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
             } else {
                 delegate = pds;
             }
-            updatePool(poolDataSourceConfigurationHikariCopy, pds == null);
+            updatePool(poolDataSourceConfigurationHikariCopy, pds == null, schema);
         }
     }
 
-    private void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
+    private void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
+				       final boolean isFirstPoolDataSource,
+				       final String schema) {
         final ArrayList<String> items = new ArrayList(Arrays.asList(delegate.getPoolName().split("-")));
-        final String schema = delegate.get().getSchema();
 
         log.debug("items: {}; schema: {}", items, schema);
 
@@ -125,8 +132,10 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
         }
     }
 
-    private void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration, final boolean isFirstPoolDataSource) {
-        updatePoolDescription(poolDataSourceConfiguration, isFirstPoolDataSource);
+    private void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
+			    final boolean isFirstPoolDataSource,
+			    final String schema) {
+        updatePoolDescription(poolDataSourceConfiguration, isFirstPoolDataSource, schema);
         if (!isFirstPoolDataSource) {
             updatePoolSizes(poolDataSourceConfiguration);
         }
