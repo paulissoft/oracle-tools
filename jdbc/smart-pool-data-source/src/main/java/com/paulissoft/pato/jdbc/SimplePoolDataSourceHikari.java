@@ -31,7 +31,7 @@ public class SimplePoolDataSourceHikari
 
     private final StringBuffer id = new StringBuffer();
 
-    private final PoolDataSourceStatistics poolDataSourceStatistics;
+    protected final PoolDataSourceStatistics poolDataSourceStatistics;
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
