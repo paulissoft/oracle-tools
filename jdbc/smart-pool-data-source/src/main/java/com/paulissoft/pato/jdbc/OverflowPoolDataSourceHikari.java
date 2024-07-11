@@ -8,9 +8,9 @@ import java.time.Instant;
 //import javafx.util.Pair;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.Vector;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 import lombok.NonNull;
@@ -18,11 +18,21 @@ import lombok.NonNull;
 @Slf4j
 public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 
+    private class CommonIdRefCountPair {
+	public final PoolDataSourceConfigurationCommonId commonId;
+
+	public final AtomicInteger refCount = new AtomicInteger(1);
+
+	public CommonIdRefCountPair(final PoolDataSourceConfigurationCommonId commonId) {
+	    this.commonId = commonId;
+	}
+    }
+
     // all static related
 
     // Store all objects of type SimplePoolDataSourceHikari in the hash table.
     // The key is the common id, i.e. the set of common properties
-    private static final Hashtable<PoolDataSourceConfigurationCommonId,Vector<SimplePoolDataSourceHikari>> lookupSimplePoolDataSourceHikariSet = new Hashtable();
+    private static final HashMap<SimplePoolDataSourceHikari,CommonIdRefCountPair> lookupSimplePoolDataSourceHikari = new HashMap();
 
     // all object related
     
@@ -31,36 +41,26 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari {
 
     // constructor
     public OverflowPoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-	final PoolDataSourceConfigurationCommonId poolDataSourceConfigurationCommonId =
+	final PoolDataSourceConfigurationCommonId commonId =
 	    new PoolDataSourceConfigurationCommonId(poolDataSourceConfigurationHikari);
-	Vector<SimplePoolDataSourceHikari> setOfSimplePoolDataSourceHikari = lookupSimplePoolDataSourceHikariSet.get(poolDataSourceConfigurationCommonId);
 	SimplePoolDataSourceHikari pds = null;
 
-	if (setOfSimplePoolDataSourceHikari != null) {
-	    for (int i = 0; i < setOfSimplePoolDataSourceHikari.size(); i++) {
-		pds = setOfSimplePoolDataSourceHikari.get(i);
-		if (pds.isInitializing()) {
+	synchronized (lookupSimplePoolDataSourceHikari) {
+	    for (var entry: lookupSimplePoolDataSourceHikari.entrySet()) {
+		if (entry.getValue().commonId.equals(commonId) && entry.getKey().isInitializing()) {
+		    pds = entry.getKey();
 		    break;
-		} else {
-		    pds = null;
 		}
 	    }
-	}
-
-	if (pds == null) {
-	    delegate = new SimplePoolDataSourceHikari();	    
-	    delegate.set(poolDataSourceConfigurationHikari);
-	    if (setOfSimplePoolDataSourceHikari == null) {
-		setOfSimplePoolDataSourceHikari = new Vector();
-		setOfSimplePoolDataSourceHikari.add(delegate);
-		lookupSimplePoolDataSourceHikariSet.put(poolDataSourceConfigurationCommonId, setOfSimplePoolDataSourceHikari);
+	    if (pds == null) {
+		delegate = new SimplePoolDataSourceHikari();	    
+		delegate.set(poolDataSourceConfigurationHikari);
+		lookupSimplePoolDataSourceHikari.put(delegate, new CommonIdRefCountPair(commonId));
+		updatePool(poolDataSourceConfigurationHikari, true);
 	    } else {
-		setOfSimplePoolDataSourceHikari.add(delegate);
+		delegate = pds;
+		updatePool(poolDataSourceConfigurationHikari, false);
 	    }
-	    updatePool(poolDataSourceConfigurationHikari, true);
-	} else {
-	    delegate = pds;
-	    updatePool(poolDataSourceConfigurationHikari, false);
 	}
     }
 
