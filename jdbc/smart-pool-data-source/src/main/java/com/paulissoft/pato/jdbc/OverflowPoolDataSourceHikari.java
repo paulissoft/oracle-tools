@@ -86,8 +86,10 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
 
     // get a connection for the multi-session proxy model
     //
-    // @param schema  provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session
-    public Connection getConnection(@NonNull final String schema) throws SQLException {
+    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session through username (e.g. bc_proxy[bodomain])
+    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session through with this password
+    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session (e.g. bodomain)
+    public Connection getConnection(@NonNull final String username, @NonNull final String password, @NonNull final String schema) throws SQLException {
         log.debug(">getConnection(id={}, schema={})",
                   getId(), schema);
 
@@ -106,7 +108,7 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
 
         try {
             while (true) {
-                conn = getConnection();
+                conn = getConnection(); // username will be bc_proxy when it is a new physical connection
 
                 found = conn.getSchema().equalsIgnoreCase(schema);
 
