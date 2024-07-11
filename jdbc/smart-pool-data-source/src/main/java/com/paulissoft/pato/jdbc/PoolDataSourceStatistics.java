@@ -108,6 +108,20 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     
     private final AtomicBigDecimal logicalTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
 
+    // all proxy time elapsed stuff
+
+    private final AtomicLong proxyLogicalConnectionCount = new AtomicLong(0L);
+        
+    private final AtomicLong proxyOpenSessionCount = new AtomicLong(0L);
+        
+    private final AtomicLong proxyCloseSessionCount = new AtomicLong(0L);
+
+    private final AtomicLong proxyTimeElapsedMin = new AtomicLong(Long.MAX_VALUE);
+    
+    private final AtomicLong proxyTimeElapsedMax = new AtomicLong(Long.MIN_VALUE);
+    
+    private final AtomicBigDecimal proxyTimeElapsedAvg = new AtomicBigDecimal(BigDecimal.ZERO);
+
     // all connection related stuff (level <= MAX_LEVEL_CONNECTION_STATISTICS)
 
     private final AtomicLong activeConnectionsMin;
@@ -274,12 +288,39 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                        pds.getIdleConnections(),
                        pds.getTotalConnections());
                 if (showStatistics) {
-                    showStatistics(timeElapsed, false);
+                    showStatistics(timeElapsed, -1L, false);
                 }
             }
         } catch (Exception ex) {
             // errors while updating / showing statistics must be ignored
             logger.error("Exception in updateStatistics():", ex);
+        }
+    }
+
+    public void updateStatistics(final SimplePoolDataSource pds,
+                                 final Connection conn,
+                                 final long timeElapsed,
+                                 final long proxyTimeElapsed,
+                                 final boolean showStatistics,
+                                 final int proxyLogicalConnectionCount,
+                                 final int proxyOpenSessionCount,
+                                 final int proxyCloseSessionCount) {
+        try {
+            update(conn,
+                   timeElapsed,
+                   proxyTimeElapsed,
+                   proxyLogicalConnectionCount,
+                   proxyOpenSessionCount,
+                   proxyCloseSessionCount,
+                   pds.getActiveConnections(),
+                   pds.getIdleConnections(),
+                   pds.getTotalConnections());
+            if (showStatistics) {
+                showStatistics(timeElapsed, proxyTimeElapsed, false);
+            }
+        } catch (Exception e) {
+            // errors while updating / showing statistics must be ignored
+            logger.error(SimplePoolDataSource.exceptionToString(e));
         }
     }
 
@@ -313,6 +354,56 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         } else {
             updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
         }
+
+        update(activeConnections, idleConnections, totalConnections);
+    }
+
+    void update(final Connection conn,
+                final long timeElapsed,
+                final long proxyTimeElapsed,
+                final int proxyLogicalConnectionCount,
+                final int proxyOpenSessionCount,
+                final int proxyCloseSessionCount,
+                final int activeConnections,
+                final int idleConnections,
+                final int totalConnections) throws SQLException {
+        if (level != MAX_LEVEL || isClosed()) {
+            return;
+        }
+
+        if (firstUpdate.get() == 0L) {
+            firstUpdate.set(now());
+        }
+        
+        final boolean isPhysicalConnection = add(conn);
+        BigDecimal count = new BigDecimal(isPhysicalConnection ?
+                                          this.physicalConnectionCount.incrementAndGet() :
+                                          this.logicalConnectionCount.incrementAndGet());
+        
+        if (isPhysicalConnection) {
+            updateIterativeMean(count, timeElapsed, physicalTimeElapsedAvg);
+        } else {
+            updateIterativeMean(count, timeElapsed, logicalTimeElapsedAvg);
+        }
+
+        // add the other part as well
+        count = count.add(new BigDecimal(!isPhysicalConnection ?
+                                         this.physicalConnectionCount.get() :
+                                         this.logicalConnectionCount.get()));
+
+        updateIterativeMean(count, proxyTimeElapsed, proxyTimeElapsedAvg);
+
+        // The rest is using AtomicLong, hence concurrent.
+        if (isPhysicalConnection) {
+            updateMinMax(timeElapsed, physicalTimeElapsedMin, physicalTimeElapsedMax);
+        } else {
+            updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
+        }        
+        updateMinMax(proxyTimeElapsed, proxyTimeElapsedMin, proxyTimeElapsedMax);
+            
+        this.proxyLogicalConnectionCount.addAndGet(proxyLogicalConnectionCount);
+        this.proxyOpenSessionCount.addAndGet(proxyOpenSessionCount);
+        this.proxyCloseSessionCount.addAndGet(proxyCloseSessionCount);
 
         update(activeConnections, idleConnections, totalConnections);
     }
@@ -444,6 +535,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                          this.parent.totalConnectionsMin, this.parent.totalConnectionsMax);
         }
 
+        // connection count is the combination of physical and logical count, not a counter so do it before the others
+        updateMean1(this.getConnectionCount(), this.proxyTimeElapsedAvg.get(),
+                    this.parent.getConnectionCount(), this.parent.proxyTimeElapsedAvg);
+
         // now update parent counters
         updateMean2(this.getPhysicalConnectionCount(), this.physicalTimeElapsedAvg.get(),
                     this.parent.physicalConnectionCount, this.parent.physicalTimeElapsedAvg);
@@ -460,6 +555,15 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                      this.parent.logicalTimeElapsedMin, this.parent.logicalTimeElapsedMax);
         updateMinMax(this.logicalTimeElapsedMax.get(),
                      this.parent.logicalTimeElapsedMin, this.parent.logicalTimeElapsedMax);
+
+        updateMinMax(this.proxyTimeElapsedMin.get(),
+                     this.parent.proxyTimeElapsedMin, this.parent.proxyTimeElapsedMax);
+        updateMinMax(this.proxyTimeElapsedMax.get(),
+                     this.parent.proxyTimeElapsedMin, this.parent.proxyTimeElapsedMax);
+            
+        this.parent.proxyLogicalConnectionCount.addAndGet(this.proxyLogicalConnectionCount.get());
+        this.parent.proxyOpenSessionCount.addAndGet(this.proxyOpenSessionCount.get());
+        this.parent.proxyCloseSessionCount.addAndGet(this.proxyCloseSessionCount.get());
 
         this.reset();
 
@@ -489,6 +593,12 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         logicalTimeElapsedMin.set(Long.MAX_VALUE);   
         logicalTimeElapsedMax.set(Long.MIN_VALUE);
         logicalTimeElapsedAvg.set(BigDecimal.ZERO);
+        proxyLogicalConnectionCount.set(0L);        
+        proxyOpenSessionCount.set(0L);        
+        proxyCloseSessionCount.set(0L);
+        proxyTimeElapsedMin.set(Long.MAX_VALUE);    
+        proxyTimeElapsedMax.set(Long.MIN_VALUE);    
+        proxyTimeElapsedAvg.set(BigDecimal.ZERO);
 
         if (level <= MAX_LEVEL_CONNECTION_STATISTICS) {
             activeConnectionsMin.set(Long.MAX_VALUE);
@@ -646,10 +756,11 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
     
     private void showStatistics(final boolean showTotals) {
-        showStatistics(-1L, showTotals);
+        showStatistics(-1L, -1L, showTotals);
     }
     
     private void showStatistics(final long timeElapsed,
+                                final long proxyTimeElapsed,
                                 final boolean showTotals) {
         if (!showTotals && !logger.isDebugEnabled()) {
             return;
@@ -681,6 +792,10 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         method.accept(String.format("%stime needed to open last connection (ms): %d",
                                                     prefix, timeElapsed));
                     }
+                    if (proxyTimeElapsed >= 0L) {
+                        method.accept(String.format("%stime needed to open last proxy connection (ms): %d",
+                                                    prefix, proxyTimeElapsed));
+                    }
                 }
             
                 long val1, val2, val3;
@@ -693,7 +808,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                     logger.info("No connections created for {}", poolDescription);
                 } else {
                     if ((val1 >= 0L && val2 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L)) {
+                        (val1 > 0L || val2 > 0L)) {
                         method.accept(String.format("%sphysical/logical connections opened: %d/%d",
                                                     prefix, val1, val2));
                     }
@@ -704,7 +819,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 >= 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%smin/avg/max physical connection time (ms): %d/%d/%d",
+                        method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
             
@@ -717,6 +832,27 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         method.accept(String.format("%smin/avg/max logical connection time (ms): %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
+            
+		    val1 = getProxyTimeElapsedMin();
+		    val2 = getProxyTimeElapsedAvg();
+		    val3 = getProxyTimeElapsedMax();
+
+		    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+			(val1 >= 0L || val2 > 0L || val3 > 0L)) {
+			method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
+						    prefix, val1, val2, val3));
+		    }
+
+		    val1 = getProxyOpenSessionCount();
+		    val2 = getProxyCloseSessionCount();
+		    val3 = getProxyLogicalConnectionCount();
+                
+		    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+			(val1 >= 0L || val2 > 0L || val3 > 0L)) {
+			method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
+						    "logical connections rejected while searching for optimal proxy session: %d",
+						    prefix, val1, val2, val3));
+		    }
             
                     if (showPoolSizes && pds != null) {
                         method.accept(String.format("%sinitial/min/max pool size: %d/%d/%d",
@@ -850,6 +986,36 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         return (new BigDecimal(logicalConnectionCount.get())).multiply(logicalTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
+    // all proxy time elapsed stuff
+
+    protected long getProxyLogicalConnectionCount() {
+        return proxyLogicalConnectionCount.get();
+    }
+
+    protected long getProxyOpenSessionCount() {
+        return proxyOpenSessionCount.get();
+    }
+        
+    protected long getProxyCloseSessionCount() {
+        return proxyCloseSessionCount.get();
+    }
+        
+    protected long getProxyTimeElapsedMin() {
+        return proxyTimeElapsedMin.get();
+    }
+
+    protected long getProxyTimeElapsedMax() {
+        return proxyTimeElapsedMax.get();
+    }
+
+    protected long getProxyTimeElapsedAvg() {
+        return proxyTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+    }
+    
+    protected long getProxyTimeElapsed() {
+        return (new BigDecimal(getConnectionCount())).multiply(proxyTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
+    }
+    
     // all connection related stuff
 
     protected long getActiveConnectionsMin() {
@@ -913,13 +1079,21 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                                  parentSnapshotAfter.physicalConnectionCount,
                                  parentSnapshotAfter.physicalTimeElapsed);
         checkTotalBeforeAndAfter(childSnapshotBefore.logicalConnectionCount,
-                                 childSnapshotBefore.logicalTimeElapsed,
-                                 parentSnapshotBefore.logicalConnectionCount,
-                                 parentSnapshotBefore.logicalTimeElapsed,
-                                 childSnapshotAfter.logicalConnectionCount,
-                                 childSnapshotAfter.logicalTimeElapsed,
-                                 parentSnapshotAfter.logicalConnectionCount,
-                                 parentSnapshotAfter.logicalTimeElapsed);
+                                childSnapshotBefore.logicalTimeElapsed,
+                                parentSnapshotBefore.logicalConnectionCount,
+                                parentSnapshotBefore.logicalTimeElapsed,
+                                childSnapshotAfter.logicalConnectionCount,
+                                childSnapshotAfter.logicalTimeElapsed,
+                                parentSnapshotAfter.logicalConnectionCount,
+                                parentSnapshotAfter.logicalTimeElapsed);
+        checkTotalBeforeAndAfter(childSnapshotBefore.connectionCount,
+                                childSnapshotBefore.proxyTimeElapsed,
+                                parentSnapshotBefore.connectionCount,
+                                parentSnapshotBefore.proxyTimeElapsed,
+                                childSnapshotAfter.connectionCount,
+                                childSnapshotAfter.proxyTimeElapsed,
+                                parentSnapshotAfter.connectionCount,
+                                parentSnapshotAfter.proxyTimeElapsed);
         checkMinMaxBeforeAndAfter(childSnapshotBefore.physicalTimeElapsedMin,
                                   childSnapshotBefore.physicalTimeElapsedMax,
                                   parentSnapshotBefore.physicalTimeElapsedMin,
@@ -936,6 +1110,26 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                                   childSnapshotAfter.logicalTimeElapsedMax,
                                   parentSnapshotAfter.logicalTimeElapsedMin,
                                   parentSnapshotAfter.logicalTimeElapsedMax);
+        checkMinMaxBeforeAndAfter(childSnapshotBefore.proxyTimeElapsedMin,
+                                  childSnapshotBefore.proxyTimeElapsedMax,
+                                  parentSnapshotBefore.proxyTimeElapsedMin,
+                                  parentSnapshotBefore.proxyTimeElapsedMax,
+                                  childSnapshotAfter.proxyTimeElapsedMin,
+                                  childSnapshotAfter.proxyTimeElapsedMax,
+                                  parentSnapshotAfter.proxyTimeElapsedMin,
+                                  parentSnapshotAfter.proxyTimeElapsedMax);
+        checkCountBeforeAndAfter(childSnapshotBefore.proxyLogicalConnectionCount,
+                                 parentSnapshotBefore.proxyLogicalConnectionCount,
+                                 childSnapshotAfter.proxyLogicalConnectionCount,
+                                 parentSnapshotAfter.proxyLogicalConnectionCount);
+        checkCountBeforeAndAfter(childSnapshotBefore.proxyOpenSessionCount,
+                                 parentSnapshotBefore.proxyOpenSessionCount,
+                                 childSnapshotAfter.proxyOpenSessionCount,
+                                 parentSnapshotAfter.proxyOpenSessionCount);
+        checkCountBeforeAndAfter(childSnapshotBefore.proxyCloseSessionCount,
+                                 parentSnapshotBefore.proxyCloseSessionCount,
+                                 childSnapshotAfter.proxyCloseSessionCount,
+                                 parentSnapshotAfter.proxyCloseSessionCount);
         checkMinMaxBeforeAndAfter(childSnapshotBefore.activeConnectionsMin,
                                   childSnapshotBefore.activeConnectionsMax,
                                   parentSnapshotBefore.activeConnectionsMin,
@@ -1157,23 +1351,6 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         }
     }
 
-    @NonNull
-    public final Snapshot getSnapshot() {
-        return new Snapshot(this);
-    }
-
-    public final Snapshot getSnapshot(final int level) {
-        assert level >= MIN_LEVEL && level <= MAX_LEVEL : String.format("Level must be between %d and %d.", MIN_LEVEL, MAX_LEVEL);
-
-        PoolDataSourceStatistics instance = this;
-
-        while (instance != null && instance.level > level) {
-            instance = instance.parent;
-        }
-
-        return instance != null && instance.level == level ? new Snapshot(instance) : null;
-    }
-
     // a data class
     public final class Snapshot {
         public final long physicalConnectionCount;
@@ -1194,6 +1371,18 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
         public final long connectionCount;
 
+        public final long proxyLogicalConnectionCount;
+
+        public final long proxyOpenSessionCount;
+
+        public final long proxyCloseSessionCount;
+
+        public final long proxyTimeElapsed;
+
+        public final long proxyTimeElapsedMin;
+
+        public final long proxyTimeElapsedMax;
+
         public final long activeConnectionsMin;
         
         public final long activeConnectionsMax;
@@ -1212,10 +1401,16 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             logicalConnectionCount = poolDataSourceStatistics.getLogicalConnectionCount();
             logicalTimeElapsed = poolDataSourceStatistics.getLogicalTimeElapsed();
             connectionCount = poolDataSourceStatistics.getConnectionCount();
-            physicalTimeElapsedMin = poolDataSourceStatistics.getPhysicalTimeElapsedMin();
+            proxyTimeElapsed = poolDataSourceStatistics.getProxyTimeElapsed();
+	    physicalTimeElapsedMin = poolDataSourceStatistics.getPhysicalTimeElapsedMin();
             physicalTimeElapsedMax = poolDataSourceStatistics.getPhysicalTimeElapsedMax();
             logicalTimeElapsedMin = poolDataSourceStatistics.getLogicalTimeElapsedMin();
             logicalTimeElapsedMax = poolDataSourceStatistics.getLogicalTimeElapsedMax();
+            proxyTimeElapsedMin = poolDataSourceStatistics.getProxyTimeElapsedMin();
+            proxyTimeElapsedMax = poolDataSourceStatistics.getProxyTimeElapsedMax();
+            proxyLogicalConnectionCount = poolDataSourceStatistics.getProxyLogicalConnectionCount();
+            proxyOpenSessionCount = poolDataSourceStatistics.getProxyOpenSessionCount();
+            proxyCloseSessionCount = poolDataSourceStatistics.getProxyCloseSessionCount();
             activeConnectionsMin = poolDataSourceStatistics.getActiveConnectionsMin();
             activeConnectionsMax = poolDataSourceStatistics.getActiveConnectionsMax();
             idleConnectionsMin = poolDataSourceStatistics.getIdleConnectionsMin();
@@ -1242,6 +1437,12 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 this.logicalTimeElapsedMin == other.logicalTimeElapsedMin &&
                 this.logicalTimeElapsedMax == other.logicalTimeElapsedMax &&
                 this.connectionCount == other.connectionCount &&
+                this.proxyLogicalConnectionCount == other.proxyLogicalConnectionCount &&
+                this.proxyOpenSessionCount == other.proxyOpenSessionCount &&
+                this.proxyCloseSessionCount == other.proxyCloseSessionCount &&
+                this.proxyTimeElapsed == other.proxyTimeElapsed &&
+                this.proxyTimeElapsedMin == other.proxyTimeElapsedMin &&
+                this.proxyTimeElapsedMax == other.proxyTimeElapsedMax &&
                 this.activeConnectionsMin == other.activeConnectionsMin &&
                 this.activeConnectionsMax == other.activeConnectionsMax &&
                 this.idleConnectionsMin == other.idleConnectionsMin &&
@@ -1249,6 +1450,22 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                 this.totalConnectionsMin == other.totalConnectionsMin &&
                 this.totalConnectionsMax == other.totalConnectionsMax;
         }
-
     }    
+
+    @NonNull
+    public final Snapshot getSnapshot() {
+        return new Snapshot(this);
+    }
+
+    public final Snapshot getSnapshot(final int level) {
+        assert level >= MIN_LEVEL && level <= MAX_LEVEL : String.format("Level must be between %d and %d.", MIN_LEVEL, MAX_LEVEL);
+
+        PoolDataSourceStatistics instance = this;
+
+        while (instance != null && instance.level > level) {
+            instance = instance.parent;
+        }
+
+        return instance != null && instance.level == level ? new Snapshot(instance) : null;
+    }
 }
