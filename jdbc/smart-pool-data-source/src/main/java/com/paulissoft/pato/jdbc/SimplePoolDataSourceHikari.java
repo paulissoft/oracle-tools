@@ -15,6 +15,8 @@ public class SimplePoolDataSourceHikari
 
     // all static related
 
+    static final long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
+
     private static final int MIN_MAXIMUM_POOL_SIZE = 1;
 
     private static final long MIN_VALIDATION_TIMEOUT = 250L;
@@ -347,5 +349,9 @@ public class SimplePoolDataSourceHikari
 
     protected final boolean isInitializing() {
         return !hasShownConfig.get();
+    }
+
+    public long getMinConnectionTimeout() {
+        return MIN_CONNECTION_TIMEOUT;
     }
 }

@@ -13,7 +13,7 @@ public class SmartPoolDataSourceHikari
     extends SmartPoolDataSource<SimplePoolDataSourceHikari>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
 
-    static final long MIN_CONNECTION_TIMEOUT = 250; // milliseconds for one pool, so twice this number for two
+    static final long MIN_CONNECTION_TIMEOUT = SimplePoolDataSourceHikari.MIN_CONNECTION_TIMEOUT; // milliseconds for one pool, so twice this number for two
 
     static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
     
@@ -88,10 +88,6 @@ public class SmartPoolDataSourceHikari
                                                      registerMbeans,    
                                                      validationTimeout,
                                                      leakDetectionThreshold));
-    }
-
-    protected long getMinConnectionTimeout() {
-        return MIN_CONNECTION_TIMEOUT;
     }
 
     protected void updatePool(@NonNull final SimplePoolDataSourceHikari poolDataSource,

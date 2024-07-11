@@ -21,6 +21,8 @@ public class SimplePoolDataSourceOracle
     
     private static final long serialVersionUID = 3886083682048526889L;
     
+    static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
+
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
         new PoolDataSourceStatistics(() -> "OraclePool: (all)",
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
@@ -358,5 +360,9 @@ public class SimplePoolDataSourceOracle
     @Override
     public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
+    }
+
+    public long getMinConnectionTimeout() {
+        return MIN_CONNECTION_TIMEOUT;
     }
 }

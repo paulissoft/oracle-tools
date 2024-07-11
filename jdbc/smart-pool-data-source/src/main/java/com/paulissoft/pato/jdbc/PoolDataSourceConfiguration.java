@@ -64,6 +64,11 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
         this.password = password;
     }
 
+    public void setUsername(String username) {
+        this.username = username;
+        proxyUsername = schema = null; // must be recalculated
+    }
+    
     public String getPoolName() {
         return null;
     }
@@ -132,7 +137,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
     public void copyFrom(final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         this.driverClassName = poolDataSourceConfiguration.driverClassName;
         this.url = poolDataSourceConfiguration.url;    
-        this.username = poolDataSourceConfiguration.username;
+        setUsername(poolDataSourceConfiguration.username);
         this.password = poolDataSourceConfiguration.password;
 
         // GJP 2024-02-20 Type can not change
@@ -141,7 +146,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
 
     void keepCommonIdConfiguration() {
         if (!isFixedUsernamePassword()) {
-            this.username = null;
+            setUsername(null);
         }
         this.password = null;
     }
@@ -155,7 +160,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
      * schema (bodomain) and proxy username (bc_proxy respectively empty).
      */    
     void determineConnectInfo(final String username, final String password) {
-        this.username = username;
+        setUsername(username);
         this.password = password;
         determineConnectInfo();
     }

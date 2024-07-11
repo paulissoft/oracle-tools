@@ -199,8 +199,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected abstract long getMinConnectionTimeout();
-    
     protected void updatePool(@NonNull final T poolDataSource,
                               final T poolDataSourceOverflow) {
         try {

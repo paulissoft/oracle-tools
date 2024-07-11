@@ -14,7 +14,7 @@ public class SmartPoolDataSourceOracle
     extends SmartPoolDataSource<SimplePoolDataSourceOracle>
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
-    static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
+    static final long MIN_CONNECTION_TIMEOUT = SimplePoolDataSourceOracle.MIN_CONNECTION_TIMEOUT; // milliseconds for one pool, so twice this number for two
 
     static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
     
@@ -85,10 +85,6 @@ public class SmartPoolDataSourceOracle
                                                      maxConnectionReuseTime,
                                                      secondsToTrustIdleConnection,
                                                      connectionValidationTimeout));
-    }
-
-    protected long getMinConnectionTimeout() {
-        return MIN_CONNECTION_TIMEOUT;
     }
 
     protected interface ToOverrideOracle extends ToOverride {
