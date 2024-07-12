@@ -2,6 +2,9 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.function.Supplier;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +13,23 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     implements SimplePoolDataSource {
 
+    private static class CommonIdRefCountPair {
+        public final String commonId;
+
+        public int refCount = 1;
+
+        public CommonIdRefCountPair(final String commonId) {
+            this.commonId = commonId;
+        }
+    }
+
+    // all static related
+
+    // Store all objects of type SimplePoolDataSourceHikari in the hash table.
+    // The key is the common id, i.e. the set of common properties
+    private static final HashMap<SimplePoolDataSource,CommonIdRefCountPair> lookupSimplePoolDataSource = new HashMap();
+
+    // object members
     private final StringBuffer id = new StringBuffer();
 
     private final PoolDataSourceConfiguration poolDataSourceConfiguration;
@@ -81,7 +101,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             log.info("Open initiated");
 
             try {
-                final PoolDataSourceConfiguration poolDataSourceConfiguration = poolDataSource.get();
+                // update the poolDataSourceConfiguration with the actual poolDataSource properties
+                PoolDataSourceConfiguration.set(poolDataSourceConfiguration, poolDataSource.get());
                 
                 setUp();
 
@@ -134,7 +155,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             }
 
             // updatePool must be called before the state is open
-            updatePool(poolDataSource, poolDataSourceOverflow);
+            updatePool();
         } finally {
             log.debug("<setUp(id={}, state={})", getId(), state);
         }
@@ -184,7 +205,18 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     poolDataSource.close();
 
                     if (poolDataSourceOverflow != null) {
-                        poolDataSourceOverflow.close();
+                        synchronized (lookupSimplePoolDataSource) {
+                            final SimplePoolDataSource key = poolDataSourceOverflow;
+                            final CommonIdRefCountPair value = lookupSimplePoolDataSource.get(key);
+
+                            if (value != null) {
+                                value.refCount--;
+                                if (value.refCount <= 0) {
+                                    poolDataSourceOverflow.close();
+                                    lookupSimplePoolDataSource.remove(key);
+                                }
+                            }
+                        }
                     }
                 } catch(Exception ex) {
                     log.error("Exception in tearDown():", ex);
@@ -201,46 +233,143 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected void updatePool(@NonNull final T poolDataSource,
-                              final T poolDataSourceOverflow) {
+    protected void updatePool() {
         try {
-            final PoolDataSourceConfiguration pdsConfig = poolDataSource.get();
-            
             // is there an overflow?
             if (poolDataSourceOverflow != null) {
+                // determine the maxPoolSizeOverflow before using poolDataSource.setMaxPoolSize()
                 final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
 
-                // copy values
-                poolDataSourceOverflow.set(pdsConfig); 
-                // need to set password explicitly since combination get()/set() does not set it
-                poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
-                // need to set pool name explicitly since combination get()/set() does not set it
-                poolDataSourceOverflow.setPoolName(poolDataSource.getPoolName());
-
                 // settings to let the pool data source fail fast so it can use the overflow
-                poolDataSource.setMaxPoolSize(pdsConfig.getMinPoolSize());
+                poolDataSource.setMaxPoolSize(poolDataSource.getMinPoolSize());
                 poolDataSource.setConnectionTimeout(getMinConnectionTimeout());
 
-                // settings to keep the dynamic/overflow pool data source as empty as possible
-                poolDataSourceOverflow.setInitialPoolSize(0);                
-                poolDataSourceOverflow.setMinPoolSize(0);
-                poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
-                poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
-            }        
+                // First try to get a poolDataSourceOverflow from the lookup: sharing is better!
+                // Now username will be the username to connect to, so bc_proxy[bodomain] may become bc_proxy
+                final PoolDataSourceConfigurationCommonId poolDataSourceConfigurationCommonId =
+                    new PoolDataSourceConfigurationCommonId(poolDataSourceConfiguration);
+                final String commonId = poolDataSourceConfigurationCommonId.toString();
+                T pds = null;
+
+                // synchronize access to lookupSimplePoolDataSource and do it fast
+                synchronized (lookupSimplePoolDataSource) {
+                    for (var entry: lookupSimplePoolDataSource.entrySet()) {
+                        final SimplePoolDataSource key = entry.getKey();
+                        final CommonIdRefCountPair value = entry.getValue();
+                
+                        if (value.commonId.equals(commonId) && key.isInitializing()) {
+                            pds = (T) key;
+                            value.refCount++;
+                            break;
+                        }
+                    }
+
+                    if (pds == null) {
+                        // we have already a new poolDataSourceOverflow and that will become the shared one
+                        lookupSimplePoolDataSource.put(poolDataSourceOverflow, new CommonIdRefCountPair(commonId));
+                    } else {
+                        // must update pool name and sizes, that's all
+                        poolDataSourceOverflow = pds;
+                    }
+                }                
+
+                if (pds == null) {
+                    // copy values from the fixed pool
+                    poolDataSourceOverflow.set(poolDataSourceConfiguration); 
+                    // need to set password explicitly since combination get()/set() does not set it
+                    poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
+
+                    // settings to keep the dynamic/overflow pool data source as empty as possible
+                    poolDataSourceOverflow.setInitialPoolSize(0);                
+                    poolDataSourceOverflow.setMinPoolSize(0);
+                    poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
+                    poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+
+                    final String proxyUsername = poolDataSourceConfiguration.getProxyUsername();
+
+                    if (proxyUsername != null) {
+                        poolDataSourceOverflow.setUsername(proxyUsername);
+                    }
+                } else {
+                    updatePoolSizes();
+                }
+                
+                updatePoolDescription(pds == null, poolDataSourceConfiguration.getSchema());
+            } // if (poolDataSourceOverflow != null) {
 
             // set pool name
-            if (pdsConfig.getPoolName() == null || pdsConfig.getPoolName().isEmpty()) {
-                poolDataSource.setPoolName(poolDataSource.getClass().getSimpleName() + "-" + pdsConfig.getSchema());
+            if (poolDataSourceConfiguration.getPoolName() == null || poolDataSourceConfiguration.getPoolName().isEmpty()) {
+                poolDataSource.setPoolName(poolDataSource.getClass().getSimpleName() + "-" + poolDataSourceConfiguration.getSchema());
             }
             // use a different name for the overflow to solve UCP-0
-            if (poolDataSourceOverflow != null) {
+            if (poolDataSourceOverflow != null && poolDataSourceOverflow.getPoolName().equals(poolDataSource.getPoolName())) {
                 poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + " (dynamic)");
             }
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }
     }
-    
+
+    private void updatePoolDescription(final boolean isFirstPoolDataSource,
+                                       final String schema) throws SQLException {
+        final ArrayList<String> items =
+            isFirstPoolDataSource ?
+            new ArrayList() :
+            new ArrayList(Arrays.asList(poolDataSourceOverflow.getPoolName().split("-")));
+
+        log.debug("items: {}; schema: {}", items, schema);
+
+        if (isFirstPoolDataSource) {
+            items.add(poolDataSourceOverflow.getPoolNamePrefix());
+            items.add(schema);
+        } else if (!items.contains(schema)) {
+            items.add(schema);
+        }
+        
+        if (items.size() >= 2) {
+            poolDataSourceOverflow.setPoolName(String.join("-", items));
+        }
+    }
+
+    private void updatePoolSizes() throws SQLException {
+        @NonNull final PoolDataSourceConfiguration poolDataSourceConfiguration = poolDataSourceOverflow.get();
+        
+        int thisSize, pdsSize;
+
+        pdsSize = poolDataSourceConfiguration.getInitialPoolSize();
+        thisSize = Integer.max(poolDataSourceOverflow.getInitialPoolSize(), 0);
+
+        log.debug("initial pool sizes before changing it: this/pds: {}/{}",
+                  thisSize,
+                  pdsSize);
+
+        if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize) {                
+            poolDataSourceOverflow.setInitialPoolSize(pdsSize + thisSize);
+        }
+                
+        pdsSize = poolDataSourceConfiguration.getMinPoolSize();
+        thisSize = Integer.max(poolDataSourceOverflow.getMinPoolSize(), 0);
+
+        log.debug("minimum pool sizes before changing it: this/pds: {}/{}",
+                  thisSize,
+                  pdsSize);
+
+        if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize) {                
+            poolDataSourceOverflow.setMinPoolSize(pdsSize + thisSize);
+        }
+                
+        pdsSize = poolDataSourceConfiguration.getMaxPoolSize();
+        thisSize = Integer.max(poolDataSourceOverflow.getMaxPoolSize(), 0);
+
+        log.debug("maximum pool sizes before changing it: this/pds: {}/{}",
+                  thisSize,
+                  pdsSize);
+
+        if (pdsSize >= 0 && pdsSize <= Integer.MAX_VALUE - thisSize && pdsSize + thisSize > 0) {
+            poolDataSourceOverflow.setMaxPoolSize(pdsSize + thisSize);
+        }
+    }
+
     protected interface ToOverride {
         public Connection getConnection() throws SQLException;
 
@@ -261,15 +390,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         public int getIdleConnections(); // idem
 
         public int getTotalConnections(); // idem
-    }
-
-    private PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
-        switch (state) {
-        case CLOSED:
-            throw new IllegalStateException("You can not use the pool once it is closed.");
-        default:
-            return poolDataSourceConfiguration;
-        }
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
@@ -358,10 +478,15 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                                        final T poolDataSourceOverflow) throws SQLException {
         log.trace(">getConnection({}, ...)", useOverflow);
 
-        final T pds = useOverflow ? poolDataSourceOverflow : poolDataSource;
-
         try {
-            return pds.getConnection();
+            if (!useOverflow) {
+                return poolDataSource.getConnection();
+            } else {
+                return poolDataSourceOverflow.getConnection(poolDataSourceConfiguration.getUsername(),
+                                                            poolDataSourceConfiguration.getPasword(),
+                                                            poolDataSourceConfiguration.getSchema(),
+                                                            lookupSimplePoolDataSource.get(poolDataSourceOverflow).refCount);
+            }
         } finally {
             log.trace("<getConnection({}, ...)", useOverflow);
         }
