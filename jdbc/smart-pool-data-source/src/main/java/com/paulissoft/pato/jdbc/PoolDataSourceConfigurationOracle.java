@@ -167,6 +167,50 @@ public class PoolDataSourceConfigurationOracle
         setDriverClassName(null);
     }
 
+    public static void set(final PoolDataSourcePropertiesSettersOracle pdsDst,
+                           final PoolDataSourceConfigurationOracle pdsSrc) {
+        log.debug(">set(pdsSrc={})", pdsSrc);
+
+        int nr = 0;
+        final int maxNr = 17;
+        
+        do {
+            try {
+                /* this.driverClassName is ignored */
+                switch(nr) {
+                case  0: pdsDst.setURL(pdsSrc.getUrl()); break;
+                case  1: pdsDst.setUser(pdsSrc.getUsername()); break;
+                case  2: pdsDst.setPassword(pdsSrc.getPassword()); break;
+                case  3: pdsDst.setConnectionPoolName(pdsSrc.getConnectionPoolName()); break;
+                case  4: pdsDst.setInitialPoolSize(pdsSrc.getInitialPoolSize()); break;
+                case  5: pdsDst.setMinPoolSize(pdsSrc.getMinPoolSize()); break;
+                case  6: pdsDst.setMaxPoolSize(pdsSrc.getMaxPoolSize()); break;
+                case  7:
+                    if (pdsSrc.getConnectionFactoryClassName() != null) {
+                        pdsDst.setConnectionFactoryClassName(pdsSrc.getConnectionFactoryClassName());
+                    }
+                    break;
+                case  8: pdsDst.setValidateConnectionOnBorrow(pdsSrc.getValidateConnectionOnBorrow()); break;
+                case  9: pdsDst.setAbandonedConnectionTimeout(pdsSrc.getAbandonedConnectionTimeout()); break;
+                case 10: pdsDst.setTimeToLiveConnectionTimeout(pdsSrc.getTimeToLiveConnectionTimeout()); break;
+                case 11: pdsDst.setInactiveConnectionTimeout(pdsSrc.getInactiveConnectionTimeout()); break;
+                case 12: pdsDst.setTimeoutCheckInterval(pdsSrc.getTimeoutCheckInterval()); break;
+                case 13: pdsDst.setMaxStatements(pdsSrc.getMaxStatements()); break;
+                case 14: pdsDst.setConnectionWaitDurationInMillis(pdsSrc.getConnectionWaitDurationInMillis()); break;
+                case 15: pdsDst.setMaxConnectionReuseTime(pdsSrc.getMaxConnectionReuseTime()); break;
+                case 16: pdsDst.setSecondsToTrustIdleConnection(pdsSrc.getSecondsToTrustIdleConnection()); break;
+                case 17: pdsDst.setConnectionValidationTimeout(pdsSrc.getConnectionValidationTimeout()); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
+            }
+        } while (++nr <= maxNr);
+
+        log.debug("<set()");
+    }
+
     @Override
     void keepCommonIdConfiguration() {
         super.keepCommonIdConfiguration();

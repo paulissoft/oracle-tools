@@ -26,6 +26,10 @@ public class PoolDataSourceConfigurationHikari
     
     public static final boolean FIXED_USERNAME_PASSWORD = true;
 
+    private static final int MIN_MAXIMUM_POOL_SIZE = 1;
+
+    private static final long MIN_VALIDATION_TIMEOUT = 250L;
+
     // properties that may differ, i.e. are ignored
     
     private String poolName;
@@ -193,6 +197,54 @@ public class PoolDataSourceConfigurationHikari
             : "Type must be assignable from SimplePoolDataSourceHikari";
     }
 
+    public static void set(final PoolDataSourcePropertiesSettersHikari pdsDst,
+                           final PoolDataSourceConfigurationHikari pdsSrc) {
+        log.debug(">set(pdsSrc={})", pdsSrc);
+        
+        int nr = 0;
+        final int maxNr = 18;
+        
+        do {
+            try {
+                switch(nr) {
+                case  0: pdsDst.setDriverClassName(pdsSrc.getDriverClassName()); break;
+                case  1: pdsDst.setJdbcUrl(pdsSrc.getUrl()); break;
+                case  2: pdsDst.setUsername(pdsSrc.getUsername()); break;
+                case  3: pdsDst.setPassword(pdsSrc.getPassword()); break;
+                case  4: pdsDst.setPoolName(pdsSrc.getPoolName()); break;
+                case  5:
+                    if (pdsSrc.getMaximumPoolSize() >= MIN_MAXIMUM_POOL_SIZE) {
+                        pdsDst.setMaximumPoolSize(pdsSrc.getMaximumPoolSize());
+                    }
+                    break;
+                case  6: pdsDst.setMinimumIdle(pdsSrc.getMinimumIdle()); break;
+                case  7: pdsDst.setAutoCommit(pdsSrc.isAutoCommit()); break;
+                case  8: pdsDst.setConnectionTimeout(pdsSrc.getConnectionTimeout()); break;
+                case  9: pdsDst.setIdleTimeout(pdsSrc.getIdleTimeout()); break;
+                case 10: pdsDst.setMaxLifetime(pdsSrc.getMaxLifetime()); break;
+                case 11: pdsDst.setConnectionTestQuery(pdsSrc.getConnectionTestQuery()); break;
+                case 12: pdsDst.setInitializationFailTimeout(pdsSrc.getInitializationFailTimeout()); break;
+                case 13: pdsDst.setIsolateInternalQueries(pdsSrc.isIsolateInternalQueries()); break;
+                case 14: pdsDst.setAllowPoolSuspension(pdsSrc.isAllowPoolSuspension()); break;
+                case 15: pdsDst.setReadOnly(pdsSrc.isReadOnly()); break;
+                case 16: pdsDst.setRegisterMbeans(pdsSrc.isRegisterMbeans()); break;
+                case 17:
+                    if (pdsSrc.getValidationTimeout() >= MIN_VALIDATION_TIMEOUT) {
+                        pdsDst.setValidationTimeout(pdsSrc.getValidationTimeout());
+                    }
+                    break;
+                case 18: pdsDst.setLeakDetectionThreshold(pdsSrc.getLeakDetectionThreshold()); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                }
+            } catch (Exception ex) {
+                log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
+            }
+        } while (++nr <= maxNr);
+
+        log.debug("<set()");
+    }
+    
     @Override
     void keepCommonIdConfiguration() {
         super.keepCommonIdConfiguration();
