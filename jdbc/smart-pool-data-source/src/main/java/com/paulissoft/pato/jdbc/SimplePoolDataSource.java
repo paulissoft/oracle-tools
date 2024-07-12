@@ -1,6 +1,7 @@
 package com.paulissoft.pato.jdbc;
 
 import java.io.Closeable;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
@@ -23,6 +24,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
         return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
     }
 
+    public String getPoolNamePrefix();
+    
     public static void setId(final StringBuffer dstId, final String id, final String srcId) {
         dstId.delete(0, dstId.length());
         dstId.append(id);
@@ -87,4 +90,9 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
     public int getTotalConnections();
 
     public long getMinConnectionTimeout();    
+
+    public boolean isInitializing();
+
+    public Connection getConnection(final String schema,
+                                    final int refCount) throws SQLException;
 }
