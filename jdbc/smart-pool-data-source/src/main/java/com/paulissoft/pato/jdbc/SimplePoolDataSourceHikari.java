@@ -5,8 +5,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
+import oracle.jdbc.OracleConnection;
 
 @Slf4j
 public class SimplePoolDataSourceHikari
@@ -79,6 +81,163 @@ public class SimplePoolDataSourceHikari
 
             if (isStatisticsEnabled) {
                 poolDataSourceStatistics.showStatistics();
+            }
+        }
+
+        return conn;
+    }
+
+    // get a connection for the multi-session proxy model
+    //
+    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session through username (e.g. bc_proxy[bodomain])
+    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session through with this password
+    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session (e.g. bodomain)
+    public Connection getConnection(final String schema,
+                                    final int refCount) throws SQLException {
+        log.debug(">getConnection(id={}, schema={})",
+                  getId(), schema);
+
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
+        final int maxProxyLogicalConnectionCount = refCount - 1; // only relevant when there are more than 1 shared pool data sources
+        final Instant tm0 = Instant.now();
+        Instant tm1 = null;
+        int proxyLogicalConnectionCount = 0;
+        int proxyOpenSessionCount = 0;
+        int proxyCloseSessionCount = 0;
+        final String proxyUsername = getUsername();
+        final Connection[] connectionsWithWrongSchema =
+            maxProxyLogicalConnectionCount > 0 ? new Connection[maxProxyLogicalConnectionCount] : null;
+        int nrProxyLogicalConnectionCount = 0;
+        Connection conn = null;
+        boolean found;
+
+        try {
+            while (true) {
+                conn = super.getConnection(); // username will be bc_proxy when it is a new physical connection
+
+                found = conn.getSchema().equalsIgnoreCase(schema);
+
+                if (found || nrProxyLogicalConnectionCount >= maxProxyLogicalConnectionCount || getIdleConnections() == 0) {
+                    break;
+                } else {
+                    // !found && nrProxyLogicalConnectionCount < maxProxyLogicalConnectionCount && getIdleConnections() > 0
+
+                    connectionsWithWrongSchema[nrProxyLogicalConnectionCount++] = conn;
+                
+                    proxyLogicalConnectionCount++;
+                }
+            }
+
+            log.debug("before proxy session - current schema: {}",
+                      conn.getSchema());
+
+            // if the current schema is not the requested schema try to open/close the proxy session
+            if (!found) {
+                tm1 = Instant.now();
+                
+                OracleConnection oraConn = null;
+
+                try {
+                    if (conn.isWrapperFor(OracleConnection.class)) {
+                        oraConn = conn.unwrap(OracleConnection.class);
+                    }
+                } catch (SQLException ex) {
+                    oraConn = null;
+                }
+
+                if (oraConn != null) {
+                    int nr = 0;
+
+                    log.debug("before open proxy session - current schema: {}; is proxy session: {}",
+                              conn.getSchema(),
+                              oraConn.isProxySession());
+                    
+                    do {                    
+                        switch(nr) {
+                        case 0:
+                            if (!conn.getSchema().equalsIgnoreCase(proxyUsername) /*oraConn.isProxySession()*/) {
+                                // go back to the session with the first username
+                                try {
+                                    oraConn.close(OracleConnection.PROXY_SESSION);
+                                    
+                                    proxyOpenSessionCount++;
+                                } catch (SQLException ex) {
+                                    log.warn("SQL warning: {}", ex.getMessage());
+                                }
+                                oraConn.setSchema(proxyUsername);
+                            }
+                            break;
+                            
+                        case 1:
+                            if (!proxyUsername.equals(schema)) {
+                                // open a proxy session with the second username
+                                final Properties proxyProperties = new Properties();
+
+                                proxyProperties.setProperty(OracleConnection.PROXY_USER_NAME, schema);
+                                oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
+                                oraConn.setSchema(schema);
+                                
+                                proxyCloseSessionCount++;
+                            }
+                            break;
+                            
+                        case 2:
+                            oraConn.setSchema(schema);
+                            break;
+                            
+                        default:
+                            throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and 2", nr));
+                        }
+
+                        log.debug("after open proxy session (#{}) - current schema: {}; is proxy session: {}",
+                                  nr,
+                                  conn.getSchema(),
+                                  oraConn.isProxySession());
+                    } while (!conn.getSchema().equalsIgnoreCase(schema) && nr++ < 3);
+                }
+            }
+
+            log.debug("after proxy session - current schema: {}",
+                      conn.getSchema());
+        } catch (SQLException se) {
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.signalSQLException(this, se);
+            }
+            throw se;
+        } catch (Exception ex) {
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.signalException(this, ex);
+            }
+            throw ex;
+        } finally {
+            while (nrProxyLogicalConnectionCount > 0) {
+                try {
+                    connectionsWithWrongSchema[--nrProxyLogicalConnectionCount].close();
+                } catch (SQLException ex) {
+                    log.error("SQL exception on close(): {}", ex);
+                }
+            }
+            log.debug("<getConnection(id={})", getId());
+        }
+        
+        if (isStatisticsEnabled) {
+            if (tm1 == null) {
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(tm0, Instant.now()).toMillis(),
+                                                          true);
+            } else {
+                poolDataSourceStatistics.updateStatistics(this,
+                                                          conn,
+                                                          Duration.between(tm0, tm1).toMillis(),
+                                                          Duration.between(tm1, Instant.now()).toMillis(),
+                                                          true,
+                                                          proxyLogicalConnectionCount,
+                                                          proxyOpenSessionCount,
+                                                          proxyCloseSessionCount);
             }
         }
 
@@ -305,7 +464,7 @@ public class SimplePoolDataSourceHikari
         }
     }
 
-    protected final boolean isInitializing() {
+    public final boolean isInitializing() {
         return !hasShownConfig.get();
     }
 
