@@ -483,7 +483,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 return poolDataSource.getConnection();
             } else {
                 return poolDataSourceOverflow.getConnection(poolDataSourceConfiguration.getUsername(),
-                                                            poolDataSourceConfiguration.getPasword(),
+                                                            poolDataSourceConfiguration.getPassword(),
                                                             poolDataSourceConfiguration.getSchema(),
                                                             lookupSimplePoolDataSource.get(poolDataSourceOverflow).refCount);
             }
