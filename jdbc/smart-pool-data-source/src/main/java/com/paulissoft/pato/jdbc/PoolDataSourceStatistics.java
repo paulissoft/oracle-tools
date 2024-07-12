@@ -46,9 +46,9 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
     private static final int MIN_LEVEL = 1;
 
-    private static final int MAX_LEVEL = 3;
+    private static final int MAX_LEVEL = 2;
     
-    private static final int MAX_LEVEL_CONNECTION_STATISTICS = MAX_LEVEL; // was MAX_LEVEL - 1
+    private static final int MAX_LEVEL_CONNECTION_STATISTICS = MAX_LEVEL - 1; // was MAX_LEVEL - 1
 
     public static final PoolDataSourceStatistics poolDataSourceStatisticsGrandTotal = new PoolDataSourceStatistics(() -> "pool: (all)");
 

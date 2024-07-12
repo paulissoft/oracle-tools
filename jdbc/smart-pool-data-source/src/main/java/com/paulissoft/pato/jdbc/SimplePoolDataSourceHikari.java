@@ -21,9 +21,11 @@ public class SimplePoolDataSourceHikari
 
     private static final String POOL_NAME_PREFIX = "HikariPool";
 
-    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
+    private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal = PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal;
+    /*    
         new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+    */
 
     // all object related
 
