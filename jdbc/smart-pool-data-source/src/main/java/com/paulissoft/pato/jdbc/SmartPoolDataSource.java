@@ -327,37 +327,43 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
             final String suffix = " (dynamic)";
             final String oldPoolName = poolDataSourceOverflow.getPoolName();
-            String oldPoolNameWithoutSuffix;
 
-            // strip suffix
-            if (oldPoolName != null && oldPoolName.endsWith(suffix)) {
-                oldPoolNameWithoutSuffix = oldPoolName.substring(0, oldPoolName.length() - suffix.length());
+            if (lookupSimplePoolDataSource == null) {
+                // use a different name for the overflow to solve UCP-0
+                poolDataSourceOverflow.setPoolName(poolDataSource.getPoolName() + suffix);
             } else {
-                oldPoolNameWithoutSuffix = oldPoolName;
-            }
+                String oldPoolNameWithoutSuffix;
+
+                // strip suffix
+                if (oldPoolName != null && oldPoolName.endsWith(suffix)) {
+                    oldPoolNameWithoutSuffix = oldPoolName.substring(0, oldPoolName.length() - suffix.length());
+                } else {
+                    oldPoolNameWithoutSuffix = oldPoolName;
+                }
             
-            final ArrayList<String> items =
-                isFirstPoolDataSource ?
-                new ArrayList() :
-                new ArrayList(Arrays.asList(oldPoolNameWithoutSuffix.split("-")));
+                final ArrayList<String> items =
+                    isFirstPoolDataSource ?
+                    new ArrayList() :
+                    new ArrayList(Arrays.asList(oldPoolNameWithoutSuffix.split("-")));
 
-            log.debug("items: {}; schema: {}", items, schema);
+                log.debug("items: {}; schema: {}", items, schema);
 
-            if (isFirstPoolDataSource) {
-                items.add(poolDataSourceOverflow.getPoolNamePrefix());
-                items.add(schema);
-            } else if (!items.contains(schema)) {
-                items.add(schema);
-            }
+                if (isFirstPoolDataSource) {
+                    items.add(poolDataSourceOverflow.getPoolNamePrefix());
+                    items.add(schema);
+                } else if (!items.contains(schema)) {
+                    items.add(schema);
+                }
         
-            if (items.size() >= 2) {
-                poolDataSourceOverflow.setPoolName(String.join("-", items));
-            }
+                if (items.size() >= 2) {
+                    poolDataSourceOverflow.setPoolName(String.join("-", items));
+                }
             
-            // use a different name for the overflow to solve UCP-0
-            poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + suffix);
+                // use a different name for the overflow to solve UCP-0
+                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + suffix);
+            }
 
-            log.debug("pool name: {} => {}", oldPoolName, poolDataSourceOverflow.getPoolName());
+            log.debug("dynamic pool name: {} => {}", oldPoolName, poolDataSourceOverflow.getPoolName());
         } finally {
             log.debug("<updatePoolDescription(id={})", getId());
         }
