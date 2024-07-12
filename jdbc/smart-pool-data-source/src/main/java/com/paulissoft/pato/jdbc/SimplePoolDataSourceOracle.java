@@ -64,6 +64,7 @@ public class SimplePoolDataSourceOracle
     public Connection getConnection() throws SQLException {
         Connection conn = null;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
+        final boolean isInitializing = !hasShownConfig.getAndSet(true);
 
         if (isStatisticsEnabled) {
             final Instant tm = Instant.now();
@@ -86,7 +87,7 @@ public class SimplePoolDataSourceOracle
             conn = super.getConnection();
         }
 
-        if (!hasShownConfig.getAndSet(true)) {
+        if (isInitializing) {
             // Only show the first time a pool has gotten a connection.
             // Not earlier because these (fixed) values may change before and after the first connection.
             show(get());
@@ -102,35 +103,57 @@ public class SimplePoolDataSourceOracle
     
     // get a connection for the multi-session proxy model
     //
-    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema
-    //                  via a proxy session through username (e.g. bc_proxy[bodomain])
-    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema
-    //                  via a proxy session through with this password
-    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
-    //                  via a proxy session (e.g. bodomain)
-    public Connection getConnection(final String username,
+    // @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                             via a proxy session through username (e.g. bc_proxy[bodomain])
+    // @param password             provided by pool data source that needs the overflow pool data source to connect to schema
+    //                             via a proxy session through with this password
+    // @param schema               provided by pool data source that needs the overflow pool data source to connect to schema
+    //                             via a proxy session (e.g. bodomain)
+    public Connection getConnection(final String usernameToConnectTo,
                                     final String password,
                                     final String schema,
                                     final int refCount) throws SQLException {
-        log.debug(">getConnection(id={}, username={}, schema={})",
-                  getId(), username, schema);
+        log.debug(">getConnection(id={}, usernameToConnectTo={}, schema={})",
+                  getId(), usernameToConnectTo, schema);
 
-        final Instant tm0 = Instant.now();
         Connection conn = null;
-
+        final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
+        final boolean isInitializing = !hasShownConfig.getAndSet(true);
+        
         try {
-            conn = super.getConnection(username, password);
+            if (isStatisticsEnabled) {
+                final Instant tm0 = Instant.now();
+
+                try {
+                    conn = super.getConnection(usernameToConnectTo, password);
+                    poolDataSourceStatistics.updateStatistics(this,
+                                                              conn,
+                                                              Duration.between(tm0, Instant.now()).toMillis(),
+                                                              true);
+                } catch (SQLException se) {
+                    poolDataSourceStatistics.signalSQLException(this, se);
+                    throw se;
+                } catch (Exception ex) {
+                    poolDataSourceStatistics.signalException(this, ex);
+                    throw ex;
+                }
+            } else {
+                conn = super.getConnection(usernameToConnectTo, password);
+            }
 
             assert conn.getSchema().equalsIgnoreCase(schema) : String.format("Connection schema (%s) must be equal to %s", conn.getSchema(), schema);
+
+            if (isInitializing) {
+                // Only show the first time a pool has gotten a connection.
+                // Not earlier because these (fixed) values may change before and after the first connection.
+                show(get());
+                
+                if (isStatisticsEnabled) {
+                    poolDataSourceStatistics.showStatistics();
+                }
+            }
         } finally {
             log.debug("<getConnection(id={})", getId());
-        }
-        
-        if (statisticsEnabled.get()) {
-            poolDataSourceStatistics.updateStatistics(this,
-                                                      conn,
-                                                      Duration.between(tm0, Instant.now()).toMillis(),
-                                                      true);
         }
 
         return conn;

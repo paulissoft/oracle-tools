@@ -40,6 +40,7 @@ public class SimplePoolDataSourceHikari
                                          poolDataSourceStatisticsTotal, 
                                          this::isClosed,
                                          this::getWithPoolName);
+        setId(this.getClass().getSimpleName());
     }
 
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
@@ -95,25 +96,26 @@ public class SimplePoolDataSourceHikari
     //                  via a proxy session through with this password
     // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
     //                  via a proxy session (e.g. bodomain)
-    public Connection getConnection(final String username,
+    public Connection getConnection(final String usernameToConnectTo,
                                     final String password,
                                     final String schema,
                                     final int refCount) throws SQLException {
-        log.debug(">getConnection(id={}, username={}, schema={})",
-                  getId(), username, schema);
+        log.debug(">getConnection(id={}, usernameToConnectTo={}, schema={})",
+                  getId(), usernameToConnectTo, schema);
 
+        Connection conn = null;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
+        final boolean isInitializing = !hasShownConfig.getAndSet(true);
         final int maxProxyLogicalConnectionCount = refCount - 1; // only relevant when there are more than 1 shared pool data sources
         final Instant tm0 = Instant.now();
         Instant tm1 = null;
         int proxyLogicalConnectionCount = 0;
         int proxyOpenSessionCount = 0;
         int proxyCloseSessionCount = 0;
-        final String proxyUsername = username;
+        final String proxyUsername = usernameToConnectTo;
         final Connection[] connectionsWithWrongSchema =
             maxProxyLogicalConnectionCount > 0 ? new Connection[maxProxyLogicalConnectionCount] : null;
         int nrProxyLogicalConnectionCount = 0;
-        Connection conn = null;
         boolean found;
 
         try {
@@ -240,6 +242,16 @@ public class SimplePoolDataSourceHikari
                                                           proxyLogicalConnectionCount,
                                                           proxyOpenSessionCount,
                                                           proxyCloseSessionCount);
+            }
+        }
+
+        if (isInitializing) {
+            // Only show the first time a pool has gotten a connection.
+            // Not earlier because these (fixed) values may change before and after the first connection.
+            show(get());
+
+            if (isStatisticsEnabled) {
+                poolDataSourceStatistics.showStatistics();
             }
         }
 
