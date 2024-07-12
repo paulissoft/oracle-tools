@@ -167,7 +167,7 @@ public class SimplePoolDataSourceHikari
                                 try {
                                     oraConn.close(OracleConnection.PROXY_SESSION);
                                     
-                                    proxyOpenSessionCount++;
+                                    proxyCloseSessionCount++;
                                 } catch (SQLException ex) {
                                     log.warn("SQL warning: {}", ex.getMessage());
                                 }
@@ -184,7 +184,7 @@ public class SimplePoolDataSourceHikari
                                 oraConn.openProxySession(OracleConnection.PROXYTYPE_USER_NAME, proxyProperties);
                                 oraConn.setSchema(schema);
                                 
-                                proxyCloseSessionCount++;
+                                proxyOpenSessionCount++;
                             }
                             break;
                             
