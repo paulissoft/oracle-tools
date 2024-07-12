@@ -23,8 +23,10 @@ public class SimplePoolDataSourceOracle
     
     static final long MIN_CONNECTION_TIMEOUT = 0; // milliseconds for one pool, so twice this number for two
 
+    private static final String POOL_NAME_PREFIX = "OraclePool";
+
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal =
-        new PoolDataSourceStatistics(() -> "OraclePool: (all)",
+        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
                                      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
 
     private static final UniversalConnectionPoolManager mgr;
@@ -95,6 +97,47 @@ public class SimplePoolDataSourceOracle
         }
 
         return conn;
+    }
+
+    
+    // get a connection for the multi-session proxy model
+    //
+    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session through username (e.g. bc_proxy[bodomain])
+    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session through with this password
+    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session (e.g. bodomain)
+    public Connection getConnection(final String username,
+                                    final String password,
+                                    final String schema,
+                                    final int refCount) throws SQLException {
+        log.debug(">getConnection(id={}, username={}, schema={})",
+                  getId(), username, schema);
+
+        final Instant tm0 = Instant.now();
+        Connection conn = null;
+
+        try {
+            conn = super.getConnection(username, password);
+
+            assert conn.getSchema().equals(schema) : String.format("Connection schema (%s) must be equal to %s", conn.getSchema(), schema);
+        } finally {
+            log.debug("<getConnection(id={})", getId());
+        }
+        
+        if (statisticsEnabled.get()) {
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm0, Instant.now()).toMillis(),
+                                                      true);
+        }
+
+        return conn;
+    }
+
+    public String getPoolNamePrefix() {
+        return POOL_NAME_PREFIX;
     }
 
     public void setId(final String srcId) {
@@ -321,6 +364,10 @@ public class SimplePoolDataSourceOracle
     @Override
     public void setConnectionWaitDurationInMillis(long waitTimeout) throws SQLException {
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
+    }
+
+    public final boolean isInitializing() {
+        return !hasShownConfig.get();
     }
 
     public long getMinConnectionTimeout() {
