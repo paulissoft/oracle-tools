@@ -204,18 +204,22 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 try {
                     poolDataSource.close();
 
-                    if (poolDataSourceOverflow != null && lookupSimplePoolDataSource != null) {
-                        synchronized (lookupSimplePoolDataSource) {
-                            final SimplePoolDataSource key = poolDataSourceOverflow;
-                            final CommonIdRefCountPair value = lookupSimplePoolDataSource.get(key);
+                    if (poolDataSourceOverflow != null) {
+                        if (lookupSimplePoolDataSource != null) {
+                            synchronized (lookupSimplePoolDataSource) {
+                                final SimplePoolDataSource key = poolDataSourceOverflow;
+                                final CommonIdRefCountPair value = lookupSimplePoolDataSource.get(key);
 
-                            if (value != null) {
-                                value.refCount--;
-                                if (value.refCount <= 0) {
-                                    poolDataSourceOverflow.close();
-                                    lookupSimplePoolDataSource.remove(key);
+                                if (value != null) {
+                                    value.refCount--;
+                                    if (value.refCount <= 0) {
+                                        poolDataSourceOverflow.close();
+                                        lookupSimplePoolDataSource.remove(key);
+                                    }
                                 }
                             }
+                        } else {
+                            poolDataSourceOverflow.close();
                         }
                     }
                 } catch(Exception ex) {
@@ -236,12 +240,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     protected void updatePool() {
         try {
             log.debug(">updatePool(id={})", getId());
-            
-            // set pool name
-            if (poolDataSource.getPoolName() == null || poolDataSource.getPoolName().isEmpty()) {
-                poolDataSource.setPoolName(poolDataSource.getClass().getSimpleName() + "-" + poolDataSourceConfiguration.getSchema());
-            }
-            
+
+            final String schema = poolDataSourceConfiguration.getSchema();                
+
             // is there an overflow?
             if (poolDataSourceOverflow != null) {
                 // determine the maxPoolSizeOverflow before using poolDataSource.setMaxPoolSize()
@@ -307,12 +308,12 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     poolDataSourceOverflow.setMaxPoolSize(poolDataSourceOverflow.getMaxPoolSize() + maxPoolSizeOverflow);
                 }
 
-                final String schema = poolDataSourceConfiguration.getSchema();
-                
                 log.debug("new maximum pool size after adding schema {}: {}", schema, poolDataSourceOverflow.getMaxPoolSize());
 
-                updatePoolDescription(pds == null, schema);                
+                updatePoolDescription(poolDataSourceOverflow, " (dynamic)", pds == null, schema);                
             } // if (poolDataSourceOverflow != null) {
+
+            updatePoolDescription(poolDataSource, " (fixed)", true, schema);                
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
@@ -320,50 +321,46 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    private void updatePoolDescription(final boolean isFirstPoolDataSource,
+    private void updatePoolDescription(final T poolDataSource,
+                                       final String suffix,
+                                       final boolean isFirstPoolDataSource,
                                        final String schema) throws SQLException {
         try {
             log.debug(">updatePoolDescription(id={}, isFirstPoolDataSource={}, schema={})", getId(), isFirstPoolDataSource, schema);
 
-            final String suffix = " (dynamic)";
-            final String oldPoolName = poolDataSourceOverflow.getPoolName();
+            final String oldPoolName = poolDataSource.getPoolName();
+            String oldPoolNameWithoutSuffix;
 
-            if (lookupSimplePoolDataSource == null) {
-                // use a different name for the overflow to solve UCP-0
-                poolDataSourceOverflow.setPoolName(poolDataSource.getPoolName() + suffix);
+            // strip suffix
+            if (oldPoolName != null && !suffix.isEmpty() && oldPoolName.endsWith(suffix)) {
+                oldPoolNameWithoutSuffix = oldPoolName.substring(0, oldPoolName.length() - suffix.length());
             } else {
-                String oldPoolNameWithoutSuffix;
-
-                // strip suffix
-                if (oldPoolName != null && oldPoolName.endsWith(suffix)) {
-                    oldPoolNameWithoutSuffix = oldPoolName.substring(0, oldPoolName.length() - suffix.length());
-                } else {
-                    oldPoolNameWithoutSuffix = oldPoolName;
-                }
-            
-                final ArrayList<String> items =
-                    isFirstPoolDataSource ?
-                    new ArrayList() :
-                    new ArrayList(Arrays.asList(oldPoolNameWithoutSuffix.split("-")));
-
-                log.debug("items: {}; schema: {}", items, schema);
-
-                if (isFirstPoolDataSource) {
-                    items.add(poolDataSourceOverflow.getPoolNamePrefix());
-                    items.add(schema);
-                } else if (!items.contains(schema)) {
-                    items.add(schema);
-                }
-        
-                if (items.size() >= 2) {
-                    poolDataSourceOverflow.setPoolName(String.join("-", items));
-                }
-            
-                // use a different name for the overflow to solve UCP-0
-                poolDataSourceOverflow.setPoolName(poolDataSourceOverflow.getPoolName() + suffix);
+                oldPoolNameWithoutSuffix = oldPoolName;
             }
+            
+            final ArrayList<String> items =
+                isFirstPoolDataSource ?
+                new ArrayList() :
+                new ArrayList(Arrays.asList(oldPoolNameWithoutSuffix.split("-")));
 
-            log.debug("dynamic pool name: {} => {}", oldPoolName, poolDataSourceOverflow.getPoolName());
+            log.debug("items: {}; schema: {}", items, schema);
+
+            if (isFirstPoolDataSource) {
+                items.clear(); // not really necessary...
+                items.add(poolDataSource.getPoolNamePrefix());
+                items.add(schema);
+            } else if (!items.contains(schema)) {
+                items.add(schema);
+            }
+        
+            if (items.size() >= 2) {
+                poolDataSource.setPoolName(String.join("-", items));
+            }
+            
+            // use a different name for the overflow to solve UCP-0
+            poolDataSource.setPoolName(poolDataSource.getPoolName() + suffix);
+
+            log.debug("pool name{}: {} => {}", suffix, oldPoolName, poolDataSource.getPoolName());
         } finally {
             log.debug("<updatePoolDescription(id={})", getId());
         }
