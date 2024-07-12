@@ -819,7 +819,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                     val3 = getPhysicalTimeElapsedMax();
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        (val1 > 0L || val2 > 0L || val3 > 0L)) {
                         method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
@@ -829,7 +829,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                     val3 = getLogicalTimeElapsedMax();
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        (val1 > 0L || val2 > 0L || val3 > 0L)) {
                         method.accept(String.format("%smin/avg/max logical connection time (ms): %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
@@ -839,7 +839,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                     val3 = getProxyTimeElapsedMax();
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        (val1 > 0L || val2 > 0L || val3 > 0L)) {
                         method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
@@ -849,7 +849,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                     val3 = getProxyLogicalConnectionCount();
                 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                        (val1 > 0L || val2 > 0L || val3 > 0L)) {
                         method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
                                                     "logical connections rejected while searching for optimal proxy session: %d",
                                                     prefix, val1, val2, val3));
@@ -869,7 +869,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         val3 = getActiveConnectionsMax();
 
                         if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                            (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                            (val1 > 0L || val2 > 0L || val3 > 0L)) {
                             method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
                                                         prefix, val1, val2, val3));
                         }
@@ -879,7 +879,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         val3 = getIdleConnectionsMax();
 
                         if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                            (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                            (val1 > 0L || val2 > 0L || val3 > 0L)) {
                             method.accept(String.format("%smin/avg/max idle connections: %d/%d/%d",
                                                         prefix, val1, val2, val3));
                         }
@@ -889,7 +889,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                         val3 = getTotalConnectionsMax();
 
                         if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                            (val1 >= 0L || val2 > 0L || val3 > 0L)) {
+                            (val1 > 0L || val2 > 0L || val3 > 0L)) {
                             method.accept(String.format("%smin/avg/max total connections: %d/%d/%d",
                                                         prefix, val1, val2, val3));
                         }
