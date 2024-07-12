@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-public abstract class PoolDataSourceConfiguration implements ConnectInfo {
+public abstract class PoolDataSourceConfiguration implements ConnectInfo, PoolDataSourcePropertiesSetters, PoolDataSourcePropertiesGetters {
 
     public static final boolean SINGLE_SESSION_PROXY_MODEL = true;
     
@@ -142,6 +142,19 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo {
 
         // GJP 2024-02-20 Type can not change
         // this.type = poolDataSourceConfiguration.type;
+    }
+
+    public static void set(final PoolDataSourcePropertiesSetters pdsDst,
+                           final PoolDataSourceConfiguration pdsSrc) {
+
+        if (pdsDst instanceof PoolDataSourcePropertiesSettersOracle &&
+            pdsSrc instanceof PoolDataSourceConfigurationOracle) {
+            PoolDataSourceConfigurationOracle.set((PoolDataSourcePropertiesSettersOracle) pdsDst,
+                                                  (PoolDataSourceConfigurationOracle) pdsSrc);
+        } else {
+            PoolDataSourceConfigurationHikari.set((PoolDataSourcePropertiesSettersHikari) pdsDst,
+                                                  (PoolDataSourceConfigurationHikari) pdsSrc);
+        }
     }
 
     void keepCommonIdConfiguration() {
