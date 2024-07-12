@@ -4,7 +4,7 @@ package com.paulissoft.pato.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import oracle.ucp.jdbc.ValidConnection;
-// import lombok.NonNull;
+import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,12 +23,12 @@ public class SmartPoolDataSourceOracle
      */
 
     public SmartPoolDataSourceOracle() {
-        this(null);
+        super(SimplePoolDataSourceOracle::new, new PoolDataSourceConfigurationOracle(), false);
     }
 
-    public SmartPoolDataSourceOracle(final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
+    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
         // configuration is supposed to be set completely
-        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
+        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle, true);
     }
 
     public SmartPoolDataSourceOracle(String url,
@@ -123,7 +123,7 @@ public class SmartPoolDataSourceOracle
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+                return getPoolDataSource();
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceGetter():", ex);

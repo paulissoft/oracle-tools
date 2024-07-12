@@ -45,8 +45,8 @@ public class SimplePoolDataSourceHikari
     }
 
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-	this();
-	set(poolDataSourceConfigurationHikari);
+        this();
+        set(poolDataSourceConfigurationHikari);
     }
     
     @Override

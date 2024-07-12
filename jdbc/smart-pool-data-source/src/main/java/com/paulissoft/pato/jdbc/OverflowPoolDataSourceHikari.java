@@ -67,12 +67,12 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
                 .connectionTimeout(poolDataSourceConfigurationHikari.getConnectionTimeout() - getMinConnectionTimeout())
                 .build();
 
-	    final String proxyUsername = poolDataSourceConfigurationHikari.getProxyUsername();
-	    final String schema = poolDataSourceConfigurationHikari.getSchema();
+      final String proxyUsername = poolDataSourceConfigurationHikari.getProxyUsername();
+      final String schema = poolDataSourceConfigurationHikari.getSchema();
 
-	    if (proxyUsername != null) {
+      if (proxyUsername != null) {
                 poolDataSourceConfigurationHikariCopy.setUsername(proxyUsername);
-	    }
+      }
 
             if (pds == null) {
                 poolDataSource = new SimplePoolDataSourceHikari(poolDataSourceConfigurationHikariCopy);
@@ -86,20 +86,23 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
 
     // get a connection for the multi-session proxy model
     //
-    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session through username (e.g. bc_proxy[bodomain])
-    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session through with this password
-    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema via a proxy session (e.g. bodomain)
+    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session through username (e.g. bc_proxy[bodomain])
+    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session through with this password
+    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
+    //                  via a proxy session (e.g. bodomain)
     public Connection getConnection(@NonNull final String username, @NonNull final String password, @NonNull final String schema) throws SQLException {
         log.debug(">getConnection(id={}, schema={})",
                   getId(), schema);
 
-	final int maxProxyLogicalConnectionCount = 0;
-	final Instant tm0 = Instant.now();
-	Instant tm1 = null;
-	int proxyLogicalConnectionCount = 0;
-	int proxyOpenSessionCount = 0;
-	int proxyCloseSessionCount = 0;
-	final String proxyUsername = getUsername(); // see constructor
+  final int maxProxyLogicalConnectionCount = 0;
+  final Instant tm0 = Instant.now();
+  Instant tm1 = null;
+  int proxyLogicalConnectionCount = 0;
+  int proxyOpenSessionCount = 0;
+  int proxyCloseSessionCount = 0;
+  final String proxyUsername = getUsername(); // see constructor
         final Connection[] connectionsWithWrongSchema =
             maxProxyLogicalConnectionCount > 0 ? new Connection[maxProxyLogicalConnectionCount] : null;
         int nrProxyLogicalConnectionCount = 0;
@@ -208,18 +211,18 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
         if (statisticsEnabled.get()) {
             if (tm1 == null) {
                 poolDataSourceStatistics.updateStatistics(this,
-							  conn,
-							  Duration.between(tm0, Instant.now()).toMillis(),
-							  true);
+                conn,
+                Duration.between(tm0, Instant.now()).toMillis(),
+                true);
             } else {
                 poolDataSourceStatistics.updateStatistics(this,
-							  conn,
-							  Duration.between(tm0, tm1).toMillis(),
-							  Duration.between(tm1, Instant.now()).toMillis(),
-							  true,
-							  proxyLogicalConnectionCount,
-							  proxyOpenSessionCount,
-							  proxyCloseSessionCount);
+                conn,
+                Duration.between(tm0, tm1).toMillis(),
+                Duration.between(tm1, Instant.now()).toMillis(),
+                true,
+                proxyLogicalConnectionCount,
+                proxyOpenSessionCount,
+                proxyCloseSessionCount);
             }
         }
 
@@ -227,8 +230,8 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
     }
 
     private void updatePoolDescription(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
-				       final boolean isFirstPoolDataSource,
-				       final String schema) {
+               final boolean isFirstPoolDataSource,
+               final String schema) {
         final ArrayList<String> items = new ArrayList(Arrays.asList(poolDataSource.getPoolName().split("-")));
 
         log.debug("items: {}; schema: {}", items, schema);
@@ -246,7 +249,7 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
         }
         
         // keep poolDataSource.getPoolName() and poolDataSourceConfiguration.getPoolName() in sync
-	// GJP 2024-07-11 Not anymore
+  // GJP 2024-07-11 Not anymore
         // poolDataSourceConfiguration.setPoolName(poolDataSource.getPoolNamePrefix() + "-" + schema); // own prefix
     }
 
@@ -277,8 +280,8 @@ public class OverflowPoolDataSourceHikari extends SimplePoolDataSourceHikari imp
     }
 
     private void updatePool(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfiguration,
-			    final boolean isFirstPoolDataSource,
-			    final String schema) {
+          final boolean isFirstPoolDataSource,
+          final String schema) {
         updatePoolDescription(poolDataSourceConfiguration, isFirstPoolDataSource, schema);
         if (!isFirstPoolDataSource) {
             updatePoolSizes(poolDataSourceConfiguration);

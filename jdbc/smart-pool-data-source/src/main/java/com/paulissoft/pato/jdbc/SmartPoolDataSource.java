@@ -12,6 +12,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     private final StringBuffer id = new StringBuffer();
 
+    private final PoolDataSourceConfiguration poolDataSourceConfiguration;
+    
     private final T poolDataSource;
 
     private volatile T poolDataSourceOverflow; // can only be set in open()
@@ -30,18 +32,18 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
      * Constructor(s)
      */
 
-    protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT) {
-        this(supplierT, null);
-    }
-
-    protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT, final PoolDataSourceConfiguration poolDataSourceConfiguration) {
+    protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT,
+                                  @NonNull final PoolDataSourceConfiguration poolDataSourceConfiguration,
+                                  final boolean fixed) {
         this.poolDataSource = supplierT.get();
         this.poolDataSourceOverflow = supplierT.get();
 
-        if (poolDataSourceConfiguration == null) {
+        if (!fixed) {
+            this.poolDataSourceConfiguration = poolDataSourceConfiguration;
             setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
         } else {
-            set(poolDataSourceConfiguration);        
+            this.poolDataSourceConfiguration = poolDataSourceConfiguration.toBuilder().build(); // a copy
+            set(poolDataSourceConfiguration);
             setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
             setUp();
             state = State.OPEN;
@@ -79,8 +81,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             log.info("Open initiated");
 
             try {
-                final PoolDataSourceConfiguration pdsConfig = poolDataSource.get();
-                    
+                final PoolDataSourceConfiguration poolDataSourceConfiguration = poolDataSource.get();
+                
                 setUp();
 
                 state = this.state = State.OPEN;
@@ -90,22 +92,22 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
                 // now getMaxPoolSize() returns the combined totals
                     
-                assert pdsConfig.getInitialPoolSize() == getInitialPoolSize() :
+                assert poolDataSourceConfiguration.getInitialPoolSize() == getInitialPoolSize() :
                 String.format("The new initial pool size (%d) must be the same as before (%d).",
                               getInitialPoolSize(),
-                              pdsConfig.getInitialPoolSize());
-                assert pdsConfig.getMinPoolSize() == getMinPoolSize() :
+                              poolDataSourceConfiguration.getInitialPoolSize());
+                assert poolDataSourceConfiguration.getMinPoolSize() == getMinPoolSize() :
                 String.format("The new min pool size (%d) must be the same as before (%d).",
                               getMinPoolSize(),
-                              pdsConfig.getMinPoolSize());
-                assert pdsConfig.getMaxPoolSize() == getMaxPoolSize() :
+                              poolDataSourceConfiguration.getMinPoolSize());
+                assert poolDataSourceConfiguration.getMaxPoolSize() == getMaxPoolSize() :
                 String.format("The new max pool size (%d) must be the same as before (%d).",
                               getMaxPoolSize(),
-                              pdsConfig.getMaxPoolSize());
-                assert pdsConfig.getConnectionTimeout() == getConnectionTimeout() :
+                              poolDataSourceConfiguration.getMaxPoolSize());
+                assert poolDataSourceConfiguration.getConnectionTimeout() == getConnectionTimeout() :
                 String.format("The new connection timeout (%d) must be the same as before (%d).",
                               getConnectionTimeout(),
-                              pdsConfig.getConnectionTimeout());
+                              poolDataSourceConfiguration.getConnectionTimeout());
 
                 log.info("Open completed ({})", getPoolName());
             } catch (Exception ex) {
@@ -259,6 +261,15 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         public int getIdleConnections(); // idem
 
         public int getTotalConnections(); // idem
+    }
+
+    private PoolDataSourceConfiguration getPoolDataSourceConfiguration() {
+        switch (state) {
+        case CLOSED:
+            throw new IllegalStateException("You can not use the pool once it is closed.");
+        default:
+            return poolDataSourceConfiguration;
+        }
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })

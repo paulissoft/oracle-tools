@@ -22,12 +22,12 @@ public class SmartPoolDataSourceHikari
      */
     
     public SmartPoolDataSourceHikari() {
-        this(null);
+        super(SimplePoolDataSourceHikari::new, new PoolDataSourceConfigurationHikari(), false);
     }
 
-    public SmartPoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
+    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
         // configuration is supposed to be set completely
-        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
+        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari, true);
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
@@ -143,7 +143,7 @@ public class SmartPoolDataSourceHikari
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                return getPoolDataSource(); // as soon as the initializing phase is over, the actual pool data source should be used
+                return getPoolDataSource();
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceGetter():", ex);
