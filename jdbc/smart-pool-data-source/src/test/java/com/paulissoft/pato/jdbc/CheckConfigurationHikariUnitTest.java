@@ -60,7 +60,7 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
-                     "maximumPoolSize=7, minimumIdle=0, dataSourceClassName=null, autoCommit=true, connectionTimeout=2750, " + 
+                     "maximumPoolSize=14, minimumIdle=0, dataSourceClassName=null, autoCommit=true, connectionTimeout=2750, " + 
                      "idleTimeout=10000, maxLifetime=30000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
@@ -72,7 +72,7 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.MyDomainDataSourceHikari), poolName=null, " +
-                     "maximumPoolSize=16, minimumIdle=9, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
+                     "maximumPoolSize=23, minimumIdle=9, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
@@ -105,9 +105,9 @@ public class CheckConfigurationHikariUnitTest {
         poolDataSourceConfiguration = operatorDataSourceHikari.getPoolDataSourceOverflow().get();
         
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
-                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
+                     "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceHikari), poolName=null, " +
-                     "maximumPoolSize=7, minimumIdle=0, dataSourceClassName=null, autoCommit=true, connectionTimeout=2750, " + 
+                     "maximumPoolSize=14, minimumIdle=0, dataSourceClassName=null, autoCommit=true, connectionTimeout=2750, " + 
                      "idleTimeout=10000, maxLifetime=30000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",
@@ -119,7 +119,7 @@ public class CheckConfigurationHikariUnitTest {
         assertEquals("PoolDataSourceConfigurationHikari(super=PoolDataSourceConfiguration(driverClassName=oracle.jdbc.OracleDriver, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain[boopapij], password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.MyOperatorDataSourceHikari), poolName=null, " +
-                     "maximumPoolSize=16, minimumIdle=9, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
+                     "maximumPoolSize=23, minimumIdle=9, dataSourceClassName=null, autoCommit=true, connectionTimeout=3000, " + 
                      "idleTimeout=600000, maxLifetime=1800000, connectionTestQuery=select 1 from dual, initializationFailTimeout=1, " +
                      "isolateInternalQueries=false, allowPoolSuspension=false, readOnly=false, registerMbeans=false, " +
                      "validationTimeout=5000, leakDetectionThreshold=0)",

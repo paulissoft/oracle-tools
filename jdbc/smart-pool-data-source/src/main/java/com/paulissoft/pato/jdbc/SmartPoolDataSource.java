@@ -27,7 +27,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     // Store all objects of type SimplePoolDataSourceHikari in the hash table.
     // The key is the common id, i.e. the set of common properties
-    private static final HashMap<SimplePoolDataSource,CommonIdRefCountPair> lookupSimplePoolDataSource = null; // new HashMap();
+    private static final HashMap<SimplePoolDataSource,CommonIdRefCountPair> lookupSimplePoolDataSource = new HashMap(); // null for regression testing
 
     // object members
     private final StringBuffer id = new StringBuffer();
