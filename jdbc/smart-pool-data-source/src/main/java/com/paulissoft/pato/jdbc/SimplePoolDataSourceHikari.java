@@ -95,10 +95,12 @@ public class SimplePoolDataSourceHikari
     //                  via a proxy session through with this password
     // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
     //                  via a proxy session (e.g. bodomain)
-    public Connection getConnection(final String schema,
+    public Connection getConnection(final String username,
+                                    final String password,
+                                    final String schema,
                                     final int refCount) throws SQLException {
-        log.debug(">getConnection(id={}, schema={})",
-                  getId(), schema);
+        log.debug(">getConnection(id={}, username={}, schema={})",
+                  getId(), username, schema);
 
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final int maxProxyLogicalConnectionCount = refCount - 1; // only relevant when there are more than 1 shared pool data sources
@@ -107,7 +109,7 @@ public class SimplePoolDataSourceHikari
         int proxyLogicalConnectionCount = 0;
         int proxyOpenSessionCount = 0;
         int proxyCloseSessionCount = 0;
-        final String proxyUsername = getUsername();
+        final String proxyUsername = username;
         final Connection[] connectionsWithWrongSchema =
             maxProxyLogicalConnectionCount > 0 ? new Connection[maxProxyLogicalConnectionCount] : null;
         int nrProxyLogicalConnectionCount = 0;
