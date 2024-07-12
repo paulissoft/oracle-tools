@@ -1,12 +1,10 @@
 package com.paulissoft.pato.jdbc;
 
-// import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
-
 
 @Slf4j
 public class SmartPoolDataSourceHikari
@@ -90,9 +88,12 @@ public class SmartPoolDataSourceHikari
                                                      leakDetectionThreshold));
     }
 
-    protected void updatePool(@NonNull final SimplePoolDataSourceHikari poolDataSource,
-                              final SimplePoolDataSourceHikari poolDataSourceOverflow) {        
-        super.updatePool(poolDataSource, poolDataSourceOverflow);
+    @Override
+    protected void updatePool() {        
+        super.updatePool();
+
+        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
+        
         // is there an overflow?
         if (poolDataSourceOverflow != null) {
             // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
