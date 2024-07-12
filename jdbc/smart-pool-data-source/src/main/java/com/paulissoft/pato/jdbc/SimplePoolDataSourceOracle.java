@@ -58,6 +58,7 @@ public class SimplePoolDataSourceOracle
                                          poolDataSourceStatisticsTotal, 
                                          this::isClosed,
                                          this::getWithPoolName);
+        setId(this.getClass().getSimpleName());
     }
     
     @Override

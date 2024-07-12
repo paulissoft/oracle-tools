@@ -90,12 +90,12 @@ public class SimplePoolDataSourceHikari
 
     // get a connection for the multi-session proxy model
     //
-    // @param username  provided by pool data source that needs the overflow pool data source to connect to schema
-    //                  via a proxy session through username (e.g. bc_proxy[bodomain])
-    // @param password  provided by pool data source that needs the overflow pool data source to connect to schema
-    //                  via a proxy session through with this password
-    // @param schema    provided by pool data source that needs the overflow pool data source to connect to schema
-    //                  via a proxy session (e.g. bodomain)
+    // @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
+    //                             via a proxy session through username (e.g. bc_proxy[bodomain])
+    // @param password             provided by pool data source that needs the overflow pool data source to connect to schema
+    //                             via a proxy session through with this password
+    // @param schema               provided by pool data source that needs the overflow pool data source to connect to schema
+    //                             via a proxy session (e.g. bodomain)
     public Connection getConnection(final String usernameToConnectTo,
                                     final String password,
                                     final String schema,
