@@ -228,6 +228,8 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo, PoolDa
      */
     String getUsernameToConnectTo() {
         assert username != null : "Username should not be empty.";
+
+        determineConnectInfo(); // determine proxyUsername if necessary
         
         return !isSingleSessionProxyModel() && proxyUsername != null ?
             /* see observations in constructor of SmartPoolDataSource for the case numbers */

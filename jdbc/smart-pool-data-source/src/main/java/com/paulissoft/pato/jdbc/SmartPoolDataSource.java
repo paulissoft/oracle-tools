@@ -500,7 +500,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             if (!useOverflow) {
                 return poolDataSource.getConnection();
             } else if (lookupSimplePoolDataSource != null) {
-                return poolDataSourceOverflow.getConnection(poolDataSourceConfiguration.getUsername(),
+                return poolDataSourceOverflow.getConnection(poolDataSourceConfiguration.getUsernameToConnectTo(),
                                                             poolDataSourceConfiguration.getPassword(),
                                                             poolDataSourceConfiguration.getSchema(),
                                                             ( lookupSimplePoolDataSource != null ?
