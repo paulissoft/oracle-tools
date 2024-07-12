@@ -101,10 +101,16 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             log.info("Open initiated");
 
             try {
-                // update the poolDataSourceConfiguration with the actual poolDataSource properties
-                PoolDataSourceConfiguration.set(poolDataSourceConfiguration, poolDataSource.get());
+                final PoolDataSourceConfiguration poolDataSourceConfigurationBefore = poolDataSource.get();
+                
+                // Update the poolDataSourceConfiguration with the actual poolDataSource properties
+                // since the sub class sets properties via delegation to poolDataSource
+                PoolDataSourceConfiguration.set(poolDataSourceConfiguration, poolDataSourceConfigurationBefore);
                 
                 setUp();
+
+                // synchronize after changing poolDataSource
+                PoolDataSourceConfiguration.set(poolDataSourceConfiguration, poolDataSource.get());
 
                 state = this.state = State.OPEN;
                 
@@ -112,24 +118,32 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     " the dynamic pool data source should NOT be null.";
 
                 // now getMaxPoolSize() returns the combined totals
-                    
-                assert poolDataSourceConfiguration.getInitialPoolSize() == getInitialPoolSize() :
+
+                assert poolDataSourceConfigurationBefore.getInitialPoolSize() == getInitialPoolSize() :
                 String.format("The new initial pool size (%d) must be the same as before (%d).",
                               getInitialPoolSize(),
-                              poolDataSourceConfiguration.getInitialPoolSize());
-                assert poolDataSourceConfiguration.getMinPoolSize() == getMinPoolSize() :
+                              poolDataSourceConfigurationBefore.getInitialPoolSize());
+                assert poolDataSourceConfigurationBefore.getMinPoolSize() == getMinPoolSize() :
                 String.format("The new min pool size (%d) must be the same as before (%d).",
                               getMinPoolSize(),
-                              poolDataSourceConfiguration.getMinPoolSize());
-                assert poolDataSourceConfiguration.getMaxPoolSize() == getMaxPoolSize() :
-                String.format("The new max pool size (%d) must be the same as before (%d).",
-                              getMaxPoolSize(),
-                              poolDataSourceConfiguration.getMaxPoolSize());
-                assert poolDataSourceConfiguration.getConnectionTimeout() == getConnectionTimeout() :
+                              poolDataSourceConfigurationBefore.getMinPoolSize());
+                if (lookupSimplePoolDataSource == null) {
+                    assert poolDataSourceConfigurationBefore.getMaxPoolSize() == getMaxPoolSize() :
+                    String.format("The new max pool size (%d) must be the same as before (%d).",
+                                  getMaxPoolSize(),
+                                  poolDataSourceConfigurationBefore.getMaxPoolSize());
+                } else {
+                    // pool data sources can be shared hence the new total can be greater
+                    assert poolDataSourceConfigurationBefore.getMaxPoolSize() <= getMaxPoolSize() :
+                    String.format("The new max pool size (%d) must be at least the same as before (%d).",
+                                  getMaxPoolSize(),
+                                  poolDataSourceConfigurationBefore.getMaxPoolSize());
+                }                    
+                assert poolDataSourceConfigurationBefore.getConnectionTimeout() == getConnectionTimeout() :
                 String.format("The new connection timeout (%d) must be the same as before (%d).",
                               getConnectionTimeout(),
-                              poolDataSourceConfiguration.getConnectionTimeout());
-
+                              poolDataSourceConfigurationBefore.getConnectionTimeout());
+                
                 log.info("Open completed ({})", getPoolName());
             } catch (Exception ex) {
                 state = this.state = State.ERROR;
@@ -242,14 +256,15 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             log.debug(">updatePool(id={})", getId());
 
             final String schema = poolDataSourceConfiguration.getSchema();                
+            int maxPoolSize = poolDataSource.getMaxPoolSize();
 
             // is there an overflow?
             if (poolDataSourceOverflow != null) {
                 // determine the maxPoolSizeOverflow before using poolDataSource.setMaxPoolSize()
-                final int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
+                int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
 
                 // settings to let the pool data source fail fast so it can use the overflow
-                poolDataSource.setMaxPoolSize(poolDataSource.getMinPoolSize());
+                maxPoolSize = poolDataSource.getMinPoolSize();
                 poolDataSource.setConnectionTimeout(getMinConnectionTimeout());
 
                 // First try to get a poolDataSourceOverflow from the lookup: sharing is better!
@@ -293,7 +308,6 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     // settings to keep the dynamic/overflow pool data source as empty as possible
                     poolDataSourceOverflow.setInitialPoolSize(0);                
                     poolDataSourceOverflow.setMinPoolSize(0);
-                    poolDataSourceOverflow.setMaxPoolSize(maxPoolSizeOverflow);
                     poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
 
                     if (lookupSimplePoolDataSource != null) {
@@ -305,15 +319,13 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     }
                 } else {
                     // add the new maxPoolSizeOverflow
-                    poolDataSourceOverflow.setMaxPoolSize(poolDataSourceOverflow.getMaxPoolSize() + maxPoolSizeOverflow);
+                    maxPoolSizeOverflow += poolDataSourceOverflow.getMaxPoolSize();
                 }
 
-                log.debug("new maximum pool size after adding schema {}: {}", schema, poolDataSourceOverflow.getMaxPoolSize());
-
-                updatePoolDescription(poolDataSourceOverflow, " (dynamic)", pds == null, schema);                
+                updatePool(poolDataSourceOverflow, " (dynamic)", pds == null, schema, maxPoolSizeOverflow);
             } // if (poolDataSourceOverflow != null) {
 
-            updatePoolDescription(poolDataSource, " (fixed)", true, schema);                
+            updatePool(poolDataSource, " (fixed)", true, schema, maxPoolSize);
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
@@ -321,12 +333,18 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    private void updatePoolDescription(final T poolDataSource,
-                                       final String suffix,
-                                       final boolean isFirstPoolDataSource,
-                                       final String schema) throws SQLException {
+    private void updatePool(final T poolDataSource,
+                            final String suffix,
+                            final boolean isFirstPoolDataSource,
+                            final String schema,
+                            final int maxPoolSize) throws SQLException {
         try {
-            log.debug(">updatePoolDescription(id={}, isFirstPoolDataSource={}, schema={})", getId(), isFirstPoolDataSource, schema);
+            log.debug(">updatePool(id={}, suffix={}, isFirstPoolDataSource={}, schema={}, maxPoolSize={})",
+                      getId(),
+                      suffix,
+                      isFirstPoolDataSource,
+                      schema,
+                      maxPoolSize);
 
             final String oldPoolName = poolDataSource.getPoolName();
             String oldPoolNameWithoutSuffix;
@@ -359,10 +377,14 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             
             // use a different name for the overflow to solve UCP-0
             poolDataSource.setPoolName(poolDataSource.getPoolName() + suffix);
-
             log.debug("pool name{}: {} => {}", suffix, oldPoolName, poolDataSource.getPoolName());
+
+            final int oldMaxPoolSize = poolDataSource.getMaxPoolSize();
+            
+            poolDataSource.setMaxPoolSize(maxPoolSize);
+            log.debug("maximum pool size{}: {} => {}", suffix, oldMaxPoolSize, poolDataSource.getMaxPoolSize());
         } finally {
-            log.debug("<updatePoolDescription(id={})", getId());
+            log.debug("<updatePool(id={})", getId());
         }
     }
 

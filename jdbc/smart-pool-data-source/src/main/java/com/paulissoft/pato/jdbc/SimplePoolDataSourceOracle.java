@@ -121,7 +121,7 @@ public class SimplePoolDataSourceOracle
         try {
             conn = super.getConnection(username, password);
 
-            assert conn.getSchema().equals(schema) : String.format("Connection schema (%s) must be equal to %s", conn.getSchema(), schema);
+            assert conn.getSchema().equalsIgnoreCase(schema) : String.format("Connection schema (%s) must be equal to %s", conn.getSchema(), schema);
         } finally {
             log.debug("<getConnection(id={})", getId());
         }
