@@ -417,8 +417,9 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         // update parent when connection statistics are not gathered for this level
         if (MAX_LEVEL_CONNECTION_STATISTICS == MAX_LEVEL) {
             update(activeConnections, idleConnections, totalConnections, this, count);
+        } else {
+            update(activeConnections, idleConnections, totalConnections, parent, count);
         }
-        update(activeConnections, idleConnections, totalConnections, parent, count);
     }
 
     private static void update(final int activeConnections,
