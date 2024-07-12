@@ -93,6 +93,8 @@ public interface SimplePoolDataSource extends DataSource, Closeable {
 
     public boolean isInitializing();
 
-    public Connection getConnection(final String schema,
+    public Connection getConnection(final String username,
+                                    final String password,
+                                    final String schema,
                                     final int refCount) throws SQLException;
 }
