@@ -28,7 +28,13 @@
 
 ## Introduction
 
-Here I will describe the JDBC Smart Pool Data Source library, a library designed to reduce the number of pools and thus connections as well as a solution to keep the pool open as long as possible making application recovery faster.
+Here I will describe the JDBC Smart Pool Data Source library, a library designed to operate in an environment with one or more pools where the maximum number of connections may peak but where you want to keep your pool size small and fixed anyway. This library does that by creating fixed pools (minimum pool size equals maximum pool size) and one shared dynamic pool per common set of pool characteristics (same URL, same pool properties and so on) if there is an overflow for a pool (i.e. the maximum pool size is not equal to the minimum pool size).
+
+An example may make things more clear: let's say you have (originally) two pools with a minimum and maximum pool size of 10 and 15 respectively (same URL, same username and password and so on). Now when you use this library you will get three pools: the two original pools with a minimum and maximum of 10 and a dynamic pool shared by these two with a minimum pool size of 0 and a maximum of 10 (2 * 5). So in total you will still have 20 as minimum pool size and 30 as maximum pool size. The library will use the dynamic pool only when the fixed pool is full (no idle connections) and its connections will be closed as fast as possible in order to keep the minimum number of physical connections small.
+
+Please note that when your original pools have the same minimum and maximum pool size no dynamic pool will be created.
+
+Furthermore, since analyzing the pool behaviour is quite difficult, this library calculates and displays pool statistics regularly. Hence, you can start with a simple and basic pool data source type (also part of this library), collect the pool statistics and then you can determine the optimal minimum and maximum pool size (that may differ per pool). After that, you can use the smart pool data source to have a more optimal way of using your resources.
 
 ### Business case
 
