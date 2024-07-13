@@ -1,7 +1,6 @@
 package com.paulissoft.pato.jdbc.jmh;
 
 import java.text.DecimalFormat;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 

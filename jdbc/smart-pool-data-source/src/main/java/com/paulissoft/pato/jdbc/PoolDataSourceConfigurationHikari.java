@@ -161,8 +161,8 @@ public class PoolDataSourceConfigurationHikari
      *
      * HikariCP does not support getConnection(String username, String password) so set
      * singleSessionProxyModel to false and fixedUsernamePassword to true so the
-     * common properties will include the proxy user name ("bc_proxy" from "bc_proxy[bodomain]")
-     * if any else just the username. Meaning "bc_proxy[bodomain]", "bc_proxy[boauth]" and so one
+     * common properties will include the proxy username ("bc_proxy" from "bc_proxy[bodomain]")
+     * if any else just the username. Meaning "bc_proxy[bodomain]", "bc_proxy[boauth]" and so on
      * will have ONE common pool data source.
      *
      * See also https://github.com/brettwooldridge/HikariCP/issues/231

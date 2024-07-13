@@ -196,7 +196,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     // you may override this one
-    // already called in an synchronized context
+    // already called in a synchronized context
     protected void tearDown() {
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
@@ -263,7 +263,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 // determine the maxPoolSizeOverflow before using poolDataSource.setMaxPoolSize()
                 int maxPoolSizeOverflow = poolDataSource.getMaxPoolSize() - poolDataSource.getMinPoolSize();
 
-                // settings to let the pool data source fail fast so it can use the overflow
+                // settings to let the pool data source fail fast, so it can use the overflow
                 maxPoolSize = poolDataSource.getMinPoolSize();
                 poolDataSource.setConnectionTimeout(getMinConnectionTimeout());
 
@@ -473,7 +473,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             Connection conn;
 
             // Try to avoid connection timeout errors.
-            // When the fixed pool data source is full with idle connections,
+            // When the fixed pool data source is full of idle connections,
             // use immediately the dynamic pool (and try the fixed one later on).
             if (poolDataSourceOverflow != null &&
                 poolDataSource.getIdleConnections() == 0 &&
