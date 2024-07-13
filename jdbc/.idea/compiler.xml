@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="smart-pool-data-source" />
+        <module name="smart-pool-data-source-jmh" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="jdbc" options="-verbose -Xlint:deprecation" />
+      <module name="smart-pool-data-source" options="-verbose -Xlint:deprecation" />
+      <module name="smart-pool-data-source-jmh" options="-verbose -Xlint:deprecation" />
+    </option>
+  </component>
+</project>

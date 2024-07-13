@@ -458,7 +458,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         return lastUpdateMoment != lastShownMoment;
     }
 
-    public void close() throws Exception {
+    public void close() /*throws Exception*/ {
         if (isClosed()) {
             return;
         }
@@ -911,7 +911,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
                         .forEach(e -> {
-                                final Properties key = (Properties) e.getKey();
+                                final Properties key = e.getKey();
                                 final String className = key.getProperty(PoolDataSourceStatistics.EXCEPTION_CLASS_NAME);
                                 final String SQLErrorCode = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_ERROR_CODE);
                                 final String SQLState = key.getProperty(PoolDataSourceStatistics.EXCEPTION_SQL_STATE);
@@ -1420,6 +1420,13 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             totalConnectionsMax = poolDataSourceStatistics.getTotalConnectionsMax();
         }
 
+        // Suppress this warning:
+        // Class com.paulissoft.pato.jdbc.PoolDataSourceStatistics.Snapshot overrides equals, but neither it nor any superclass overrides hashCode method
+        @Override
+        public int hashCode() {
+            return super.hashCode();
+        }
+        
         @Override
         public boolean equals(Object obj) {
             if (obj == null || !(obj instanceof Snapshot)) {

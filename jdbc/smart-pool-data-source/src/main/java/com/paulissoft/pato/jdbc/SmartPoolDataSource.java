@@ -27,13 +27,15 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     // Store all objects of type SimplePoolDataSourceHikari in the hash table.
     // The key is the common id, i.e. the set of common properties
-    private static final HashMap<SimplePoolDataSource,CommonIdRefCountPair> lookupSimplePoolDataSource = new HashMap(); // null for regression testing
+    private static final HashMap<SimplePoolDataSource,CommonIdRefCountPair> lookupSimplePoolDataSource = new HashMap<>(); // null for regression testing
 
     // object members
     private final StringBuffer id = new StringBuffer();
 
-    private final PoolDataSourceConfiguration poolDataSourceConfiguration;
-    
+    private final StringBuffer usernameToConnectTo = new StringBuffer();
+
+    private final StringBuffer schema = new StringBuffer();
+
     private final T poolDataSource;
 
     private volatile T poolDataSourceOverflow; // can only be set in open()
@@ -59,10 +61,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         this.poolDataSourceOverflow = supplierT.get();
 
         if (!fixed) {
-            this.poolDataSourceConfiguration = poolDataSourceConfiguration;
             setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
         } else {
-            this.poolDataSourceConfiguration = poolDataSourceConfiguration.toBuilder().build(); // a copy
             set(poolDataSourceConfiguration);
             setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
             setUp();
@@ -103,14 +103,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             try {
                 final PoolDataSourceConfiguration poolDataSourceConfigurationBefore = poolDataSource.get();
                 
-                // Update the poolDataSourceConfiguration with the actual poolDataSource properties
-                // since the sub class sets properties via delegation to poolDataSource
-                PoolDataSourceConfiguration.set(poolDataSourceConfiguration, poolDataSourceConfigurationBefore);
-                
                 setUp();
-
-                // synchronize after changing poolDataSource
-                PoolDataSourceConfiguration.set(poolDataSourceConfiguration, poolDataSource.get());
 
                 state = this.state = State.OPEN;
                 
@@ -251,12 +244,19 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
+    @SuppressWarnings("unchecked")
     protected void updatePool() {
         try {
             log.debug(">updatePool(id={})", getId());
 
+            final PoolDataSourceConfiguration poolDataSourceConfiguration = get();
             final String schema = poolDataSourceConfiguration.getSchema();                
             int maxPoolSize = poolDataSource.getMaxPoolSize();
+
+            this.usernameToConnectTo.delete(0, this.usernameToConnectTo.length());
+            this.usernameToConnectTo.append(poolDataSourceConfiguration.getUsernameToConnectTo());
+            this.schema.delete(0, this.schema.length());
+            this.schema.append(schema);
 
             // is there an overflow?
             if (poolDataSourceOverflow != null) {
@@ -274,18 +274,25 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 final String commonId = poolDataSourceConfigurationCommonId.toString();
                 T pds = null;
 
+                log.debug("commonId: {}", commonId);
+                
                 // synchronize access to lookupSimplePoolDataSource and do it fast
                 if (lookupSimplePoolDataSource != null) {
                     synchronized (lookupSimplePoolDataSource) {
                         for (var entry: lookupSimplePoolDataSource.entrySet()) {
                             final SimplePoolDataSource key = entry.getKey();
                             final CommonIdRefCountPair value = entry.getValue();
-                
+
                             if (value.commonId.equals(commonId) && key.isInitializing()) {
                                 pds = (T) key;
                                 value.refCount++;
-                                log.debug("found shared pool for commonId {} and refCount {}", commonId, value.refCount);
+                                log.debug("found shared pool with new refCount {}", value.refCount);
                                 break;
+                            } else {
+                                log.debug("this shared pool does not match; key.isInitializing(): {}; value.refCount: {}; value.commonId: {}",
+                                          key.isInitializing(),
+                                          value.refCount,
+                                          value.commonId);
                             }
                         }
 
@@ -358,8 +365,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             
             final ArrayList<String> items =
                 isFirstPoolDataSource ?
-                new ArrayList() :
-                new ArrayList(Arrays.asList(oldPoolNameWithoutSuffix.split("-")));
+                new ArrayList<>() :
+                new ArrayList<>(Arrays.asList(oldPoolNameWithoutSuffix.split("-")));
 
             log.debug("items: {}; schema: {}", items, schema);
 
@@ -432,7 +439,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     /*
      * Connection
      */
-    
+
+    @SuppressWarnings("fallthrough")
     public final Connection getConnection() throws SQLException {
         log.trace(">getConnection()");
 
@@ -451,7 +459,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     useOverflow = true; 
                 }
                 */
-                // fall through
+                /* FALLTHROUGH */
             case OPEN:
                 break;
             default:
@@ -500,9 +508,9 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             if (!useOverflow) {
                 return poolDataSource.getConnection();
             } else if (lookupSimplePoolDataSource != null) {
-                return poolDataSourceOverflow.getConnection(poolDataSourceConfiguration.getUsernameToConnectTo(),
-                                                            poolDataSourceConfiguration.getPassword(),
-                                                            poolDataSourceConfiguration.getSchema(),
+                return poolDataSourceOverflow.getConnection(usernameToConnectTo.toString(),
+                                                            getPassword(),
+                                                            schema.toString(),
                                                             ( lookupSimplePoolDataSource != null ?
                                                               lookupSimplePoolDataSource.get(poolDataSourceOverflow).refCount :
                                                               1 ));

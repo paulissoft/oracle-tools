@@ -144,24 +144,12 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo, PoolDa
         // this.type = poolDataSourceConfiguration.type;
     }
 
-    public static void set(final PoolDataSourcePropertiesSetters pdsDst,
-                           final PoolDataSourceConfiguration pdsSrc) {
-
-        if (pdsDst instanceof PoolDataSourcePropertiesSettersOracle &&
-            pdsSrc instanceof PoolDataSourceConfigurationOracle) {
-            PoolDataSourceConfigurationOracle.set((PoolDataSourcePropertiesSettersOracle) pdsDst,
-                                                  (PoolDataSourceConfigurationOracle) pdsSrc);
-        } else {
-            PoolDataSourceConfigurationHikari.set((PoolDataSourcePropertiesSettersHikari) pdsDst,
-                                                  (PoolDataSourceConfigurationHikari) pdsSrc);
-        }
-    }
-
     void keepCommonIdConfiguration() {
         if (!isFixedUsernamePassword()) {
             setUsername(null);
         }
         this.password = null;
+        this.type = null; // GJP 2024-07-13 type is not important for the common id
     }
 
     void keepIdConfiguration() {
