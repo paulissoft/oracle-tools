@@ -50,7 +50,7 @@ public class BenchmarkTestBase {
                         BenchmarkState.addOk(classIndex);
                     } catch (SQLException | InterruptedException ex) {
                         if (ex.getMessage().contains("UCP-")) { // ignore UCP message for now
-                            log.warn("UCP exception: {}", ex);
+                            log.warn("UCP exception:", ex);
                         } else {
                             throw new RuntimeException(ex.getMessage());
                         }

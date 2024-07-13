@@ -227,7 +227,7 @@ public class SimplePoolDataSourceHikari
                 try {
                     connectionsWithWrongSchema[--nrProxyLogicalConnectionCount].close();
                 } catch (SQLException ex) {
-                    log.error("SQL exception on close(): {}", ex);
+                    log.error("SQL exception on close():", ex);
                 }
             }
             log.debug("<getConnection(id={})", getId());
@@ -420,17 +420,6 @@ public class SimplePoolDataSourceHikari
         log.info("{}registerMbeans: {}", indentPrefix, isRegisterMbeans());
         log.info("{}validationTimeout: {}", indentPrefix, getValidationTimeout());
         log.info("{}leakDetectionThreshold: {}", indentPrefix, getLeakDetectionThreshold());
-        /*
-        log.info("metricRegistry: {}", getMetricRegistry());
-        log.info("healthCheckRegistry: {}", getHealthCheckRegistry());
-        log.info("catalog: {}", getCatalog());
-        log.info("connectionInitSql: {}", getConnectionInitSql());
-        log.info("transactionIsolation: {}", getTransactionIsolation());
-        log.info("dataSource: {}", getDataSource());
-        log.info("schema: {}", getSchema());
-        log.info("threadFactory: {}", getThreadFactory());
-        log.info("scheduledExecutor: {}", getScheduledExecutor());
-        */
     }
 
     /* Interface PoolDataSourcePropertiesSettersHikari */
@@ -446,20 +435,8 @@ public class SimplePoolDataSourceHikari
     
     public String getUrl() {
         return getJdbcUrl();
-    }  
+    }
 
-    // public void setPoolName(String poolName) throws SQLException;
-
-    // public String getPoolName();
-
-    // public void setUsername(String username) throws SQLException;
-
-    // public String getUsername();
-
-    // public void setPassword(String password) throws SQLException;
-
-    // public String getPassword();
-    
     // HikariCP does NOT know of an initial pool size so just use getMinPoolSize()
     public int getInitialPoolSize() {
         return getMinPoolSize();
@@ -487,10 +464,6 @@ public class SimplePoolDataSourceHikari
         setMaximumPoolSize(maxPoolSize);
     }
 
-    // Already part of HikariDataSource:
-    // public long getConnectionTimeout(); // milliseconds
-    // public void setConnectionTimeout(long connectionTimeout); // milliseconds
-    
     public int getActiveConnections() {
         try {
             return getHikariPoolMXBean().getActiveConnections();

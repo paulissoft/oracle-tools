@@ -396,25 +396,25 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected interface ToOverride {
-        public Connection getConnection() throws SQLException;
+        Connection getConnection() throws SQLException;
 
-        public void close();
+        void close();
 
-        public String getId();
+        String getId();
         
-        public void setId(final String srcId);
+        void setId(final String srcId);
 
-        public PoolDataSourceConfiguration get(); // must be combined: normal + overflow
+        PoolDataSourceConfiguration get(); // must be combined: normal + overflow
         
-        public int getMaxPoolSize(); // idem
+        int getMaxPoolSize(); // idem
 
-        public long getConnectionTimeout(); // idem
+        long getConnectionTimeout(); // idem
         
-        public int getActiveConnections(); // idem
+        int getActiveConnections(); // idem
 
-        public int getIdleConnections(); // idem
+        int getIdleConnections(); // idem
 
-        public int getTotalConnections(); // idem
+        int getTotalConnections(); // idem
     }
 
     // @Delegate(types=<T>.class, excludes={ PoolDataSourcePropertiesSetters<T>.class, PoolDataSourcePropertiesGetters<T>.class, ToOverride.class })
@@ -464,7 +464,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 break;
             default:
                 throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
-                                                              state.toString()));
+                                                              state));
             }
 
             // minimize accessing volatile variables by shadowing them

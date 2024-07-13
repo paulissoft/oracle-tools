@@ -416,8 +416,6 @@ public class SimplePoolDataSourceOracle
                 log.info("{} - Close completed.", connectionPoolName);
                 // mgr.destroyConnectionPool(getConnectionPoolName()); // will generate a UCP-45 later on
             }
-        } catch (UniversalConnectionPoolException ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } catch (Exception ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         }

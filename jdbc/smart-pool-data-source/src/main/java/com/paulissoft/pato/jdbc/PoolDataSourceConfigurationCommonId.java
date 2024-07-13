@@ -14,6 +14,6 @@ public class PoolDataSourceConfigurationCommonId extends PoolDataSourceConfigura
         }
         
         this.id.delete(0, this.id.length());
-        this.id.append(copy.toString());
+        this.id.append(copy);
     }
 }

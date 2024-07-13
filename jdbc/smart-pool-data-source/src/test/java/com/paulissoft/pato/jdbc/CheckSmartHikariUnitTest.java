@@ -103,7 +103,7 @@ public class CheckSmartHikariUnitTest {
         pds.close();
         assertFalse(pds.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds.getConnection());
+        thrown = assertThrows(IllegalStateException.class, pds::getConnection);
         assertTrue(thrown.getMessage().matches(rex));
     }
 
@@ -137,9 +137,7 @@ public class CheckSmartHikariUnitTest {
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
-        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
-                assertNotNull(pds.getConnection());
-            });
+        thrown = assertThrows(SQLTransientConnectionException.class, () -> assertNotNull(pds.getConnection()));
 
         log.debug("message: {}", thrown.getMessage());
         
@@ -196,9 +194,7 @@ public class CheckSmartHikariUnitTest {
         }
 
         // now it should fail
-        thrown = assertThrows(SQLTransientConnectionException.class, () -> {
-                assertNotNull(pds.getConnection());
-            });
+        thrown = assertThrows(SQLTransientConnectionException.class, () -> assertNotNull(pds.getConnection()));
 
         log.debug("message: {}", thrown.getMessage());
         

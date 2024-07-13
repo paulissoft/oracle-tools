@@ -3,6 +3,8 @@ package com.paulissoft.pato.jdbc.jmh;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.results.RunResult;
@@ -13,7 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class ApplicationTests {
 
-    private static DecimalFormat df = new DecimalFormat("0.000");
+    private static final DecimalFormat df = new DecimalFormat("0.000");
 
     // # Benchmark: com.paulissoft.pato.jdbc.jmh.HikariTest0.connectAllBasic
     private static double REFERENCE_SCORE_HIKARI = 14.606; // not final since overridden in executeHikariTest0
@@ -21,7 +23,7 @@ class ApplicationTests {
     // # Benchmark: com.paulissoft.pato.jdbc.jmh.OracleTest0.connectAllBasic
     private static double REFERENCE_SCORE_ORACLE = 14.025; // not final since overridden in executeOracleTest0
 
-    private static double MAX_DEVIATION = 0.1;
+    private static final double MAX_DEVIATION = 0.1;
 
     @Test
     void executeHikariTest0() throws RunnerException {
@@ -55,7 +57,7 @@ class ApplicationTests {
 
     private void checkHikariTest(final String dataSourceClassName, final String simpleTestClassName) throws RunnerException {
         final int classIndex = BenchmarkState.getClassIndex(dataSourceClassName);
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(simpleTestClassName));
+        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Collections.singletonList(simpleTestClassName));
 
         Assertions.assertEquals(BenchmarkState.getCount(classIndex), BenchmarkState.getOk(classIndex), "all operations should be OK");
                     
@@ -72,7 +74,7 @@ class ApplicationTests {
 
     private void checkOracleTest(final String dataSourceClassName, final String simpleTestClassName) throws RunnerException {
         final int classIndex = BenchmarkState.getClassIndex(dataSourceClassName);
-        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Arrays.asList(simpleTestClassName));
+        final Collection<RunResult> runResults = BenchmarkTestRunner.execute(Collections.singletonList(simpleTestClassName));
 
         Assertions.assertEquals(BenchmarkState.getCount(classIndex), BenchmarkState.getOk(classIndex), "all operations should be OK");
         

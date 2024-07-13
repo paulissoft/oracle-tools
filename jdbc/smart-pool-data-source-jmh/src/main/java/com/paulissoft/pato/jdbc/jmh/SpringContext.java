@@ -15,8 +15,6 @@ public class SpringContext implements ApplicationContextAware {
     /**
      * Returns the Spring managed bean instance of the given class type if it exists.
      * Returns null otherwise.
-     * @param beanClass
-     * @return
      */
     public static <T extends Object> T getBean(Class<T> beanClass) {
         return context.getBean(beanClass);
@@ -26,6 +24,7 @@ public class SpringContext implements ApplicationContextAware {
         return context.getBean(beanName);
     }
  
+    @SuppressWarnings("NullableProblems")
     @Override
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         // store ApplicationContext reference to access required beans later on

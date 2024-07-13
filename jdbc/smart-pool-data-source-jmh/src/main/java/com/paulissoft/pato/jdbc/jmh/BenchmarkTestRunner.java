@@ -32,9 +32,9 @@ public class BenchmarkTestRunner {
             .jvmArgs("-server")
             .jvmArgs("-ea");
 
-        if (jmhFilter != null && jmhFilter.size() > 0) {
+        if (jmhFilter != null && !jmhFilter.isEmpty()) {
             // set the class name regex for benchmarks to search for to the current class 
-            jmhFilter.forEach(i -> { chainedOptionsBuilder.include("\\." + i + "\\.").result(i + "-" + resultFile); });
+            jmhFilter.forEach(i -> chainedOptionsBuilder.include("\\." + i + "\\.").result(i + "-" + resultFile));
         } else {
             chainedOptionsBuilder.include("\\..*\\.");
         }

@@ -12,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -61,7 +60,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     private static final AtomicBoolean failOnInvalidStatistics = new AtomicBoolean(false);
 
     static {
-        logger.info("Initializing {}", PoolDataSourceStatistics.class.toString());
+        logger.info("Initializing {}", PoolDataSourceStatistics.class);
     }
 
     static void clear() {
@@ -174,10 +173,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
         // only the overall instance tracks note of physical connections
         if (parent == null) {
             // see https://www.geeksforgeeks.org/how-to-create-a-thread-safe-concurrenthashset-in-java/
-            
-            //final ConcurrentHashMap<Connection, Integer> dummy = new ConcurrentHashMap<>();
-            //this.physicalConnections = dummy.newKeySet();
- 
+
             this.physicalConnections = ConcurrentHashMap.newKeySet();
             
             this.level = MIN_LEVEL;
@@ -196,7 +192,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             break;
             
         default:
-            this.children = new CopyOnWriteArraySet<PoolDataSourceStatistics>();
+            this.children = new CopyOnWriteArraySet<>();
             break;
         }
 
@@ -248,8 +244,8 @@ public class PoolDataSourceStatistics implements AutoCloseable {
             result = isClosedSupplier.get();
         } else if (children != null) {
             // traverse the children: if one is not closed return false
-            for (final Iterator<PoolDataSourceStatistics> i = children.iterator(); i.hasNext(); ) {
-                if (!i.next().isClosed()) {
+            for (PoolDataSourceStatistics child : children) {
+                if (!child.isClosed()) {
                     result = false;
                     break;
                 }
@@ -1058,7 +1054,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     protected Map<Properties, Long> getErrors() {
         final Map<Properties, Long> result = new HashMap<>();
             
-        errors.forEach((k, v) -> result.put(k, Long.valueOf(v.get())));
+        errors.forEach((k, v) -> result.put(k, v.get()));
             
         return result;
     }
@@ -1312,9 +1308,9 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     /**
      * @author Alexander_Sergeev
      *
-     * See https://github.com/qbit-for-money/commons/blob/master/src/main/java/com/qbit/commons/model/AtomicBigDecimal.java
+     * See <a href="https://github.com/qbit-for-money/commons/blob/master/src/main/java/com/qbit/commons/model/AtomicBigDecimal.java">...</a>
      */
-    private final class AtomicBigDecimal {
+    private static final class AtomicBigDecimal {
 
         private final AtomicReference<BigDecimal> valueHolder = new AtomicReference<>();
 
@@ -1353,7 +1349,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
     }
 
     // a data class
-    public final class Snapshot {
+    public static final class Snapshot {
         public final long physicalConnectionCount;
         
         public final long physicalTimeElapsed;
@@ -1422,6 +1418,7 @@ public class PoolDataSourceStatistics implements AutoCloseable {
 
         // Suppress this warning:
         // Class com.paulissoft.pato.jdbc.PoolDataSourceStatistics.Snapshot overrides equals, but neither it nor any superclass overrides hashCode method
+        @SuppressWarnings("EmptyMethod")
         @Override
         public int hashCode() {
             return super.hashCode();

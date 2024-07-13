@@ -10,91 +10,91 @@ import javax.sql.DataSource;
 public interface SimplePoolDataSource extends DataSource, Closeable {
 
     // for all pool data sources the same
-    public static final AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
+    AtomicBoolean statisticsEnabled = new AtomicBoolean(true);
 
-    public static boolean isStatisticsEnabled() {
+    static boolean isStatisticsEnabled() {
         return statisticsEnabled.get();
     }
 
-    public static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
+    static void setStatisticsEnabled(final boolean isStatisticsEnabled) {
         statisticsEnabled.set(isStatisticsEnabled);
     }
 
-    public static String exceptionToString(final Exception ex) {
+    static String exceptionToString(final Exception ex) {
         return String.format("%s: %s", ex.getClass().getName(), ex.getMessage());
     }
 
-    public String getPoolNamePrefix();
+    String getPoolNamePrefix();
     
-    public static void setId(final StringBuffer dstId, final String id, final String srcId) {
+    static void setId(final StringBuffer dstId, final String id, final String srcId) {
         dstId.delete(0, dstId.length());
         dstId.append(id);
         dstId.append(" (");
-        dstId.append(srcId != null && srcId.length() > 0 ? srcId : "UNKNOWN");
+        dstId.append(srcId != null && !srcId.isEmpty() ? srcId : "UNKNOWN");
         dstId.append(")");
     }
 
-    public void setId(final String srcId);
+    void setId(final String srcId);
 
-    public String getId();
+    String getId();
 
-    public void set(final PoolDataSourceConfiguration pdsConfig);
+    void set(final PoolDataSourceConfiguration pdsConfig);
 
-    public PoolDataSourceConfiguration getWithPoolName();
+    PoolDataSourceConfiguration getWithPoolName();
 
-    public PoolDataSourceConfiguration get();
+    PoolDataSourceConfiguration get();
 
-    public boolean isClosed();
+    boolean isClosed();
 
-    public void show(final PoolDataSourceConfiguration pdsConfig);
+    void show(final PoolDataSourceConfiguration pdsConfig);
     
     // signatures used by com.zaxxer.hikari.HikariDataSource
-    public void setPoolName(String poolName) throws SQLException;
+    void setPoolName(String poolName) throws SQLException;
 
-    public String getPoolName();
+    String getPoolName();
 
-    public String getUrl();
+    String getUrl();
     
     // signatures used by com.zaxxer.hikari.HikariDataSource
-    public void setUsername(String username) throws SQLException;
+    void setUsername(String username) throws SQLException;
 
-    public String getUsername();
+    String getUsername();
 
     // signatures used by com.zaxxer.hikari.HikariDataSource / oracle.ucp.jdbc.PoolDataSource
-    public void setPassword(String password) throws SQLException;
+    void setPassword(String password) throws SQLException;
 
-    public String getPassword();
+    String getPassword();
 
     // signatures used by oracle.ucp.jdbc.PoolDataSource
-    public int getInitialPoolSize();
+    int getInitialPoolSize();
 
-    public void setInitialPoolSize(int initialPoolSize) throws SQLException;
+    void setInitialPoolSize(int initialPoolSize) throws SQLException;
 
-    public int getMinPoolSize();
+    int getMinPoolSize();
 
-    public void setMinPoolSize(int minPoolSize) throws SQLException;
+    void setMinPoolSize(int minPoolSize) throws SQLException;
 
-    public int getMaxPoolSize();
+    int getMaxPoolSize();
 
-    public void setMaxPoolSize(int maxPoolSize) throws SQLException;
+    void setMaxPoolSize(int maxPoolSize) throws SQLException;
 
-    public long getConnectionTimeout(); // milliseconds
+    long getConnectionTimeout(); // milliseconds
     
-    public void setConnectionTimeout(long connectionTimeout) throws SQLException; // milliseconds
+    void setConnectionTimeout(long connectionTimeout) throws SQLException; // milliseconds
 
     // connection statistics    
-    public int getActiveConnections();
+    int getActiveConnections();
 
-    public int getIdleConnections();
+    int getIdleConnections();
 
-    public int getTotalConnections();
+    int getTotalConnections();
 
-    public long getMinConnectionTimeout();    
+    long getMinConnectionTimeout();
 
-    public boolean isInitializing();
+    boolean isInitializing();
 
-    public Connection getConnection(final String usernameToConnectTo,
-                                    final String password,
-                                    final String schema,
-                                    final int refCount) throws SQLException;
+    Connection getConnection(final String usernameToConnectTo,
+                             final String password,
+                             final String schema,
+                             final int refCount) throws SQLException;
 }

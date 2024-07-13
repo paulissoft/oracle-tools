@@ -63,7 +63,7 @@ public class BenchmarkState {
     @Param({/*"10000",*/ "500" })
     public int divideLogicalConnectionsBy;
 
-    public List<Integer> testList = new Vector(1000, 1000);
+    public final List<Integer> testList = new Vector<>(1000, 1000);
 
     @Setup(Level.Trial)
     public void setUp() {
@@ -125,7 +125,7 @@ public class BenchmarkState {
             logicalConnections[idx]--;
             totalLogicalConnections--;
 
-            log.debug("adding index ", idx);
+            log.debug("adding index {}", idx);
                 
             testList.add(idx);
         }

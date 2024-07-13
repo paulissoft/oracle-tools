@@ -195,7 +195,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo, PoolDa
     /**
      *
      * Get the username to connect to.
-     *
+     * <p>
      * Some observations:
      * 1 - when username does NOT contain proxy info (like "bodomain", not "bc_proxy[bodomain]")
      *     the username to connect must be username (e.g. "bodomain", proxyUsername is null)
@@ -205,14 +205,13 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo, PoolDa
      * 3 - else, when singleSessionProxyModel is false,
      *     the username to connect to must be proxyUsername ("bc_proxy") and
      *     then later on OracleConnection.openProxySession() will be invoked to connect to schema.
-     *
+     * <p>
      * So you use proxyUsername only if not null and when singleSessionProxyModel is false (case 3).
-     *
+     * <p>
      * A - when useUsernamePassword is true,
      *     every data source having the same common data source MUST use the same username/password to connect to.
      *     Meaning that these properties MUST be part of the commonDataSourceProperties!
      *
-     * @param singleSessionProxyModel  Do we use a single session proxy model?
      */
     String getUsernameToConnectTo() {
         assert username != null : "Username should not be empty.";

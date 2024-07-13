@@ -40,28 +40,6 @@ public class ConfigurationFactoryHikari {
             .type(SmartPoolDataSourceHikari.class)
             .build();
     }
-    
-    /*
-    @Bean(name = {"configDataSourceHikari1"})
-    @ConfigurationProperties(prefix = "app.config.datasource.hikari")
-    public SmartPoolDataSourceHikari configDataSourceHikari1(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(SmartPoolDataSourceHikari.class)
-            .build();
-    }
-    */
-
-    /*
-    @Bean(name = {"configDataSourceHikari2"})
-    @ConfigurationProperties(prefix = "app.config.datasource.hikari")
-    public SmartPoolDataSourceHikari configDataSourceHikari2(@Qualifier("configDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(SmartPoolDataSourceHikari.class)
-            .build();
-    }
-    */
 
     @Bean(name = {"configDataSourceHikari3"})
     @ConfigurationProperties(prefix = "app.config.datasource.hikari")
@@ -90,17 +68,6 @@ public class ConfigurationFactoryHikari {
             .build();
     }
 
-    /*
-    @Bean(name = {"ocpiDataSourceHikari2"})
-    @ConfigurationProperties(prefix = "app.ocpi.datasource.hikari")
-    public SmartPoolDataSourceHikari ocpiDataSourceHikari2(@Qualifier("ocpiDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(SmartPoolDataSourceHikari.class)
-            .build();
-    }
-    */
-
     @Bean(name = {"ocppDataSourceHikari1"})
     @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
     public SmartPoolDataSourceHikari ocppDataSourceHikari1(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
@@ -109,17 +76,6 @@ public class ConfigurationFactoryHikari {
             .type(SmartPoolDataSourceHikari.class)
             .build();
     }
-
-    /*
-    @Bean(name = {"ocppDataSourceHikari2"})
-    @ConfigurationProperties(prefix = "app.ocpp.datasource.hikari")
-    public SmartPoolDataSourceHikari ocppDataSourceHikari2(@Qualifier("ocppDataSourceProperties") DataSourceProperties properties) {
-        return properties
-            .initializeDataSourceBuilder()
-            .type(SmartPoolDataSourceHikari.class)
-            .build();
-    }
-    */
 
     @Primary
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")

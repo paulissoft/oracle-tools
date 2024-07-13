@@ -103,7 +103,7 @@ public class CheckSmartOracleUnitTest {
         pds.close();
         assertFalse(pds.isOpen());
 
-        thrown = assertThrows(IllegalStateException.class, () -> pds.getConnection());
+        thrown = assertThrows(IllegalStateException.class, pds::getConnection);
 
         log.debug("message: {}", thrown.getMessage());
         
@@ -141,9 +141,7 @@ public class CheckSmartOracleUnitTest {
 
         assertEquals(pdsConfigBefore, pdsConfigAfter);
 
-        thrown = assertThrows(SQLException.class, () -> {
-                assertNotNull(pds.getConnection());
-            });
+        thrown = assertThrows(SQLException.class, () -> assertNotNull(pds.getConnection()));
 
         log.debug("message: {}", thrown.getMessage());
         
@@ -200,9 +198,7 @@ public class CheckSmartOracleUnitTest {
         }
 
         // now it should fail
-        thrown = assertThrows(SQLException.class, () -> {
-                assertNotNull(pds.getConnection());
-            });
+        thrown = assertThrows(SQLException.class, () -> assertNotNull(pds.getConnection()));
 
         log.debug("message: {}", thrown.getMessage());
         

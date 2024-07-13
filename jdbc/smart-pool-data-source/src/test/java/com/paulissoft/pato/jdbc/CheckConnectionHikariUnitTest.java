@@ -105,7 +105,7 @@ public class CheckConnectionHikariUnitTest {
         pds3.close();
         assertFalse(pds3.isOpen());
 
-        thrown1 = assertThrows(IllegalStateException.class, () -> pds3.getConnection());
+        thrown1 = assertThrows(IllegalStateException.class, pds3::getConnection);
         log.debug("message: {}", thrown1.getMessage());       
         assertTrue(thrown1.getMessage().matches(rex1));
 
@@ -114,7 +114,7 @@ public class CheckConnectionHikariUnitTest {
         pds2.close();
         assertFalse(pds2.isOpen());
 
-        thrown1 = assertThrows(IllegalStateException.class, () -> pds2.getConnection());
+        thrown1 = assertThrows(IllegalStateException.class, pds2::getConnection);
         log.debug("message: {}", thrown1.getMessage());       
         assertTrue(thrown1.getMessage().matches(rex1));
 
@@ -123,7 +123,7 @@ public class CheckConnectionHikariUnitTest {
         pds1.close();
         assertTrue(pds1.getState() == SmartPoolDataSourceHikari.State.CLOSED);
 
-        thrown1 = assertThrows(IllegalStateException.class, () -> pds1.getConnection());
+        thrown1 = assertThrows(IllegalStateException.class, pds1::getConnection);
         log.debug("message: {}", thrown1.getMessage());        
         assertTrue(thrown1.getMessage().matches(rex1));
     }
