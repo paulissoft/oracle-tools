@@ -23,12 +23,12 @@ public class SmartPoolDataSourceOracle
      */
 
     public SmartPoolDataSourceOracle() {
-        super(SimplePoolDataSourceOracle::new, new PoolDataSourceConfigurationOracle(), false);
+        super(SimplePoolDataSourceOracle::new);
     }
 
     public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
         // configuration is supposed to be set completely
-        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle, true);
+        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
     }
 
     public SmartPoolDataSourceOracle(String url,

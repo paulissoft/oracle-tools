@@ -54,13 +54,16 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
      * Constructor(s)
      */
 
+    protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT) {
+        this(supplierT, null);
+    }
+
     protected SmartPoolDataSource(@NonNull final Supplier<T> supplierT,
-                                  @NonNull final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                                  final boolean fixed) {
+                                  final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         this.poolDataSource = supplierT.get();
         this.poolDataSourceOverflow = supplierT.get();
 
-        if (!fixed) {
+        if (poolDataSourceConfiguration == null) {
             setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
         } else {
             set(poolDataSourceConfiguration);

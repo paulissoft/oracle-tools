@@ -20,12 +20,12 @@ public class SmartPoolDataSourceHikari
      */
     
     public SmartPoolDataSourceHikari() {
-        super(SimplePoolDataSourceHikari::new, new PoolDataSourceConfigurationHikari(), false);
+        super(SimplePoolDataSourceHikari::new);
     }
 
     public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
         // configuration is supposed to be set completely
-        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari, true);
+        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,

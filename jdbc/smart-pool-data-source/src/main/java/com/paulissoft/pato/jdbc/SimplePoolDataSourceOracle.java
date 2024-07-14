@@ -13,7 +13,7 @@ import oracle.ucp.admin.UniversalConnectionPoolManagerImpl;
 import oracle.ucp.jdbc.PoolDataSourceImpl;
     
 @Slf4j
-public class SimplePoolDataSourceOracle
+public final class SimplePoolDataSourceOracle
     extends PoolDataSourceImpl
     implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
@@ -49,7 +49,7 @@ public class SimplePoolDataSourceOracle
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-    private final PoolDataSourceStatistics poolDataSourceStatistics;
+    private final transient PoolDataSourceStatistics poolDataSourceStatistics;
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
@@ -174,7 +174,7 @@ public class SimplePoolDataSourceOracle
         return id.toString();
     }
 
-    public void set(final PoolDataSourceConfiguration pdsConfig) {
+    public final void set(final PoolDataSourceConfiguration pdsConfig) {
         set((PoolDataSourceConfigurationOracle)pdsConfig);
     }
 
@@ -223,15 +223,15 @@ public class SimplePoolDataSourceOracle
 
 
 
-    public PoolDataSourceConfiguration getWithPoolName() {
+    public final PoolDataSourceConfiguration getWithPoolName() {
         return get(true);
     }
 
-    public PoolDataSourceConfiguration get() {
+    public final PoolDataSourceConfiguration get() {
         return get(false);
     }
 
-    private PoolDataSourceConfiguration get(final boolean withPoolName) {
+    private final PoolDataSourceConfiguration get(final boolean withPoolName) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
@@ -257,7 +257,7 @@ public class SimplePoolDataSourceOracle
             .build();
     }
 
-    public boolean isClosed() {
+    public final boolean isClosed() {
         return isClosed.get();
     }
     
