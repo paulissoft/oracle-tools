@@ -36,12 +36,10 @@ public class SmartPoolDataSourceOracle
                                      String password,
                                      String type)
     {
-        this();
-        // configuration is set partially so just use the default constructor
-        set(PoolDataSourceConfigurationOracle.build(url,
-                                                    username,
-                                                    password,
-                                                    type != null ? type : SmartPoolDataSourceOracle.class.getName()));
+        this(PoolDataSourceConfigurationOracle.build(url,
+                                                     username,
+                                                     password,
+                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName()));
     }
 
     public SmartPoolDataSourceOracle(String url,
@@ -107,7 +105,7 @@ public class SmartPoolDataSourceOracle
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                throw new IllegalStateException("The configuration of the pool is sealed once started.");
+                throw new IllegalStateException("The configuration of the pool is sealed once initialized or started.");
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceSetter():", ex);
@@ -170,7 +168,7 @@ public class SmartPoolDataSourceOracle
         final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
         SimplePoolDataSourceOracle poolDataSourceOverflow;
 
-        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
             return poolDataSource.getConnectionWaitDurationInMillis();
         } else {
             return poolDataSource.getConnectionWaitDurationInMillis() + poolDataSourceOverflow.getConnectionWaitDurationInMillis();
@@ -193,7 +191,7 @@ public class SmartPoolDataSourceOracle
         final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
         SimplePoolDataSourceOracle poolDataSourceOverflow;
 
-        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
             return poolDataSource.getBorrowedConnectionsCount();
         } else {
             return poolDataSource.getBorrowedConnectionsCount() + poolDataSourceOverflow.getBorrowedConnectionsCount();
@@ -204,7 +202,7 @@ public class SmartPoolDataSourceOracle
         final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
         SimplePoolDataSourceOracle poolDataSourceOverflow;
 
-        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
             return poolDataSource.getAvailableConnectionsCount();
         } else {
             return poolDataSource.getAvailableConnectionsCount() + poolDataSourceOverflow.getAvailableConnectionsCount();

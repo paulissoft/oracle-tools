@@ -34,12 +34,11 @@ public class SmartPoolDataSourceHikari
                                      String password,
                                      String type) {
         // configuration is set partially so just use the default constructor
-        this();
-        set(PoolDataSourceConfigurationHikari.build(driverClassName,
-                                                    url,
-                                                    username,
-                                                    password,
-                                                    type != null ? type : SmartPoolDataSourceHikari.class.getName()));
+        this(PoolDataSourceConfigurationHikari.build(driverClassName,
+                                                     url,
+                                                     username,
+                                                     password,
+                                                     type != null ? type : SmartPoolDataSourceHikari.class.getName()));
     }
 
     public SmartPoolDataSourceHikari(String driverClassName,
@@ -128,7 +127,7 @@ public class SmartPoolDataSourceHikari
             case CLOSED:
                 throw new IllegalStateException("You can not use the pool once it is closed.");
             default:
-                throw new IllegalStateException("The configuration of the pool is sealed once started.");
+                throw new IllegalStateException("The configuration of the pool is sealed once initialized or started.");
             }
         } catch (IllegalStateException ex) {
             log.error("Exception in getPoolDataSourceSetter():", ex);
@@ -218,7 +217,7 @@ public class SmartPoolDataSourceHikari
         final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
         SimplePoolDataSourceHikari poolDataSourceOverflow;
 
-        if (getState() == State.INITIALIZING || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
+        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
             return poolDataSource.getMaximumPoolSize();
         } else {
             return poolDataSource.getMaximumPoolSize() + poolDataSourceOverflow.getMaximumPoolSize();

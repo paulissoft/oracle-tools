@@ -2,8 +2,6 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.SQLException;
 
-import javax.sql.DataSource;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 //**/import lombok.NoArgsConstructor;
@@ -20,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @ToString(callSuper = true)
 //**/@NoArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class PoolDataSourceConfigurationOracle
+public final class PoolDataSourceConfigurationOracle
     extends PoolDataSourceConfiguration
     implements PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
 
@@ -68,15 +66,6 @@ public class PoolDataSourceConfigurationOracle
     private int secondsToTrustIdleConnection;
 
     private int connectionValidationTimeout;
-
-    @SuppressWarnings("unchecked")
-    public PoolDataSourceConfigurationOracle() {
-        // super();
-        final Class<DataSource> cls = getType();
-
-        assert (cls == null || SimplePoolDataSourceOracle.class.isAssignableFrom(cls))
-            : "Type must be assignable from SimplePoolDataSourceOracle";
-    }
 
     public static PoolDataSourceConfigurationOracle build(String url,
                                                           String username,

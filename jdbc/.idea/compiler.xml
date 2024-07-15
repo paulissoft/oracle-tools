@@ -14,9 +14,9 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="jdbc" options="-verbose -Xlint:all,-options,-path" />
-      <module name="smart-pool-data-source" options="-verbose -Xlint:all,-options,-path" />
-      <module name="smart-pool-data-source-jmh" options="-verbose -Xlint:all,-options,-path" />
+      <module name="jdbc" options="-verbose -Xlint:all,-options,-path,-processing" />
+      <module name="smart-pool-data-source" options="-verbose -Xlint:all,-options,-path,-processing" />
+      <module name="smart-pool-data-source-jmh" options="-verbose -Xlint:all,-options,-path,-processing" />
     </option>
   </component>
 </project>

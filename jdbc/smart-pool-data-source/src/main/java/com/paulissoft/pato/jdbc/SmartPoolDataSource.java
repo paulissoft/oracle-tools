@@ -36,13 +36,16 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
 
     private final StringBuffer schema = new StringBuffer();
 
+    private final PoolDataSourceConfiguration poolDataSourceConfiguration; // can be null
+        
     private final T poolDataSource;
 
     private volatile T poolDataSourceOverflow; // can only be set in open()
 
     protected enum State {
-        INITIALIZING, // next possible states: ERROR, OPEN or CLOSED
-        ERROR,        // INITIALIZATING error: next possible states: CLOSED
+        INITIALIZING, // a start state; next possible states: ERROR, OPEN or CLOSED
+        INITIALIZED,  // a start state; next possible states: ERROR, OPEN or CLOSED
+        ERROR,        // INITIALIZATING error; next possible states: CLOSED
         OPEN,         // next possible states: CLOSED
         CLOSED
     }
@@ -62,17 +65,11 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                                   final PoolDataSourceConfiguration poolDataSourceConfiguration) {
         this.poolDataSource = supplierT.get();
         this.poolDataSourceOverflow = supplierT.get();
+        this.poolDataSourceConfiguration = poolDataSourceConfiguration;
 
-        if (poolDataSourceConfiguration == null) {
-            setId(this.getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
-        } else {
-            set(poolDataSourceConfiguration);
-            setId(this.getUsername()); // must invoke setId() after this.poolDataSource is set
-            setUp();
-            state = State.OPEN;
+        if (poolDataSourceConfiguration != null) {
+            state = State.INITIALIZED;
         }
-
-        assert getPoolDataSource() != null : "The pool data source should not be null.";
     }
     
     /*
@@ -100,7 +97,13 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         // minimize accessing volatile variables by shadowing them
         State state = this.state;
 
-        if (state == State.INITIALIZING) {
+        if (state == State.INITIALIZED) {
+            // use lazy initialisation to solve this error:
+            // java: possible 'this' escape before subclass is fully initialized
+            set(this.poolDataSourceConfiguration);
+        }
+
+        if (state == State.INITIALIZING || state == State.INITIALIZED) {
             log.info("Open initiated");
 
             try {
@@ -153,7 +156,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         // minimize accessing volatile variables by shadowing them
         final State state = this.state;
         
-        if (state != State.INITIALIZING) {
+        if (!(state == State.INITIALIZING || state == State.INITIALIZED)) {
             return;
         }
 
@@ -210,6 +213,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             switch(state) {
             case OPEN:
             case INITIALIZING:
+            case INITIALIZED:
             case ERROR:
                 try {
                     poolDataSource.close();
@@ -452,6 +456,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         try {
             switch (state) {
             case INITIALIZING:
+            case INITIALIZED:
                 open(); // will change state to OPEN
                 assert state == State.OPEN : "After the pool data source is opened explicitly the state must be OPEN: " +
                     "did you override setUp() correctly by invoking super.setUp()?";
@@ -528,9 +533,16 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     protected abstract boolean getConnectionFailsDueToNoIdleConnections(final Exception ex);
 
     public final String getId() {
+        if (id.length() == 0) {
+            if (getUsername() == null || getUsername().isEmpty()) {
+                setId(getClass().getSimpleName()); // must invoke setId() after this.poolDataSource is set
+            } else {
+                setId(getUsername()); // must invoke setId() after this.poolDataSource is set
+            }
+        }
         return id.toString();
     }
-    
+
     public final void setId(final String srcId) {
         SimplePoolDataSource.setId(id, String.format("0x%08x", hashCode()), srcId);
     }
@@ -539,7 +551,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         final int maxPoolSize = poolDataSource.getMaxPoolSize();
         T poolDataSourceOverflow; // to speed up access to volatile attribute
         
-        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+        if (state == State.INITIALIZING || state == State.INITIALIZED || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
             return maxPoolSize;
         }
 
@@ -556,7 +568,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         final long connectionTimeout = poolDataSource.getConnectionTimeout();
         T poolDataSourceOverflow;
 
-        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {            
+        if (state == State.INITIALIZING || state == State.INITIALIZED || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {            
             return connectionTimeout;
         }
 
@@ -574,7 +586,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         T poolDataSourceOverflow; // to speed up access to volatile attribute
         final int activeConnections = poolDataSource.getActiveConnections();
 
-        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+        if (state == State.INITIALIZING || state == State.INITIALIZED || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
             return activeConnections;
         }
 
@@ -591,7 +603,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         T poolDataSourceOverflow; // to speed up access to volatile attribute
         final int idleConnections = poolDataSource.getIdleConnections();
 
-        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+        if (state == State.INITIALIZING || state == State.INITIALIZED || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
             return idleConnections;
         }
 
@@ -608,7 +620,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         T poolDataSourceOverflow; // to speed up access to volatile attribute
         final int totalConnections = poolDataSource.getTotalConnections();
 
-        if (state == State.INITIALIZING || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
+        if (state == State.INITIALIZING || state == State.INITIALIZED || (poolDataSourceOverflow = this.poolDataSourceOverflow) == null) {
             return totalConnections;
         }
 
@@ -624,6 +636,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     public final boolean hasOverflow() {
         switch (state) {
         case INITIALIZING:
+        case INITIALIZED:
             return poolDataSource.getMaxPoolSize() > poolDataSource.getMinPoolSize();
         default:
             return poolDataSourceOverflow != null;

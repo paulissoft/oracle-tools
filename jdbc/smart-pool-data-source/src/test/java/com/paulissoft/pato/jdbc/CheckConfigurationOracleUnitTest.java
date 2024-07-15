@@ -35,6 +35,9 @@ public class CheckConfigurationOracleUnitTest {
 
     @Test
     void testPoolDataSourceConfigurationDomain() {
+        domainDataSourceOracle.open(); // lazy initialization
+        operatorDataSourceOracle.open(); // lazy initialization
+
         PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceOracle.getPoolDataSource().get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
@@ -81,6 +84,9 @@ public class CheckConfigurationOracleUnitTest {
     
     @Test
     void testPoolDataSourceConfigurationOperator() {
+        domainDataSourceOracle.open(); // lazy initialization
+        operatorDataSourceOracle.open(); // lazy initialization
+
         PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceOracle.getPoolDataSource().get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());

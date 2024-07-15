@@ -34,6 +34,9 @@ public class CheckConfigurationHikariUnitTest {
 
     @Test
     void testPoolDataSourceConfigurationDomain() {
+        domainDataSourceHikari.open(); // lazy initialization
+        operatorDataSourceHikari.open(); // lazy initialization
+        
         PoolDataSourceConfiguration poolDataSourceConfiguration = domainDataSourceHikari.getPoolDataSource().get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());
@@ -81,6 +84,9 @@ public class CheckConfigurationHikariUnitTest {
     
     @Test
     void testPoolDataSourceConfigurationOperator() {
+        domainDataSourceHikari.open(); // lazy initialization
+        operatorDataSourceHikari.open(); // lazy initialization
+        
         PoolDataSourceConfiguration poolDataSourceConfiguration = operatorDataSourceHikari.getPoolDataSource().get();
         
         log.debug("poolDataSourceConfiguration: {}", poolDataSourceConfiguration.toString());

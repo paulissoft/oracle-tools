@@ -99,7 +99,7 @@ public abstract class PoolDataSourceConfiguration implements ConnectInfo, PoolDa
     }
         
     @SuppressWarnings("rawtypes")
-    public Class getType() {
+    public final Class getType() {
         try {
             final Class cls = type != null ? Class.forName(type) : null;
 
