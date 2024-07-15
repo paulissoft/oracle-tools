@@ -105,12 +105,12 @@ public class SmartPoolDataSourceHikari
         // setUsername(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
         // cannot implement setUsername(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
         // overridden method does not throw java.sql.SQLException
-        void setUsername(String password) throws SQLException;
+        void setUsername(String password) /*throws SQLException*/;
 
         // setPassword(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
         // cannot implement setPassword(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
         // overridden method does not throw java.sql.SQLException
-        void setPassword(String password) throws SQLException;
+        void setPassword(String password) /*throws SQLException*/;
 
         int getMaximumPoolSize(); // may add the overflow
 

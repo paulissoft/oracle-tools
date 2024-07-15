@@ -403,7 +403,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     }
 
     protected interface ToOverride {
-        Connection getConnection() throws SQLException;
+        Connection getConnection() /*throws SQLException*/;
 
         void close();
 

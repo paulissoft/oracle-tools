@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.SQLException;
+//import java.sql.SQLException;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -80,25 +80,25 @@ public final class PoolDataSourceConfigurationOracle
             .build();
     }
 
-    protected static PoolDataSourceConfigurationOracle build(String url,
-                                                             String username,
-                                                             String password,
-                                                             String type,
-                                                             String connectionPoolName,
-                                                             int initialPoolSize,
-                                                             int minPoolSize,
-                                                             int maxPoolSize,
-                                                             String connectionFactoryClassName,
-                                                             boolean validateConnectionOnBorrow,
-                                                             int abandonedConnectionTimeout,
-                                                             int timeToLiveConnectionTimeout,
-                                                             int inactiveConnectionTimeout,
-                                                             int timeoutCheckInterval,
-                                                             int maxStatements,
-                                                             long connectionWaitDurationInMillis,
-                                                             long maxConnectionReuseTime,
-                                                             int secondsToTrustIdleConnection,
-                                                             int connectionValidationTimeout) {
+    public static PoolDataSourceConfigurationOracle build(String url,
+                                                          String username,
+                                                          String password,
+                                                          String type,
+                                                          String connectionPoolName,
+                                                          int initialPoolSize,
+                                                          int minPoolSize,
+                                                          int maxPoolSize,
+                                                          String connectionFactoryClassName,
+                                                          boolean validateConnectionOnBorrow,
+                                                          int abandonedConnectionTimeout,
+                                                          int timeToLiveConnectionTimeout,
+                                                          int inactiveConnectionTimeout,
+                                                          int timeoutCheckInterval,
+                                                          int maxStatements,
+                                                          long connectionWaitDurationInMillis,
+                                                          long maxConnectionReuseTime,
+                                                          int secondsToTrustIdleConnection,
+                                                          int connectionValidationTimeout) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .url(url)
@@ -123,7 +123,7 @@ public final class PoolDataSourceConfigurationOracle
             .build();
     }
 
-    public void setURL(String paramString) throws SQLException {
+    public void setURL(String paramString) {
         setUrl(paramString);
     }
   
@@ -131,7 +131,7 @@ public final class PoolDataSourceConfigurationOracle
         return getUrl();
     }
   
-    public void setUser(String paramString) throws SQLException {
+    public void setUser(String paramString) {
         setUsername(paramString);
     }
   

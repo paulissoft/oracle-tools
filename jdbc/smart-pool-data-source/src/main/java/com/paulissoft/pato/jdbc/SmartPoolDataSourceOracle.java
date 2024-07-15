@@ -88,7 +88,7 @@ public class SmartPoolDataSourceOracle
     protected interface ToOverrideOracle extends ToOverride {
         long getConnectionWaitDurationInMillis(); // may add the overflow
 
-        void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException; // check for minimum
+        void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) /*throws SQLException*/; // check for minimum
 
         int getBorrowedConnectionsCount();
         

@@ -37,7 +37,7 @@ public class BenchmarkTestBase {
 
     public void connectAll(Blackhole bh,
                            BenchmarkState bs,
-                           String dataSourceClassName) throws SQLException {
+                           String dataSourceClassName) {
         final int classIndex = BenchmarkState.getClassIndex(dataSourceClassName);
 
         dataSources = bs.getDataSources(classIndex);

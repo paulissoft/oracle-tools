@@ -77,27 +77,27 @@ public final class PoolDataSourceConfigurationHikari
             .build();
     }
 
-    protected static PoolDataSourceConfigurationHikari build(String driverClassName,
-                                                             String url,
-                                                             String username,
-                                                             String password,
-                                                             String type,
-                                                             String poolName,
-                                                             int maximumPoolSize,
-                                                             int minimumIdle,
-                                                             String dataSourceClassName,
-                                                             boolean autoCommit,
-                                                             long connectionTimeout,
-                                                             long idleTimeout,
-                                                             long maxLifetime,
-                                                             String connectionTestQuery,
-                                                             long initializationFailTimeout,
-                                                             boolean isolateInternalQueries,
-                                                             boolean allowPoolSuspension,
-                                                             boolean readOnly,
-                                                             boolean registerMbeans,    
-                                                             long validationTimeout,
-                                                             long leakDetectionThreshold) {
+    public static PoolDataSourceConfigurationHikari build(String driverClassName,
+                                                          String url,
+                                                          String username,
+                                                          String password,
+                                                          String type,
+                                                          String poolName,
+                                                          int maximumPoolSize,
+                                                          int minimumIdle,
+                                                          String dataSourceClassName,
+                                                          boolean autoCommit,
+                                                          long connectionTimeout,
+                                                          long idleTimeout,
+                                                          long maxLifetime,
+                                                          String connectionTestQuery,
+                                                          long initializationFailTimeout,
+                                                          boolean isolateInternalQueries,
+                                                          boolean allowPoolSuspension,
+                                                          boolean readOnly,
+                                                          boolean registerMbeans,
+                                                          long validationTimeout,
+                                                          long leakDetectionThreshold) {
         return PoolDataSourceConfigurationHikari
             .builder()
             .driverClassName(driverClassName)

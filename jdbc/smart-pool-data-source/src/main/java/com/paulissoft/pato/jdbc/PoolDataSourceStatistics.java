@@ -81,9 +81,9 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
 
     private final AtomicLong lastUpdate = new AtomicLong(0L); // LocalDateTime in milliseconds
 
-    private final AtomicLong lastShown = new AtomicLong(0L); // LocalDateTime in millseconds
+    private final AtomicLong lastShown = new AtomicLong(0L); // LocalDateTime in milliseconds
 
-    private final AtomicBoolean isUpdateable = new AtomicBoolean(true);
+    private final AtomicBoolean isUpdatable = new AtomicBoolean(true);
     
     // all physical time elapsed stuff
     
@@ -241,16 +241,16 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
     boolean isClosed() {
         boolean result = true;
 
-        if (!isUpdateable.get()) {
-            result = true;
-        } else if (isClosedSupplier != null) {
-            result = isClosedSupplier.get();
-        } else if (children != null) {
-            // traverse the children: if one is not closed return false
-            for (PoolDataSourceStatistics child : children) {
-                if (!child.isClosed()) {
-                    result = false;
-                    break;
+        if (isUpdatable.get()) {
+            if (isClosedSupplier != null) {
+                result = isClosedSupplier.get();
+            } else if (children != null) {
+                // traverse the children: if one is not closed return false
+                for (PoolDataSourceStatistics child : children) {
+                    if (!child.isClosed()) {
+                        result = false;
+                        break;
+                    }
                 }
             }
         }
@@ -470,11 +470,11 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         logger.info("{} - Close initiated...", getDescription());
 
         try {
-            if (isUpdateable.get()) {
+            if (isUpdatable.get()) {
                 if (level == MAX_LEVEL) {
                     consolidate();
                 }
-                isUpdateable.set(false);
+                isUpdatable.set(false);
             }
         } finally {
             assert isClosed() : "Statistics should be closed now.";
@@ -508,8 +508,8 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         Snapshot
             childSnapshotBefore = null,
             parentSnapshotBefore = null,
-            childSnapshotAfter = null,
-            parentSnapshotAfter = null;
+            childSnapshotAfter,
+            parentSnapshotAfter;
 
         if (debugStatistics) {
             childSnapshotBefore = new Snapshot(this);
@@ -955,119 +955,119 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
     
     // getter(s)
 
-    protected long getConnectionCount() {
+    private long getConnectionCount() {
         return getPhysicalConnectionCount() + getLogicalConnectionCount();
     }
             
     // all physical time elapsed stuff
 
-    protected long getPhysicalConnectionCount() {
+    private long getPhysicalConnectionCount() {
         return physicalConnectionCount.get();
     }
             
-    protected long getPhysicalTimeElapsedMin() {
+    private long getPhysicalTimeElapsedMin() {
         return physicalTimeElapsedMin.get();
     }
 
-    protected long getPhysicalTimeElapsedMax() {
+    private long getPhysicalTimeElapsedMax() {
         return physicalTimeElapsedMax.get();
     }
 
-    protected long getPhysicalTimeElapsedAvg() {
+    private long getPhysicalTimeElapsedAvg() {
         return physicalTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
-    protected long getPhysicalTimeElapsed() {
+    private long getPhysicalTimeElapsed() {
         return (new BigDecimal(physicalConnectionCount.get())).multiply(physicalTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
     // all logical time elapsed stuff
     
-    protected long getLogicalConnectionCount() {
+    private long getLogicalConnectionCount() {
         return logicalConnectionCount.get();
     }
 
-    protected long getLogicalTimeElapsedMin() {
+    private long getLogicalTimeElapsedMin() {
         return logicalTimeElapsedMin.get();
     }
 
-    protected long getLogicalTimeElapsedMax() {
+    private long getLogicalTimeElapsedMax() {
         return logicalTimeElapsedMax.get();
     }
 
-    protected long getLogicalTimeElapsedAvg() {
+    private long getLogicalTimeElapsedAvg() {
         return logicalTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
-    protected long getLogicalTimeElapsed() {
+    private long getLogicalTimeElapsed() {
         return (new BigDecimal(logicalConnectionCount.get())).multiply(logicalTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
 
     // all proxy time elapsed stuff
 
-    protected long getProxyLogicalConnectionCount() {
+    private long getProxyLogicalConnectionCount() {
         return proxyLogicalConnectionCount.get();
     }
 
-    protected long getProxyOpenSessionCount() {
+    private long getProxyOpenSessionCount() {
         return proxyOpenSessionCount.get();
     }
-        
-    protected long getProxyCloseSessionCount() {
+
+    private long getProxyCloseSessionCount() {
         return proxyCloseSessionCount.get();
     }
-        
-    protected long getProxyTimeElapsedMin() {
+
+    private long getProxyTimeElapsedMin() {
         return proxyTimeElapsedMin.get();
     }
 
-    protected long getProxyTimeElapsedMax() {
+    private long getProxyTimeElapsedMax() {
         return proxyTimeElapsedMax.get();
     }
 
-    protected long getProxyTimeElapsedAvg() {
+    private long getProxyTimeElapsedAvg() {
         return proxyTimeElapsedAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
-    
-    protected long getProxyTimeElapsed() {
+
+    private long getProxyTimeElapsed() {
         return (new BigDecimal(getConnectionCount())).multiply(proxyTimeElapsedAvg.get()).setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue();
     }
     
     // all connection related stuff
 
-    protected long getActiveConnectionsMin() {
+    private long getActiveConnectionsMin() {
         return activeConnectionsMin != null ? activeConnectionsMin.get() : Long.MAX_VALUE;
     }
 
-    protected long getActiveConnectionsMax() {
+    private long getActiveConnectionsMax() {
         return activeConnectionsMax != null ? activeConnectionsMax.get() : Long.MIN_VALUE;
     }
 
-    protected long getActiveConnectionsAvg() {
+    private long getActiveConnectionsAvg() {
         return activeConnectionsAvg != null ? activeConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
 
-    protected long getIdleConnectionsMin() {
+    private long getIdleConnectionsMin() {
         return idleConnectionsMin != null ? idleConnectionsMin.get() : Long.MAX_VALUE;
     }
 
-    protected long getIdleConnectionsMax() {
+    private long getIdleConnectionsMax() {
         return idleConnectionsMax != null ? idleConnectionsMax.get() : Long.MIN_VALUE;
     }
-        
-    protected long getIdleConnectionsAvg() {
+
+    private long getIdleConnectionsAvg() {
         return idleConnectionsAvg != null ? idleConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
-        
-    protected long getTotalConnectionsMin() {
+
+    private long getTotalConnectionsMin() {
         return totalConnectionsMin != null ? totalConnectionsMin.get() : Long.MAX_VALUE;
     }
 
-    protected long getTotalConnectionsMax() {
+    private long getTotalConnectionsMax() {
         return totalConnectionsMax != null ? totalConnectionsMax.get() : Long.MIN_VALUE;
     }
 
-    protected long getTotalConnectionsAvg() {
+    private long getTotalConnectionsAvg() {
         return totalConnectionsAvg != null ? totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
 
@@ -1486,11 +1486,11 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
     }    
 
     @NonNull
-    public final Snapshot getSnapshot() {
+    public Snapshot getSnapshot() {
         return new Snapshot(this);
     }
 
-    public final Snapshot getSnapshot(final int level) {
+    public Snapshot getSnapshot(final int level) {
         assert level >= MIN_LEVEL && level <= MAX_LEVEL : String.format("Level must be between %d and %d.", MIN_LEVEL, MAX_LEVEL);
 
         PoolDataSourceStatistics instance = this;

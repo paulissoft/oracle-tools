@@ -36,7 +36,7 @@ public final class SimplePoolDataSourceHikari
 
     private final StringBuffer id = new StringBuffer();
 
-    protected final PoolDataSourceStatistics poolDataSourceStatistics;
+    private final PoolDataSourceStatistics poolDataSourceStatistics;
 
     private final AtomicBoolean hasShownConfig = new AtomicBoolean(false);
 
@@ -62,7 +62,7 @@ public final class SimplePoolDataSourceHikari
     
     @Override
     public Connection getConnection() throws SQLException {
-        Connection conn = null;
+        Connection conn;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final boolean isInitializing = !hasShownConfig.getAndSet(true);
         
@@ -115,7 +115,7 @@ public final class SimplePoolDataSourceHikari
         log.debug(">getConnection(id={}, usernameToConnectTo={}, schema={})",
                   getId(), usernameToConnectTo, schema);
 
-        Connection conn = null;
+        Connection conn;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final boolean isInitializing = !hasShownConfig.getAndSet(true);
         final int maxProxyLogicalConnectionCount = refCount - 1; // only relevant when there are more than 1 shared pool data sources
@@ -161,7 +161,6 @@ public final class SimplePoolDataSourceHikari
                         oraConn = conn.unwrap(OracleConnection.class);
                     }
                 } catch (SQLException ex) {
-                    oraConn = null;
                 }
 
                 if (oraConn != null) {
@@ -272,7 +271,7 @@ public final class SimplePoolDataSourceHikari
     }
 
     @Override
-    final public boolean isClosed() {
+    public boolean isClosed() {
       return super.isClosed();
     }
 
@@ -288,7 +287,7 @@ public final class SimplePoolDataSourceHikari
         return id.toString();
     }
 
-    public final void set(final PoolDataSourceConfiguration pdsConfig) {
+    public void set(final PoolDataSourceConfiguration pdsConfig) {
         set(this, (PoolDataSourceConfigurationHikari)pdsConfig);
     }
 
@@ -347,11 +346,11 @@ public final class SimplePoolDataSourceHikari
         return hikariConfig;
     }
 
-    public final PoolDataSourceConfiguration getWithPoolName() {
+    public PoolDataSourceConfiguration getWithPoolName() {
         return get(true);
     }
 
-    public final PoolDataSourceConfiguration get() {
+    public PoolDataSourceConfiguration get() {
         return get(false);
     }
 
@@ -520,7 +519,7 @@ public final class SimplePoolDataSourceHikari
         }
     }
 
-    public final boolean isInitializing() {
+    public boolean isInitializing() {
         return !hasShownConfig.get();
     }
 

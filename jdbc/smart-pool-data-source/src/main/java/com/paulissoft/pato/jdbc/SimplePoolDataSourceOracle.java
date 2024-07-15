@@ -65,7 +65,7 @@ public final class SimplePoolDataSourceOracle
     
     @Override
     public Connection getConnection() throws SQLException {
-        Connection conn = null;
+        Connection conn;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final boolean isInitializing = !hasShownConfig.getAndSet(true);
 
@@ -119,7 +119,7 @@ public final class SimplePoolDataSourceOracle
         log.debug(">getConnection(id={}, usernameToConnectTo={}, schema={})",
                   getId(), usernameToConnectTo, schema);
 
-        Connection conn = null;
+        Connection conn;
         final boolean isStatisticsEnabled = poolDataSourceStatistics != null && SimplePoolDataSource.isStatisticsEnabled();
         final boolean isInitializing = !hasShownConfig.getAndSet(true);
         
@@ -174,7 +174,7 @@ public final class SimplePoolDataSourceOracle
         return id.toString();
     }
 
-    public final void set(final PoolDataSourceConfiguration pdsConfig) {
+    public void set(final PoolDataSourceConfiguration pdsConfig) {
         set((PoolDataSourceConfigurationOracle)pdsConfig);
     }
 
@@ -221,17 +221,15 @@ public final class SimplePoolDataSourceOracle
         log.debug("<set()");
     }
 
-
-
-    public final PoolDataSourceConfiguration getWithPoolName() {
+    public PoolDataSourceConfiguration getWithPoolName() {
         return get(true);
     }
 
-    public final PoolDataSourceConfiguration get() {
+    public PoolDataSourceConfiguration get() {
         return get(false);
     }
 
-    private final PoolDataSourceConfiguration get(final boolean withPoolName) {
+    private PoolDataSourceConfiguration get(final boolean withPoolName) {
         return PoolDataSourceConfigurationOracle
             .builder()
             .driverClassName(null)
@@ -257,7 +255,7 @@ public final class SimplePoolDataSourceOracle
             .build();
     }
 
-    public final boolean isClosed() {
+    public boolean isClosed() {
         return isClosed.get();
     }
     
@@ -364,12 +362,12 @@ public final class SimplePoolDataSourceOracle
     }
 
     // Already part of PoolDataSourceImpl:
-    // public int getInitialPoolSize();
-    // public void setInitialPoolSize(int initialPoolSize);
-    // public int getMinPoolSize();
-    // public void setMinPoolSize(int minPoolSize);
-    // public int getMaxPoolSize();
-    // public void setMaxPoolSize(int maxPoolSize);
+    // - public int getInitialPoolSize();
+    // - public void setInitialPoolSize(int initialPoolSize);
+    // - public int getMinPoolSize();
+    // - public void setMinPoolSize(int minPoolSize);
+    // - public int getMaxPoolSize();
+    // - public void setMaxPoolSize(int maxPoolSize);
     
     public long getConnectionTimeout() { // milliseconds
         return getConnectionWaitDurationInMillis();
@@ -431,7 +429,7 @@ public final class SimplePoolDataSourceOracle
         setConnectionWaitDuration(Duration.ofMillis(waitTimeout));
     }
 
-    public final boolean isInitializing() {
+    public boolean isInitializing() {
         return !hasShownConfig.get();
     }
 

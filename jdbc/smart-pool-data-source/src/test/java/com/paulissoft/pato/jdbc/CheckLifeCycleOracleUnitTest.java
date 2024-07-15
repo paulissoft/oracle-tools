@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 //import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import java.sql.SQLException;
+//import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ public class CheckLifeCycleOracleUnitTest {
 
     @Disabled("A parent status must be OPEN.")
     @Test
-    void testSimplePoolDataSourceOracleJoinTwice() throws SQLException {
+    void testSimplePoolDataSourceOracleJoinTwice() {
         log.debug("testSimplePoolDataSourceOracleJoinTwice()");
 
         // do not use a try open block for the parent (configDataSourceOracle)
