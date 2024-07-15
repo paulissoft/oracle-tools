@@ -1,11 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +13,13 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -121,7 +122,7 @@ public class CheckConnectionHikariUnitTest {
         // close pds1
         assertTrue(pds1.isOpen());
         pds1.close();
-        assertTrue(pds1.getState() == SmartPoolDataSourceHikari.State.CLOSED);
+        assertSame(pds1.getState(), SmartPoolDataSourceHikari.State.CLOSED);
 
         thrown1 = assertThrows(IllegalStateException.class, pds1::getConnection);
         log.debug("message: {}", thrown1.getMessage());        

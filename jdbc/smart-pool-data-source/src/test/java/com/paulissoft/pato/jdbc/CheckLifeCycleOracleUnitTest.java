@@ -69,7 +69,7 @@ public class CheckLifeCycleOracleUnitTest {
             .build();
 
         // scratch variable
-        SmartPoolDataSourceOracle pds = null;
+        SmartPoolDataSourceOracle pds;
             
         try (final SmartPoolDataSourceOracle pds2 = new SmartPoolDataSourceOracle(pdsConfig)) {
             assertFalse(pds2.isOpen());
@@ -124,8 +124,8 @@ public class CheckLifeCycleOracleUnitTest {
     }
 
     private void checkSimplePoolDataSourceJoin(final SmartPoolDataSourceOracle pds1, final SmartPoolDataSourceOracle pds2, final boolean equal) {
-        PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
-        PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
+        PoolDataSourceConfiguration poolDataSourceConfiguration1;
+        PoolDataSourceConfiguration poolDataSourceConfiguration2;
             
         // check all fields
         poolDataSourceConfiguration1 = pds1.get();

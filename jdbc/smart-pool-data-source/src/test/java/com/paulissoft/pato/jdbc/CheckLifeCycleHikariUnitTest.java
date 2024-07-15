@@ -69,7 +69,7 @@ public class CheckLifeCycleHikariUnitTest {
             .build();
                     
         // scratch variable
-        SmartPoolDataSourceHikari pds = null;
+        SmartPoolDataSourceHikari pds;
 
         try (final SmartPoolDataSourceHikari pds2 = new SmartPoolDataSourceHikari(pdsConfig)) {
             assertFalse(pds2.isOpen());
@@ -124,8 +124,8 @@ public class CheckLifeCycleHikariUnitTest {
     }
 
     private void checkSimplePoolDataSourceJoin(final SmartPoolDataSourceHikari pds1, final SmartPoolDataSourceHikari pds2, final boolean equal) {
-        PoolDataSourceConfiguration poolDataSourceConfiguration1 = null;
-        PoolDataSourceConfiguration poolDataSourceConfiguration2 = null;
+        PoolDataSourceConfiguration poolDataSourceConfiguration1;
+        PoolDataSourceConfiguration poolDataSourceConfiguration2;
             
         // check all fields
         poolDataSourceConfiguration1 = pds1.get();

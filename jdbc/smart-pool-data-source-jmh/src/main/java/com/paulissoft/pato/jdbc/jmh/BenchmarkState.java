@@ -134,7 +134,7 @@ public class BenchmarkState {
     }
 
     public static int getClassIndex(final String className) {
-        int d = -1, t = -1;
+        int d, t;
 
         if (className.equals(HikariDataSource.class.getName())) {
             d = 0; t = 0;

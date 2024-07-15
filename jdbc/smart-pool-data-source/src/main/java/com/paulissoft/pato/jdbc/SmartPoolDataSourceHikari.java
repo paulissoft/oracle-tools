@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-import java.sql.SQLException;
+//import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
