@@ -7,32 +7,27 @@
    2. [How can we combine pools?](#how-can-we-combine-pools)
       1. [Get a default connection](#get-a-default-connection)
       2. [Get a connection with supplied credentials](#get-a-connection-with-supplied-credentials)
-      3. [How can Oracle Universal Connection Pool (UCP) combine pools?](#how-can-oracle-universal-connection-pool-ucp-combine-pools)
-      4. [How can we let Hikari combine pools?](#how-can-we-let-hikari-combine-pools)
+      3. [An overflow pool and the Oracle Universal Connection Pool (UCP)](#an-overflow-pool-and-the-oracle-universal-connection-pool-ucp)
+      4. [An overflow pool and Hikari](#an-overflow-pool-and-hikari)
    3. [What pool statistics are needed?](#what-pool-statistics-are-needed)
    4. [What are the advantages of this library?](#what-are-the-advantages-of-this-library)
 2. [High Level Design](#high-level-design)
    1. [Data source properties](#data-source-properties)
    2. [Hikari pool data source properties](#hikari-pool-data-source-properties)
    3. [Oracle pool data source properties](#oracle-pool-data-source-properties)
-   4. [Join multiple pool data sources](#join-multiple-pool-data-sources)
-      1. [Determination of the data source type](#determination-of-the-data-source-type)
-      2. [Build a smart pool data source](#build-a-smart-pool-data-source)
-3. [Usage](#usage)
-   1. [Spring Boot bean creation](#spring-boot-bean-creation)
-      1. [Old version of class `JpaAuthConfiguration`](#old-version-of-class-jpaauthconfiguration)
-      2. [New version of class `JpaAuthConfiguration`](#new-version-of-class-jpaauthconfiguration)
-      3. [Class `MyPoolDataSourceBuilder`](#class-mypooldatasourcebuilder)
-   2. [Spring boot application properties file](#spring-boot-application-properties-file)
-4. [Conclusion](#conclusion)
+3. [Conclusion](#conclusion)
 
 ## Introduction
 
-Here I will describe the JDBC Smart Pool Data Source library, a library designed to operate in an environment with one or more pools where the maximum number of connections may peak but where you want to keep your pool size small and fixed anyway. This library does that by creating fixed pools (minimum pool size equals maximum pool size) and one shared dynamic pool per common set of pool characteristics (same URL, same pool properties and so on) if there is an overflow for a pool (i.e. the maximum pool size is not equal to the minimum pool size).
+Here I will describe the JDBC Smart Pool Data Source library, a library designed to operate in an environment with one or more pools where the maximum number of connections may peak but where you want to keep your pool size small and fixed anyway. Typically in a Java Spring Boot application but not limited to that. This library just uses the JDBC data source pools [HikariCP](https://github.com/brettwooldridge/HikariCP) and [Oracle UCP](https://docs.oracle.com/en/database/oracle/oracle-database/23/jjucp/intro.html#GUID-DEC07CE5-F791-4234-BBF9-5C808169BCD2).
 
-An example may make things more clear: let's say you have (originally) two pools with a minimum and maximum pool size of 10 and 15 respectively (same URL, same username and password and so on). Now when you use this library you will get three pools: the two original pools with a minimum and maximum of 10 and a dynamic pool shared by these two with a minimum pool size of 0 and a maximum of 10 (2 * 5). So in total you will still have 20 as minimum pool size and 30 as maximum pool size. The library will use the dynamic pool only when the fixed pool is full (no idle connections) and its connections will be closed as fast as possible in order to keep the minimum number of physical connections small.
+This library does that by creating:
+* fixed pool(s) (minimum pool size equals maximum pool size)
+* one (shared) dynamic pool per common set of pool characteristics (same URL, same pool properties and so on but not *necessarily* the same username) 
 
-Please note that when your pools have the same minimum and maximum pool size no dynamic pool will be created.
+A dynamic pool will **only** be created when there is an overflow for a pool (i.e. the maximum pool size is not equal to the minimum pool size).
+
+An example may make things more clear: let's say you have (originally) two pools with a minimum and maximum pool size of 10 and 15 respectively (same URL, same username and password and so on). Now when you use this library you will get three pools: the two original pools with a minimum and maximum of 10 and a dynamic pool shared by these two with a minimum pool size of 0 and a maximum of 10 (2 * 5). So in total you will still have 20 as minimum pool size and 30 as maximum pool size. The library will use the dynamic pool only when the fixed pool is full (i.e. no idle connections) and the dynamic connections will be closed as fast as possible in order to keep the minimum number of physical connections small.
 
 Furthermore, since analyzing pool behaviour is quite difficult (in order to determine the optimal minimum and maximum pool size), this library calculates and displays pool statistics regularly. Hence, you can start with a simple and basic pool data source type (also part of this library), collect the pool statistics and then you can determine the optimal minimum and maximum pool size (that may differ per pool). After that, you can use the smart pool data source to have a more optimal way of using your resources.
 
@@ -42,14 +37,14 @@ Let's start with the business case first.
 
 A client of mine, [Blue Current](https://www.bluecurrent.nl), provides smart software, charge points, and services for electric vehicles (EV), electric cars usually. Charge points communicate with the central Oracle Cloud database when they charge an electric car. There are a few thousand Blue Current charge points in the Netherlands and it suffices to say that a fast and reliable communication is paramount. And let's not forget about the costs, since Oracle Cloud costs depend indirectly on the number of connections (actually it depends on the number of CPUs but every CPU has a maximum number of sessions).
 
-Blue Current uses a Java Spring Boot application called Motown from [Infuse](https://infuse-ev.com). It uses the Java Persistence Api (JPA) to connect to database, Oracle is just one of the possibilities. There are 6 Oracle schemas (also accounts or users) where the data will be stored to and retrieved from. So, 6 JDBC data sources are needed. The default pool data source from [HikariCP](https://github.com/brettwooldridge/HikariCP) is used as a data source. A pool data source allows you to create a (fixed) maximum number of physical connections (a.k.a. the maximum pool count) and keep those connections in a pool, therefore decreasing the time to connect to the database since usually the (physical) connection is already there. Remember, creating a physical connection is expensive. Another characteristic of a pool data source is that you should not set the maximum number of physical connections too high, please read more about that in this article: [About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing).
+Blue Current uses a Java Spring Boot application called Motown from [Infuse](https://infuse-ev.com). It uses the Java Persistence Api (JPA) to connect to database, Oracle is just one of the possible databases. There are 6 Oracle schemas (also known as accounts or users) where the data will be stored to and retrieved from. So, 6 JDBC data sources are needed. The default pool data source from [HikariCP](https://github.com/brettwooldridge/HikariCP) is used as a data source. A pool data source allows you to create a (fixed) maximum number of physical connections (a.k.a. the maximum pool count) and keep those connections in a pool, therefore decreasing the time to connect to the database since usually the (physical) connection is already there. Remember, creating a physical connection is expensive. Another characteristic of a pool data source is that you should not set the maximum number of physical connections too high, please read more about that in this article: [About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing).
 
 So how can we decrease the number of connections and thus costs?
-1. by reducing the maximum number of physical connections per pool, however that has already been tried and the number of SQL errors increased by doing this. And it is really a trial and error process, something you do not want to do (too long) with a mission-critical application.
-2. by combining pools and thus reduce the number of pools: since pools will usually have idle connections, the combined pool will have more of them so the maximum pool size can be reduced.
-3. by connecting to one schema and give that schema all the rights to query and manipulate objects from the other schemas including DDL: from a security perspective not the best option.
+1. by reducing the maximum number of physical connections per pool, however that has already been tried and the number of SQL errors increased by doing this. And it is really a trial and error process, something you do not want to do (for a long period) with a mission-critical application.
+2. by having small fixed pools for the regular work and overflow pools for the peak periods: these overflow pools should really needs a lower maximum pool size.
+3. by having just one large pool but then you can have just one set of credentials (i.e. one schema) and hence you must give that schema all the rights to query and manipulate objects from the other schemas including DDL: from a security perspective not the best option.
 
-So the second option, combining pools, seems the best option.
+So the second option, overflow pools, seems the best option.
 
 But how can we do that and maybe more important, how can we tune the combined pool via pool statistics?
 
@@ -75,22 +70,24 @@ Attempts to establish a connection with the data source that this DataSource obj
 
 Not all pool data sources support this. Hikari for instance doesn't: there this method is deprecated. Oracle Universal Connection Pool ([UCP](https://docs.oracle.com/en/database/oracle/oracle-database/23/jjucp/intro.html#GUID-DEC07CE5-F791-4234-BBF9-5C808169BCD2)) on the other hand supports this method.
 
-#### How can Oracle Universal Connection Pool (UCP) combine pools?
+#### An overflow pool and the Oracle Universal Connection Pool (UCP)
 
 The idea here is to define all pool characteristics through configuration. In the case of a Spring Boot application this is rather easy: use the annotation `@ConfigurationProperties`.
-Every pool has some specific properties like username, password, pool name and maximum pool size, but also generic properties like the JDBC url, timeout settings and so on. When the generic properties are the same, that can be used to create one common pool where the maximum pool sizes will be accumulated.
+Every pool has some specific properties like username, password, pool name and maximum pool size, but also generic properties like the JDBC url, timeout settings and so on. When the generic properties are the same, that can be used to create one shared overflow pool where the maximum pool sizes will be accumulated.
 
-So we will have a situation where there are several smart pools who are joined together to an actual combined and rather simple pool. The smart pools each contain the credential information needed to create a physical connection (or get a logical connection with the same credentials). They delegate the work of getting a connection to the simple pool.
+The smart pool data source for Oracle UCP can have two pools:
+* always a fixed pool of type `SimplePoolDataSourceOracle` that is a subclass of the standard Oracle UCP pool data source with pool statistics gathering added.
+* optionally a dynamic pool of the same type but **only** if the minimum and maximum pool size is not equal
 
-So the smart pool also gets a (default) connection via `getConnection()` but only after the smart pool data source library first sets the default credentials via `PoolDataSource.setUser()` and `PoolDataSource.setPassword()`. See also [the Oracle PoolDataSource interface](https://javadoc.io/doc/com.oracle.database.jdbc/ucp/21.3.0.0/oracle/ucp/jdbc/PoolDataSource.html).
+When a connection is requested:
+1. when the fixed pool has idle connections (or there is no dynamic pool): use the fixed pool and the default credentials, i.e. use `getConnection()`
+2. when the fixed pool has no idle connections and there is a dynamic pool: use the dynamic pool **but** with the credentials of the fixed pool i.e. use `getConnection(String username, String password)`. Please note that also the schema is passed just for verification.
 
-The only thing you need to change is the initial pool size. Since the common pool data source will have as credentials one of its combined pool data source credentials (for example user X), on start up it will create exactly this initial amount of connections for user X (since it is the default for `getConnection()`). And that is probably not what you want: a pool with only connections for user X. So it is best to set the initial pool size to 0 and let the physical connections be made on demand thereafter.
+When an exception occurs indicating that a connection time-out has occurred, the other pool will be used to get a connection (if there are two pools).
 
-#### How can we let Hikari combine pools?
+#### An overflow pool and Hikari
 
-We just saw that it was rather easy to use UCP. But Hikari does not support connections with specific credentials, only the defaults. 
-
-Yeah, you can just set the default user and password like UCP but the connection returned is not guaranteed to have the correct username. Remember that all connections are created at start-up using the credentials at that time. So when it was user X and you ask for user Y now, you will get a user X session. Unless, unless, you ask for every connection while there are still connections available and then when there is none left, you close a physical connection (you can get a physical connection from a logical connection by unwrapping) and then ask again a connection for user Y. Maybe then Hikari will then create a physical connection to Y and return that. And then you do not have to forget to release all logical connections you asked before. Not really a pleasant scenario. 
+We just saw that it was rather easy to use UCP. But Hikari does not support connections with specific credentials, only the default credentials. 
 
 So, we can just say that Hikari does not support a pool with different users. Unless, Oracle can help us...
 
@@ -99,7 +96,7 @@ And, yes Oracle can help us here. Oracle has the following functionality: [Proxy
 So this means that when you want to connect to users X, Y and Z, you can do that through proxy user P.
 
 ```
-create user P identified by <password of P>;
+create user P identified by "<password of P>";
 grant create session to P;
 
 alter user X grant connect through P;
@@ -113,22 +110,15 @@ Now you can connect in SQL\*Plus as X like this:
 SQL> connect P[X]/<password of P>
 ```
 
-This will lead to one session (one entry in `v$session`).
+This will lead to exactly one session (one entry in `v$session`).
 
-But if we have three pools with usernames `P[X]`, `P[Y]` and `P[Z]`, then we will have three different usernames again.
+But the Hikari pool can only have one user, so it will be use `P` that will be the username to connect to. And the schema to connect to later will be provided by the fixed pool. Therefore you need to invoke the JDBC method `OracleConnection.openProxySession()`, that will get you a proxy session to the schema wanted. But, at the expense of a second session (in `v$session`). See also [the OracleConnection class](https://docs.oracle.com/en/database/oracle/oracle-database/23/jajdb/oracle/jdbc/OracleConnection.html).
 
-Please note that in UCP this is a correct way of setting up one pool with credentials of just one (proxy) user.
+Although half of these (overflow) sessions do nothing, they may be counted in the Oracle Cloud as stated before (a maximum of sessions per CPU). 
+So we can reduce the number of sessions by using an overflow pool but not as much as with an UCP overflow pool.
 
-Is there any other solution?
-
-When you have a normal connection to the proxy user and you invoke then the JDBC method `OracleConnection.openProxySession()`, you will get a proxy session to the schema wanted. But, at the expense of a second session (in `v$session`). See also [the OracleConnection class](https://docs.oracle.com/en/database/oracle/oracle-database/23/jajdb/oracle/jdbc/OracleConnection.html).
-
-Although half of these sessions do nothing, they may be counted in the Oracle Cloud as stated before (a maximum of sessions per CPU). 
-So we win some with combining pools but we lose a lot by using proxy sessions? 
-
-Well, there is a clever trick to optimize, i.e. decrease the number of sessions: among the user schemas there is always one that is used most (as can be determined by the pool statistics).
-
-Let that user (say X) just connect without a proxy, and let the other users connect through X.
+But there is a clever trick to optimize, i.e. decrease the number of sessions: among the user schemas there is always one that is used most (as can be determined by the pool statistics).
+Assume that user X is that user. Now let user X just connect without a proxy (username `X`), and let the other users connect through X (i.e. username `X[Y]` and `X[Z]`).
 
 So we get:
 
@@ -137,21 +127,16 @@ alter user Y grant connect through X;
 alter user Z grant connect through X;
 ```
 
-And the usernames will become: `X`, `X[Y]` and `X[Z]`.
+So the usernames will become: `X`, `X[Y]` and `X[Z]`. The smart pool data source for Hikari will determine that they have one (initial) username to connect to: `X`.
 
-So the smart pool data source must include the (initial) user to connect to (here `X`) in its common information for Hikari (or other pool implementations that also do not support getting a connection with multiple credentials in one pool). This is unlike pools like UCP where the connect information can be ignored since UCP is able to handle that well.
-
-The algorithm for getting a connection for Hikari is a little bit more complex:
-1. get a connection: this can be a normal session or a proxy session;
-2. if the current schema (`java.sql.Connection.getSchema()`) is equal to the schema wanted we are done;
-3. next, if it is a proxy session, close that proxy session (and if the resulting current schema is the schema wanted we are done);
-4. last, open a proxy session for the schema wanted (and the resulting schema must be the same).
+The same connection request procedure as for UCP is followed. The only difference is that the schema passed for the overflow pool is really needed to open a proxy session.
 
 ### What pool statistics are needed?
 
 The solution must provide easy to analyze statistics such as:
 - the number of connections: active, idle and total (active + idle);
 - the minimum, average and maximum elapsed time for getting a connection from the pool;
+- number of connections per schema;
 - the latter broken down into physical, logical and proxy connections.
 
 This must be gathered for two levels:
@@ -163,10 +148,10 @@ Pool statistics are displayed in debugging mode on every connection request (onl
 ### What are the advantages of this library?
 
 This Smart Pool Data Source library has the following goals:
-- let several pool data sources share a one common pool data source that does the hard work giving you the opportunity to reduce the number of connections;
+- let several pool data sources share an overflow pool data source that does the hard work giving you the opportunity to reduce the number of connections;
 - every (non-shared) pool data source has information that is not common: username, password, pool sizes and so on;
-- the library is transparent in a Spring Boot environment: the number of (pool) data sources stays the same, only the creation changes;
-- keep the common pool data source open as long as possible: applications like Spring Boot try to close data sources when a thread is closed but this library does NOT close the common pool data source.
+- the library is transparent in a Spring Boot environment: the number of (pool) data sources stays the same for the application, only the creation changes;
+- keep the overflow pool data source open as long as possible: applications like Spring Boot try to close data sources when a thread is closed but this library does NOT close the overflow pool data source unless all pool data sources using it have been closed.
 
 This Smart Pool Data Source library is especially meant for Oracle connections since Oracle has so-called proxy connections, i.e. connections where you log in to a schema using the credentials from another (proxy) account. This allows for several pools to connect to the proxy account and then start a proxy session immediately after that using `OracleConnection.openProxySession()`.
 
@@ -178,9 +163,7 @@ The architecture allows you to add other pool data sources easily by using deleg
 
 ## High Level Design
 
-There is one main build method in class SmartPoolDataSource that needs:
-1. [data source properties as derived from Spring Boot DataSourceProperties](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/jdbc/DataSourceProperties.html)
-2. a list of pool data source properties from either Hikari or Oracle
+You can create a smart pool data source with either a default constructor or a set of data source properties.
 
 ### Data source properties
 
@@ -230,152 +213,13 @@ These are the properties defined in class `PoolDataSourceConfigurationOracle`:
 - int secondsToTrustIdleConnection
 - int connectionValidationTimeout
 
-### Join multiple pool data sources
-
-Every time you build a smart pool data source (from data source properties and the list of pool data source properties) these steps are executed:
-1. the type of data source is determined
-2. the appropriate pool data source properties are used to build a smart pool data source
-
-#### Determination of the data source type
-
-It must either be:
-- an Oracle pool data source class (`PoolDataSourceImpl` or `SimplePoolDataSourceOracle`) OR
-- a Hikari pool data source class (`HikariDataSource` or `SimplePoolDataSourceHikari`) OR
-- null which results in a Hikari pool data source class (as is the default for Spring Boot)
-
-This can be specified in the Spring properties file by:
-
-```
-spring.datasource.type=com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle
-```
-
-or:
-
-```
-spring.datasource.type=com.zaxxer.hikari.HikariDataSource
-```
-
-#### Build a smart pool data source
-
-First, determine:
-- the (unique) id using all properties except pool name and password;
-- the common id using all properties except password, pool name and pool sizes;
-- for Oracle, the (proxy) username is not part of the common properties but for Hikari it must be included since Hikari smart pools must share the same (proxy) username, see the discussion above.
-
-The first question: is this (unique) id already cached (as SmartPoolDataSource)?
-
-1. yes: return that one
-2. no, but there is a SimplePoolDataSource for its (unique) id (or common id and the SmartPoolDataSource could be constructed, i.e. joined): return that one
-3. no, but there is a SimplePoolDataSource for its common id and the SmartPoolDataSource could NOT be constructed (join did NOT work):
-   create a SimplePoolDataSource and store it with the most specific id, i.e. with the unique id
-4. else, create a SimplePoolDataSource and store it with the common id
-
-After steps 2, 3 and 4 you just need to build a SmartPoolDataSource from the last stored SimplePoolDataSource.
-
-## Usage
-
-### Spring Boot bean creation
-
-#### Old version of class `JpaAuthConfiguration`
-
-```
-import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-...
-
-@Configuration
-@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory",
-                       transactionManagerRef = "authTransactionManager",
-                       basePackages = {"io.motown.domain.commandauthorization.repositories",
-                                       "io.motown.identificationauthorization"})
-public class JpaAuthConfiguration {
-
-  @Bean(name = {"authDataSourceProperties"})
-  @ConfigurationProperties(prefix = "app.auth.datasource")
-  public DataSourceProperties dataSourceProperties() {
-    return new DataSourceProperties();
-  }
-  
-  @Bean(name = {"authDataSource"})
-  @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
-  public DataSource dataSource(@Qualifier("authDataSourceProperties") DataSourceProperties properties) {
-    return properties
-      .initializeDataSourceBuilder()
-      .type(HikariDataSource.class)
-      .build();
-  }
-...
-```
-
-#### New version of class `JpaAuthConfiguration`
-
-```
-import com.paulissoft.pato.jdbc.PoolDataSourceConfiguration;
-import com.paulissoft.pato.jdbc.PoolDataSourceConfigurationHikari;
-import com.paulissoft.pato.jdbc.PoolDataSourceConfigurationOracle;
-...
-
-@Configuration
-@EnableJpaRepositories(entityManagerFactoryRef = "authEntityManagerFactory",
-                       transactionManagerRef = "authTransactionManager",
-                       basePackages = {"io.motown.domain.commandauthorization.repositories",
-                                       "io.motown.identificationauthorization"})
-public class JpaAuthConfiguration {
-
-  @Bean(name = {"authDataSourceConfiguration"})
-  @ConfigurationProperties(prefix = "app.auth.datasource")
-  public PoolDataSourceConfiguration dataSourceConfiguration() {
-    return new PoolDataSourceConfiguration();
-  }
-  
-  @Bean(name = {"authPoolDataSourceConfigurationHikari"})
-  @ConfigurationProperties(prefix = "app.auth.datasource.hikari")
-  public PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari() {
-    return new PoolDataSourceConfigurationHikari();
-  }
-  
-  @Bean(name = {"authPoolDataSourceConfigurationOracle"})
-  @ConfigurationProperties(prefix = "app.auth.datasource.ucp")
-  public PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle() {
-    return new PoolDataSourceConfigurationOracle();
-  }
-  
-  @Bean(name = {"authDataSource"})
-  public DataSource dataSource(@Qualifier("authDataSourceConfiguration") PoolDataSourceConfiguration dataSourceConfiguration,
-                               @Qualifier("authPoolDataSourceConfigurationHikari") PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari,
-                               @Qualifier("authPoolDataSourceConfigurationOracle") PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
-    return MyPoolDataSourceBuilder.build(dataSourceConfiguration, 
-                                         poolDataSourceConfigurationHikari, 
-                                         poolDataSourceConfigurationOracle);
-  }
-...
-```
-
-#### Class `MyPoolDataSourceBuilder`
-
-```
-public class MyPoolDataSourceBuilder {
-  protected static SmartPoolDataSource build(PoolDataSourceConfiguration dataSourceConfiguration, PoolDataSourceConfiguration... pdsConfigurations) {
-    try {
-      SmartPoolDataSource pds = SmartPoolDataSource.build(dataSourceConfiguration, pdsConfigurations);
-      SmartPoolDataSource.setStatisticsEnabled(true);
-      return pds;
-    } catch (SQLException ex) {
-      throw new RuntimeException(ex.getMessage());
-    } 
-  }
-}
-```
-
-### Spring boot application properties file
-
 ## Conclusion
 
-The Smart Pool Data Source library allows you to combine pool data sources in Java JDBC applications like Spring Boot and thus reduce the number of connections. In an Oracle Cloud environment this may reduce costs also since they are related to the number of CPUs where each CPU has a limit to the maximum number of connections.
+The Smart Pool Data Source library allows you to have small fixed pool data sources in Java JDBC applications like Spring Boot next to one or more overflow pools. This can reduce the number of connections (provided you limit the combined maximum pool size for the overflow pool). In an Oracle Cloud environment this may reduce costs also since they are related to the number of CPUs where each CPU has a limit to the maximum number of connections.
 
-Another advantage is that the library shows pool statistics for up to two levels, and they are displayed regularly (at least every hour) and when closing. This allows you to easily fine tune the pool sizes.
+The usage of this smart pool is transparant in a Spring Boot environment. Just the type of the data source needs to change.
 
-The last advantage of this library is that it does not destroy the physical pool data source when the logical pool data sources are closed: they are just virtual and use the physical pool data source to do the actual work, and it will not be closed by the library.
+Another advantage is that the library shows pool statistics for up to two levels, and they are displayed regularly (at least every hour) and when staring or closing. This allows you to more easily fine tune the pool sizes.
 
 ## Links
 

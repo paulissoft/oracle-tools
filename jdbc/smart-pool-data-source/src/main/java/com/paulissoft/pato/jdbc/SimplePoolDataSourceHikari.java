@@ -253,7 +253,8 @@ public final class SimplePoolDataSourceHikari
                                                           true,
                                                           proxyLogicalConnectionCount,
                                                           proxyOpenSessionCount,
-                                                          proxyCloseSessionCount);
+                                                          proxyCloseSessionCount,
+                                                          schema);
             }
         }
 

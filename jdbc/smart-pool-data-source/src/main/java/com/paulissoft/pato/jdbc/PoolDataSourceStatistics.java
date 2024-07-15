@@ -148,6 +148,9 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
 
     private final CopyOnWriteArraySet<PoolDataSourceStatistics> children;
 
+    // the error attributes (error code and SQL state) and its count
+    private final ConcurrentHashMap<String, AtomicLong> connectionsPerSchema = new ConcurrentHashMap<>();
+
     /*
      * Constructors
      */
@@ -300,7 +303,8 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                                  final boolean showStatistics,
                                  final int proxyLogicalConnectionCount,
                                  final int proxyOpenSessionCount,
-                                 final int proxyCloseSessionCount) {
+                                 final int proxyCloseSessionCount,
+                                 final String schema) {
         try {
             update(conn,
                    timeElapsed,
@@ -308,6 +312,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                    proxyLogicalConnectionCount,
                    proxyOpenSessionCount,
                    proxyCloseSessionCount,
+                   schema,
                    pds.getActiveConnections(),
                    pds.getIdleConnections(),
                    pds.getTotalConnections());
@@ -360,6 +365,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                 final int proxyLogicalConnectionCount,
                 final int proxyOpenSessionCount,
                 final int proxyCloseSessionCount,
+                final String schema,
                 final int activeConnections,
                 final int idleConnections,
                 final int totalConnections) throws SQLException {
@@ -402,6 +408,8 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         this.proxyCloseSessionCount.addAndGet(proxyCloseSessionCount);
 
         update(activeConnections, idleConnections, totalConnections);
+
+        connectionsPerSchema.computeIfAbsent(schema, s -> new AtomicLong(0)).incrementAndGet();
     }
 
     private void update(final int activeConnections,
@@ -610,6 +618,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         }
 
         errors.clear();
+        connectionsPerSchema.clear();
     }
 
     private boolean add(final Connection conn) throws SQLException {
@@ -893,11 +902,22 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                 }
             }
 
+            // show connections per schema
+            final Map<String, Long> connectionsPerSchema = getConnectionsPerSchema();
+
+           if (!connectionsPerSchema.isEmpty()) {
+                method.accept(String.format("Connections per schema in decreasing order for %s:", poolDescription));
+
+                connectionsPerSchema.entrySet().stream()
+                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
+                        .forEach(e -> method.accept(String.format("%s# connections for schema %s: %d", prefix, e.getKey(), e.getValue())));
+            }
+
             // show errors
             if (showErrors) {
                 final Map<Properties, Long> errors = getErrors();
 
-                // don't use method here 
+                // don't use method here since we are showing warnings/errors
 
                 if (errors.isEmpty()) {
                     logger.info("No connection exceptions signalled for {}", poolDescription);
@@ -1051,11 +1071,19 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         return totalConnectionsAvg != null ? totalConnectionsAvg.get().setScale(DISPLAY_SCALE, RoundingMode.HALF_UP).longValue() : 0L;
     }
 
-    protected Map<Properties, Long> getErrors() {
+    private Map<Properties, Long> getErrors() {
         final Map<Properties, Long> result = new HashMap<>();
-            
+
         errors.forEach((k, v) -> result.put(k, v.get()));
-            
+
+        return result;
+    }
+
+    private Map<String, Long> getConnectionsPerSchema() {
+        final Map<String, Long> result = new HashMap<>();
+
+        connectionsPerSchema.forEach((k, v) -> result.put(k, v.get()));
+
         return result;
     }
 
