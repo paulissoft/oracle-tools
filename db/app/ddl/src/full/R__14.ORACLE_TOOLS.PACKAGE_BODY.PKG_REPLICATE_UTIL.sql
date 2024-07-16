@@ -19,6 +19,7 @@ is
   l_column_tab dbms_sql.varchar2a;
   l_column_name all_tab_columns.column_name%type;
   l_found pls_integer;
+  l_table_alias constant varchar2(3 byte) := 'TAB';
 
   procedure check_existence(p_count_expected in pls_integer)
   is
@@ -69,7 +70,7 @@ begin
       -- check column list
       if p_column_list = '*'
       then
-        l_column_list := p_column_list;
+        l_column_list := l_table_alias || '.' || p_column_list;
       else
         oracle_tools.pkg_str_util.split
         ( p_str => p_column_list
@@ -109,7 +110,7 @@ abc
               );
           end;
 
-          l_column_tab(i_idx) := '"' || l_column_name || '"';
+          l_column_tab(i_idx) := l_table_alias || '.' || '"' || l_column_name || '"';
         end loop;
 
         l_column_list := oracle_tools.pkg_str_util.join(l_column_tab);
@@ -120,7 +121,7 @@ abc
         then
           check_existence(0); -- BOTH SHOULD NOT EXIST
           -- check privileges first before creating the synonym (so we can redo the action)
-          execute_immediate('CREATE OR REPLACE VIEW "' || l_view_name || '" AS SELECT ' || l_column_list || ' FROM "' || l_table_owner || '"."' || l_table_name || '"');
+          execute_immediate('CREATE OR REPLACE VIEW "' || l_view_name || '" AS SELECT ' || l_column_list || ' FROM "' || l_table_owner || '"."' || l_table_name || '"' || ' ' || l_table_alias);
         when 'REPLACE'
         then check_existence(2); -- BOTH MUST EXIST
         else null;
@@ -130,7 +131,7 @@ abc
   end case;
 
   -- always create a view based on the synonym
-  execute_immediate('CREATE OR REPLACE VIEW "' || l_view_name || '" AS SELECT rowid as row_id,' || l_column_list || ' FROM "' || l_synonym_name || '"');
+  execute_immediate('CREATE OR REPLACE VIEW "' || l_view_name || '" AS SELECT rowid as row_id,' || l_column_list || ' FROM "' || l_synonym_name || '"' || ' ' || l_table_alias);
 end replicate_table;
 
 end pkg_replicate_util;
