@@ -100,14 +100,19 @@ public final class SimplePoolDataSourceHikari
         return conn;
     }
 
-    // get a connection for the multi-session proxy model
-    //
-    // @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
-    //                             via a proxy session through username (e.g. bc_proxy[bodomain])
-    // @param password             provided by pool data source that needs the overflow pool data source to connect to schema
-    //                             via a proxy session through with this password
-    // @param schema               provided by pool data source that needs the overflow pool data source to connect to schema
-    //                             via a proxy session (e.g. bodomain)
+    /**
+     * Get a connection for the dynamic data source.
+     *
+     * @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
+     *                             via a proxy session through username (e.g. bc_proxy[bodomain])
+     * @param password             provided by pool data source that needs the overflow pool data source to connect to schema
+     *                             via a proxy session through with this password
+     * @param schema               provided by pool data source that needs the overflow pool data source to connect to schema
+     *                             via a proxy session (e.g. bodomain)
+     * @param refCount             the number of times this data source is shared
+     * @return                     a connection
+     * @throws SQLException        a SQL exception
+     */
     public Connection getConnection(final String usernameToConnectTo,
                                     final String password,
                                     final String schema,
@@ -124,7 +129,6 @@ public final class SimplePoolDataSourceHikari
         int proxyLogicalConnectionCount = 0;
         int proxyOpenSessionCount = 0;
         int proxyCloseSessionCount = 0;
-        final String proxyUsername = usernameToConnectTo;
         final Connection[] connectionsWithWrongSchema =
             maxProxyLogicalConnectionCount > 0 ? new Connection[maxProxyLogicalConnectionCount] : null;
         int nrProxyLogicalConnectionCount = 0;
@@ -156,11 +160,8 @@ public final class SimplePoolDataSourceHikari
                 
                 OracleConnection oraConn = null;
 
-                try {
-                    if (conn.isWrapperFor(OracleConnection.class)) {
-                        oraConn = conn.unwrap(OracleConnection.class);
-                    }
-                } catch (SQLException ex) {
+                if (conn.isWrapperFor(OracleConnection.class)) {
+                    oraConn = conn.unwrap(OracleConnection.class);
                 }
 
                 if (oraConn != null) {
@@ -173,7 +174,7 @@ public final class SimplePoolDataSourceHikari
                     do {                    
                         switch(nr) {
                         case 0:
-                            if (!conn.getSchema().equalsIgnoreCase(proxyUsername) /*oraConn.isProxySession()*/) {
+                            if (!conn.getSchema().equalsIgnoreCase(usernameToConnectTo) /*oraConn.isProxySession()*/) {
                                 // go back to the session with the first username
                                 try {
                                     oraConn.close(OracleConnection.PROXY_SESSION);
@@ -182,12 +183,12 @@ public final class SimplePoolDataSourceHikari
                                 } catch (SQLException ex) {
                                     log.warn("SQL warning: {}", ex.getMessage());
                                 }
-                                oraConn.setSchema(proxyUsername);
+                                oraConn.setSchema(usernameToConnectTo);
                             }
                             break;
                             
                         case 1:
-                            if (!proxyUsername.equals(schema)) {
+                            if (!usernameToConnectTo.equals(schema)) {
                                 // open a proxy session with the second username
                                 final Properties proxyProperties = new Properties();
 
@@ -239,22 +240,15 @@ public final class SimplePoolDataSourceHikari
         }
         
         if (isStatisticsEnabled) {
-            if (tm1 == null) {
-                poolDataSourceStatistics.updateStatistics(this,
-                                                          conn,
-                                                          Duration.between(tm0, Instant.now()).toMillis(),
-                                                          true);
-            } else {
-                poolDataSourceStatistics.updateStatistics(this,
-                                                          conn,
-                                                          Duration.between(tm0, tm1).toMillis(),
-                                                          Duration.between(tm1, Instant.now()).toMillis(),
-                                                          true,
-                                                          proxyLogicalConnectionCount,
-                                                          proxyOpenSessionCount,
-                                                          proxyCloseSessionCount,
-                                                          schema);
-            }
+            poolDataSourceStatistics.updateStatistics(this,
+                                                      conn,
+                                                      Duration.between(tm0, ((tm1 == null) ? Instant.now() : tm1)).toMillis(),
+                                                      ((tm1 == null) ? -1L : Duration.between(tm1, Instant.now()).toMillis()),
+                                                      true,
+                                                      proxyLogicalConnectionCount,
+                                                      proxyOpenSessionCount,
+                                                      proxyCloseSessionCount,
+                                                      schema);
         }
 
         if (isInitializing) {

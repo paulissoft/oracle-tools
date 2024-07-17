@@ -103,15 +103,20 @@ public final class SimplePoolDataSourceOracle
         return conn;
     }
 
-    
-    // get a connection for the multi-session proxy model
-    //
-    // @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
-    //                             via a proxy session through username (e.g. bc_proxy[bodomain])
-    // @param password             provided by pool data source that needs the overflow pool data source to connect to schema
-    //                             via a proxy session through with this password
-    // @param schema               provided by pool data source that needs the overflow pool data source to connect to schema
-    //                             via a proxy session (e.g. bodomain)
+
+    /**
+     * Get a connection for the dynamic data source.
+     *
+     * @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
+     *                             via a proxy session through username (e.g. bc_proxy[bodomain])
+     * @param password             provided by pool data source that needs the overflow pool data source to connect to schema
+     *                             via a proxy session through with this password
+     * @param schema               provided by pool data source that needs the overflow pool data source to connect to schema
+     *                             via a proxy session (e.g. bodomain)
+     * @param refCount             the number of times this data source is shared
+     * @return                     a connection
+     * @throws SQLException        a SQL exception
+     */
     public Connection getConnection(final String usernameToConnectTo,
                                     final String password,
                                     final String schema,
@@ -140,6 +145,16 @@ public final class SimplePoolDataSourceOracle
                     poolDataSourceStatistics.signalException(this, ex);
                     throw ex;
                 }
+
+                poolDataSourceStatistics.updateStatistics(this,
+                        conn,
+                        Duration.between(tm0, Instant.now()).toMillis(),
+                        -1L,
+                        true,
+                        0,
+                        0,
+                        0,
+                        schema);
             } else {
                 conn = super.getConnection(usernameToConnectTo, password);
             }

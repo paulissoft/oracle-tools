@@ -393,15 +393,19 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                                          this.physicalConnectionCount.get() :
                                          this.logicalConnectionCount.get()));
 
-        updateIterativeMean(count, proxyTimeElapsed, proxyTimeElapsedAvg);
+        if (proxyTimeElapsed >= 0L) {
+            updateIterativeMean(count, proxyTimeElapsed, proxyTimeElapsedAvg);
+        }
 
         // The rest is using AtomicLong, hence concurrent.
         if (isPhysicalConnection) {
             updateMinMax(timeElapsed, physicalTimeElapsedMin, physicalTimeElapsedMax);
         } else {
             updateMinMax(timeElapsed, logicalTimeElapsedMin, logicalTimeElapsedMax);
-        }        
-        updateMinMax(proxyTimeElapsed, proxyTimeElapsedMin, proxyTimeElapsedMax);
+        }
+        if (proxyTimeElapsed >= 0L) {
+            updateMinMax(proxyTimeElapsed, proxyTimeElapsedMin, proxyTimeElapsedMax);
+        }
             
         this.proxyLogicalConnectionCount.addAndGet(proxyLogicalConnectionCount);
         this.proxyOpenSessionCount.addAndGet(proxyOpenSessionCount);
