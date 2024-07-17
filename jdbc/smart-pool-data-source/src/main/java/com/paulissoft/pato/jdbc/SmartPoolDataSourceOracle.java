@@ -16,7 +16,8 @@ public class SmartPoolDataSourceOracle
 
     static final long MIN_CONNECTION_TIMEOUT = SimplePoolDataSourceOracle.MIN_CONNECTION_TIMEOUT; // milliseconds for one pool, so twice this number for two
 
-    static final String REX_CONNECTION_TIMEOUT = "^UCP-29: Failed to get a connection$";
+    static final String REX_CONNECTION_TIMEOUT =
+        "^(UCP-29: Failed to get a connection|UCP-45064: All connections in the Universal Connection Pool are in use.*)$";
     
     /*
      * Constructor
