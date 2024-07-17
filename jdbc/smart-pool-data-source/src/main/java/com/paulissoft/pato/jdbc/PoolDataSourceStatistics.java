@@ -829,7 +829,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
 
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 > 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%smin/avg/max active connections: %d/%d/%d",
+                        method.accept(String.format("%smin/avg/max physical connection time (ms): %d/%d/%d",
                                                     prefix, val1, val2, val3));
                     }
             
