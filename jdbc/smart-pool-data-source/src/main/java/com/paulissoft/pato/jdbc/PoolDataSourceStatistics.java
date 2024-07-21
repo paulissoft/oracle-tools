@@ -144,12 +144,12 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
     // the error attributes (error code and SQL state) and its count
     private final ConcurrentHashMap<Properties, AtomicLong> errors = new ConcurrentHashMap<>();
 
+    // the number of connections per schema
+    private final ConcurrentHashMap<String, AtomicLong> numberOfConnectionsPerSchema = new ConcurrentHashMap<>();
+
     private final PoolDataSourceStatistics parent;
 
     private final CopyOnWriteArraySet<PoolDataSourceStatistics> children;
-
-    // the error attributes (error code and SQL state) and its count
-    private final ConcurrentHashMap<String, AtomicLong> connectionsPerSchema = new ConcurrentHashMap<>();
 
     /*
      * Constructors
@@ -413,7 +413,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
 
         update(activeConnections, idleConnections, totalConnections);
 
-        connectionsPerSchema.computeIfAbsent(schema, s -> new AtomicLong(0)).incrementAndGet();
+        numberOfConnectionsPerSchema.computeIfAbsent(schema, s -> new AtomicLong(0)).incrementAndGet();
     }
 
     private void update(final int activeConnections,
@@ -574,6 +574,21 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         this.parent.proxyOpenSessionCount.addAndGet(this.proxyOpenSessionCount.get());
         this.parent.proxyCloseSessionCount.addAndGet(this.proxyCloseSessionCount.get());
 
+	final Map<Properties, Long> errors = this.getErrors();
+
+	if (!errors.isEmpty()) {
+	    errors.entrySet().stream()
+		.forEach(e -> this.parent.errors.computeIfAbsent(e.getKey(), s -> new AtomicLong(0)).addAndGet(e.getValue()));
+	}
+
+	// show connections per schema
+	final Map<String, Long> numberOfConnectionsPerSchema = this.getConnectionsPerSchema();
+
+	if (!numberOfConnectionsPerSchema.isEmpty()) {
+	    numberOfConnectionsPerSchema.entrySet().stream()
+		.forEach(e -> this.parent.numberOfConnectionsPerSchema.computeIfAbsent(e.getKey(), s -> new AtomicLong(0)).addAndGet(e.getValue()));	    
+	}
+
         this.reset();
 
         if (debugStatistics) {
@@ -622,7 +637,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         }
 
         errors.clear();
-        connectionsPerSchema.clear();
+        numberOfConnectionsPerSchema.clear();
     }
 
     private boolean add(final Connection conn) throws SQLException {
@@ -907,14 +922,14 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
             }
 
             // show connections per schema
-            final Map<String, Long> connectionsPerSchema = getConnectionsPerSchema();
+            final Map<String, Long> numberOfConnectionsPerSchema = getConnectionsPerSchema();
 
-           if (!connectionsPerSchema.isEmpty()) {
-                method.accept(String.format("Connections per schema in decreasing order for %s:", poolDescription));
+	    if (!numberOfConnectionsPerSchema.isEmpty()) {
+                method.accept(String.format("=== Connections per schema in decreasing order for %s ===", poolDescription));
 
-                connectionsPerSchema.entrySet().stream()
-                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
-                        .forEach(e -> method.accept(String.format("%s# connections for schema %s: %d", prefix, e.getKey(), e.getValue())));
+                numberOfConnectionsPerSchema.entrySet().stream()
+		    .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
+		    .forEach(e -> method.accept(String.format("%s# connections for schema %s: %d", prefix, e.getKey(), e.getValue())));
             }
 
             // show errors
@@ -924,9 +939,9 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                 // don't use method here since we are showing warnings/errors
 
                 if (errors.isEmpty()) {
-                    logger.info("No connection exceptions signalled for {}", poolDescription);
+                    logger.info("=== No connection exceptions signalled for {} ===", poolDescription);
                 } else {
-                    logger.warn("Connection exceptions signalled in decreasing number of occurrences for {}:", poolDescription);
+                    logger.warn("=== Connection exceptions signalled in decreasing number of occurrences for {} ===", poolDescription);
                 
                     errors.entrySet().stream()
                         .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
@@ -1086,7 +1101,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
     private Map<String, Long> getConnectionsPerSchema() {
         final Map<String, Long> result = new HashMap<>();
 
-        connectionsPerSchema.forEach((k, v) -> result.put(k, v.get()));
+        numberOfConnectionsPerSchema.forEach((k, v) -> result.put(k, v.get()));
 
         return result;
     }
@@ -1453,7 +1468,7 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         @SuppressWarnings("EmptyMethod")
         @Override
         public int hashCode() {
-            return super.hashCode();
+            return (int) physicalConnectionCount;
         }
         
         @Override

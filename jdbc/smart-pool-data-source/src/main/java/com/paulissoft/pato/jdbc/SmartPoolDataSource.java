@@ -5,9 +5,13 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+
+
+    
 
 @Slf4j
 public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
@@ -28,6 +32,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
     // Store all objects of type SimplePoolDataSourceHikari in the hash table.
     // The key is the common id, i.e. the set of common properties
     private static final HashMap<SimplePoolDataSource,CommonIdRefCountPair> lookupSimplePoolDataSource = new HashMap<>(); // null for regression testing
+
+    private static AtomicBoolean overflowStatic = new AtomicBoolean(true);
 
     // object members
     private final StringBuffer id = new StringBuffer();
@@ -114,7 +120,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 state = this.state = State.OPEN;
                 
                 assert hasOverflow() == (poolDataSourceOverflow != null) : "Only when there is an overflow (max pool size > min pool size)" +
-                    " the dynamic pool data source should NOT be null.";
+                    " the overflow pool data source should NOT be null.";
 
                 // now getMaxPoolSize() returns the combined totals
 
@@ -251,8 +257,10 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
+    protected abstract void updateOverflowPool(final int maxPoolSizeOverflow) throws SQLException;
+
     @SuppressWarnings("unchecked")
-    protected void updatePool() {
+    private void updatePool() {
         try {
             log.debug(">updatePool(id={})", getId());
 
@@ -318,28 +326,24 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                     poolDataSourceOverflow.set(poolDataSourceConfiguration); 
                     // need to set password explicitly since combination get()/set() does not set it
                     poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
+		    if (lookupSimplePoolDataSource != null) {
+			final String proxyUsername = poolDataSourceConfiguration.getProxyUsername();
 
-                    // settings to keep the dynamic/overflow pool data source as empty as possible
-                    poolDataSourceOverflow.setInitialPoolSize(0);                
-                    poolDataSourceOverflow.setMinPoolSize(0);
-                    poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+		    	if (proxyUsername != null) {
+			    poolDataSourceOverflow.setUsername(proxyUsername);
+			}
+		    }	
 
-                    if (lookupSimplePoolDataSource != null) {
-                        final String proxyUsername = poolDataSourceConfiguration.getProxyUsername();
-
-                        if (proxyUsername != null) {
-                            poolDataSourceOverflow.setUsername(proxyUsername);
-                        }
-                    }
+		    updateOverflowPool(maxPoolSizeOverflow);
                 } else {
                     // add the new maxPoolSizeOverflow
                     maxPoolSizeOverflow += poolDataSourceOverflow.getMaxPoolSize();
                 }
 
-                updatePool(poolDataSourceOverflow, " (dynamic)", pds == null, schema, maxPoolSizeOverflow);
+                updatePool(poolDataSourceOverflow, " (overflow)", pds == null, schema, maxPoolSizeOverflow);
             } // if (poolDataSourceOverflow != null) {
 
-            updatePool(poolDataSource, " (fixed)", true, schema, maxPoolSize);
+            updatePool(poolDataSource, " (static)", true, schema, maxPoolSize);
         } catch (SQLException ex) {
             throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
         } finally {
@@ -481,8 +485,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
             Connection conn;
 
             // Try to avoid connection timeout errors.
-            // When the fixed pool data source is full of idle connections,
-            // use immediately the dynamic pool (and try the fixed one later on).
+            // When the static pool data source is full of idle connections,
+            // use immediately the overflow pool (and try the static one later on).
             if (poolDataSourceOverflow != null &&
                 poolDataSource.getIdleConnections() == 0 &&
                 poolDataSource.getTotalConnections() == poolDataSource.getMaxPoolSize()) {
@@ -641,5 +645,13 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         default:
             return poolDataSourceOverflow != null;
         }
+    }
+
+    static boolean isOverflowStatic() {
+        return overflowStatic.get();
+    }
+
+    static void setOverflowStatic(final boolean isOverflowStatic) {
+        overflowStatic.set(isOverflowStatic);
     }
 }

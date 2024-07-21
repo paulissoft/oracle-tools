@@ -220,12 +220,27 @@ public class SmartPoolDataSourceOracle
                                        final SimplePoolDataSourceOracle poolDataSourceOverflow) throws SQLException {
         final Connection conn = super.getConnection(useOverflow, poolDataSource, poolDataSourceOverflow);
             
-        if (useOverflow) {
+        if (useOverflow && !isOverflowStatic()) {
             // The setInvalid method of the ValidConnection interface
             // indicates that a connection should be removed from the connection pool when it is closed. 
             ((ValidConnection) conn).setInvalid();
         }
 
         return conn;
+    }
+
+    protected void updateOverflowPool(final int maxPoolSizeOverflow) throws SQLException {
+	final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
+	
+	poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+
+	if (!isOverflowStatic()) {
+	    // settings to keep the overflow pool data source as empty as possible
+	    poolDataSourceOverflow.setInitialPoolSize(0);                
+	    poolDataSourceOverflow.setMinPoolSize(0);
+	} else {
+	    poolDataSourceOverflow.setInitialPoolSize(0); // do not start with a pool full of default connections
+	    poolDataSourceOverflow.setMinPoolSize(maxPoolSizeOverflow);
+	}
     }
 }

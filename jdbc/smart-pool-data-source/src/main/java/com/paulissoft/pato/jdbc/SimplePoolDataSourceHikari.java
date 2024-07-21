@@ -101,7 +101,7 @@ public final class SimplePoolDataSourceHikari
     }
 
     /**
-     * Get a connection for the dynamic data source.
+     * Get a connection for the overflow data source.
      *
      * @param usernameToConnectTo  provided by pool data source that needs the overflow pool data source to connect to schema
      *                             via a proxy session through username (e.g. bc_proxy[bodomain])

@@ -87,20 +87,6 @@ public class SmartPoolDataSourceHikari
                                                      leakDetectionThreshold));
     }
 
-    @Override
-    protected void updatePool() {        
-        super.updatePool();
-
-        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
-        
-        // is there an overflow?
-        if (poolDataSourceOverflow != null) {
-            // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
-            poolDataSourceOverflow.setIdleTimeout(10000); // minimum
-            poolDataSourceOverflow.setMaxLifetime(30000); // minimum
-        }        
-    }
-    
     protected interface ToOverrideHikari extends ToOverride {
         // setUsername(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
         // cannot implement setUsername(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
@@ -234,5 +220,21 @@ public class SmartPoolDataSourceHikari
                                                              2 * MIN_CONNECTION_TIMEOUT));
         }
         poolDataSource.setConnectionTimeout(connectionTimeout);
+    }
+    
+    protected void updateOverflowPool(final int maxPoolSizeOverflow) {
+        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
+
+	poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+
+	if (!isOverflowStatic()) {
+	    // settings to keep the overflow pool data source as empty as possible
+	    // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
+	    poolDataSourceOverflow.setMinimumIdle(0);
+	    poolDataSourceOverflow.setIdleTimeout(10000); // minimum
+	    poolDataSourceOverflow.setMaxLifetime(30000); // minimum
+	} else {
+	    poolDataSourceOverflow.setMinimumIdle(maxPoolSizeOverflow);
+	}
     }
 }
