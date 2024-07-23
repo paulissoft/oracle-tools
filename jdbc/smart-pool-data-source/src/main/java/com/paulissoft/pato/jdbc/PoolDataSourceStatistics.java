@@ -574,20 +574,20 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
         this.parent.proxyOpenSessionCount.addAndGet(this.proxyOpenSessionCount.get());
         this.parent.proxyCloseSessionCount.addAndGet(this.proxyCloseSessionCount.get());
 
-	final Map<Properties, Long> errors = this.getErrors();
+        final Map<Properties, Long> errors = this.getErrors();
 
-	if (!errors.isEmpty()) {
-	    errors.entrySet().stream()
-		.forEach(e -> this.parent.errors.computeIfAbsent(e.getKey(), s -> new AtomicLong(0)).addAndGet(e.getValue()));
-	}
+        if (!errors.isEmpty()) {
+            errors.entrySet().stream()
+                .forEach(e -> this.parent.errors.computeIfAbsent(e.getKey(), s -> new AtomicLong(0)).addAndGet(e.getValue()));
+        }
 
-	// show connections per schema
-	final Map<String, Long> numberOfConnectionsPerSchema = this.getConnectionsPerSchema();
+        // show connections per schema
+        final Map<String, Long> numberOfConnectionsPerSchema = this.getConnectionsPerSchema();
 
-	if (!numberOfConnectionsPerSchema.isEmpty()) {
-	    numberOfConnectionsPerSchema.entrySet().stream()
-		.forEach(e -> this.parent.numberOfConnectionsPerSchema.computeIfAbsent(e.getKey(), s -> new AtomicLong(0)).addAndGet(e.getValue()));	    
-	}
+        if (!numberOfConnectionsPerSchema.isEmpty()) {
+            numberOfConnectionsPerSchema.entrySet().stream()
+                .forEach(e -> this.parent.numberOfConnectionsPerSchema.computeIfAbsent(e.getKey(), s -> new AtomicLong(0)).addAndGet(e.getValue()));        
+        }
 
         this.reset();
 
@@ -817,10 +817,6 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                         method.accept(String.format("%stime needed to open last connection (ms): %d",
                                                     prefix, timeElapsed));
                     }
-                    if (proxyTimeElapsed >= 0L) {
-                        method.accept(String.format("%stime needed to open last proxy connection (ms): %d",
-                                                    prefix, proxyTimeElapsed));
-                    }
                 }
             
                 long val1, val2, val3;
@@ -855,27 +851,6 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                     if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
                         (val1 > 0L || val2 > 0L || val3 > 0L)) {
                         method.accept(String.format("%smin/avg/max logical connection time (ms): %d/%d/%d",
-                                                    prefix, val1, val2, val3));
-                    }
-            
-                    val1 = getProxyTimeElapsedMin();
-                    val2 = getProxyTimeElapsedAvg();
-                    val3 = getProxyTimeElapsedMax();
-
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 > 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
-                                                    prefix, val1, val2, val3));
-                    }
-
-                    val1 = getProxyOpenSessionCount();
-                    val2 = getProxyCloseSessionCount();
-                    val3 = getProxyLogicalConnectionCount();
-                
-                    if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
-                        (val1 > 0L || val2 > 0L || val3 > 0L)) {
-                        method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
-                                                    "logical connections rejected while searching for optimal proxy session: %d",
                                                     prefix, val1, val2, val3));
                     }
             
@@ -918,19 +893,53 @@ public final class PoolDataSourceStatistics implements AutoCloseable {
                                                         prefix, val1, val2, val3));
                         }
                     }
-                }
+
+		    // show Overflow pool statistics
+		    // show connections per schema
+		    final Map<String, Long> numberOfConnectionsPerSchema = getConnectionsPerSchema();
+
+		    if (!numberOfConnectionsPerSchema.isEmpty()) {
+			// implies getPhysicalConnectionCount() > 0 or getLogicalConnectionCount() > 0
+
+			method.accept(String.format("=== Overflow pool statistics for %s ===", poolDescription));
+
+			if (!showTotals) {
+			    if (proxyTimeElapsed >= 0L) {
+				method.accept(String.format("%stime needed to open last proxy connection (ms): %d",
+							    prefix, proxyTimeElapsed));
+			    }
+			}
+                
+			val1 = getProxyTimeElapsedMin();
+			val2 = getProxyTimeElapsedAvg();
+			val3 = getProxyTimeElapsedMax();
+
+			if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+			    (val1 > 0L || val2 > 0L || val3 > 0L)) {
+			    method.accept(String.format("%smin/avg/max proxy connection time (ms): %d/%d/%d",
+							prefix, val1, val2, val3));
+			}
+
+			val1 = getProxyOpenSessionCount();
+			val2 = getProxyCloseSessionCount();
+			val3 = getProxyLogicalConnectionCount();
+                
+			if ((val1 >= 0L && val2 >= 0L && val3 >= 0L) &&
+			    (val1 > 0L || val2 > 0L || val3 > 0L)) {
+			    method.accept(String.format("%sproxy sessions opened/closed: %d/%d; " +
+							"logical connections rejected while searching for optimal proxy session: %d",
+							prefix, val1, val2, val3));
+			}
+            
+			method.accept(String.format("--- Connections per schema in decreasing order ---", poolDescription));
+
+			numberOfConnectionsPerSchema.entrySet().stream()
+			    .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
+			    .forEach(e -> method.accept(String.format("%s# connections for schema %s: %d", prefix, e.getKey(), e.getValue())));
+		    }
+		}
             }
 
-            // show connections per schema
-            final Map<String, Long> numberOfConnectionsPerSchema = getConnectionsPerSchema();
-
-	    if (!numberOfConnectionsPerSchema.isEmpty()) {
-                method.accept(String.format("=== Connections per schema in decreasing order for %s ===", poolDescription));
-
-                numberOfConnectionsPerSchema.entrySet().stream()
-		    .sorted(Collections.reverseOrder(Map.Entry.comparingByValue())) // sort by decreasing number of errors
-		    .forEach(e -> method.accept(String.format("%s# connections for schema %s: %d", prefix, e.getKey(), e.getValue())));
-            }
 
             // show errors
             if (showErrors) {

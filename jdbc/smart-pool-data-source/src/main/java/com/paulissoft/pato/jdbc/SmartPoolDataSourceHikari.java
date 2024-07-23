@@ -1,6 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-//import java.sql.SQLException;
+import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import lombok.NonNull;
 import lombok.experimental.Delegate;
@@ -222,19 +222,23 @@ public class SmartPoolDataSourceHikari
         poolDataSource.setConnectionTimeout(connectionTimeout);
     }
     
-    protected void updateOverflowPool(final int maxPoolSizeOverflow) {
+    @Override
+    protected void initializeOverflowPool(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+					  final int maxPoolSizeOverflow) throws SQLException {
+	super.initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
+	
         final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
 
-	poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+        poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
 
-	if (!isOverflowStatic()) {
-	    // settings to keep the overflow pool data source as empty as possible
-	    // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
-	    poolDataSourceOverflow.setMinimumIdle(0);
-	    poolDataSourceOverflow.setIdleTimeout(10000); // minimum
-	    poolDataSourceOverflow.setMaxLifetime(30000); // minimum
-	} else {
-	    poolDataSourceOverflow.setMinimumIdle(maxPoolSizeOverflow);
-	}
+        if (isOverflowStatic()) {
+            poolDataSourceOverflow.setMinimumIdle(maxPoolSizeOverflow);
+        } else {
+            // settings to keep the overflow pool data source as empty as possible
+            // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
+            poolDataSourceOverflow.setMinimumIdle(0);
+            poolDataSourceOverflow.setIdleTimeout(10000); // minimum
+            poolDataSourceOverflow.setMaxLifetime(30000); // minimum
+        }
     }
 }

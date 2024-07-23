@@ -257,7 +257,20 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
         }
     }
 
-    protected abstract void updateOverflowPool(final int maxPoolSizeOverflow) throws SQLException;
+    protected void initializeOverflowPool(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+					  final int maxPoolSizeOverflow) throws SQLException {
+	// copy values from the fixed pool
+	poolDataSourceOverflow.set(poolDataSourceConfiguration); 
+	// need to set password explicitly since combination get()/set() does not set it
+	poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
+	if (lookupSimplePoolDataSource != null) {
+	    final String proxyUsername = poolDataSourceConfiguration.getProxyUsername();
+	    
+	    if (proxyUsername != null) {
+		poolDataSourceOverflow.setUsername(proxyUsername);
+	    }
+	}	
+    }
 
     @SuppressWarnings("unchecked")
     private void updatePool() {
@@ -322,19 +335,7 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 }
 
                 if (pds == null) {
-                    // copy values from the fixed pool
-                    poolDataSourceOverflow.set(poolDataSourceConfiguration); 
-                    // need to set password explicitly since combination get()/set() does not set it
-                    poolDataSourceOverflow.setPassword(poolDataSource.getPassword());
-		    if (lookupSimplePoolDataSource != null) {
-			final String proxyUsername = poolDataSourceConfiguration.getProxyUsername();
-
-		    	if (proxyUsername != null) {
-			    poolDataSourceOverflow.setUsername(proxyUsername);
-			}
-		    }	
-
-		    updateOverflowPool(maxPoolSizeOverflow);
+		    initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
                 } else {
                     // add the new maxPoolSizeOverflow
                     maxPoolSizeOverflow += poolDataSourceOverflow.getMaxPoolSize();

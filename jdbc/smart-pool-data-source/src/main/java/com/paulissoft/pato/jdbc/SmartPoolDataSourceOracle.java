@@ -229,18 +229,22 @@ public class SmartPoolDataSourceOracle
         return conn;
     }
 
-    protected void updateOverflowPool(final int maxPoolSizeOverflow) throws SQLException {
+    @Override
+    protected void initializeOverflowPool(final PoolDataSourceConfiguration poolDataSourceConfiguration,
+					  final int maxPoolSizeOverflow) throws SQLException {
+	super.initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
+
 	final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
 	
 	poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
 
-	if (!isOverflowStatic()) {
+	if (isOverflowStatic()) {
+	    poolDataSourceOverflow.setInitialPoolSize(0); // do not start with a pool full of default connections
+	    poolDataSourceOverflow.setMinPoolSize(maxPoolSizeOverflow);
+	} else {	    
 	    // settings to keep the overflow pool data source as empty as possible
 	    poolDataSourceOverflow.setInitialPoolSize(0);                
 	    poolDataSourceOverflow.setMinPoolSize(0);
-	} else {
-	    poolDataSourceOverflow.setInitialPoolSize(0); // do not start with a pool full of default connections
-	    poolDataSourceOverflow.setMinPoolSize(maxPoolSizeOverflow);
 	}
     }
 }
