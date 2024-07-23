@@ -224,9 +224,9 @@ public class SmartPoolDataSourceHikari
     
     @Override
     protected void initializeOverflowPool(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-					  final int maxPoolSizeOverflow) throws SQLException {
-	super.initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
-	
+                                          final int maxPoolSizeOverflow) throws SQLException {
+        super.initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
+  
         final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
 
         poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
