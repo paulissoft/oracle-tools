@@ -385,6 +385,7 @@ function get_jobs
 return sys.odcivarchar2list
 is
   l_job_names sys.odcivarchar2list;
+  l_job_states sys.odcivarchar2list;
   l_job_name_expr constant job_name_t := to_like_expr(p_job_name_expr);
   l_job_name job_name_t;
 begin
@@ -415,14 +416,26 @@ begin
 
   else
     select  j.job_name
+    ,       j.state
     bulk collect
     into    l_job_names
+    ,       l_job_states
     from    user_scheduler_jobs j
     where   j.job_name like l_job_name_expr escape '\'
     and     ( p_state is null or j.state = p_state )
     order by
             job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
     ;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+    if l_job_names.count > 0
+    then
+      for i_idx in l_job_names.first .. l_job_names.last
+      loop
+        dbug.print(dbug."info", 'get_jobs(%s); job_name: %s; state: %s', i_idx, l_job_names(i_idx), l_job_states(i_idx));
+      end loop;
+    end if;
+$end
   end if;
 
   return l_job_names;
