@@ -1683,6 +1683,8 @@ $end
   PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name)
   then
+    $if oracle_tools.cfg_pkg.c_debugging $then show_jobs; $end
+
     raise_application_error
     ( c_job_already_running
     , utl_lms.format_message
