@@ -388,10 +388,13 @@ $end
     end if;
 
     -- restart the jobs (if necessary), see NOTE above
-    run_processing_method
-    ( p_default_processing_method
-    , 'restart'
-    );
+    if p_default_processing_method like "package://" || '%'
+    then
+      run_processing_method
+      ( p_default_processing_method
+      , 'restart'
+      );
+    end if;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
