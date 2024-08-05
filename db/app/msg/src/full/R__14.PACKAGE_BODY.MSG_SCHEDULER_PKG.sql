@@ -1683,30 +1683,37 @@ $end
   PRAGMA INLINE (is_job_running, 'YES');
   if is_job_running(l_job_name)
   then
-    $if oracle_tools.cfg_pkg.c_debugging $then show_jobs; $end
+    begin
+      $if oracle_tools.cfg_pkg.c_debugging $then show_jobs; $end
 
-    raise_application_error
-    ( c_job_already_running
-    , utl_lms.format_message
-      ( c_job_already_running_msg
-      , l_job_name
-      )
+      raise_application_error
+      ( c_job_already_running
+      , utl_lms.format_message
+        ( c_job_already_running_msg
+        , l_job_name
+        )
+      );
+    exception
+      when e_job_already_running
+      then
+        $if oracle_tools.cfg_pkg.c_debugging $then dbug.on_error; $end
+        null;
+    end;
+  else
+    create_job(p_job_name => l_job_name);
+
+    set_processing_job_arguments
+    ( p_job_name => l_job_name
+    , p_processing_package => p_processing_package
+    , p_groups_to_process_list => p_groups_to_process_list
+    , p_nr_workers => p_nr_workers
+    , p_worker_nr => p_worker_nr
+    , p_end_date => p_end_date
     );
+    
+    -- GO
+    change_job(p_job_name => l_job_name, p_enabled => true);
   end if;
-
-  create_job(p_job_name => l_job_name);
-
-  set_processing_job_arguments
-  ( p_job_name => l_job_name
-  , p_processing_package => p_processing_package
-  , p_groups_to_process_list => p_groups_to_process_list
-  , p_nr_workers => p_nr_workers
-  , p_worker_nr => p_worker_nr
-  , p_end_date => p_end_date
-  );
-  
-  -- GO
-  change_job(p_job_name => l_job_name, p_enabled => true);
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
