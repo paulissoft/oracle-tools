@@ -220,7 +220,7 @@ begin
   PRAGMA INLINE (execute_immediate, 'YES');
   execute_immediate
   ( utl_lms.format_message
-    ( q'[call %s.do('%s', '%s')]'
+    ( q'[begin %s.do('%s', '%s'); end;]'
     , oracle_tools.data_api_pkg.dbms_assert$sql_object_name(replace(p_processing_method, "package://"), 'package')
     , p_command
     , $$PLSQL_UNIT
