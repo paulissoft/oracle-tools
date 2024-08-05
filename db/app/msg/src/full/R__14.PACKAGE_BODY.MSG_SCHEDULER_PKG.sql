@@ -2703,6 +2703,11 @@ $end
     
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
 $end
   end read_initial_state;
 
@@ -2800,6 +2805,10 @@ exception
   when no_data_needed
   then
     cleanup;
+    
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.leave;
+$end
     return;
   
   when others
@@ -3198,6 +3207,11 @@ $end
       );
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
 $end
   end check_input_and_state;
 
@@ -3263,6 +3277,11 @@ $end
     end loop job_loop;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
 $end
   end define_jobs;
 
@@ -3292,6 +3311,11 @@ $end
     end if;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
 $end
   end start_jobs;
 
