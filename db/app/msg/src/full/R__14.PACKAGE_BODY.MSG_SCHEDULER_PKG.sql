@@ -149,12 +149,12 @@ procedure init
 ( p_dbug_channel_tab out nocopy dbug_channel_tab_t
 )
 is
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   l_dbug_channel_active_tab constant sys.odcivarchar2list := msg_constants_pkg.get_dbug_channel_active_tab;
   l_dbug_channel_inactive_tab constant sys.odcivarchar2list := msg_constants_pkg.get_dbug_channel_inactive_tab;
 $end    
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   for i_idx in l_dbug_channel_active_tab.first .. l_dbug_channel_active_tab.last
   loop
     p_dbug_channel_tab(l_dbug_channel_active_tab(i_idx)) := dbug.active(l_dbug_channel_active_tab(i_idx));
@@ -214,7 +214,7 @@ begin
          end;
 end;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
 
 procedure profiler_report
 is
@@ -247,17 +247,17 @@ exception
     null; -- do not re-raise
 end profiler_report;
 
-$end -- $if oracle_tools.cfg_pkg.c_debugging $then
+$end -- $if msg_scheduler_pkg.c_debugging > 0 $then
 
 procedure done
 ( p_dbug_channel_tab in dbug_channel_tab_t
 )
 is
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   l_dbug_channel all_objects.object_name%type := p_dbug_channel_tab.first;
 $end  
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
 /* GJP 2023-03-13 Getting dbug errors. */
 --/*
   if dbug.active('PROFILER')
@@ -269,7 +269,7 @@ $end
 
   msg_pkg.done;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
 /* GJP 2023-03-13 Do not change dbug settings anymore. */
 --/*
   while l_dbug_channel is not null
@@ -279,7 +279,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
     l_dbug_channel := p_dbug_channel_tab.next(l_dbug_channel);
   end loop;
 --*/  
-$end -- $if oracle_tools.cfg_pkg.c_debugging $then  
+$end -- $if msg_scheduler_pkg.c_debugging > 0 $then  
 end done;
 
 function join_job_name
@@ -305,7 +305,7 @@ begin
     p_program_name ||
     case when p_worker_nr is not null then '#' || to_char(p_worker_nr) end;
 
-$if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
+$if msg_scheduler_pkg.c_debugging > 0 and msg_scheduler_pkg.c_debugging >= 2 $then
   dbug.print(dbug."info", 'join_job_name: %s', l_job_name);
 $end
 
@@ -355,7 +355,7 @@ begin
     raise program_error;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and msg_scheduler_pkg.c_debugging >= 2 $then
+$if msg_scheduler_pkg.c_debugging > 0 and msg_scheduler_pkg.c_debugging >= 2 $then
   dbug.print
   ( dbug."info"
   , q'[split_job_name(p_job_name => %s, p_processing_package => %s, p_program_name => %s, p_worker_nr => %s)]'
@@ -427,7 +427,7 @@ begin
             job_name -- permanent launcher first, then its workers jobs, next temporary launchers and their workers
     ;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     if l_job_names.count > 0
     then
       for i_idx in l_job_names.first .. l_job_names.last
@@ -441,7 +441,7 @@ $end
   return l_job_names;
 end get_jobs;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
 
 procedure show_jobs
 is
@@ -495,7 +495,7 @@ begin
     l_result := l_job_names.count = 1;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print
   ( dbug."info"
   , q'[does_job_exist(p_job_name => %s) = %s]'
@@ -522,7 +522,7 @@ begin
     l_result := get_jobs(p_job_name, 'RUNNING').count = 1;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print
   ( dbug."info"
   , q'[is_job_running(p_job_name => %s) = %s]'
@@ -559,7 +559,7 @@ begin
     end;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print
   ( dbug."info"
   , q'[does_program_exist(p_program_name => %s) = %s]'
@@ -596,7 +596,7 @@ begin
     end;
   end if;    
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print
   ( dbug."info"
   , q'[does_schedule_exist(p_schedule_name => %s) = %s]'
@@ -635,7 +635,7 @@ begin
     end;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print
   ( dbug."info"
   , 'session_job_name(p_session_id => %s) = %s'
@@ -673,7 +673,7 @@ procedure add_command
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print(dbug."info", 'add_command(p_command => %s)', dyn_sql_parm(p_command));
 $end
 
@@ -1305,7 +1305,7 @@ begin
     where   j.job_name = p_job_name;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print
   ( dbug."info"
   , 'get_job_info (1); job_name: %s; schedule: %s; start date: %s; repeat interval: %s; end date: %s'
@@ -1337,7 +1337,7 @@ is
   l_interval oracle_tools.api_time_pkg.timestamp_diff_t;
   l_now constant user_scheduler_jobs.end_date%type := current_timestamp();
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.GET_NEXT_END_DATE');
   dbug.print
   ( dbug."input"
@@ -1413,7 +1413,7 @@ $end
                 , nvl(l_job_info_rec.next_run_date, l_now) - numtodsinterval(msg_constants_pkg.get_time_between_runs, 'SECOND')
                 );
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.print(dbug."output", 'p_end_date: %s', to_char(p_end_date, "yyyy-mm-dd hh24:mi:ss"));
   dbug.leave;
 exception
@@ -1431,7 +1431,7 @@ procedure change_job
 is
   l_job_info_rec job_info_rec_t;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CHANGE_JOB');
   dbug.print(dbug."input", 'p_job_name: %s; p_enabled: %s', p_job_name, dbug.cast_to_varchar2(p_enabled));
 $end
@@ -1455,7 +1455,7 @@ $end
     then disable_job(p_job_name => p_job_name);
   end case;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -1475,7 +1475,7 @@ is
   l_end_date user_scheduler_jobs.end_date%type := null;
   l_job_names sys.odcivarchar2list;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_JOB');
   dbug.print
   ( dbug."input"
@@ -1569,7 +1569,7 @@ $end
     end case;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -1666,7 +1666,7 @@ is
   l_start_date user_scheduler_jobs.start_date%type;
   l_repeat_interval user_scheduler_jobs.repeat_interval%type;
 begin  
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING');
   dbug.print
   ( dbug."input"
@@ -1697,7 +1697,7 @@ $end
   if is_job_running(l_job_name)
   then
     begin
-      $if oracle_tools.cfg_pkg.c_debugging $then show_jobs; $end
+      $if msg_scheduler_pkg.c_debugging > 0 $then show_jobs; $end
 
       raise_application_error
       ( c_job_already_running
@@ -1709,7 +1709,7 @@ $end
     exception
       when e_job_already_running
       then
-        $if oracle_tools.cfg_pkg.c_debugging $then dbug.on_error; $end
+        $if msg_scheduler_pkg.c_debugging > 0 $then dbug.on_error; $end
         null;
     end;
   else
@@ -1728,7 +1728,7 @@ $end
     change_job(p_job_name => l_job_name, p_enabled => true);
   end if;
   
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -1757,14 +1757,14 @@ procedure stop_job
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT || '.STOP_JOB');
   dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
 $end
 
   for i_step in 1..2
   loop
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.print(dbug."info", 'i_step: %s', i_step);
 $end
 
@@ -1775,7 +1775,7 @@ $end
     admin_scheduler_pkg$stop_job(p_job_name => p_job_name, p_force => case i_step when 1 then false else true end);
   end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -1791,7 +1791,7 @@ procedure drop_job
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT || '.DROP_JOB');
   dbug.print(dbug."input", 'p_job_name: %s', p_job_name);
 $end
@@ -1800,7 +1800,7 @@ $end
   stop_job(p_job_name);
   admin_scheduler_pkg$drop_job(p_job_name => p_job_name, p_force => p_force);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -1828,7 +1828,7 @@ begin
 
   return l_groups_to_process_tab;
   
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
 exception
   when others
   then
@@ -2065,7 +2065,7 @@ is
     l_nr_workers natural := null;
     l_found pls_integer := null;
   begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.enter(l_module_name || '.' || 'DO_SUB_COMMAND');
     dbug.print(dbug."input", 'p_sub_command: %s; p_processing_package: %s; p_program_name: %s', p_sub_command, p_processing_package, p_program_name);
 $end
@@ -2079,7 +2079,7 @@ $end
         , p_worker_nr => null
         , p_check => false
         );
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.print(dbug."info", 'l_job_name: %s', l_job_name);
 $end
     end if;
@@ -2158,7 +2158,7 @@ $end
         exception
           when others
           then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
             dbug.on_error;
             dbug.print
             ( dbug."warning"
@@ -2180,7 +2180,7 @@ $end
           PRAGMA INLINE (get_jobs, 'YES');
           l_job_names := get_jobs(p_job_name_expr => l_job_name || '%');
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
           dbug.print(dbug."info", q'[jobs found matching '%s%': %s]', l_job_name, l_job_names.count);
 $end
 
@@ -2197,7 +2197,7 @@ $end
                 then null;
                 when others
                 then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
                   dbug.on_error;
                   dbug.print
                   ( dbug."warning"
@@ -2296,7 +2296,7 @@ $end
         
         l_nr_groups := get_groups_to_process(p_processing_package).count;
         l_nr_workers := get_nr_workers(p_nr_groups => l_nr_groups);
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
         dbug.print(dbug."info", 'nr groups: %s; nr workers: %s', l_nr_groups, l_nr_workers);
 $end
         oracle_tools.api_heartbeat_pkg.shutdown
@@ -2320,7 +2320,7 @@ $end
         PRAGMA INLINE (get_jobs, 'YES');
         l_job_names := get_jobs(p_job_name_expr => l_job_name || '%');
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
         dbug.print(dbug."info", q'[jobs found matching '%s%': %s]', l_job_name, l_job_names.count);
 $end
 
@@ -2338,7 +2338,7 @@ $end
               then null;
               when others
               then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
                 dbug.on_error;
                 dbug.print
                 ( dbug."warning"
@@ -2357,7 +2357,7 @@ $end
             exception
               when others
               then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
                 dbug.on_error;
                 dbug.print
                 ( dbug."warning"
@@ -2379,7 +2379,7 @@ $end
           )
         );
     end case;
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
   exception
     when others
@@ -2389,7 +2389,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
   end do_sub_command;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter(l_module_name);
   dbug.print
   ( dbug."input"
@@ -2407,7 +2407,7 @@ $end
   <<processing_package_loop>>
   for i_package_idx in l_processing_package_tab.first .. l_processing_package_tab.last
   loop
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.print(dbug."info", 'l_processing_package_tab(%s): %s', i_package_idx, l_processing_package_tab(i_package_idx));
 $end
 
@@ -2462,13 +2462,13 @@ $end
 
   commit;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 $end
 exception
   when others
   then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave_on_error;
 $end    
     raise;
@@ -2526,7 +2526,7 @@ is
     l_processing_package all_objects.object_name%type;
     l_job_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.enter(l_module_name || '.READ_INITIAL_STATE');
 $end
 
@@ -2714,7 +2714,7 @@ $end
       end loop job_loop;
     end loop program_loop;
     
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
   exception
     when others
@@ -2736,7 +2736,7 @@ $end
     g_jobs.delete;
   end cleanup;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter(l_module_name);
   dbug.print
   ( dbug."input"
@@ -2809,7 +2809,7 @@ $end
 
   cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 $end
 
@@ -2819,7 +2819,7 @@ exception
   then
     cleanup;
     
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
 $end
     return;
@@ -2848,7 +2848,7 @@ $end
     
     cleanup;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave_on_error;
 $end
 
@@ -2921,7 +2921,7 @@ procedure submit_do
 is
   l_job_name_do job_name_t;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_DO');
   dbug.print(dbug."input", 'p_command: %s; p_processing_package: %s', p_command, p_processing_package);
 $end
@@ -2942,7 +2942,7 @@ $end
 
   change_job(p_job_name => l_job_name_do, p_enabled => true);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -2979,7 +2979,7 @@ is
       end;
   end;    
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SET_PROCESSING_LAUNCHER_JOB_ARGUMENTS');
   dbug.print
   ( dbug."input"
@@ -3025,7 +3025,7 @@ $end
     end loop;
   end if;
   
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -3044,7 +3044,7 @@ is
   l_processing_package constant all_objects.object_name%type := determine_processing_package(p_processing_package);
   l_job_name_launcher job_name_t;
 begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SUBMIT_PROCESSING_LAUNCHER');
   dbug.print
   ( dbug."input"
@@ -3073,7 +3073,7 @@ $end
   -- GO
   change_job(p_job_name => l_job_name_launcher, p_enabled => true);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 exception
   when others
@@ -3105,7 +3105,7 @@ is
   procedure check_input_and_state
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.enter(l_module_name || '.' || 'CHECK_INPUT_AND_STATE');
 $end
   
@@ -3129,13 +3129,13 @@ $end
     
     l_job_name_launcher := l_session_job_name;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.print(dbug."info", 'g_dry_run$: %s', g_dry_run$);
 $end
 
     if l_job_name_launcher is null
     then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.print
       ( dbug."warning"
       , utl_lms.format_message
@@ -3184,7 +3184,7 @@ $end
     -- the job exists and is enabled or even running so the next call will return the next end date
     get_next_end_date(l_job_name_launcher, l_end_date);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.print(dbug."info", 'system date: %s', to_char(systimestamp, "yyyy-mm-dd hh24:mi:ss"));
 $end
 
@@ -3218,7 +3218,7 @@ $end
       , p_sep => ','
       , p_ignore_null => 1
       );
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
   exception
     when others
@@ -3238,7 +3238,7 @@ $end
       , p_nr_workers_exact => p_nr_workers_exact
       );
   begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.enter(l_module_name || '.' || 'DEFINE_JOBS');
     dbug.print(dbug."info", 'l_nr_workers: %s', l_nr_workers);
 $end
@@ -3251,7 +3251,7 @@ $end
         , p_program_name => case when i_worker_nr = 0 then c_program_supervisor else c_program_worker end
         , p_worker_nr => case when i_worker_nr = 0 then null else i_worker_nr end
         );
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.print(dbug."info", 'l_job_name_tab(%s): %s', i_worker_nr, l_job_name_tab(i_worker_nr));
 $end
     end loop;
@@ -3277,7 +3277,7 @@ $end
       exception
         when others
         then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
           dbug.on_error;
           dbug.print
           ( dbug."warning"
@@ -3288,7 +3288,7 @@ $end
           null;
       end;
     end loop job_loop;
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
   exception
     when others
@@ -3301,7 +3301,7 @@ $end
   procedure start_jobs
   is
   begin    
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.enter(l_module_name || '.' || 'START_JOB');
 $end
     if l_job_name_tab.count > 1 -- exclude supervisor
@@ -3310,7 +3310,7 @@ $end
       <<worker_loop>>
       for i_worker_nr in l_job_name_tab.first .. l_job_name_tab.last
       loop
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
         dbug.print(dbug."info", 'i_worker_nr: %s', i_worker_nr);
 $end
         submit_processing
@@ -3322,7 +3322,7 @@ $end
         );
       end loop worker_loop;
     end if;
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
   exception
     when others
@@ -3346,7 +3346,7 @@ begin
     init(l_dbug_channel_tab);
   end if;
   
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter(l_module_name);
   dbug.print
   ( dbug."input"
@@ -3363,7 +3363,7 @@ $end
   define_jobs;
   start_jobs;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 $end
 
@@ -3377,7 +3377,7 @@ exception
       add_comment(substr(sqlerrm, 1, 2000));
     end if;  
     
-$if oracle_tools.cfg_pkg.c_debugging $then  
+$if msg_scheduler_pkg.c_debugging > 0 $then  
     dbug.leave_on_error;
 $end
 
@@ -3407,7 +3407,7 @@ is
   )
   is
   begin
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING.RESTART_WORKERS');
 $end
 
@@ -3454,7 +3454,7 @@ $end
       end if;
     end loop worker_loop;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
     dbug.leave;
   exception
     when others
@@ -3496,7 +3496,7 @@ $end
 
       l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.print
       ( dbug."info"
       , 'elapsed time: %s (s); finished?: %s'
@@ -3533,7 +3533,7 @@ $end
     when oracle_tools.api_heartbeat_pkg.e_shutdown_request_forwarded
     then
       -- log the shutdown anyhow (although it is okay) otherwise the error gets lost
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.on_error;
 $end
       cleanup;
@@ -3586,7 +3586,7 @@ call %s.processing( p_controlling_package => :1
   exception
     when e_compilation_error
     then
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.print(dbug."error", 'statement: %s', l_statement);
 $end                  
       raise;
@@ -3594,7 +3594,7 @@ $end
     when oracle_tools.api_heartbeat_pkg.e_shutdown_request_received
     then
       -- log the shutdown anyhow (although it is okay) otherwise the error gets lost
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
       dbug.on_error;
 $end
       null;
@@ -3615,7 +3615,7 @@ begin
     init(l_dbug_channel_tab);
   end if;  
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING');
   dbug.print
   ( dbug."input"
@@ -3665,7 +3665,7 @@ $end
     processing_worker;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging $then
+$if msg_scheduler_pkg.c_debugging > 0 $then
   dbug.leave;
 $end  
 
@@ -3673,7 +3673,7 @@ $end
 exception
   when others
   then
-$if oracle_tools.cfg_pkg.c_debugging $then  
+$if msg_scheduler_pkg.c_debugging > 0 $then  
     dbug.leave_on_error;
 $end    
     cleanup;

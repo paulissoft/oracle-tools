@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "MSG_SCHEDULER_PKG" AUTHID DEFINER AS 
 
-c_debugging constant naturaln := 1; -- can be 0, 1, 2, ...
+c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- can be 0, 1, 2, ...
 
 c_job_already_running simple_integer := -20200;
 e_job_already_running exception;
