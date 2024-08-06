@@ -94,6 +94,9 @@ procedure drop_queue_table
 procedure create_queue
 ( p_queue_name in varchar2 -- Must be a simple SQL name
 , p_comment in varchar2
+, p_max_retries in naturaln default 1
+, p_retry_delay in naturaln default 0
+, p_retention_time in naturaln default 24 * 60 * 60 -- 1 day
 );
 /** Create the queue with queue table c_queue_table. When the queue table does not exist, it is created too. **/
 
