@@ -108,6 +108,9 @@ end sql_object_name;
 procedure create_queue_at
 ( p_queue_name in varchar2
 , p_comment in varchar2
+, p_max_retries in naturaln default 1
+, p_retry_delay in naturaln default 0
+, p_retention_time in naturaln default 24 * 60 * 60 -- 1 day
 )
 is
   pragma autonomous_transaction;
@@ -115,6 +118,9 @@ begin
   create_queue
   ( p_queue_name => p_queue_name
   , p_comment => p_comment
+  , p_max_retries => p_max_retries
+  , p_retry_delay => p_retry_delay
+  , p_retention_time => p_retention_time
   );
   commit;
 end create_queue_at;
@@ -526,13 +532,24 @@ end drop_queue_table;
 procedure create_queue
 ( p_queue_name in varchar2
 , p_comment in varchar2
+, p_max_retries in naturaln
+, p_retry_delay in naturaln
+, p_retention_time in naturaln
 )
 is
   l_queue_name constant all_queues.name%type := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(p_queue_name, 'queue');
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CREATE_QUEUE');
-  dbug.print(dbug."input", 'p_queue_name: %s; p_comment: %s', p_queue_name, p_comment);
+  dbug.print
+  ( dbug."input"
+  , 'p_queue_name: %s; p_comment: %s; p_max_retries: %s; p_retry_delay: %s; p_retention_time: %s'
+  , p_queue_name
+  , p_comment
+  , p_max_retries
+  , p_retry_delay
+  , p_retention_time
+  );
 $end
 
   <<try_loop>>
@@ -543,9 +560,9 @@ $end
       ( queue_name => l_queue_name
       , queue_table => c_queue_table
       , queue_type => dbms_aqadm.normal_queue
-      , max_retries => 0 -- no retries
-      , retry_delay => 0
-      , retention_time => 0
+      , max_retries => p_max_retries
+      , retry_delay => p_retry_delay
+      , retention_time => p_retention_time
       , comment => p_comment
       );
       exit try_loop;
