@@ -9,9 +9,10 @@ c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 "plsql://" constant varchar2(10) := 'plsql://';
 "package://" constant varchar2(10) := 'package://';
 
-type t_processing_method_tab is table of user_subscr_registrations.location_name%type index by user_queues.name%type;
+type t_processing_method_tab is table of boolean index by user_subscr_registrations.location_name%type;
+type t_processing_method_by_queue_tab is table of t_processing_method_tab index by user_queues.name%type;
 
-g_previous_processing_method_tab t_processing_method_tab;
+g_previous_processing_method_tab t_processing_method_by_queue_tab;
 
 function simple_queue_name
 ( p_queue_name in varchar2
@@ -243,7 +244,8 @@ is
 
   l_subscriber user_subscr_registrations.subscription_name%type := null;
   l_recipients all_queue_tables.recipients%type := null;
-      
+  l_empty_processing_method_tab t_processing_method_tab;
+
   function get_subscriber
   return l_subscriber%type
   is
@@ -311,7 +313,7 @@ $end
       and     instr(','||p_queue_name||',', ','||sja.value||',') > 0
       and     l_default_processing_method = "package://" || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG' -- see definition in MSG_CONSTANTS_PKG
       ;
-      g_previous_processing_method_tab(p_queue_name) := l_location_name;
+      g_previous_processing_method_tab(p_queue_name)(l_location_name) := null;
     exception
       when no_data_found or too_many_rows
       then null;
@@ -328,15 +330,15 @@ $if msg_aq_pkg.c_debugging >= 2 $then
     dbug.print
     ( dbug."info"
     , 'previous processing method: %s'
-    , g_previous_processing_method_tab(p_queue_name)
+    , g_previous_processing_method_tab(p_queue_name).first
     );
 $end
-    if (g_previous_processing_method_tab(p_queue_name) is null and p_default_processing_method is null)
-    or (g_previous_processing_method_tab(p_queue_name) = p_default_processing_method)
+    if (g_previous_processing_method_tab(p_queue_name).first is null and p_default_processing_method is null)
+    or (g_previous_processing_method_tab(p_queue_name).first = p_default_processing_method)
     then
       null; -- OK, no change
     else
-      if g_previous_processing_method_tab(p_queue_name) like "plsql://" || '%'
+      if g_previous_processing_method_tab(p_queue_name).first like "plsql://" || '%'
       then
         -- must unregister this old processing method first
         PRAGMA INLINE (get_subscriber, 'YES');
@@ -345,7 +347,7 @@ $end
         unregister_at
         ( p_queue_name => p_queue_name
         , p_subscriber => l_subscriber
-        , p_plsql_callback => replace(g_previous_processing_method_tab(p_queue_name), "plsql://")
+        , p_plsql_callback => replace(g_previous_processing_method_tab(p_queue_name).first, "plsql://")
         );
 
         if l_subscriber is not null
@@ -370,7 +372,13 @@ $if msg_aq_pkg.c_debugging >= 2 $then
     , p_default_processing_method
     );
 $end
-    g_previous_processing_method_tab(p_queue_name) := p_default_processing_method;
+
+    if p_default_processing_method is null
+    then
+      g_previous_processing_method_tab(p_queue_name) := l_empty_processing_method_tab;
+    else
+      g_previous_processing_method_tab(p_queue_name)(p_default_processing_method) := null;
+    end if;
 
     if p_default_processing_method like "plsql://" || '%'
     then
@@ -459,7 +467,8 @@ exception
   then
     p_agent.address := null;
 $if msg_aq_pkg.c_debugging >= 1 $then
-    dbug.leave_on_error;
+    dbug.print(dbug."warning", 'listen timeout');
+    dbug.leave;
 $end
             
 $if msg_aq_pkg.c_debugging >= 1 $then
@@ -787,7 +796,8 @@ exception
   when e_dequeue_timeout
   then
 $if msg_aq_pkg.c_debugging >= 1 $then
-    dbug.leave_on_error;
+    dbug.print(dbug."warning", 'dequeue timeout');
+    dbug.leave;
 $end
     null; -- normal behaviour
     
