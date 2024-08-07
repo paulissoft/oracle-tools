@@ -1601,7 +1601,7 @@ $end
   for i_try in 1 .. c_max_tries
   loop
 $if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.print(dbug."info", 'dequeue array; try # %s', _try);
+    dbug.print(dbug."info", 'dequeue array; try # %s', i_try);
 $end    
     begin
       l_dummy :=
