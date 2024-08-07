@@ -408,6 +408,68 @@ $if msg_aq_pkg.c_debugging >= 2 $then
 $end
 end ensure_queue_gets_dequeued;
 
+procedure listen
+( p_agent_list in dbms_aq.aq$_agent_list_t
+, p_wait in naturaln
+, p_agent out nocopy sys.aq$_agent
+, p_message_delivery_mode out nocopy pls_integer
+)
+is
+$if msg_aq_pkg.c_debugging >= 1 $then    
+  l_agent_list_descr varchar2(4000 byte) := null;
+$end    
+begin
+  -- Use dbug.enter/dbug.leave to be able to profile this dbms_aq.listen call.
+$if msg_aq_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LISTEN');
+$end
+
+$if msg_aq_pkg.c_debugging >= 1 $then
+  if p_agent_list.count > 0
+  then
+    for i_idx in p_agent_list.first .. p_agent_list.last
+    loop
+      l_agent_list_descr :=
+        case when i_idx > p_agent_list.first then l_agent_list_descr || ', ' end ||
+        '#' || to_char(i_idx) || ':' || p_agent_list(i_idx).address;
+    end loop;
+  end if;
+  dbug.print(dbug."info", 'agent list: %s', l_agent_list_descr);
+$end
+
+  dbms_aq.listen
+  ( agent_list => p_agent_list
+  , wait => p_wait
+  , listen_delivery_mode => dbms_aq.persistent_or_buffered
+  , agent => p_agent
+  , message_delivery_mode => p_message_delivery_mode
+  );
+
+$if msg_aq_pkg.c_debugging >= 1 $then
+  dbug.print
+  ( dbug."output"
+  , 'p_agent.address: %s; p_message_delivery_mode: %s'
+  , p_agent.address
+  , delivery_mode_descr(p_message_delivery_mode)
+  );
+  dbug.leave;
+$end
+exception
+  when e_listen_timeout -- normal exception
+  then
+    p_agent.address := null;
+$if msg_aq_pkg.c_debugging >= 1 $then
+    dbug.leave_on_error;
+$end
+            
+$if msg_aq_pkg.c_debugging >= 1 $then
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end listen;
+
 -- public routines
 
 function get_queue_name
@@ -556,6 +618,9 @@ $end
   for i_try in 1..2
   loop
     begin
+$if msg_aq_pkg.c_debugging >= 2 $then
+      dbug.print(dbug."info", 'create queue; try # %s', i_try);
+$end      
       dbms_aqadm.create_queue
       ( queue_name => l_queue_name
       , queue_table => c_queue_table
@@ -569,6 +634,9 @@ $end
     exception
       when e_queue_table_does_not_exist
       then
+$if msg_aq_pkg.c_debugging >= 2 $then
+        dbug.on_error;
+$end      
         if i_try = 1
         then
           create_queue_table;
@@ -584,6 +652,11 @@ $end
 
 $if msg_aq_pkg.c_debugging >= 2 $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end create_queue;
 
@@ -663,7 +736,7 @@ is
   l_message_properties dbms_aq.message_properties_t;
   l_msg msg_typ;
 begin
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.EMPTY_QUEUE');
   dbug.print(dbug."input", 'p_queue_name: %s', p_queue_name);
 $end
@@ -707,23 +780,23 @@ $end
     end if;
   end loop;
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 exception
   when e_dequeue_timeout
   then
-$if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.leave;
+$if msg_aq_pkg.c_debugging >= 1 $then
+    dbug.leave_on_error;
 $end
     null; -- normal behaviour
     
+$if msg_aq_pkg.c_debugging >= 1 $then
   when others
   then
-$if msg_aq_pkg.c_debugging >= 2 $then
     dbug.leave_on_error;
-$end
     raise;
+$end
 end empty_queue;
 
 procedure stop_queue
@@ -1004,7 +1077,7 @@ $end
   for i_try in 1 .. c_max_tries
   loop
 $if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.print(dbug."info", 'i_try: %s', i_try);
+    dbug.print(dbug."info", 'enqueue; try # %s', i_try);
 $end    
     begin
       dbms_aq.enqueue
@@ -1126,7 +1199,7 @@ $end
   for i_try in 1 .. c_max_tries
   loop
 $if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.print(dbug."info", 'i_try: %s', i_try);
+    dbug.print(dbug."info", 'enqueue array; try # %s', i_try);
 $end    
     begin
       l_dummy :=
@@ -1213,7 +1286,7 @@ is
   
   c_max_tries constant simple_integer := case when p_force then 2 else 1 end;
 begin
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE (1)');
   dbug.print
   ( dbug."input"
@@ -1279,7 +1352,7 @@ $end
 
     -- give a warning when the input parameters were not default and not a correct combination
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
     if ( p_delivery_mode is not null or p_visibility is not null )
     then
       dbug.print
@@ -1294,7 +1367,7 @@ $if msg_aq_pkg.c_debugging >= 2 $then
 $end
   end if;  
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.print
   ( dbug."info"
   , 'l_dequeue_options.visibility: %s; l_dequeue_options.delivery_mode: %s'
@@ -1307,6 +1380,9 @@ $end
   for i_try in 1 .. c_max_tries
   loop
     begin
+$if msg_aq_pkg.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'dequeue; try # %s', i_try);
+$end
       dbms_aq.dequeue
       ( queue_name => l_queue_name
       , dequeue_options => l_dequeue_options
@@ -1318,6 +1394,9 @@ $end
     exception
       when e_queue_does_not_exist or e_fq_queue_does_not_exist
       then
+$if msg_aq_pkg.c_debugging >= 1 $then
+        dbug.on_error;
+$end
         if i_try != c_max_tries
         then
           create_queue_at
@@ -1329,6 +1408,9 @@ $end
         end if;
       when e_dequeue_disabled
       then
+$if msg_aq_pkg.c_debugging >= 1 $then
+        dbug.on_error;
+$end
         if i_try != c_max_tries
         then
           start_queue_at
@@ -1340,7 +1422,7 @@ $end
     end;
   end loop try_loop;  
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.print(dbug."output", 'p_msgid: %s', rawtohex(p_msgid));
 $if msg_pkg.c_debugging >= 2 $then
   p_msg.print();
@@ -1349,7 +1431,7 @@ $end
 exception
   when others
   then
-    dbug.leave;
+    dbug.leave_on_error;
     raise;
 $end
 end dequeue;
@@ -1416,6 +1498,9 @@ $end
   <<try_loop>>
   for i_try in 1 .. c_max_tries
   loop
+$if msg_aq_pkg.c_debugging >= 2 $then
+    dbug.print(dbug."info", 'dequeue array; try # %s', _try);
+$end    
     begin
       l_dummy :=
         dbms_aq.dequeue_array
@@ -1430,6 +1515,9 @@ $end
     exception
       when e_queue_does_not_exist or e_fq_queue_does_not_exist
       then
+$if msg_aq_pkg.c_debugging >= 2 $then
+        dbug.on_error;
+$end    
         if i_try != c_max_tries
         then
           create_queue_at
@@ -1441,6 +1529,9 @@ $end
         end if;
       when e_dequeue_disabled
       then
+$if msg_aq_pkg.c_debugging >= 2 $then
+        dbug.on_error;
+$end    
         if i_try != c_max_tries
         then
           start_queue_at
@@ -1457,7 +1548,7 @@ $if msg_aq_pkg.c_debugging >= 2 $then
 exception
   when others
   then
-    dbug.leave;
+    dbug.leave_on_error;
     raise;
 $end
 end dequeue_array;
@@ -1480,8 +1571,26 @@ is
   l_message_properties dbms_aq.message_properties_t;
   l_msg msg_typ;
 begin
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_queue_name: %s; p_delivery_mode: %s; p_visibility: %s; p_subscriber: %s; p_dequeue_mode: %s'
+  , p_queue_name
+  , delivery_mode_descr(p_delivery_mode)
+  , visibility_descr(p_visibility)
+  , p_subscriber
+  , dequeue_mode_descr(p_dequeue_mode)
+  );
+  dbug.print
+  ( dbug."input"
+  , 'p_navigation: %s; p_wait: %s; p_correlation: %s; p_deq_condition: %s; p_force: %s'
+  , navigation_descr(p_navigation)
+  , p_wait
+  , p_correlation
+  , p_deq_condition
+  , dbug.cast_to_varchar2(p_force)
+  );
   dbug.print(dbug."input", 'p_commit: %s', p_commit);
 $end
 
@@ -1506,12 +1615,12 @@ $end
   , p_commit => p_commit
   );
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.leave;
 exception
   when others
   then
-    dbug.leave;
+    dbug.leave_on_error;
     raise;
 $end
 end dequeue_and_process;
@@ -1595,7 +1704,7 @@ $if msg_aq_pkg.c_debugging >= 2 $then
 exception
   when others
   then
-    dbug.leave;
+    dbug.leave_on_error;
     raise;
 $end
 end dequeue;
@@ -1639,7 +1748,7 @@ $if msg_aq_pkg.c_debugging >= 2 $then
 exception
   when others
   then
-    dbug.leave;
+    dbug.leave_on_error;
     raise;
 $end
 end dequeue_and_process;
@@ -1810,7 +1919,7 @@ is
         l_agent_list(l_agent_list.count+1) :=
           sys.aq$_agent(null, l_queue_name_tab(l_queue_name_idx), null);
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
         dbug.print
         ( dbug."info"
         , 'i_idx: %s; l_queue_name_tab(%s): %s; l_agent_list(%s).address: %s'
@@ -1861,108 +1970,6 @@ $end
     end if;
   end send_next_heartbeat;
 
-  function agent_ready
-  return boolean
-  is
-    l_agent_list dbms_aq.aq$_agent_list_t;
-$if msg_aq_pkg.c_debugging >= 2 $then    
-    l_agent_list_descr varchar2(4000 byte) := null;
-$end    
-  begin
-    -- Use dbug.enter/dbug.leave to be able to profile this dbms_aq.listen call.
-$if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.enter(l_procedure || '.' || 'LISTEN');
-$end
-
-    -- initialisation each listen and deqeueue round
-    -- remember: round-robin fashion
-    if l_agent_list_by_group_idx is null
-    then
-      l_agent_list_by_group_idx := mod(p_worker_nr - 1, l_queue_name_tab.count);
-    else
-      l_agent_list_by_group_idx := mod(l_agent_list_by_group_idx + 1, l_queue_name_tab.count);
-    end if;
-
-    l_agent_list := l_agent_list_by_group(l_agent_list_by_group_idx);
-    
-$if msg_aq_pkg.c_debugging >= 2 $then    
-    if l_agent_list.count > 0
-    then
-      for i_idx in l_agent_list.first .. l_agent_list.last
-      loop
-        l_agent_list_descr :=
-          case when i_idx > l_agent_list.first then l_agent_list_descr || ', ' end ||
-          i_idx || ':' || l_agent_list(i_idx).address;
-      end loop;
-    end if;
-    dbug.print(dbug."info", 'agent list: %s', l_agent_list_descr);
-$end
-
-    dbms_aq.listen
-    ( agent_list => l_agent_list
-    , wait => l_wait
-    , listen_delivery_mode => dbms_aq.persistent_or_buffered
-    , agent => l_agent
-    , message_delivery_mode => l_message_delivery_mode
-    );
-
-$if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.leave;
-$end
-
-    return true;
-  exception
-    when e_listen_timeout -- normal exception
-    then
-$if msg_aq_pkg.c_debugging >= 2 $then
-      dbug.leave;
-$end
-      return false;
-            
-    when others
-    then
-$if msg_aq_pkg.c_debugging >= 2 $then
-      dbug.leave_on_error;
-$end
-      raise;
-  end agent_ready;
-
-  function process_message(p_wait in naturaln)
-  return boolean
-  is
-  begin
-$if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.print(dbug."info", 'trying to process a message from queue %s with timeout %s', l_agent.address, p_wait);
-$end
-    msg_aq_pkg.dequeue_and_process
-    ( p_queue_name => l_agent.address
-    , p_delivery_mode => l_message_delivery_mode
-    , p_visibility => dbms_aq.immediate
-    , p_subscriber => l_agent.name
-    , p_dequeue_mode => dbms_aq.remove
-    , p_navigation => l_navigation -- may be better for performance when concurrent messages arrive
-    -- Although a message should be there and a timeout of 0 should be okay, we will just specify a wait time of 1 second
-    -- since I saw a few times time-outs here.
-    , p_wait => p_wait
-    , p_correlation => null
-    , p_deq_condition => null
-    , p_force => false -- queue should be there
-    , p_commit => true
-    );
-    l_navigation := dbms_aq.next_message;
-$if msg_aq_pkg.c_debugging >= 2 $then
-    dbug.print(dbug."info", 'message processed');
-$end
-    return true;
-  exception
-    when e_dequeue_timeout -- stop this loop and try again with listen first (if applicable)
-    then
-$if msg_aq_pkg.c_debugging >= 2 $then
-      dbug.print(dbug."info", 'timeout while waiting for a message to process');
-$end
-      return false;
-  end process_message;
-
   procedure cleanup
   is
   begin
@@ -1972,7 +1979,7 @@ $end
     );
   end cleanup;
 begin
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.enter(l_procedure);
   dbug.print
   ( dbug."input"
@@ -1996,18 +2003,16 @@ $end
     
   <<process_loop>>
   loop
-    -- GJP 2024-08-06
-    -- l_navigation := dbms_aq.first_message;
-    l_navigation := dbms_aq.next_message;
+    l_navigation := dbms_aq.first_message;
     -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
     l_wait := least(msg_constants_pkg.get_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time)));      
     l_now := oracle_tools.api_time_pkg.get_timestamp;
     l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
 
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
     dbug.print
     ( dbug."info"
-    , 'wait time; %s; elapsed time: %s (s); ttl: %s; finished (elapsed >= ttl)?: %s'
+    , 'wait time: %s; elapsed time: %s (s); ttl: %s; finished (elapsed >= ttl)?: %s'
     , to_char(l_wait)
     , to_char(l_elapsed_time)
     , to_char(l_ttl)
@@ -2022,22 +2027,69 @@ $end
     PRAGMA INLINE (send_next_heartbeat, 'YES');
     send_next_heartbeat;
 
-    PRAGMA INLINE (agent_ready, 'YES');
-    if l_queue_name_tab.count = 1 -- no need to listen when there is just one queue
-       or
-       agent_ready
+    if l_agent.address is null
     then
-      PRAGMA INLINE (process_message, 'YES');
-      while process_message(l_wait)
+      -- initialisation each listen and deqeueue round
+      -- remember: round-robin fashion
+      if l_agent_list_by_group_idx is null
+      then
+        l_agent_list_by_group_idx := mod(p_worker_nr - 1, l_queue_name_tab.count);
+      else
+        l_agent_list_by_group_idx := mod(l_agent_list_by_group_idx + 1, l_queue_name_tab.count);
+      end if;
+
+      PRAGMA INLINE (listen, 'YES');
+      listen
+      ( p_agent_list => l_agent_list_by_group(l_agent_list_by_group_idx)
+      , p_wait => l_wait
+      , p_agent => l_agent
+      , p_message_delivery_mode => l_message_delivery_mode
+      );    
+    else
+      <<dequeue_loop>>
       loop
-        l_wait := 0;
-      end loop;
+        begin
+$if msg_aq_pkg.c_debugging >= 1 $then
+          dbug.print(dbug."info", 'trying to process a message from queue %s with timeout %s', l_agent.address, l_wait);
+$end
+
+          msg_aq_pkg.dequeue_and_process
+          ( p_queue_name => l_agent.address
+          , p_delivery_mode => l_message_delivery_mode
+          , p_visibility => dbms_aq.immediate
+          , p_subscriber => l_agent.name
+          , p_dequeue_mode => dbms_aq.remove
+          , p_navigation => l_navigation -- may be better for performance when concurrent messages arrive
+          -- Although a message should be there and a timeout of 0 should be okay, we will just specify a wait time of 1 second
+          -- since I saw a few times time-outs here.
+          , p_wait => l_wait
+          , p_correlation => null
+          , p_deq_condition => null
+          , p_force => false -- queue should be there
+          , p_commit => true
+          );
+
+          l_navigation := dbms_aq.next_message;
+          l_wait := 0;
+
+$if msg_aq_pkg.c_debugging >= 1 $then
+          dbug.print(dbug."info", 'message processed');
+$end
+        exception
+          when e_dequeue_timeout -- stop this loop and try again with listen first (if applicable)
+          then
+$if msg_aq_pkg.c_debugging >= 1 $then
+            dbug.print(dbug."info", 'timeout while waiting for a message to process');
+$end
+            exit dequeue_loop;
+        end;    
+      end loop dequeue_loop;
     end if;
   end loop process_loop;
 
   cleanup;
   
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
   dbug.print(dbug."info", 'Stopped processing messages after %s seconds', to_char(l_elapsed_time));
   dbug.leave;
 $end  
@@ -2045,7 +2097,7 @@ exception
   when others
   then
     cleanup;
-$if msg_aq_pkg.c_debugging >= 2 $then
+$if msg_aq_pkg.c_debugging >= 1 $then
     dbug.leave_on_error;
 $end
     raise;
