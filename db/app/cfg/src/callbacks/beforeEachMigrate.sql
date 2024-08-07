@@ -1,3 +1,11 @@
+-- The first time the package CFG_INSTALL_PKG may NOT exist yet (or INVALID),
+-- hence this script instead of (see ../../../../src/callbacks/beforeEachMigrate.sql):
+--
+-- begin
+--   ${oracle_tools_schema}.cfg_install_pkg."beforeEachMigrate";
+-- end;
+-- /
+
 declare
 
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -7,6 +15,7 @@ declare
 -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 procedure setup_session
 ( p_plsql_warnings in varchar2 default 'DISABLE:ALL'
+, p_plscope_settings in varchar2 default null
 )
 is
   l_plsql_flags varchar2(4000) := null;
@@ -76,6 +85,11 @@ begin
   if p_plsql_warnings is not null
   then
     l_statement := l_statement || q'[ PLSQL_WARNINGS = ']' || p_plsql_warnings || q'[']';
+  end if;
+
+  if p_plscope_settings is not null
+  then
+    l_statement := l_statement || q'[ PLSCOPE_SETTINGS = ']' || p_plscope_settings || q'[']';
   end if;
 
   if l_statement is not null

@@ -35,30 +35,48 @@ begin
   return l_clob;
 end replace_clob;
    
+$if cfg_pkg.c_start_stop_msg_framework $then
+
+procedure scheduler_do
+( p_oracle_tools_schema_msg in varchar2
+, p_command in varchar2
+)
+is
+  l_found boolean := false;
+begin
+  for r in
+  ( select  '"' || o.owner || '"."' || o.object_name || '"' as fq_object_name
+    from    all_objects o
+    where   o.owner in (p_oracle_tools_schema_msg, upper(p_oracle_tools_schema_msg))
+    and     o.object_name = 'MSG_SCHEDULER_PKG'
+    and     o.object_type = 'PACKAGE BODY'
+    and     o.status = 'VALID'
+  )
+  loop
+    l_found := true;
+    -- start/stop the supervisor job
+    execute immediate utl_lms.format_message(q'[begin %s.do(p_command => '%s'); end;]', r.fq_object_name, p_command);
+  end loop;
+  if not l_found
+  then
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message('While connected as %s, I could not find a valid MSG_SCHEDULER_PKG package body in schema %s.', user, p_oracle_tools_schema_msg)
+    );
+  end if;
+end scheduler_do;
+
+$end  
+
 -- GLOBAL
 
 procedure "beforeMigrate"
 ( p_oracle_tools_schema_msg in varchar2
 )
 is
-$if cfg_pkg.c_start_stop_msg_framework $then
-  l_found pls_integer;
-$end  
 begin
 $if cfg_pkg.c_start_stop_msg_framework $then
-  select  1
-  into    l_found
-  from    all_objects o
-  where   o.owner = $$PLSQL_UNIT_OWNER
-  and     o.object_name = 'MSG_SCHEDULER_PKG'
-  and     o.object_type = 'PACKAGE BODY'
-  and     o.status = 'VALID';
-
-  -- stop the supervisor job
-  execute immediate q'[begin ${oracle_tools_schema_msg}.msg_scheduler_pkg.do(p_command => 'stop'); end;]';
-exception
-  when others
-  then null;
+  scheduler_do(p_oracle_tools_schema_msg => p_oracle_tools_schema_msg, p_command => 'stop');
 $else
   null;
 $end  
@@ -83,21 +101,7 @@ begin
   setup_session;
   compile_objects(p_compile_all => p_compile_all, p_reuse_settings => p_reuse_settings);
 $if cfg_pkg.c_start_stop_msg_framework $then
-  begin
-    select  1
-    into    l_found
-    from    all_objects o
-    where   o.owner = $$PLSQL_UNIT_OWNER
-    and     o.object_name = 'MSG_SCHEDULER_PKG'
-    and     o.object_type = 'PACKAGE BODY'
-    and     o.status = 'VALID';
-  
-    -- start the supervisor job
-    execute immediate q'[begin ${oracle_tools_schema_msg}.msg_scheduler_pkg.do(p_command => 'start'); end;]';
-  exception
-    when others
-    then null;
-  end;
+  scheduler_do(p_oracle_tools_schema_msg => p_oracle_tools_schema_msg, p_command => 'start');
 $end
 end "afterMigrate";
 

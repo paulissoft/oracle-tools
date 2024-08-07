@@ -11,6 +11,10 @@ c_testing constant boolean := oracle_tools.cfg_pkg.c_testing;
 c_queue_table constant user_queues.queue_table%type := '"MSG_QT"';
 c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messaging then dbms_aqadm.persistent_or_buffered else dbms_aqadm.persistent end;
 
+-- see MSG_CONSTANTS_PKG
+c_default_notification_method constant varchar(128 char) := 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
+c_use_default_notification_method constant boolean := true;
+
 /*
 -- The following exceptions are all defined by Oracle.
 */
