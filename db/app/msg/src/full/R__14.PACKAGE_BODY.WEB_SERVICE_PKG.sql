@@ -32,11 +32,17 @@ function simple_request
 )
 return boolean
 is
+  l_simple_request constant boolean :=
+    p_request.proxy_override is null and
+    p_request.https_host is null and
+    p_request.credential_static_id is null and
+    p_request.token_url is null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print
   ( dbug."info"
-  , 'p_request.proxy_override is null: %s; p_request.https_host is null: %s; p_request.credential_static_id is null: %s; p_request.token_url is null: %s'
+  , 'simple request: %s (p_request.proxy_override is null: %s; p_request.https_host is null: %s; p_request.credential_static_id is null: %s; p_request.token_url is null: %s)'
+  , dbug.cast_to_varchar2(l_simple_request)
   , dbug.cast_to_varchar2(p_request.proxy_override is null)
   , dbug.cast_to_varchar2(p_request.https_host is null)
   , dbug.cast_to_varchar2(p_request.credential_static_id is null)
@@ -44,10 +50,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   );
 $end
 
-  return p_request.proxy_override is null and
-         p_request.https_host is null and
-         p_request.credential_static_id is null and
-         p_request.token_url is null;
+  return l_simple_request;
 end simple_request;
   
 procedure utl_http_request
