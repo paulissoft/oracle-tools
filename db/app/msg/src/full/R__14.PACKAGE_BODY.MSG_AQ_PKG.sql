@@ -528,7 +528,7 @@ $end
   dbms_aq.listen
   ( agent_list => p_agent_list
   , wait => p_wait
-  , listen_delivery_mode => dbms_aq.persistent_or_buffered
+  , listen_delivery_mode => case when msg_aq_pkg.c_buffered_messaging then dbms_aq.persistent_or_buffered else dbms_aq.persistent end
   , agent => p_agent
   , message_delivery_mode => p_message_delivery_mode
   );
@@ -876,7 +876,6 @@ exception
   when e_dequeue_timeout
   then
 $if msg_aq_pkg.c_debugging >= 1 $then
-    dbug.print(dbug."warning", 'dequeue timeout');
     dbug.leave;
 $end
     null; -- normal behaviour
@@ -1137,7 +1136,8 @@ $if msg_aq_pkg.c_debugging >= 2 $then
     then
       dbug.print
       ( dbug."warning"
-      , 'delivery mode: %s => %s; visibility: %s => %s'
+      , 'msg_aq_pkg.c_buffered_messaging: %s; delivery mode: %s => %s; visibility: %s => %s'
+      , dbug.cast_to_varchar2(msg_aq_pkg.c_buffered_messaging)
       , delivery_mode_descr(p_delivery_mode)
       , delivery_mode_descr(l_enqueue_options.delivery_mode)
       , visibility_descr(p_visibility)
@@ -1430,7 +1430,7 @@ $end
         l_dequeue_options.delivery_mode := p_delivery_mode;
         l_dequeue_options.visibility := dbms_aq.immediate;
 
-      when p_visibility = dbms_aq.on_commit
+      when p_visibility in (dbms_aq.on_commit, dbms_aq.immediate)
       then
         l_dequeue_options.delivery_mode := dbms_aq.persistent;
         l_dequeue_options.visibility := p_visibility;
@@ -1447,7 +1447,8 @@ $if msg_aq_pkg.c_debugging >= 1 $then
     then
       dbug.print
       ( dbug."warning"
-      , 'delivery mode: %s => %s; visibility: %s => %s'
+      , 'msg_aq_pkg.c_buffered_messaging: %s; delivery mode: %s => %s; visibility: %s => %s'
+      , dbug.cast_to_varchar2(msg_aq_pkg.c_buffered_messaging)
       , delivery_mode_descr(p_delivery_mode)
       , delivery_mode_descr(l_dequeue_options.delivery_mode)
       , visibility_descr(p_visibility)
@@ -1518,12 +1519,23 @@ $if msg_pkg.c_debugging >= 2 $then
   p_msg.print();
 $end  
   dbug.leave;
+$end
+
 exception
+  when e_dequeue_timeout
+  then
+$if msg_aq_pkg.c_debugging >= 1 $then
+    dbug.print(dbug."warning", 'dequeue timeout');
+    dbug.leave;
+$end
+    raise;
+    
+$if msg_aq_pkg.c_debugging >= 1 $then
   when others
   then
     dbug.leave_on_error;
     raise;
-$end
+$end    
 end dequeue;
 
 procedure dequeue_array
@@ -1707,7 +1719,16 @@ $end
 
 $if msg_aq_pkg.c_debugging >= 1 $then
   dbug.leave;
+$end  
 exception
+  when e_dequeue_timeout
+  then
+$if msg_aq_pkg.c_debugging >= 1 $then
+    dbug.leave;
+$end
+    raise;
+    
+$if msg_aq_pkg.c_debugging >= 1 $then
   when others
   then
     dbug.leave_on_error;
@@ -1967,7 +1988,7 @@ is
   l_queue_name_tab sys.odcivarchar2list := sys.odcivarchar2list();
   l_agent sys.aq$_agent :=
     sys.aq$_agent(null, get_queue_name(p_groups_to_process_tab(p_groups_to_process_tab.first)), null); -- no subscriber, just a queue address
-  l_message_delivery_mode pls_integer := dbms_aq.persistent_or_buffered; -- when there is just one queue
+  l_message_delivery_mode pls_integer := case when msg_aq_pkg.c_buffered_messaging then dbms_aq.persistent_or_buffered else dbms_aq.persistent end; -- when there is just one queue
   l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
   l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
   l_wait naturaln := 0;
