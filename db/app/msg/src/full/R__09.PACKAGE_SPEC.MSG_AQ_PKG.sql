@@ -14,7 +14,7 @@ c_subscriber_delivery_mode constant binary_integer := case when c_buffered_messa
 -- see MSG_CONSTANTS_PKG
 c_default_notification_processing_method constant varchar(128 char) := 'plsql://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC';
 c_default_scheduler_processing_method constant varchar(128 char) := 'package://' || $$PLSQL_UNIT_OWNER || '.' || 'MSG_SCHEDULER_PKG';
-c_use_default_notification_processing_method constant boolean := true; -- add always c_default_notification_processing_method when adding c_default_scheduler_processing_method
+c_use_default_notification_processing_method constant boolean := false; -- true: add c_default_notification_processing_method when adding c_default_scheduler_processing_method
 
 /*
 -- The following exceptions are all defined by Oracle.
