@@ -62,6 +62,11 @@ pragma exception_init(e_dequeue_timeout, -25228);
 e_listen_timeout exception;
 pragma exception_init(e_listen_timeout, -25254);
 
+-- ORA-25263: no message in queue BC_SC_API.WEB_SERVICE_REQUEST with message ID 1F19569215234FCEE0630F5C000A3F19
+-- Can happen when notification and/or scheduler both try to dequeue/process a message
+e_dequeue_message_id_not_found exception;
+pragma exception_init(e_dequeue_message_id_not_found, -25263);
+
 /**
 
 This package is used as a wrapper around Oracle Advanced Queueing.
