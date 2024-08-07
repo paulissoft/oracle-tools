@@ -444,7 +444,7 @@ $if msg_aq_pkg.c_use_default_notification_processing_method $then
       end if;
 $end      
 
-      -- do not use "NOT IN (l_previous_processing_method1, l_previous_processing_method2)" since when one of those is NULL you do not get what you want
+      -- do not use "NOT IN (X, Y, Z)" since when one of those is NULL you do not get what you want
       if c_default_notification_processing_method in ( l_previous_processing_method1
 $if msg_aq_pkg.c_use_default_notification_processing_method $then  
                                                      , l_previous_processing_method2
@@ -452,7 +452,8 @@ $end
                                                      )
       then
         null; -- c_default_notification_processing_method has already been registered (and not unregistered)
-      else
+      elsif g_previous_processing_method_tab(p_queue_name)(g_previous_processing_method_tab(p_queue_name).last) = c_default_notification_processing_method
+      then
         -- register c_default_notification_processing_method
         PRAGMA INLINE (get_subscriber, 'YES');
         l_subscriber := get_subscriber;
