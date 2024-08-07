@@ -11,7 +11,9 @@ c_schema constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
 subtype t_processing_method is user_subscr_registrations.location_name%type;
 -- first entry is p_msg.default_processing_method() (empty, c_default_notification_processing_method or c_default_scheduler_processing_method)
--- second entry c_default_notification_processing_method if first entry is c_default_scheduler_processing_method
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
+-- second entry is c_default_notification_processing_method when first entry is c_default_scheduler_processing_method
+$end
 subtype t_processing_method_tab is sys.odcivarchar2list; 
 type t_processing_method_by_queue_tab is table of t_processing_method_tab index by user_queues.name%type;
 
@@ -250,7 +252,9 @@ is
   l_subscriber user_subscr_registrations.subscription_name%type := null;
   l_recipients all_queue_tables.recipients%type := null;
   l_previous_processing_method1 t_processing_method;
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
   l_previous_processing_method2 t_processing_method;
+$end  
   
   function get_subscriber
   return l_subscriber%type
@@ -312,27 +316,32 @@ $end
         msg_constants_pkg.get_default_processing_method;
     begin
       for r in
-      ( select  sr.location_name
-        ,       "plsql://" as protocol
-        from    user_subscr_registrations sr -- at most 1
-        where   sr.location_name like "plsql://" || '%'
-        and     ( sr.subscription_name = l_fq_queue_name or
-                  sr.subscription_name like l_fq_queue_name || ':%' -- with a subscriber
+      ( select  location_name
+        from    ( select  sr.location_name
+                  ,       "plsql://" as protocol
+                  from    user_subscr_registrations sr -- at most 1
+                  where   sr.location_name like "plsql://" || '%'
+                  and     ( sr.subscription_name = l_fq_queue_name or
+                            sr.subscription_name like l_fq_queue_name || ':%' -- with a subscriber
+                          )
+                  and     sr.location_name = c_default_notification_processing_method        
+                  union
+                  select  l_default_processing_method as location_name
+                  ,       "package://" as protocol
+                  from    user_scheduler_job_args sja -- at most 1
+                  where   sja.job_name like $$PLSQL_UNIT || '$PROCESSING_SUPERVISOR' -- e.g. MSG_AQ_PKG$PROCESSING_SUPERVISOR
+                  and     sja.argument_name = 'P_GROUPS_TO_PROCESS_LIST'
+                  and     sja.value is not null -- value is a comma separated list of queue names
+                  and     instr(','||p_queue_name||',', ','||sja.value||',') > 0
+                          -- When the default processing method is (no longer) the scheduler package,
+                          -- it will not be an active queue processing method.
+                  and     l_default_processing_method = c_default_scheduler_processing_method
+                  order by
+                          protocol -- "package://" before "plsql://" as it should
                 )
-        and     sr.location_name = c_default_notification_processing_method        
-        union
-        select  l_default_processing_method as location_name
-        ,       "package://" as protocol
-        from    user_scheduler_job_args sja -- at most 1
-        where   sja.job_name like $$PLSQL_UNIT || '$PROCESSING_SUPERVISOR' -- e.g. MSG_AQ_PKG$PROCESSING_SUPERVISOR
-        and     sja.argument_name = 'P_GROUPS_TO_PROCESS_LIST'
-        and     sja.value is not null -- value is a comma separated list of queue names
-        and     instr(','||p_queue_name||',', ','||sja.value||',') > 0
-                -- When the default processing method is (no longer) the scheduler package,
-                -- it will not be an active queue processing method.
-        and     l_default_processing_method = c_default_scheduler_processing_method
-        order by
-                protocol -- "package://" before "plsql://" as it should
+$if not msg_aq_pkg.c_use_default_notification_processing_method $then
+        where   rownum = 1
+$end        
       )
       loop
         g_previous_processing_method_tab(p_queue_name).extend(1);
@@ -351,15 +360,18 @@ $end
       when g_previous_processing_method_tab(p_queue_name).count >= 1
       then g_previous_processing_method_tab(p_queue_name)(1)
     end;
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
   l_previous_processing_method2 :=
     case
       when g_previous_processing_method_tab(p_queue_name).count >= 2
       then g_previous_processing_method_tab(p_queue_name)(2)
     end;
+$end    
 
   if ( p_default_processing_method is null and l_previous_processing_method1 is null )
      or
      ( p_default_processing_method = l_previous_processing_method1
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
        and
        ( ( l_previous_processing_method1 = c_default_notification_processing_method
            and
@@ -370,16 +382,21 @@ $end
            l_previous_processing_method2 = c_default_notification_processing_method -- extra
          )
        )
+$end           
      )
   then
     null; -- OK, no change
   else
-    -- do not use "NOT IN (l_previous_processing_method1, l_previous_processing_method12)" since when one of those is NULL you do not get what you want
-    if c_default_notification_processing_method in (l_previous_processing_method1, l_previous_processing_method2)
+    -- do not use "NOT IN (l_previous_processing_method1, l_previous_processing_method2)" since when one of those is NULL you do not get what you want
+    if c_default_notification_processing_method in ( l_previous_processing_method1
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
+                                                   , l_previous_processing_method2
+$end                                                   
+                                                   )
        and
        p_default_processing_method is null
     then
-      -- c_default_notification_processing_method has already been registered: deregister it
+      -- c_default_notification_processing_method has already been registered: unregister it
       -- must unregister this old processing method first
       PRAGMA INLINE (get_subscriber, 'YES');
       l_subscriber := get_subscriber;
@@ -413,22 +430,28 @@ $if msg_aq_pkg.c_debugging >= 2 $then
     );
 $end
 
-    if p_default_processing_method is not null
+    if p_default_processing_method is not null -- hence no unregister
     then
       g_previous_processing_method_tab(p_queue_name).extend(1);
       g_previous_processing_method_tab(p_queue_name)(g_previous_processing_method_tab(p_queue_name).last) := p_default_processing_method;
 
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
       -- add extra processing method?
       if p_default_processing_method != c_default_notification_processing_method
       then
         g_previous_processing_method_tab(p_queue_name).extend(1);
         g_previous_processing_method_tab(p_queue_name)(g_previous_processing_method_tab(p_queue_name).last) := c_default_notification_processing_method;
       end if;
+$end      
 
-      -- do not use "NOT IN (l_previous_processing_method1, l_previous_processing_method12)" since when one of those is NULL you do not get what you want
-      if c_default_notification_processing_method in (l_previous_processing_method1, l_previous_processing_method2)
+      -- do not use "NOT IN (l_previous_processing_method1, l_previous_processing_method2)" since when one of those is NULL you do not get what you want
+      if c_default_notification_processing_method in ( l_previous_processing_method1
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
+                                                     , l_previous_processing_method2
+$end                                                     
+                                                     )
       then
-        null; -- c_default_notification_processing_method has already been registered (and not deregistered)
+        null; -- c_default_notification_processing_method has already been registered (and not unregistered)
       else
         -- register c_default_notification_processing_method
         PRAGMA INLINE (get_subscriber, 'YES');
@@ -454,7 +477,12 @@ $end
     -- restart the jobs when anoything has changed:
     -- A) when the new processing method is c_default_scheduler_processing_method (one queue more to process)
     -- B) when a previous processing method is c_default_scheduler_processing_method (one queue less to process)
-    if c_default_scheduler_processing_method in (/* A */ p_default_processing_method, /* B */ l_previous_processing_method1, l_previous_processing_method2)
+    if c_default_scheduler_processing_method in ( /* A */ p_default_processing_method
+                                                , /* B1 */ l_previous_processing_method1
+$if msg_aq_pkg.c_use_default_notification_processing_method $then  
+                                                , /* B2 */ l_previous_processing_method2
+$end                                                
+                                                )
     then
       run_processing_method
       ( c_default_scheduler_processing_method
@@ -1836,6 +1864,7 @@ $end
   where   q.queue_type = 'NORMAL_QUEUE'
   and     q.queue_table = trim('"' from c_queue_table)
   and     trim(q.dequeue_enabled) = 'YES'
+$if not msg_aq_pkg.c_use_default_notification_processing_method $then  
   minus
   select  case
             when sr.subscription_name like '%:%'
@@ -1843,6 +1872,7 @@ $end
             else sr.subscription_name
           end as fq_queue_name -- "OWNER"."QUEUE"
   from    user_subscr_registrations sr
+$end  
   order by
           fq_queue_name;
 
@@ -1888,7 +1918,12 @@ $end -- $if msg_aq_pkg.c_debugging >= 2 $then
   from    ( select t.column_value as fq_queue_name from table(l_fq_queue_name_tab) t ) q
           inner join table(l_msg_tab) t
           on q.fq_queue_name = msg_pkg.get_object_name(p_object_name => msg_aq_pkg.get_queue_name(value(t)), p_what => 'queue')
-  where   ( t.default_processing_method() = p_processing_method or t.default_processing_method() like "plsql://" || '%' )
+  where   ( t.default_processing_method() = p_processing_method
+$if not msg_aq_pkg.c_use_default_notification_processing_method $then
+            or
+            t.default_processing_method() like "plsql://" || '%'
+$end            
+          )
   and     t.group$ is not null;
 
 $if msg_aq_pkg.c_debugging >= 2 $then
