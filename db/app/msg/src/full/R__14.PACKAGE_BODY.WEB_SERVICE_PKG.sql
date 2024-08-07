@@ -25,7 +25,7 @@ $end
 
 -- LOCAL
 
-$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$if web_service_pkg.c_prefer_to_use_utl_http $then
 
 function simple_request
 ( p_request in rest_web_service_request_typ
@@ -263,7 +263,7 @@ begin
   end if;
 end utl_http_request;
 
-$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
 function get_hdr_array_idx
 ( p_header_name in varchar2
@@ -694,7 +694,7 @@ $end
   -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
   case
-$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$if web_service_pkg.c_prefer_to_use_utl_http $then
   
     when simple_request(p_request)
     then
@@ -719,7 +719,7 @@ $end
       , p_response_headers => apex_web_service.g_headers
       , p_status_code => apex_web_service.g_status_code
       );
-$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
       
     when p_request.binary_response = 0
     then
@@ -876,7 +876,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
 $end
 
-$if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$if web_service_pkg.c_prefer_to_use_utl_http $then
 
   if l_parms is not null and l_parms_keys.count > 0
   then
@@ -919,11 +919,11 @@ $end
     raise_application_error(-20000, 'The request is not simple enough and should be executed by APEX_WEB_SERVICE but APEX is not installed.');
   end if;
 
-$else -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$else -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
   raise_application_error(-20000, 'APEX is not installed.');
 
-$end -- $if msg_constants_pkg.c_prefer_to_use_utl_http $then
+$end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
   pragma inline (data2json, 'YES');
   data2json(g_response_cookies, l_cookies);
@@ -1165,9 +1165,9 @@ $end
     l_web_service_response := treat(l_msg as web_service_response_typ);
 
     -- ORA-29273: HTTP request failed?
-    -- In bc_dev only when msg_constants_pkg.c_prefer_to_use_utl_http is true, on pato never
+    -- In bc_dev only when web_service_pkg.c_prefer_to_use_utl_http is true, on pato never
   
-$if not(msg_constants_pkg.c_prefer_to_use_utl_http) $then
+$if not(web_service_pkg.c_prefer_to_use_utl_http) $then
     ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
 $end  
 
@@ -1543,9 +1543,9 @@ $end
   l_web_service_response := treat(l_msg as web_service_response_typ);
 
   -- ORA-29273: HTTP request failed?
-  -- In bc_dev only when msg_constants_pkg.c_prefer_to_use_utl_http is true, on pato never
+  -- In bc_dev only when web_service_pkg.c_prefer_to_use_utl_http is true, on pato never
   
-$if not(msg_constants_pkg.c_prefer_to_use_utl_http) $then
+$if not(web_service_pkg.c_prefer_to_use_utl_http) $then
   ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
 $end  
 

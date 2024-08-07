@@ -4,6 +4,8 @@ CREATE OR REPLACE PACKAGE "WEB_SERVICE_PKG" AUTHID DEFINER AS
 A package with some functions and procedures for web services.
 **/
 
+c_prefer_to_use_utl_http constant boolean := false;
+
 subtype vc_arr2 is sys.dbms_sql.varchar2a;
 
 empty_vc_arr vc_arr2;

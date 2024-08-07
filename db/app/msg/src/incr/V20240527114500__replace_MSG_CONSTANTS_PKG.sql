@@ -57,12 +57,6 @@ function get_dbug_channel_inactive_tab
 return sys.odcivarchar2list
 deterministic;
 
-/*
--- for WEB_SERVICE_PKG
-*/
-
-c_prefer_to_use_utl_http constant boolean := false; -- utl_http versus apex_web_service
-
 /**
 This package just defines constants/functions to be used by the MSG subsystem.
 It will never be separately published as a repeatable Flyway object since this package (body)
@@ -131,12 +125,6 @@ $if not(oracle_tools.cfg_pkg.c_testing) $then
 $end  
   , 'PLSDBUG'
   );
-
-/*
--- for WEB_SERVICE_PKG
-*/
-
-c_prefer_to_use_utl_http constant boolean := false; -- utl_http versus apex_web_service
 
 /**
 This package just defines constants to be used by the MSG subsystem.
