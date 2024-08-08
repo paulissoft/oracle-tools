@@ -368,6 +368,21 @@ that it can listen at most X seconds for messages to arrive before it sends a
 heartbeat.
 **/
 
+type t_queue_info_rec is record
+( queue_name user_queues.name%type
+, msg_state varchar2(20)
+, total integer
+, min_elapsed number
+, avg_elapsed number
+, max_elapsed number
+);
+
+type t_queue_info_tab is table of t_queue_info_rec;
+
+function show_queues
+return t_queue_info_tab
+pipelined;
+
 end msg_aq_pkg;
 /
 
