@@ -1345,6 +1345,12 @@ $end
   if p_msg_tab.first is not null
   then
     ensure_queue_gets_dequeued(p_msg_tab(p_msg_tab.first).default_processing_method(), l_queue_name);
+$if msg_aq_pkg.c_debugging >= 2 $then
+    for i_idx in p_msgid_tab.first .. p_msgid_tab.last
+    loop
+      dbug.print(dbug."info", 'message # %s enqueued with msgid %s', i_idx, rawtohex(p_msgid_tab(i_idx)));
+    end loop;
+$end    
   end if;  
 
 $if msg_aq_pkg.c_debugging >= 2 $then
@@ -1556,6 +1562,11 @@ procedure dequeue_array
 , p_msg_tab out nocopy msg_tab_typ
 )
 is
+  -- NOTE: there are rumours that dbms_aq.dequeue_array may return duplicate msg ids
+  l_msgid varchar2(4000 byte);  
+  type t_msgid_lookup_tab is table of boolean index by l_msgid%type;
+  l_msgid_lookup_tab t_msgid_lookup_tab;
+  
   l_queue_name constant user_queues.name%type := simple_queue_name(p_queue_name);
   l_dequeue_options dbms_aq.dequeue_options_t;
   l_dummy pls_integer;
@@ -1646,6 +1657,22 @@ $end
         end if;
     end;
   end loop try_loop;  
+
+  -- see NOTE above
+  if p_msgid_tab.count > 0
+  then
+    for i_idx in p_msgid_tab.first .. p_msgid_tab.last
+    loop
+      l_msgid := rawtohex(p_msgid_tab(i_idx));
+      if not l_msgid_lookup_tab.exists(l_msgid)
+      then
+        l_msgid_lookup_tab(l_msgid) := null;
+      else
+        p_msg_tab(i_idx) := null;
+        p_msgid_tab(i_idx) := null;
+      end if;
+    end loop;
+  end if;
 
 $if msg_aq_pkg.c_debugging >= 2 $then
   dbug.leave;
@@ -1804,11 +1831,17 @@ $end
   then
     for i_idx in l_msg_tab.first .. l_msg_tab.last
     loop
-      msg_pkg.process_msg
-      ( p_msg => l_msg_tab(i_idx)
-      , p_commit => p_commit
-      );
-      p_nr_msgs_processed := p_nr_msgs_processed + 1;
+      if l_msg_tab(i_idx) is not null
+      then
+$if msg_aq_pkg.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'about to process message # %s with msgid %s', i_idx, rawtohex(l_msgid_tab(i_idx)));
+$end  
+        msg_pkg.process_msg
+        ( p_msg => l_msg_tab(i_idx)
+        , p_commit => p_commit
+        );
+        p_nr_msgs_processed := p_nr_msgs_processed + 1;
+      end if;
     end loop;
   end if;
 
@@ -1954,6 +1987,9 @@ $end
   , p_msg => l_msg
   );
 
+$if msg_aq_pkg.c_debugging >= 1 $then
+  dbug.print(dbug."info", 'about to process message with msgid %s', rawtohex(l_msgid));
+$end  
   msg_pkg.process_msg
   ( p_msg => l_msg
   , p_commit => p_commit
