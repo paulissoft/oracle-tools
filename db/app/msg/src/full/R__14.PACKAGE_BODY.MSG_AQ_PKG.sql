@@ -1780,7 +1780,7 @@ $end
   else
     dequeue_array
     ( p_queue_name => p_queue_name
-    , p_visibility => p_visibility
+    , p_visibility => nvl(p_visibility, dbms_aq.on_commit)
     , p_subscriber => p_subscriber
     , p_array_size => p_batch_size
     , p_dequeue_mode => p_dequeue_mode
