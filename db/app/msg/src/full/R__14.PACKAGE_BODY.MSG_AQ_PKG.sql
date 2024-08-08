@@ -2365,50 +2365,6 @@ $end
     raise;
 end processing;
 
-function show_queues
-return t_queue_info_tab
-pipelined
-is
-  l_statement constant varchar2(4000 byte) := '
-select  queue as queue_name
-,       msg_state
-,       count(*) as total
-,       trunc(min(deq_time - enq_time) * 24 * 60 * 60, 2) as min_elapsed
-,       trunc(avg(deq_time - enq_time) * 24 * 60 * 60, 2) as avg_elapsed
-,       trunc(max(deq_time - enq_time) * 24 * 60 * 60, 2) as max_elapsed
-from    AQ$' || trim('"' from c_queue_table) || '
-group by
-        queue
-,       msg_state
-order by
-        queue
-,       msg_state';
-  l_cursor sys_refcursor;
-  l_queue_info_rec t_queue_info_rec;
-begin
-  open l_cursor for l_statement;
-
-  loop
-    fetch l_cursor into l_queue_info_rec;
-    exit when l_cursor%notfound;
-
-    pipe row (l_queue_info_rec);
-  end loop;
-  close l_cursor;
-  
-  return;
-exception
-  when no_data_needed or no_data_found
-  then
-    if l_cursor%isopen then close l_cursor; end if;
-    return;
-    
-  when others
-  then
-    if l_cursor%isopen then close l_cursor; end if;
-    raise_application_error(-20000, 'statement: ' || l_statement, true);
-end show_queues;        
-
 end msg_aq_pkg;
 /
 
