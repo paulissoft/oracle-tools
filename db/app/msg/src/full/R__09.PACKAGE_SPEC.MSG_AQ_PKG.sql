@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "MSG_AQ_PKG" AUTHID DEFINER AS 
 
-c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 2 $else 0 $end; -- can be 0, 1, 2, ...
+c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- can be 0, 1, 2, ...
 
 -- You can tweak the constants thru MSG_CONSTANTS_PKG, you are not supposed to do it here.
 c_buffered_messaging constant boolean := msg_constants_pkg.get_buffered_messaging;
