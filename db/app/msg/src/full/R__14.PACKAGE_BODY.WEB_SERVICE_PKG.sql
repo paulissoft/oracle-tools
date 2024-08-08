@@ -672,6 +672,9 @@ is
       then p_request.body_blob
     end;
   l_web_service_response web_service_response_typ := null;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  l_start constant number := dbms_utility.get_time;
+$end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
@@ -791,6 +794,7 @@ $end
     );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
   dbug.leave;
 $end
 
@@ -799,6 +803,7 @@ exception
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
     dbug.leave_on_error;
 $end
 
@@ -871,6 +876,9 @@ is
       then p_request.body_blob
     end;
   l_web_service_response web_service_response_typ := null;
+$if oracle_tools.cfg_pkg.c_debugging $then
+  l_start constant number := dbms_utility.get_time;
+$end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
@@ -943,6 +951,7 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
   dbug.leave;
 $end
 
@@ -951,6 +960,7 @@ exception
   when others
   then
 $if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
     dbug.leave_on_error;
 $end
 

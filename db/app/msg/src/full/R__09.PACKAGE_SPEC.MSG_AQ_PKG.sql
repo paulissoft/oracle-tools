@@ -276,6 +276,26 @@ procedure dequeue_and_process
 , p_deq_condition in varchar2 default null
 , p_force in boolean default false -- When true, queue tables, queues will be created/added if necessary
 , p_commit in boolean default true
+, p_batch_size in binary_integer default 1 -- number of messages to dequeue in one batch
+);
+
+procedure dequeue_and_process
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_delivery_mode in binary_integer
+, p_visibility in binary_integer
+, p_subscriber in varchar2
+, p_dequeue_mode in binary_integer default dbms_aq.remove
+, p_navigation in binary_integer default dbms_aq.next_message
+, p_wait in binary_integer default dbms_aq.forever
+, p_correlation in varchar2 default null
+, p_deq_condition in varchar2 default null
+, p_force in boolean default false -- When true, queue tables, queues will be created/added if necessary
+, p_commit in boolean default true
+, p_batch_size in binary_integer default 1 -- number of messages to dequeue and process
+, p_nr_msgs_dequeued out nocopy natural
+, p_dequeue_elapsed_time out nocopy oracle_tools.api_time_pkg.seconds_t
+, p_nr_msgs_processed out nocopy natural
+, p_process_elapsed_time out nocopy oracle_tools.api_time_pkg.seconds_t
 );
 /** Dequeue a message (of base type msg_typ) from the queue and process it using <message>.process(0). **/
 

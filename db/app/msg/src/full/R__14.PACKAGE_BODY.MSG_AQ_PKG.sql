@@ -847,6 +847,7 @@ $end
       , p_deq_condition => null
       , p_force => false
       , p_commit => true
+      , p_batch_size => 100
       );
     else
       -- reset in/out parameter
@@ -1668,11 +1669,60 @@ procedure dequeue_and_process
 , p_deq_condition in varchar2
 , p_force in boolean
 , p_commit in boolean
+, p_batch_size in binary_integer
 )
 is
-  l_msgid raw(16) := null;
-  l_message_properties dbms_aq.message_properties_t;
-  l_msg msg_typ;
+  l_nr_msgs_dequeued natural;
+  l_dequeue_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+  l_nr_msgs_processed natural;
+  l_process_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+begin
+  dequeue_and_process
+  ( p_queue_name => p_queue_name
+  , p_delivery_mode => p_delivery_mode
+  , p_visibility => p_visibility
+  , p_subscriber => p_subscriber
+  , p_dequeue_mode => p_dequeue_mode
+  , p_navigation => p_navigation
+  , p_wait => p_wait
+  , p_correlation => p_correlation
+  , p_deq_condition => p_deq_condition
+  , p_force => p_force
+  , p_commit => p_commit
+  , p_batch_size => p_batch_size
+  , p_nr_msgs_dequeued => l_nr_msgs_dequeued
+  , p_dequeue_elapsed_time => l_dequeue_elapsed_time
+  , p_nr_msgs_processed => l_nr_msgs_processed
+  , p_process_elapsed_time => l_process_elapsed_time
+  );
+end dequeue_and_process;
+
+procedure dequeue_and_process
+( p_queue_name in varchar2 -- Can be fully qualified (including schema).
+, p_delivery_mode in binary_integer
+, p_visibility in binary_integer
+, p_subscriber in varchar2
+, p_dequeue_mode in binary_integer default dbms_aq.remove
+, p_navigation in binary_integer default dbms_aq.next_message
+, p_wait in binary_integer default dbms_aq.forever
+, p_correlation in varchar2 default null
+, p_deq_condition in varchar2 default null
+, p_force in boolean default false -- When true, queue tables, queues will be created/added if necessary
+, p_commit in boolean default true
+, p_batch_size in binary_integer default 1 -- number of messages to dequeue in one batch
+, p_nr_msgs_dequeued out nocopy natural
+, p_dequeue_elapsed_time out nocopy oracle_tools.api_time_pkg.seconds_t
+, p_nr_msgs_processed out nocopy natural
+, p_process_elapsed_time out nocopy oracle_tools.api_time_pkg.seconds_t
+)
+is
+  l_empty_message_properties dbms_aq.message_properties_t;
+  -- array msg
+  l_msgid_tab dbms_aq.msgid_array_t := dbms_aq.msgid_array_t(null);
+  l_message_properties_tab dbms_aq.message_properties_array_t := dbms_aq.message_properties_array_t(l_empty_message_properties);
+  l_msg_tab msg_tab_typ := msg_tab_typ(null);
+  -- timing
+  l_start_time oracle_tools.api_time_pkg.time_t := null;
 begin
 $if msg_aq_pkg.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.DEQUEUE_AND_PROCESS (1)');
@@ -1694,31 +1744,85 @@ $if msg_aq_pkg.c_debugging >= 1 $then
   , p_deq_condition
   , dbug.cast_to_varchar2(p_force)
   );
-  dbug.print(dbug."input", 'p_commit: %s', p_commit);
+  dbug.print
+  ( dbug."input"
+  , 'p_commit: %s; p_batch_size: %s'
+  , dbug.cast_to_varchar2(p_commit)
+  , p_batch_size
+  );
 $end
 
-  dequeue
-  ( p_queue_name => p_queue_name
-  , p_delivery_mode => p_delivery_mode
-  , p_visibility => p_visibility
-  , p_subscriber => p_subscriber
-  , p_dequeue_mode => p_dequeue_mode
-  , p_navigation => p_navigation
-  , p_wait => p_wait
-  , p_correlation => p_correlation
-  , p_deq_condition => p_deq_condition
-  , p_force => p_force
-  , p_msgid => l_msgid
-  , p_message_properties => l_message_properties
-  , p_msg => l_msg
-  );
+  p_nr_msgs_dequeued := 0;
+  p_dequeue_elapsed_time := null;
+  p_nr_msgs_processed := 0;
+  p_process_elapsed_time := null;
 
-  msg_pkg.process_msg
-  ( p_msg => l_msg
-  , p_commit => p_commit
-  );
+  l_start_time := oracle_tools.api_time_pkg.get_time;
+  
+  if p_batch_size = 1
+  then
+    dequeue
+    ( p_queue_name => p_queue_name
+    , p_delivery_mode => p_delivery_mode
+    , p_visibility => p_visibility
+    , p_subscriber => p_subscriber
+    , p_dequeue_mode => p_dequeue_mode
+    , p_navigation => p_navigation
+    , p_wait => p_wait
+    , p_correlation => p_correlation
+    , p_deq_condition => p_deq_condition
+    , p_force => p_force
+    , p_msgid => l_msgid_tab(1)
+    , p_message_properties => l_message_properties_tab(1)
+    , p_msg => l_msg_tab(1)
+    );
+    p_nr_msgs_dequeued := 1;
+  else
+    dequeue_array
+    ( p_queue_name => p_queue_name
+    , p_visibility => p_visibility
+    , p_subscriber => p_subscriber
+    , p_array_size => p_batch_size
+    , p_dequeue_mode => p_dequeue_mode
+    , p_navigation => p_navigation
+    , p_wait => p_wait
+    , p_correlation => p_correlation
+    , p_deq_condition => p_deq_condition
+    , p_force => p_force
+    , p_msgid_tab => l_msgid_tab
+    , p_message_properties_tab => l_message_properties_tab
+    , p_msg_tab => l_msg_tab
+    );
+    p_nr_msgs_dequeued := l_msg_tab.count;
+  end if;
+
+  p_dequeue_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_time, oracle_tools.api_time_pkg.get_time);
+
+  l_start_time := oracle_tools.api_time_pkg.get_time;
+
+  if l_msg_tab is not null and l_msg_tab.count > 0
+  then
+    for i_idx in l_msg_tab.first .. l_msg_tab.last
+    loop
+      msg_pkg.process_msg
+      ( p_msg => l_msg_tab(i_idx)
+      , p_commit => p_commit
+      );
+      p_nr_msgs_processed := p_nr_msgs_processed + 1;
+    end loop;
+  end if;
+
+  p_process_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_time, oracle_tools.api_time_pkg.get_time);
 
 $if msg_aq_pkg.c_debugging >= 1 $then
+  dbug.print
+  ( dbug."output"
+  , 'p_nr_msgs_dequeued: %s; p_dequeue_elapsed_time: %s; p_nr_msgs_processed: %s; p_process_elapsed_time: %s'
+  , p_nr_msgs_dequeued
+  , p_dequeue_elapsed_time
+  , p_nr_msgs_processed
+  , p_process_elapsed_time
+  );
   dbug.leave;
 $end  
 exception
@@ -1978,6 +2082,7 @@ is
   -- In order to prevent starvation (i.e. you always get the first queue when all queues are ready),
   -- it is necesary to do a round-robin.
   type agent_list_by_group_t is table of dbms_aq.aq$_agent_list_t index by binary_integer; -- will start with index 0
+  type t_batch_size_tab is table of binary_integer index by user_queues.name%type; -- batch size per queue
   
   l_agent_list_by_group agent_list_by_group_t;
   l_agent_list_by_group_idx natural := null;  
@@ -1993,7 +2098,13 @@ is
   l_timestamp_tab oracle_tools.api_heartbeat_pkg.timestamp_tab_t;
   l_silent_worker_tab oracle_tools.api_heartbeat_pkg.silent_worker_tab_t;
   l_wait naturaln := 0;
+  l_wait_orig naturaln := 0;
   l_navigation pls_integer;
+  l_batch_size_tab t_batch_size_tab;
+  l_nr_msgs_dequeued natural;
+  l_dequeue_elapsed_time oracle_tools.api_time_pkg.seconds_t;
+  l_nr_msgs_processed natural;
+  l_process_elapsed_time oracle_tools.api_time_pkg.seconds_t;
 
   l_procedure constant varchar2(100) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESSING';
   
@@ -2124,7 +2235,8 @@ $end
   loop
     l_navigation := dbms_aq.first_message;
     -- don't use 0 but 1 second as minimal timeout since 0 seconds may kill your server
-    l_wait := least(msg_constants_pkg.get_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time)));      
+    l_wait := least(msg_constants_pkg.get_time_between_heartbeats, greatest(1, trunc(l_ttl - l_elapsed_time)));
+    l_wait_orig := l_wait;
     l_now := oracle_tools.api_time_pkg.get_timestamp;
     l_elapsed_time := oracle_tools.api_time_pkg.elapsed_time(l_start_date, l_now);
 
@@ -2172,6 +2284,11 @@ $if msg_aq_pkg.c_debugging >= 1 $then
           dbug.print(dbug."info", 'trying to process a message from queue %s with timeout %s', l_agent.address, l_wait);
 $end
 
+          if not l_batch_size_tab.exists(l_agent.address)
+          then
+            l_batch_size_tab(l_agent.address) := 1;
+          end if;
+          
           msg_aq_pkg.dequeue_and_process
           ( p_queue_name => l_agent.address
           , p_delivery_mode => l_message_delivery_mode
@@ -2186,14 +2303,40 @@ $end
           , p_deq_condition => null
           , p_force => false -- queue should be there
           , p_commit => true
+          , p_batch_size => l_batch_size_tab(l_agent.address)
+          , p_nr_msgs_dequeued => l_nr_msgs_dequeued
+          , p_dequeue_elapsed_time => l_dequeue_elapsed_time
+          , p_nr_msgs_processed => l_nr_msgs_processed
+          , p_process_elapsed_time => l_process_elapsed_time
           );
 
-          l_navigation := dbms_aq.next_message;
-          l_wait := 0;
-
 $if msg_aq_pkg.c_debugging >= 1 $then
-          dbug.print(dbug."info", 'message processed');
+          dbug.print(dbug."info", '%s message(s) processed', l_nr_msgs_processed);
 $end
+
+          exit dequeue_loop when l_nr_msgs_dequeued < l_batch_size_tab(l_agent.address);
+          
+          -- try to adjust the batch size in a smart way
+          if l_nr_msgs_processed = l_batch_size_tab(l_agent.address)
+          then
+            l_batch_size_tab(l_agent.address) :=
+              case
+                -- it took more than the wait interval
+                when l_dequeue_elapsed_time + l_process_elapsed_time > l_wait_orig
+                then greatest(1, l_batch_size_tab(l_agent.address) - 1) -- must be > 0
+                -- we have some more room within the wait interval
+                else l_batch_size_tab(l_agent.address) + 1
+              end;
+$if msg_aq_pkg.c_debugging >= 1 $then
+            dbug.print(dbug."info", 'batch size: %s => %s', l_nr_msgs_processed, l_batch_size_tab(l_agent.address));
+$end
+          end if;
+            
+          if l_wait != 0 -- first dequeue and process in this loop
+          then
+            l_navigation := dbms_aq.next_message;
+            l_wait := 0;
+          end if;
         exception
           when e_dequeue_timeout -- stop this loop and try again with listen first (if applicable)
           then
