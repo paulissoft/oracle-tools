@@ -27,8 +27,8 @@ public final class SimplePoolDataSourceOracle
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal = PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal;
     /*
-        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+      new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+      PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
     */
 
     private static final UniversalConnectionPoolManager mgr;
@@ -147,14 +147,14 @@ public final class SimplePoolDataSourceOracle
                 }
 
                 poolDataSourceStatistics.updateStatistics(this,
-                        conn,
-                        Duration.between(tm0, Instant.now()).toMillis(),
-                        -1L,
-                        true,
-                        0,
-                        0,
-                        0,
-                        schema);
+                                                          conn,
+                                                          Duration.between(tm0, Instant.now()).toMillis(),
+                                                          -1L,
+                                                          true,
+                                                          0,
+                                                          0,
+                                                          0,
+                                                          schema);
             } else {
                 conn = super.getConnection(usernameToConnectTo, password);
             }
@@ -203,30 +203,30 @@ public final class SimplePoolDataSourceOracle
             try {
                 /* this.driverClassName is ignored */
                 switch(nr) {
-                    case  0: setURL(pdsConfig.getUrl()); break;
-                    case  1: setUser(pdsConfig.getUsername()); break;
-                    case  2: setPassword(pdsConfig.getPassword()); break;
-                    case  3: setConnectionPoolName(pdsConfig.getConnectionPoolName()); break;
-                    case  4: setInitialPoolSize(pdsConfig.getInitialPoolSize()); break;
-                    case  5: setMinPoolSize(pdsConfig.getMinPoolSize()); break;
-                    case  6: setMaxPoolSize(pdsConfig.getMaxPoolSize()); break;
-                    case  7:
-                        if (pdsConfig.getConnectionFactoryClassName() != null) {
-                            setConnectionFactoryClassName(pdsConfig.getConnectionFactoryClassName());
-                        }
-                        break;
-                    case  8: setValidateConnectionOnBorrow(pdsConfig.getValidateConnectionOnBorrow()); break;
-                    case  9: setAbandonedConnectionTimeout(pdsConfig.getAbandonedConnectionTimeout()); break;
-                    case 10: setTimeToLiveConnectionTimeout(pdsConfig.getTimeToLiveConnectionTimeout()); break;
-                    case 11: setInactiveConnectionTimeout(pdsConfig.getInactiveConnectionTimeout()); break;
-                    case 12: setTimeoutCheckInterval(pdsConfig.getTimeoutCheckInterval()); break;
-                    case 13: setMaxStatements(pdsConfig.getMaxStatements()); break;
-                    case 14: setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis()); break;
-                    case 15: setMaxConnectionReuseTime(pdsConfig.getMaxConnectionReuseTime()); break;
-                    case 16: setSecondsToTrustIdleConnection(pdsConfig.getSecondsToTrustIdleConnection()); break;
-                    case 17: setConnectionValidationTimeout(pdsConfig.getConnectionValidationTimeout()); break;
-                    default:
-                        throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                case  0: setURL(pdsConfig.getUrl()); break;
+                case  1: setUser(pdsConfig.getUsername()); break;
+                case  2: setPassword(pdsConfig.getPassword()); break;
+                case  3: setConnectionPoolName(pdsConfig.getConnectionPoolName()); break;
+                case  4: setInitialPoolSize(pdsConfig.getInitialPoolSize()); break;
+                case  5: setMinPoolSize(pdsConfig.getMinPoolSize()); break;
+                case  6: setMaxPoolSize(pdsConfig.getMaxPoolSize()); break;
+                case  7:
+                    if (pdsConfig.getConnectionFactoryClassName() != null) {
+                        setConnectionFactoryClassName(pdsConfig.getConnectionFactoryClassName());
+                    }
+                    break;
+                case  8: setValidateConnectionOnBorrow(pdsConfig.getValidateConnectionOnBorrow()); break;
+                case  9: setAbandonedConnectionTimeout(pdsConfig.getAbandonedConnectionTimeout()); break;
+                case 10: setTimeToLiveConnectionTimeout(pdsConfig.getTimeToLiveConnectionTimeout()); break;
+                case 11: setInactiveConnectionTimeout(pdsConfig.getInactiveConnectionTimeout()); break;
+                case 12: setTimeoutCheckInterval(pdsConfig.getTimeoutCheckInterval()); break;
+                case 13: setMaxStatements(pdsConfig.getMaxStatements()); break;
+                case 14: setConnectionWaitDurationInMillis(pdsConfig.getConnectionWaitDurationInMillis()); break;
+                case 15: setMaxConnectionReuseTime(pdsConfig.getMaxConnectionReuseTime()); break;
+                case 16: setSecondsToTrustIdleConnection(pdsConfig.getSecondsToTrustIdleConnection()); break;
+                case 17: setConnectionValidationTimeout(pdsConfig.getConnectionValidationTimeout()); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
                 log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));

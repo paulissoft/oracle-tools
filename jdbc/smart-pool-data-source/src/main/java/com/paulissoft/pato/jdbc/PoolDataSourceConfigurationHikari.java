@@ -198,12 +198,12 @@ public final class PoolDataSourceConfigurationHikari
         this.poolName = null;
     }
     
-//**/    @Override
-//**/    public String toString() {
-//**/        ReflectionToStringBuilder rtsb = new ReflectionToStringBuilder(this, ToStringStyle.JSON_STYLE);
-//**/        
-//**/        rtsb.setExcludeNullValues(true);
-//**/        
-//**/        return rtsb.toString();
-//**/    }
+    //**/    @Override
+    //**/    public String toString() {
+    //**/        ReflectionToStringBuilder rtsb = new ReflectionToStringBuilder(this, ToStringStyle.JSON_STYLE);
+    //**/        
+    //**/        rtsb.setExcludeNullValues(true);
+    //**/        
+    //**/        return rtsb.toString();
+    //**/    }
 }

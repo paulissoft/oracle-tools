@@ -28,8 +28,8 @@ public final class SimplePoolDataSourceHikari
 
     private static final PoolDataSourceStatistics poolDataSourceStatisticsTotal = PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal;
     /*    
-        new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
-                                     PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
+          new PoolDataSourceStatistics(() -> POOL_NAME_PREFIX + ": (all)",
+          PoolDataSourceStatistics.poolDataSourceStatisticsGrandTotal);
     */
 
     // all object related
@@ -53,10 +53,10 @@ public final class SimplePoolDataSourceHikari
     public SimplePoolDataSourceHikari(final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
         super(getHikariConfig(poolDataSourceConfigurationHikari));
         poolDataSourceStatistics =
-                new PoolDataSourceStatistics(null, // description will be the pool name
-                        poolDataSourceStatisticsTotal,
-                        this::isClosed,
-                        this::getWithPoolName);
+            new PoolDataSourceStatistics(null, // description will be the pool name
+                                         poolDataSourceStatisticsTotal,
+                                         this::isClosed,
+                                         this::getWithPoolName);
         setId(this.getClass().getSimpleName());
     }
     
@@ -266,7 +266,7 @@ public final class SimplePoolDataSourceHikari
 
     @Override
     public boolean isClosed() {
-      return super.isClosed();
+        return super.isClosed();
     }
 
     public String getPoolNamePrefix() {
@@ -294,35 +294,35 @@ public final class SimplePoolDataSourceHikari
         do {
             try {
                 switch(nr) {
-                    case  0: hikariConfig.setDriverClassName(pdsConfig.getDriverClassName()); break;
-                    case  1: hikariConfig.setJdbcUrl(pdsConfig.getUrl()); break;
-                    case  2: hikariConfig.setUsername(pdsConfig.getUsername()); break;
-                    case  3: hikariConfig.setPassword(pdsConfig.getPassword()); break;
-                    case  4: hikariConfig.setPoolName(pdsConfig.getPoolName()); break;
-                    case  5:
-                        if (pdsConfig.getMaximumPoolSize() >= MIN_MAXIMUM_POOL_SIZE) {
-                            hikariConfig.setMaximumPoolSize(pdsConfig.getMaximumPoolSize());
-                        }
-                        break;
-                    case  6: hikariConfig.setMinimumIdle(pdsConfig.getMinimumIdle()); break;
-                    case  7: hikariConfig.setAutoCommit(pdsConfig.isAutoCommit()); break;
-                    case  8: hikariConfig.setConnectionTimeout(pdsConfig.getConnectionTimeout()); break;
-                    case  9: hikariConfig.setIdleTimeout(pdsConfig.getIdleTimeout()); break;
-                    case 10: hikariConfig.setMaxLifetime(pdsConfig.getMaxLifetime()); break;
-                    case 11: hikariConfig.setConnectionTestQuery(pdsConfig.getConnectionTestQuery()); break;
-                    case 12: hikariConfig.setInitializationFailTimeout(pdsConfig.getInitializationFailTimeout()); break;
-                    case 13: hikariConfig.setIsolateInternalQueries(pdsConfig.isIsolateInternalQueries()); break;
-                    case 14: hikariConfig.setAllowPoolSuspension(pdsConfig.isAllowPoolSuspension()); break;
-                    case 15: hikariConfig.setReadOnly(pdsConfig.isReadOnly()); break;
-                    case 16: hikariConfig.setRegisterMbeans(pdsConfig.isRegisterMbeans()); break;
-                    case 17:
-                        if (pdsConfig.getValidationTimeout() >= MIN_VALIDATION_TIMEOUT) {
-                            hikariConfig.setValidationTimeout(pdsConfig.getValidationTimeout());
-                        }
-                        break;
-                    case 18: hikariConfig.setLeakDetectionThreshold(pdsConfig.getLeakDetectionThreshold()); break;
-                    default:
-                        throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
+                case  0: hikariConfig.setDriverClassName(pdsConfig.getDriverClassName()); break;
+                case  1: hikariConfig.setJdbcUrl(pdsConfig.getUrl()); break;
+                case  2: hikariConfig.setUsername(pdsConfig.getUsername()); break;
+                case  3: hikariConfig.setPassword(pdsConfig.getPassword()); break;
+                case  4: hikariConfig.setPoolName(pdsConfig.getPoolName()); break;
+                case  5:
+                    if (pdsConfig.getMaximumPoolSize() >= MIN_MAXIMUM_POOL_SIZE) {
+                        hikariConfig.setMaximumPoolSize(pdsConfig.getMaximumPoolSize());
+                    }
+                    break;
+                case  6: hikariConfig.setMinimumIdle(pdsConfig.getMinimumIdle()); break;
+                case  7: hikariConfig.setAutoCommit(pdsConfig.isAutoCommit()); break;
+                case  8: hikariConfig.setConnectionTimeout(pdsConfig.getConnectionTimeout()); break;
+                case  9: hikariConfig.setIdleTimeout(pdsConfig.getIdleTimeout()); break;
+                case 10: hikariConfig.setMaxLifetime(pdsConfig.getMaxLifetime()); break;
+                case 11: hikariConfig.setConnectionTestQuery(pdsConfig.getConnectionTestQuery()); break;
+                case 12: hikariConfig.setInitializationFailTimeout(pdsConfig.getInitializationFailTimeout()); break;
+                case 13: hikariConfig.setIsolateInternalQueries(pdsConfig.isIsolateInternalQueries()); break;
+                case 14: hikariConfig.setAllowPoolSuspension(pdsConfig.isAllowPoolSuspension()); break;
+                case 15: hikariConfig.setReadOnly(pdsConfig.isReadOnly()); break;
+                case 16: hikariConfig.setRegisterMbeans(pdsConfig.isRegisterMbeans()); break;
+                case 17:
+                    if (pdsConfig.getValidationTimeout() >= MIN_VALIDATION_TIMEOUT) {
+                        hikariConfig.setValidationTimeout(pdsConfig.getValidationTimeout());
+                    }
+                    break;
+                case 18: hikariConfig.setLeakDetectionThreshold(pdsConfig.getLeakDetectionThreshold()); break;
+                default:
+                    throw new IllegalArgumentException(String.format("Wrong value for nr (%d): must be between 0 and %d", nr, maxNr));
                 }
             } catch (Exception ex) {
                 log.warn("nr: {}; exception: {}", nr, SimplePoolDataSource.exceptionToString(ex));
