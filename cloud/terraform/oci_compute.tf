@@ -1,5 +1,4 @@
 # Variables
-variable "compartment_id"              { type = string }
 variable "compute_name"                { type = string }
 variable "compute_subnet_id"           { type = string }
 variable "compute_image_id"            { type = string }
@@ -29,7 +28,7 @@ data "oci_identity_availability_domains" "ads" {
 resource "oci_core_instance" "tf_compute" {
   # Required
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-  compartment_id      = var.compartment_id
+  compartment_id      = oci_identity_compartment.tf_compartment.id
   shape               = var.compute_shape
 
   source_details {
@@ -62,7 +61,7 @@ output "compute_id" {
   value = oci_core_instance.tf_compute.id
 }
 
-output "db_state" {
+output "compute_state" {
   value = oci_core_instance.tf_compute.state
 }
 
