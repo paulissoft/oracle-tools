@@ -2,6 +2,8 @@
 
 The creation of an autonomous free database & OCI compute instance will be executed by Terraform using the articles found on https://oracle-base.com.
 
+**Important**: you have to create the autonomous free database **before** creating the OCI compute instance since the datbase VCN public subnet will be used during the OCI compute instance creation.
+
 Instructions are based on [Terraform : Linking Oracle Cloud Interface (OCI) Terraform Modules Together](https://oracle-base.com/articles/misc/terraform-linking-oci-modules-together).
 
 However since the Oracle Cloud UI has changed since the creation of those instructions, I will update the instructions where applicable.
@@ -38,7 +40,12 @@ No changes.
 
 ## [Terraform : Oracle Cloud Infrastructure (OCI) Compute Instance](https://oracle-base.com/articles/misc/terraform-oci-compute-instance)
 
+The variables "compartment_id" and "compute_shape" have been removed from the file `oci_compute_variables.auto.tfvars` since other values will be used in `oci_compute.tf`.
 
+For variable "compute_subnet_id" I used the OCID of the public subnet of the autonomous database VCN.
+For variable "compute_image_id" I used the OCID for OS image Oracle-Linux-9.4-2024.07.31-0 in region eu-frankfurt-1.
+
+For variable "compute_ssh_authorized_keys" I used the full name of my RSA public key file in the `$HOME/.ssh` directory.
 
 ## [Terraform : Linking Oracle Cloud Interface (OCI) Terraform Modules Together](https://oracle-base.com/articles/misc/terraform-linking-oci-modules-together)
 
