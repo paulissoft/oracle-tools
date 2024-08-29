@@ -29,4 +29,4 @@ jdbc/smart-pool-data-source-jmh/*results.txt
 \.terraform.*
 terraform.tfstate
 terraform.tfstate.backup
-cloud/autonomous-free-database/terraform/backend.tf
+cloud/terraform/backend.tf

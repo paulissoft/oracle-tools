@@ -1,12 +1,12 @@
-# Create an autonomous free database
+# Create an autonomous free database & OCI compute instance
 
-The creation of an autonomous free database will be executed by Terraform using the articles found on https://oracle-base.com.
+The creation of an autonomous free database & OCI compute instance will be executed by Terraform using the articles found on https://oracle-base.com.
 
 Instructions are based on [Terraform : Linking Oracle Cloud Interface (OCI) Terraform Modules Together](https://oracle-base.com/articles/misc/terraform-linking-oci-modules-together).
 
 However since the Oracle Cloud UI has changed since the creation of those instructions, I will update the instructions where applicable.
 
-All code Terraform files (`*.tf`) mentioned in those articles need not be (re-)created since they are already stored in this folder: `oracle-tools/cloud/autonomous-free-database/terraform`.
+All code Terraform files (`*.tf`) mentioned in those articles need not be (re-)created since they are already stored in this folder: `oracle-tools/cloud/terraform`.
 
 However, the variable Terraform files (`*.auto.tfvars`) must be created and should **NOT** be stored in a Git repository. The file `oracle-tools/.gitignore` does already exclude them.
 
@@ -35,6 +35,10 @@ No changes.
 ## [Terraform : Oracle Cloud Infrastructure (OCI) Autonomous Database (ADW, ATP, AJD, APX)](https://oracle-base.com/articles/misc/terraform-oci-autonomous-database)
 
 No changes.
+
+## [Terraform : Oracle Cloud Infrastructure (OCI) Compute Instance](https://oracle-base.com/articles/misc/terraform-oci-compute-instance)
+
+
 
 ## [Terraform : Linking Oracle Cloud Interface (OCI) Terraform Modules Together](https://oracle-base.com/articles/misc/terraform-linking-oci-modules-together)
 

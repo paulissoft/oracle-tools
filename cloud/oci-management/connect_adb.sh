@@ -5,7 +5,7 @@ set -eu
 source $this_dir/setup.sh
 echo "Using this wallet file for database $DB_NAME:" ${WALLET_FILE:=${WALLET_DIR:=$HOME/wallets}/${DB_NAME}.zip}
 
-oci db autonomous-database generate-wallet --autonomous-database-id $DB_ID --password Pw4ZipFile --file $WALLET_FILE
+oci db autonomous-database generate-wallet --autonomous-database-id $DB_ID --password ${WALLET_PASSWORD:-Pw4ZipFile} --file $WALLET_FILE
 
 adb_variables="$this_dir/../terraform/oci_adb_variables.auto.tfvars"
 
