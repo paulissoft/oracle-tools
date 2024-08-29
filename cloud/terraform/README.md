@@ -40,10 +40,23 @@ No changes.
 
 ## [Terraform : Oracle Cloud Infrastructure (OCI) Compute Instance](https://oracle-base.com/articles/misc/terraform-oci-compute-instance)
 
+### compartment_id
+
 The variables "compartment_id" and "compute_shape" have been removed from the file `oci_compute_variables.auto.tfvars` since other values will be used in `oci_compute.tf`.
 
+### compute_subnet_id
+
 For variable "compute_subnet_id" I used the OCID of the public subnet of the autonomous database VCN.
-For variable "compute_image_id" I used the OCID for OS image Oracle-Linux-9.4-2024.07.31-0 in region eu-frankfurt-1.
+
+### compute_image_id
+
+For variable "compute_image_id" I used the OCID for this OS image from [All Image Families](https://docs.oracle.com/en-us/iaas/images/index.htm) in region eu-frankfurt-1:
+
+Image: Oracle Linux 8 Image build: 2024.07.31-0
+
+You can find it out when you start to create manually an OCI compute instance (but do not finish it).
+
+### compute_ssh_authorized_keys
 
 For variable "compute_ssh_authorized_keys" I used the full name of my RSA public key file in the `$HOME/.ssh` directory.
 
