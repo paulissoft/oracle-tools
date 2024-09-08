@@ -1,0 +1,11 @@
+name: oke
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+description: Set up an Oracle Kubernetes Engine.
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: python
