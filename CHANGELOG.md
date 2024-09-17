@@ -19,6 +19,24 @@ Types of changes:
 
 - [Use Podman instead of Docker inside Jenkins.](https://github.com/paulissoft/oracle-tools/issues/169)
 
+## [3.4.0] - 2024-09-17
+
+### Added
+
+- [Add dry run to Oracle package MSG_SCHEDULER_PKG.](https://github.com/paulissoft/oracle-tools/issues/170)
+- [Add statistics to Java class simple pool data source.](https://github.com/paulissoft/oracle-tools/issues/171)
+- [Main classes for Java JDBC pool data source should start with SmartPoolDataSource.](https://github.com/paulissoft/oracle-tools/issues/172)
+- [Add Oracle package PKG_REPLICATE_UTIL for replicating sources from one schema to another.](https://github.com/paulissoft/oracle-tools/issues/173)
+- [Add max retries, retry delay and retention time to MSG_AQ_PKG.CREATE_QUEUE.](https://github.com/paulissoft/oracle-tools/issues/174)
+- [Enhance start/stop MSG scheduler in case of PATO installations.](https://github.com/paulissoft/oracle-tools/issues/new)
+- [Use a default processing method when the job scheduler can not be used for the MSG subsystem.](https://github.com/paulissoft/oracle-tools/issues/176)
+- [Add pipelined function show_queues to MSG_AQ_PKG.](https://github.com/paulissoft/oracle-tools/issues/178)
+- [Add view msg_queue_info_v.](https://github.com/paulissoft/oracle-tools/issues/179)
+
+### Fixed
+
+- [Constant MSG_CONSTANTS_PKG. c_prefer_to_use_utl_http must be moved to WEB_SERVICE_PKG.](https://github.com/paulissoft/oracle-tools/issues/177)
+
 ## [3.3.2] - 2024-07-04
 
 ### Fixed

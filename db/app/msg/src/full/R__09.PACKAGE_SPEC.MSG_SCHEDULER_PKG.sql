@@ -130,7 +130,7 @@ p_command = stop:
 p_command = restart:
 - Stop and start, equivalent to do('stop') followed by do('start').
 
-p_command = check-jobs-not-running/ check-jobs-not-running:
+p_command = check-jobs-running / check-jobs-not-running:
 - Check that there are (no) running jobs that have been started by this package. If so, an error is raised.
 
 **/
@@ -138,12 +138,28 @@ p_command = check-jobs-not-running/ check-jobs-not-running:
 function show_do
 ( p_commands in varchar2 default null -- comma separated list of: create / drop / start / shutdown / stop / restart / check-jobs-running / check-jobs-not-running
 , p_processing_package in varchar2 default '%' -- find packages like this paramater that have both a routine get_groups_to_process() and processing()
-, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state
+, p_read_initial_state in natural default null -- read info from USER_SCHEDULER_* dictionary views at the beginning to constitute an ininitial state (0=false)
 , p_show_initial_state in natural default null -- show the initial state: set to false (0) when you want to have what-if scenarios
 , p_show_comments in natural default null -- show comments with each command in p_commands and the program
 )
 return sys.odcivarchar2list
 pipelined;
+/**
+Shows what a call to do() would do, hence a kind of a dry run for do().
+
+This function will "read initial state" from the USER_SCHEDULER_* dictionary views at the beginning when:
+- ( p_read_initial_state is null ) OR
+- p_read_initial_state != 0
+
+This function will "show initial state" when:
+- ( p_show_initial_state is null and "read initial state" is true and p_commands is null ) OR
+- p_show_initial_state is not null and p_show_initial_state != 0
+
+This function will "show comments" when:
+- NOT( p_show_comments is null and "read initial state" is true and "show initial state" is true and p_commands is null ) AND
+- p_show_comments is null or p_show_comments != 0
+
+*/
 
 procedure submit_do
 ( p_command in varchar2 -- same as for do() above
