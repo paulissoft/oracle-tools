@@ -15,6 +15,10 @@ Types of changes:
 
 ## [Unreleased]
 
+### Added
+
+- [Use Podman instead of Docker inside Jenkins.](https://github.com/paulissoft/oracle-tools/issues/169)
+
 ## [3.3.2] - 2024-07-04
 
 ### Fixed
