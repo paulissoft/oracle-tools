@@ -30,3 +30,4 @@ jdbc/smart-pool-data-source-jmh/*results.txt
 terraform.tfstate
 terraform.tfstate.backup
 cloud/terraform/backend.tf
+cloud/pulumi/
