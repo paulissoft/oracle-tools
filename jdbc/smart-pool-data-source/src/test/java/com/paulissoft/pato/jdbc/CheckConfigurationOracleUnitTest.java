@@ -63,7 +63,7 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
-                     "initialPoolSize=0, minPoolSize=0, maxPoolSize=14, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "initialPoolSize=0, minPoolSize=7, maxPoolSize=14, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
@@ -113,7 +113,7 @@ public class CheckConfigurationOracleUnitTest {
         assertEquals("PoolDataSourceConfigurationOracle(super=PoolDataSourceConfiguration(driverClassName=null, " +
                      "url=jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1, username=bodomain, password=null, " + 
                      "type=class com.paulissoft.pato.jdbc.SimplePoolDataSourceOracle), connectionPoolName=null, " +
-                     "initialPoolSize=0, minPoolSize=0, maxPoolSize=14, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
+                     "initialPoolSize=0, minPoolSize=7, maxPoolSize=14, connectionFactoryClassName=oracle.jdbc.pool.OracleDataSource, " +
                      "validateConnectionOnBorrow=false, abandonedConnectionTimeout=0, timeToLiveConnectionTimeout=0, " +
                      "inactiveConnectionTimeout=0, timeoutCheckInterval=30, maxStatements=10, connectionWaitDurationInMillis=0, " +
                      "maxConnectionReuseTime=0, secondsToTrustIdleConnection=0, connectionValidationTimeout=15)",
