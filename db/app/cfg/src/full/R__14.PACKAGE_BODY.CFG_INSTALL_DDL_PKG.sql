@@ -125,8 +125,8 @@ begin
   ( p_statement =>
       case
         when p_table_name is not null
-        then p_operation || ' ' || p_index_name || ' ON ' || p_table_name || ' ' || p_extra
-        else p_operation || ' ' || p_index_name || p_extra
+        then p_operation || ' INDEX ' || p_index_name || ' ON ' || p_table_name || ' ' || p_extra
+        else p_operation || ' INDEX ' || p_index_name || p_extra
       end
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
