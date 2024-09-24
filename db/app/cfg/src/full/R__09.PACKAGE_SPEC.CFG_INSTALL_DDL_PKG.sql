@@ -9,10 +9,19 @@ This package defines functions and procedures used by Flyway increments (or more
 c_column_added_already_exists constant pls_integer := -1430;
 
 -- ORA-00955: name is already used by an existing object
-c_table_created_already_exists constant pls_integer := -955;
+c_object_created_already_exists constant pls_integer := -955;
 
 -- ORA-02264: name already used by an existing constraint
 c_constraint_added_already_exists constant pls_integer := -2264;
+
+-- ORA-02260: table can have only one primary key
+c_table_can_have_only_one_primary_key constant pls_integer := -2260;
+
+-- ORA-02275: such a referential constraint already exists in the table
+c_referential_constraint_already_exists constant pls_integer := -2275;
+
+-- ORA-04081: trigger 'FKNTM_BC_CHARGEPOINT_TARIFF_GROUPS' already exists
+c_trigger_already_exists constant pls_integer := -4081;
 
 type t_ignore_sqlcode_tab is table of pls_integer;
 
@@ -31,7 +40,7 @@ procedure table_ddl
 ( p_operation in varchar2 -- The operation: usually CREATE, ALTER or DROP
 , p_table_name in user_tab_columns.table_name%type -- The table name
 , p_extra in varchar2 default null -- To add after the table name
-, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab(c_table_created_already_exists) -- SQL codes to ignore
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab(c_object_created_already_exists) -- SQL codes to ignore
 );
 /**
 Issues a p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
@@ -42,7 +51,7 @@ procedure constraint_ddl
 , p_table_name in user_constraints.table_name%type -- The table name
 , p_constraint_name in user_constraints.constraint_name%type -- The constraint name
 , p_extra in varchar2 default null -- To add after the constraint name
-, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab(c_constraint_added_already_exists) -- SQL codes to ignore
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab(c_constraint_added_already_exists, c_table_can_have_only_one_primary_key, c_referential_constraint_already_exists) -- SQL codes to ignore
 );
 /**
 Issues a 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra
@@ -65,7 +74,7 @@ procedure index_ddl
 , p_index_name in user_indexes.index_name%type -- The index name
 , p_table_name in user_indexes.table_name%type default null -- The table name
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
-, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab() -- default no SQL codes to ignore
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab(c_object_created_already_exists) -- SQL codes to ignore
 );
 /**
 Issues:
@@ -79,7 +88,7 @@ procedure trigger_ddl
 , p_trigger_extra in varchar2 default null -- The extra to add after the trigger name
 , p_table_name in user_triggers.table_name%type default null -- The table name
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
-, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab() -- default no SQL codes to ignore
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default t_ignore_sqlcode_tab(c_trigger_already_exists) -- SQL codes to ignore
 );
 /**
 Issues:
