@@ -232,6 +232,9 @@ procedure ut_ck_constraint_does_not_exist;
 --%test
 procedure ut_rename_constraint;
 
+--%test
+procedure ut_rename_index;
+
 $end
 
 end cfg_install_ddl_pkg;
