@@ -6,6 +6,7 @@ g_ddl_lock_timeout           naturaln := c_ddl_lock_timeout;
 g_dry_run                    boolean  := c_dry_run;
 g_reraise_original_exception boolean  := c_reraise_original_exception;
 g_explicit_commit            boolean  := c_explicit_commit;
+g_verbose           constant boolean  := cfg_pkg.c_testing;
 
 $if cfg_pkg.c_testing $then
 
@@ -20,7 +21,8 @@ c_test_pk_name_child constant user_objects.object_name%type := c_test_base_name_
 c_test_uk_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'uk';
 c_test_uk_name_child constant user_objects.object_name%type := c_test_base_name_child || 'uk';
 c_test_ck_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'ck';
-c_test_ck_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck';
+c_test_ck1_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck1';
+c_test_ck2_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck2';
 c_test_fk_name_child constant user_objects.object_name%type := c_test_base_name_child || 'fk';
 c_test_index_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'ind';
 c_test_index_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ind';
@@ -36,19 +38,30 @@ procedure do
 )
 is
 begin
-  if g_dry_run
+  if g_dry_run or g_verbose 
   then
     dbms_output.put_line(p_statement);
-  else
-    dbms_output.put_line(p_statement);
-    commit; -- explicit commit
+  end if;
+  if not(g_dry_run)
+  then
+    if g_explicit_commit
+    then
+      commit; -- explicit commit
+    end if;
     execute immediate 'alter session set ddl_lock_timeout = ' || g_ddl_lock_timeout;
     execute immediate p_statement;
-    commit; -- explicit commit
+    if g_explicit_commit
+    then
+      commit; -- explicit commit
+    end if;
   end if;
 exception
   when others
   then
+    if not(g_dry_run) and g_explicit_commit
+    then
+      rollback;
+    end if;
     if p_ignore_sqlcode_tab is null or not(sqlcode member of p_ignore_sqlcode_tab)
     then
       if g_reraise_original_exception
@@ -145,6 +158,7 @@ procedure constraint_ddl
 , p_table_name in user_constraints.table_name%type
 , p_constraint_name in user_constraints.constraint_name%type
 , p_constraint_type in user_constraints.constraint_type%type
+, p_column_tab in t_column_tab
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
@@ -153,27 +167,78 @@ is
 
   procedure determine_constraint_name
   is
+    l_nr_constraints_found naturaln := 0;
+    l_nr_columns_found naturaln := 0;
   begin
-    if upper(p_constraint_type) in ( 'P', 'R', 'C' )
-    then
-      null;
-    else
-      raise value_error;
-    end if;
     if instr(p_constraint_name, '%') > 0
     then
-      select  con.constraint_name
-      into    l_constraint_name
-      from    user_constraints con
-      where   con.owner = user
-      and     con.table_name in ( p_table_name, upper(p_table_name) )
-      and     ( con.constraint_name like p_constraint_name escape '\' or
-                con.constraint_name like upper(p_constraint_name) escape '\'
-              )
-      and     con.constraint_type = upper(p_constraint_type);
-    end if;    
+      if upper(p_constraint_type) in ( 'P', 'R', 'C' )
+      then
+        null;
+      else
+        raise value_error;
+      end if;
+      -- 1. Find the one and only constraint that matches the filter criteria p_table_name, p_constraint_name and p_constraint_type.
+      -- 2. But also all the constraint columns must match p_column_tab (when not null).
+      for r_con in
+      ( select  con.owner
+        ,       con.constraint_name
+        from    user_constraints con
+        where   con.owner = user
+        and     con.table_name in ( p_table_name, upper(p_table_name) )
+        and     ( con.constraint_name like p_constraint_name escape '\' or
+                  con.constraint_name like upper(p_constraint_name) escape '\'
+                )
+        and     con.constraint_type = upper(p_constraint_type)
+      )
+      loop
+        -- if g_verbose then dbms_output.put_line('r_con.constraint_name: ' || r_con.constraint_name); end if;
+        
+        -- See 2. Can probably better but this is fine.
+        if p_column_tab is not null
+        then
+          l_nr_columns_found := 0;
+          for r_cons in
+          ( select  cons.column_name
+            from    user_cons_columns cons
+            where   cons.owner = r_con.owner
+            and     cons.constraint_name = r_con.constraint_name
+          )
+          loop
+            -- if g_verbose then dbms_output.put_line('r_cons.column_name: ' || r_cons.column_name); end if;
+            
+            if r_cons.column_name member of p_column_tab
+            then
+              l_nr_columns_found := l_nr_columns_found + 1;
+            end if;
+          end loop;
+        end if;
+
+        if p_column_tab is null or l_nr_columns_found = p_column_tab.count
+        then
+          l_nr_constraints_found := l_nr_constraints_found + 1;
+          l_constraint_name := r_con.constraint_name;
+        end if;
+      end loop;
+      case l_nr_constraints_found
+        when 0
+        then raise no_data_found;
+        when 1
+        then null; -- OK
+        else raise too_many_rows;
+      end case;
+    end if;
   end determine_constraint_name;
 begin
+/*
+  if g_verbose
+  then
+    dbms_output.put_line('p_operation: ' || p_operation);
+    dbms_output.put_line('p_table_name: ' || p_table_name);
+    dbms_output.put_line('p_constraint_name: ' || p_constraint_name);
+    dbms_output.put_line('p_constraint_type: ' || p_constraint_type);
+  end if;
+*/
   case upper(p_operation)
     when 'ADD'
     then null;
@@ -216,10 +281,66 @@ procedure index_ddl
 ( p_operation in varchar2
 , p_index_name in user_indexes.index_name%type
 , p_table_name in user_indexes.table_name%type
+, p_column_tab in t_column_tab
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
+  l_index_name user_indexes.index_name%type := p_index_name;
+  l_index_name_list varchar2(32767) := null; -- used in CREATE
+
+  procedure determine_index_name
+  is
+    l_nr_indexes_found naturaln := 0;
+    l_nr_columns_found naturaln := 0;
+  begin
+    if instr(p_index_name, '%') > 0
+    then
+      -- 1. Find the one and only index that matches the filter criteria p_table_name and p_index_name.
+      -- 2. But also all the index columns must match p_column_tab (when not null and in that order).
+      for r_ind in
+      ( select  ind.index_name
+        from    user_indexes ind
+        where   ind.table_owner = user
+        and     ind.table_name in ( p_table_name, upper(p_table_name) )
+        and     ( ind.index_name like p_index_name escape '\' or
+                  ind.index_name like upper(p_index_name) escape '\'
+                )
+      )
+      loop
+        -- See 2. Can probably better but this is fine.
+        if p_column_tab is not null
+        then
+          l_nr_columns_found := 0;
+          for r_inds in
+          ( select  inds.column_name
+            ,       inds.column_position
+            from    user_ind_columns inds
+            where   inds.index_name = r_ind.index_name
+          )
+          loop
+            if p_column_tab.exists(r_inds.column_position) and r_inds.column_name = p_column_tab(r_inds.column_position)
+            then
+              l_nr_columns_found := l_nr_columns_found + 1;
+            end if;
+          end loop;
+        end if;
+
+        if p_column_tab is null or l_nr_columns_found = p_column_tab.count
+        then
+          l_nr_indexes_found := l_nr_indexes_found + 1;
+          l_index_name := r_ind.index_name;
+        end if;
+      end loop;
+      case l_nr_indexes_found
+        when 0
+        then raise no_data_found;
+        when 1
+        then null; -- OK
+        else raise too_many_rows;
+      end case;
+    end if;
+  end determine_index_name;
 begin
   if upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
   then
@@ -227,15 +348,46 @@ begin
   else
     raise value_error;
   end if;
-  do
-  ( p_statement =>
-      case 
-        when p_table_name is not null
-        then p_operation || ' INDEX ' || p_index_name || ' ON ' || p_table_name || ' ' || p_extra
-        else p_operation || ' INDEX ' || p_index_name || ' ' || p_extra          
-      end
-  , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
-  );
+  if upper(p_operation) = 'ALTER'
+  then
+    if p_table_name is not null
+    then
+      raise value_error;
+    end if;
+    
+    if instr(p_index_name, '%') > 0 and upper(p_extra) like 'RENAME TO %'
+    then
+      determine_index_name;
+    end if;
+    do
+    ( p_statement => p_operation || ' INDEX ' || l_index_name || ' ' || p_extra
+    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+    );
+  else
+    if upper(p_operation) = 'CREATE'
+    then
+      if p_table_name is null or p_column_tab is null or p_column_tab.count = 0
+      then
+        raise value_error;
+      end if;
+      
+      l_index_name_list := '(';
+      for i_idx in p_column_tab.first .. p_column_tab.last
+      loop
+        if i_idx <> p_column_tab.first
+        then
+          l_index_name_list := l_index_name_list || ',';
+        end if;
+        l_index_name_list := l_index_name_list || p_column_tab(i_idx);
+      end loop;
+      l_index_name_list := l_index_name_list || ')';
+    end if;
+    
+    do
+    ( p_statement => p_operation || ' INDEX ' || l_index_name || case when p_table_name is not null then ' ON ' || p_table_name || l_index_name_list end || ' ' || p_extra
+    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+    );  
+  end if;
 end index_ddl;    
 
 procedure trigger_ddl
@@ -297,7 +449,7 @@ begin
 )'
     , c_test_table_name_child
     , c_test_pk_name_child
-    , c_test_ck_name_child
+    , c_test_ck1_name_child
     , c_test_fk_name_child
     , c_test_table_name_parent
     , c_test_uk_name_child
@@ -326,6 +478,31 @@ begin
   , t_ignore_sqlcode_tab(c_table_does_not_exist)
   );
 end ut_done;
+
+procedure ut_drop_constraints
+( p_table_name in varchar2
+)
+is
+begin
+  for r_con in
+  ( select  con.constraint_name
+    from    user_constraints con
+    where   table_name = upper(p_table_name)
+  )
+  loop
+    begin
+      constraint_ddl
+      ( p_operation => 'DROP'
+      , p_table_name => p_table_name
+      , p_constraint_name => r_con.constraint_name
+      , p_ignore_sqlcode_tab => null
+      );
+    exception
+      when others
+      then raise program_error; -- should not come here
+    end;
+  end loop;
+end ut_drop_constraints;
 
 procedure ut_setup
 is
@@ -368,7 +545,7 @@ begin
                          when 8 then null
                        end
       , p_table_name => 'TEST'
-      , p_column_name => 'COLUMN'
+      , p_column_name => 'ABC'
       , p_extra => 'XYZ'
       );
     exception
@@ -385,7 +562,7 @@ begin
   column_ddl
   ( p_operation => 'Add'
   , p_table_name => 'test'
-  , p_column_name => 'column'
+  , p_column_name => 'abc'
   , p_extra => 'xyz '
   );
   l_nr_lines := 1000;
@@ -394,7 +571,7 @@ begin
   , numlines => l_nr_lines
   );
   ut.expect(l_nr_lines).to_equal(1);
-  ut.expect(l_lines(1)).to_equal('ALTER TABLE test Add (column xyz )');
+  ut.expect(l_lines(1)).to_equal('ALTER TABLE test Add (abc xyz )');
   reset_ddl_execution_settings;
 end ut_column_ddl;
 
@@ -427,6 +604,33 @@ is
   l_nr_lines integer := 1000;
 begin
   set_ddl_execution_settings(p_dry_run => true);
+
+  -- check parameters
+  for i_idx in 1..8
+  loop
+    begin
+      table_ddl
+      ( p_operation => case i_idx
+                         -- OK
+                         when 1 then 'create'
+                         when 2 then 'ALTER'
+                         when 3 then 'Drop'
+                         -- FAIL
+                         when 4 then 'add'
+                         when 5 then 'create or replace'
+                         when 6 then 'modify'
+                         when 7 then 'rename'
+                         when 8 then null
+                       end
+      , p_table_name => 'TEST'
+      , p_extra => 'XYZ'
+      );
+    exception
+      when value_error
+      then if i_idx >= 4 then null; else raise; end if;
+    end;
+  end loop;
+
   -- clear the output cache
   dbms_output.get_lines
   ( lines => l_lines
@@ -468,6 +672,193 @@ begin
   , p_ignore_sqlcode_tab => null
   );
 end ut_table_does_not_exist;
+
+procedure ut_constraint_ddl
+is
+  l_lines dbms_output.chararr;
+  l_nr_lines integer := 1000;
+begin
+  set_ddl_execution_settings(p_dry_run => true);
+  
+  -- check parameters
+  for i_idx in 1..8
+  loop
+    begin
+      constraint_ddl
+      ( p_operation => case i_idx
+                         -- OK
+                         when 1 then 'ADD'
+                         when 2 then 'modify'
+                         when 3 then 'rename'
+                         when 4 then 'Drop'
+                         -- FAIL
+                         when 5 then 'create'
+                         when 6 then 'create or replace'
+                         when 7 then 'alter'
+                         when 8 then null
+                       end
+      , p_table_name => 'TEST'
+      , p_constraint_name => 'ABC'
+      , p_extra => 'XYZ'
+      );
+    exception
+      when value_error
+      then if i_idx >= 5 then null; else raise_application_error(-20000, 'idx: ' || i_idx, true); end if;
+    end;
+  end loop;
+
+  -- clear the output cache
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  constraint_ddl
+  ( p_operation => 'Add'
+  , p_table_name => 'test'
+  , p_constraint_name => 'abc'
+  , p_extra => 'xyz '
+  );
+  l_nr_lines := 1000;
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  ut.expect(l_nr_lines).to_equal(1);
+  ut.expect(l_lines(1)).to_equal('ALTER TABLE test Add CONSTRAINT abc xyz ');
+  reset_ddl_execution_settings;
+end ut_constraint_ddl;
+
+procedure ut_pk_constraint_already_exists
+is
+begin
+  constraint_ddl
+  ( p_operation => 'ADD'
+  , p_table_name => c_test_table_name_parent
+  , p_constraint_name => c_test_pk_name_parent
+  , p_extra => 'PRIMARY KEY (ID)'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_pk_constraint_already_exists;
+
+procedure ut_uk_constraint_already_exists
+is
+begin
+  constraint_ddl
+  ( p_operation => 'ADD'
+  , p_table_name => c_test_table_name_parent
+  , p_constraint_name => c_test_uk_name_parent
+  , p_extra => 'UNIQUE (NAME)'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_uk_constraint_already_exists;
+
+procedure ut_fk_constraint_already_exists
+is
+begin
+  constraint_ddl
+  ( p_operation => 'ADD'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => c_test_uk_name_child
+  , p_extra => 'FOREIGN KEY (PARENT_ID) REFERENCES ' || c_test_table_name_parent || '(ID)'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_fk_constraint_already_exists;
+
+procedure ut_ck_constraint_already_exists
+is
+begin
+  constraint_ddl
+  ( p_operation => 'ADD'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => c_test_ck1_name_child
+  , p_extra => 'CHECK (NAME IS NOT NULL)'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_ck_constraint_already_exists;
+
+procedure ut_pk_constraint_does_not_exist
+is
+begin
+  ut_drop_constraints(c_test_table_name_child);
+  
+  -- this should be the second drop
+  constraint_ddl
+  ( p_operation => 'DROP'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => c_test_pk_name_child
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_pk_constraint_does_not_exist;
+
+procedure ut_uk_constraint_does_not_exist
+is
+begin
+  ut_drop_constraints(c_test_table_name_child);
+  
+  -- this should be the second drop
+  constraint_ddl
+  ( p_operation => 'DROP'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => c_test_uk_name_child
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_uk_constraint_does_not_exist;
+
+procedure ut_fk_constraint_does_not_exist
+is
+begin
+  ut_drop_constraints(c_test_table_name_child);
+  
+  -- this should be the second drop
+  constraint_ddl
+  ( p_operation => 'DROP'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => c_test_fk_name_child
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_fk_constraint_does_not_exist;
+
+procedure ut_ck_constraint_does_not_exist
+is
+begin
+  ut_drop_constraints(c_test_table_name_child);
+  
+  -- this should be the second drop
+  constraint_ddl
+  ( p_operation => 'DROP'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => c_test_ck1_name_child
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_ck_constraint_does_not_exist;
+
+procedure ut_rename_constraint
+is
+  l_lines dbms_output.chararr;
+  l_nr_lines integer := 1000;
+begin
+  -- clear the output cache
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );  
+  constraint_ddl
+  ( p_operation => 'RENAME'
+  , p_table_name => c_test_table_name_child
+  , p_constraint_name => 'sys\_%'
+  , p_constraint_type => 'C'
+  , p_extra => 'TO ' || c_test_ck2_name_child
+  , p_ignore_sqlcode_tab => null
+  );
+  l_nr_lines := 1000;
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  ut.expect(l_nr_lines).to_be_greater_or_equal(1);
+  -- 
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE test$CFG_INSTALL_DDL_PKG$child$tab RENAME CONSTRAINT SYS\_% TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
+end ut_rename_constraint;
 
 $end
 
