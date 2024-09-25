@@ -20,7 +20,9 @@ c_object_already_exists constant pls_integer := -955;
 -- *** column_ddl ***
 -- ORA-01430: column being added already exists in table
 c_column_already_exists constant pls_integer := -1430;
-c_ignore_sqlcodes_column_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_column_already_exists);
+-- ORA-00904: "NAME": invalid identifier
+c_column_does_not_exist constant pls_integer := -904;
+c_ignore_sqlcodes_column_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_column_already_exists, c_column_does_not_exist);
  
 -- *** table_ddl **
 -- ORA-00955: name is already used by an existing object
@@ -81,7 +83,7 @@ procedure column_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_column_ddl -- SQL codes to ignore
 );
 /**
-Issues a 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' ' || p_column_name || ' ' || p_extra
+Issues a 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
 **/
 
 procedure table_ddl
@@ -158,11 +160,24 @@ procedure ut_setup;
 procedure ut_teardown;
 
 --%test
+procedure ut_column_ddl;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_column_already_exists)
+procedure ut_column_already_exists;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_column_does_not_exist)
+procedure ut_column_does_not_exist;
+
+--%test
 procedure ut_table_ddl;
 
+--%test
 --%throws(cfg_install_ddl_pkg.c_table_already_exists)
 procedure ut_table_already_exists;
 
+--%test
 --%throws(cfg_install_ddl_pkg.c_table_does_not_exist)
 procedure ut_table_does_not_exist;
 
