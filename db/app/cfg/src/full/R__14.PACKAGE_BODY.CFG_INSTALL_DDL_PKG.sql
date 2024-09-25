@@ -40,6 +40,7 @@ begin
   then
     dbms_output.put_line(p_statement);
   else
+    dbms_output.put_line(p_statement);
     commit; -- explicit commit
     execute immediate 'alter session set ddl_lock_timeout = ' || g_ddl_lock_timeout;
     execute immediate p_statement;
@@ -52,6 +53,7 @@ exception
     then
       if g_reraise_original_exception
       then
+        dbms_output.put_line('Statement causing an error: ' || p_statement);
         raise;
       else
         raise_application_error(-20000, 'Statement causing an error: ' || p_statement, true);
@@ -113,7 +115,7 @@ begin
     raise value_error;
   end if;
   do
-  ( p_statement => 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' ' || p_column_name || ' ' || p_extra
+  ( p_statement => 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 end column_ddl;
@@ -341,7 +343,84 @@ begin
   reset_ddl_execution_settings;
 end ut_teardown;
 
---%test
+procedure ut_column_ddl
+is
+  l_lines dbms_output.chararr;
+  l_nr_lines integer := 1000;
+begin
+  set_ddl_execution_settings(p_dry_run => true);
+  
+  -- check parameters
+  for i_idx in 1..8
+  loop
+    begin
+      column_ddl
+      ( p_operation => case i_idx
+                         -- OK
+                         when 1 then 'ADD'
+                         when 2 then 'modify'
+                         when 3 then 'Drop'
+                         -- FAIL
+                         when 4 then 'create'
+                         when 5 then 'create or replace'
+                         when 6 then 'alter'
+                         when 7 then 'rename'
+                         when 8 then null
+                       end
+      , p_table_name => 'TEST'
+      , p_column_name => 'COLUMN'
+      , p_extra => 'XYZ'
+      );
+    exception
+      when value_error
+      then if i_idx >= 4 then null; else raise; end if;
+    end;
+  end loop;
+
+  -- clear the output cache
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  column_ddl
+  ( p_operation => 'Add'
+  , p_table_name => 'test'
+  , p_column_name => 'column'
+  , p_extra => 'xyz '
+  );
+  l_nr_lines := 1000;
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  ut.expect(l_nr_lines).to_equal(1);
+  ut.expect(l_lines(1)).to_equal('ALTER TABLE test Add (column xyz )');
+  reset_ddl_execution_settings;
+end ut_column_ddl;
+
+procedure ut_column_already_exists
+is
+begin
+  column_ddl
+  ( p_operation => 'Add'
+  , p_table_name => c_test_table_name_parent
+  , p_column_name => 'ID'
+  , p_extra => 'number'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_column_already_exists;
+
+procedure ut_column_does_not_exist
+is
+begin
+  column_ddl
+  ( p_operation => 'drop'
+  , p_table_name => c_test_table_name_child
+  , p_column_name => 'xyz'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_column_does_not_exist;
+
 procedure ut_table_ddl
 is
   l_lines dbms_output.chararr;
@@ -368,24 +447,26 @@ begin
   reset_ddl_execution_settings;
 end ut_table_ddl;
 
---%throws(cfg_install_ddl_pkg.c_table_already_exists)
 procedure ut_table_already_exists
 is
 begin
-  ut_init; -- twice
+  table_ddl
+  ( p_operation => 'CREATE'
+  , p_table_name => c_test_table_name_parent
+  , p_extra => '( id number )'
+  , p_ignore_sqlcode_tab => null
+  );
 end ut_table_already_exists;
 
---%throws(cfg_install_ddl_pkg.c_table_does_not_exist)
 procedure ut_table_does_not_exist
 is
 begin
-  begin
-    ut_done;
-  exception
-    when others
-    then raise program_error;
-  end;
-  ut_done;
+  table_ddl
+  ( p_operation => 'DROP'
+  , p_table_name => c_test_table_name_child || 'XYZ'
+  , p_extra => 'purge'
+  , p_ignore_sqlcode_tab => null
+  );
 end ut_table_does_not_exist;
 
 $end
