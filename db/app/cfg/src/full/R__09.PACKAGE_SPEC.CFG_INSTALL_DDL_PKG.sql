@@ -11,7 +11,8 @@ c_dry_run                    constant boolean  := false; -- must commands be exe
 c_reraise_original_exception constant boolean  := true; -- raise original exception or use raise_application_error(-20000, ..., true)
 c_explicit_commit            constant boolean  := true; -- explicit commit before and after statements?
 
-type t_ignore_sqlcode_tab is table of pls_integer;
+type t_ignore_sqlcode_tab is table of pls_integer; -- must be a nested table
+type t_column_tab is table of all_tab_columns.column_name%type; -- must be a nested table
 
 -- *** generic ***
 -- ORA-00955: name is already used by an existing object
@@ -32,15 +33,25 @@ c_table_does_not_exist constant pls_integer := -942;
 c_ignore_sqlcodes_table_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_table_already_exists, c_table_does_not_exist);
 
 -- *** constraint_ddl ***
+-- ORA-02261: such unique or primary key already exists in the table
+c_unique_key_already_exists constant pls_integer := -2261;
 -- ORA-02264: name already used by an existing constraint
-c_constraint_already_exists constant pls_integer := -2264;
+c_check_already_exists constant pls_integer := -2264;
 -- ORA-02260: table can have only one primary key
 c_primary_key_already_exists constant pls_integer := -2260;
 -- ORA-02275: such a referential constraint already exists in the table
 c_foreign_key_already_exists constant pls_integer := -2275;
--- ORA-23292: The constraint does not exist
-c_constraint_does_not_exist constant pls_integer := -23292;
-c_ignore_sqlcodes_constraint_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_constraint_already_exists, c_primary_key_already_exists, c_foreign_key_already_exists, c_constraint_does_not_exist);
+-- ORA-02443: Cannot drop constraint  - nonexistent constraint
+c_constraint_does_not_exist constant pls_integer := -2443;
+
+c_ignore_sqlcodes_constraint_ddl constant t_ignore_sqlcode_tab :=
+  t_ignore_sqlcode_tab
+  ( c_unique_key_already_exists
+  , c_check_already_exists
+  , c_primary_key_already_exists
+  , c_foreign_key_already_exists
+  , c_constraint_does_not_exist
+  );
 
 -- *** comment_ddl ***
 c_ignore_sqlcodes_comment_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(); -- there are no SQL codes to ignore
@@ -101,6 +112,7 @@ procedure constraint_ddl
 , p_table_name in user_constraints.table_name%type -- The table name
 , p_constraint_name in user_constraints.constraint_name%type -- The constraint name
 , p_constraint_type in user_constraints.constraint_type%type default null -- The constraint type (used when you RENAME or DROP a constraint containing the wildcard %)
+, p_column_tab in t_column_tab default null -- The column names to check for (used when you RENAME or DROP a constraint containing the wildcard %)
 , p_extra in varchar2 default null -- To add after the constraint name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
 );
@@ -124,6 +136,7 @@ procedure index_ddl
 ( p_operation in varchar2 -- Usually CREATE, ALTER or DROP
 , p_index_name in user_indexes.index_name%type -- The index name
 , p_table_name in user_indexes.table_name%type default null -- The table name
+, p_column_tab in t_column_tab default null -- The column names of the index (in that order). May be used when for operation CREATE or ALTER with a RENAME with index_name containing the wildcard %.
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_index_ddl -- SQL codes to ignore
 );
@@ -144,7 +157,7 @@ procedure trigger_ddl
 /**
 Issues:
 a. p_table_name is not null: p_operation || ' TRIGGER ' || p_trigger_name || ' ' || p_trigger_extra || ' ON ' || p_table_name || chr(10) || p_extra
-b. p_table_name is null: p_operation || ' TRIGGER ' || p_trigger_name || ' ' || p_trigger_extra
+c. p_table_name is null: p_operation || ' TRIGGER ' || p_trigger_name || ' ' || p_trigger_extra
 **/
 
 $if cfg_pkg.c_testing $then
@@ -180,6 +193,44 @@ procedure ut_table_already_exists;
 --%test
 --%throws(cfg_install_ddl_pkg.c_table_does_not_exist)
 procedure ut_table_does_not_exist;
+
+--%test
+procedure ut_constraint_ddl;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_primary_key_already_exists)
+procedure ut_pk_constraint_already_exists;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_unique_key_already_exists)
+procedure ut_uk_constraint_already_exists;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_foreign_key_already_exists)
+procedure ut_fk_constraint_already_exists;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_check_already_exists)
+procedure ut_ck_constraint_already_exists;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_constraint_does_not_exist)
+procedure ut_pk_constraint_does_not_exist;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_constraint_does_not_exist)
+procedure ut_uk_constraint_does_not_exist;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_constraint_does_not_exist)
+procedure ut_fk_constraint_does_not_exist;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_constraint_does_not_exist)
+procedure ut_ck_constraint_does_not_exist;
+
+--%test
+procedure ut_rename_constraint;
 
 $end
 
