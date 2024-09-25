@@ -6,9 +6,10 @@ This package defines functions and procedures used by Flyway increments (or more
 **/
 
 -- *** ddl_execution_settings ***
-c_ddl_lock_timeout constant naturaln := 60; -- alter session set ddl_lock_timeout = p_ddl_lock_timeout;
-c_dry_run constant boolean := false; -- Must commands be execute or just shown via dbms_output?
-
+c_ddl_lock_timeout           constant naturaln := 60; -- alter session set ddl_lock_timeout = p_ddl_lock_timeout;
+c_dry_run                    constant boolean  := false; -- must commands be executed or just shown via dbms_output?
+c_reraise_original_exception constant boolean  := true; -- raise original exception or use raise_application_error(-20000, ..., true)
+c_explicit_commit            constant boolean  := true; -- explicit commit before and after statements?
 
 type t_ignore_sqlcode_tab is table of pls_integer;
 
@@ -56,13 +57,21 @@ c_trigger_already_exists constant pls_integer := -4081;
 c_trigger_does_not_exist constant pls_integer := -4080;
 c_ignore_sqlcodes_trigger_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_trigger_already_exists, c_trigger_does_not_exist);
 
-procedure ddl_execution_settings
-( p_ddl_lock_timeout in pls_integer default 60 -- alter session set ddl_lock_timeout = p_ddl_lock_timeout;
-, p_dry_run in boolean default false -- Must commands be execute or just shown via dbms_output?
+procedure set_ddl_execution_settings
+( p_ddl_lock_timeout in natural default null -- alter session set ddl_lock_timeout = p_ddl_lock_timeout;
+, p_dry_run in boolean default null -- must commands be executed or just shown via dbms_output?
+, p_reraise_original_exception in boolean default null -- raise original exception or use raise_application_error(-20000, ..., true)
+, p_explicit_commit in boolean default null -- explicit commit before and after statements?
 );
 /**
-Change DDL execution settings.
+Change DDL execution settings that are stored for this session.
+
+When a parameter is null, the corresponding cached variable is not set (i.e. not changed).
+So this procedure can be used to change 0, 1, 2, 3 or 4 parameters.
 **/
+
+procedure reset_ddl_execution_settings;
+/** Reset to the default values, i.e. c_ddl_lock_timeout, c_dry_run, c_reraise_original_exception, c_explicit_commit. **/
 
 procedure column_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY or DROP
@@ -140,15 +149,22 @@ $if cfg_pkg.c_testing $then
 
 --%suitepath(CFG)
 --%suite
+--%rollback(manual)
 
---%beforeall
+--%beforeeach
 procedure ut_setup;
 
---%afterall
+--%aftereach
 procedure ut_teardown;
 
 --%test
 procedure ut_table_ddl;
+
+--%throws(cfg_install_ddl_pkg.c_table_already_exists)
+procedure ut_table_already_exists;
+
+--%throws(cfg_install_ddl_pkg.c_table_does_not_exist)
+procedure ut_table_does_not_exist;
 
 $end
 
