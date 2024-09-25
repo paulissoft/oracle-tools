@@ -19,7 +19,7 @@ c_test_table_name_child constant user_objects.object_name%type := c_test_base_na
 c_test_pk_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'pk';
 c_test_pk_name_child constant user_objects.object_name%type := c_test_base_name_child || 'pk';
 c_test_uk_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'uk';
-c_test_uk_name_child constant user_objects.object_name%type := c_test_base_name_child || 'uk';
+-- uk for child is unnamed (i.e. like SYS\_%)
 c_test_ck_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'ck';
 c_test_ck1_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck1';
 c_test_ck2_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck2';
@@ -296,6 +296,11 @@ is
   begin
     if instr(p_index_name, '%') > 0
     then
+      if p_table_name is null
+      then
+        raise value_error;
+      end if;    
+    
       -- 1. Find the one and only index that matches the filter criteria p_table_name and p_index_name.
       -- 2. But also all the index columns must match p_column_tab (when not null and in that order).
       for r_ind in
@@ -350,11 +355,6 @@ begin
   end if;
   if upper(p_operation) = 'ALTER'
   then
-    if p_table_name is not null
-    then
-      raise value_error;
-    end if;
-    
     if instr(p_index_name, '%') > 0 and upper(p_extra) like 'RENAME TO %'
     then
       determine_index_name;
@@ -445,14 +445,13 @@ begin
 , name varchar2(30) constraint %s not null
 , parent_id number not null
 , constraint %s foreign key(parent_id) references %s(id)
-, constraint %s unique(name)
+, unique(name)
 )'
     , c_test_table_name_child
     , c_test_pk_name_child
     , c_test_ck1_name_child
     , c_test_fk_name_child
     , c_test_table_name_parent
-    , c_test_uk_name_child
     )
   );
 end ut_init;
@@ -481,6 +480,7 @@ end ut_done;
 
 procedure ut_drop_constraints
 ( p_table_name in varchar2
+, p_constraint_name in varchar2 default null
 )
 is
 begin
@@ -488,6 +488,7 @@ begin
   ( select  con.constraint_name
     from    user_constraints con
     where   table_name = upper(p_table_name)
+    and     ( p_constraint_name is null or con.constraint_name in ( p_constraint_name, upper(p_constraint_name) ) )
   )
   loop
     begin
@@ -758,7 +759,7 @@ begin
   constraint_ddl
   ( p_operation => 'ADD'
   , p_table_name => c_test_table_name_child
-  , p_constraint_name => c_test_uk_name_child
+  , p_constraint_name => c_test_fk_name_child
   , p_extra => 'FOREIGN KEY (PARENT_ID) REFERENCES ' || c_test_table_name_parent || '(ID)'
   , p_ignore_sqlcode_tab => null
   );
@@ -793,13 +794,13 @@ end ut_pk_constraint_does_not_exist;
 procedure ut_uk_constraint_does_not_exist
 is
 begin
-  ut_drop_constraints(c_test_table_name_child);
+  ut_drop_constraints(c_test_table_name_parent, c_test_uk_name_parent);
   
   -- this should be the second drop
   constraint_ddl
   ( p_operation => 'DROP'
-  , p_table_name => c_test_table_name_child
-  , p_constraint_name => c_test_uk_name_child
+  , p_table_name => c_test_table_name_parent
+  , p_constraint_name => c_test_uk_name_parent
   , p_ignore_sqlcode_tab => null
   );
 end ut_uk_constraint_does_not_exist;
@@ -859,6 +860,34 @@ begin
   -- 
   ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE test$CFG_INSTALL_DDL_PKG$child$tab RENAME CONSTRAINT SYS\_% TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
 end ut_rename_constraint;
+
+procedure ut_rename_index
+is
+  l_lines dbms_output.chararr;
+  l_nr_lines integer := 1000;
+begin
+  -- clear the output cache
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );  
+  index_ddl
+  ( p_operation => 'ALTER'
+  , p_table_name => c_test_table_name_child
+  , p_index_name => 'sys\_%'
+  , p_column_tab => t_column_tab('NAME')
+  , p_extra => 'RENAME TO XYZ'
+  , p_ignore_sqlcode_tab => null
+  );
+  l_nr_lines := 1000;
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  ut.expect(l_nr_lines).to_be_greater_or_equal(1);
+  -- 
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER INDEX SYS\_% RENAME TO XYZ', '\');
+end ut_rename_index;
 
 $end
 
