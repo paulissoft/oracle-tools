@@ -500,6 +500,8 @@ public abstract class SmartPoolDataSource<T extends SimplePoolDataSource>
                 // switch pools (just once) when the connection fails due to no idle connections 
                 if ((useOverflow || poolDataSourceOverflow != null) &&
                     getConnectionFailsDueToNoIdleConnections(ex)) {
+                    log.info("{} pool has no idle connections: trying to get a connection from the other pool (error: {})",
+                             (useOverflow ? "Overflow" : "Standard"), ex.getMessage());
                     conn = getConnection(!useOverflow, poolDataSource, poolDataSourceOverflow);
                 } else {
                     throw ex;

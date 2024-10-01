@@ -1,0 +1,161 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "maven@latest": {
+      "last_modified": "2024-09-10T15:01:03Z",
+      "resolved": "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#maven",
+      "source": "devbox-search",
+      "version": "3.9.8",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/fykyp125710ksn9f7sj6m0li4wl5mxin-maven-3.9.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/fykyp125710ksn9f7sj6m0li4wl5mxin-maven-3.9.8"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/igc1nxyridgx8b82nm2kvs5qw8l3gqm5-maven-3.9.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/igc1nxyridgx8b82nm2kvs5qw8l3gqm5-maven-3.9.8"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/w1l66ds97552b2ln8hfdzs0p382xk51g-maven-3.9.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/w1l66ds97552b2ln8hfdzs0p382xk51g-maven-3.9.8"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/6y2p26qfy6qqzrl0wjvdz0hdc6lyl5jy-maven-3.9.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/6y2p26qfy6qqzrl0wjvdz0hdc6lyl5jy-maven-3.9.8"
+        }
+      }
+    },
+    "openjdk@latest": {
+      "last_modified": "2023-02-24T09:01:09Z",
+      "resolved": "github:NixOS/nixpkgs/7d0ed7f2e5aea07ab22ccb338d27fbe347ed2f11#openjdk",
+      "source": "devbox-search",
+      "version": "19.0.1+10"
+    },
+    "perl@latest": {
+      "last_modified": "2024-09-10T15:01:03Z",
+      "resolved": "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#perl",
+      "source": "devbox-search",
+      "version": "5.38.2",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/hq4l4dpxln0n9kb4lah102bdvpdm2a5n-perl-5.38.2",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/dc3wh1wqlq9gnkwkxs6ki1imqpvg39ji-perl-5.38.2-man",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/4h2bj4qw8kaf7z02pcnf3vywa2mab3qh-perl-5.38.2-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/hq4l4dpxln0n9kb4lah102bdvpdm2a5n-perl-5.38.2"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/71dxajciymxkig3hr2wyc41nw2ypx9xg-perl-5.38.2",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/dwjk74i0bbi7g0ibm3lf6i9rkh8fsgh4-perl-5.38.2-man",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/dq80hk0glcxacpf5qakxwvgw0bsdgd5k-perl-5.38.2-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/71dxajciymxkig3hr2wyc41nw2ypx9xg-perl-5.38.2"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/kds6a5pz2qgsncdbci532hhvd56xym1m-perl-5.38.2",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/ygc9n4p9ckrmpr0k8wvfz44zwg9v1rwj-perl-5.38.2-man",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/insvmgiv9k01ybbi9w120zjipva6xai1-perl-5.38.2-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/kds6a5pz2qgsncdbci532hhvd56xym1m-perl-5.38.2"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ww69rb7srifikvilg39q4v8n9h1zcssf-perl-5.38.2",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/d75vxd12xz55z9zmg9w2ifz9b8yw6ncx-perl-5.38.2-man",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/kmz78jkfkcx6idysviwzsax73lh2i2ds-perl-5.38.2-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/ww69rb7srifikvilg39q4v8n9h1zcssf-perl-5.38.2"
+        }
+      }
+    },
+    "sqlcl@latest": {
+      "last_modified": "2024-09-10T15:01:03Z",
+      "resolved": "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#sqlcl",
+      "source": "devbox-search",
+      "version": "24.2.0.180.1721",
+      "systems": {
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/8r6fq4776bkryxh0yicqai0mhcv5bnhd-sqlcl-24.2.0.180.1721",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/8r6fq4776bkryxh0yicqai0mhcv5bnhd-sqlcl-24.2.0.180.1721"
+        }
+      }
+    }
+  }
+}
