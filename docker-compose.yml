@@ -1,0 +1,7 @@
+services:
+  pato:
+    container_name: pato
+    image: pato:latest
+    platform: ${PLATFORM:-linux/amd64}
+    build:
+      context: .

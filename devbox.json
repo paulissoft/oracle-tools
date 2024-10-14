@@ -6,8 +6,9 @@
       "version":            "latest",
       "excluded_platforms": ["aarch64-darwin"]
     },
-    "perl":    "latest",
-    "openjdk": "latest"
+    "perl":           "latest",
+    "podman":         "latest",
+    "podman-compose": "latest"
   },
   "shell": {
     "init_hook": [

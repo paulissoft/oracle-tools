@@ -1,0 +1,110 @@
+.git/
+**/*~
+**/target
+**/*.bak
+**/*.log
+**/.flattened-pom.xml
+**/*.tmp
+**/jenkins/.initrd
+**/node_modules/
+**/\.DS_Store
+**/docker/\.env
+**/apex/src/scripts/f138/*
+**/java/.project
+**/java/.settings/org.eclipse.core.resources.prefs
+**/java/.settings/org.eclipse.m2e.core.prefs
+**/java/smart-pool-data-source/.settings/org.springframework.ide.eclipse.prefs
+**/java/smart-pool-data-source/.settings/org.eclipse.m2e.core.prefs
+**/java/smart-pool-data-source/.settings/org.eclipse.jdt.core.prefs
+**/java/smart-pool-data-source/.settings/org.eclipse.jdt.apt.core.prefs
+**/java/smart-pool-data-source/.settings/org.eclipse.core.resources.prefs
+**/java/smart-pool-data-source/.project
+**/java/smart-pool-data-source/.factorypath
+**/java/smart-pool-data-source/.classpath
+**/*.pkb
+**/*.pks
+**/jdbc/smart-pool-data-source-jmh/*results.txt
+**/*.auto.tfvars
+**/*.hcl
+**/\.terraform/
+**/\.terraform.*
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/cloud/terraform/backend.tf
+**/cloud/pulumi/
+
+# From db/app/admin/src/callbacks/.gitignore
+!db/app/admin/src/callbacks/**/.gitignore
+# From db/app/admin/src/dml/.gitignore
+!db/app/admin/src/dml/**/.gitignore
+# From db/app/admin/src/incr/.gitignore
+!db/app/admin/src/incr/**/.gitignore
+# From db/app/api/src/dml/.gitignore
+!db/app/api/src/dml/**/.gitignore
+# From db/app/api/src/incr/.gitignore
+!db/app/api/src/incr/**/.gitignore
+# From db/app/cfg/src/dml/.gitignore
+!db/app/cfg/src/dml/**/.gitignore
+# From db/app/cfg/src/incr/.gitignore
+!db/app/cfg/src/incr/**/.gitignore
+# From db/app/data/src/dml/.gitignore
+!db/app/data/src/dml/**/.gitignore
+# From db/app/data/src/incr/.gitignore
+!db/app/data/src/incr/**/.gitignore
+# From db/app/ddl/src/dml/.gitignore
+!db/app/ddl/src/dml/**/.gitignore
+
+# From db/app/ext/src/dml/.gitignore
+!db/app/ext/src/dml/**/.gitignore
+# From db/app/ext/src/incr/.gitignore
+!db/app/ext/src/incr/**/.gitignore
+# From db/app/msg/src/dml/.gitignore
+!db/app/msg/src/dml/**/.gitignore
+# From db/app/ui/src/dml/.gitignore
+!db/app/ui/src/dml/**/.gitignore
+# From db/app/ui/src/incr/.gitignore
+!db/app/ui/src/incr/**/.gitignore
+# From docs/.gitignore
+docs/**/_site
+docs/**/.sass-cache
+docs/**/.jekyll-cache
+docs/**/.jekyll-metadata
+docs/**/vendor
+
+# From docs/docs/plsql/admin/.gitignore
+# *.md
+!docs/docs/plsql/admin/**/index.md
+
+# From docs/docs/plsql/api/.gitignore
+# *.md
+!docs/docs/plsql/api/**/index.md
+
+# From docs/docs/plsql/cfg/.gitignore
+# *.md
+!docs/docs/plsql/cfg/**/index.md
+
+# From docs/docs/plsql/data/.gitignore
+# *.md
+!docs/docs/plsql/data/**/index.md
+
+# From docs/docs/plsql/ddl/.gitignore
+# *.md
+!docs/docs/plsql/ddl/**/index.md
+
+# From docs/docs/plsql/ext/.gitignore
+# *.md
+!docs/docs/plsql/ext/**/index.md
+
+# From docs/docs/plsql/msg/.gitignore
+# *.md
+!docs/docs/plsql/msg/**/index.md
+
+# From docs/docs/plsql/ui/.gitignore
+# *.md
+!docs/docs/plsql/ui/**/index.md
+
+# From jdbc/.idea/.gitignore
+# Default ignored files
+jdbc/.idea/shelf/
+jdbc/.idea/workspace.xml
+
