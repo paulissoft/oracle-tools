@@ -25,9 +25,9 @@ COPY --chown=${DEVBOX_USER}:${DEVBOX_USER} devbox.json devbox.lock ./
 RUN devbox run -- echo "Installed Packages."
 
 # Copy all the run time dependencies of python into /tmp/nix-store-closure.
-RUN packages=$(devbox list -q | sed -r 's/..(.*)/\1/' | cut -d '@' -f 1 | sed 's/maven/mvn/') && \
+RUN packages=$(devbox list -q | cut -d '#' -f 2 | sed 's/maven/mvn/') && \
 		echo "packages: ${packages}" && \
-		installed_packages=$(echo ${packages} | xargs devbox run -- type | awk '{print $3}') && \
+		installed_packages=$(echo ${packages} | xargs devbox run -- type 2>/dev/null | awk '{print $3}') && \
 		echo "installed_packages: ${installed_packages}" && \
 		deps=$(nix-store -qR ${installed_packages}) && \
 		echo "Output references (Runtime dependencies): $deps" && \

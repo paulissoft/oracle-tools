@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.2/.schema/devbox.schema.json",
   "packages": {
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#maven": "",
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#sqlcl": {
+    "github:NixOS/nixpkgs/nixos-24.05#maven": "",
+    "github:NixOS/nixpkgs/nixos-24.05#sqlcl": {
       "excluded_platforms": ["aarch64-darwin"]
     },
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#perl":           "",
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#podman":         "",
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#podman-compose": ""
+    "github:NixOS/nixpkgs/nixos-24.05#podman":         "",
+    "github:NixOS/nixpkgs/nixos-24.05#podman-compose": "",
+    "github:NixOS/nixpkgs/nixos-24.05#perl":                                        ""
   },
   "shell": {
     "init_hook": [
