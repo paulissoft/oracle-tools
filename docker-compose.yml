@@ -5,3 +5,7 @@ services:
     platform: ${PLATFORM:-linux/amd64}
     build:
       context: .
+    command: mvn -h
+    volumes:
+      - ${TNS_ADMIN}:/opt/oracle/network/admin:ro
+      - ${HOME}/.m2:/home/pato/.m2
