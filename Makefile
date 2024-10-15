@@ -69,8 +69,8 @@ tag: ## Tag the package on GitHub.
 docker-build: ## Do a Docker build
 	@$(DOCKER_BUILD) $(DOCKER_BUILD_OPTIONS)
 
-docker-run: docker-stop docker-build ## Start the container
+docker-run: docker-stop # docker-build ## Start the container
 	@$(DOCKER_COMPOSE) run pato $(MVN_CMD)
 
 docker-stop:
-	@$(DOCKER_COMPOSE) down 
+	-@$(DOCKER_COMPOSE) down 
