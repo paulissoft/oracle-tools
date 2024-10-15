@@ -108,3 +108,7 @@ docs/**/vendor
 jdbc/.idea/shelf/
 jdbc/.idea/workspace.xml
 
+**/Makefile
+**/Dockerfile
+**/.dockerignore
+**/docker-compose.yml
