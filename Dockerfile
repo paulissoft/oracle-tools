@@ -2,10 +2,10 @@
 #
 # 	command: mvn -f <POM file relative to project folder> ...
 # 	volumes:
-# 	- $TNS_ADMIN:/opt/oracle/network/admin:ro
-# 	- ${HOME:-${USERPROFILE}}/.m2:/home/pato/.m2:wr
+# 	- ${TNS_ADMIN}:/opt/oracle/network/admin:ro
+# 	- ${HOME}/.m2:/home/pato/.m2
 # 	- <your db conf folder (pato-gui --db-config-dir)>:/mnt/db-config:ro
-# 	- <your project folder (pato-gui --project-dir)>:/mnt/project:wr
+# 	- <your project folder (pato-gui --project-dir)>:/mnt/project
 # 	- [ <your oracle-tools project folder (pato-gui --oracle-tools-dir)>:/mnt/oracle-tools:ro ]
 # 
 
@@ -27,11 +27,12 @@ WORKDIR ${TNS_ADMIN}
 
 # Installing your devbox project
 USER root:root
-WORKDIR /mnt/project
-WORKDIR /app/db-config
+WORKDIR /mnt
+WORKDIR /app/conf
 WORKDIR /app
-RUN ln -s /app/db-config /mnt && \
-		ln -s /app /mnt/oracle-tools && \
+RUN ln -s /app/conf /mnt/db-config && \
+		ln -s /app      /mnt/oracle-tools && \
+		ln -s /app      /mnt/project && \
 		chown ${DEVBOX_USER}:${DEVBOX_USER} /app
 USER ${DEVBOX_USER}:${DEVBOX_USER}
 COPY --chown=${DEVBOX_USER}:${DEVBOX_USER} devbox.json devbox.lock ./
@@ -81,11 +82,13 @@ COPY --from=base /mnt /mnt
 ENV PATH=/app/.devbox/nix/profile/default/bin:${PATH}
 
 # Only copy sources necessary for Maven builds
-COPY pom.xml .
+COPY pom.xml ./
 # pato-gui --db-config-dir parameter
-COPY conf ./db-confif
+COPY conf ./conf
 COPY db ./db
 COPY apex ./apex
 COPY .mvn ./.mvn
+
+WORKDIR /mnt/project
 
 CMD ["/bin/sh"]
