@@ -9,12 +9,13 @@ This document explains how DDL is generated using the DDL API.
    1. [Ant target *generate-ddl-full-scripts*](#ant-target-generate-ddl-full-scripts)
       1. [Examples of (temporary) scripts](#examples-of-temporary-scripts)
       2. [`oracle-tools/db/src/scripts/GenerateDDL.java`](#oracle-toolsdbsrcscriptsgenerateddljava)
-         1. [*oracle_tools.pkg_ddl_util.display_ddl_schema*](#oracle_toolspkg_ddl_utildisplay_ddl_schema)
-            1. [*oracle_tools.pkg_schema_object_filter.get_schema_objects*](#oracle_toolspkg_schema_object_filterget_schema_objects)
-            2. [*oracle_tools.pkg_ddl_util.get_schema_ddl*](#oracle_toolspkg_ddl_utilget_schema_ddl)
-            3. [*oracle_tools.pkg_ddl_util.sort_objects_by_deps*](#oracle_toolspkg_ddl_utilsort_objects_by_deps)
       3. [`oracle-tools/db/src/scripts/generate_ddl.pl`](#oracle-toolsdbsrcscriptsgenerate_ddlpl)
    2. [Ant target *generate-ddl-full-uninstall*](#ant-target-generate-ddl-full-uninstall)
+3. [Oracle packages](#oracle-packages) 
+   1. [*oracle_tools.pkg_ddl_util.display_ddl_schema*](#oracle_toolspkg_ddl_utildisplay_ddl_schema)
+      1. [*oracle_tools.pkg_schema_object_filter.get_schema_objects*](#oracle_toolspkg_schema_object_filterget_schema_objects)
+      2. [*oracle_tools.pkg_ddl_util.get_schema_ddl*](#oracle_toolspkg_ddl_utilget_schema_ddl)
+      3. [*oracle_tools.pkg_ddl_util.sort_objects_by_deps*](#oracle_toolspkg_ddl_utilsort_objects_by_deps)
 3. [Oracle object types](#oracle-object-types)
    1. [oracle_tools.t_schema_ddl_tab](#oracle_toolst_schema_ddl_tab)
    2. [oracle_tools.t_schema_ddl](#oracle_toolst_schema_ddl)
@@ -129,7 +130,13 @@ CREATE OR REPLACE EDITIONABLE FUNCTION "BC_LP"."BLOB_TO_BASE64" (P_BLOB BLOB) RE
 
 Invokes Oracle package *oracle_tools.p_generate_ddl* that in turn invokes *oracle_tools.pkg_ddl_util.display_ddl_schema*.
 
-##### *oracle_tools.pkg_ddl_util.display_ddl_schema*
+#### `oracle-tools/db/src/scripts/generate_ddl.pl`
+
+### Ant target *generate-ddl-full-uninstall*
+
+## Oracle packages
+
+### *oracle_tools.pkg_ddl_util.display_ddl_schema*
 
 Returns: [oracle_tools.t_schema_ddl_tab](#oracle_toolst_schema_ddl_tab)
 
@@ -138,7 +145,7 @@ Invokes:
 2. *oracle_tools.pkg_ddl_util.get_schema_ddl*
 3. *oracle_tools.pkg_ddl_util.sort_objects_by_deps*
 
-###### *oracle_tools.pkg_schema_object_filter.get_schema_objects*
+#### *oracle_tools.pkg_schema_object_filter.get_schema_objects*
 
 Returns: [oracle_tools.t_schema_object_tab](#oracle_toolst_schema_object_tab)
 
@@ -146,15 +153,11 @@ Returns: [oracle_tools.t_schema_object_tab](#oracle_toolst_schema_object_tab)
 create or replace type              t_schema_object_tab as table of oracle_tools.t_schema_object
 ```
 
-###### *oracle_tools.pkg_ddl_util.get_schema_ddl*
+#### *oracle_tools.pkg_ddl_util.get_schema_ddl*
 
 Returns: [oracle_tools.t_schema_ddl_tab](#oracle_toolst_schema_ddl_tab)
 
-###### *oracle_tools.pkg_ddl_util.sort_objects_by_deps*
-
-#### `oracle-tools/db/src/scripts/generate_ddl.pl`
-
-### Ant target *generate-ddl-full-uninstall*
+#### *oracle_tools.pkg_ddl_util.sort_objects_by_deps*
 
 ## Oracle object types
 
