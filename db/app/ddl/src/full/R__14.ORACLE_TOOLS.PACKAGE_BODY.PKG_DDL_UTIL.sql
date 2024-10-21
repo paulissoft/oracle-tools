@@ -43,7 +43,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
   c_euro_sign constant varchar2(1 char) := '€';
 
-  c_dbms_metadata_set_count constant pls_integer := 100;
+  c_dbms_metadata_set_count_small_ddl constant pls_integer := 100;
+  c_dbms_metadata_set_count_large_ddl constant pls_integer := 10;
 
   -- ORA-01795: maximum number of expressions in a list is 1000
   c_max_object_name_tab_count constant integer := 1000;
@@ -56,7 +57,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   g_package_prefix constant t_module := g_package || '.';
 
-  g_max_fetch constant simple_integer := 10000;
+  g_max_fetch constant simple_integer := 100;
 
   function get_object_no_dependencies_tab
   return t_object_natural_tab;
@@ -2188,7 +2189,13 @@ $end
     dbms_metadata.set_parse_item(handle => p_handle, name => 'BASE_OBJECT_SCHEMA');
     dbms_metadata.set_parse_item(handle => p_handle, name => 'GRANTEE');
 
-    dbms_metadata.set_count(handle => p_handle, value => c_dbms_metadata_set_count);
+    dbms_metadata.set_count
+    ( handle => p_handle
+    , value => case
+                 when p_object_type in ('PROCEDURE', 'FUNCTION', 'VIEW', 'PACKAGE_SPEC', 'PACKAGE_BODY', 'TYPE_SPEC', 'TYPE_BODY', 'MATERIALIZED_VIEW')
+                 then c_dbms_metadata_set_count_large_ddl
+                 else c_dbms_metadata_set_count_small_ddl
+               end);
 
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.leave;
@@ -2204,7 +2211,6 @@ $end
   procedure md_fetch_ddl
   ( p_handle in number
   , p_split_grant_statement in boolean
-  , p_ddl_tab out nocopy sys.ku$_ddls
   )
   is
     l_line_tab dbms_sql.varchar2a;
@@ -2219,18 +2225,18 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
 $end
 
     begin
-      p_ddl_tab := dbms_metadata.fetch_ddl(handle => p_handle);
+      g_ddl_tab := dbms_metadata.fetch_ddl(handle => p_handle);
 
-      if p_ddl_tab is not null and p_ddl_tab.count > 0
+      if g_ddl_tab is not null and g_ddl_tab.count > 0
       then
         -- GRANT DELETE, INSERT, SELECT, UPDATE, REFERENCES, ON COMMIT REFRESH, QUERY REWRITE, DEBUG, FLASHBACK ...
-        l_ddl_tab_last := p_ddl_tab.last; -- the collection may expand so just store the last entry
+        l_ddl_tab_last := g_ddl_tab.last; -- the collection may expand so just store the last entry
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-        dbug.print(dbug."info", 'p_ddl_tab.first: %s; l_ddl_tab_last: %s', p_ddl_tab.first, l_ddl_tab_last);
+        dbug.print(dbug."info", 'g_ddl_tab.first: %s; l_ddl_tab_last: %s', g_ddl_tab.first, l_ddl_tab_last);
 $end
-        for i_ku$ddls_idx in p_ddl_tab.first .. l_ddl_tab_last
+        for i_ku$ddls_idx in g_ddl_tab.first .. l_ddl_tab_last
         loop
-          l_statement := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => p_ddl_tab(i_ku$ddls_idx).ddlText, p_offset => 1, p_amount => 4000);
+          l_statement := oracle_tools.pkg_str_util.dbms_lob_substr(p_clob => g_ddl_tab(i_ku$ddls_idx).ddlText, p_offset => 1, p_amount => 4000);
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
           dbug.print
           ( dbug."info"
@@ -2258,8 +2264,8 @@ $end
             if l_line_tab.count > 0
             then
               -- free and nullify the ddlText so a copy will not create a new temporary on the fly
-              dbms_lob.freetemporary(p_ddl_tab(i_ku$ddls_idx).ddlText);
-              p_ddl_tab(i_ku$ddls_idx).ddlText := null;
+              dbms_lob.freetemporary(g_ddl_tab(i_ku$ddls_idx).ddlText);
+              g_ddl_tab(i_ku$ddls_idx).ddlText := null;
 
               for i_idx in l_line_tab.first .. l_line_tab.last
               loop
@@ -2274,21 +2280,21 @@ $end
                 if i_idx = l_line_tab.first
                 then
                   -- replace i_ku$ddls_idx
-                  dbms_lob.createtemporary(p_ddl_tab(i_ku$ddls_idx).ddlText, true);
+                  dbms_lob.createtemporary(g_ddl_tab(i_ku$ddls_idx).ddlText, true);
                   oracle_tools.pkg_str_util.append_text
                   ( pi_buffer => replace(l_statement, l_privileges, l_line_tab(i_idx))
-                  , pio_clob => p_ddl_tab(i_ku$ddls_idx).ddlText
+                  , pio_clob => g_ddl_tab(i_ku$ddls_idx).ddlText
                   );
                 else
                   -- extend the table
-                  p_ddl_tab.extend(1);
+                  g_ddl_tab.extend(1);
                   -- copy everything (including the null ddlText)
-                  p_ddl_tab(p_ddl_tab.last) := p_ddl_tab(i_ku$ddls_idx);
+                  g_ddl_tab(g_ddl_tab.last) := g_ddl_tab(i_ku$ddls_idx);
                   -- create a new clob
-                  dbms_lob.createtemporary(p_ddl_tab(p_ddl_tab.last).ddlText, true);
+                  dbms_lob.createtemporary(g_ddl_tab(g_ddl_tab.last).ddlText, true);
                   oracle_tools.pkg_str_util.append_text
                   ( pi_buffer => replace(l_statement, l_privileges, l_line_tab(i_idx))
-                  , pio_clob => p_ddl_tab(p_ddl_tab.last).ddlText
+                  , pio_clob => g_ddl_tab(g_ddl_tab.last).ddlText
                   );
                 end if;
               end loop;
@@ -2303,11 +2309,11 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
         dbug.on_error;
 $end
-        p_ddl_tab := null;
+        g_ddl_tab := null;
     end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-    dbug.print(dbug."output", 'p_ddl_tab.count: %s', case when p_ddl_tab is not null then p_ddl_tab.count end);
+    dbug.print(dbug."output", 'g_ddl_tab.count: %s', case when g_ddl_tab is not null then g_ddl_tab.count end);
     dbug.leave;
   exception
     when others
@@ -4888,7 +4894,7 @@ $end
     -- objects fetched for this param
     <<fetch_loop>>
     loop
-      md_fetch_ddl(l_handle, true, g_ddl_tab);
+      md_fetch_ddl(l_handle, true);
 
       exit fetch_loop when g_ddl_tab is null;
 
@@ -5210,11 +5216,7 @@ $end
     -- now we can calculate the percentage matches (after get_schema_objects)
     l_use_schema_export :=
       case
-$if oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then      
-        when false
-$else
         when p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold()
-$end
         then 1
         else 0
       end;
