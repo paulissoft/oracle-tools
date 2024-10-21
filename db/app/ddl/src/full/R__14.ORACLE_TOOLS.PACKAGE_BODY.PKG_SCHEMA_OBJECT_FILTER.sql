@@ -78,12 +78,59 @@ return integer
 deterministic
 is
   l_result simple_integer := 0;
-  l_lwb naturaln := 0;
-  l_upb naturaln := 0;
+
+  function search(p_lwb in naturaln, p_upb in naturaln)
+  return natural
+  is
+    l_cmp simple_integer := -1;
+  begin
+    for i_idx in p_lwb .. p_upb
+    loop      
+      l_cmp := 
+        case substr(p_schema_object_filter.object_cmp_tab$(i_idx), -1)
+          when '~'
+          then
+            case
+              when p_schema_object_id like p_schema_object_filter.object_tab$(i_idx) escape '\'
+              then 0 -- found
+              else 1 -- try further
+            end
+
+          when '='
+          then
+            case
+              when p_schema_object_id = p_schema_object_filter.object_tab$(i_idx)
+              then 0 -- found
+              when p_schema_object_id > p_schema_object_filter.object_tab$(i_idx)
+              then 1 -- try further: p_schema_object_filter.object_tab$(i_idx+1) > p_schema_object_filter.object_tab$(i_idx)
+              else -1 -- will never find it since ordered (first object_cmp_tab$ !?~, then object_cmp_tab$ !?= and in ascending object_tab$ order)
+            end
+        end;
+
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+      dbug.print
+      ( dbug."info"
+      , '[%s] compare "%s" "%s" "%s": %s'
+      , i_idx
+      , p_schema_object_id
+      , p_schema_object_filter.object_cmp_tab$(i_idx)
+      , p_schema_object_filter.object_tab$(i_idx)
+      , l_cmp
+      );
+$end
+
+      case l_cmp
+        when 0  then return 1; -- found: stop
+        when -1 then return 0; -- will never find
+        else null;
+      end case;
+    end loop search_loop;
+
+    return case when p_lwb <= p_upb then 0 else null end;
+  end search;
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
-$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then  
   dbug.print
   ( dbug."input"
   , 'object: "%s"; base object: "%s"; p_schema_object_id: %s'
@@ -97,7 +144,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   , case when p_schema_object_filter is not null then cardinality(p_schema_object_filter.object_tab$) end
   , case when p_schema_object_filter is not null then p_schema_object_filter.nr_excluded_objects$ end
   );
-$end  
 $end    
 
   case
@@ -106,7 +152,7 @@ $end
          p_base_object_name is not null and
          oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_base_object_type, p_base_object_name) = 1
     then
-$if oracle_tools.pkg_schema_object_filter.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then  
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 1');
 $end
       l_result := 0;
@@ -116,95 +162,35 @@ $end
          p_object_name is not null and
          oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_object_type, p_object_name) = 1
     then
-$if oracle_tools.pkg_schema_object_filter.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 2');
 $end
       l_result := 0;
 
     when p_schema_object_filter is null or
          p_schema_object_id is null or
-         p_schema_object_filter.object_tab$.count = 0
+         cardinality(p_schema_object_filter.object_tab$) = 0
     then
       l_result := 1;
 
+    when search(1, p_schema_object_filter.nr_excluded_objects$) = 1
+    then
+      -- any exclusion match; return 0
+      l_result := 0;
+
     else
-      <<try_loop>>
-      for i_try in 1..2
-      loop
-        case i_try
-          when 1
-          then
-            l_lwb := 1;
-            l_upb := p_schema_object_filter.nr_excluded_objects$;
-          when 2
-          then
-            l_lwb := p_schema_object_filter.nr_excluded_objects$ + 1;
-            l_upb := p_schema_object_filter.object_tab$.count;
-        end case;
-
-        declare
-          l_cmp simple_integer := -1;
-          l_search_result pls_integer := null;
-        begin          
-          <<search_loop>>
-          for i_idx in l_lwb .. l_upb
-          loop      
-            l_cmp := 
-              case substr(p_schema_object_filter.object_cmp_tab$(i_idx), -1)
-                when '~'
-                then
-                  case
-                    when p_schema_object_id like p_schema_object_filter.object_tab$(i_idx) escape '\'
-                    then 0 -- found
-                    else 1 -- try further
-                  end
-
-                when '='
-                then
-                  case
-                    when p_schema_object_id = p_schema_object_filter.object_tab$(i_idx)
-                    then 0 -- found
-                    when p_schema_object_id > p_schema_object_filter.object_tab$(i_idx)
-                    then 1 -- try further: p_schema_object_filter.object_tab$(i_idx+1) > p_schema_object_filter.object_tab$(i_idx)
-                    else -1 -- will never find it since ordered (first object_cmp_tab$ !?~, then object_cmp_tab$ !?= and in ascending object_tab$ order)
-                  end
-              end;
-
-            case l_cmp
-              when 0  then l_search_result := 1; -- found: stop
-              when -1 then l_search_result := 0; -- will never find
-              else null;
-            end case;
-            
-            exit when l_search_result >= 0;
-          end loop search_loop;
-
-          if l_search_result is null and l_lwb <= l_upb
-          then
-            l_search_result := 0;
-          end if;
-          
-          case i_try
-            when 1
-            then
-              -- any exclusion match; return 0
-              if l_search_result = 1
-              then
-                l_result := 0;
-              end if;
-            when 2
-            then
-              -- when there are no inclusions at all: OK
-              l_result := nvl(l_search_result, 1);
-          end case;
-        end;
-      end loop try_loop;
+      -- check for inclusion match
+      l_result := nvl
+                  ( search
+                    ( p_schema_object_filter.nr_excluded_objects$ + 1
+                    , nvl(cardinality(p_schema_object_filter.object_tab$), 0)
+                    )
+                  , 1 -- when there are no inclusions at all: OK
+                  );
   end case;  
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then  
   dbug.print(dbug."output", 'return: %s', l_result);
-$end  
   dbug.leave;
 $end
 
@@ -346,7 +332,6 @@ $end
 
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
 
-          PRAGMA INLINE (matches_schema_object, 'YES');
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
           pipe row ( oracle_tools.t_named_object.create_named_object
@@ -382,7 +367,6 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
           end if;
 
-          PRAGMA INLINE (matches_schema_object, 'YES');
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
           -- this is a special case since we need to exclude first
@@ -427,7 +411,6 @@ $end
 
           if not(l_excluded_tables_tab.exists(r.object_name))
           then
-            PRAGMA INLINE (matches_schema_object, 'YES');
             continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
             pipe row (oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name));
@@ -479,7 +462,6 @@ $end
           and     o.is_dependent_object_type = 0
         )
         loop
-          PRAGMA INLINE (matches_schema_object, 'YES');
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
           pipe row ( oracle_tools.t_named_object.create_named_object
@@ -1245,7 +1227,6 @@ begin
     );            
   end if;
 
-  PRAGMA INLINE (matches_schema_object, 'YES');
   return
     matches_schema_object
     ( p_object_type => l_part_tab("OBJECT TYPE")
@@ -1290,7 +1271,6 @@ is
   is
   begin
     p_schema_object_filter.match_count$ := p_schema_object_filter.match_count$ + 1;
-    PRAGMA INLINE (matches_schema_object, 'YES');
     if matches_schema_object
        ( p_object_type => p_object_type
        , p_object_name => p_object_name
