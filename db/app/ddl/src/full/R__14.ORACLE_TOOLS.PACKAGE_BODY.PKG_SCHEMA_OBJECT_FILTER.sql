@@ -1118,7 +1118,7 @@ $end
              p_object_type is null -- can be any of the above                 
           then
             -- Add entries for each dependent object type and
-            -- let oracle_tools.t_schema_object.id() decide about setting the base object type
+            -- let oracle_tools.t_schema_object.id_udf() decide about setting the base object type
             -- inside add_item().
             for i_object_type_idx in l_dependent_md_object_type_tab.first .. l_dependent_md_object_type_tab.last
             loop
@@ -1278,6 +1278,7 @@ $end
   is
   begin
     p_schema_object_filter.match_count$ := p_schema_object_filter.match_count$ + 1;
+    PRAGMA INLINE(matches_schema_object, 'YES');
     if matches_schema_object
        ( p_object_type => p_object_type
        , p_object_name => p_object_name
@@ -1298,6 +1299,7 @@ $end
   )
   is
   begin
+    PRAGMA INLINE(process_schema_object, 'YES');
     process_schema_object
     ( p_schema_object => p_schema_object
     , p_object_type => p_schema_object.object_type()
@@ -1373,9 +1375,9 @@ $end
           ,       p.grantee
           ,       p.privilege
           ,       p.grantable
-          from    ( select  obj.object_type() as object_type
-                    ,       obj.object_schema() as object_schema
-                    ,       obj.object_name() as object_name
+          from    ( select  obj.object_type_udf() as object_type
+                    ,       obj.object_schema_udf() as object_schema
+                    ,       obj.object_name_udf() as object_name
                     ,       value(obj) as obj
                     from    table(l_named_object_tab) obj
                   ) obj
@@ -1409,9 +1411,9 @@ $end
                     ,       null           as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_synonyms s
-                            on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
-                    where   obj.object_type() not like '%BODY'
-                    and     obj.object_type() <> 'MATERIALIZED_VIEW'
+                            on s.table_owner = obj.object_schema_udf() and s.table_name = obj.object_name_udf()
+                    where   obj.object_type_udf() not like '%BODY'
+                    and     obj.object_type_udf() <> 'MATERIALIZED_VIEW'
                     and     s.owner = 'PUBLIC'
                     union all
                     -- table/view comments
@@ -1422,8 +1424,8 @@ $end
                     ,       null           as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_tab_comments t
-                            on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
-                    where   obj.object_type() in ('TABLE', 'VIEW')
+                            on t.owner = obj.object_schema_udf() and t.table_type = obj.object_type_udf() and t.table_name = obj.object_name_udf()
+                    where   obj.object_type_udf() in ('TABLE', 'VIEW')
                     and     t.comments is not null
                     union all
                     -- materialized view comments
@@ -1434,8 +1436,8 @@ $end
                     ,       null           as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_mview_comments m
-                            on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
-                    where   obj.object_type() = 'MATERIALIZED_VIEW'
+                            on m.owner = obj.object_schema_udf() and m.mview_name = obj.object_name_udf()
+                    where   obj.object_type_udf() = 'MATERIALIZED_VIEW'
                     and     m.comments is not null
                     union all
                     -- column comments
@@ -1446,8 +1448,8 @@ $end
                     ,       c.column_name  as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_col_comments c
-                            on c.owner = obj.object_schema() and c.table_name = obj.object_name()
-                    where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
+                            on c.owner = obj.object_schema_udf() and c.table_name = obj.object_name_udf()
+                    where   obj.object_type_udf() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
                     and     c.comments is not null
                   ) t
         )
@@ -1501,8 +1503,8 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
 $end                          
                     from    table(l_named_object_tab) obj
                             inner join all_constraints c /* this is where we are interested in */
-                            on c.owner = obj.object_schema() and c.table_name = obj.object_name()
-                    where   obj.object_type() in ('TABLE', 'VIEW')
+                            on c.owner = obj.object_schema_udf() and c.table_name = obj.object_name_udf()
+                    where   obj.object_type_udf() in ('TABLE', 'VIEW')
                             /* Type of constraint definition:
                                C (check constraint on a table)
                                P (primary key)
@@ -1521,14 +1523,12 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and not(oracle_tool
                               c.constraint_type <> 'C' or
                               -- column is the only column in the check constraint and must be nullable
                               ( 1, 'Y' ) in
-                              ( select  count(cc.column_name)
+                              ( select  count(tc.column_name)
                                 ,       max(tc.nullable)
-                                from    all_cons_columns cc
-                                        inner join all_tab_columns tc
-                                        on tc.owner = cc.owner and tc.table_name = cc.table_name and tc.column_name = cc.column_name
-                                where   cc.owner = c.owner
-                                and     cc.table_name = c.table_name
-                                and     cc.constraint_name = c.constraint_name
+                                from    all_tab_columns tc
+                                where   tc.owner = c.owner
+                                and     tc.table_name = c.table_name
+                                and     tc.constraint_name = c.constraint_name
                               )
                             )
 $end
@@ -1594,31 +1594,29 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
         ( select  t.*
           from    ( -- private synonyms for this schema which may point to another schema
                     with obj as
-                    ( select  obj.owner
-                      ,       obj.object_type
-                      ,       obj.object_name
-                      ,       obj.status
-                      ,       obj.generated
-                      ,       obj.temporary
-                      ,       obj.subobject_name
+                    ( select  s.owner as object_schema
+                      ,       'SYNONYM' as object_type
+                      ,       s.synonym_name as object_name
+                      ,       obj.owner as base_object_schema
                               -- use scalar subqueries for a (possible) better performance
-                      ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
-                      from    all_objects obj
+                      ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as base_object_type
+                      ,       obj.object_name as base_object_name
+                      from    all_synonyms s
+                              inner join all_objects obj
+                              on obj.owner = s.table_owner and obj.object_name = s.table_name
+                      where   s.owner = l_schema
+                      and     obj.object_type not like '%BODY'
+                      and     obj.object_type <> 'MATERIALIZED VIEW'
                     )
-                    select  s.owner as object_schema
-                    ,       'SYNONYM' as object_type
-                    ,       s.synonym_name as object_name
-                    ,       obj.owner as base_object_schema
-                    ,       obj.md_object_type as base_object_type
-                    ,       obj.object_name as base_object_name
+                    select  obj.object_schema
+                    ,       obj.object_type
+                    ,       obj.object_name
+                    ,       obj.base_object_schema
+                    ,       obj.base_object_type
+                    ,       obj.base_object_name
                     ,       null as column_name
-                    from    all_synonyms s
-                            inner join obj
-                            on obj.owner = s.table_owner and obj.object_name = s.table_name
-                    where   obj.object_type not like '%BODY'
-                    and     obj.md_object_type member of l_schema_md_object_type_tab
-                    and     obj.object_type <> 'MATERIALIZED VIEW'
-                    and     s.owner = l_schema
+                    from    obj
+                    where   obj.base_object_type member of l_schema_md_object_type_tab
                     -- no need to check on s.generated since we are interested in synonyms, not objects
                     union all
                     -- triggers for this schema which may point to another schema
@@ -2210,7 +2208,7 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
                 , 1
                 )
               ) t
-      where   t.object_type() in ('TABLE', 'AQ_QUEUE_TABLE');
+      where   t.object_type_udf() in ('TABLE', 'AQ_QUEUE_TABLE');
 
       ut.expect(l_count, l_program || '#queue table count#' || r.owner || '.' || r.queue_table || '#' || i_test).to_equal(1);
     end loop;
@@ -2243,7 +2241,7 @@ $end
                 , 1
                 )
               ) t
-      where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW');
+      where   t.object_type_udf() in ('TABLE', 'MATERIALIZED_VIEW');
 
       ut.expect
       ( l_count
@@ -2341,8 +2339,8 @@ $end
   select  id
   bulk collect
   into    l_schema_object_id_tab
-  from    ( select  t.id() as id
-            ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
+  from    ( select  t.id_udf() as id
+            ,       row_number() over (partition by t.object_schema_udf(), t.object_type_udf() order by t.object_name_udf() asc) as nr
             from    table
                     ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                       ( p_schema => user
@@ -2355,8 +2353,8 @@ $end
                       )
                     ) t
             order by
-                    t.object_schema()
-            ,       t.object_type()
+                    t.object_schema_udf()
+            ,       t.object_type_udf()
           )
   where   nr = 1  
   ;
@@ -2371,7 +2369,7 @@ $end
       select  l_schema_object_id_tab(i_idx) as id
       from    dual;
     open l_actual for
-      select  t.id() as id
+      select  t.id_udf() as id
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                 ( p_schema => user
@@ -2385,7 +2383,7 @@ $end
       from    dual
       where   0 = 1;
     open l_actual for
-      select  t.id() as id
+      select  t.id_udf() as id
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                 ( p_schema => user

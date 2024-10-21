@@ -924,6 +924,178 @@ begin
          self.grantable();  
 end schema_object_info;
 
+-- new methods with PRAGMA UDF
+final member function network_link_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (network_link, 'YES');
+  return network_link();
+end network_link_udf;
+
+final member function object_schema_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (object_schema, 'YES');
+  return object_schema();
+end object_schema_udf;
+
+final member function object_type_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (object_type, 'YES');
+  return object_type();
+end object_type_udf;
+
+final member function object_name_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (object_name, 'YES');
+  return object_name();
+end object_name_udf;
+
+final member function base_object_schema_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (base_object_schema, 'YES');
+  return base_object_schema();
+end base_object_schema_udf;
+
+final member function base_object_type_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (base_object_type, 'YES');
+  return base_object_type();
+end base_object_type_udf;
+
+final member function base_object_name_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (base_object_name, 'YES');
+  return base_object_name();
+end base_object_name_udf;
+
+final member function column_name_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (column_name, 'YES');
+  return column_name();
+end column_name_udf;
+
+final member function grantee_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (grantee, 'YES');
+  return grantee();
+end grantee_udf;
+
+final member function privilege_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (privilege, 'YES');
+  return privilege();
+end privilege_udf;
+
+final member function grantable_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (grantable, 'YES');
+  return grantable();
+end grantable_udf;
+
+final member function object_type_order_udf
+return integer
+is
+  pragma udf;
+begin
+  pragma inline (object_type_order, 'YES');
+  return object_type_order();
+end object_type_order_udf;
+
+final member function id_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (id, 'YES');
+  return id();
+end id_udf;
+
+final member function dict2metadata_object_type_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (dict2metadata_object_type, 'YES');
+  return dict2metadata_object_type();
+end dict2metadata_object_type_udf;
+
+final member function is_a_repeatable_udf
+return integer
+is
+  pragma udf;
+begin
+  pragma inline (is_a_repeatable, 'YES');
+  return is_a_repeatable();
+end is_a_repeatable_udf;
+
+final member function fq_object_name_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (fq_object_name, 'YES');
+  return fq_object_name();
+end fq_object_name_udf;
+
+final member function dict_object_type_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (dict_object_type, 'YES');
+  return dict_object_type();
+end dict_object_type_udf;
+
+final member function base_dict_object_type_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (base_dict_object_type, 'YES');
+  return base_dict_object_type();
+end base_dict_object_type_udf;
+
+final member function schema_object_info_udf
+return varchar2
+is
+  pragma udf;
+begin
+  pragma inline (schema_object_info, 'YES');
+  return schema_object_info();
+end schema_object_info_udf;
+
 end;
 /
 
