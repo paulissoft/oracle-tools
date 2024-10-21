@@ -264,7 +264,9 @@ $end
   return t_transform_param_tab;
 
   c_transform_param_tab constant t_transform_param_tab := default_transform_param_tab;
-  
+
+  g_ddl_tab sys.ku$_ddls; -- should be package global for better performance
+
   /* PRIVATE ROUTINES */
 
   function default_transform_param_tab
@@ -4869,7 +4871,6 @@ $end
     
     l_handle number := null;
 
-    l_ddl_tab sys.ku$_ddls; -- should be package global for better performance
     l_transform_param_tab t_transform_param_tab;
   begin
     get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
@@ -4887,15 +4888,15 @@ $end
     -- objects fetched for this param
     <<fetch_loop>>
     loop
-      md_fetch_ddl(l_handle, true, l_ddl_tab);
+      md_fetch_ddl(l_handle, true, g_ddl_tab);
 
-      exit fetch_loop when l_ddl_tab is null;
+      exit fetch_loop when g_ddl_tab is null;
 
-      if l_ddl_tab.count > 0
+      if g_ddl_tab.count > 0
       then
-        for i_ku$ddls_idx in l_ddl_tab.first .. l_ddl_tab.last
+        for i_ku$ddls_idx in g_ddl_tab.first .. g_ddl_tab.last
         loop
-          pipe row (l_ddl_tab(i_ku$ddls_idx));
+          pipe row (g_ddl_tab(i_ku$ddls_idx));
         end loop;
       end if;
     end loop fetch_loop;
@@ -4980,6 +4981,8 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
+    l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+
     -- GJP 2022-12-15
 
     -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
@@ -5017,35 +5020,35 @@ $end
                   from    dual
                   where   b_use_schema_export != 0
                   union all
-                  select  t.object_type()
+                  select  t.object_type_udf()
                   ,       case
-                            when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
+                            when t.object_type_udf() in ('CONSTRAINT', 'REF_CONSTRAINT')
                             then null
-                            else t.object_schema()
+                            else t.object_schema_udf()
                           end as object_schema
                   ,       case
-                            when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
+                            when t.object_type_udf() in ('CONSTRAINT', 'REF_CONSTRAINT')
                             then null
-                            else t.object_name()
+                            else t.object_name_udf()
                           end as object_name
                   ,       case
-                            when t.object_type() in ('INDEX', 'TRIGGER')
+                            when t.object_type_udf() in ('INDEX', 'TRIGGER')
                             then null
-                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
+                            when t.object_type_udf() = 'SYNONYM' and t.object_schema_udf() = b_schema
                             then null
-                            else t.base_object_schema()
+                            else t.base_object_schema_udf()
                           end as base_object_schema
                   ,       case
-                            when t.object_type() in ('INDEX', 'TRIGGER') and t.object_schema() = b_schema
+                            when t.object_type_udf() in ('INDEX', 'TRIGGER') and t.object_schema_udf() = b_schema
                             then null
-                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
+                            when t.object_type_udf() = 'SYNONYM' and t.object_schema_udf() = b_schema
                             then null
-                            else t.base_object_name()
+                            else t.base_object_name_udf()
                           end as base_object_name
-                  ,       t.column_name()
-                  ,       t.grantee()
-                  ,       t.privilege()
-                  ,       t.grantable()
+                  ,       t.column_name_udf()
+                  ,       t.grantee_udf()
+                  ,       t.privilege_udf()
+                  ,       t.grantable_udf()
                   from    table(b_schema_object_tab) t
                   where   b_use_schema_export = 0
                 )
@@ -5095,8 +5098,6 @@ $end
     l_params_tab t_params_tab;
     r_params c_params%rowtype;
     l_params_idx pls_integer;
-
-    l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec;
@@ -5236,6 +5237,10 @@ $end
     <<outer_loop>>
     for i_use_schema_export in l_use_schema_export .. l_use_schema_export+1
     loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.enter(g_package_prefix || l_program || '.EXPORT.' || i_use_schema_export);
+$end
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print
       ( dbug."info"
@@ -5420,6 +5425,10 @@ $end
         end if;
         l_object_key := l_object_lookup_tab.next(l_object_key);
       end loop;
+      
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
     end loop outer_loop;
     
     -- overall
