@@ -301,9 +301,11 @@ is
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_NAMED_OBJECTS');
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print(dbug."input", 'p_schema: %s', p_schema);
+$end  
 $end
 
   for i_idx in 1 .. 4
@@ -474,13 +476,13 @@ $end
     end case;
   end loop;
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.leave;
 $end
 
   return; -- essential
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
 exception
   when others
   then
@@ -876,8 +878,9 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
   end add_items;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT');
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_grantor_is_schema: %s'
@@ -893,6 +896,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   , dbms_lob.getlength(p_exclude_objects)
   , dbms_lob.getlength(p_include_objects)
   );
+$end  
 $end
 
   -- old functionality
@@ -1161,7 +1165,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   print(p_schema_object_filter);
 $end
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.leave;
 exception
   when others
@@ -1243,6 +1247,9 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (1)';
+$end  
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
 
@@ -1306,9 +1313,11 @@ is
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
   end cleanup;
 begin
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+  dbug.enter(l_module_name);
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (1)');
   p_schema_object_filter.print();
+$end  
 $end
 
   p_schema_object_tab := oracle_tools.t_schema_object_tab();
@@ -1321,6 +1330,10 @@ $end
   for i_idx in c_steps.first .. c_steps.last
   loop
     l_step := c_steps(i_idx);
+
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+    dbug.enter(l_module_name || '.' || l_step);
+$end    
 
     case l_step
       when "named objects"
@@ -1690,6 +1703,10 @@ $end
     end case;
 
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+    
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+    dbug.leave;
+$end    
   end loop;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -1698,8 +1715,10 @@ $end
 
   cleanup;
 
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));
+$end  
   dbug.leave;
 $end
 
@@ -1707,7 +1726,7 @@ exception
   when others
   then
     cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
     dbug.leave_on_error;
 $end
     raise;
@@ -1743,7 +1762,7 @@ is
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
   end cleanup;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (2)');
 $end
 
@@ -1774,7 +1793,7 @@ $end
 
   cleanup;
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.leave;
 $end
 
@@ -1784,14 +1803,14 @@ exception
   then
     -- not a real error, just a way to some cleanup
     cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
     dbug.leave;
 $end
 
   when no_data_found
   then
     cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
     dbug.leave_on_error;
 $end
     oracle_tools.pkg_ddl_error.reraise_error(l_program);
@@ -1800,7 +1819,7 @@ $end
   when others
   then
     cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
     dbug.leave_on_error;
 $end
     raise;
