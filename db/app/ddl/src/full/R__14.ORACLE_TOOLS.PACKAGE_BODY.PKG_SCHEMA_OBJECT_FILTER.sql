@@ -1903,7 +1903,7 @@ $end
       when 3
       then
         l_schema_object_filter := oracle_tools.t_schema_object_filter
-                                  ( p_schema => 'HR'
+                                  ( p_schema => 'ORDSYS'
                                   , p_object_type => null
                                   , p_object_names => '
 DBMS_OUTPUT,
@@ -1915,7 +1915,7 @@ DBMS_SQL
                                   , p_include_objects => null
                                   );
         l_expected := json_element_t.parse('{
-   "SCHEMA$" : "HR",
+   "SCHEMA$" : "ORDSYS",
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
@@ -1957,7 +1957,7 @@ DBMS_SQL
       then
         -- duplicate objects should be ignored
         l_schema_object_filter := oracle_tools.t_schema_object_filter
-                                  ( p_schema => 'HR'
+                                  ( p_schema => 'ORDSYS'
                                   , p_object_type => 'OBJECT_GRANT'
                                   , p_object_names => 'DBMS_OUTPUT,DBMS_OUTPUT,DBMS_SQL,DBMS_SQL'
                                   , p_object_names_include => 0
@@ -1967,7 +1967,7 @@ DBMS_SQL
                                   );
         l_expected := json_element_t.parse('
 {
-  "SCHEMA$" : "HR",
+  "SCHEMA$" : "ORDSYS",
   "GRANTOR_IS_SCHEMA$" : 1,
   "OBJECT_TAB$" :
   [
@@ -1990,7 +1990,7 @@ DBMS_SQL
       when 5
       then
         l_schema_object_filter := oracle_tools.t_schema_object_filter
-                                  ( p_schema => 'HR'
+                                  ( p_schema => 'ORDSYS'
                                   , p_object_type => null
                                   , p_object_names => '
 DBMS_OUTPUT,
@@ -2002,7 +2002,7 @@ DBMS_SQL
                                   , p_include_objects => null
                                   );
         l_expected := json_element_t.parse('{
-   "SCHEMA$" : "HR",
+   "SCHEMA$" : "ORDSYS",
    "GRANTOR_IS_SCHEMA$" : 1,
    "OBJECT_TAB$" :
    [
@@ -2043,7 +2043,7 @@ DBMS_SQL
       when 6
       then
         l_schema_object_filter := oracle_tools.t_schema_object_filter
-                                  ( p_schema => 'HR'
+                                  ( p_schema => 'ORDSYS'
                                   , p_object_type => 'PACKAGE_SPEC'
                                   , p_object_names => 'DBMS_METADATA,DBMS_VERSION'
                                   , p_object_names_include => 1
@@ -2052,7 +2052,7 @@ DBMS_SQL
                                   , p_include_objects => null
                                   );
         l_expected := json_element_t.parse('{
-  "SCHEMA$" : "HR",
+  "SCHEMA$" : "ORDSYS",
   "GRANTOR_IS_SCHEMA$" : 1,
   "OBJECT_TAB$" :
   [
