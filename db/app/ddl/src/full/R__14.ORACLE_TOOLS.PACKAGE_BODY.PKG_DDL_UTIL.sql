@@ -105,9 +105,9 @@ $end -- $if oracle_tools.cfg_pkg.c_testing $then
   e_job_is_not_attached exception;
   pragma exception_init(e_job_is_not_attached, -31623);
 
-  -- ORA-31604: invalid transform NAME parameter "MODIFY" for object type ON_USER_GRANT in function ADD_TRANSFORM
-  e_invalid_transform_parameter exception;
-  pragma exception_init(e_invalid_transform_parameter, -31604);
+--  -- ORA-31604: invalid transform NAME parameter "MODIFY" for object type ON_USER_GRANT in function ADD_TRANSFORM
+--  e_invalid_transform_parameter exception;
+--  pragma exception_init(e_invalid_transform_parameter, -31604);
 
   -- ORA-31602: parameter OBJECT_TYPE value "XMLSCHEMA" in function ADD_TRANSFORM inconsistent with HANDLE
   e_wrong_transform_object_type exception;
@@ -5210,7 +5210,11 @@ $end
     -- now we can calculate the percentage matches (after get_schema_objects)
     l_use_schema_export :=
       case
+$if oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then      
+        when false
+$else
         when p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold()
+$end
         then 1
         else 0
       end;
