@@ -1383,8 +1383,13 @@ $end
                   ) obj
                   inner join prv p
                   on p.table_schema = obj.object_schema and p.table_name = obj.object_name
-          where   obj.object_type not like '%BODY'
-          and     obj.object_type not in ('MATERIALIZED_VIEW') -- grants are on underlying tables
+          where   obj.object_type not in ( 'PACKAGE BODY'
+                                         , 'TYPE BODY'
+                                         , 'MATERIALIZED VIEW'
+                                         , 'PACKAGE_BODY'
+                                         , 'TYPE_BODY'
+                                         , 'MATERIALIZED_VIEW'
+                                         ) -- grants are on underlying tables
         )
         loop
           process_schema_object
@@ -1412,8 +1417,7 @@ $end
                     from    table(l_named_object_tab) obj
                             inner join all_synonyms s
                             on s.table_owner = obj.object_schema_udf() and s.table_name = obj.object_name_udf()
-                    where   obj.object_type_udf() not like '%BODY'
-                    and     obj.object_type_udf() <> 'MATERIALIZED_VIEW'
+                    where   obj.object_type_udf() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                     and     s.owner = 'PUBLIC'
                     union all
                     -- table/view comments
@@ -1519,7 +1523,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
 $end
 $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
                             -- exclude system generated not null constraints
-                    and     ( c.constraint_name not like 'SYS\_C%' escape '\' or
+                    and     ( c.generated <> 'GENERATED NAME' or -- constraint_name not like 'SYS\_C%' escape '\' or
                               c.constraint_type <> 'C' or
                               -- column is the only column in the check constraint and must be nullable
                               ( 1, 'Y' ) in
@@ -1605,8 +1609,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                               inner join all_objects obj
                               on obj.owner = s.table_owner and obj.object_name = s.table_name
                       where   s.owner = l_schema
-                      and     obj.object_type not like '%BODY'
-                      and     obj.object_type <> 'MATERIALIZED VIEW'
+                      and     obj.object_type not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                     )
                     select  obj.object_schema
                     ,       obj.object_type
