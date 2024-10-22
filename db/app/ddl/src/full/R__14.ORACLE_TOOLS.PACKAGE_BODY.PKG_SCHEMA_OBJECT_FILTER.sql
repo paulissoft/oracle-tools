@@ -2428,6 +2428,9 @@ end ut_compatible_le_oracle_11g;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
+begin
+  -- https://oracle-base.com/articles/12c/temporary-undo-12cr1
+  execute immediate 'ALTER SESSION SET TEMP_UNDO_ENABLED = TRUE';
 end pkg_schema_object_filter;
 /
 
