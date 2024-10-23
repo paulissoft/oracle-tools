@@ -6004,18 +6004,18 @@ $end
 
         if l_dependent_or_granted_object is not null and
            l_dependent_or_granted_object.base_object$ is not null and
-           l_dependent_or_granted_object.base_object$.id != r.ref_obj.id /* no need to add the same entry twice */
+           l_dependent_or_granted_object.base_object().id != r.ref_obj.id /* no need to add the same entry twice */
         then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           dbug.print
           ( dbug."info"
           , 'object %s depends on its base object %s'
           , l_dependent_or_granted_object.id
-          , l_dependent_or_granted_object.base_object$.id
+          , l_dependent_or_granted_object.base_object().id
           );
 $end
 
-          l_object_dependency_tab(l_dependent_or_granted_object.base_object$.id)(l_dependent_or_granted_object.id) := null;
+          l_object_dependency_tab(l_dependent_or_granted_object.base_object().id)(l_dependent_or_granted_object.id) := null;
         end if;  
       end if;
     end loop;

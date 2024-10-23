@@ -5,7 +5,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.object_schema();
+  return base_object().object_schema();
 end base_object_schema;
 
 overriding member function base_object_type
@@ -13,7 +13,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.object_type();
+  return base_object().object_type();
 end base_object_type;
 
 overriding member function base_dict_object_type
@@ -21,7 +21,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.dict_object_type();
+  return base_object().dict_object_type();
 end base_dict_object_type;
 
 overriding member function base_object_name
@@ -29,7 +29,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.object_name();
+  return base_object().object_name();
 end base_object_name;
 
 overriding final member procedure base_object_schema
@@ -38,7 +38,7 @@ overriding final member procedure base_object_schema
 )
 is
 begin
-  self.base_object$.object_schema(p_base_object_schema);
+  self.base_object().object_schema(p_base_object_schema);
 end base_object_schema;
 
 overriding member procedure chk
@@ -57,6 +57,21 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+member function base_object
+return oracle_tools.t_named_object
+deterministic
+is
+  l_base_object oracle_tools.t_named_object := null;
+begin
+  if base_object$ is not null
+  then
+    select  deref(base_object$)
+    into    l_base_object
+    from    dual;
+  end if;
+  return l_base_object;
+end;
 
 end;
 /

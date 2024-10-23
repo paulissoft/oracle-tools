@@ -78,18 +78,21 @@ $end
       and     r.constraint_type in ('P', 'U')
     )
     loop
-      self.ref_object$ :=
-        oracle_tools.t_constraint_object
-        ( p_base_object => oracle_tools.t_named_object.create_named_object
-                           ( p_object_schema => r.r_owner
-                           , p_object_type => r.r_object_type
-                           , p_object_name => r.r_table_name
-                           )
-        , p_object_schema => r.r_owner
-        , p_object_name => r.r_constraint_name
-        , p_constraint_type => r.r_constraint_type
-        , p_search_condition => null
-        );
+      select  ref
+              ( oracle_tools.t_constraint_object
+                ( p_base_object => oracle_tools.t_named_object.create_named_object
+                                   ( p_object_schema => r.r_owner
+                                   , p_object_type => r.r_object_type
+                                   , p_object_name => r.r_table_name
+                                   )
+                , p_object_schema => r.r_owner
+                , p_object_name => r.r_constraint_name
+                , p_constraint_type => r.r_constraint_type
+                , p_search_condition => null
+                )
+              )
+      into    self.ref_object$
+      from    dual;
       exit find_loop;
     end loop find_loop;
   end if;
@@ -116,7 +119,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.object_schema() end;
+  return case when self.ref_object$ is not null then self.ref_object().object_schema() end;
 end ref_object_schema;
 
 member function ref_object_type
@@ -124,7 +127,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.object_type() end;
+  return case when self.ref_object$ is not null then self.ref_object().object_type() end;
 end ref_object_type;
 
 member function ref_object_name
@@ -132,7 +135,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.object_name() end;
+  return case when self.ref_object$ is not null then self.ref_object().object_name() end;
 end ref_object_name;
 
 member function ref_base_object_schema
@@ -140,7 +143,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.base_object_schema() end;
+  return case when self.ref_object$ is not null then self.ref_object().base_object_schema() end;
 end ref_base_object_schema;
 
 member function ref_base_object_type
@@ -148,7 +151,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.base_object_type() end;
+  return case when self.ref_object$ is not null then self.ref_object().base_object_type() end;
 end ref_base_object_type;
 
 member function ref_base_object_name
@@ -156,7 +159,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.base_object_name() end;
+  return case when self.ref_object$ is not null then self.ref_object().base_object_name() end;
 end ref_base_object_name;
 
 -- end of getter(s)
@@ -223,9 +226,9 @@ final member procedure ref_object_schema
 is
 begin
   -- the constraint changes from schema name
-  self.ref_object$.object_schema(p_ref_object_schema);
+  self.ref_object().object_schema(p_ref_object_schema);
   -- the constraint base object changes from schema name too (must be in the same schema)
-  self.ref_object$.base_object$.object_schema(p_ref_object_schema);
+  self.ref_object().base_object().object_schema(p_ref_object_schema);
 end ref_object_schema;
 
 static function get_ref_constraint -- get referenced primary / unique key constraint whose base object is the referencing table / view with those columns
@@ -334,6 +337,21 @@ $end
 
   return l_ref_object;
 end get_ref_constraint;
+
+member function ref_object
+return oracle_tools.t_named_object
+deterministic
+is
+  l_ref_object oracle_tools.t_named_object := null;
+begin
+  if ref_object$ is not null
+  then
+    select  deref(ref_object$)
+    into    l_ref_object
+    from    dual;
+  end if;
+  return l_ref_object;
+end;
 
 end;
 /

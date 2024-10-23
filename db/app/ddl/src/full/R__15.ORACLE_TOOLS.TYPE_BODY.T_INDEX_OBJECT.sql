@@ -63,7 +63,14 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   );
 $end
 
-  self.base_object$ := p_base_object;
+  if p_base_object is null
+  then
+    self.base_object$ := null;
+  else
+    select  ref(p_base_object)
+    into    self.base_object$
+    from    dual;
+  end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
