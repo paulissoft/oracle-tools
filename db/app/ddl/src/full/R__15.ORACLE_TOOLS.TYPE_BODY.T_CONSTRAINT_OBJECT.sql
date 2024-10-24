@@ -217,6 +217,93 @@ exception
 $end
 end chk;
 
+final static function deserialize
+( p_text_tab in oracle_tools.t_text_tab
+)
+return oracle_tools.t_constraint_object
+deterministic
+is
+  l_constraint_object oracle_tools.t_constraint_object := null;
+begin
+  if p_text_tab is not null and p_text_tab.count = 1 + 10
+  then    
+    -- p_text_tab(1): type name (see serialize() below)
+    -- p_text_tab(2): object schema (see t_schema_object.id())
+    -- p_text_tab(3): object type (see t_schema_object.id())
+    -- p_text_tab(4): object name (see t_schema_object.id())
+    -- p_text_tab(5): base object schema (see t_schema_object.id())
+    -- p_text_tab(6): base object type (see t_schema_object.id())
+    -- p_text_tab(7): base object name (see t_schema_object.id())
+    case p_text_tab(1)
+      when 'T_CONSTRAINT_OBJECT'
+      then
+        l_constraint_object :=
+          oracle_tools.t_constraint_object
+          ( p_base_object =>
+              oracle_tools.t_named_object.create_named_object
+              ( p_object_type => p_text_tab(6)
+              , p_object_schema => p_text_tab(5)
+              , p_object_name => p_text_tab(7)
+              )
+          , p_object_schema => p_text_tab(2)
+          , p_object_name => p_text_tab(4)
+          , p_constraint_type => null
+          , p_column_names => null
+          , p_search_condition => null
+          );
+          
+      when 'T_REF_CONSTRAINT_OBJECT'
+      then
+        l_constraint_object :=
+          oracle_tools.t_ref_constraint_object
+          ( p_base_object =>
+              oracle_tools.t_named_object.create_named_object
+              ( p_object_type => p_text_tab(6)
+              , p_object_schema => p_text_tab(5)
+              , p_object_name => p_text_tab(7)
+              )
+          , p_object_schema => p_text_tab(2)
+          , p_object_name => p_text_tab(4)
+          , p_constraint_type => null
+          , p_column_names => null
+          , p_ref_object => null
+          );
+    end case;
+  end if;
+  return l_constraint_object;
+end deserialize;
+
+final member function serialize
+return oracle_tools.t_text_tab
+deterministic
+is
+  -- start with the type name
+  l_text_tab oracle_tools.t_text_tab := oracle_tools.t_text_tab(sys.anydata.gettypename(sys.anydata.convertobject(self)));
+  l_part_tab dbms_sql.varchar2a;
+begin
+  pkg_str_util.split
+  ( p_str => id()
+  , p_delimiter => ':'
+  , p_str_tab => l_part_tab
+  );
+
+  if l_part_tab.count > 0
+  then
+    for i_idx in l_part_tab.first .. l_part_tab.last
+    loop
+      l_text_tab.extend(1);
+      l_text_tab(l_text_tab.last) := l_part_tab(i_idx);
+    end loop;
+  end if;
+
+  if l_text_tab.count != 1 + 10
+  then
+    raise program_error;
+  end if;
+  
+  return l_text_tab;
+end serialize;
+
 end;
 /
 

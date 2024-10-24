@@ -52,7 +52,7 @@ $end
             )
           , null -- search condition
           , nvl(p_constraint_type, 'R')
-          , p_ref_object
+          , case when p_ref_object is not null then p_ref_object.serialize() end
           );
 
   if self.ref_object$ is null
@@ -78,19 +78,17 @@ $end
       and     r.constraint_type in ('P', 'U')
     )
     loop
-      select  ref
-              ( oracle_tools.t_constraint_object
-                ( p_base_object => oracle_tools.t_named_object.create_named_object
-                                   ( p_object_schema => r.r_owner
-                                   , p_object_type => r.r_object_type
-                                   , p_object_name => r.r_table_name
-                                   )
-                , p_object_schema => r.r_owner
-                , p_object_name => r.r_constraint_name
-                , p_constraint_type => r.r_constraint_type
-                , p_search_condition => null
-                )
-              )
+      select  oracle_tools.t_constraint_object
+              ( p_base_object => oracle_tools.t_named_object.create_named_object
+                                 ( p_object_schema => r.r_owner
+                                 , p_object_type => r.r_object_type
+                                 , p_object_name => r.r_table_name
+                                 )
+              , p_object_schema => r.r_owner
+              , p_object_name => r.r_constraint_name
+              , p_constraint_type => r.r_constraint_type
+              , p_search_condition => null
+              ).serialize()
       into    self.ref_object$
       from    dual;
       exit find_loop;
@@ -346,9 +344,7 @@ is
 begin
   if ref_object$ is not null
   then
-    select  deref(ref_object$)
-    into    l_ref_object
-    from    dual;
+    l_ref_object := oracle_tools.t_named_object.deserialize(ref_object$);
   end if;
   return l_ref_object;
 end;

@@ -28,9 +28,7 @@ $end
   then
     self.base_object$ := null;
   else
-    select  ref(p_base_object)
-    into    self.base_object$
-    from    dual;
+    self.base_object$ := p_base_object.serialize();
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;

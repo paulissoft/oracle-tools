@@ -31,9 +31,7 @@ $end
   then
     self.base_object$ := null;
   else
-    select  ref(p_base_object)
-    into    self.base_object$
-    from    dual;
+    self.base_object$ := p_base_object.serialize();
   end if;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
