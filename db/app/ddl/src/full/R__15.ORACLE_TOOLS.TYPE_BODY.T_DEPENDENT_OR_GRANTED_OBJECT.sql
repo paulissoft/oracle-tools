@@ -37,8 +37,25 @@ overriding final member procedure base_object_schema
 , p_base_object_schema in varchar2
 )
 is
+  l_base_object oracle_tools.t_named_object;
 begin
-  self.base_object().object_schema(p_base_object_schema);
+  select  deref(self.base_object$)
+  into    l_base_object
+  from    dual;
+
+  if l_base_object.object_schema() = p_base_object_schema
+  then
+    null; -- no change
+  else
+    -- remove from all_schema_objects and then insert the new
+    delete
+    from    all_schema_objects t
+    where   t.obj.id() = l_base_object.id();
+    
+    l_base_object.object_schema(p_base_object_schema);
+
+    insert into all_schema_objects(obj) values (l_base_object);
+  end if;  
 end base_object_schema;
 
 overriding member procedure chk
@@ -66,9 +83,9 @@ is
 begin
   if base_object$ is not null
   then
-    select  deref(my_named_objects)
+    select  deref(base_object$)
     into    l_base_object
-    from    my_named_objects;
+    from    dual;
   end if;
   return l_base_object;
 end;
