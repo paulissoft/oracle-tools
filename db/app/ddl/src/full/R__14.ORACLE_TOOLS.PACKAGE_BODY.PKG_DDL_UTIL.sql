@@ -2332,10 +2332,10 @@ $end
   )
   is
     l_verb varchar2(4000 char) := null;
-    l_object_name varchar2(4000 char) := null;
+    l_object_name t_object_name := null;
     l_object_type varchar2(4000 char) := null;
     l_object_schema varchar2(4000 char) := null;
-    l_base_object_name varchar2(4000 char) := null;
+    l_base_object_name t_object_name := null;
     l_base_object_type varchar2(4000 char) := null;
     l_base_object_schema varchar2(4000 char) := null;
     l_column_name varchar2(4000 char) := null;

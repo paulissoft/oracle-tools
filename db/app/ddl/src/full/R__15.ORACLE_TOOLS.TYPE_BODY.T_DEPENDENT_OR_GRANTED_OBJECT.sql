@@ -66,7 +66,9 @@ is
 begin
   if base_object$ is not null
   then
-    l_base_object := oracle_tools.t_named_object.deserialize(base_object$);
+    select  deref(my_named_objects)
+    into    l_base_object
+    from    my_named_objects;
   end if;
   return l_base_object;
 end;

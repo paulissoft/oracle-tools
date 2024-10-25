@@ -67,7 +67,9 @@ $end
   then
     self.base_object$ := null;
   else
-    self.base_object$ := p_base_object.serialize();
+    select  ref(my_named_objects)
+    into    self.base_object$
+    from    my_named_objects;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;

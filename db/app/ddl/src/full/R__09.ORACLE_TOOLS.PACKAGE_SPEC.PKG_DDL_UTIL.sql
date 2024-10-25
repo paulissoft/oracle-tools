@@ -127,11 +127,11 @@ subtype t_dict_object_type_nn is t_dict_object_type not null;
 subtype t_metadata_object_type is varchar2(30 char);
 subtype t_metadata_object_type_nn is t_metadata_object_type not null;
 
-subtype t_object_name is varchar2(4000 char);
+subtype t_object_name is varchar2(1000 char);
 subtype t_object_name_nn is t_object_name not null;
 
 -- key: owner.object_type.object_name[.grantee]
-subtype t_object is varchar2(4000 char);
+subtype t_object is varchar2(1000 char);
 subtype t_object_nn is t_object not null;
 
 subtype t_numeric_boolean is natural; -- must be null, 0 or 1

@@ -1,7 +1,7 @@
 begin
   execute immediate q'[
 create type oracle_tools.t_synonym_object authid current_user under oracle_tools.t_dependent_or_granted_object
-( object_name$ varchar2(4000 char)
+( object_name$ varchar2(1000 char)
 , constructor function t_synonym_object
   ( self in out nocopy oracle_tools.t_synonym_object
   , p_base_object in oracle_tools.t_named_object

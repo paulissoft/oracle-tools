@@ -829,7 +829,7 @@ final member function fq_object_name
 return varchar2
 deterministic
 is
-  l_object_name varchar2(4000 char);
+  l_object_name pkg_ddl_util.t_object_name;
 
   function get_object_part(p_object_part in varchar2)
   return varchar2

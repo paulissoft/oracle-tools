@@ -1,7 +1,7 @@
 begin
   execute immediate q'[
 create type oracle_tools.t_index_object authid current_user under oracle_tools.t_dependent_or_granted_object
-( object_name$ varchar2(4000 char)
+( object_name$ varchar2(1000 char)
 , column_names$ varchar2(4000 char)
 , tablespace_name$ varchar2(30 char)
 , constructor function t_index_object
