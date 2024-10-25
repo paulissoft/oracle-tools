@@ -1,8 +1,8 @@
 begin
   execute immediate q'[
 create type oracle_tools.t_schema_object authid current_user as object
-( network_link$ varchar2(128 char)
-, object_schema$ varchar2(128 char)
+( network_link$ varchar2(128 byte)
+, object_schema$ varchar2(128 byte)
 -- begin of getter(s)/setter(s)
 , final member function network_link return varchar2 deterministic
 , final member procedure network_link

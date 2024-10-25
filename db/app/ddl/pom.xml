@@ -83,6 +83,8 @@
 ,V_MY_INCLUDE_OBJECTS
 ,V_MY_SCHEMA_DDL_INFO
 ,V_MY_SCHEMA_OBJECT_INFO
+,ALL_SCHEMA_OBJECTS
+,V_MY_NAMED_OBJECTS
     </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
