@@ -84,7 +84,9 @@
 ,V_MY_SCHEMA_DDL_INFO
 ,V_MY_SCHEMA_OBJECT_INFO
 ,ALL_SCHEMA_OBJECTS
+,ALL_SCHEMA_OBJECTS_TRG
 ,V_MY_NAMED_OBJECTS
+,V_MY_CONSTRAINT_OBJECTS
     </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
