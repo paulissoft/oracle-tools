@@ -8,6 +8,7 @@ constructor function t_index_object
 )
 return self as result
 is
+  l_base_object ref oracle_tools.t_named_object := null; 
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR' || ' (1)');
@@ -20,8 +21,16 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   );
 $end
 
+  if p_base_object is not null
+  then
+    select  ref(t)
+    into    l_base_object
+    from    v_my_named_objects t
+    where   value(t).id() = p_base_object.id();
+  end if;
+
   -- default constructor
-  self := oracle_tools.t_index_object(null, p_object_schema, p_base_object, p_object_name, null, null);
+  self := oracle_tools.t_index_object(null, p_object_schema, l_base_object, p_object_name, null, null);
 
   self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name);
 
@@ -67,9 +76,10 @@ $end
   then
     self.base_object$ := null;
   else
-    select  ref(my_named_objects)
+    select  ref(t)
     into    self.base_object$
-    from    my_named_objects;
+    from    v_my_named_objects t
+    where   value(t).id() = p_base_object.id();
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
