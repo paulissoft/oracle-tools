@@ -13,6 +13,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" authid current_user under o
   )
   return self as result
 -- begin of getter(s)
+, member function ref_object return oracle_tools.t_constraint_object deterministic
 , overriding member function object_type return varchar2 deterministic
 , member function ref_object_schema return varchar2 deterministic
 , member function ref_object_type return varchar2 deterministic
