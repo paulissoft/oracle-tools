@@ -28,9 +28,10 @@ $end
   then
     self.base_object$ := null;
   else
-    select  ref(my_named_objects)
+    select  ref(t)
     into    self.base_object$
-    from    v_my_named_objects;
+    from    v_my_named_objects t
+    where   value(t).id() = p_base_object.id();
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
