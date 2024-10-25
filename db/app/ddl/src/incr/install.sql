@@ -1,7 +1,7 @@
 whenever sqlerror exit failure
 whenever oserror exit failure
 
-delete from "schema_version_tools_ddl" where "version" is not null;
+delete from "schema_version_tools_ddl";
 commit;
 
 prompt @V00000000000000__drop_all_objects.sql

@@ -25,12 +25,11 @@ declare
 begin
   select  count(*)
   into    l_count
-  from    "schema_version_tools_ddl"
-  where   "version" is not null;
+  from    "schema_version_tools_ddl";
 
   if l_count <> 0
   then
-    raise_application_error(-20000, 'Please clean up Flyway cache by: delete from "schema_version_tools_ddl" where "version" is not null');
+    raise_application_error(-20000, 'Please clean up Flyway cache by: delete from "schema_version_tools_ddl"');
   end if;
 
   <<while_objects_dropped_loop>>
