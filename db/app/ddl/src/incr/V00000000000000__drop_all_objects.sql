@@ -36,6 +36,15 @@ begin
   <<while_objects_dropped_loop>>
   loop
     l_nr_objects_dropped := 0;
+    
+    begin
+      execute immediate 'drop table all_schema_objects purge';
+      l_nr_objects_dropped := l_nr_objects_dropped + 1;
+    exception
+      when others
+      then null;
+    end;
+
     for i_idx in l_type_tab.first .. l_type_tab.last
     loop
       for r in

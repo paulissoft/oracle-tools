@@ -5026,35 +5026,35 @@ $end
                   from    dual
                   where   b_use_schema_export != 0
                   union all
-                  select  t.object_type_udf()
+                  select  t.object_type()
                   ,       case
-                            when t.object_type_udf() in ('CONSTRAINT', 'REF_CONSTRAINT')
+                            when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
                             then null
-                            else t.object_schema_udf()
+                            else t.object_schema()
                           end as object_schema
                   ,       case
-                            when t.object_type_udf() in ('CONSTRAINT', 'REF_CONSTRAINT')
+                            when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
                             then null
-                            else t.object_name_udf()
+                            else t.object_name()
                           end as object_name
                   ,       case
-                            when t.object_type_udf() in ('INDEX', 'TRIGGER')
+                            when t.object_type() in ('INDEX', 'TRIGGER')
                             then null
-                            when t.object_type_udf() = 'SYNONYM' and t.object_schema_udf() = b_schema
+                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
                             then null
-                            else t.base_object_schema_udf()
+                            else t.base_object_schema()
                           end as base_object_schema
                   ,       case
-                            when t.object_type_udf() in ('INDEX', 'TRIGGER') and t.object_schema_udf() = b_schema
+                            when t.object_type() in ('INDEX', 'TRIGGER') and t.object_schema() = b_schema
                             then null
-                            when t.object_type_udf() = 'SYNONYM' and t.object_schema_udf() = b_schema
+                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
                             then null
-                            else t.base_object_name_udf()
+                            else t.base_object_name()
                           end as base_object_name
-                  ,       t.column_name_udf()
-                  ,       t.grantee_udf()
-                  ,       t.privilege_udf()
-                  ,       t.grantable_udf()
+                  ,       t.column_name()
+                  ,       t.grantee()
+                  ,       t.privilege()
+                  ,       t.grantable()
                   from    table(b_schema_object_tab) t
                   where   b_use_schema_export = 0
                 )

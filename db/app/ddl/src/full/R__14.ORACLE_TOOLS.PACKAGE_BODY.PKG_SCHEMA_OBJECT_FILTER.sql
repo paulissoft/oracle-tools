@@ -1118,7 +1118,7 @@ $end
              p_object_type is null -- can be any of the above                 
           then
             -- Add entries for each dependent object type and
-            -- let oracle_tools.t_schema_object.id_udf() decide about setting the base object type
+            -- let oracle_tools.t_schema_object.id() decide about setting the base object type
             -- inside add_item().
             for i_object_type_idx in l_dependent_md_object_type_tab.first .. l_dependent_md_object_type_tab.last
             loop
@@ -1375,9 +1375,9 @@ $end
           ,       p.grantee
           ,       p.privilege
           ,       p.grantable
-          from    ( select  obj.object_type_udf() as object_type
-                    ,       obj.object_schema_udf() as object_schema
-                    ,       obj.object_name_udf() as object_name
+          from    ( select  obj.object_type() as object_type
+                    ,       obj.object_schema() as object_schema
+                    ,       obj.object_name() as object_name
                     ,       value(obj) as obj
                     from    table(l_named_object_tab) obj
                   ) obj
@@ -1416,8 +1416,8 @@ $end
                     ,       null           as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_synonyms s
-                            on s.table_owner = obj.object_schema_udf() and s.table_name = obj.object_name_udf()
-                    where   obj.object_type_udf() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                            on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
+                    where   obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                     and     s.owner = 'PUBLIC'
                     union all
                     -- table/view comments
@@ -1428,8 +1428,8 @@ $end
                     ,       null           as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_tab_comments t
-                            on t.owner = obj.object_schema_udf() and t.table_type = obj.object_type_udf() and t.table_name = obj.object_name_udf()
-                    where   obj.object_type_udf() in ('TABLE', 'VIEW')
+                            on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
+                    where   obj.object_type() in ('TABLE', 'VIEW')
                     and     t.comments is not null
                     union all
                     -- materialized view comments
@@ -1440,8 +1440,8 @@ $end
                     ,       null           as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_mview_comments m
-                            on m.owner = obj.object_schema_udf() and m.mview_name = obj.object_name_udf()
-                    where   obj.object_type_udf() = 'MATERIALIZED_VIEW'
+                            on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
+                    where   obj.object_type() = 'MATERIALIZED_VIEW'
                     and     m.comments is not null
                     union all
                     -- column comments
@@ -1452,8 +1452,8 @@ $end
                     ,       c.column_name  as column_name
                     from    table(l_named_object_tab) obj
                             inner join all_col_comments c
-                            on c.owner = obj.object_schema_udf() and c.table_name = obj.object_name_udf()
-                    where   obj.object_type_udf() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
+                            on c.owner = obj.object_schema() and c.table_name = obj.object_name()
+                    where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
                     and     c.comments is not null
                   ) t
         )
@@ -1507,8 +1507,8 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
 $end                          
                     from    table(l_named_object_tab) obj
                             inner join all_constraints c /* this is where we are interested in */
-                            on c.owner = obj.object_schema_udf() and c.table_name = obj.object_name_udf()
-                    where   obj.object_type_udf() in ('TABLE', 'VIEW')
+                            on c.owner = obj.object_schema() and c.table_name = obj.object_name()
+                    where   obj.object_type() in ('TABLE', 'VIEW')
                             /* Type of constraint definition:
                                C (check constraint on a table)
                                P (primary key)
@@ -2211,7 +2211,7 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
                 , 1
                 )
               ) t
-      where   t.object_type_udf() in ('TABLE', 'AQ_QUEUE_TABLE');
+      where   t.object_type() in ('TABLE', 'AQ_QUEUE_TABLE');
 
       ut.expect(l_count, l_program || '#queue table count#' || r.owner || '.' || r.queue_table || '#' || i_test).to_equal(1);
     end loop;
@@ -2244,7 +2244,7 @@ $end
                 , 1
                 )
               ) t
-      where   t.object_type_udf() in ('TABLE', 'MATERIALIZED_VIEW');
+      where   t.object_type() in ('TABLE', 'MATERIALIZED_VIEW');
 
       ut.expect
       ( l_count
@@ -2342,8 +2342,8 @@ $end
   select  id
   bulk collect
   into    l_schema_object_id_tab
-  from    ( select  t.id_udf() as id
-            ,       row_number() over (partition by t.object_schema_udf(), t.object_type_udf() order by t.object_name_udf() asc) as nr
+  from    ( select  t.id() as id
+            ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
             from    table
                     ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                       ( p_schema => user
@@ -2356,8 +2356,8 @@ $end
                       )
                     ) t
             order by
-                    t.object_schema_udf()
-            ,       t.object_type_udf()
+                    t.object_schema()
+            ,       t.object_type()
           )
   where   nr = 1  
   ;
@@ -2372,7 +2372,7 @@ $end
       select  l_schema_object_id_tab(i_idx) as id
       from    dual;
     open l_actual for
-      select  t.id_udf() as id
+      select  t.id() as id
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                 ( p_schema => user
@@ -2386,7 +2386,7 @@ $end
       from    dual
       where   0 = 1;
     open l_actual for
-      select  t.id_udf() as id
+      select  t.id() as id
       from    table
               ( oracle_tools.pkg_schema_object_filter.get_schema_objects
                 ( p_schema => user
