@@ -18,6 +18,8 @@ constructor function t_ref_constraint_object
 )
 return self as result
 is
+  l_base_object ref oracle_tools.t_named_object := null;
+  l_ref_object ref oracle_tools.t_constraint_object := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
@@ -36,11 +38,27 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   end if;
 $end
 
+  if p_base_object is not null
+  then
+    select  ref(t)
+    into    l_base_object
+    from    v_my_named_objects t
+    where   value(t).id() = p_base_object.id();
+  end if;
+  
+  if p_ref_object is not null
+  then
+    select  ref(t)
+    into    l_ref_object
+    from    v_my_constraint_objects t
+    where   value(t).id() = p_ref_object.id();
+  end if;
+
   -- default constructor
   self := oracle_tools.t_ref_constraint_object
           ( null
           , p_object_schema
-          , p_base_object
+          , l_base_object
           , p_object_name
           , nvl
             ( p_column_names
@@ -52,7 +70,7 @@ $end
             )
           , null -- search condition
           , nvl(p_constraint_type, 'R')
-          , case when p_ref_object is not null then p_ref_object.serialize() end
+          , l_ref_object
           );
 
   if self.ref_object$ is null
@@ -95,10 +113,10 @@ $end
         )
       );
              
-      select  ref(v_my_named_objects)
-      into    self.base_object$
-      from    v_my_named_objects v
-      where   v.network_link$ = ;
+      select  ref(t)
+      into    self.ref_object$
+      from    v_my_constraint_objects t
+      where   value(t).id() = p_ref_object.id();
       
       exit find_loop;
     end loop find_loop;
@@ -231,11 +249,46 @@ final member procedure ref_object_schema
 , p_ref_object_schema in varchar2
 )
 is
+  l_base_object oracle_tools.t_named_object;
+  l_ref_object oracle_tools.t_constraint_object;
 begin
-  -- the constraint changes from schema name
-  self.ref_object().object_schema(p_ref_object_schema);
-  -- the constraint base object changes from schema name too (must be in the same schema)
-  self.ref_object().base_object().object_schema(p_ref_object_schema);
+  select  deref(deref(self.ref_object$).base_object$)
+  ,       deref(self.ref_object$)
+  into    l_base_object
+  ,       l_ref_object
+  from    dual;
+
+  if l_ref_object.object_schema() = p_ref_object_schema
+  then
+    null; -- no change
+  else
+    -- the constraint changes from schema name
+    
+    -- remove from all_schema_objects and then insert the new
+    delete
+    from    all_schema_objects t
+    where   t.obj.id() = l_ref_object.id();
+
+    l_ref_object.object_schema(p_ref_object_schema);
+  
+    insert into all_schema_objects(obj) values (l_ref_object);
+  end if;  
+
+  if l_base_object.object_schema() = p_ref_object_schema
+  then
+    null; -- no change
+  else
+    -- the constraint base object changes from schema name too (must be in the same schema)
+  
+    -- remove from all_schema_objects and then insert the new
+    delete
+    from    all_schema_objects t
+    where   t.obj.id() = l_base_object.id();
+    
+    l_base_object.object_schema(p_ref_object_schema);
+
+    insert into all_schema_objects(obj) values (l_base_object);
+  end if;  
 end ref_object_schema;
 
 static function get_ref_constraint -- get referenced primary / unique key constraint whose base object is the referencing table / view with those columns
@@ -346,14 +399,16 @@ $end
 end get_ref_constraint;
 
 member function ref_object
-return oracle_tools.t_named_object
+return oracle_tools.t_constraint_object
 deterministic
 is
-  l_ref_object oracle_tools.t_named_object := null;
+  l_ref_object oracle_tools.t_constraint_object := null;
 begin
   if ref_object$ is not null
   then
-    l_ref_object := oracle_tools.t_named_object.deserialize(ref_object$);
+    select  deref(ref_object$)
+    into    l_ref_object
+    from    dual;
   end if;
   return l_ref_object;
 end;
