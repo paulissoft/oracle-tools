@@ -31,7 +31,10 @@ $end
   then
     self.base_object$ := null;
   else
-    self.base_object$ := p_base_object.serialize();
+    select  ref(t)
+    into    self.base_object$
+    from    v_my_named_objects t
+    where   value(t).id() = p_base_object.id();
   end if;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
