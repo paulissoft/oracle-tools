@@ -78,19 +78,28 @@ $end
       and     r.constraint_type in ('P', 'U')
     )
     loop
-      select  oracle_tools.t_constraint_object
-              ( p_base_object => oracle_tools.t_named_object.create_named_object
-                                 ( p_object_schema => r.r_owner
-                                 , p_object_type => r.r_object_type
-                                 , p_object_name => r.r_table_name
-                                 )
-              , p_object_schema => r.r_owner
-              , p_object_name => r.r_constraint_name
-              , p_constraint_type => r.r_constraint_type
-              , p_search_condition => null
-              ).serialize()
-      into    self.ref_object$
-      from    dual;
+      insert into all_schema_objects
+      ( obj
+      )
+      values
+      ( oracle_tools.t_constraint_object
+        ( p_base_object => oracle_tools.t_named_object.create_named_object
+                           ( p_object_schema => r.r_owner
+                           , p_object_type => r.r_object_type
+                           , p_object_name => r.r_table_name
+                           )
+        , p_object_schema => r.r_owner
+        , p_object_name => r.r_constraint_name
+        , p_constraint_type => r.r_constraint_type
+        , p_search_condition => null
+        )
+      );
+             
+      select  ref(v_my_named_objects)
+      into    self.base_object$
+      from    v_my_named_objects v
+      where   v.network_link$ = ;
+      
       exit find_loop;
     end loop find_loop;
   end if;
