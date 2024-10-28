@@ -8,14 +8,6 @@ begin
   return self.object_name$;
 end object_name;
 
-overriding member function object_type
-return varchar2
-deterministic
-is
-begin
-  raise_application_error(-20000, 'This type (T_NAMED_OBJECT) should not be instantiated.');
-end object_type;
-
 final static procedure create_named_object
 ( p_object_type in varchar2
 , p_object_schema in varchar2

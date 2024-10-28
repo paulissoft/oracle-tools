@@ -10,10 +10,6 @@ prompt @V20201115143000__t_text_tab.sql
 @V20201115143000__t_text_tab.sql
 prompt @V20201128105200__t_object_info_rec.sql
 @V20201128105200__t_object_info_rec.sql
-prompt @V20201212173400.01__t_sort_objects_by_deps_rec.sql
-@V20201212173400.01__t_sort_objects_by_deps_rec.sql
-prompt @V20201212173400.02__t_sort_objects_by_deps_tab.sql
-@V20201212173400.02__t_sort_objects_by_deps_tab.sql
 prompt @V20201215162500.03__t_object_info_tab.sql
 @V20201215162500.03__t_object_info_tab.sql
 prompt @V20210104170000.01__t_schema_object.sql
@@ -120,12 +116,8 @@ prompt @V20210323150100__t_ddl_sequence.sql
 @V20210323150100__t_ddl_sequence.sql
 prompt @V20210327121100__t_trigger_ddl.sql
 @V20210327121100__t_trigger_ddl.sql
-prompt @V20210830110000__drop_t_sort_objects_by_deps.sql
-@V20210830110000__drop_t_sort_objects_by_deps.sql
 prompt @V20221124104600__t_schema_object_filter.sql
 @V20221124104600__t_schema_object_filter.sql
-prompt @V20221229165800__t_type_spec_object.sql
-@V20221229165800__t_type_spec_object.sql
 prompt @V20241025151600__all_schema_objects.sql
 @V20241025151600__all_schema_objects.sql
 @check.sql

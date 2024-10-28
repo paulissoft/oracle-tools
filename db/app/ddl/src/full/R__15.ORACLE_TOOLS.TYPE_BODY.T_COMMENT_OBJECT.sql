@@ -22,12 +22,12 @@ $end
 
   if p_base_object is null
   then
-    self.base_object$ := null;
+    self.base_object_urowid$ := null;
   else
-    select  ref(t)
-    into    self.base_object$
-    from    v_my_named_objects t
-    where   value(t).id() = p_base_object.id();
+    select  t.rowid
+    into    self.base_object_urowid$
+    from    oracle_tools.all_schema_objects_api.get() t
+    where   t.obj.id() = p_base_object.id();
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;

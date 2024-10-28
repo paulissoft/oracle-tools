@@ -7,7 +7,6 @@ declare
     , 'T_SCHEMA_DDL_TAB'
     , 'T_SCHEMA_OBJECT_TAB'
     , 'T_OBJECT_INFO_TAB'
-    , 'T_SORT_OBJECTS_BY_DEPS_TAB'
     , 'T_DDL_TAB'
       -- object types
     , 'T_ARGUMENT_OBJECT'
@@ -15,7 +14,6 @@ declare
     , 'T_SCHEMA_OBJECT'
     , 'T_DDL'
     , 'T_OBJECT_INFO_REC'
-    , 'T_SORT_OBJECTS_BY_DEPS_REC'
     , 'T_SCHEMA_OBJECT_FILTER'
       -- must be last
     , 'T_TEXT_TAB' 

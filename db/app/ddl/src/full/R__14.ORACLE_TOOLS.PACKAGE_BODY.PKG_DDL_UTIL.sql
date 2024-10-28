@@ -4567,7 +4567,7 @@ $end
       );
     end if;
 
-    if p_dependent_or_granted_object.base_object$ is null
+    if p_dependent_or_granted_object.base_object_urowid$ is null
     then
       oracle_tools.pkg_ddl_error.raise_error
       ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
@@ -6003,7 +6003,7 @@ $end
         l_dependent_or_granted_object := treat(r.obj as oracle_tools.t_dependent_or_granted_object);
 
         if l_dependent_or_granted_object is not null and
-           l_dependent_or_granted_object.base_object$ is not null and
+           l_dependent_or_granted_object.base_object_urowid$ is not null and
            l_dependent_or_granted_object.base_object().id != r.ref_obj.id /* no need to add the same entry twice */
         then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then

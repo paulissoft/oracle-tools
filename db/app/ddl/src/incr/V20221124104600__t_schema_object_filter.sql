@@ -1,14 +1,4 @@
 begin
-  for r in
-  ( select  'drop type ' || object_name as cmd
-    from    user_objects
-    where   object_type = 'TYPE'
-    and     object_name = 'T_SCHEMA_OBJECT_FILTER'
-  )
-  loop
-    execute immediate r.cmd;
-  end loop;
-
   execute immediate q'[
 CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as object
 ( schema$ varchar2(30 char)
@@ -54,7 +44,5 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
 )
 instantiable
 final]';
-
-  execute immediate 'GRANT EXECUTE ON T_SCHEMA_OBJECT_FILTER TO PUBLIC';
 end;
 /
