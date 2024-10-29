@@ -1,7 +1,7 @@
 begin
   execute immediate q'[
 CREATE TYPE "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" authid current_user under oracle_tools.t_constraint_object
-( ref_object_urowid$ varchar2(4000 byte) -- referenced primary / unique key constraint whose base object is the referencing table / view
+( ref_object_seq$ integer -- referenced primary / unique key constraint whose base object is the referencing table / view (all_schema_objects.seq)
 , constructor function t_ref_constraint_object
   ( self in out nocopy oracle_tools.t_ref_constraint_object
   , p_base_object in oracle_tools.t_named_object
