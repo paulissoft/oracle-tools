@@ -22,12 +22,9 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_urowid$ := null;
+    self.base_object_seq$ := null;
   else
-    select  t.rowid
-    into    self.base_object_urowid$
-    from    oracle_tools.all_schema_objects_api.get() t
-    where   t.obj.id() = p_base_object.id();
+    self.base_object_seq$ := all_schema_objects_api.find_by_object_id(p_base_object.id()).seq;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
