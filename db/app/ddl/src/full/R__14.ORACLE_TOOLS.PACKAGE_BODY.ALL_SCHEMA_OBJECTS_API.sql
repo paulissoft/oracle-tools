@@ -109,34 +109,34 @@ function find_by_seq
 ( p_seq in all_schema_objects.seq%type
 , p_session_id in all_schema_objects.session_id%type
 )
-return t_schema_object
+return all_schema_objects%rowtype
 is
-  l_schema_object t_schema_object;
+  l_rec all_schema_objects%rowtype;
 begin
-  select  t.obj
-  into    l_schema_object
+  select  t.*
+  into    l_rec
   from    all_schema_objects t
   where   t.session_id = p_session_id
   and     t.seq = p_seq;
 
-  return l_schema_object;
+  return l_rec;
 end find_by_seq;
 
 function find_by_object_id
 ( p_id in varchar2
 , p_session_id in all_schema_objects.session_id%type
 )
-return t_schema_object
+return all_schema_objects%rowtype
 is
-  l_schema_object t_schema_object;
+  l_rec all_schema_objects%rowtype;
 begin
-  select  t.obj
-  into    l_schema_object
+  select  t.*
+  into    l_rec
   from    all_schema_objects t
   where   t.session_id = p_session_id -- there is a unique index on (session_id, obj.id())
   and     t.obj.id() = p_id;
 
-  return l_schema_object;
+  return l_rec;
 end find_by_object_id;
 
 function get_schema_objects
@@ -145,10 +145,7 @@ is
 begin
   return replace
          ( q'[
-select  t.seq
-,       t.created
-,       t.generate_ddl
-,       t.obj
+select  t.*
 from    all_schema_objects t
 where   t.session_id = {session_id}
 ]'       , '{session_id}'
