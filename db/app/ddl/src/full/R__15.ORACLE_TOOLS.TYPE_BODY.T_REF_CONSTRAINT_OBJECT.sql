@@ -18,8 +18,8 @@ constructor function t_ref_constraint_object
 )
 return self as result
 is
-  l_base_object ref oracle_tools.t_named_object := null;
-  l_ref_object ref oracle_tools.t_constraint_object := null;
+  l_base_object oracle_tools.t_named_object;
+  l_constraint_object oracle_tools.t_constraint_object;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
@@ -38,27 +38,11 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   end if;
 $end
 
-  if p_base_object is not null
-  then
-    select  ref(t)
-    into    l_base_object
-    from    v_my_named_objects t
-    where   value(t).id() = p_base_object.id();
-  end if;
-  
-  if p_ref_object is not null
-  then
-    select  ref(t)
-    into    l_ref_object
-    from    v_my_constraint_objects t
-    where   value(t).id() = p_ref_object.id();
-  end if;
-
   -- default constructor
   self := oracle_tools.t_ref_constraint_object
           ( null
           , p_object_schema
-          , l_base_object
+          , case when p_base_object is not null then all_schema_objects_api.find_by_object_id(p_base_object.id()).seq end          
           , p_object_name
           , nvl
             ( p_column_names
@@ -70,10 +54,10 @@ $end
             )
           , null -- search condition
           , nvl(p_constraint_type, 'R')
-          , l_ref_object
+          , case when p_ref_object is not null then all_schema_objects_api.find_by_object_id(p_ref_object.id()).seq end          
           );
 
-  if self.ref_object$ is null
+  if self.ref_object_seq$ is null
   then
     -- find referenced primary / unique key and its base table / view
     <<find_loop>>
@@ -96,27 +80,29 @@ $end
       and     r.constraint_type in ('P', 'U')
     )
     loop
-      insert into all_schema_objects
-      ( obj
-      )
-      values
-      ( oracle_tools.t_constraint_object
-        ( p_base_object => oracle_tools.t_named_object.create_named_object
-                           ( p_object_schema => r.r_owner
-                           , p_object_type => r.r_object_type
-                           , p_object_name => r.r_table_name
-                           )
+      l_base_object :=
+        oracle_tools.t_named_object.create_named_object
+        ( p_object_schema => r.r_owner
+        , p_object_type => r.r_object_type
+        , p_object_name => r.r_table_name
+        );
+      l_constraint_object :=
+        oracle_tools.t_constraint_object
+        ( p_base_object => l_base_object
         , p_object_schema => r.r_owner
         , p_object_name => r.r_constraint_name
         , p_constraint_type => r.r_constraint_type
         , p_search_condition => null
-        )
+        );
+      all_schema_objects_api.add
+      ( p_schema_object => l_base_object
+      , p_must_exist => null
       );
-             
-      select  ref(t)
-      into    self.ref_object$
-      from    v_my_constraint_objects t
-      where   value(t).id() = p_ref_object.id();
+      all_schema_objects_api.add
+      ( p_schema_object => l_constraint_object          
+      , p_must_exist => null
+      );
+      self.ref_object_seq$ := all_schema_objects_api.find_by_object_id(l_constraint_object.id()).seq;
       
       exit find_loop;
     end loop find_loop;
@@ -144,7 +130,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object().object_schema() end;
+  return case when self.ref_object_seq$ is not null then self.ref_object().object_schema() end;
 end ref_object_schema;
 
 member function ref_object_type
@@ -152,7 +138,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object().object_type() end;
+  return case when self.ref_object_seq$ is not null then self.ref_object().object_type() end;
 end ref_object_type;
 
 member function ref_object_name
@@ -160,7 +146,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object().object_name() end;
+  return case when self.ref_object_seq$ is not null then self.ref_object().object_name() end;
 end ref_object_name;
 
 member function ref_base_object_schema
@@ -168,7 +154,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object().base_object_schema() end;
+  return case when self.ref_object_seq$ is not null then self.ref_object().base_object_schema() end;
 end ref_base_object_schema;
 
 member function ref_base_object_type
@@ -176,7 +162,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object().base_object_type() end;
+  return case when self.ref_object_seq$ is not null then self.ref_object().base_object_type() end;
 end ref_base_object_type;
 
 member function ref_base_object_name
@@ -184,7 +170,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object().base_object_name() end;
+  return case when self.ref_object_seq$ is not null then self.ref_object().base_object_name() end;
 end ref_base_object_name;
 
 -- end of getter(s)
@@ -234,7 +220,7 @@ $end
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.', self.schema_object_info());
   end if;
 
-  if self.ref_object$ is null
+  if self.ref_object_seq$ is null
   then
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Reference object should not be empty.', self.schema_object_info());
   end if;
@@ -249,45 +235,25 @@ final member procedure ref_object_schema
 , p_ref_object_schema in varchar2
 )
 is
-  l_base_object oracle_tools.t_named_object;
-  l_ref_object oracle_tools.t_constraint_object;
+  l_base_object oracle_tools.t_named_object := self.base_object();
+  l_ref_object oracle_tools.t_constraint_object := self.ref_object();
 begin
-  select  deref(deref(self.ref_object$).base_object$)
-  ,       deref(self.ref_object$)
-  into    l_base_object
-  ,       l_ref_object
-  from    dual;
-
   if l_ref_object.object_schema() = p_ref_object_schema
   then
     null; -- no change
   else
-    -- the constraint changes from schema name
-    
-    -- remove from all_schema_objects and then insert the new
-    delete
-    from    all_schema_objects t
-    where   t.obj.id() = l_ref_object.id();
-
+    -- change and add again (must exist)
     l_ref_object.object_schema(p_ref_object_schema);
-  
-    insert into all_schema_objects(obj) values (l_ref_object);
+    all_schema_objects_api.add(p_schema_object => l_ref_object, p_must_exist => true);
   end if;  
 
   if l_base_object.object_schema() = p_ref_object_schema
   then
     null; -- no change
   else
-    -- the constraint base object changes from schema name too (must be in the same schema)
-  
-    -- remove from all_schema_objects and then insert the new
-    delete
-    from    all_schema_objects t
-    where   t.obj.id() = l_base_object.id();
-    
+    -- change and add again (must exist)
     l_base_object.object_schema(p_ref_object_schema);
-
-    insert into all_schema_objects(obj) values (l_base_object);
+    all_schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
   end if;  
 end ref_object_schema;
 
@@ -402,16 +368,10 @@ member function ref_object
 return oracle_tools.t_constraint_object
 deterministic
 is
-  l_ref_object oracle_tools.t_constraint_object := null;
+  l_ref_object oracle_tools.t_named_object := null;
 begin
-  if ref_object$ is not null
-  then
-    select  deref(ref_object$)
-    into    l_ref_object
-    from    dual;
-  end if;
-  return l_ref_object;
-end;
+  return case when self.ref_object_seq$ is not null then treat(all_schema_objects_api.find_by_seq(self.ref_object_seq$).obj as oracle_tools.t_constraint_object) end;
+end ref_object;
 
 end;
 /
