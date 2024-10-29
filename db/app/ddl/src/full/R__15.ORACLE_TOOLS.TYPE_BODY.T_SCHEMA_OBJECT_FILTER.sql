@@ -83,20 +83,6 @@ begin
   );
 end print;
 
-member function matches_schema_object
-( self in oracle_tools.t_schema_object_filter
-, p_schema_object_id in varchar2
-)
-return integer
-deterministic
-is
-begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object
-         ( p_schema_object_filter => self
-         , p_schema_object_id => p_schema_object_id
-         );
-end matches_schema_object;
-
 member procedure get_schema_objects
 ( self in out nocopy oracle_tools.t_schema_object_filter 
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab

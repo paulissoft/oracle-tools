@@ -15,6 +15,7 @@ procedure add
 ( p_schema_object in t_schema_object -- The schema object to add to ALL_SCHEMA_OBJECTS (session id equals p_session_id)
 , p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_session_id in all_schema_objects.session_id%type default get_session_id -- The session id
+, p_generate_ddl in all_schema_objects.generate_ddl%type default null -- The generate DDL flag
 );
 /** Add a schema object to ALL_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
@@ -22,6 +23,7 @@ procedure add
 ( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to ALL_SCHEMA_OBJECTS (session id equals p_session_id)
 , p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_session_id in all_schema_objects.session_id%type default get_session_id -- The session id
+, p_generate_ddl in all_schema_objects.generate_ddl%type default null -- The generate DDL flag
 );
 /** Add schema objects to ALL_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 

@@ -30,18 +30,6 @@ These two methods can be combined.
 
 **/
 
-function get_named_objects
-( p_schema in varchar2
-)
-return oracle_tools.t_schema_object_tab
-pipelined;
-
-/**
-
-Return objects like dbms_metadata.get_ddl() would.
-
-**/
-
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer default 50
 );
@@ -70,19 +58,6 @@ procedure print
 /**
 
 Print the JSON representation of a schema object filter using the DBUG package.
-
-**/
-
-function matches_schema_object
-( p_schema_object_filter in t_schema_object_filter
-, p_schema_object_id in varchar2
-)
-return integer
-deterministic;
-
-/**
-
-Determine whether a schema object matches a filter.
 
 **/
 
@@ -143,9 +118,6 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
 --%test
 procedure ut_construct;
-
---%test
-procedure ut_matches_schema_object;
 
 --%test
 procedure ut_get_schema_objects;

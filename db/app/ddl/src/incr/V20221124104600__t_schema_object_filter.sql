@@ -31,12 +31,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
 , member procedure print
   ( self in oracle_tools.t_schema_object_filter
   )
-, member function matches_schema_object
-  ( self in oracle_tools.t_schema_object_filter
-  , p_schema_object_id in varchar2
-  )
-  return integer
-  deterministic
 , member procedure get_schema_objects
   ( self in out nocopy oracle_tools.t_schema_object_filter 
   , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab

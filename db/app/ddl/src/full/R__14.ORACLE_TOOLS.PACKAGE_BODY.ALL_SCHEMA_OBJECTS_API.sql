@@ -25,6 +25,7 @@ procedure add
 ( p_schema_object in t_schema_object
 , p_must_exist in boolean
 , p_session_id in all_schema_objects.session_id%type
+, p_generate_ddl in all_schema_objects.generate_ddl%type
 )
 is
   -- index 1: update; 2: insert
@@ -39,6 +40,7 @@ begin
       then
         update  all_schema_objects t
         set     t.obj = p_schema_object
+        ,       t.generate_ddl = nvl(p_generate_ddl, t.generate_ddl)
         where   t.obj.id() = p_schema_object.id();
         
       when 2
@@ -47,6 +49,7 @@ begin
         ( session_id
         , seq
         , obj
+        , generate_ddl
         )
         values
         ( p_session_id
@@ -54,6 +57,7 @@ begin
           -- there is never a problem with another session inserting at the same time for the same session.
         , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.session_id = p_session_id)
         , p_schema_object
+        , nvl(p_generate_ddl, 0)
         );
     end case;
       
@@ -81,6 +85,7 @@ procedure add
 ( p_schema_object_cursor in t_schema_object_cursor
 , p_must_exist in boolean
 , p_session_id in all_schema_objects.session_id%type
+, p_generate_ddl in all_schema_objects.generate_ddl%type
 )
 is
   l_schema_object_tab t_schema_object_tab;
@@ -97,7 +102,8 @@ begin
         add
         ( p_schema_object => l_schema_object_tab(i_idx)
         , p_must_exist => p_must_exist
-        , p_session_id=> p_session_id
+        , p_session_id => p_session_id
+        , p_generate_ddl => p_generate_ddl
         );
       end loop;
     end if;

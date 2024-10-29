@@ -2345,6 +2345,7 @@ $end
     l_ddl_text varchar2(32767 char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
     l_schema_object oracle_tools.t_schema_object;
+    l_my_schema_object all_schema_objects%rowtype;
 
     procedure cleanup
     is
@@ -2437,10 +2438,14 @@ $end
       exception
         when no_data_found
         then
+          begin
+            l_my_schema_object := oracle_tools.all_schema_objects_api.find_by_object_id(p_object_key);
+          exception
+            when no_data_found
+            then l_my_schema_object.generate_ddl := 0;
+          end;
           case
-            when p_schema_object_filter.matches_schema_object
-                 ( p_schema_object_id => p_object_key
-                 ) = 0 -- object not but on purpose
+            when l_my_schema_object.generate_ddl = 0 -- object not but on purpose
             then
               p_object_key := null;
 

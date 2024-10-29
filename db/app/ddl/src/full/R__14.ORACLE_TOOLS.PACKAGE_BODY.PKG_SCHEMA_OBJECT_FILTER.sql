@@ -286,13 +286,9 @@ end check_duplicates;
 
 $end            
 
--- GLOBAL
-
-function get_named_objects
+procedure get_named_objects
 ( p_schema in varchar2
 )
-return oracle_tools.t_schema_object_tab
-pipelined
 is
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -336,12 +332,16 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
 
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
-          pipe row ( oracle_tools.t_named_object.create_named_object
-                     ( p_object_schema => r.object_schema
-                     , p_object_type => r.object_type
-                     , p_object_name => r.object_name
-                     )
-                   );
+          all_schema_objects_api.add
+          ( p_schema_object =>
+              oracle_tools.t_named_object.create_named_object
+              ( p_object_schema => r.object_schema
+              , p_object_type => r.object_type
+              , p_object_name => r.object_name
+              )
+          , p_must_exist => false
+          , p_generate_ddl => 1
+          );
 $else
           /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
           null; 
@@ -372,7 +372,11 @@ $end
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
           -- this is a special case since we need to exclude first
-          pipe row (oracle_tools.t_materialized_view_object(r.object_schema, r.object_name));
+          all_schema_objects_api.add
+          ( p_schema_object => oracle_tools.t_materialized_view_object(r.object_schema, r.object_name)
+          , p_must_exist => false
+          , p_generate_ddl => 1
+          );          
         end loop;
 
       when 3
@@ -415,7 +419,11 @@ $end
           then
             continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
-            pipe row (oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name));
+            all_schema_objects_api.add
+            ( p_schema_object => oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name)
+            , p_must_exist => false
+            , p_generate_ddl => 1
+            );
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
           else  
@@ -466,12 +474,16 @@ $end
         loop
           continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
-          pipe row ( oracle_tools.t_named_object.create_named_object
-                     ( p_object_schema => r.object_schema
-                     , p_object_type => r.object_type
-                     , p_object_name => r.object_name
-                     )
-                   );
+          all_schema_objects_api.add
+          ( p_schema_object =>
+              oracle_tools.t_named_object.create_named_object
+              ( p_object_schema => r.object_schema
+              , p_object_type => r.object_type
+              , p_object_name => r.object_name
+              )
+          , p_must_exist => false
+          , p_generate_ddl => 1
+          );          
         end loop;        
     end case;
   end loop;
@@ -490,6 +502,8 @@ exception
     raise;
 $end
 end get_named_objects;
+
+-- GLOBAL
 
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer
@@ -1324,10 +1338,12 @@ $end
 
   p_schema_object_tab := oracle_tools.t_schema_object_tab();
 
-  select  value(obj)
+  get_named_objects(l_schema);
+  
+  select  t.obj
   bulk collect
   into    l_named_object_tab
-  from    table(oracle_tools.pkg_schema_object_filter.get_named_objects(l_schema)) obj;
+  from    v_my_schema_objects t;
 
   for i_idx in c_steps.first .. c_steps.last
   loop
@@ -2092,6 +2108,8 @@ exception
 $end
 end ut_construct;
 
+$if false $then
+
 procedure ut_matches_schema_object
 is
   l_id t_object;
@@ -2170,6 +2188,8 @@ begin
     end loop;
   end loop try_loop;
 end ut_matches_schema_object;
+
+$end
 
 procedure ut_get_schema_objects
 is
