@@ -38,15 +38,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   );
 $end
 
-  if p_base_object is null
-  then
-    self.base_object$ := null;
-  else
-    select  ref(t)
-    into    self.base_object$
-    from    v_my_named_objects t
-    where   value(t).id() = p_base_object.id();
-  end if;
+  self.base_object_seq$ := case when p_base_object is not null then all_schema_objects_api.find_by_object_id(p_base_object.id()).seq end;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
   self.data_type_name$ := p_data_type_name;
