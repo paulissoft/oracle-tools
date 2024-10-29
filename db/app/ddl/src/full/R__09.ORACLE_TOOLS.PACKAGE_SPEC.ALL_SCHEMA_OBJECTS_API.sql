@@ -29,14 +29,14 @@ function find_by_seq
 ( p_seq in all_schema_objects.seq%type default 1 -- Find schema object in ALL_SCHEMA_OBJECTS by (p_session_id, seq)
 , p_session_id in all_schema_objects.session_id%type default get_session_id -- The session id
 )
-return t_schema_object;
+return all_schema_objects%rowtype;
 /** Find the schema object in ALL_SCHEMA_OBJECTS by seq. **/
 
 function find_by_object_id
 ( p_id in varchar2 -- Find schema object in ALL_SCHEMA_OBJECTS by (p_session_id, obj.id())
 , p_session_id in all_schema_objects.session_id%type default get_session_id -- The session id
 )
-return t_schema_object;
+return all_schema_objects%rowtype;
 /** Find the schema object in ALL_SCHEMA_OBJECTS by obj.id(). **/
 
 function get_schema_objects
