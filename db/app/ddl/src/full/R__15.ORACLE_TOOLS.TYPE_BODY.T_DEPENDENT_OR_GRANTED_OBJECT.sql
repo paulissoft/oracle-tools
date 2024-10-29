@@ -37,24 +37,15 @@ overriding final member procedure base_object_schema
 , p_base_object_schema in varchar2
 )
 is
-  l_base_object oracle_tools.t_named_object;
+  l_base_object oracle_tools.t_named_object := self.base_object();
 begin
-  select  deref(self.base_object$)
-  into    l_base_object
-  from    dual;
-
   if l_base_object.object_schema() = p_base_object_schema
   then
     null; -- no change
   else
-    -- remove from all_schema_objects and then insert the new
-    delete
-    from    all_schema_objects t
-    where   t.obj.id() = l_base_object.id();
-    
+    -- change and add again (must exist)
     l_base_object.object_schema(p_base_object_schema);
-
-    insert into all_schema_objects(obj) values (l_base_object);
+    all_schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
   end if;  
 end base_object_schema;
 
@@ -81,14 +72,8 @@ deterministic
 is
   l_base_object oracle_tools.t_named_object := null;
 begin
-  if base_object$ is not null
-  then
-    select  deref(base_object$)
-    into    l_base_object
-    from    dual;
-  end if;
-  return l_base_object;
-end;
+  return case when self.base_object_seq$ is not null then treat(all_schema_objects_api.find_by_seq(self.base_object_seq$).obj as oracle_tools.t_named_object) end;
+end base_object;
 
 end;
 /
