@@ -41,6 +41,9 @@ function find_by_object_id
 return all_schema_objects%rowtype;
 /** Find the schema object in ALL_SCHEMA_OBJECTS by obj.id(). **/
 
+function ignore_object(p_obj in oracle_tools.t_schema_object)
+return integer;
+
 function get_schema_objects
 return varchar2 sql_macro;
 /**

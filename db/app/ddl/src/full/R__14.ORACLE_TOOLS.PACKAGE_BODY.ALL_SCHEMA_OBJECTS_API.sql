@@ -145,6 +145,73 @@ begin
   return l_rec;
 end find_by_object_id;
 
+function ignore_object(p_obj in oracle_tools.t_schema_object)
+return integer
+is
+  pragma udf;
+  
+  function ignore_object(p_object_type in varchar2, p_object_name in varchar2)
+  return integer
+  is
+  begin
+    return
+      case
+        when p_object_type is null
+        then 0        
+        when p_object_name is null
+        then 0
+        -- no dropped tables
+        when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' escape '\'
+        then 1
+        -- no AQ indexes/views
+        when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' escape '\'
+        then 1
+        -- no Flashback archive tables/indexes
+        when p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
+        then 1
+        -- no system generated indexes
+        when p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\'
+        then 1
+        -- no generated types by declaring pl/sql table types in package specifications
+        when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
+        then 1
+        -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
+        when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' escape '\'
+        then 1
+        -- no datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
+        then 1
+        -- no datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
+        then 1
+        -- no datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
+        then 1
+        -- no Oracle generated datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\'
+        then 1
+        -- no Flyway stuff and other Oracle things
+        when p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
+             ( p_object_name like 'schema_version%' or
+               p_object_name like 'flyway_schema_history%' or
+               p_object_name like 'CREATE$JAVA$LOB$TABLE%' )
+        then 1
+        -- no identity column sequences
+        when p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' escape '\'
+        then 1
+        else 0
+      end;
+  end ignore_object;
+begin
+  return
+    case
+      when ignore_object(p_obj.object_type(), p_obj.object_name()) = 1 or
+           ignore_object(p_obj.base_object_type(), p_obj.base_object_name()) = 1
+      then 1
+      else 0
+    end;
+end ignore_object;
+
 function get_schema_objects
 return varchar2 sql_macro
 is
@@ -152,6 +219,7 @@ begin
   return replace
          ( q'[
 select  t.*
+,       all_schema_objects_api.ignore_object(t.obj) as ignore_object
 from    all_schema_objects t
 where   t.session_id = {session_id}
 ]'       , '{session_id}'
