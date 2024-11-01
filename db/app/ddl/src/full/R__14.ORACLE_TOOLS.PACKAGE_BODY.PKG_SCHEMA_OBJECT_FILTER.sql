@@ -95,7 +95,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'cardinality(p_schema_object_filter.object_tab$): %s; p_schema_object_filter.nr_excluded_objects$: %s'
-  , case when p_schema_object_filter is not null then cardinality(p_schema_object_filter.object_tab$) end
+  , case when p_schema_object_filter is not null and p_schema_object_filter.object_tab$ is not null then p_schema_object_filter.object_tab$.count end
   , case when p_schema_object_filter is not null then p_schema_object_filter.nr_excluded_objects$ end
   );
 $end    
@@ -123,7 +123,8 @@ $end
 
     when p_schema_object_filter is null or
          p_schema_object_id is null or
-         cardinality(p_schema_object_filter.object_tab$) = 0
+         p_schema_object_filter.object_tab$ is null or
+         p_schema_object_filter.object_tab$.count = 0
     then
       l_result := 1;
 
@@ -137,7 +138,12 @@ $end
       l_result := nvl
                   ( search
                     ( p_schema_object_filter.nr_excluded_objects$ + 1
-                    , nvl(cardinality(p_schema_object_filter.object_tab$), 0)
+                    , case
+                        when p_schema_object_filter is null or
+                             p_schema_object_filter.object_tab$ is null
+                        then 0
+                        else p_schema_object_filter.object_tab$.count
+                      end
                     )
                   , 1 -- when there are no inclusions at all: OK
                   );
