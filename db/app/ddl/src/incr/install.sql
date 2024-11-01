@@ -118,7 +118,8 @@ prompt @V20210327121100__t_trigger_ddl.sql
 @V20210327121100__t_trigger_ddl.sql
 prompt @V20221124104600__t_schema_object_filter.sql
 @V20221124104600__t_schema_object_filter.sql
-prompt @V20241025151600__all_schema_objects.sql
-@V20241025151600__all_schema_objects.sql
+prompt @V20241101115700__schema_object_filters.sql
+@V20241101115700__schema_object_filters.sql
+prompt @V20241101121700__all_schema_objects.sql
+@V20241101121700__all_schema_objects.sql
 @check.sql
-

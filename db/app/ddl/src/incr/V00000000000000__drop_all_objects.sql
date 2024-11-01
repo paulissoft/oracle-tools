@@ -18,6 +18,19 @@ declare
       -- must be last
     , 'T_TEXT_TAB' 
     );
+  l_table_tab sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( 'ALL_SCHEMA_OBJECTS'
+    , 'SCHEMA_OBJECT_FILTERS'
+    );
+  l_sequence_tab sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( 'SCHEMA_OBJECT_FILTERS$SEQ'
+    );
+  l_function_tab sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( 'MATCHES_SCHEMA_OBJECT_FNC'
+    );
   l_count pls_integer;
   l_nr_objects_dropped pls_integer;
 begin
@@ -34,13 +47,38 @@ begin
   loop
     l_nr_objects_dropped := 0;
     
-    begin
-      execute immediate 'drop table all_schema_objects purge';
-      l_nr_objects_dropped := l_nr_objects_dropped + 1;
-    exception
-      when others
-      then null;
-    end;
+    for i_idx in l_table_tab.first .. l_table_tab.last
+    loop
+      begin
+        execute immediate 'drop table ' || l_table_tab(i_idx) || ' purge';
+        l_nr_objects_dropped := l_nr_objects_dropped + 1;
+      exception
+        when others
+        then null;
+      end;
+    end loop;
+    
+    for i_idx in l_sequence_tab.first .. l_sequence_tab.last
+    loop
+      begin
+        execute immediate 'drop sequence ' || l_sequence_tab(i_idx);
+        l_nr_objects_dropped := l_nr_objects_dropped + 1;
+      exception
+        when others
+        then null;
+      end;
+    end loop;
+
+    for i_idx in l_function_tab.first .. l_function_tab.last
+    loop
+      begin
+        execute immediate 'drop function ' || l_function_tab(i_idx);
+        l_nr_objects_dropped := l_nr_objects_dropped + 1;
+      exception
+        when others
+        then null;
+      end;
+    end loop;
 
     for i_idx in l_type_tab.first .. l_type_tab.last
     loop

@@ -43,36 +43,6 @@ begin
   return self.grantor_is_schema$;
 end;
 
-member function match_perc
-return integer
-deterministic
-is
-begin
-  return
-    case
-      when match_count$ > 0
-      then trunc((100 * match_count_ok$) / match_count$)
-      else null
-    end;
-end;
-
-member function match_perc_threshold
-return integer
-deterministic
-is
-begin
-  return match_perc_threshold$;
-end match_perc_threshold;
-
-member procedure match_perc_threshold
-( self in out nocopy oracle_tools.t_schema_object_filter 
-, p_match_perc_threshold in integer
-)
-is
-begin
-  self.match_perc_threshold$ := p_match_perc_threshold;
-end match_perc_threshold;
-
 member procedure print
 ( self in oracle_tools.t_schema_object_filter
 )
@@ -82,18 +52,6 @@ begin
   ( p_schema_object_filter => self
   );
 end print;
-
-member procedure get_schema_objects
-( self in out nocopy oracle_tools.t_schema_object_filter 
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-)
-is
-begin
-  oracle_tools.pkg_schema_object_filter.get_schema_objects
-  ( p_schema_object_filter => self
-  , p_schema_object_tab => p_schema_object_tab
-  );
-end get_schema_objects;
 
 end;
 /

@@ -54,6 +54,49 @@ Usage: select * from all_schema_objects_api.get_schema_objects()
 
 **/
 
+function matches_schema_object
+( p_schema_object_filter_id in number
+, p_obj in oracle_tools.t_schema_object
+)
+return integer
+deterministic;
+
+function match_perc
+return integer
+deterministic;
+/*
+is
+begin
+  return
+    case
+      when match_count$ > 0
+      then trunc((100 * match_count_ok$) / match_count$)
+      else null
+    end;
+end;
+*/
+
+function match_perc_threshold
+return integer
+deterministic;
+/*
+is
+begin
+  return match_perc_threshold$;
+end match_perc_threshold;
+*/
+
+procedure match_perc_threshold
+( self in out nocopy oracle_tools.t_schema_object_filter 
+, p_match_perc_threshold in integer
+);
+/*
+is
+begin
+  self.match_perc_threshold$ := p_match_perc_threshold;
+end match_perc_threshold;
+*/
+
 END ALL_SCHEMA_OBJECTS_API;
 /
 
