@@ -24,7 +24,7 @@ $end
   then
     self.base_object_seq$ := null;
   else
-    self.base_object_seq$ := all_schema_objects_api.find_by_object_id(p_base_object.id()).seq;
+    self.base_object_seq$ := schema_objects_api.find_by_object_id(p_base_object.id()).seq;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;

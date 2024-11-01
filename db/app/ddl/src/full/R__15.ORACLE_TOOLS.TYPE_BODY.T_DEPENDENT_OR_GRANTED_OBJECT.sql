@@ -45,7 +45,7 @@ begin
   else
     -- change and add again (must exist)
     l_base_object.object_schema(p_base_object_schema);
-    all_schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
+    schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
   end if;  
 end base_object_schema;
 
@@ -72,7 +72,7 @@ deterministic
 is
   l_base_object oracle_tools.t_named_object := null;
 begin
-  return case when self.base_object_seq$ is not null then treat(all_schema_objects_api.find_by_seq(self.base_object_seq$).obj as oracle_tools.t_named_object) end;
+  return case when self.base_object_seq$ is not null then treat(schema_objects_api.find_by_seq(self.base_object_seq$).obj as oracle_tools.t_named_object) end;
 end base_object;
 
 end;

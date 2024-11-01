@@ -1,4 +1,4 @@
 CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECTS" BEQUEATH CURRENT_USER AS
 SELECT  t.*
-FROM    all_schema_objects_api.get_schema_objects() t;
+FROM    schema_objects_api.get_schema_objects() t;
 

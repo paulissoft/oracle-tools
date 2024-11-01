@@ -42,7 +42,7 @@ $end
   self := oracle_tools.t_ref_constraint_object
           ( null
           , p_object_schema
-          , case when p_base_object is not null then all_schema_objects_api.find_by_object_id(p_base_object.id()).seq end          
+          , case when p_base_object is not null then schema_objects_api.find_by_object_id(p_base_object.id()).seq end          
           , p_object_name
           , nvl
             ( p_column_names
@@ -54,7 +54,7 @@ $end
             )
           , null -- search condition
           , nvl(p_constraint_type, 'R')
-          , case when p_ref_object is not null then all_schema_objects_api.find_by_object_id(p_ref_object.id()).seq end          
+          , case when p_ref_object is not null then schema_objects_api.find_by_object_id(p_ref_object.id()).seq end          
           );
 
   if self.ref_object_seq$ is null
@@ -94,15 +94,15 @@ $end
         , p_constraint_type => r.r_constraint_type
         , p_search_condition => null
         );
-      all_schema_objects_api.add
+      schema_objects_api.add
       ( p_schema_object => l_base_object
       , p_must_exist => null
       );
-      all_schema_objects_api.add
+      schema_objects_api.add
       ( p_schema_object => l_constraint_object          
       , p_must_exist => null
       );
-      self.ref_object_seq$ := all_schema_objects_api.find_by_object_id(l_constraint_object.id()).seq;
+      self.ref_object_seq$ := schema_objects_api.find_by_object_id(l_constraint_object.id()).seq;
       
       exit find_loop;
     end loop find_loop;
@@ -244,7 +244,7 @@ begin
   else
     -- change and add again (must exist)
     l_ref_object.object_schema(p_ref_object_schema);
-    all_schema_objects_api.add(p_schema_object => l_ref_object, p_must_exist => true);
+    schema_objects_api.add(p_schema_object => l_ref_object, p_must_exist => true);
   end if;  
 
   if l_base_object.object_schema() = p_ref_object_schema
@@ -253,7 +253,7 @@ begin
   else
     -- change and add again (must exist)
     l_base_object.object_schema(p_ref_object_schema);
-    all_schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
+    schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
   end if;  
 end ref_object_schema;
 
@@ -370,7 +370,7 @@ deterministic
 is
   l_ref_object oracle_tools.t_named_object := null;
 begin
-  return case when self.ref_object_seq$ is not null then treat(all_schema_objects_api.find_by_seq(self.ref_object_seq$).obj as oracle_tools.t_constraint_object) end;
+  return case when self.ref_object_seq$ is not null then treat(schema_objects_api.find_by_seq(self.ref_object_seq$).obj as oracle_tools.t_constraint_object) end;
 end ref_object;
 
 end;

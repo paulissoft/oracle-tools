@@ -43,6 +43,17 @@ begin
   return self.grantor_is_schema$;
 end;
 
+member function matches_schema_object
+( self in oracle_tools.t_schema_object_filter
+, p_obj in oracle_tools.t_schema_object
+)
+return integer
+deterministic
+is
+begin
+  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_obj.id());
+end matches_schema_object;
+
 member procedure print
 ( self in oracle_tools.t_schema_object_filter
 )

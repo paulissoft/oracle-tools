@@ -2439,7 +2439,7 @@ $end
         when no_data_found
         then
           begin
-            l_my_schema_object := oracle_tools.all_schema_objects_api.find_by_object_id(p_object_key);
+            l_my_schema_object := oracle_tools.schema_objects_api.find_by_object_id(p_object_key);
           exception
             when no_data_found
             then l_my_schema_object.generate_ddl := 0;
@@ -3034,7 +3034,7 @@ $end
          Now if it that means invoking get_schema_ddl() twice that may be costly.
          The solution is to retrieve all the object ddl info once and use it twice.
       */
-      oracle_tools.pkg_schema_object_filter.get_schema_objects
+      oracle_tools.schema_objects_api.get_schema_objects
       ( p_schema_object_filter => l_schema_object_filter
       , p_schema_object_tab => l_schema_object_tab
       );
@@ -4964,7 +4964,7 @@ $end
       , p_exclude_objects => p_exclude_objects
       , p_include_objects => p_include_objects
       );
-    oracle_tools.pkg_schema_object_filter.get_schema_objects
+    oracle_tools.schema_objects_api.get_schema_objects
     ( p_schema_object_filter => l_schema_object_filter
     , p_schema_object_tab => l_schema_object_tab
     );
@@ -8244,7 +8244,7 @@ $end
         , p_exclude_objects => null
         , p_include_objects => null
         );
-      oracle_tools.pkg_schema_object_filter.get_schema_objects
+      oracle_tools.schema_objects_api.get_schema_objects
       ( p_schema_object_filter => l_schema_object_filter          
       , p_schema_object_tab => l_schema_object_tab1
       );

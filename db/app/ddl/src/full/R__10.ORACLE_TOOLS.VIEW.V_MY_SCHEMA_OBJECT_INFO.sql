@@ -11,7 +11,7 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_INFO" ("SCHEMA_OBJECT_
 ,       t.privilege() as privilege
 ,       t.grantable() as grantable
 from    table
-        ( oracle_tools.pkg_schema_object_filter.get_schema_objects
+        ( oracle_tools.schema_objects_api.get_schema_objects
           ( p_schema => user
           , p_object_type => null
           , p_object_names => null

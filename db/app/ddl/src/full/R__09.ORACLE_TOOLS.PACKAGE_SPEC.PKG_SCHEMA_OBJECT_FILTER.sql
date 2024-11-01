@@ -30,10 +30,6 @@ These two methods can be combined.
 
 **/
 
-procedure default_match_perc_threshold
-( p_match_perc_threshold in integer default 50
-);
-
 procedure construct
 ( p_schema in varchar2 default user -- The schema to filter
 , p_object_type in varchar2 default null -- The object type to filter (PARTIAL)
@@ -51,6 +47,13 @@ The constructor for an oracle_tools.t_schema_object_filter object.
 
 **/
 
+function matches_schema_object
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_obj in oracle_tools.t_schema_object
+)
+return integer
+deterministic;
+
 procedure print
 ( p_schema_object_filter in t_schema_object_filter
 );
@@ -58,54 +61,6 @@ procedure print
 /**
 
 Print the JSON representation of a schema object filter using the DBUG package.
-
-**/
-
-procedure get_schema_objects
-( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter -- The schema object filter.
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-);
-
-/**
-
-Get all the object info from several dictionary views.
-
-A list of object info records where every object will have p_schema as its object_schema except for public synonyms to objects of this schema since they will have object_schema PUBLIC.
- 
-These are the dictionary views:
-
-- ALL_QUEUE_TABLES
-- ALL_MVIEWS
-- ALL_TABLES
-- ALL_OBJECTS
-- ALL_TAB_PRIVS
-- ALL_SYNONYMS
-- ALL_TAB_COMMENTS
-- ALL_MVIEW_COMMENTS
-- ALL_COL_COMMENTS
-- ALL_CONS_COLUMNS
-- ALL_CONSTRAINTS
-- ALL_TAB_COLUMNS
-- ALL_TRIGGERS
-- ALL_INDEXES
-
-**/
-
-function get_schema_objects
-( p_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_grantor_is_schema in integer default 0
-, p_exclude_objects in clob default null
-, p_include_objects in clob default null
-)
-return oracle_tools.t_schema_object_tab
-pipelined;
-
-/**
-
-Constructs a schema object filter based on the input parameters, then invokes the procedure get_schema_objects and returns the objects found.
 
 **/
 
@@ -119,11 +74,8 @@ $if oracle_tools.cfg_pkg.c_testing $then
 --%test
 procedure ut_construct;
 
---%test
-procedure ut_get_schema_objects;
-
---%test
-procedure ut_get_schema_object_filter;
+--%test;
+procedure ut_matches_schema_object
 
 --%test
 procedure ut_compatible_le_oracle_11g;
