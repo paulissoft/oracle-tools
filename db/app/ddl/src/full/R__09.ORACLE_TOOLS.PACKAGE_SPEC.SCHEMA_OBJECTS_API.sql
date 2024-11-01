@@ -53,7 +53,7 @@ return oracle_tools.t_schema_object_tab
 pipelined;
 
 function get_schema_objects
-( p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type -- If null, the last from schema_object_filters for this session is used
+( p_schema_object_filter_id in number -- If null, the last from schema_object_filters for this session is used
 )
 return varchar2 sql_macro;
 /**
