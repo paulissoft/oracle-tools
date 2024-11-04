@@ -104,28 +104,7 @@ is
   return boolean
   is
   begin
-    if p_source_tab.count != p_target_tab.count
-    then
-      return false;
-    end if;
-    if p_source_tab.first != p_target_tab.first
-    then
-      return false;
-    end if;
-    if p_source_tab.first > 0
-    then
-      for i_idx in p_source_tab.first .. p_source_tab.last
-      loop
-        if (p_source_tab(i_idx) is null and p_target_tab(i_idx) is null)
-        or (p_source_tab(i_idx) = p_target_tab(i_idx))
-        then
-          continue;
-        else
-          return false;
-        end if;
-      end loop;
-    end if;
-    return true;
+    return p_source_tab = p_target_tab;
   end eq;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then

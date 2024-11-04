@@ -175,7 +175,7 @@ $end
   g_clob clob := null;
 
   -- DBMS_METADATA object types voor DBA gerelateerde taken (DBA rol)
-  g_dba_md_object_type_tab constant t_md_object_type_tab := t_md_object_type_tab
+  g_dba_md_object_type_tab constant t_md_object_type_tab := oracle_tools.t_text_tab
                                                             ( 'CONTEXT'
                                                             /*, 'DEFAULT_ROLE'*/
                                                             , 'DIRECTORY'
@@ -191,11 +191,11 @@ $end
                                                             );
 
   -- DBMS_METADATA object types voor de PUBLIC rol
-  g_public_md_object_type_tab constant t_md_object_type_tab := t_md_object_type_tab('DB_LINK');
+  g_public_md_object_type_tab constant t_md_object_type_tab := oracle_tools.t_text_tab('DB_LINK');
 
   -- DBMS_METADATA object types ordered by least dependencies (see also sort_objects_by_deps)
   g_schema_md_object_type_tab constant t_md_object_type_tab :=
-    t_md_object_type_tab
+    oracle_tools.t_text_tab
     ( 'SEQUENCE'
     , 'TYPE_SPEC'
     , 'CLUSTER'
@@ -249,7 +249,7 @@ $end
     );
 
   g_dependent_md_object_type_tab constant t_md_object_type_tab :=
-    t_md_object_type_tab
+    oracle_tools.t_text_tab
     ( 'OBJECT_GRANT'   -- Part of g_schema_md_object_type_tab
     , 'SYNONYM'        -- Part of g_schema_md_object_type_tab
     , 'COMMENT'        -- Part of g_schema_md_object_type_tab

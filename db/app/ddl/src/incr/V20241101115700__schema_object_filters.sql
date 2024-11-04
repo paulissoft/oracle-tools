@@ -11,5 +11,6 @@ organization index
 tablespace data
 including created
 overflow tablespace data
+nested table obj.object_tab$ store as obj_object_tab$ 
+nested table obj.object_cmp_tab$ store as obj_object_cmp_tab$ 
 ;
-
