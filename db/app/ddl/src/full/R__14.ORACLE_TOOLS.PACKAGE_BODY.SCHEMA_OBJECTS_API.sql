@@ -30,8 +30,21 @@ c_steps constant sys.odcivarchar2list :=
 
 g_default_match_perc_threshold integer := 50;
 
+function get_last_schema_object_filter
+return number
+is
+  l_schema_object_filter_id number;
+begin
+  select  max(f.id)
+  into    l_schema_object_filter_id
+  from    oracle_tools.schema_object_filters f
+  where   f.session_id = sys_context('USERENV', 'SESSION_ID');
+  return l_schema_object_filter_id;
+end get_last_schema_object_filter;
+
 procedure get_named_objects
 ( p_schema in varchar2
+, p_schema_object_filter_id in number
 )
 is
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
@@ -74,7 +87,7 @@ $end
 
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
 
-          schema_objects_api.add
+          add
           ( p_schema_object =>
               oracle_tools.t_named_object.create_named_object
               ( p_object_schema => r.object_schema
@@ -82,6 +95,7 @@ $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
               , p_object_name => r.object_name
               )
           , p_must_exist => false
+          , p_schema_object_filter_id => p_schema_object_filter_id
           );
 $else
           /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
@@ -111,9 +125,10 @@ $end
           end if;
 
           -- this is a special case since we need to exclude first
-          schema_objects_api.add
+          add
           ( p_schema_object => oracle_tools.t_materialized_view_object(r.object_schema, r.object_name)
           , p_must_exist => false
+          , p_schema_object_filter_id => p_schema_object_filter_id
           );          
         end loop;
 
@@ -155,9 +170,10 @@ $end
 
           if not(l_excluded_tables_tab.exists(r.object_name))
           then
-            schema_objects_api.add
+            add
             ( p_schema_object => oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name)
             , p_must_exist => false
+            , p_schema_object_filter_id => p_schema_object_filter_id
             );
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -207,7 +223,7 @@ $end
           and     o.is_dependent_object_type = 0
         )
         loop
-          schema_objects_api.add
+          add
           ( p_schema_object =>
               oracle_tools.t_named_object.create_named_object
               ( p_object_schema => r.object_schema
@@ -215,6 +231,7 @@ $end
               , p_object_name => r.object_name
               )
           , p_must_exist => false
+          , p_schema_object_filter_id => p_schema_object_filter_id
           );          
         end loop;        
     end case;
@@ -230,8 +247,10 @@ exception
 $end
 end get_named_objects;
 
+-- PUBLIC
+
 procedure get_schema_objects
-( p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
@@ -240,6 +259,7 @@ $if oracle_tools.pkg_schema_object_filter.c_tracing $then
 $end  
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
+  l_schema_object_filter_id number;
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -270,7 +290,9 @@ $end
 
   p_schema_object_tab := oracle_tools.t_schema_object_tab();
 
-  get_named_objects(l_schema);
+  ins(p_schema_object_filter, l_schema_object_filter_id);
+
+  get_named_objects(l_schema, l_schema_object_filter_id);
   
   for i_idx in c_steps.first .. c_steps.last
   loop
@@ -283,16 +305,23 @@ $end
     case l_step
       when "named objects"
       then
+        /*
         for r in
         ( select  value(obj) as obj
-          from    schema_objects_api.get_schema_objects() obj
+          from    schema_objects_api.get_schema_objects(l_schema_object_filter_id) obj
           where   value(obj) is of type (oracle_tools.t_named_objects)
         )
         loop
-          process_schema_object(r.obj, null, null); -- object_type and object_name have already been tested for exclusions
+          add
+          ( p_schema_object => r.obj
+          , p_must_exist => false
+          , p_schema_object_filter_id => l_schema_object_filter_id
+          );
         end loop;
+        */
+        null; -- already there
 
-      -- object grants must depend on a base object already gathered, i.e. l_named_object_tab
+      -- object grants must depend on a base object already gathered (see above)
       when "object grants"
       then
         for r in
@@ -319,11 +348,11 @@ $end
           ,       p.grantee
           ,       p.privilege
           ,       p.grantable
-          from    ( select  obj.object_type() as object_type
-                    ,       obj.object_schema() as object_schema
-                    ,       obj.object_name() as object_name
-                    ,       value(obj) as obj
-                    from    table(l_named_object_tab) obj
+          from    ( select  t.obj.object_type() as object_type
+                    ,       t.obj.object_schema() as object_schema
+                    ,       t.obj.object_name() as object_name
+                    ,       t.obj
+                    from    v_my_named_schema_objects t
                   ) obj
                   inner join prv p
                   on p.table_schema = obj.object_schema and p.table_name = obj.object_name
@@ -336,68 +365,71 @@ $end
                                          ) -- grants are on underlying tables
         )
         loop
-          process_schema_object
-          ( oracle_tools.t_object_grant_object
-            ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-            , p_object_schema => r.object_schema
-            , p_grantee => r.grantee
-            , p_privilege => r.privilege
-            , p_grantable => r.grantable
-            )
+          add
+          ( p_schema_object =>
+              oracle_tools.t_object_grant_object
+              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+              , p_object_schema => r.object_schema
+              , p_grantee => r.grantee
+              , p_privilege => r.privilege
+              , p_grantable => r.grantable
+              )
+          , p_must_exist => false
+          , p_schema_object_filter_id => l_schema_object_filter_id
           );
         end loop;
 
-      -- public synonyms and comments must depend on a base object already gathered, i.e. l_named_object_tab
+      -- public synonyms and comments must depend on a base object already gathered
       when "public synonyms and comments"
       then
         for r in
         ( select  t.*
           from    ( -- public synonyms for all our objects
-                    select  value(obj)     as base_object
+                    select  t.obj          as base_object
                     ,       s.owner        as object_schema
                     ,       'SYNONYM'      as object_type
                     ,       s.synonym_name as object_name
                     ,       null           as column_name
-                    from    table(l_named_object_tab) obj
+                    from    oracle_tools.v_my_named_schema_objects t
                             inner join all_synonyms s
-                            on s.table_owner = obj.object_schema() and s.table_name = obj.object_name()
-                    where   obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                            on s.table_owner = t.obj.object_schema() and s.table_name = t.obj.object_name()
+                    where   t.obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                     and     s.owner = 'PUBLIC'
                     union all
                     -- table/view comments
-                    select  value(obj)     as base_object
+                    select  t.obj          as base_object
                     ,       null           as object_schema
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       null           as column_name
-                    from    table(l_named_object_tab) obj
+                    from    oracle_tools.v_my_named_schema_objects t
                             inner join all_tab_comments t
-                            on t.owner = obj.object_schema() and t.table_type = obj.object_type() and t.table_name = obj.object_name()
-                    where   obj.object_type() in ('TABLE', 'VIEW')
+                            on t.owner = t.obj.object_schema() and t.table_type = t.obj.object_type() and t.table_name = t.obj.object_name()
+                    where   t.obj.object_type() in ('TABLE', 'VIEW')
                     and     t.comments is not null
                     union all
                     -- materialized view comments
-                    select  value(obj)     as base_object
+                    select  t.obj          as base_object
                     ,       null           as object_schema
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       null           as column_name
-                    from    table(l_named_object_tab) obj
+                    from    oracle_tools.v_my_named_schema_objects t
                             inner join all_mview_comments m
-                            on m.owner = obj.object_schema() and m.mview_name = obj.object_name()
-                    where   obj.object_type() = 'MATERIALIZED_VIEW'
+                            on m.owner = t.obj.object_schema() and m.mview_name = t.obj.object_name()
+                    where   t.obj.object_type() = 'MATERIALIZED_VIEW'
                     and     m.comments is not null
                     union all
                     -- column comments
-                    select  value(obj)     as base_object
+                    select  t.obj          as base_object
                     ,       null           as object_schema
                     ,       'COMMENT'      as object_type
                     ,       null           as object_name
                     ,       c.column_name  as column_name
-                    from    table(l_named_object_tab) obj
+                    from    oracle_tools.v_my_named_schema_objects t
                             inner join all_col_comments c
-                            on c.owner = obj.object_schema() and c.table_name = obj.object_name()
-                    where   obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
+                            on c.owner = t.obj.object_schema() and c.table_name = t.obj.object_name()
+                    where   t.obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
                     and     c.comments is not null
                   ) t
         )
@@ -405,32 +437,38 @@ $end
           case r.object_type
             when 'SYNONYM'
             then
-              process_schema_object
-              ( oracle_tools.t_synonym_object
-                ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-                , p_object_schema => r.object_schema
-                , p_object_name => r.object_name
-                )
+              add
+              ( p_schema_object =>
+                  oracle_tools.t_synonym_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  , p_object_schema => r.object_schema
+                  , p_object_name => r.object_name
+                  )
+              , p_must_exist => false
+              , p_schema_object_filter_id => l_schema_object_filter_id
               );
             when 'COMMENT'
             then
-              process_schema_object
-              ( oracle_tools.t_comment_object
-                ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-                , p_object_schema => r.object_schema
-                , p_column_name => r.column_name
-                )
+              add
+              ( p_schema_object =>
+                  oracle_tools.t_comment_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  , p_object_schema => r.object_schema
+                  , p_column_name => r.column_name
+                  )
+              , p_must_exist => false
+              , p_schema_object_filter_id => l_schema_object_filter_id
               );
           end case;
         end loop;
 
-      -- constraints must depend on a base object already gathered, i.e. l_named_object_tab
+      -- constraints must depend on a base object already gathered
       when "constraints"
       then
         for r in
         ( -- constraints for objects in the same schema
           select  t.*
-          from    ( select  value(obj) as base_object
+          from    ( select  t.obj as base_object
                     ,       c.owner as object_schema
                     ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
                     ,       c.constraint_name as object_name
@@ -449,10 +487,10 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
                               else null
                             end as any_column_name
 $end                          
-                    from    table(l_named_object_tab) obj
+                    from    oracle_tools.v_my_named_schema_objects t
                             inner join all_constraints c /* this is where we are interested in */
-                            on c.owner = obj.object_schema() and c.table_name = obj.object_name()
-                    where   obj.object_type() in ('TABLE', 'VIEW')
+                            on c.owner = t.obj.object_schema() and c.table_name = t.obj.object_name()
+                    where   t.obj.object_type() in ('TABLE', 'VIEW')
                             /* Type of constraint definition:
                                C (check constraint on a table)
                                P (primary key)
@@ -509,31 +547,37 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
           case r.object_type
             when 'REF_CONSTRAINT'
             then
-              process_schema_object
-              ( oracle_tools.t_ref_constraint_object
-                ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-                , p_object_schema => r.object_schema
-                , p_object_name => r.object_name
-                , p_constraint_type => r.constraint_type
-                , p_column_names => null
-                )
+              add
+              ( p_schema_object =>
+                  oracle_tools.t_ref_constraint_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  , p_object_schema => r.object_schema
+                  , p_object_name => r.object_name
+                  , p_constraint_type => r.constraint_type
+                  , p_column_names => null
+                  )
+              , p_must_exist => false
+              , p_schema_object_filter_id => l_schema_object_filter_id
               );
 
             when 'CONSTRAINT'
             then
-              process_schema_object
-              ( oracle_tools.t_constraint_object
-                ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-                , p_object_schema => r.object_schema
-                , p_object_name => r.object_name
-                , p_constraint_type => r.constraint_type
-                , p_search_condition => r.search_condition
-                )
+              add
+              ( p_schema_object =>
+                  oracle_tools.t_constraint_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  , p_object_schema => r.object_schema
+                  , p_object_name => r.object_name
+                  , p_constraint_type => r.constraint_type
+                  , p_search_condition => r.search_condition
+                  )
+              , p_must_exist => false
+              , p_schema_object_filter_id => l_schema_object_filter_id
               );
           end case;
         end loop;
 
-      -- these are not dependent on l_named_object_tab:
+      -- these are not dependent on named objects:
       -- * private synonyms from this schema pointing to a base object in ANY schema possible
       -- * triggers from this schema pointing to a base object in ANY schema possible
       when "private synonyms and triggers"
@@ -586,20 +630,23 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                   ) t
         )
         loop
-          process_schema_object
-          ( oracle_tools.t_schema_object.create_schema_object
-            ( p_object_schema => r.object_schema
-            , p_object_type => r.object_type
-            , p_object_name => r.object_name
-            , p_base_object_schema => r.base_object_schema
-            , p_base_object_type => r.base_object_type
-            , p_base_object_name => r.base_object_name
-            , p_column_name => r.column_name
-            )
+          add
+          ( p_schema_object =>
+              oracle_tools.t_schema_object.create_schema_object
+              ( p_object_schema => r.object_schema
+              , p_object_type => r.object_type
+              , p_object_name => r.object_name
+              , p_base_object_schema => r.base_object_schema
+              , p_base_object_type => r.base_object_type
+              , p_base_object_name => r.base_object_name
+              , p_column_name => r.column_name
+              )
+          , p_must_exist => false
+          , p_schema_object_filter_id => l_schema_object_filter_id
           );
         end loop;
 
-      -- these are not dependent on l_named_object_tab:
+      -- these are not dependent on named objects:
       -- * indexes from this schema pointing to a base object in ANY schema possible
       when "indexes"
       then
@@ -631,18 +678,21 @@ $if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
 $end      
         )
         loop
-          process_schema_object
-          ( oracle_tools.t_index_object
-            ( p_base_object =>
-                oracle_tools.t_named_object.create_named_object
-                ( p_object_schema => r.base_object_schema
-                , p_object_type => r.base_object_type
-                , p_object_name => r.base_object_name
-                )
-            , p_object_schema => r.object_schema
-            , p_object_name => r.object_name
-            , p_tablespace_name => r.tablespace_name
-            )
+          add
+          ( p_schema_object =>
+              oracle_tools.t_index_object
+              ( p_base_object =>
+                  oracle_tools.t_named_object.create_named_object
+                  ( p_object_schema => r.base_object_schema
+                  , p_object_type => r.base_object_type
+                  , p_object_name => r.base_object_name
+                  )
+              , p_object_schema => r.object_schema
+              , p_object_name => r.object_name
+              , p_tablespace_name => r.tablespace_name
+              )
+          , p_must_exist => false
+          , p_schema_object_filter_id => l_schema_object_filter_id
           );
         end loop;
     end case;
@@ -770,8 +820,6 @@ $end
     raise;
 end get_schema_objects;
 
--- PUBLIC
-
 procedure ins
 ( p_obj in oracle_tools.schema_object_filters.obj%type
 , p_id out nocopy oracle_tools.schema_object_filters.id%type
@@ -814,7 +862,7 @@ begin
         ( p_schema_object_filter_id
           -- Since objects are inserted per Oracle session
           -- there is never a problem with another session inserting at the same time for the same session.
-        , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.session_id = p_session_id)
+        , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.schema_object_filter_id = p_schema_object_filter_id)
         , p_schema_object
         );
     end case;
@@ -909,11 +957,11 @@ is
 begin
   return q'[
 select  t.obj
-from    all_schema_objects t
+from    v_all_schema_objects t
 where   t.schema_object_filter_id =
         nvl
         ( get_schema_objects.p_schema_object_filter_id
-        , (select max(f.schema_object_filter_id) from oracle_tools.schema_object_filters f where f.session_id = sys_context('USERENV', 'SESSION_ID'))
+        , (select max(f.id) from oracle_tools.schema_object_filters f where f.session_id = sys_context('USERENV', 'SESSION_ID'))
         )
 and     t.generate_ddl = 1        
 ]';
