@@ -51,7 +51,7 @@ return integer
 deterministic
 is
 begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_obj.id());
+  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_obj);
 end matches_schema_object;
 
 member procedure print
