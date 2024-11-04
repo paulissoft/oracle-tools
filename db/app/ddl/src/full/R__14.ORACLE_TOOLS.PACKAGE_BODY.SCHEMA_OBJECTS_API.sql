@@ -981,21 +981,6 @@ where   t.session_id = {session_id}
          );
 end get_schema_objects;
 
-function matches_schema_object
-( p_schema_object_filter_id in number
-, p_obj in oracle_tools.t_schema_object
-)
-return integer
-deterministic
-is
-begin
-  for r in ( select t.obj from schema_object_filters t where t.id = p_schema_object_filter_id )
-  loop
-    return r.obj.matches_schema_object(p_obj);
-  end loop;
-  raise no_data_found;
-end matches_schema_object;
-
 $if oracle_tools.cfg_pkg.c_testing $then
 
 procedure ut_get_schema_objects

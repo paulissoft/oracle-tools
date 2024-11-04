@@ -3,7 +3,12 @@ return integer
 deterministic
 is
 begin
-  raise_application_error(-20000, 'Must invoke all_schema_objects_api.matches_schema_object');
+begin
+  for r in ( select t.obj from schema_object_filters t where t.id = p_schema_object_filter_id )
+  loop
+    return r.obj.matches_schema_object(p_obj);
+  end loop;
+  raise no_data_found;
 end matches_schema_object_fnc;
 /
 

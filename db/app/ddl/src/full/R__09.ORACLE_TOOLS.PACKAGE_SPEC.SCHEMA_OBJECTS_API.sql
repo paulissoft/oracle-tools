@@ -64,13 +64,6 @@ Usage: select * from schema_objects_api.get_schema_objects(null)
 
 **/
 
-function matches_schema_object
-( p_schema_object_filter_id in number
-, p_obj in oracle_tools.t_schema_object
-)
-return integer
-deterministic;
-
 function match_perc
 return integer
 deterministic;
