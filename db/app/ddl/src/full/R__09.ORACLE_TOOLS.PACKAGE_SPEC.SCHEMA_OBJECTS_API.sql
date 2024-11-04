@@ -63,6 +63,9 @@ Get all rows from ALL_SCHEMA_OBJECTS with schema_object_filter_id equal to p_sch
 Usage: select * from schema_objects_api.get_schema_objects(null)
 
 **/
+procedure default_match_perc_threshold
+( p_match_perc_threshold in integer
+);
 
 function match_perc
 return integer

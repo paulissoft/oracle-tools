@@ -7,6 +7,13 @@ subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
 subtype t_metadata_object_type is oracle_tools.pkg_ddl_util.t_metadata_object_type;
 subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 subtype t_schema is oracle_tools.pkg_ddl_util.t_schema;
+subtype t_md_object_type_tab is oracle_tools.pkg_ddl_util.t_md_object_type_tab;
+
+"OBJECT SCHEMA" constant simple_integer := 1;
+"OBJECT TYPE" constant simple_integer := 2;
+"OBJECT NAME" constant simple_integer := 3;
+"BASE OBJECT TYPE" constant simple_integer := 5;
+"BASE OBJECT NAME" constant simple_integer := 6;
 
 -- see static function T_SCHEMA_OBJECT.ID
 c_nr_parts constant simple_integer := 10;
@@ -32,6 +39,59 @@ return integer
 deterministic
 is
   l_result simple_integer := 0;
+
+  function ignore_object(p_object_type in varchar2, p_object_name in varchar2)
+  return integer
+  is
+  begin
+    return
+      case
+        when p_object_type is null
+        then 0        
+        when p_object_name is null
+        then 0
+        -- no dropped tables
+        when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' escape '\'
+        then 1
+        -- no AQ indexes/views
+        when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' escape '\'
+        then 1
+        -- no Flashback archive tables/indexes
+        when p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
+        then 1
+        -- no system generated indexes
+        when p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\'
+        then 1
+        -- no generated types by declaring pl/sql table types in package specifications
+        when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
+        then 1
+        -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
+        when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' escape '\'
+        then 1
+        -- no datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
+        then 1
+        -- no datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
+        then 1
+        -- no datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
+        then 1
+        -- no Oracle generated datapump tables
+        when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\'
+        then 1
+        -- no Flyway stuff and other Oracle things
+        when p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
+             ( p_object_name like 'schema_version%' or
+               p_object_name like 'flyway_schema_history%' or
+               p_object_name like 'CREATE$JAVA$LOB$TABLE%' )
+        then 1
+        -- no identity column sequences
+        when p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' escape '\'
+        then 1
+        else 0
+      end;
+  end ignore_object;
 
   function search(p_lwb in naturaln, p_upb in naturaln)
   return natural
@@ -100,11 +160,14 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   );
 $end    
 
+  PRAGMA INLINE (ignore_object, 'YES');
+  PRAGMA INLINE (search, 'YES');
+  
   case
     -- exclude certain (semi-)dependent objects
     when p_base_object_type is not null and
          p_base_object_name is not null and
-         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_base_object_type, p_base_object_name) = 1
+         ignore_object(p_base_object_type, p_base_object_name) = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 1');
@@ -114,7 +177,7 @@ $end
     -- exclude certain named objects
     when p_object_type is not null and
          p_object_name is not null and
-         oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_object_type, p_object_name) = 1
+         ignore_object(p_object_type, p_object_name) = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 2');
@@ -190,9 +253,6 @@ begin
   to_json_array('OBJECT_TAB$', p_schema_object_filter.object_tab$);
   to_json_array('OBJECT_CMP_TAB$', p_schema_object_filter.object_cmp_tab$);
   p_json_object.put('NR_EXCLUDED_OBJECTS$', p_schema_object_filter.nr_excluded_objects$);
-  p_json_object.put('MATCH_COUNT$', p_schema_object_filter.match_count$);
-  p_json_object.put('MATCH_COUNT_OK$', p_schema_object_filter.match_count_ok$);
-  p_json_object.put('MATCH_PERC_THRESHOLD$', p_schema_object_filter. match_perc_threshold$);
 end serialize;
 
 function serialize
@@ -248,14 +308,6 @@ $end
 
 -- GLOBAL
 
-procedure default_match_perc_threshold
-( p_match_perc_threshold in integer
-)
-is
-begin
-  g_default_match_perc_threshold := p_match_perc_threshold;
-end default_match_perc_threshold;
-
 procedure construct
 ( p_schema in varchar2
 , p_object_type in varchar2
@@ -267,7 +319,7 @@ procedure construct
 , p_schema_object_filter in out nocopy t_schema_object_filter
 )
 is
-  l_dependent_md_object_type_tab constant oracle_tools.t_text_tab :=
+  l_dependent_md_object_type_tab constant t_md_object_type_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('DEPENDENT');
 
   l_exclude_object_tab dbms_sql.varchar2a;
@@ -668,9 +720,6 @@ $end
   p_schema_object_filter.object_tab$ := oracle_tools.t_text_tab();
   p_schema_object_filter.object_cmp_tab$ := oracle_tools.t_text_tab();
   p_schema_object_filter.nr_excluded_objects$ := 0;
-  p_schema_object_filter.match_count$ := 0;
-  p_schema_object_filter.match_count_ok$ := 0;
-  p_schema_object_filter.match_perc_threshold$ := g_default_match_perc_threshold;
 
   if p_exclude_objects is not null
   then
@@ -932,6 +981,38 @@ exception
 $end  
 end construct;
 
+function matches_schema_object
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_obj in oracle_tools.t_schema_object
+)
+return integer
+deterministic
+is
+  l_part_tab dbms_sql.varchar2a;
+begin
+  oracle_tools.pkg_str_util.split(p_str => p_obj.id(), p_delimiter => ':', p_str_tab => l_part_tab);
+
+  if l_part_tab.count != c_nr_parts
+  then
+    oracle_tools.pkg_ddl_error.raise_error
+    ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
+    , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
+    , p_context_info => p_obj.id()
+    , p_context_label => 'schema object id'
+    );            
+  end if;
+
+  return
+    matches_schema_object
+    ( p_object_type => l_part_tab("OBJECT TYPE")
+    , p_object_name => l_part_tab("OBJECT NAME")
+    , p_base_object_type => l_part_tab("BASE OBJECT TYPE")
+    , p_base_object_name => l_part_tab("BASE OBJECT NAME")
+    , p_schema_object_filter => p_schema_object_filter
+    , p_schema_object_id => p_obj.id()
+    );
+end matches_schema_object;
+
 procedure print
 ( p_schema_object_filter in t_schema_object_filter
 )
@@ -966,44 +1047,6 @@ $else
   null;
 $end
 end print;
-
-function matches_schema_object
-( p_schema_object_filter in t_schema_object_filter
-, p_schema_object_id in varchar2
-)
-return integer
-deterministic
-is
-  l_part_tab dbms_sql.varchar2a;
-  
-  "OBJECT SCHEMA" constant simple_integer := 1;
-  "OBJECT TYPE" constant simple_integer := 2;
-  "OBJECT NAME" constant simple_integer := 3;
-  "BASE OBJECT TYPE" constant simple_integer := 5;
-  "BASE OBJECT NAME" constant simple_integer := 6;
-begin
-  oracle_tools.pkg_str_util.split(p_str => p_schema_object_id, p_delimiter => ':', p_str_tab => l_part_tab);
-
-  if l_part_tab.count != c_nr_parts
-  then
-    oracle_tools.pkg_ddl_error.raise_error
-    ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
-    , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
-    , p_context_info => p_schema_object_id
-    , p_context_label => 'schema object id'
-    );            
-  end if;
-
-  return
-    matches_schema_object
-    ( p_object_type => l_part_tab("OBJECT TYPE")
-    , p_object_name => l_part_tab("OBJECT NAME")
-    , p_base_object_type => l_part_tab("BASE OBJECT TYPE")
-    , p_base_object_name => l_part_tab("BASE OBJECT NAME")
-    , p_schema_object_filter => p_schema_object_filter
-    , p_schema_object_id => p_schema_object_id
-    );
-end matches_schema_object;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
@@ -1045,10 +1088,7 @@ $end
         l_expected := json_element_t.parse('{
   "SCHEMA$" : null,
   "GRANTOR_IS_SCHEMA$" : 0,
-  "NR_EXCLUDED_OBJECTS$" : 0,
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0,
-  "MATCH_PERC_THRESHOLD$" : 50
+  "NR_EXCLUDED_OBJECTS$" : 0
 }');  
 
       when 2
@@ -1073,10 +1113,7 @@ $end
     "~",
     "~"
   ],
-  "NR_EXCLUDED_OBJECTS$" : 0,
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0,
-  "MATCH_PERC_THRESHOLD$" : 50
+  "NR_EXCLUDED_OBJECTS$" : 0
 }');
 
       when 3
@@ -1126,10 +1163,7 @@ DBMS_SQL
      "!~",
      "!~"
    ],
-   "NR_EXCLUDED_OBJECTS$" : 12,
-   "MATCH_COUNT$" : 0,
-   "MATCH_COUNT_OK$" : 0,
-   "MATCH_PERC_THRESHOLD$" : 50
+   "NR_EXCLUDED_OBJECTS$" : 12
  }');
 
       when 4
@@ -1160,10 +1194,7 @@ DBMS_SQL
     "!~",
     "~"
   ],
-  "NR_EXCLUDED_OBJECTS$" : 2,
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0,
-  "MATCH_PERC_THRESHOLD$" : 50
+  "NR_EXCLUDED_OBJECTS$" : 2
 }');
 
       when 5
@@ -1213,10 +1244,7 @@ DBMS_SQL
      "~",
      "~"
    ],
-   "NR_EXCLUDED_OBJECTS$" : 0,
-   "MATCH_COUNT$" : 0,
-   "MATCH_COUNT_OK$" : 0,
-   "MATCH_PERC_THRESHOLD$" : 50
+   "NR_EXCLUDED_OBJECTS$" : 0
  }');
 
       when 6
@@ -1247,10 +1275,7 @@ DBMS_SQL
     "~",
     "~"
   ],
-  "NR_EXCLUDED_OBJECTS$" : 0,
-  "MATCH_COUNT$" : 0,
-  "MATCH_COUNT_OK$" : 0,
-  "MATCH_PERC_THRESHOLD$" : 50
+  "NR_EXCLUDED_OBJECTS$" : 0
 }');
     end case;
 

@@ -824,6 +824,14 @@ $end
 end get_schema_objects;
 
 -- PUBLIC
+procedure default_match_perc_threshold
+( p_match_perc_threshold in integer
+)
+is
+begin
+  g_default_match_perc_threshold := p_match_perc_threshold;
+end default_match_perc_threshold;
+
 procedure set_session_id
 ( p_session_id in all_schema_objects.session_id%type
 )

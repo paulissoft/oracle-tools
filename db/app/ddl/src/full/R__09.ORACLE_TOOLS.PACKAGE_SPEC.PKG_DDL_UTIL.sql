@@ -441,10 +441,12 @@ procedure migrate_schema_ddl
 , p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
 );
 
+type t_md_object_type_tab is table of t_metadata_object_type;
+
 function get_md_object_type_tab
 ( p_what in varchar2 -- Either DBA, PUBLIC, SCHEMA or DEPENDENT
 )
-return oracle_tools.t_text_tab
+return t_md_object_type_tab
 deterministic;
 
 /**
