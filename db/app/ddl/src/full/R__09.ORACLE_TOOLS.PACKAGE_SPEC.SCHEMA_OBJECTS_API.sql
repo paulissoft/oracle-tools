@@ -40,6 +40,11 @@ function find_by_object_id
 return all_schema_objects%rowtype;
 /** Find the schema object in ALL_SCHEMA_OBJECTS by obj.id(). **/
 
+procedure get_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+);
+
 function get_schema_objects
 ( p_schema in varchar2 default user
 , p_object_type in varchar2 default null
