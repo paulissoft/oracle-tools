@@ -5204,19 +5204,10 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     );
 $end
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print
-    ( dbug."info"
-    , 'p_schema_object_filter.match_perc(): %s; p_schema_object_filter.match_perc_threshold: %s'
-    , p_schema_object_filter.match_perc()
-    , p_schema_object_filter.match_perc_threshold()
-    );
-$end
-
     -- now we can calculate the percentage matches (after get_schema_objects)
     l_use_schema_export :=
       case
-        when p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold()
+        when schema_objects_api.match_perc() >= schema_objects_api.match_perc_threshold()
         then 1
         else 0
       end;

@@ -976,45 +976,31 @@ begin
 end default_match_perc_threshold;
 
 function match_perc
+( p_schema_object_filter_id in number
+)
 return integer
 deterministic
 is
+  l_schema_object_filter_id constant number := nvl(p_schema_object_filter_id, get_last_schema_object_filter);
+  l_nr_objects_generate_ddl number;
+  l_nr_objects number;
 begin
-  raise program_error;
-end;
-/*
-is
-begin
-  return
-    case
-      when match_count$ > 0
-      then trunc((100 * match_count_ok$) / match_count$)
-      else null
-    end;
-end;
-*/
+  select  sum(t.generate_ddl) as nr_objects_generate_ddl
+  ,       count(*) as nr_objects
+  into    l_nr_objects_generate_ddl
+  ,       l_nr_objects
+  from    v_all_schema_objects t
+  where   t.schema_object_filter_id = l_schema_object_filter_id;
+  
+  return case when l_nr_objects > 0 then trunc((100 * l_nr_objects_generate_ddl) / l_nr_objects) else null end;
+end match_perc;
 
 function match_perc_threshold
 return integer
 deterministic
 is
 begin
-  raise program_error;
-end;
-/*
-is
-begin
-  return match_perc_threshold$;
-end match_perc_threshold;
-*/
-
-procedure match_perc_threshold
-( self in out nocopy oracle_tools.t_schema_object_filter 
-, p_match_perc_threshold in integer
-)
-is
-begin
-  raise program_error;
+  return g_default_match_perc_threshold;
 end;
 
 $if oracle_tools.cfg_pkg.c_testing $then

@@ -74,40 +74,14 @@ procedure default_match_perc_threshold
 );
 
 function match_perc
+( p_schema_object_filter_id in number default null
+)
 return integer
 deterministic;
-/*
-is
-begin
-  return
-    case
-      when match_count$ > 0
-      then trunc((100 * match_count_ok$) / match_count$)
-      else null
-    end;
-end;
-*/
 
 function match_perc_threshold
 return integer
 deterministic;
-/*
-is
-begin
-  return match_perc_threshold$;
-end match_perc_threshold;
-*/
-
-procedure match_perc_threshold
-( self in out nocopy oracle_tools.t_schema_object_filter 
-, p_match_perc_threshold in integer
-);
-/*
-is
-begin
-  self.match_perc_threshold$ := p_match_perc_threshold;
-end match_perc_threshold;
-*/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
