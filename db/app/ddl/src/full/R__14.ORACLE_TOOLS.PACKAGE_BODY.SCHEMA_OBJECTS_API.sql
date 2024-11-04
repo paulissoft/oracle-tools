@@ -2,8 +2,6 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" IS /* -*-codi
 
 -- PRIVATE
 
-g_session_id all_schema_objects.session_id%type := to_number(sys_context('USERENV', 'SESSIONID'));
-
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
 "object grants" constant varchar2(30 char) := 'object grants';
@@ -32,7 +30,7 @@ is
 
   l_excluded_tables_tab t_excluded_tables_tab;
 
-  l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
+  l_schema_md_object_type_tab constant pkg_ddl_util.t_md_object_type_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
 begin
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then
@@ -67,8 +65,6 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
 
 $if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
-
-          continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
           schema_objects_api.add
           ( p_schema_object =>
@@ -105,8 +101,6 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
             dbug.print(dbug."info", 'excluding materialized view table: %s', r.object_name);
 $end
           end if;
-
-          continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
 
           -- this is a special case since we need to exclude first
           schema_objects_api.add
@@ -153,8 +147,6 @@ $end
 
           if not(l_excluded_tables_tab.exists(r.object_name))
           then
-            continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
-
             schema_objects_api.add
             ( p_schema_object => oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name)
             , p_must_exist => false
@@ -207,8 +199,6 @@ $end
           and     o.is_dependent_object_type = 0
         )
         loop
-          continue when matches_schema_object(p_object_type => r.object_type, p_object_name => r.object_name) = 0;
-
           schema_objects_api.add
           ( p_schema_object =>
               oracle_tools.t_named_object.create_named_object
@@ -976,17 +966,21 @@ begin
 end find_by_object_id;
 
 function get_schema_objects
+( p_schema_object_filter_id in number
+)
 return varchar2 sql_macro
 is
 begin
-  return replace
-         ( q'[
-select  t.*
+  return q'[
+select  t.obj
 from    all_schema_objects t
-where   t.session_id = {session_id}
-]'       , '{session_id}'
-         , g_session_id
-         );
+where   t.schema_object_filter_id =
+        nvl
+        ( get_schema_objects.p_schema_object_filter_id
+        , (select max(f.schema_object_filter_id) from oracle_tools.schema_object_filters f where f.session_id = sys_context('USERENV', 'SESSION_ID'))
+        )
+and     t.generate_ddl = 1        
+]';
 end get_schema_objects;
 
 $if oracle_tools.cfg_pkg.c_testing $then
