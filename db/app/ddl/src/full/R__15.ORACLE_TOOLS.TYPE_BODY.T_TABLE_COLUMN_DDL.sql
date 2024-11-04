@@ -94,8 +94,39 @@ is
   l_clob clob := null;
   l_source_table_column_object oracle_tools.t_table_column_object := treat(p_source.obj as oracle_tools.t_table_column_object);
   l_target_table_column_object oracle_tools.t_table_column_object := treat(p_target.obj as oracle_tools.t_table_column_object);
-  l_data_default t_text_tab;
+  l_data_default oracle_tools.t_text_tab;
   l_changed boolean;
+
+  function eq
+  ( p_source_tab in oracle_tools.t_text_tab
+  , p_target_tab in oracle_tools.t_text_tab
+  )
+  return boolean
+  is
+  begin
+    if p_source_tab.count != p_target_tab.count
+    then
+      return false;
+    end if;
+    if p_source_tab.first != p_target_tab.first
+    then
+      return false;
+    end if;
+    if p_source_tab.first > 0
+    then
+      for i_idx in p_source_tab.first .. p_source_tab.last
+      loop
+        if (p_source_tab(i_idx) is null and p_target_tab(i_idx) is null)
+        or (p_source_tab(i_idx) = p_target_tab(i_idx))
+        then
+          continue;
+        else
+          return false;
+        end if;
+      end loop;
+    end if;
+    return true;
+  end eq;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
@@ -138,8 +169,8 @@ $end
 
       when 2
       then
-        -- default changed?
-        if l_source_table_column_object.data_default() != l_target_table_column_object.data_default()
+        -- default changed?        
+        if not(eq(l_source_table_column_object.data_default(), l_target_table_column_object.data_default()))
         then
           oracle_tools.pkg_str_util.append_text
           ( pi_text => 'DEFAULT '
