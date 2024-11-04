@@ -1,6 +1,14 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" IS /* -*-coding: utf-8-*- */
 
 -- PRIVATE
+/*
+subtype t_object is oracle_tools.pkg_ddl_util.t_object;
+subtype t_object_names is oracle_tools.pkg_ddl_util.t_object_names;
+subtype t_schema is oracle_tools.pkg_ddl_util.t_schema;
+*/
+subtype t_module is varchar2(100);
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
+subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
@@ -214,11 +222,6 @@ $end
 
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.leave;
-$end
-
-  return; -- essential
-
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
 exception
   when others
   then
@@ -244,7 +247,6 @@ $end
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
   l_step varchar2(30 char);
-  l_named_object_tab oracle_tools.t_schema_object_tab;
   l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
     oracle_tools.api_longops_pkg.longops_init
     ( p_target_desc => 'procedure ' || 'GET_SCHEMA_OBJECTS'
@@ -252,47 +254,6 @@ $end
     , p_op_name => 'what'
     , p_units => 'steps'
     );
-
-  procedure process_schema_object
-  ( p_schema_object in oracle_tools.t_schema_object
-  , p_object_type in varchar2
-  , p_object_name in varchar2
-  , p_base_object_type in varchar2 default null
-  , p_base_object_name in varchar2 default null
-  )
-  is
-  begin
-    p_schema_object_filter.match_count$ := p_schema_object_filter.match_count$ + 1;
-    PRAGMA INLINE(matches_schema_object, 'YES');
-    if matches_schema_object
-       ( p_object_type => p_object_type
-       , p_object_name => p_object_name
-       , p_base_object_type => p_base_object_type
-       , p_base_object_name => p_base_object_name
-       , p_schema_object_filter => p_schema_object_filter
-       , p_schema_object_id => p_schema_object.id()
-       ) = 1
-    then
-      p_schema_object_tab.extend(1);
-      p_schema_object_tab(p_schema_object_tab.last) := p_schema_object;
-      p_schema_object_filter.match_count_ok$ := p_schema_object_filter.match_count_ok$ + 1;
-    end if;
-  end process_schema_object;
-
-  procedure process_schema_object
-  ( p_schema_object in oracle_tools.t_schema_object
-  )
-  is
-  begin
-    PRAGMA INLINE(process_schema_object, 'YES');
-    process_schema_object
-    ( p_schema_object => p_schema_object
-    , p_object_type => p_schema_object.object_type()
-    , p_object_name => p_schema_object.object_name()
-    , p_base_object_type => p_schema_object.base_object_type()
-    , p_base_object_name => p_schema_object.base_object_name()
-    );
-  end process_schema_object;
 
   procedure cleanup
   is
@@ -311,11 +272,6 @@ $end
 
   get_named_objects(l_schema);
   
-  select  t.obj
-  bulk collect
-  into    l_named_object_tab
-  from    v_my_schema_objects t;
-
   for i_idx in c_steps.first .. c_steps.last
   loop
     l_step := c_steps(i_idx);
@@ -329,7 +285,8 @@ $end
       then
         for r in
         ( select  value(obj) as obj
-          from    table(l_named_object_tab) obj
+          from    schema_objects_api.get_schema_objects() obj
+          where   value(obj) is of type (oracle_tools.t_named_objects)
         )
         loop
           process_schema_object(r.obj, null, null); -- object_type and object_name have already been tested for exclusions
@@ -814,38 +771,20 @@ $end
 end get_schema_objects;
 
 -- PUBLIC
-procedure default_match_perc_threshold
-( p_match_perc_threshold in integer
+
+procedure ins
+( p_obj in oracle_tools.schema_object_filters.obj%type
+, p_id out nocopy oracle_tools.schema_object_filters.id%type
 )
 is
 begin
-  g_default_match_perc_threshold := p_match_perc_threshold;
-end default_match_perc_threshold;
-
-procedure set_session_id
-( p_session_id in all_schema_objects.session_id%type
-)
-is
-begin
-  if p_session_id is null
-  then
-    raise value_error;
-  end if;
-  g_session_id := p_session_id;
-end set_session_id;
-
-function get_session_id
-return all_schema_objects.session_id%type
-is
-begin
-  return g_session_id;
-end get_session_id;
+  insert into schema_object_filters(obj) values (p_obj) returning id into p_id;
+end ins;
 
 procedure add
-( p_schema_object in t_schema_object
+( p_schema_object in oracle_tools.all_schema_objects.obj%type
 , p_must_exist in boolean
-, p_session_id in all_schema_objects.session_id%type
-, p_generate_ddl in all_schema_objects.generate_ddl%type
+, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
 )
 is
   -- index 1: update; 2: insert
@@ -858,26 +797,25 @@ begin
     case i_idx
       when 1
       then
-        update  all_schema_objects t
+        update  /*+ index(t, all_schema_objects$idx$1) */
+                all_schema_objects t
         set     t.obj = p_schema_object
-        ,       t.generate_ddl = nvl(p_generate_ddl, t.generate_ddl)
-        where   t.obj.id() = p_schema_object.id();
+        where   t.schema_object_filter_id = p_schema_object_filter_id
+        and     t.obj.id() = p_schema_object.id();
         
       when 2
       then
         insert into all_schema_objects
-        ( session_id
+        ( schema_object_filter_id
         , seq
         , obj
-        , generate_ddl
         )
         values
-        ( p_session_id
+        ( p_schema_object_filter_id
           -- Since objects are inserted per Oracle session
           -- there is never a problem with another session inserting at the same time for the same session.
         , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.session_id = p_session_id)
         , p_schema_object
-        , nvl(p_generate_ddl, 0)
         );
     end case;
       
@@ -904,8 +842,7 @@ end add;
 procedure add
 ( p_schema_object_cursor in t_schema_object_cursor
 , p_must_exist in boolean
-, p_session_id in all_schema_objects.session_id%type
-, p_generate_ddl in all_schema_objects.generate_ddl%type
+, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
 )
 is
   l_schema_object_tab t_schema_object_tab;
@@ -922,8 +859,7 @@ begin
         add
         ( p_schema_object => l_schema_object_tab(i_idx)
         , p_must_exist => p_must_exist
-        , p_session_id => p_session_id
-        , p_generate_ddl => p_generate_ddl
+        , p_schema_object_filter_id => p_schema_object_filter_id
         );
       end loop;
     end if;
@@ -933,7 +869,7 @@ end add;
 
 function find_by_seq
 ( p_seq in all_schema_objects.seq%type
-, p_session_id in all_schema_objects.session_id%type
+, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
 )
 return all_schema_objects%rowtype
 is
@@ -942,7 +878,7 @@ begin
   select  t.*
   into    l_rec
   from    all_schema_objects t
-  where   t.session_id = p_session_id
+  where   t.schema_object_filter_id = p_schema_object_filter_id
   and     t.seq = p_seq;
 
   return l_rec;
@@ -950,7 +886,7 @@ end find_by_seq;
 
 function find_by_object_id
 ( p_id in varchar2
-, p_session_id in all_schema_objects.session_id%type
+, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
 )
 return all_schema_objects%rowtype
 is
@@ -959,7 +895,7 @@ begin
   select  t.*
   into    l_rec
   from    all_schema_objects t
-  where   t.session_id = p_session_id -- there is a unique index on (session_id, obj.id())
+  where   t.schema_object_filter_id = p_schema_object_filter_id
   and     t.obj.id() = p_id;
 
   return l_rec;
@@ -982,6 +918,56 @@ where   t.schema_object_filter_id =
 and     t.generate_ddl = 1        
 ]';
 end get_schema_objects;
+
+procedure default_match_perc_threshold
+( p_match_perc_threshold in integer
+)
+is
+begin
+  g_default_match_perc_threshold := p_match_perc_threshold;
+end default_match_perc_threshold;
+
+function match_perc
+return integer
+deterministic
+is
+begin
+  raise program_error;
+end;
+/*
+is
+begin
+  return
+    case
+      when match_count$ > 0
+      then trunc((100 * match_count_ok$) / match_count$)
+      else null
+    end;
+end;
+*/
+
+function match_perc_threshold
+return integer
+deterministic
+is
+begin
+  raise program_error;
+end;
+/*
+is
+begin
+  return match_perc_threshold$;
+end match_perc_threshold;
+*/
+
+procedure match_perc_threshold
+( self in out nocopy oracle_tools.t_schema_object_filter 
+, p_match_perc_threshold in integer
+)
+is
+begin
+  raise program_error;
+end;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 

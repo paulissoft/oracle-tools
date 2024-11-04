@@ -1,12 +1,7 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" IS
 
-subtype t_module is varchar2(100);
-subtype t_object is oracle_tools.pkg_ddl_util.t_object;
-subtype t_object_names is oracle_tools.pkg_ddl_util.t_object_names;
 subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
 subtype t_metadata_object_type is oracle_tools.pkg_ddl_util.t_metadata_object_type;
-subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
-subtype t_schema is oracle_tools.pkg_ddl_util.t_schema;
 subtype t_md_object_type_tab is oracle_tools.pkg_ddl_util.t_md_object_type_tab;
 
 "OBJECT SCHEMA" constant simple_integer := 1;

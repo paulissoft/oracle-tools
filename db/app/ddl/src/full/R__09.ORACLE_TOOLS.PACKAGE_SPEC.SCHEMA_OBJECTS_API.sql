@@ -53,7 +53,7 @@ return oracle_tools.t_schema_object_tab
 pipelined;
 
 function get_schema_objects
-( p_schema_object_filter_id in number -- If null, the last from schema_object_filters for this session is used
+( p_schema_object_filter_id in number default null -- If null, the last from schema_object_filters for this session is used
 )
 return varchar2 sql_macro;
 /**
@@ -63,6 +63,7 @@ Get all rows from ALL_SCHEMA_OBJECTS with schema_object_filter_id equal to p_sch
 Usage: select * from schema_objects_api.get_schema_objects(null)
 
 **/
+
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer
 );
