@@ -69,7 +69,7 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   self.obj.print();
-  dbug.print(dbug."info", 'cardinality(self.ddl_tab): %s', cardinality(self.ddl_tab));
+  dbug.print(dbug."info", 'cardinality(self.ddl_tab): %s', case when self.ddl_tab is not null then self.ddl_tab.count end);
   if self.ddl_tab is not null and self.ddl_tab.count > 0
   then
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
@@ -131,7 +131,7 @@ $end
 
   l_text_tab := oracle_tools.pkg_str_util.clob2text(p_text, 1); -- text
   -- ORA-20113: Object BC_PORTAL:INDEX:bcp_addresses_l1:BC_PORTAL::BCP_ADDRESSES:::: is not correct.
-  if cardinality(l_text_tab) > 0
+  if l_text_tab is not null and l_text_tab.count > 0
   then
     if p_add_sqlterminator > 0
     then

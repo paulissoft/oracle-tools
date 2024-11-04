@@ -113,7 +113,7 @@ begin
     return 'MEMBER';
   else
     -- is there a SELF argument
-    if cardinality(self.arguments) > 0
+    if self.arguments is not null and self.arguments.count > 0
     then
       for i_idx in self.arguments.first .. self.arguments.last
       loop
@@ -173,7 +173,7 @@ $end
   add(' ' || self.member_name());
 
   -- first the arguments and later the return value
-  if cardinality(self.arguments) > self.results()
+  if case when self.arguments is not null then self.arguments.count end > self.results()
   then
     add(chr(10) || '( ');
 
@@ -220,7 +220,7 @@ $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object => self, p_schema => p_schema);
 
-  if self.parameters() + self.results() = nvl(cardinality(self.arguments), 0)
+  if self.parameters() + self.results() = case when self.arguments is not null then self.arguments.count else 0 end
   then
     null;
   else
@@ -233,7 +233,7 @@ $end
       '" parameters, "' ||
       self.results() ||
       '" results and "' ||
-      cardinality(self.arguments) ||
+      case when self.arguments is not null then self.arguments.count end ||
       '" arguments.'
     , self.schema_object_info()
     );

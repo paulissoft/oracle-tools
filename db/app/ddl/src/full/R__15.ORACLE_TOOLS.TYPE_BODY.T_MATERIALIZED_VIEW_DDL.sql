@@ -50,7 +50,8 @@ $end
   then
     for i_idx in l_schema_ddl_tab.first .. l_schema_ddl_tab.last
     loop
-      if cardinality(l_schema_ddl_tab(i_idx).ddl_tab) > 0
+      if l_schema_ddl_tab(i_idx).ddl_tab is not null and
+         l_schema_ddl_tab(i_idx).ddl_tab.count > 0
       then
         for i_ddl_idx in l_schema_ddl_tab(i_idx).ddl_tab.first .. l_schema_ddl_tab(i_idx).ddl_tab.last
         loop

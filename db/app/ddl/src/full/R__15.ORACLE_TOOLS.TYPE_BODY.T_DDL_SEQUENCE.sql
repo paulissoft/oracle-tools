@@ -6,7 +6,7 @@ is
   l_repl_regexp constant varchar2(100) := '\1 1';
 begin
   -- a sequence should have just 1 entry
-  if cardinality(self.text) = 1
+  if self.text is not null and self.text.count = 1
   then
     null;
   else

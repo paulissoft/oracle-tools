@@ -56,10 +56,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   , 'ddl#: %s; verb: %s; cardinality: %s'
   , self.ddl#()
   , self.verb()
-  , cardinality(self.text)
+  , case when self.text is not null then self.text.count end
   );
 --$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  if cardinality(self.text) > 0
+  if self.text is not null and self.text.count > 0
   then
     oracle_tools.pkg_str_util.text2clob
     ( pi_text_tab => self.text

@@ -147,7 +147,7 @@ $end
           , pio_clob => l_clob
           );
           l_data_default := l_source_table_column_object.data_default();
-          if cardinality(l_data_default) > 0
+          if l_data_default is not null and l_data_default.count > 0
           then
             for i_idx in l_data_default.first .. l_data_default.last
             loop

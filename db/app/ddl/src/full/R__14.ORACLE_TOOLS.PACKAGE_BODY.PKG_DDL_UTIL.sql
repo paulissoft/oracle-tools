@@ -2347,6 +2347,7 @@ $end
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
     l_schema_object oracle_tools.t_schema_object;
     l_my_schema_object all_schema_objects%rowtype;
+    l_generate_ddl pls_integer := 0;
 
     procedure cleanup
     is
@@ -2443,10 +2444,10 @@ $end
             l_my_schema_object := oracle_tools.schema_objects_api.find_by_object_id(p_object_key);
           exception
             when no_data_found
-            then l_my_schema_object.generate_ddl := 0;
+            then l_generate_ddl := 0;
           end;
           case
-            when l_my_schema_object.generate_ddl = 0 -- object not but on purpose
+            when l_generate_ddl = 0 -- object not but on purpose
             then
               p_object_key := null;
 
@@ -3371,7 +3372,7 @@ $end
          - parameter p_skip_repeatables != 0 AND
          - the object are repeatable objects (excluding oracle_tools.t_type_method_ddl because it uses ddl_tab(1))
       */
-      if p_skip_repeatables != 0 and cardinality(p_schema_ddl_tab) > 0
+      if p_skip_repeatables != 0 and p_schema_ddl_tab is not null and p_schema_ddl_tab.count > 0
       then
         for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
         loop
@@ -3446,10 +3447,6 @@ $end
       free_memory(l_source_schema_ddl_tab);
     end if;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'cardinality(l_source_schema_ddl_tab): %s', cardinality(l_source_schema_ddl_tab));
-$end
-
     if p_schema_target is null
     then
       l_target_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
@@ -3491,10 +3488,6 @@ $end
       ;
       free_memory(l_target_schema_ddl_tab);
     end if;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'cardinality(l_target_schema_ddl_tab): %s', cardinality(l_target_schema_ddl_tab));
-$end
 
     for r_schema_ddl in
     ( with source as
@@ -3818,7 +3811,8 @@ $end
     then
       for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
       loop
-        if cardinality(p_schema_ddl_tab(i_idx).ddl_tab) > 0
+        if p_schema_ddl_tab(i_idx).ddl_tab is not null and
+           p_schema_ddl_tab(i_idx).ddl_tab.count > 0
         then
           for i_ddl_idx in p_schema_ddl_tab(i_idx).ddl_tab.first .. p_schema_ddl_tab(i_idx).ddl_tab.last
           loop
@@ -3833,7 +3827,7 @@ $end
               execute_ddl(p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text, p_network_link);
             end if;
           end loop;
-        end if; -- if cardinality(p_schema_ddl_tab(i_idx).ddl_tab) > 0
+        end if;
       end loop;
     end if;
 
@@ -7741,7 +7735,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           , r_text.object_type
           , r_text.object_name
           );
-          if cardinality(r_text.text) > 0
+          if r_text.text is not null and r_text.text.count > 0
           then
             for i_line_idx in r_text.text.first .. r_text.text.last
             loop

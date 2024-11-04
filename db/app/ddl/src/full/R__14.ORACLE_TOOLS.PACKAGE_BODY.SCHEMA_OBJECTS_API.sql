@@ -715,7 +715,7 @@ $end
 
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));
+  dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', case when p_schema_object_tab is not null then p_schema_object_tab.count end);
 $end  
   dbug.leave;
 $end
