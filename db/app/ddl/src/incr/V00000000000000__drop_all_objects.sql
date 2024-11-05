@@ -20,7 +20,8 @@ declare
     );
   l_table_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
-    ( 'ALL_SCHEMA_OBJECTS'
+    ( 'ALL_SCHEMA_DDLS'
+    , 'ALL_SCHEMA_OBJECTS'
     , 'SCHEMA_OBJECT_FILTERS'
     );
   l_sequence_tab sys.odcivarchar2list :=

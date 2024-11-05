@@ -122,4 +122,6 @@ prompt @V20241101115700__schema_object_filters.sql
 @V20241101115700__schema_object_filters.sql
 prompt @V20241101121700__all_schema_objects.sql
 @V20241101121700__all_schema_objects.sql
+prompt @V20241105193700__all_schema_ddls.sql
+@V20241105193700__all_schema_ddls.sql
 @check.sql
