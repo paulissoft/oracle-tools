@@ -1,16 +1,23 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID DEFINER IS /* -*-coding: utf-8-*- */
 
+c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
+c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+
 type t_schema_object_rec is record
 ( obj oracle_tools.t_schema_object
 );
 
 type t_schema_object_cursor is ref cursor return t_schema_object_rec;
    
-procedure ins
-( p_obj in oracle_tools.schema_object_filters.obj%type
-, p_id out nocopy oracle_tools.schema_object_filters.id%type
+function get_last_schema_object_filter_id
+return number;
+
+procedure add
+( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
+, p_add_schema_objects in boolean default true
+, p_schema_object_filter_id out nocopy oracle_tools.schema_object_filters.id%type
 );
-/** Add a record to table schema_object_filters. **/
+/** Add a record to table schema_object_filters and optionally all schema objects. **/
 
 procedure add
 ( p_schema_object in oracle_tools.all_schema_objects.obj%type -- The schema object to add to ALL_SCHEMA_OBJECTS
@@ -40,10 +47,12 @@ function find_by_object_id
 return all_schema_objects%rowtype;
 /** Find the schema object in ALL_SCHEMA_OBJECTS by obj.id(). **/
 
-procedure get_schema_objects
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-);
+function get_named_objects
+( p_schema in varchar2
+, p_schema_object_filter_id in number
+)
+return oracle_tools.t_schema_object_tab
+pipelined;
 
 function get_schema_objects
 ( p_schema in varchar2 default user
@@ -56,6 +65,11 @@ function get_schema_objects
 )
 return oracle_tools.t_schema_object_tab
 pipelined;
+
+procedure get_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+);
 
 function get_schema_objects
 ( p_schema_object_filter_id in number default null -- If null, the last from schema_object_filters for this session is used

@@ -2,6 +2,10 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECTS" BEQUEATH CURRENT_USE
 select  t.obj
 from    v_all_schema_objects t
 where   t.schema_object_filter_id =
-        (select max(f.id) from oracle_tools.schema_object_filters f where f.session_id = sys_context('USERENV', 'SESSION_ID'))
-and     t.generate_ddl = 1;
+        (select oracle_tools.schema_objects_api.get_last_schema_object_filter_id from dual where rownum <= 1)
+and     t.generate_ddl = 1
+order by
+        -- primary key
+        t.schema_object_filter_id
+,       t.seq;
 

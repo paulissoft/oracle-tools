@@ -30,236 +30,17 @@ c_steps constant sys.odcivarchar2list :=
 
 g_default_match_perc_threshold integer := 50;
 
-function get_last_schema_object_filter
-return number
-is
-  l_schema_object_filter_id number;
-begin
-  select  max(f.id)
-  into    l_schema_object_filter_id
-  from    oracle_tools.schema_object_filters f
-  where   f.session_id = sys_context('USERENV', 'SESSION_ID');
-  return l_schema_object_filter_id;
-end get_last_schema_object_filter;
-
-procedure get_named_objects
-( p_schema in varchar2
-, p_schema_object_filter_id in number
-)
-is
-  type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
-
-  l_excluded_tables_tab t_excluded_tables_tab;
-
-  l_schema_md_object_type_tab constant pkg_ddl_util.t_md_object_type_tab :=
-    oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
-begin
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_NAMED_OBJECTS');
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.print(dbug."input", 'p_schema: %s', p_schema);
-$end  
-$end
-
-  for i_idx in 1 .. 4
-  loop
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-    dbug.print(dbug."info", 'i_idx: %s', i_idx);
-$end
-
-    case i_idx
-      when 1
-      then
-        -- queue tables
-        for r in
-        ( select  q.owner as object_schema
-          ,       'AQ_QUEUE_TABLE' as object_type
-          ,       q.queue_table as object_name
-          from    all_queue_tables q
-          where   q.owner = p_schema
-        )
-        loop
-          l_excluded_tables_tab(r.object_name) := true;
-
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-          dbug.print(dbug."info", 'excluding queue table: %s', r.object_name);
-$end
-
-$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
-
-          add
-          ( p_schema_object =>
-              oracle_tools.t_named_object.create_named_object
-              ( p_object_schema => r.object_schema
-              , p_object_type => r.object_type
-              , p_object_name => r.object_name
-              )
-          , p_must_exist => false
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );
-$else
-          /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
-          null; 
-$end
-        end loop;
-
-      when 2
-      then
-        -- no MATERIALIZED VIEW tables unless PREBUILT
-        for r in
-        ( select  m.owner as object_schema
-          ,       'MATERIALIZED_VIEW' as object_type
-          ,       m.mview_name as object_name
-          ,       m.build_mode
-          from    all_mviews m
-          where   m.owner = p_schema
-        )
-        loop
-          if r.build_mode != 'PREBUILT'
-          then
-            l_excluded_tables_tab(r.object_name) := true;
-
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-            dbug.print(dbug."info", 'excluding materialized view table: %s', r.object_name);
-$end
-          end if;
-
-          -- this is a special case since we need to exclude first
-          add
-          ( p_schema_object => oracle_tools.t_materialized_view_object(r.object_schema, r.object_name)
-          , p_must_exist => false
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );          
-        end loop;
-
-      when 3
-      then
-        -- tables
-        for r in
-        ( select  t.owner as object_schema
-          ,       t.table_name as object_name
-          ,       t.tablespace_name
-          ,       'TABLE' as object_type
-          from    all_tables t
-          where   t.owner = p_schema
-          and     t.nested = 'NO' -- Exclude nested tables, their DDL is part of their parent table.
-          and     ( t.iot_type is null or t.iot_type = 'IOT' ) -- Only the IOT table itself, not an overflow or mapping
-                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-          and     substr(t.table_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
-          union -- not union all because since Oracle 12, temporary tables are also shown in all_tables
-          -- temporary tables
-          select  t.owner as object_schema
-          ,       t.object_name
-          ,       null as tablespace_name
-          ,       t.object_type
-          from    all_objects t
-          where   t.owner = p_schema
-          and     t.object_type = 'TABLE'
-          and     t.temporary = 'Y'
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
-          and     t.generated = 'N' -- GPA 2016-12-19 #136334705
-$end      
-                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-          and     substr(t.object_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
-        )
-        loop
-          if r.object_type <> 'TABLE'
-          then
-            raise program_error;
-          end if;
-
-          if not(l_excluded_tables_tab.exists(r.object_name))
-          then
-            add
-            ( p_schema_object => oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name)
-            , p_must_exist => false
-            , p_schema_object_filter_id => p_schema_object_filter_id
-            );
-
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-          else  
-            dbug.print(dbug."info", 'not checking since table was excluded: %s', r.object_name);
-$end
-          end if; 
-        end loop;
-
-      when 4
-      then
-        for r in
-        ( /*
-          -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
-          */
-          with obj as
-          ( select  obj.owner
-            ,       obj.object_type
-            ,       obj.object_name
-            ,       obj.status
-            ,       obj.generated
-            ,       obj.temporary
-            ,       obj.subobject_name
-                    -- use scalar subqueries for a (possible) better performance
-            ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
---            ,       ( select oracle_tools.t_schema_object.is_a_repeatable(obj.object_type) from dual ) as is_a_repeatable
---            ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), obj.object_name) from dual ) as is_exclude_name_expr
-            ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
-            from    all_objects obj
-          )
-          select  o.owner as object_schema
-          ,       o.md_object_type as object_type
-          ,       o.object_name
-          from    obj o
-          where   o.owner = p_schema
-          and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
-          and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
-          and     o.md_object_type member of l_schema_md_object_type_tab
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
-          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
-$end                
-                  -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
-                  -- =====         ===========                      ==============
-                  -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
-          and     o.subobject_name is null
-                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
-          and     o.is_dependent_object_type = 0
-        )
-        loop
-          add
-          ( p_schema_object =>
-              oracle_tools.t_named_object.create_named_object
-              ( p_object_schema => r.object_schema
-              , p_object_type => r.object_type
-              , p_object_name => r.object_name
-              )
-          , p_must_exist => false
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );          
-        end loop;        
-    end case;
-  end loop;
-
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
-end get_named_objects;
-
--- PUBLIC
-
-procedure get_schema_objects
+procedure add_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (1)';
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS';
 $end  
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
   l_schema_object_filter_id number;
+  l_cursor t_schema_object_cursor;
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -269,7 +50,7 @@ $end
   l_step varchar2(30 char);
   l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
     oracle_tools.api_longops_pkg.longops_init
-    ( p_target_desc => 'procedure ' || 'GET_SCHEMA_OBJECTS'
+    ( p_target_desc => 'procedure ' || 'ADD_SCHEMA_OBJECTS'
     , p_totalwork => 10
     , p_op_name => 'what'
     , p_units => 'steps'
@@ -281,45 +62,38 @@ $end
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
   end cleanup;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
   p_schema_object_filter.print();
 $end  
 $end
 
-  p_schema_object_tab := oracle_tools.t_schema_object_tab();
+  add
+  ( p_schema_object_filter => p_schema_object_filter
+  , p_add_schema_objects => true
+  , p_schema_object_filter_id => l_schema_object_filter_id
+  );
 
-  ins(p_schema_object_filter, l_schema_object_filter_id);
-
-  get_named_objects(l_schema, l_schema_object_filter_id);
-  
   for i_idx in c_steps.first .. c_steps.last
   loop
     l_step := c_steps(i_idx);
 
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.schema_objects_api.c_tracing $then
     dbug.enter(l_module_name || '.' || l_step);
 $end    
 
     case l_step
       when "named objects"
       then
-        /*
-        for r in
-        ( select  value(obj) as obj
-          from    schema_objects_api.get_schema_objects(l_schema_object_filter_id) obj
-          where   value(obj) is of type (oracle_tools.t_named_objects)
-        )
-        loop
-          add
-          ( p_schema_object => r.obj
-          , p_must_exist => false
-          , p_schema_object_filter_id => l_schema_object_filter_id
-          );
-        end loop;
-        */
-        null; -- already there
+        open l_cursor for
+          select  value(t)
+          from    table(oracle_tools.schema_objects_api.get_named_objects(l_schema, l_schema_object_filter_id)) t;
+        add
+        ( p_schema_object_cursor => l_cursor
+        , p_must_exist => false
+        , p_schema_object_filter_id => l_schema_object_filter_id
+        );
 
       -- object grants must depend on a base object already gathered (see above)
       when "object grants"
@@ -530,7 +304,7 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
           then
             -- This is a not null constraint.
             -- Since search_condition has only one column, any column name is THE column name.
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
             dbug.print
             ( dbug."info"
             , 'ignoring not null constraint: owner: %s; table: %s; constraint: %s; search_condition: %s'
@@ -699,21 +473,14 @@ $end
 
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave;
 $end    
   end loop;
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  check_duplicates(p_schema_object_tab, c_steps(c_steps.last));
-$end
-
   cleanup;
 
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', case when p_schema_object_tab is not null then p_schema_object_tab.count end);
-$end  
+$if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
 $end
 
@@ -721,113 +488,45 @@ exception
   when others
   then
     cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
     raise;
-end get_schema_objects;
+end add_schema_objects;
 
-function get_schema_objects
-( p_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_grantor_is_schema in integer default 0
-, p_exclude_objects in clob default null
-, p_include_objects in clob default null
-)
-return oracle_tools.t_schema_object_tab
-pipelined
+-- PUBLIC
+
+function get_last_schema_object_filter_id
+return number
 is
-  l_schema_object_filter oracle_tools.t_schema_object_filter := null;
-  l_schema_object_tab oracle_tools.t_schema_object_tab;
-  l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
-
-  -- dbms_application_info stuff
-  l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
-    oracle_tools.api_longops_pkg.longops_init
-    ( p_target_desc => l_program
-    , p_op_name => 'fetch'
-    , p_units => 'objects'
-    );
-
-  procedure cleanup
-  is
-  begin
-    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
-  end cleanup;
+  l_schema_object_filter_id number;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (2)');
-$end
+  select  f.id
+  into    l_schema_object_filter_id
+  from    ( select  f.id
+            from    oracle_tools.schema_object_filters f
+            where   f.session_id = sys_context('USERENV', 'SESSION_ID')
+            order by
+                    f.session_id
+            ,       f.created desc            
+          ) f
+  where   rownum = 1;
+  return l_schema_object_filter_id;
+end get_last_schema_object_filter_id;
 
-  l_schema_object_filter :=
-    new oracle_tools.t_schema_object_filter
-        ( p_schema => p_schema
-        , p_object_type => p_object_type
-        , p_object_names => p_object_names
-        , p_object_names_include => p_object_names_include 
-        , p_grantor_is_schema => p_grantor_is_schema 
-        , p_exclude_objects => p_exclude_objects 
-        , p_include_objects => p_include_objects 
-        );
-
-  get_schema_objects
-  ( p_schema_object_filter => l_schema_object_filter
-  , p_schema_object_tab => l_schema_object_tab
-  );
-
-  if l_schema_object_tab is not null and l_schema_object_tab.count > 0
+procedure add
+( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
+, p_add_schema_objects in boolean
+, p_schema_object_filter_id out nocopy oracle_tools.schema_object_filters.id%type
+)
+is
+begin
+  insert into schema_object_filters(obj) values (p_schema_object_filter) returning id into p_schema_object_filter_id;
+  if p_add_schema_objects
   then
-    for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
-    loop
-      pipe row (l_schema_object_tab(i_idx));
-      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-    end loop;
+    add_schema_objects(p_schema_object_filter);
   end if;
-
-  cleanup;
-
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-  dbug.leave;
-$end
-
-  return; -- essential for pipelined functions
-exception
-  when no_data_needed
-  then
-    -- not a real error, just a way to some cleanup
-    cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-    dbug.leave;
-$end
-
-  when no_data_found
-  then
-    cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-    dbug.leave_on_error;
-$end
-    oracle_tools.pkg_ddl_error.reraise_error(l_program);
-    raise; -- to keep the compiler happy
-
-  when others
-  then
-    cleanup;
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-    dbug.leave_on_error;
-$end
-    raise;
-end get_schema_objects;
-
-procedure ins
-( p_obj in oracle_tools.schema_object_filters.obj%type
-, p_id out nocopy oracle_tools.schema_object_filters.id%type
-)
-is
-begin
-  insert into schema_object_filters(obj) values (p_obj) returning id into p_id;
-end ins;
+end add;
 
 procedure add
 ( p_schema_object in oracle_tools.all_schema_objects.obj%type
@@ -845,8 +544,7 @@ begin
     case i_idx
       when 1
       then
-        update  /*+ index(t, all_schema_objects$idx$1) */
-                all_schema_objects t
+        update  all_schema_objects t
         set     t.obj = p_schema_object
         where   t.schema_object_filter_id = p_schema_object_filter_id
         and     t.obj.id() = p_schema_object.id();
@@ -949,6 +647,322 @@ begin
   return l_rec;
 end find_by_object_id;
 
+function get_named_objects
+( p_schema in varchar2
+, p_schema_object_filter_id in number
+)
+return oracle_tools.t_schema_object_tab
+pipelined
+is
+  type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
+
+  l_excluded_tables_tab t_excluded_tables_tab;
+
+  l_schema_md_object_type_tab constant pkg_ddl_util.t_md_object_type_tab :=
+    oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
+begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_NAMED_OBJECTS');
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."input", 'p_schema: %s', p_schema);
+$end  
+$end
+
+  for i_idx in 1 .. 4
+  loop
+$if oracle_tools.schema_objects_api.c_debugging $then
+    dbug.print(dbug."info", 'i_idx: %s', i_idx);
+$end
+
+    case i_idx
+      when 1
+      then
+        -- queue tables
+        for r in
+        ( select  q.owner as object_schema
+          ,       'AQ_QUEUE_TABLE' as object_type
+          ,       q.queue_table as object_name
+          from    all_queue_tables q
+          where   q.owner = p_schema
+        )
+        loop
+          l_excluded_tables_tab(r.object_name) := true;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+          dbug.print(dbug."info", 'excluding queue table: %s', r.object_name);
+$end
+
+$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+
+          pipe row
+          ( oracle_tools.t_named_object.create_named_object
+            ( p_object_schema => r.object_schema
+            , p_object_type => r.object_type
+            , p_object_name => r.object_name
+            )
+          );
+$else
+          /* ORA-00904: "KU$"."SCHEMA_OBJ"."TYPE": invalid identifier */
+          null; 
+$end
+        end loop;
+
+      when 2
+      then
+        -- no MATERIALIZED VIEW tables unless PREBUILT
+        for r in
+        ( select  m.owner as object_schema
+          ,       'MATERIALIZED_VIEW' as object_type
+          ,       m.mview_name as object_name
+          ,       m.build_mode
+          from    all_mviews m
+          where   m.owner = p_schema
+        )
+        loop
+          if r.build_mode != 'PREBUILT'
+          then
+            l_excluded_tables_tab(r.object_name) := true;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+            dbug.print(dbug."info", 'excluding materialized view table: %s', r.object_name);
+$end
+          end if;
+
+          -- this is a special case since we need to exclude first
+          pipe row
+          ( oracle_tools.t_materialized_view_object(r.object_schema, r.object_name)
+          );          
+        end loop;
+
+      when 3
+      then
+        -- tables
+        for r in
+        ( select  t.owner as object_schema
+          ,       t.table_name as object_name
+          ,       t.tablespace_name
+          ,       'TABLE' as object_type
+          from    all_tables t
+          where   t.owner = p_schema
+          and     t.nested = 'NO' -- Exclude nested tables, their DDL is part of their parent table.
+          and     ( t.iot_type is null or t.iot_type = 'IOT' ) -- Only the IOT table itself, not an overflow or mapping
+                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+          and     substr(t.table_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
+          union -- not union all because since Oracle 12, temporary tables are also shown in all_tables
+          -- temporary tables
+          select  t.owner as object_schema
+          ,       t.object_name
+          ,       null as tablespace_name
+          ,       t.object_type
+          from    all_objects t
+          where   t.owner = p_schema
+          and     t.object_type = 'TABLE'
+          and     t.temporary = 'Y'
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+          and     t.generated = 'N' -- GPA 2016-12-19 #136334705
+$end      
+                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+          and     substr(t.object_name, 1, 5) not in (/*'APEX$', */'MLOG$', 'RUPD$') 
+        )
+        loop
+          if r.object_type <> 'TABLE'
+          then
+            raise program_error;
+          end if;
+
+          if not(l_excluded_tables_tab.exists(r.object_name))
+          then
+            pipe row
+            ( oracle_tools.t_table_object(r.object_schema, r.object_name, r.tablespace_name)
+            );
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+          else  
+            dbug.print(dbug."info", 'not checking since table was excluded: %s', r.object_name);
+$end
+          end if; 
+        end loop;
+
+      when 4
+      then
+        for r in
+        ( /*
+          -- Just the base objects, i.e. no constraints, comments, grant nor public synonyms to base objects.
+          */
+          with obj as
+          ( select  obj.owner
+            ,       obj.object_type
+            ,       obj.object_name
+            ,       obj.status
+            ,       obj.generated
+            ,       obj.temporary
+            ,       obj.subobject_name
+                    -- use scalar subqueries for a (possible) better performance
+            ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
+--            ,       ( select oracle_tools.t_schema_object.is_a_repeatable(obj.object_type) from dual ) as is_a_repeatable
+--            ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), obj.object_name) from dual ) as is_exclude_name_expr
+            ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
+            from    all_objects obj
+          )
+          select  o.owner as object_schema
+          ,       o.md_object_type as object_type
+          ,       o.object_name
+          from    obj o
+          where   o.owner = p_schema
+          and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+          and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
+          and     o.md_object_type member of l_schema_md_object_type_tab
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end                
+                  -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
+                  -- =====         ===========                      ==============
+                  -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
+          and     o.subobject_name is null
+                  -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
+          and     o.is_dependent_object_type = 0
+        )
+        loop
+          pipe row
+          ( oracle_tools.t_named_object.create_named_object
+            ( p_object_schema => r.object_schema
+            , p_object_type => r.object_type
+            , p_object_name => r.object_name
+            )
+          );          
+        end loop;        
+    end case;
+  end loop;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+$end
+
+  return; -- essential
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end get_named_objects;
+
+procedure get_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+)
+is
+  l_schema_object_filter_id oracle_tools.schema_object_filters.id%type := null;
+begin
+  add
+  ( p_schema_object_filter => p_schema_object_filter
+  , p_add_schema_objects => true
+  , p_schema_object_filter_id => l_schema_object_filter_id
+  );
+  p_schema_object_tab := oracle_tools.t_schema_object_tab();
+  for r in ( select t.obj from v_my_schema_objects t )
+  loop
+    p_schema_object_tab.extend(1);
+    p_schema_object_tab(p_schema_object_tab.last) := r.obj;
+  end loop;
+end get_schema_objects;
+
+function get_schema_objects
+( p_schema in varchar2 default user
+, p_object_type in varchar2 default null
+, p_object_names in varchar2 default null
+, p_object_names_include in integer default null
+, p_grantor_is_schema in integer default 0
+, p_exclude_objects in clob default null
+, p_include_objects in clob default null
+)
+return oracle_tools.t_schema_object_tab
+pipelined
+is
+  pragma autonomous_transaction;
+  
+  l_schema_object_filter oracle_tools.t_schema_object_filter := null;
+  l_schema_object_filter_id oracle_tools.schema_object_filters.id%type := null;
+  l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+
+  -- dbms_application_info stuff
+  l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
+    oracle_tools.api_longops_pkg.longops_init
+    ( p_target_desc => l_program
+    , p_op_name => 'fetch'
+    , p_units => 'objects'
+    );
+
+  procedure cleanup(p_rollback in boolean default false)
+  is
+  begin
+    if p_rollback then rollback; else commit; end if;
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
+  end cleanup;
+begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS');
+$end
+
+  l_schema_object_filter :=
+    new oracle_tools.t_schema_object_filter
+        ( p_schema => p_schema
+        , p_object_type => p_object_type
+        , p_object_names => p_object_names
+        , p_object_names_include => p_object_names_include 
+        , p_grantor_is_schema => p_grantor_is_schema 
+        , p_exclude_objects => p_exclude_objects 
+        , p_include_objects => p_include_objects 
+        );
+
+  add
+  ( p_schema_object_filter => l_schema_object_filter
+  , p_add_schema_objects => true
+  , p_schema_object_filter_id => l_schema_object_filter_id
+  );
+
+  for r in ( select t.obj from v_my_schema_objects t )
+  loop
+    pipe row (r.obj);
+    oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+  end loop;
+
+  cleanup;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+$end
+
+  return; -- essential for pipelined functions
+exception
+  when no_data_needed
+  then
+    -- not a real error, just a way to some cleanup
+    cleanup;
+$if oracle_tools.schema_objects_api.c_tracing $then
+    dbug.leave;
+$end
+
+  when no_data_found
+  then
+    cleanup(true);
+$if oracle_tools.schema_objects_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    oracle_tools.pkg_ddl_error.reraise_error(l_program);
+    raise; -- to keep the compiler happy
+
+  when others
+  then
+    cleanup(true);
+$if oracle_tools.schema_objects_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    raise;
+end get_schema_objects;
+
 function get_schema_objects
 ( p_schema_object_filter_id in number
 )
@@ -961,7 +975,7 @@ from    v_all_schema_objects t
 where   t.schema_object_filter_id =
         nvl
         ( get_schema_objects.p_schema_object_filter_id
-        , (select max(f.id) from oracle_tools.schema_object_filters f where f.session_id = sys_context('USERENV', 'SESSION_ID'))
+        , (select oracle_tools.schema_objects_api.get_last_schema_object_filter_id from dual where rownum <= 1)
         )
 and     t.generate_ddl = 1        
 ]';
@@ -981,7 +995,7 @@ function match_perc
 return integer
 deterministic
 is
-  l_schema_object_filter_id constant number := nvl(p_schema_object_filter_id, get_last_schema_object_filter);
+  l_schema_object_filter_id constant number := nvl(p_schema_object_filter_id, get_last_schema_object_filter_id);
   l_nr_objects_generate_ddl number;
   l_nr_objects number;
 begin
@@ -1019,7 +1033,7 @@ is
 
   l_program constant t_module := 'UT_GET_SCHEMA_OBJECTS';
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || l_program);
 $end
 
@@ -1151,7 +1165,7 @@ $end
 
   commit;
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
   dbug.leave;
 exception
   when others
@@ -1169,7 +1183,7 @@ is
 
   l_program constant t_module := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UT_GET_SCHEMA_OBJECT_FILTER';
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
   dbug.enter(l_program);
 $end
 
@@ -1198,7 +1212,7 @@ $end
 
   for i_idx in l_schema_object_id_tab.first .. l_schema_object_id_tab.last
   loop
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", 'id: %s', l_schema_object_id_tab(i_idx));
 $end
 
@@ -1231,7 +1245,7 @@ $end
     ut.expect(l_actual, 'exclude and include ' || l_schema_object_id_tab(i_idx)).to_equal(l_expected);
 end loop;
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.schema_objects_api.c_debugging $then
   dbug.leave;
 exception
   when others
