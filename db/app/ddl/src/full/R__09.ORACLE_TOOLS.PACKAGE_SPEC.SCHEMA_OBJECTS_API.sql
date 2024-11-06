@@ -20,16 +20,23 @@ procedure add
 /** Add a record to table schema_object_filters and optionally all schema objects. **/
 
 procedure add
-( p_schema_object in oracle_tools.all_schema_objects.obj%type -- The schema object to add to ALL_SCHEMA_OBJECTS
+( p_schema_ddl in oracle_tools.all_schema_ddls.ddl%type
+, p_schema_object_filter_id in oracle_tools.all_schema_ddls.schema_object_filter_id%type
 , p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
+);
+/** Add a record to table all_schema_ddls. **/
+
+procedure add
+( p_schema_object in oracle_tools.all_schema_objects.obj%type -- The schema object to add to ALL_SCHEMA_OBJECTS
 , p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type default null -- If null, the last from schema_object_filters for this session is used
+, p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 );
 /** Add a schema object to ALL_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
 procedure add
 ( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to ALL_SCHEMA_OBJECTS
-, p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type default null -- If null, the last from schema_object_filters for this session is used
+, p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 );
 /** Add schema objects to ALL_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
