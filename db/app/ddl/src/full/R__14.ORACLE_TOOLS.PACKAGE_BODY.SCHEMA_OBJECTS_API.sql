@@ -41,6 +41,7 @@ $end
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
   l_cursor t_schema_object_cursor;
+  l_base_object oracle_tools.t_named_object;
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -133,10 +134,17 @@ $end
                                          ) -- grants are on underlying tables
         )
         loop
+          -- base first
+          l_base_object := treat(r.base_object as oracle_tools.t_named_object);
+          add
+          ( p_schema_object => l_base_object
+          , p_must_exist => null -- don't care
+          , p_schema_object_filter_id => p_schema_object_filter_id
+          );
           add
           ( p_schema_object =>
               oracle_tools.t_object_grant_object
-              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+              ( p_base_object => l_base_object
               , p_object_schema => r.object_schema
               , p_grantee => r.grantee
               , p_privilege => r.privilege
@@ -202,13 +210,20 @@ $end
                   ) t
         )
         loop
+          -- base first
+          l_base_object := treat(r.base_object as oracle_tools.t_named_object);
+          add
+          ( p_schema_object => l_base_object
+          , p_must_exist => null -- don't care
+          , p_schema_object_filter_id => p_schema_object_filter_id
+          );
           case r.object_type
             when 'SYNONYM'
             then
               add
               ( p_schema_object =>
                   oracle_tools.t_synonym_object
-                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  ( p_base_object => l_base_object
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   )
@@ -220,7 +235,7 @@ $end
               add
               ( p_schema_object =>
                   oracle_tools.t_comment_object
-                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  ( p_base_object => l_base_object
                   , p_object_schema => r.object_schema
                   , p_column_name => r.column_name
                   )
@@ -312,13 +327,20 @@ $end
           end if;
 $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
 
+          -- base first
+          l_base_object := treat(r.base_object as oracle_tools.t_named_object);
+          add
+          ( p_schema_object => l_base_object
+          , p_must_exist => null -- don't care
+          , p_schema_object_filter_id => p_schema_object_filter_id
+          );
           case r.object_type
             when 'REF_CONSTRAINT'
             then
               add
               ( p_schema_object =>
                   oracle_tools.t_ref_constraint_object
-                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  ( p_base_object => l_base_object
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   , p_constraint_type => r.constraint_type
@@ -333,7 +355,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
               add
               ( p_schema_object =>
                   oracle_tools.t_constraint_object
-                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  ( p_base_object => l_base_object
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   , p_constraint_type => r.constraint_type
@@ -446,15 +468,21 @@ $if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
 $end      
         )
         loop
+          l_base_object := 
+            oracle_tools.t_named_object.create_named_object
+            ( p_object_schema => r.base_object_schema
+            , p_object_type => r.base_object_type
+            , p_object_name => r.base_object_name
+            );
+          add
+          ( p_schema_object => l_base_object
+          , p_must_exist => null -- don't care
+          , p_schema_object_filter_id => p_schema_object_filter_id
+          );
           add
           ( p_schema_object =>
               oracle_tools.t_index_object
-              ( p_base_object =>
-                  oracle_tools.t_named_object.create_named_object
-                  ( p_object_schema => r.base_object_schema
-                  , p_object_type => r.base_object_type
-                  , p_object_name => r.base_object_name
-                  )
+              ( p_base_object => l_base_object
               , p_object_schema => r.object_schema
               , p_object_name => r.object_name
               , p_tablespace_name => r.tablespace_name
@@ -514,7 +542,7 @@ begin
   into    l_schema_object_filter_id
   from    ( select  f.id
             from    oracle_tools.schema_object_filters f
-            where   f.session_id = sys_context('USERENV', 'SESSION_ID')
+            where   f.session_id = sys_context('USERENV', 'SESSIONID')
             order by
                     f.session_id
             ,       f.created desc            
@@ -604,6 +632,10 @@ is
   l_lwb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 1 end;
   l_upb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 2 end; -- try both when p_must_exist is null
 begin
+  if p_schema_object_filter_id is null
+  then
+    raise value_error;
+  end if;
   <<dml_loop>>
   for i_idx in l_lwb .. l_upb
   loop
@@ -704,13 +736,32 @@ return all_schema_objects%rowtype
 is
   l_rec all_schema_objects%rowtype;
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FIND_BY_OBJECT_ID');
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."input", 'p_id: %s; p_schema_object_filter_id: %s', p_id, p_schema_object_filter_id);
+$end  
+$end
+
   select  t.*
   into    l_rec
   from    all_schema_objects t
   where   t.schema_object_filter_id = p_schema_object_filter_id
   and     t.obj.id() = p_id;
 
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+$end
+
   return l_rec;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end find_by_object_id;
 
 function get_named_objects
@@ -963,7 +1014,7 @@ is
   procedure cleanup
   is
   begin
-    rollback to spt; -- always rollback
+    commit; -- rollback to spt; -- always rollback
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
   end cleanup;
 begin
