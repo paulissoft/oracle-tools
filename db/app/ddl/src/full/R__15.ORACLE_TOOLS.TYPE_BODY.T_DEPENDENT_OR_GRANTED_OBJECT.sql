@@ -5,7 +5,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object().object_schema();
+  return self.base_object_schema$;
 end base_object_schema;
 
 overriding member function base_object_type
@@ -13,7 +13,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object().object_type();
+  return self.base_object_type$;
 end base_object_type;
 
 overriding member function base_dict_object_type
@@ -21,7 +21,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object().dict_object_type();
+  return oracle_tools.t_schema_object.dict_object_type(self.base_object_type$);
 end base_dict_object_type;
 
 overriding member function base_object_name
@@ -29,7 +29,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object().object_name();
+  return self.base_object_name$;
 end base_object_name;
 
 overriding final member procedure base_object_schema
@@ -37,16 +37,8 @@ overriding final member procedure base_object_schema
 , p_base_object_schema in varchar2
 )
 is
-  l_base_object oracle_tools.t_named_object := self.base_object();
 begin
-  if l_base_object.object_schema() = p_base_object_schema
-  then
-    null; -- no change
-  else
-    -- change and add again (must exist)
-    l_base_object.object_schema(p_base_object_schema);
-    schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
-  end if;  
+  self.base_object_schema$ := p_base_object_schema;
 end base_object_schema;
 
 overriding member procedure chk
@@ -66,14 +58,17 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
-member function base_object
-return oracle_tools.t_named_object
+member function base_object_id
+return varchar2
 deterministic
 is
-  l_base_object oracle_tools.t_named_object := null;
 begin
-  return case when self.base_object_seq$ is not null then treat(schema_objects_api.find_by_seq(self.base_object_seq$).obj as oracle_tools.t_named_object) end;
-end base_object;
+  return oracle_tools.t_schema_object.id
+         ( p_object_schema => self.base_object_schema$
+         , p_object_type => self.base_object_type$
+         , p_object_name => self.base_object_name$
+         );
+end base_object_id;
 
 end;
 /

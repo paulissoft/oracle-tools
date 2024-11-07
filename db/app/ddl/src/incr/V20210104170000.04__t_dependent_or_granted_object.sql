@@ -1,8 +1,10 @@
 begin
   execute immediate q'[
 create type oracle_tools.t_dependent_or_granted_object authid current_user under oracle_tools.t_schema_object
-( base_object_seq$ integer -- base object (all_schema_objects.seq)
-, member function base_object return oracle_tools.t_named_object deterministic
+( base_object_schema$ varchar2(128 byte)
+, base_object_type$ varchar2(30 byte)
+, base_object_name$ varchar2(128 byte)
+, member function base_object_id return varchar2 deterministic
 , overriding member function base_object_schema return varchar2 deterministic
 , overriding member function base_object_type return varchar2 deterministic
 , overriding member function base_object_name return varchar2 deterministic

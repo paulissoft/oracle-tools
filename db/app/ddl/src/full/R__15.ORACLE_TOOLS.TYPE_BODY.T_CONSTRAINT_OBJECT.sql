@@ -23,7 +23,9 @@ $end
   self := oracle_tools.t_constraint_object
           ( null
           , p_object_schema
-          , case when p_base_object is not null then schema_objects_api.find_by_object_id(p_base_object.id()).seq end
+          , case when p_base_object is not null then p_base_object.object_schema() end
+          , case when p_base_object is not null then p_base_object.object_type() end
+          , case when p_base_object is not null then p_base_object.object_name() end
           , p_object_name
           , p_column_names
           , p_search_condition

@@ -856,7 +856,9 @@ $end
   return l_object_name;
 end fq_object_name;
 
-member function dict_object_type
+static function dict_object_type
+( p_object_type in varchar2
+)
 return varchar2
 deterministic
 is
@@ -867,7 +869,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DICT_OBJECT_TYPE');
 $end
 
-  l_metadata_object_type := self.object_type();
+  l_metadata_object_type := p_object_type;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."info", 'l_metadata_object_type: %s', l_metadata_object_type);
@@ -888,6 +890,14 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return l_dict_object_type;
+end dict_object_type;
+
+member function dict_object_type
+return varchar2
+deterministic
+is
+begin
+  return dict_object_type(self.object_type());
 end dict_object_type;
 
 member procedure chk

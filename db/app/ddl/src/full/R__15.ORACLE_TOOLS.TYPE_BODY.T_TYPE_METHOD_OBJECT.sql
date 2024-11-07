@@ -27,7 +27,16 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   );
 $end
 
-  self.base_object_seq$ := case when p_base_object is not null then schema_objects_api.find_by_object_id(p_base_object.id()).seq end;
+  if p_base_object is null
+  then
+    self.base_object_schema$ := null;
+    self.base_object_type$ := null;
+    self.base_object_name$ := null;
+  else
+    self.base_object_schema$ := p_base_object.object_schema();
+    self.base_object_type$ := p_base_object.object_type();
+    self.base_object_name$ := p_base_object.object_name();
+  end if;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
   self.method_type$ := p_method_type;

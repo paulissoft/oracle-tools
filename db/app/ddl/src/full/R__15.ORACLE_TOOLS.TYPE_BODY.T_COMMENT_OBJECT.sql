@@ -22,9 +22,13 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_seq$ := null;
+    self.base_object_schema$ := null;
+    self.base_object_type$ := null;
+    self.base_object_name$ := null;
   else
-    self.base_object_seq$ := schema_objects_api.find_by_object_id(p_base_object.id()).seq;
+    self.base_object_schema$ := p_base_object.object_schema();
+    self.base_object_type$ := p_base_object.object_type();
+    self.base_object_name$ := p_base_object.object_name();
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;

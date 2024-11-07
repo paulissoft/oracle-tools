@@ -90,6 +90,11 @@ create type oracle_tools.t_schema_object authid current_user as object
   deterministic
 , member function is_a_repeatable return integer deterministic
 , final member function fq_object_name return varchar2 deterministic
+, static function dict_object_type
+  ( p_object_type in varchar2
+  )
+  return varchar2
+  deterministic
 , member function dict_object_type return varchar2 deterministic
 , member procedure chk
   ( self in oracle_tools.t_schema_object

@@ -42,7 +42,9 @@ $end
   self := oracle_tools.t_ref_constraint_object
           ( null
           , p_object_schema
-          , case when p_base_object is not null then schema_objects_api.find_by_object_id(p_base_object.id()).seq end          
+          , case when p_base_object is not null then p_base_object.object_schema() end          
+          , case when p_base_object is not null then p_base_object.object_type() end          
+          , case when p_base_object is not null then p_base_object.object_name() end          
           , p_object_name
           , nvl
             ( p_column_names
@@ -54,10 +56,20 @@ $end
             )
           , null -- search condition
           , nvl(p_constraint_type, 'R')
-          , case when p_ref_object is not null then schema_objects_api.find_by_object_id(p_ref_object.id()).seq end          
+          , case when p_ref_object is not null then p_ref_object.object_schema() end          
+          , case when p_ref_object is not null then p_ref_object.object_type() end          
+          , case when p_ref_object is not null then p_ref_object.object_name() end          
+          , case when p_ref_object is not null then p_ref_object.base_object_schema() end          
+          , case when p_ref_object is not null then p_ref_object.base_object_type() end          
+          , case when p_ref_object is not null then p_ref_object.base_object_name() end          
           );
 
-  if self.ref_object_seq$ is null
+  if self.ref_object_schema$ is null or
+     self.ref_object_type$ is null or
+     self.ref_object_name$ is null or
+     self.ref_base_object_schema$ is null or
+     self.ref_base_object_type$ is null or
+     self.ref_base_object_name$ is null
   then
     -- find referenced primary / unique key and its base table / view
     <<find_loop>>
@@ -102,7 +114,12 @@ $end
       ( p_schema_object => l_constraint_object          
       , p_must_exist => null
       );
-      self.ref_object_seq$ := schema_objects_api.find_by_object_id(l_constraint_object.id()).seq;
+      self.ref_object_schema$ := l_constraint_object.object_schema();
+      self.ref_object_type$ := l_constraint_object.object_type();
+      self.ref_object_name$ := l_constraint_object.object_name();
+      self.ref_base_object_schema$ := l_constraint_object.base_object_schema();
+      self.ref_base_object_type$ := l_constraint_object.base_object_type();
+      self.ref_base_object_name$ := l_constraint_object.base_object_name();
       
       exit find_loop;
     end loop find_loop;
@@ -130,7 +147,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object_seq$ is not null then self.ref_object().object_schema() end;
+  return self.ref_object_schema$;
 end ref_object_schema;
 
 member function ref_object_type
@@ -138,7 +155,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object_seq$ is not null then self.ref_object().object_type() end;
+  return self.ref_object_type$;
 end ref_object_type;
 
 member function ref_object_name
@@ -146,7 +163,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object_seq$ is not null then self.ref_object().object_name() end;
+  return self.ref_object_name$;
 end ref_object_name;
 
 member function ref_base_object_schema
@@ -154,7 +171,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object_seq$ is not null then self.ref_object().base_object_schema() end;
+  return self.ref_base_object_schema$;
 end ref_base_object_schema;
 
 member function ref_base_object_type
@@ -162,7 +179,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object_seq$ is not null then self.ref_object().base_object_type() end;
+  return self.ref_base_object_type$;
 end ref_base_object_type;
 
 member function ref_base_object_name
@@ -170,7 +187,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object_seq$ is not null then self.ref_object().base_object_name() end;
+  return self.ref_base_object_name$;
 end ref_base_object_name;
 
 -- end of getter(s)
@@ -220,7 +237,12 @@ $end
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.', self.schema_object_info());
   end if;
 
-  if self.ref_object_seq$ is null
+  if self.ref_object_schema$ is null or
+     self.ref_object_type$ is null or
+     self.ref_object_name$ is null or
+     self.ref_base_object_schema$ is null or
+     self.ref_base_object_type$ is null or
+     self.ref_base_object_name$ is null
   then
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Reference object should not be empty.', self.schema_object_info());
   end if;
@@ -364,13 +386,20 @@ $end
   return l_ref_object;
 end get_ref_constraint;
 
-member function ref_object
+member function ref_object_id
 return oracle_tools.t_constraint_object
 deterministic
 is
   l_ref_object oracle_tools.t_named_object := null;
 begin
-  return case when self.ref_object_seq$ is not null then treat(schema_objects_api.find_by_seq(self.ref_object_seq$).obj as oracle_tools.t_constraint_object) end;
+  return oracle_tools.t_schema_object.id
+         ( p_object_schema => self.ref_object_schema$
+         , p_object_type => self.ref_object_type$
+         , p_object_name => self.ref_object_name$
+         , p_base_object_schema => self.ref_base_object_schema$
+         , p_base_object_type => self.ref_base_object_type$
+         , p_base_object_name => self.ref_base_object_name$
+         );
 end ref_object;
 
 end;
