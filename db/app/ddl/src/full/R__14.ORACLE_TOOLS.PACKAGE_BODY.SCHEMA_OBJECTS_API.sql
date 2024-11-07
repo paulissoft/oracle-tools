@@ -339,8 +339,9 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                   , p_constraint_type => r.constraint_type
                   , p_search_condition => r.search_condition
                   )
-              , p_must_exist => false
               , p_schema_object_filter_id => p_schema_object_filter_id
+              , p_must_exist => false
+              , p_ignore_dup_val_on_index => true
               );
           end case;
         end loop;
@@ -534,6 +535,7 @@ procedure add
 ( p_schema_ddl in oracle_tools.all_schema_ddls.ddl%type
 , p_schema_object_filter_id in positiven
 , p_must_exist in boolean
+, p_ignore_dup_val_on_index in boolean
 )
 is
   -- index 1: update; 2: insert
@@ -553,18 +555,38 @@ begin
         
       when 2
       then
-        insert into all_schema_ddls
-        ( schema_object_filter_id
-        , seq
-        , ddl
-        )
-        values
-        ( p_schema_object_filter_id
-          -- Since objects are inserted per Oracle session
-          -- there is never a problem with another session inserting at the same time for the same session.
-        , (select nvl(max(t.seq), 0) + 1 from all_schema_ddls t where t.schema_object_filter_id = p_schema_object_filter_id)
-        , p_schema_ddl
-        );
+        begin
+          insert into all_schema_ddls
+          ( schema_object_filter_id
+          , seq
+          , ddl
+          )
+          values
+          ( p_schema_object_filter_id
+            -- Since objects are inserted per Oracle session
+            -- there is never a problem with another session inserting at the same time for the same session.
+          , (select nvl(max(t.seq), 0) + 1 from all_schema_ddls t where t.schema_object_filter_id = p_schema_object_filter_id)
+          , p_schema_ddl
+          );
+        exception
+          when dup_val_on_index
+          then
+            if p_ignore_dup_val_on_index
+            then
+              null;
+            else
+              raise_application_error
+              ( oracle_tools.pkg_ddl_error.c_duplicate_item
+              , utl_lms.format_message
+                ( 'Could not add duplicate ALL_SCHEMA_DLLS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
+                , p_schema_ddl.obj.id()
+                , to_char(p_schema_object_filter_id)
+                , to_char(find_schema_ddl_by_object_id(p_schema_ddl.obj.id(), p_schema_object_filter_id).seq)
+                )
+              , true              
+              );
+            end if;
+        end;
     end case;
       
     case sql%rowcount
@@ -591,6 +613,7 @@ procedure add
 ( p_schema_object in oracle_tools.all_schema_objects.obj%type
 , p_schema_object_filter_id in positiven
 , p_must_exist in boolean
+, p_ignore_dup_val_on_index in boolean
 )
 is
   -- index 1: update; 2: insert
@@ -626,15 +649,21 @@ begin
         exception
           when dup_val_on_index
           then
-            raise_application_error
-            ( oracle_tools.pkg_ddl_error.c_duplicate_item
-            , utl_lms.format_message
-              ( 'Could not add duplicate ALL_SCHEMA_OBJECTS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
-              , p_schema_object.id()
-              , to_char(p_schema_object_filter_id)
-              , to_char(find_by_object_id(p_schema_object.id(), p_schema_object_filter_id).seq)
-              )
-            );
+            if p_ignore_dup_val_on_index
+            then
+              null;
+            else
+              raise_application_error
+              ( oracle_tools.pkg_ddl_error.c_duplicate_item
+              , utl_lms.format_message
+                ( 'Could not add duplicate ALL_SCHEMA_OBJECTS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
+                , p_schema_object.id()
+                , to_char(p_schema_object_filter_id)
+                , to_char(find_schema_object_by_object_id(p_schema_object.id(), p_schema_object_filter_id).seq)
+                )
+              , true              
+              );
+            end if;
         end;
     end case;
       
@@ -662,6 +691,7 @@ procedure add
 ( p_schema_object_cursor in t_schema_object_cursor
 , p_schema_object_filter_id in positiven
 , p_must_exist in boolean
+, p_ignore_dup_val_on_index in boolean
 )
 is
   l_schema_object_tab t_schema_object_tab;
@@ -679,6 +709,7 @@ begin
         ( p_schema_object => l_schema_object_tab(i_idx)
         , p_must_exist => p_must_exist
         , p_schema_object_filter_id => p_schema_object_filter_id
+        , p_ignore_dup_val_on_index => p_ignore_dup_val_on_index
         );
       end loop;
     end if;
@@ -686,7 +717,7 @@ begin
   end loop;
 end add;
 
-function find_by_seq
+function find_schema_object_by_seq
 ( p_seq in all_schema_objects.seq%type
 , p_schema_object_filter_id in positiven
 )
@@ -701,9 +732,9 @@ begin
   and     t.seq = p_seq;
 
   return l_rec;
-end find_by_seq;
+end find_schema_object_by_seq;
 
-function find_by_object_id
+function find_schema_object_by_object_id
 ( p_id in varchar2
 , p_schema_object_filter_id in positiven
 )
@@ -718,7 +749,41 @@ begin
   and     t.obj.id() = p_id;
 
   return l_rec;
-end find_by_object_id;
+end find_schema_object_by_object_id;
+
+function find_schema_ddl_by_seq
+( p_seq in all_schema_objects.seq%type
+, p_schema_object_filter_id in positiven
+)
+return all_schema_ddls%rowtype
+is
+  l_rec all_schema_ddls%rowtype;
+begin
+  select  t.*
+  into    l_rec
+  from    all_schema_ddls t
+  where   t.schema_object_filter_id = p_schema_object_filter_id
+  and     t.seq = p_seq;
+
+  return l_rec;
+end find_schema_ddl_by_seq;
+
+function find_schema_ddl_by_object_id
+( p_id in varchar2
+, p_schema_object_filter_id in positiven
+)
+return all_schema_ddls%rowtype
+is
+  l_rec all_schema_ddls%rowtype;
+begin
+  select  t.*
+  into    l_rec
+  from    all_schema_ddls t
+  where   t.schema_object_filter_id = p_schema_object_filter_id
+  and     t.ddl.obj.id() = p_id;
+
+  return l_rec;
+end find_schema_ddl_by_object_id;
 
 function get_named_objects
 ( p_schema in varchar2

@@ -2441,7 +2441,7 @@ $end
         when no_data_found
         then
           begin
-            l_my_schema_object := oracle_tools.schema_objects_api.find_by_object_id(p_object_key);
+            l_my_schema_object := oracle_tools.schema_objects_api.find_schema_object_by_object_id(p_object_key);
           exception
             when no_data_found
             then l_generate_ddl := 0;
