@@ -541,6 +541,7 @@ is
   -- index 1: update; 2: insert
   l_lwb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 1 end;
   l_upb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 2 end; -- try both when p_must_exist is null
+  l_sql_rowcount pls_integer := null;
 begin
   <<dml_loop>>
   for i_idx in l_lwb .. l_upb
@@ -552,6 +553,7 @@ begin
         set     t.ddl = p_schema_ddl
         where   t.schema_object_filter_id = p_schema_object_filter_id
         and     t.ddl.obj.id() = p_schema_ddl.obj.id();
+        l_sql_rowcount := sql%rowcount;
         
       when 2
       then
@@ -568,12 +570,13 @@ begin
           , (select nvl(max(t.seq), 0) + 1 from all_schema_ddls t where t.schema_object_filter_id = p_schema_object_filter_id)
           , p_schema_ddl
           );
+          l_sql_rowcount := sql%rowcount;
         exception
           when dup_val_on_index
           then
             if p_ignore_dup_val_on_index
             then
-              null;
+              l_sql_rowcount := 1;
             else
               raise_application_error
               ( oracle_tools.pkg_ddl_error.c_duplicate_item
@@ -589,7 +592,7 @@ begin
         end;
     end case;
       
-    case sql%rowcount
+    case l_sql_rowcount
       when 0
       then
         if i_idx = 1 and l_upb = 2
@@ -619,6 +622,7 @@ is
   -- index 1: update; 2: insert
   l_lwb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 1 end;
   l_upb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 2 end; -- try both when p_must_exist is null
+  l_sql_rowcount pls_integer := null;
 begin
   <<dml_loop>>
   for i_idx in l_lwb .. l_upb
@@ -630,6 +634,7 @@ begin
         set     t.obj = p_schema_object
         where   t.schema_object_filter_id = p_schema_object_filter_id
         and     t.obj.id() = p_schema_object.id();
+        l_sql_rowcount := sql%rowcount;
         
       when 2
       then
@@ -646,12 +651,13 @@ begin
           , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.schema_object_filter_id = p_schema_object_filter_id)
           , p_schema_object
           );
+          l_sql_rowcount := sql%rowcount;
         exception
           when dup_val_on_index
           then
             if p_ignore_dup_val_on_index
             then
-              null;
+              l_sql_rowcount := 1;
             else
               raise_application_error
               ( oracle_tools.pkg_ddl_error.c_duplicate_item
@@ -667,7 +673,7 @@ begin
         end;
     end case;
       
-    case sql%rowcount
+    case l_sql_rowcount
       when 0
       then
         if i_idx = 1 and l_upb = 2
