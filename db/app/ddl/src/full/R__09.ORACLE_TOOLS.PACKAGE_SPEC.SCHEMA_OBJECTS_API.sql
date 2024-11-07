@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID DEFINER IS /* -*-coding: utf-8-*- */
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID CURRENT_USER IS /* -*-coding: utf-8-*- */
 
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
