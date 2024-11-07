@@ -897,7 +897,7 @@ return varchar2
 deterministic
 is
 begin
-  return dict_object_type(self.object_type());
+  return oracle_tools.t_schema_object.dict_object_type(self.object_type());
 end dict_object_type;
 
 member procedure chk
