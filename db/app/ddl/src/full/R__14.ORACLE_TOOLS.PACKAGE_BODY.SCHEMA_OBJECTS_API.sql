@@ -31,8 +31,8 @@ c_steps constant sys.odcivarchar2list :=
 g_default_match_perc_threshold integer := 50;
 
 procedure add_schema_objects
-( p_schema_object_filter_id in oracle_tools.schema_object_filters.id%type
-, p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_filter_id in positiven
 )
 is
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -41,7 +41,6 @@ $end
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
   l_cursor t_schema_object_cursor;
-  l_base_object oracle_tools.t_named_object;
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -134,17 +133,10 @@ $end
                                          ) -- grants are on underlying tables
         )
         loop
-          -- base first
-          l_base_object := treat(r.base_object as oracle_tools.t_named_object);
-          add
-          ( p_schema_object => l_base_object
-          , p_must_exist => null -- don't care
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );
           add
           ( p_schema_object =>
               oracle_tools.t_object_grant_object
-              ( p_base_object => l_base_object
+              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
               , p_object_schema => r.object_schema
               , p_grantee => r.grantee
               , p_privilege => r.privilege
@@ -210,20 +202,13 @@ $end
                   ) t
         )
         loop
-          -- base first
-          l_base_object := treat(r.base_object as oracle_tools.t_named_object);
-          add
-          ( p_schema_object => l_base_object
-          , p_must_exist => null -- don't care
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );
           case r.object_type
             when 'SYNONYM'
             then
               add
               ( p_schema_object =>
                   oracle_tools.t_synonym_object
-                  ( p_base_object => l_base_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   )
@@ -235,7 +220,7 @@ $end
               add
               ( p_schema_object =>
                   oracle_tools.t_comment_object
-                  ( p_base_object => l_base_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                   , p_object_schema => r.object_schema
                   , p_column_name => r.column_name
                   )
@@ -327,20 +312,13 @@ $end
           end if;
 $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
 
-          -- base first
-          l_base_object := treat(r.base_object as oracle_tools.t_named_object);
-          add
-          ( p_schema_object => l_base_object
-          , p_must_exist => null -- don't care
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );
           case r.object_type
             when 'REF_CONSTRAINT'
             then
               add
               ( p_schema_object =>
                   oracle_tools.t_ref_constraint_object
-                  ( p_base_object => l_base_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   , p_constraint_type => r.constraint_type
@@ -355,7 +333,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
               add
               ( p_schema_object =>
                   oracle_tools.t_constraint_object
-                  ( p_base_object => l_base_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   , p_constraint_type => r.constraint_type
@@ -468,21 +446,15 @@ $if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
 $end      
         )
         loop
-          l_base_object := 
-            oracle_tools.t_named_object.create_named_object
-            ( p_object_schema => r.base_object_schema
-            , p_object_type => r.base_object_type
-            , p_object_name => r.base_object_name
-            );
-          add
-          ( p_schema_object => l_base_object
-          , p_must_exist => null -- don't care
-          , p_schema_object_filter_id => p_schema_object_filter_id
-          );
           add
           ( p_schema_object =>
               oracle_tools.t_index_object
-              ( p_base_object => l_base_object
+              ( p_base_object =>
+                  oracle_tools.t_named_object.create_named_object
+                  ( p_object_schema => r.base_object_schema
+                  , p_object_type => r.base_object_type
+                  , p_object_name => r.base_object_name
+                  )
               , p_object_schema => r.object_schema
               , p_object_name => r.object_name
               , p_tablespace_name => r.tablespace_name
@@ -516,27 +488,20 @@ $end
     raise;
 end add_schema_objects;
 
-procedure add
-( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
-, p_add_schema_objects in boolean
-)
+procedure cleanup
 is
-  -- this way the sequence will not be used
-  l_schema_object_filter_id constant oracle_tools.schema_object_filters.id%type := -1;
+  pragma autonomous_transaction;
 begin
-  insert into schema_object_filters(id, obj) values (l_schema_object_filter_id, p_schema_object_filter);
-  if p_add_schema_objects
-  then
-    add_schema_objects(p_schema_object_filter_id => l_schema_object_filter_id, p_schema_object_filter => p_schema_object_filter);
-  end if;
-end add;
+  delete from schema_object_filters t where t.created <= (sys_extract_utc(current_timestamp) - interval '1' day);
+  commit;
+end cleanup;
 
 -- PUBLIC
 
 function get_last_schema_object_filter_id
-return number
+return positiven
 is
-  l_schema_object_filter_id number;
+  l_schema_object_filter_id positive;
 begin
   select  f.id
   into    l_schema_object_filter_id
@@ -554,20 +519,20 @@ end get_last_schema_object_filter_id;
 procedure add
 ( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
 , p_add_schema_objects in boolean
-, p_schema_object_filter_id out nocopy oracle_tools.schema_object_filters.id%type
+, p_schema_object_filter_id out nocopy positiven
 )
 is
 begin
   insert into schema_object_filters(obj) values (p_schema_object_filter) returning id into p_schema_object_filter_id;
   if p_add_schema_objects
   then
-    add_schema_objects(p_schema_object_filter_id => p_schema_object_filter_id, p_schema_object_filter => p_schema_object_filter);
+    add_schema_objects(p_schema_object_filter, p_schema_object_filter_id);
   end if;
 end add;
 
 procedure add
 ( p_schema_ddl in oracle_tools.all_schema_ddls.ddl%type
-, p_schema_object_filter_id in oracle_tools.all_schema_ddls.schema_object_filter_id%type
+, p_schema_object_filter_id in positiven
 , p_must_exist in boolean
 )
 is
@@ -624,7 +589,7 @@ end add;
 
 procedure add
 ( p_schema_object in oracle_tools.all_schema_objects.obj%type
-, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
+, p_schema_object_filter_id in positiven
 , p_must_exist in boolean
 )
 is
@@ -632,10 +597,6 @@ is
   l_lwb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 1 end;
   l_upb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 2 end; -- try both when p_must_exist is null
 begin
-  if p_schema_object_filter_id is null
-  then
-    raise value_error;
-  end if;
   <<dml_loop>>
   for i_idx in l_lwb .. l_upb
   loop
@@ -685,7 +646,7 @@ end add;
 
 procedure add
 ( p_schema_object_cursor in t_schema_object_cursor
-, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
+, p_schema_object_filter_id in positiven
 , p_must_exist in boolean
 )
 is
@@ -713,7 +674,7 @@ end add;
 
 function find_by_seq
 ( p_seq in all_schema_objects.seq%type
-, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
+, p_schema_object_filter_id in positiven
 )
 return all_schema_objects%rowtype
 is
@@ -730,43 +691,24 @@ end find_by_seq;
 
 function find_by_object_id
 ( p_id in varchar2
-, p_schema_object_filter_id in oracle_tools.all_schema_objects.schema_object_filter_id%type
+, p_schema_object_filter_id in positiven
 )
 return all_schema_objects%rowtype
 is
   l_rec all_schema_objects%rowtype;
 begin
-$if oracle_tools.schema_objects_api.c_tracing $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FIND_BY_OBJECT_ID');
-$if oracle_tools.schema_objects_api.c_debugging $then
-  dbug.print(dbug."input", 'p_id: %s; p_schema_object_filter_id: %s', p_id, p_schema_object_filter_id);
-$end  
-$end
-
   select  t.*
   into    l_rec
   from    all_schema_objects t
   where   t.schema_object_filter_id = p_schema_object_filter_id
   and     t.obj.id() = p_id;
 
-$if oracle_tools.schema_objects_api.c_tracing $then
-  dbug.leave;
-$end
-
   return l_rec;
-
-$if oracle_tools.schema_objects_api.c_tracing $then
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
 end find_by_object_id;
 
 function get_named_objects
 ( p_schema in varchar2
-, p_schema_object_filter_id in number
+, p_schema_object_filter_id in positiven
 )
 return oracle_tools.t_schema_object_tab
 pipelined
@@ -971,7 +913,7 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
-  l_schema_object_filter_id oracle_tools.schema_object_filters.id%type := null;
+  l_schema_object_filter_id positive := null;
 begin
   add
   ( p_schema_object_filter => p_schema_object_filter
@@ -1001,6 +943,7 @@ is
   pragma autonomous_transaction;
   
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
+  l_schema_object_filter_id positive := null;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
   -- dbms_application_info stuff
@@ -1011,10 +954,14 @@ is
     , p_units => 'objects'
     );
 
-  procedure cleanup
+  procedure cleanup(p_error in boolean default false)
   is
   begin
-    commit; -- rollback to spt; -- always rollback
+    -- on error save so we can verify else rollback because we do not need the data
+    if p_error
+    then commit;
+    else rollback to spt;
+    end if;
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
   end cleanup;
 begin
@@ -1035,10 +982,10 @@ $end
         , p_include_objects => p_include_objects 
         );
 
-  -- use -1 for schema_object_filter_id
   add
   ( p_schema_object_filter => l_schema_object_filter
   , p_add_schema_objects => true
+  , p_schema_object_filter_id => l_schema_object_filter_id
   );
 
   for r in ( select t.obj from v_my_schema_objects t )
@@ -1065,7 +1012,7 @@ $end
 
   when no_data_found
   then
-    cleanup;
+    cleanup(true);
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -1074,7 +1021,7 @@ $end
 
   when others
   then
-    cleanup;
+    cleanup(true);
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -1082,7 +1029,7 @@ $end
 end get_schema_objects;
 
 function get_schema_objects
-( p_schema_object_filter_id in number
+( p_schema_object_filter_id in positiven
 )
 return varchar2 sql_macro
 is
@@ -1090,11 +1037,7 @@ begin
   return q'[
 select  t.obj
 from    v_all_schema_objects t
-where   t.schema_object_filter_id =
-        nvl
-        ( get_schema_objects.p_schema_object_filter_id
-        , (select oracle_tools.schema_objects_api.get_last_schema_object_filter_id from dual where rownum <= 1)
-        )
+where   t.schema_object_filter_id = get_schema_objects.p_schema_object_filter_id
 and     t.generate_ddl = 1        
 ]';
 end get_schema_objects;
@@ -1108,12 +1051,11 @@ begin
 end default_match_perc_threshold;
 
 function match_perc
-( p_schema_object_filter_id in number
+( p_schema_object_filter_id in positiven
 )
 return integer
 deterministic
 is
-  l_schema_object_filter_id constant number := nvl(p_schema_object_filter_id, get_last_schema_object_filter_id);
   l_nr_objects_generate_ddl number;
   l_nr_objects number;
 begin
@@ -1122,7 +1064,7 @@ begin
   into    l_nr_objects_generate_ddl
   ,       l_nr_objects
   from    v_all_schema_objects t
-  where   t.schema_object_filter_id = l_schema_object_filter_id;
+  where   t.schema_object_filter_id = p_schema_object_filter_id;
   
   return case when l_nr_objects > 0 then trunc((100 * l_nr_objects_generate_ddl) / l_nr_objects) else null end;
 end match_perc;
@@ -1375,6 +1317,8 @@ end ut_get_schema_object_filter;
 
 $end
 
+begin
+  cleanup;
 END SCHEMA_OBJECTS_API;
 /
 

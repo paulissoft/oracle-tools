@@ -21,5 +21,5 @@ create table all_schema_objects
 );
 
 create unique index all_schema_objects$idx$1 on all_schema_objects(schema_object_filter_id, obj.id()); -- Object id
-create        index all_schema_objects$idx$2 on all_schema_objects(schema_object_filter_id, matches_schema_object_fnc(schema_object_filter_id, obj)); -- Will we generate DDL for this one?
-create        index all_schema_objects$idx$3 on all_schema_objects(matches_schema_object_fnc(schema_object_filter_id, obj)); -- Will we generate DDL for this one?
+create        index all_schema_objects$idx$2 on all_schema_objects(schema_object_filter_id, oracle_tools.matches_schema_object_fnc(schema_object_filter_id, obj)); -- Will we generate DDL for this one?
+create        index all_schema_objects$idx$3 on all_schema_objects(oracle_tools.matches_schema_object_fnc(schema_object_filter_id, obj)); -- Will we generate DDL for this one?
