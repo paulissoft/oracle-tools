@@ -6005,7 +6005,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           );
 $end
 
-          l_object_dependency_tab(l_dependent_or_granted_object.base_object().id)(l_dependent_or_granted_object.id) := null;
+          l_object_dependency_tab(l_dependent_or_granted_object.base_object_id())(l_dependent_or_granted_object.id) := null;
         end if;  
       end if;
     end loop;
