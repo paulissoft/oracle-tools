@@ -610,18 +610,32 @@ begin
         
       when 2
       then
-        insert into all_schema_objects
-        ( schema_object_filter_id
-        , seq
-        , obj
-        )
-        values
-        ( p_schema_object_filter_id
-          -- Since objects are inserted per Oracle session
-          -- there is never a problem with another session inserting at the same time for the same session.
-        , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.schema_object_filter_id = p_schema_object_filter_id)
-        , p_schema_object
-        );
+        begin
+          insert into all_schema_objects
+          ( schema_object_filter_id
+          , seq
+          , obj
+          )
+          values
+          ( p_schema_object_filter_id
+            -- Since objects are inserted per Oracle session
+            -- there is never a problem with another session inserting at the same time for the same session.
+          , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.schema_object_filter_id = p_schema_object_filter_id)
+          , p_schema_object
+          );
+        exception
+          when dup_val_on_index
+          then
+            raise_application_error
+            ( oracle_tools.pkg_ddl_error.c_duplicate_item
+            , utl_lms.format_message
+              ( 'Could not add duplicate ALL_SCHEMA_OBJECTS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
+              , p_schema_object.id()
+              , to_char(p_schema_object_filter_id)
+              , to_char(find_by_object_id(p_schema_object.id(), p_schema_object_filter_id).seq)
+              )
+            );
+        end;
     end case;
       
     case sql%rowcount
