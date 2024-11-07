@@ -257,26 +257,9 @@ final member procedure ref_object_schema
 , p_ref_object_schema in varchar2
 )
 is
-  l_base_object oracle_tools.t_named_object := self.base_object();
-  l_ref_object oracle_tools.t_constraint_object := self.ref_object();
 begin
-  if l_ref_object.object_schema() = p_ref_object_schema
-  then
-    null; -- no change
-  else
-    -- change and add again (must exist)
-    l_ref_object.object_schema(p_ref_object_schema);
-    schema_objects_api.add(p_schema_object => l_ref_object, p_must_exist => true);
-  end if;  
-
-  if l_base_object.object_schema() = p_ref_object_schema
-  then
-    null; -- no change
-  else
-    -- change and add again (must exist)
-    l_base_object.object_schema(p_ref_object_schema);
-    schema_objects_api.add(p_schema_object => l_base_object, p_must_exist => true);
-  end if;  
+  self.ref_object_schema$ := p_ref_object_schema;
+  self.base_object_schema$ := p_ref_object_schema;
 end ref_object_schema;
 
 static function get_ref_constraint -- get referenced primary / unique key constraint whose base object is the referencing table / view with those columns
@@ -387,7 +370,7 @@ $end
 end get_ref_constraint;
 
 member function ref_object_id
-return oracle_tools.t_constraint_object
+return varchar2
 deterministic
 is
   l_ref_object oracle_tools.t_named_object := null;
@@ -400,7 +383,7 @@ begin
          , p_base_object_type => self.ref_base_object_type$
          , p_base_object_name => self.ref_base_object_name$
          );
-end ref_object;
+end ref_object_id;
 
 end;
 /
