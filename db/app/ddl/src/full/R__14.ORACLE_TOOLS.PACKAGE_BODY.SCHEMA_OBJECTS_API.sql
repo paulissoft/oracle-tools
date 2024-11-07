@@ -1039,22 +1039,16 @@ is
     , p_units => 'objects'
     );
 
-  procedure cleanup(p_error in boolean default false)
+  procedure cleanup
   is
   begin
     -- on error save so we can verify else rollback because we do not need the data
-    if p_error
-    then commit;
-    else rollback to spt;
-    end if;
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
   end cleanup;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS');
 $end
-
-  savepoint spt;
 
   l_schema_object_filter :=
     new oracle_tools.t_schema_object_filter
@@ -1080,6 +1074,7 @@ $end
   end loop;
 
   cleanup;
+  commit;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
@@ -1091,13 +1086,15 @@ exception
   then
     -- not a real error, just a way to some cleanup
     cleanup;
+    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave;
 $end
 
   when no_data_found
   then
-    cleanup(true);
+    cleanup;
+    rollback;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -1106,7 +1103,8 @@ $end
 
   when others
   then
-    cleanup(true);
+    cleanup;
+    rollback;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
