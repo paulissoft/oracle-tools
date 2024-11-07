@@ -519,7 +519,7 @@ end get_last_schema_object_filter_id;
 procedure add
 ( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
 , p_add_schema_objects in boolean
-, p_schema_object_filter_id out nocopy positiven
+, p_schema_object_filter_id in out nocopy positiven
 )
 is
 begin
@@ -913,7 +913,7 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
-  l_schema_object_filter_id positive := null;
+  l_schema_object_filter_id positiven := 1;
 begin
   add
   ( p_schema_object_filter => p_schema_object_filter
@@ -943,7 +943,7 @@ is
   pragma autonomous_transaction;
   
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
-  l_schema_object_filter_id positive := null;
+  l_schema_object_filter_id positiven := 1;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
   -- dbms_application_info stuff

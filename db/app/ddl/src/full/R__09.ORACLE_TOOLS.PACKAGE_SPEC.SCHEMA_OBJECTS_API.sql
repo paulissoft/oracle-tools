@@ -15,7 +15,7 @@ return positiven;
 procedure add
 ( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
 , p_add_schema_objects in boolean default true
-, p_schema_object_filter_id out nocopy positiven
+, p_schema_object_filter_id in out nocopy positiven -- IN because of positiven but it is an OUT
 );
 /** Add a record to table schema_object_filters and optionally all schema objects. **/
 
