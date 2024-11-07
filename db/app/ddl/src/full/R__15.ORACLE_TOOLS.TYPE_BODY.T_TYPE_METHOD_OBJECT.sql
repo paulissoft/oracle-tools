@@ -257,7 +257,7 @@ $end
     , 'Method (' ||
       self.member_name() ||
       ') must have a TYPE_SPEC as its base object: ' ||
-      self.base_object().id()
+      self.base_object_id()
     , self.schema_object_info()
     );
   end if;
