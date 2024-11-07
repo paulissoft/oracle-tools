@@ -1028,20 +1028,6 @@ $end
     raise;
 end get_schema_objects;
 
-function get_schema_objects
-( p_schema_object_filter_id in positiven
-)
-return varchar2 sql_macro
-is
-begin
-  return q'[
-select  t.obj
-from    v_all_schema_objects t
-where   t.schema_object_filter_id = get_schema_objects.p_schema_object_filter_id
-and     t.generate_ddl = 1        
-]';
-end get_schema_objects;
-
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer
 )
