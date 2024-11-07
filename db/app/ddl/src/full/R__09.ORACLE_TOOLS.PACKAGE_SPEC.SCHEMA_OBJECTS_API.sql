@@ -78,18 +78,6 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
 
-function get_schema_objects
-( p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
-)
-return varchar2 sql_macro;
-/**
-
-Get all rows from ALL_SCHEMA_OBJECTS with schema_object_filter_id equal to p_schema_object_filter_id (if not null) or the last for this session (if null).
-
-Usage: select * from schema_objects_api.get_schema_objects(null)
-
-**/
-
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer
 );
