@@ -7,7 +7,7 @@ create type oracle_tools.t_constraint_object authid current_user under oracle_to
 , constraint_type$ varchar2(1 byte)
 , constructor function t_constraint_object
   ( self in out nocopy oracle_tools.t_constraint_object
-  , p_base_object in oracle_tools.t_named_object
+  , p_base_object_id in varchar2
   , p_object_schema in varchar2
   , p_object_name in varchar2
   , p_constraint_type in varchar2 default null

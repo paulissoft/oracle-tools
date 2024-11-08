@@ -1,5 +1,6 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" IS
 
+subtype t_object is oracle_tools.pkg_ddl_util.t_object;
 subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
 subtype t_metadata_object_type is oracle_tools.pkg_ddl_util.t_metadata_object_type;
 subtype t_md_object_type_tab is oracle_tools.pkg_ddl_util.t_md_object_type_tab;

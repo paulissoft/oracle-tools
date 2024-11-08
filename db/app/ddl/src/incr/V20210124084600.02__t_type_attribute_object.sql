@@ -17,7 +17,7 @@ create type oracle_tools.t_type_attribute_object authid current_user under oracl
 
 , constructor function t_type_attribute_object
   ( self in out nocopy oracle_tools.t_type_attribute_object
-  , p_base_object in oracle_tools.t_named_object
+  , p_base_object_id in varchar2
   , p_member# in integer
   , p_member_name in varchar2
   , p_data_type_name in varchar2

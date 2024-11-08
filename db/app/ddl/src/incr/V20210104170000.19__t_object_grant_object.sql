@@ -6,7 +6,7 @@ create type oracle_tools.t_object_grant_object authid current_user under oracle_
 , grantable$ varchar2(3 byte)
 , constructor function t_object_grant_object
   ( self in out nocopy oracle_tools.t_object_grant_object
-  , p_base_object in oracle_tools.t_named_object
+  , p_base_object_id in varchar2
   , p_object_schema in varchar2
   , p_grantee in varchar2
   , p_privilege in varchar2

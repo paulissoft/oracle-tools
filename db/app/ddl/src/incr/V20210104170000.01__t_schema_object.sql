@@ -1,8 +1,40 @@
 begin
   execute immediate q'[
 create type oracle_tools.t_schema_object authid current_user as object
-( network_link$ varchar2(128 byte)
+( id varchar2(500 byte) /* the unique id, formerly the id() member function */
+, network_link$ varchar2(128 byte)
 , object_schema$ varchar2(128 byte)
+-- begin of constructors
+, constructor function t_schema_object
+  ( self in out nocopy oracle_tools.t_schema_object
+  , id in varchar2
+  , network_link$ in varchar2
+  , object_schema$ in varchar2
+  )
+  return self as result
+/** Constructor that should never be called. **/
+, constructor function t_schema_object
+  ( self in out nocopy oracle_tools.t_schema_object
+  , p_network_link$ in varchar2
+  , p_object_schema$ in varchar2
+  )
+  return self as result
+/** Constructor without id since that must be determined by the procedure construct below. **/
+, final member procedure construct
+  ( self in out nocopy oracle_tools.t_schema_object
+  , p_network_link$ in varchar2
+  , p_object_schema$ in varchar2
+  )
+/**
+This procedure is there since Oracle Object Types do not allow to invoke a
+super constructor.  Therefore this procedure can be called instead in a sub
+type constructor like this:
+
+(self as oracle_tools.t_schema_object).construct(p_network_link$, p_object_schema$);
+
+This procedure sets id.
+**/
+
 -- begin of getter(s)/setter(s)
 , final member function network_link return varchar2 deterministic
 , final member procedure network_link
@@ -31,9 +63,9 @@ create type oracle_tools.t_schema_object authid current_user as object
 , static function object_type_order
   ( p_object_type in varchar2
   )
-  return integer deterministic
+  return integer deterministic result_cache
 , final member function object_type_order return integer deterministic
-, static function id
+, static function determine_id
   ( p_object_schema in varchar2
   , p_object_type in varchar2
   , p_object_name in varchar2 default null
@@ -45,14 +77,13 @@ create type oracle_tools.t_schema_object authid current_user as object
   , p_privilege in varchar2 default null
   , p_grantable in varchar2 default null
   )
-  return varchar2 deterministic
-, member function id return varchar2 deterministic
+  return varchar2 deterministic result_cache
 , map member function signature return varchar2 deterministic
 , static function dict2metadata_object_type
   ( p_dict_object_type in varchar2
   )
   return varchar2
-  deterministic
+  deterministic result_cache
 , final member function dict2metadata_object_type return varchar2 deterministic
 , member procedure print
   ( self in oracle_tools.t_schema_object
@@ -87,14 +118,14 @@ create type oracle_tools.t_schema_object authid current_user as object
   ( p_object_type in varchar2
   )
   return integer
-  deterministic
+  deterministic result_cache
 , member function is_a_repeatable return integer deterministic
 , final member function fq_object_name return varchar2 deterministic
 , static function dict_object_type
   ( p_object_type in varchar2
   )
   return varchar2
-  deterministic
+  deterministic result_cache
 , member function dict_object_type return varchar2 deterministic
 , member procedure chk
   ( self in oracle_tools.t_schema_object

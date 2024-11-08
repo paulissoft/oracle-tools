@@ -6001,7 +6001,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           ( dbug."info"
           , 'object %s depends on its base object %s'
           , l_dependent_or_granted_object.id
-          , l_dependent_or_granted_object.base_object().id
+          , l_dependent_or_granted_object.base_object_id()
           );
 $end
 

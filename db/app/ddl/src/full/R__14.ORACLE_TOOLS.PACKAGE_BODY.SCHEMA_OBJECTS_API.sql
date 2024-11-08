@@ -1067,6 +1067,8 @@ $end
   , p_schema_object_filter_id => l_schema_object_filter_id
   );
 
+  commit; -- must be done before the pipe row
+
   for r in ( select t.obj from v_my_schema_objects t )
   loop
     pipe row (r.obj);
@@ -1074,7 +1076,6 @@ $end
   end loop;
 
   cleanup;
-  commit;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
@@ -1086,7 +1087,6 @@ exception
   then
     -- not a real error, just a way to some cleanup
     cleanup;
-    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave;
 $end

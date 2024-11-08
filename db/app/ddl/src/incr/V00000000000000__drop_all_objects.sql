@@ -23,6 +23,9 @@ declare
     ( 'ALL_SCHEMA_DDLS'
     , 'ALL_SCHEMA_OBJECTS'
     , 'SCHEMA_OBJECT_FILTERS'
+    , 'SCHEMA_OBJECTS'
+    , 'SCHEMA_OBJECT_FILTER_RESULTS'
+    , 'GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
     );
   l_sequence_tab sys.odcivarchar2list :=
     sys.odcivarchar2list

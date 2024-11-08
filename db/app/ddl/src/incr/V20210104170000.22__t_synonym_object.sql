@@ -4,7 +4,7 @@ create type oracle_tools.t_synonym_object authid current_user under oracle_tools
 ( object_name$ varchar2(128 byte)
 , constructor function t_synonym_object
   ( self in out nocopy oracle_tools.t_synonym_object
-  , p_base_object in oracle_tools.t_named_object
+  , p_base_object_id in varchar2
   , p_object_schema in varchar2
   , p_object_name in varchar2
   )

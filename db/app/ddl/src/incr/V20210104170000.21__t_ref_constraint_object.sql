@@ -1,20 +1,15 @@
 begin
   execute immediate q'[
 CREATE TYPE "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" authid current_user under oracle_tools.t_constraint_object
-( ref_object_schema$ varchar2(128 byte)
-, ref_object_type$ varchar2(30 byte)
-, ref_object_name$ varchar2(128 byte)
-, ref_base_object_schema$ varchar2(128 byte)
-, ref_base_object_type$ varchar2(30 byte)
-, ref_base_object_name$ varchar2(128 byte)
+( ref_object_id$ varchar2(500 byte)
 , constructor function t_ref_constraint_object
   ( self in out nocopy oracle_tools.t_ref_constraint_object
-  , p_base_object in oracle_tools.t_named_object
+  , p_base_object_id in varchar2
   , p_object_schema in varchar2
   , p_object_name in varchar2
   , p_constraint_type in varchar2 default null
   , p_column_names in varchar2 default null
-  , p_ref_object in oracle_tools.t_constraint_object default null
+  , p_ref_object_id in varchar2 default null
   )
   return self as result
 -- begin of getter(s)

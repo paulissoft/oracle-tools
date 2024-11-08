@@ -21,10 +21,11 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
 , member function grantor_is_schema return integer deterministic
 , member function matches_schema_object
   ( self in oracle_tools.t_schema_object_filter
-  , p_obj in oracle_tools.t_schema_object
+  , p_schema_object_id in varchar2
   )
   return integer
   deterministic
+, member function serialize return clob deterministic  
 , member procedure print
   ( self in oracle_tools.t_schema_object_filter
   )
