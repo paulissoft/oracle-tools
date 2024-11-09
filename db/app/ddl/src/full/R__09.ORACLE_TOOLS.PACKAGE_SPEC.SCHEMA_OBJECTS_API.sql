@@ -47,14 +47,14 @@ function find_schema_object_by_seq
 ( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 )
-return GENERATE_DDL_SESSION_SCHEMA_OBJECTS%rowtype;
+return generate_ddl_session_schema_objects%rowtype;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
 
 function find_schema_object_by_object_id
 ( p_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 )
-return GENERATE_DDL_SESSION_SCHEMA_OBJECTS%rowtype;
+return generate_ddl_session_schema_objects%rowtype;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
 
 function get_named_objects
