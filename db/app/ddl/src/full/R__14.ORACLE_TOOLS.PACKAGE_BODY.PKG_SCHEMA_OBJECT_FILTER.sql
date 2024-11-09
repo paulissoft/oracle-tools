@@ -577,7 +577,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     );
 $end
 
-    l_object := oracle_tools.t_schema_object.id
+    l_object := oracle_tools.t_schema_object.get_id
                 ( p_object_schema => p_object_schema
                 , p_object_type => p_object_type
                 , p_object_name => p_object_name
@@ -607,7 +607,7 @@ $end
     if p_case = 4
     then
       -- include all objects (object name and base object name *) with the same object type
-      l_object := oracle_tools.t_schema_object.id
+      l_object := oracle_tools.t_schema_object.get_id
                   ( p_object_schema => p_object_schema
                   , p_object_type => p_object_type
                   , p_object_name => '*'
