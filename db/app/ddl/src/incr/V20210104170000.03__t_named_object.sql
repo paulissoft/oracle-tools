@@ -2,15 +2,6 @@ begin
   execute immediate q'[
 create type oracle_tools.t_named_object authid current_user under oracle_tools.t_schema_object
 ( object_name$ varchar2(128 byte)
-  -- begin of constructor(s)
-, constructor function t_named_object
-  ( self in out nocopy oracle_tools.t_named_object
-  , network_link$ in varchar2
-  , object_schema$ in varchar2
-  , object_name$ in varchar2
-  )
-  return self as result
-/** Constructor without id since that must be determined by the procedure construct below. **/
   -- other methods
 , overriding final member function object_name return varchar2 deterministic
 , final static procedure create_named_object
