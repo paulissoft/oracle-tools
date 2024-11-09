@@ -1,14 +1,12 @@
 create table generate_ddl_session_schema_objects
-( session_id number
-  default to_number(sys_context('USERENV', 'SESSIONID')) -- Primary key #1: The session id (v$session.audsid)
-, schema_object_filter_id integer -- Primary key #2
-, seq integer
+( session_id number not null
+, schema_object_filter_id integer not null
+, seq integer not null
   constraint generate_ddl_session_schema_objects$ck$seq check (seq >= 1) -- Primary key #3: Sequence within (session_id, schema_object_filter_id)
-, schema_object_id varchar2(500 byte)
-  constraint generate_ddl_session_schema_objects$ck$schema_object_id check (schema_object_id is not null)
+, schema_object_id varchar2(500 byte) not null
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
-  constraint generate_ddl_session_schema_objects$ck$created check (created is not null)
+  not null  
 , ddl oracle_tools.t_schema_ddl
 , constraint generate_ddl_session_schema_objects$pk
   primary key (session_id, schema_object_filter_id, seq)

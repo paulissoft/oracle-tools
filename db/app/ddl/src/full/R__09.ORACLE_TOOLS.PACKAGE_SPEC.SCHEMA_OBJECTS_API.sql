@@ -13,19 +13,17 @@ function get_last_schema_object_filter_id
 return positiven;
 
 procedure add
-( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
-, p_add_schema_objects in boolean default true
-, p_schema_object_filter_id in out nocopy positiven -- IN because of positiven but it is an OUT
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
+, p_add_schema_objects in boolean default true -- create records for table GENERATE_DDL_SESSION_SCHEMA_OBJECTS (and its parent tables SCHEMA_OBJECTS and SCHEMA_OBJECT_FILTER_RESULTS)?
+, p_schema_object_filter_id in out nocopy positiven -- IN because of positiven but it is in reality an OUT parameter
 );
-/** Add a record to table schema_object_filters and optionally all schema objects. **/
+/** Add a record to table GENERATE_DDL_SESSIONS (and its parent SCHEMA_OBJECT_FILTERS). **/
 
 procedure add
 ( p_schema_ddl in oracle_tools.t_schema_ddl
 , p_schema_object_filter_id in positiven
-, p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
-, p_ignore_dup_val_on_index in boolean default false
 );
-/** Add a record to table all_schema_ddls. **/
+/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS

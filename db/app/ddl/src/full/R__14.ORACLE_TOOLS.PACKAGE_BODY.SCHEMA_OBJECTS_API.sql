@@ -515,13 +515,39 @@ begin
 end get_last_schema_object_filter_id;
 
 procedure add
-( p_schema_object_filter in oracle_tools.schema_object_filters.obj%type
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_add_schema_objects in boolean
 , p_schema_object_filter_id in out nocopy positiven
 )
 is
+  l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
 begin
-  insert into schema_object_filters(obj) values (p_schema_object_filter) returning id into p_schema_object_filter_id;
+  select  max(sof.id) as schema_object_filter_id
+  into    p_schema_object_filter_id
+  from    oracle_tools.schema_object_filters sof
+  where   sof.obj = p_schema_object_filter;
+
+  -- when not found add it
+  if p_schema_object_filter_id is null
+  then
+    select  nvl(max(sof.hash_bucket_nr), 0) + 1
+    into    l_hash_bucket_nr
+    from    oracle_tools.schema_object_filters sof
+    where   sys.dbms_crypto.hash(sof.obj.serialize(), 3) =
+            -- good old fashioned trick to execute this expression just once
+            ( select sys.dbms_crypto.hash(p_schema_object_filter.serialize(), 3) from dual where rownum = 1 );
+
+    insert into oracle_tools.schema_object_filters
+    ( hash_bucket_nr
+    , obj
+    )
+    values
+    ( l_hash_bucket_nr
+    , p_schema_object_filter
+    )
+    returning id into p_schema_object_filter_id;
+  end if;
+
   if p_add_schema_objects
   then
     add_schema_objects(p_schema_object_filter, p_schema_object_filter_id);
@@ -529,84 +555,26 @@ begin
 end add;
 
 procedure add
-( p_schema_ddl in oracle_tools.all_schema_ddls.ddl%type
+( p_schema_ddl in oracle_tools.t_schema_ddl
 , p_schema_object_filter_id in positiven
-, p_must_exist in boolean
-, p_ignore_dup_val_on_index in boolean
 )
 is
-  -- index 1: update; 2: insert
-  l_lwb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 1 end;
-  l_upb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 2 end; -- try both when p_must_exist is null
-  l_sql_rowcount pls_integer := null;
+  cursor c_gdsso
+  is
+    select  1
+    from    generate_ddl_session_schema_objects gdsso
+    where   gdsso.session_id = sys_context('USERENV', 'SESSIONID')
+    and     gdsso.schema_object_filter_id = p_schema_object_filter_id
+    and     gdsso.schema_object_id = p_schema_ddl.obj.id
+    for update of
+            gdsso.ddl;
 begin
-  <<dml_loop>>
-  for i_idx in l_lwb .. l_upb
+  for r_gdsso in c_gdsso
   loop
-    case i_idx
-      when 1
-      then
-        update  all_schema_ddls t
-        set     t.ddl = p_schema_ddl
-        where   t.schema_object_filter_id = p_schema_object_filter_id
-        and     t.ddl.obj.id = p_schema_ddl.obj.id;
-        l_sql_rowcount := sql%rowcount;
-        
-      when 2
-      then
-        begin
-          insert into all_schema_ddls
-          ( schema_object_filter_id
-          , seq
-          , ddl
-          )
-          values
-          ( p_schema_object_filter_id
-            -- Since objects are inserted per Oracle session
-            -- there is never a problem with another session inserting at the same time for the same session.
-          , (select nvl(max(t.seq), 0) + 1 from all_schema_ddls t where t.schema_object_filter_id = p_schema_object_filter_id)
-          , p_schema_ddl
-          );
-          l_sql_rowcount := sql%rowcount;
-        exception
-          when dup_val_on_index
-          then
-            if p_ignore_dup_val_on_index
-            then
-              l_sql_rowcount := 1;
-            else
-              raise_application_error
-              ( oracle_tools.pkg_ddl_error.c_duplicate_item
-              , utl_lms.format_message
-                ( 'Could not add duplicate ALL_SCHEMA_DLLS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
-                , p_schema_ddl.obj.id
-                , to_char(p_schema_object_filter_id)
-                , to_char(find_schema_ddl_by_object_id(p_schema_ddl.obj.id, p_schema_object_filter_id).seq)
-                )
-              , true              
-              );
-            end if;
-        end;
-    end case;
-      
-    case l_sql_rowcount
-      when 0
-      then
-        if i_idx = 1 and l_upb = 2
-        then
-          null; -- will still have an insert to come
-        else
-          raise no_data_found;
-        end if;
-        
-      when 1
-      then
-        exit dml_loop; -- ok
-        
-      else
-        raise too_many_rows; -- strange
-    end case;
-  end loop dml_loop;
+    update  generate_ddl_session_schema_objects gdsso
+    set     gdsso.ddl = p_schema_ddl
+    where   currof of c_gdsso;
+  end loop;
 end add;
 
 procedure add

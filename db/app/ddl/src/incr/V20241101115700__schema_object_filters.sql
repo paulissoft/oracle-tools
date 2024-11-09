@@ -2,17 +2,18 @@
 create sequence schema_object_filters$seq minvalue 1 maxvalue 2147483647 start with 1 increment by 1 cycle;
 
 create table schema_object_filters
-( id integer
+( id integer 
   default oracle_tools.schema_object_filters$seq.nextval
-  constraint schema_object_filters$ck$id check (id is not null and id between 1 and 2147483647)
+  not null
+  constraint schema_object_filters$ck$id check (id between 1 and 2147483647)
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
-  constraint schema_object_filters$ck$created check (created is not null)
+  not null
 , hash_bucket_nr integer
   default 1
-  constraint schema_object_filters$ck$hash_bucket_nr check (hash_bucket_nr is not null and hash_bucket_nr >= 1)
+  not null
+  constraint schema_object_filters$ck$hash_bucket_nr check (hash_bucket_nr >= 1)
 , obj oracle_tools.t_schema_object_filter
-  constraint schema_object_filters$ck$obj check (obj is not null)
 , constraint schema_object_filters$pk
   primary key (id)
 )

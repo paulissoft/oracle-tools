@@ -12,11 +12,11 @@ end matches_schema_object_fnc;
 /
 
 create table schema_object_filter_results
-( schema_object_filter_id integer
-, schema_object_id varchar2(500 byte)
-, created timestamp(6)
+( schema_object_filter_id integer not null
+, schema_object_id varchar2(500 byte) not null
+, created timestamp(6) 
   default sys_extract_utc(systimestamp)
-  constraint schema_object_filter_results$ck$created check (created is not null)
+  not null
 , constraint schema_object_filter_results$pk
   primary key (schema_object_filter_id, schema_object_id)
 , constraint schema_object_filter_results$fk$1
