@@ -377,25 +377,6 @@ begin
     );
 end set_id;
 
-member function id
-return varchar2
-deterministic
-is
-begin
-  return oracle_tools.t_schema_object.id
-         ( p_object_schema => self.object_schema
-         , p_object_type => self.object_type
-         , p_object_name => self.object_name
-         , p_base_object_schema => self.base_object_schema
-         , p_base_object_type => self.base_object_type
-         , p_base_object_name => self.base_object_name
-         , p_column_name => self.column_name
-         , p_grantee => self.grantee
-         , p_privilege => self.privilege
-         , p_grantable => self.grantable
-         );
-end id;
-
 map member function signature
 return varchar2
 deterministic
@@ -449,7 +430,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
-  dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id());
+  dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id);
   dbug.print(dbug."info", 'signature: %s', self.signature());
   dbug.leave;
 $else
@@ -500,7 +481,7 @@ is
         , p_base_object_schema
         , p_base_object_name
         , p_base_object_type
-        , oracle_tools.t_schema_object.id
+        , oracle_tools.t_schema_object.get_id
           ( p_object_schema 
           , p_object_type
           , p_object_name
@@ -1005,7 +986,7 @@ begin
          p_id_parts( 7) || ':' ||
          p_id_parts( 8) || ':' ||
          p_id_parts( 9) || ':' ||
-         p_id_parts(10)
+         p_id_parts(10);
 end join_id;
 
 end;
