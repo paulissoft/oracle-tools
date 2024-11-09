@@ -124,10 +124,7 @@ $end
                   ) obj
                   inner join prv p
                   on p.table_schema = obj.object_schema and p.table_name = obj.object_name
-          where   obj.object_type not in ( 'PACKAGE BODY'
-                                         , 'TYPE BODY'
-                                         , 'MATERIALIZED VIEW'
-                                         , 'PACKAGE_BODY'
+          where   obj.object_type not in ( 'PACKAGE_BODY'
                                          , 'TYPE_BODY'
                                          , 'MATERIALIZED_VIEW'
                                          ) -- grants are on underlying tables
@@ -161,7 +158,7 @@ $end
                     from    oracle_tools.v_my_named_schema_objects t
                             inner join all_synonyms s
                             on s.table_owner = t.obj.object_schema() and s.table_name = t.obj.object_name()
-                    where   t.obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                    where   t.obj.dict_object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                     and     s.owner = 'PUBLIC'
                     union all
                     -- table/view comments
@@ -185,7 +182,7 @@ $end
                     from    oracle_tools.v_my_named_schema_objects t
                             inner join all_mview_comments m
                             on m.owner = t.obj.object_schema() and m.mview_name = t.obj.object_name()
-                    where   t.obj.object_type() = 'MATERIALIZED_VIEW'
+                    where   t.obj.dict_object_type() = 'MATERIALIZED VIEW'
                     and     m.comments is not null
                     union all
                     -- column comments
@@ -197,7 +194,7 @@ $end
                     from    oracle_tools.v_my_named_schema_objects t
                             inner join all_col_comments c
                             on c.owner = t.obj.object_schema() and c.table_name = t.obj.object_name()
-                    where   t.obj.object_type() in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')
+                    where   t.obj.dict_object_type() in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
                     and     c.comments is not null
                   ) t
         )
@@ -552,7 +549,7 @@ begin
         update  all_schema_ddls t
         set     t.ddl = p_schema_ddl
         where   t.schema_object_filter_id = p_schema_object_filter_id
-        and     t.ddl.obj.id() = p_schema_ddl.obj.id();
+        and     t.ddl.obj.id = p_schema_ddl.obj.id;
         l_sql_rowcount := sql%rowcount;
         
       when 2
@@ -582,9 +579,9 @@ begin
               ( oracle_tools.pkg_ddl_error.c_duplicate_item
               , utl_lms.format_message
                 ( 'Could not add duplicate ALL_SCHEMA_DLLS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
-                , p_schema_ddl.obj.id()
+                , p_schema_ddl.obj.id
                 , to_char(p_schema_object_filter_id)
-                , to_char(find_schema_ddl_by_object_id(p_schema_ddl.obj.id(), p_schema_object_filter_id).seq)
+                , to_char(find_schema_ddl_by_object_id(p_schema_ddl.obj.id, p_schema_object_filter_id).seq)
                 )
               , true              
               );
@@ -633,7 +630,7 @@ begin
         update  all_schema_objects t
         set     t.obj = p_schema_object
         where   t.schema_object_filter_id = p_schema_object_filter_id
-        and     t.obj.id() = p_schema_object.id();
+        and     t.obj.id = p_schema_object.id;
         l_sql_rowcount := sql%rowcount;
         
       when 2
@@ -663,9 +660,9 @@ begin
               ( oracle_tools.pkg_ddl_error.c_duplicate_item
               , utl_lms.format_message
                 ( 'Could not add duplicate ALL_SCHEMA_OBJECTS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
-                , p_schema_object.id()
+                , p_schema_object.id
                 , to_char(p_schema_object_filter_id)
-                , to_char(find_schema_object_by_object_id(p_schema_object.id(), p_schema_object_filter_id).seq)
+                , to_char(find_schema_object_by_object_id(p_schema_object.id, p_schema_object_filter_id).seq)
                 )
               , true              
               );
@@ -752,7 +749,7 @@ begin
   into    l_rec
   from    all_schema_objects t
   where   t.schema_object_filter_id = p_schema_object_filter_id
-  and     t.obj.id() = p_id;
+  and     t.obj.id = p_id;
 
   return l_rec;
 end find_schema_object_by_object_id;
@@ -786,7 +783,7 @@ begin
   into    l_rec
   from    all_schema_ddls t
   where   t.schema_object_filter_id = p_schema_object_filter_id
-  and     t.ddl.obj.id() = p_id;
+  and     t.ddl.obj.id = p_id;
 
   return l_rec;
 end find_schema_ddl_by_object_id;
@@ -1319,7 +1316,7 @@ $end
   select  id
   bulk collect
   into    l_schema_object_id_tab
-  from    ( select  t.id() as id
+  from    ( select  t.id as id
             ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
             from    table
                     ( oracle_tools.schema_objects_api.get_schema_objects
@@ -1349,7 +1346,7 @@ $end
       select  l_schema_object_id_tab(i_idx) as id
       from    dual;
     open l_actual for
-      select  t.id() as id
+      select  t.id as id
       from    table
               ( oracle_tools.schema_objects_api.get_schema_objects
                 ( p_schema => user
@@ -1363,7 +1360,7 @@ $end
       from    dual
       where   0 = 1;
     open l_actual for
-      select  t.id() as id
+      select  t.id as id
       from    table
               ( oracle_tools.schema_objects_api.get_schema_objects
                 ( p_schema => user

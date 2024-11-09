@@ -232,15 +232,15 @@ overriding member function dict_object_exists
 return integer -- 0/1
 is
   l_count pls_integer;
-  l_owner constant all_objects.object_type%type := self.object_schema();
+  l_object_schema constant all_objects.owner%type := self.object_schema();
   l_object_type constant all_objects.object_type%type := self.dict_object_type();
-  l_object_name constant all_objects.object_type%type := self.object_name();
+  l_object_name constant all_objects.object_name%type := self.object_name();
 begin
   select  sign(count(*))
   into    l_count
   from    all_constraints c /* this is where we are interested in */
   where   l_object_type in ('TABLE', 'VIEW')
-  and     c.owner = l_owner
+  and     c.owner = l_object_schema
   and     c.table_name = l_object_name;
   return l_count;
 end;

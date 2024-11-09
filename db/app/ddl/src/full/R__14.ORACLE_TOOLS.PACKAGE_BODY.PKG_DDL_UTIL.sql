@@ -17,7 +17,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   type t_object_lookup_tab is table of t_object_lookup_rec index by t_object;
 
-  -- key is oracle_tools.t_schema_object.signature(), value is oracle_tools.t_schema_object.id()
+  -- key is oracle_tools.t_schema_object.signature(), value is oracle_tools.t_schema_object.id
   type t_constraint_lookup_tab is table of t_object index by t_object; -- for parse_ddl
 
   -- just to make the usage of VIEW oracle_tools.v_display_ddl_schema in dynamic SQL explicit
@@ -2409,7 +2409,7 @@ $end
       -- check the object type (base object set if necessary and so on)
       l_schema_object.chk(p_schema_object_filter.schema());
 
-      p_object_key := l_schema_object.id();
+      p_object_key := l_schema_object.id;
 
       begin
         if not(p_object_lookup_tab(p_object_key).ready)
@@ -2429,7 +2429,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
 $end            
               raise_application_error
               ( oracle_tools.pkg_ddl_error.c_object_not_correct
-              , 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id() || ' is not correct.'
+              , 'Object ' || p_object_lookup_tab(p_object_key).schema_ddl.obj.id || ' is not correct.'
               , true
               );
           end;
@@ -3515,7 +3515,7 @@ $end
         ,       s.dependency_order as source_dependency_order
         ,       t.schema_ddl as target_schema_ddl
         ,       t.dependency_order as target_dependency_order
-        ,       count(*) over (partition by case when s.schema_ddl is not null then s.schema_ddl.obj.id() else t.schema_ddl.obj.id() end) as nr_objects_with_same_id
+        ,       count(*) over (partition by case when s.schema_ddl is not null then s.schema_ddl.obj.id else t.schema_ddl.obj.id end) as nr_objects_with_same_id
         from    source s
                 full outer join target t
                 on t.schema_ddl.obj = s.schema_ddl.obj -- map function is used
@@ -3557,7 +3557,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
         ( case
             when r_schema_ddl.source_schema_ddl is not null and
                  r_schema_ddl.target_schema_ddl is not null
-            then r_schema_ddl.source_schema_ddl.obj.id() != r_schema_ddl.target_schema_ddl.obj.id()
+            then r_schema_ddl.source_schema_ddl.obj.id != r_schema_ddl.target_schema_ddl.obj.id
           end
         )
       );
@@ -5126,7 +5126,7 @@ $end
 
             l_schema_object.chk(p_schema_object_filter.schema());
 
-            l_object_key := l_schema_object.id();
+            l_object_key := l_schema_object.id;
 
             if not l_object_lookup_tab.exists(l_object_key)
             then
@@ -5154,14 +5154,14 @@ $end
 
               if not l_constraint_lookup_tab.exists(l_object_key)
               then
-                l_constraint_lookup_tab(l_object_key) := l_schema_object.id();
+                l_constraint_lookup_tab(l_object_key) := l_schema_object.id;
               else
                 raise dup_val_on_index;
               end if;
             end if;
           exception
             when others
-            then oracle_tools.pkg_ddl_error.reraise_error('Object id: ' || l_schema_object.id() || chr(10) || 'Object signature: ' || l_object_key);
+            then oracle_tools.pkg_ddl_error.reraise_error('Object id: ' || l_schema_object.id || chr(10) || 'Object signature: ' || l_object_key);
           end;  
         end loop;
       end if;

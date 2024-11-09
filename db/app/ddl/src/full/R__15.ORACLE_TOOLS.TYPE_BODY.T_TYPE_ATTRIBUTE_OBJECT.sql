@@ -40,13 +40,9 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_schema$ := null;
-    self.base_object_type$ := null;
-    self.base_object_name$ := null;
+    self.base_object_id$ := null;
   else
-    self.base_object_schema$ := p_base_object.object_schema();
-    self.base_object_type$ := p_base_object.object_type();
-    self.base_object_name$ := p_base_object.object_name();
+    self.base_object_id$ := p_base_object.id;
   end if;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
@@ -57,6 +53,8 @@ $end
   self.data_precision$ := p_data_precision;
   self.data_scale$ := p_data_scale;
   self.character_set_name$ := p_character_set_name;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -165,6 +163,23 @@ begin
            then '(' || self.char_length() || case self.char_used() when 'B' then ' BYTE' when 'C' then ' CHAR' end || ')'
          end;
 end data_type;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_member_name constant all_type_attrs.attr_name%type := self.member_name$;
+  l_base_object_schema constant all_type_attrs.owner%type := self.base_object_schema();
+  l_base_object_name constant all_type_attrs.type_name%type := self.base_object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_type_attrs t
+  where   t.owner = l_base_object_schema
+  and     t.type_name = l_base_object_name
+  and     t.attr_name = l_member_name;
+  return l_count;
+end;
 
 end;
 /

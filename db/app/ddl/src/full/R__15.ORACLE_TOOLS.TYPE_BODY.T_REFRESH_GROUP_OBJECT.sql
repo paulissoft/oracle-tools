@@ -22,6 +22,8 @@ $end
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
 
+  oracle_tools.t_schema_object.set_id(self);
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
@@ -36,6 +38,21 @@ is
 begin
   return 'REFRESH_GROUP';
 end object_type;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_object_schema constant all_refresh.rowner%type := self.object_schema();
+  l_object_name constant all_refresh.rname%type := self.object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_refresh r
+  where   r.rowner = l_object_schema
+  and     r.rname = l_object_name;
+  return l_count;
+end;
 
 end;
 /

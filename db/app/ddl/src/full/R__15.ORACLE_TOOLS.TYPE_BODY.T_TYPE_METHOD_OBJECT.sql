@@ -29,13 +29,9 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_schema$ := null;
-    self.base_object_type$ := null;
-    self.base_object_name$ := null;
+    self.base_object_id$ := null;
   else
-    self.base_object_schema$ := p_base_object.object_schema();
-    self.base_object_type$ := p_base_object.object_type();
-    self.base_object_name$ := p_base_object.object_name();
+    self.base_object_id$ := p_base_object.id;
   end if;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
@@ -46,6 +42,8 @@ $end
   self.instantiable$ := p_instantiable;
   self.overriding$ := p_overriding;
   self.arguments := p_arguments;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -266,6 +264,25 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_method_name constant all_type_methods.method_name%type := self.member_name$;
+  l_method_type constant all_type_methods.method_type%type := self.method_type$;
+  l_base_object_schema constant all_type_methods.owner%type := self.base_object_schema();
+  l_base_object_name constant all_type_methods.type_name%type := self.base_object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_type_methods t
+  where   t.owner = l_base_object_schema
+  and     t.type_name = l_base_object_name
+  and     t.method_name = l_method_name
+  and     t.method_type = l_method_type;
+  return l_count;
+end;
 
 end;
 /

@@ -49,10 +49,15 @@ The constructor for an oracle_tools.t_schema_object_filter object.
 
 function matches_schema_object
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_obj in oracle_tools.t_schema_object
+, p_schema_object_id in varchar2
 )
 return integer
 deterministic;
+
+function serialize
+( p_schema_object_filter in t_schema_object_filter
+)
+return json_object_t;
 
 procedure print
 ( p_schema_object_filter in t_schema_object_filter

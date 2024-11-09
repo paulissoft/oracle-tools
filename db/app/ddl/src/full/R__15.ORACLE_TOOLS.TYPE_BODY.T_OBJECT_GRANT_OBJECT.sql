@@ -26,19 +26,17 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_schema$ := null;
-    self.base_object_type$ := null;
-    self.base_object_name$ := null;
+    self.base_object_id$ := null;
   else
-    self.base_object_schema$ := p_base_object.object_schema();
-    self.base_object_type$ := p_base_object.object_type();
-    self.base_object_name$ := p_base_object.object_name();
+    self.base_object_id$ := p_base_object.id;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.grantee$ := p_grantee;
   self.privilege$ := p_privilege;
   self.grantable$ := p_grantable;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -171,6 +169,27 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_object_schema constant all_objects.owner%type := self.object_schema();
+  l_object_name constant all_objects.object_name%type := self.object_name();
+  l_grantee constant all_tab_privs.grantee%type := self.grantee();
+  l_privilege constant all_tab_privs.privilege%type := self.privilege();
+  l_grantable constant all_tab_privs.grantable%type := self.grantable();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_tab_privs p
+  where   p.table_schema = l_object_schema
+  and     p.table_name = l_object_name
+  and     p.grantee = l_grantee
+  and     p.privilege = l_privilege
+  and     p.grantable = l_grantable;
+  return l_count;
+end;
 
 end;
 /

@@ -19,7 +19,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := oracle_tools.t_procobj_object(null, p_object_schema, p_object_name, null);
+  self := oracle_tools.t_procobj_object(null, null, p_object_schema, p_object_name, null);
 
   select  obj.object_type
   into    self.dict_object_type$
@@ -27,6 +27,8 @@ $end
   where   obj.owner = p_object_schema
   and     obj.object_name = p_object_name
   ;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -72,6 +74,72 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_object_schema constant all_objects.owner%type := self.object_schema();
+  l_object_name constant all_objects.object_name%type := self.object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_objects o
+  where   o.owner = l_object_schema
+  -- here the list from my database
+  and     o.object_type in ( null -- to make it easier to (un)comment
+--                         , 'CLUSTER'
+--                         , 'CONSUMER GROUP'
+--                         , 'CONTEXT'
+--                         , 'DATABASE LINK'
+--                         , 'DESTINATION'
+--                         , 'DIRECTORY'
+--                         , 'DOMAIN'
+--                         , 'EDITION'
+                           , 'EVALUATION CONTEXT'
+--                         , 'FUNCTION'
+--                         , 'INDEX'
+--                         , 'INDEX PARTITION'
+--                         , 'INDEXTYPE'
+--                         , 'JAVA CLASS'
+--                         , 'JAVA DATA'
+--                         , 'JAVA RESOURCE'
+--                         , 'JAVA SOURCE'
+                           , 'JOB'
+                           , 'JOB CLASS'
+--                         , 'LIBRARY'
+--                         , 'LOB'
+--                         , 'LOB PARTITION'
+--                         , 'MATERIALIZED VIEW'
+--                         , 'MLE LANGUAGE'
+--                         , 'OPERATOR'
+--                         , 'PACKAGE'
+--                         , 'PACKAGE BODY'
+--                         , 'PROCEDURE'
+                           , 'PROGRAM'
+--                         , 'QUEUE'
+--                         , 'RESOURCE PLAN'
+                           , 'RULE'
+                           , 'RULE SET'
+                           , 'SCHEDULE'
+                           , 'SCHEDULER GROUP'
+--                         , 'SEQUENCE'
+--                         , 'SYNONYM'
+--                         , 'TABLE'
+--                         , 'TABLE PARTITION'
+--                         , 'TABLE SUBPARTITION'
+--                         , 'TRIGGER'
+--                         , 'TYPE'
+--                         , 'TYPE BODY'
+--                         , 'UNDEFINED'
+--                         , 'UNIFIED AUDIT POLICY'
+--                         , 'VIEW'
+                           , 'WINDOW'
+--                         , 'XML SCHEMA'
+                           )
+  and     o.object_name = l_object_name;
+  return l_count;
+end;
 
 end;
 /

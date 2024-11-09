@@ -42,6 +42,8 @@ $end
     and     ind.index_name = p_object_name;
   end if;
 
+  oracle_tools.t_schema_object.set_id(self);
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
@@ -260,11 +262,11 @@ overriding member function dict_object_exists
 return integer -- 0/1
 is
   l_count pls_integer;
-  l_object_schema constant all_objects.object_type%type := self.object_schema();
-  l_object_name constant all_objects.object_type%type := self.object_name();
-  l_base_object_schema constant all_objects.object_type%type := self.base_object_schema();
+  l_object_schema constant all_objects.owner%type := self.object_schema();
+  l_object_name constant all_objects.object_name%type := self.object_name();
+  l_base_object_schema constant all_objects.owner%type := self.base_object_schema();
   l_base_object_type constant all_objects.object_type%type := self.base_dict_object_type();
-  l_base_object_name constant all_objects.object_type%type := self.base_object_name();
+  l_base_object_name constant all_objects.object_name%type := self.base_object_name();
 begin
   select  sign(count(*))
   into    l_count

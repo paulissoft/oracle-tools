@@ -45,14 +45,21 @@ end;
 
 member function matches_schema_object
 ( self in oracle_tools.t_schema_object_filter
-, p_obj in oracle_tools.t_schema_object
+, p_schema_object_id in varchar2
 )
 return integer
 deterministic
 is
 begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_obj);
+  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_schema_object_id);
 end matches_schema_object;
+
+member function serialize
+return clob deterministic
+is
+begin
+  return oracle_tools.pkg_schema_object_filter.serialize(self).to_clob();
+end;
 
 member procedure print
 ( self in oracle_tools.t_schema_object_filter

@@ -22,17 +22,15 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_schema$ := null;
-    self.base_object_type$ := null;
-    self.base_object_name$ := null;
+    self.base_object_id$ := null;
   else
-    self.base_object_schema$ := p_base_object.object_schema();
-    self.base_object_type$ := p_base_object.object_type();
-    self.base_object_name$ := p_base_object.object_name();
+    self.base_object_id$ := p_base_object.id;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -88,6 +86,25 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_object_schema constant all_triggers.owner%type := self.object_schema();
+  l_object_name constant all_triggers.trigger_name%type := self.object_name();
+  l_base_object_schema constant all_triggers.table_owner%type := self.base_object_schema();
+  l_base_object_name constant all_triggers.table_name%type := self.base_object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_triggers t
+  where   t.owner = l_object_schema
+  and     t.trigger_name = l_object_name
+  and     t.table_owner = l_base_object_schema
+  and     t.table_name = l_base_object_name;
+  return l_count;
+end;
 
 end;
 /

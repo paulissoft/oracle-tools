@@ -251,17 +251,6 @@ begin
   p_json_object.put('NR_EXCLUDED_OBJECTS$', p_schema_object_filter.nr_excluded_objects$);
 end serialize;
 
-function serialize
-( p_schema_object_filter in t_schema_object_filter
-)
-return json_object_t
-is
-  l_json_object json_object_t := json_object_t();
-begin
-  serialize(p_schema_object_filter, l_json_object);
-  return l_json_object;
-end serialize;
-
 function repr
 ( p_schema_object_filter in t_schema_object_filter
 )
@@ -979,21 +968,21 @@ end construct;
 
 function matches_schema_object
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_obj in oracle_tools.t_schema_object
+, p_schema_object_id in varchar2
 )
 return integer
 deterministic
 is
   l_part_tab dbms_sql.varchar2a;
 begin
-  oracle_tools.pkg_str_util.split(p_str => p_obj.id(), p_delimiter => ':', p_str_tab => l_part_tab);
+  oracle_tools.pkg_str_util.split(p_str => p_schema_object_id, p_delimiter => ':', p_str_tab => l_part_tab);
 
   if l_part_tab.count != c_nr_parts
   then
     oracle_tools.pkg_ddl_error.raise_error
     ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
     , p_error_message => 'number of parts (' || l_part_tab.count || ') must be ' || c_nr_parts
-    , p_context_info => p_obj.id()
+    , p_context_info => p_schema_object_id
     , p_context_label => 'schema object id'
     );            
   end if;
@@ -1005,9 +994,20 @@ begin
     , p_base_object_type => l_part_tab("BASE OBJECT TYPE")
     , p_base_object_name => l_part_tab("BASE OBJECT NAME")
     , p_schema_object_filter => p_schema_object_filter
-    , p_schema_object_id => p_obj.id()
+    , p_schema_object_id => p_schema_object_id
     );
 end matches_schema_object;
+
+function serialize
+( p_schema_object_filter in t_schema_object_filter
+)
+return json_object_t
+is
+  l_json_object json_object_t := json_object_t();
+begin
+  serialize(p_schema_object_filter, l_json_object);
+  return l_json_object;
+end serialize;
 
 procedure print
 ( p_schema_object_filter in t_schema_object_filter

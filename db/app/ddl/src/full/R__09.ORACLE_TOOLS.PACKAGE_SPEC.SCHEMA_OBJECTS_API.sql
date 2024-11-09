@@ -20,7 +20,7 @@ procedure add
 /** Add a record to table schema_object_filters and optionally all schema objects. **/
 
 procedure add
-( p_schema_ddl in oracle_tools.all_schema_ddls.ddl%type
+( p_schema_ddl in oracle_tools.t_schema_ddl
 , p_schema_object_filter_id in positiven
 , p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_ignore_dup_val_on_index in boolean default false
@@ -28,48 +28,34 @@ procedure add
 /** Add a record to table all_schema_ddls. **/
 
 procedure add
-( p_schema_object in oracle_tools.all_schema_objects.obj%type -- The schema object to add to ALL_SCHEMA_OBJECTS
+( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 , p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_ignore_dup_val_on_index in boolean default false
 );
-/** Add a schema object to ALL_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
+/** Add a schema object to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
 procedure add
-( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to ALL_SCHEMA_OBJECTS
+( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 , p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_ignore_dup_val_on_index in boolean default false
 );
-/** Add schema objects to ALL_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
+/** Add schema objects to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
 function find_schema_object_by_seq
-( p_seq in all_schema_objects.seq%type default 1 -- Find schema object in ALL_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
+( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 )
-return all_schema_objects%rowtype;
-/** Find the schema object in ALL_SCHEMA_OBJECTS by seq. **/
+return GENERATE_DDL_SESSION_SCHEMA_OBJECTS%rowtype;
+/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
 
 function find_schema_object_by_object_id
-( p_id in varchar2 -- Find schema object in ALL_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
+( p_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 )
-return all_schema_objects%rowtype;
-/** Find the schema object in ALL_SCHEMA_OBJECTS by obj.id(). **/
-
-function find_schema_ddl_by_seq
-( p_seq in all_schema_objects.seq%type default 1 -- Find schema object in ALL_SCHEMA_DDLS by (schema_object_filter_id, seq)
-, p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
-)
-return all_schema_ddls%rowtype;
-/** Find the schema ddl in ALL_SCHEMA_DDLS by seq. **/
-
-function find_schema_ddl_by_object_id
-( p_id in varchar2 -- Find schema object in ALL_SCHEMA_DDLS by (schema_object_filter_id, obj.id())
-, p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
-)
-return all_schema_ddls%rowtype;
-/** Find the schema object in ALL_SCHEMA_DDLS by obj.id(). **/
+return GENERATE_DDL_SESSION_SCHEMA_OBJECTS%rowtype;
+/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
 
 function get_named_objects
 ( p_schema in varchar2

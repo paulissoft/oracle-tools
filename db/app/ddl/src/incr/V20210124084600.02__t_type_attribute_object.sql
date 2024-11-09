@@ -42,6 +42,7 @@ create type oracle_tools.t_type_attribute_object authid current_user under oracl
 , member function char_used return varchar2 deterministic
 -- end of getter(s)/setter(s)
 , final member function data_type return varchar2 deterministic
+, overriding member function dict_object_exists return integer -- 0/1
 )
 not final]';
 end;
