@@ -549,40 +549,6 @@ begin
 end add;
 
 procedure add
-( p_schema_ddl in oracle_tools.t_schema_ddl
-, p_schema_object_filter_id in positiven
-)
-is
-  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
-
-  cursor c_gdsso(b_schema_object_id in generate_ddl_session_schema_objects.schema_object_id%type)
-  is
-    select  1
-    from    oracle_tools.generate_ddl_session_schema_objects gdsso
-    where   gdsso.session_id = l_session_id
-    and     gdsso.schema_object_filter_id = p_schema_object_filter_id
-    and     gdsso.schema_object_id = b_schema_object_id
-    for update of
-            gdsso.ddl;
-  l_rowcount naturaln := 0;
-begin
-  for r_gdsso in c_gdsso(p_schema_ddl.obj.id)
-  loop
-    update  generate_ddl_session_schema_objects gdsso
-    set     gdsso.ddl = p_schema_ddl
-    where   current of c_gdsso;
-    l_rowcount := l_rowcount + 1;
-  end loop;
-  case l_rowcount
-    when 0
-    then raise no_data_found;
-    when 1
-    then null; -- ok
-    else raise too_many_rows; -- strange
-  end case;
-end add;
-
-procedure add
 ( p_schema_object in oracle_tools.t_schema_object
 , p_schema_object_filter_id in positiven
 , p_ignore_dup_val_on_index in boolean
@@ -720,6 +686,40 @@ begin
     end if;
     exit fetch_loop when l_schema_object_tab.count < l_limit; -- netx fetch will return 0 rows
   end loop;
+end add;
+
+procedure add
+( p_schema_ddl in oracle_tools.t_schema_ddl
+, p_schema_object_filter_id in positiven
+)
+is
+  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
+
+  cursor c_gdsso(b_schema_object_id in generate_ddl_session_schema_objects.schema_object_id%type)
+  is
+    select  1
+    from    oracle_tools.generate_ddl_session_schema_objects gdsso
+    where   gdsso.session_id = l_session_id
+    and     gdsso.schema_object_filter_id = p_schema_object_filter_id
+    and     gdsso.schema_object_id = b_schema_object_id
+    for update of
+            gdsso.ddl;
+  l_rowcount naturaln := 0;
+begin
+  for r_gdsso in c_gdsso(p_schema_ddl.obj.id)
+  loop
+    update  generate_ddl_session_schema_objects gdsso
+    set     gdsso.ddl = p_schema_ddl
+    where   current of c_gdsso;
+    l_rowcount := l_rowcount + 1;
+  end loop;
+  case l_rowcount
+    when 0
+    then raise no_data_found;
+    when 1
+    then null; -- ok
+    else raise too_many_rows; -- strange
+  end case;
 end add;
 
 function find_schema_object_by_seq
