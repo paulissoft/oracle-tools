@@ -22,11 +22,10 @@ $end
 
   -- default constructor
   self := oracle_tools.t_index_object
-          ( null
+          ( null -- id
+          , null
           , p_object_schema
-          , case when p_base_object is not null then p_base_object.object_schema() end
-          , case when p_base_object is not null then p_base_object.object_type() end
-          , case when p_base_object is not null then p_base_object.object_name() end
+          , case when p_base_object is not null then p_base_object.id end
           , p_object_name
           , null
           , null
@@ -74,19 +73,17 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_schema$ := null;
-    self.base_object_type$ := null;
-    self.base_object_name$ := null;
+    self.base_object_id$ := null;
   else
-    self.base_object_schema$ := p_base_object.object_schema();
-    self.base_object_type$ := p_base_object.object_type();
-    self.base_object_name$ := p_base_object.object_name();
+    self.base_object_id$ := p_base_object.id;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
   self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema, p_object_name);
   self.tablespace_name$ := p_tablespace_name;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -258,6 +255,27 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_object_schema constant all_objects.object_type%type := self.object_schema();
+  l_object_name constant all_objects.object_type%type := self.object_name();
+  l_base_object_schema constant all_objects.object_type%type := self.base_object_schema();
+  l_base_object_type constant all_objects.object_type%type := self.base_dict_object_type();
+  l_base_object_name constant all_objects.object_type%type := self.base_object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_indexes i
+  where   i.owner = l_object_schema
+  and     i.index_name = l_object_name
+  and     i.table_owner = l_base_object_schema
+  and     i.table_type = l_base_object_type
+  and     i.table_name = l_base_object_name;
+  return l_count;
+end;
 
 end;
 /
