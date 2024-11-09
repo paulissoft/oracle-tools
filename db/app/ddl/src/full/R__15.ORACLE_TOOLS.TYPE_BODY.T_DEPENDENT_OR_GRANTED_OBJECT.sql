@@ -5,7 +5,7 @@ return varchar2
 deterministic
 is
 begin
-  return self.base_object_schema$;
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(4);
 end base_object_schema;
 
 overriding member function base_object_type
@@ -13,7 +13,7 @@ return varchar2
 deterministic
 is
 begin
-  return self.base_object_type$;
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(5);
 end base_object_type;
 
 overriding member function base_dict_object_type
@@ -21,7 +21,7 @@ return varchar2
 deterministic
 is
 begin
-  return oracle_tools.t_schema_object.dict_object_type(self.base_object_type$);
+  return oracle_tools.t_schema_object.dict_object_type(self.base_object_type());
 end base_dict_object_type;
 
 overriding member function base_object_name
@@ -37,8 +37,10 @@ overriding final member procedure base_object_schema
 , p_base_object_schema in varchar2
 )
 is
+  l_id_parts oracle_tools.t_text_tab := oracle_tools.t_schema_object.split_id(self.base_object_id$);
 begin
-  self.base_object_schema$ := p_base_object_schema;
+  l_id_parts(4) := p_base_object_schema;
+  self.base_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
 end base_object_schema;
 
 overriding member procedure chk
