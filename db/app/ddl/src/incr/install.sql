@@ -124,6 +124,8 @@ prompt @V20241101115701__schema_objects.sql
 @V20241101115701__schema_objects.sql
 prompt @V20241101121700__schema_object_filter_results.sql
 @V20241101121700__schema_object_filter_results.sql
-prompt @V20241101121701__generate_ddl_session_schema_objects.sql
-@V20241101121701__generate_ddl_session_schema_objects.sql
+prompt @V20241101121701__generate_ddl_sessions.sql
+@V20241101121701__generate_ddl_sessions.sql
+prompt @V20241101121702__generate_ddl_session_schema_objects.sql
+@V20241101121702__generate_ddl_session_schema_objects.sql
 
